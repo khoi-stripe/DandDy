@@ -2781,7 +2781,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
               
               // Store the image URL in character state
               if (result.imageUrl) {
-                CharacterState.update({ aiPortraitImageUrl: result.imageUrl });
+                CharacterState.updateCharacter({ aiPortraitImageUrl: result.imageUrl });
               }
               
               // Update just the portrait section
