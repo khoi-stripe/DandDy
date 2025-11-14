@@ -953,11 +953,31 @@
         element.textContent = '';
         element.classList.add('is-typing');
         
-        for (let char of text) {
-          element.textContent += char;
+        let skipTyping = false;
+        
+        // Allow skipping by pressing any key
+        const skipHandler = (e) => {
+          // Only skip if not typing in an input field
+          if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+            skipTyping = true;
+          }
+        };
+        
+        window.addEventListener('keydown', skipHandler, { once: true });
+        
+        // Type out character by character, or skip if interrupted
+        for (let i = 0; i < text.length; i++) {
+          if (skipTyping) {
+            // Show all remaining text immediately
+            element.textContent = text;
+            break;
+          }
+          element.textContent += text[i];
           await this.sleep(speed);
         }
         
+        // Clean up
+        window.removeEventListener('keydown', skipHandler);
         element.classList.remove('is-typing');
       },
       
