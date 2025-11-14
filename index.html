@@ -1787,25 +1787,44 @@
       activate() {
         this.isActive = true;
         this.currentFocusIndex = 0;
-        // Wait for DOM to update before focusing
-        setTimeout(() => this.updateFocus(), 60);
+        // Wait for DOM to update before focusing, retry if no buttons found
+        setTimeout(() => {
+          const buttons = this.getActiveButtons();
+          console.log('[KeyboardNav] Activating, found buttons:', buttons.length);
+          if (buttons.length > 0) {
+            this.updateFocus();
+          } else {
+            // Retry after a bit more time
+            console.log('[KeyboardNav] No buttons found, retrying...');
+            setTimeout(() => this.updateFocus(), 100);
+          }
+        }, 60);
       },
       
       deactivate() {
         this.isActive = false;
         this.clearFocus();
+        console.log('[KeyboardNav] Deactivated');
       },
       
       getActiveButtons() {
         // Get buttons from the last question card that aren't disabled
         const lastCard = document.querySelector('.question-card:last-child');
-        if (!lastCard) return [];
-        return Array.from(lastCard.querySelectorAll('.button-primary:not(:disabled)'));
+        if (!lastCard) {
+          console.log('[KeyboardNav] No question card found');
+          return [];
+        }
+        const buttons = Array.from(lastCard.querySelectorAll('.button-primary:not(:disabled)'));
+        console.log('[KeyboardNav] Found', buttons.length, 'active buttons in last card');
+        return buttons;
       },
       
       updateFocus() {
         const buttons = this.getActiveButtons();
-        if (buttons.length === 0) return;
+        if (buttons.length === 0) {
+          console.log('[KeyboardNav] Cannot update focus, no buttons');
+          return;
+        }
         
         // Remove focus from all buttons
         buttons.forEach(btn => btn.classList.remove('is-focused'));
@@ -1813,6 +1832,7 @@
         // Add focus to current index
         if (buttons[this.currentFocusIndex]) {
           buttons[this.currentFocusIndex].classList.add('is-focused');
+          console.log('[KeyboardNav] Focused button', this.currentFocusIndex);
         }
       },
       
@@ -2506,12 +2526,15 @@
         if (splashActive) return; // Don't interfere with splash screen
         
         if (e.key === 'ArrowUp') {
+          console.log('[Keyboard] Arrow Up pressed, isActive:', KeyboardNav.isActive);
           e.preventDefault();
           KeyboardNav.moveUp();
         } else if (e.key === 'ArrowDown') {
+          console.log('[Keyboard] Arrow Down pressed, isActive:', KeyboardNav.isActive);
           e.preventDefault();
           KeyboardNav.moveDown();
         } else if (e.key === 'Enter') {
+          console.log('[Keyboard] Enter pressed, isActive:', KeyboardNav.isActive);
           e.preventDefault();
           KeyboardNav.select();
         }
