@@ -2303,6 +2303,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
     
     const App = {
       currentQuestion: null,
+      isGeneratingPortrait: false,
       
       async init() {
         console.log('Initializing Character Builder...');
@@ -2764,8 +2765,16 @@ Format your response as JSON array of strings, one for each option in order. Exa
         const isCharacterComplete = character.backstory && character.backstory.length > 0;
         
         if (aiPortraitsEnabled) {
-          if (isCharacterComplete && character.race && character.class) {
-            // Character is complete - generate AI portrait
+          if (isCharacterComplete && character.race && character.class && !character.aiPortraitImageUrl) {
+            // Character is complete and NO portrait generated yet - generate AI portrait
+            // Guard against infinite loop
+            if (this.isGeneratingPortrait) {
+              console.log('Portrait generation already in progress, skipping...');
+              return;
+            }
+            
+            this.isGeneratingPortrait = true;
+            
             // First render with loading indicator
             panel.innerHTML = Components.renderCharacterSheet(character, `
               [ GENERATING AI PORTRAIT... ]
@@ -2796,6 +2805,8 @@ Format your response as JSON array of strings, one for each option in order. Exa
               if (portraitEl) {
                 portraitEl.textContent = AsciiArtService.getFullPortrait(character);
               }
+            } finally {
+              this.isGeneratingPortrait = false;
             }
           } else {
             // Character not complete yet - don't show any portrait
