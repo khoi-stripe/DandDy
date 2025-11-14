@@ -284,6 +284,40 @@
       overflow: auto;
     }
     
+    /* Enhanced Image Container */
+    .enhanced-image-container {
+      text-align: center;
+      margin: var(--spacing-md) 0;
+      position: relative;
+    }
+    
+    .enhanced-image-container.hidden {
+      display: none;
+    }
+    
+    .enhanced-image-container img {
+      max-width: 100%;
+      border: 1px solid var(--terminal-accent);
+      border-radius: 4px;
+      image-rendering: pixelated;
+      animation: depixelate 2s ease-out forwards;
+    }
+    
+    @keyframes depixelate {
+      0% {
+        filter: blur(20px) contrast(1.5);
+        transform: scale(0.5);
+      }
+      50% {
+        filter: blur(10px) contrast(1.3);
+        transform: scale(0.75);
+      }
+      100% {
+        filter: blur(0px) contrast(1);
+        transform: scale(1);
+      }
+    }
+    
     /* Loading */
     .loading-indicator {
       color: var(--terminal-dim);
@@ -1693,7 +1727,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
           
           if (!imageUrl) {
             console.log('DALL-E generation failed, using template');
-            return this.getFullPortrait(character);
+            return { asciiArt: this.getFullPortrait(character), imageUrl: null };
           }
           
           console.log('DALL-E image generated:', imageUrl);
@@ -1704,15 +1738,15 @@ Format your response as JSON array of strings, one for each option in order. Exa
           
           if (!asciiArt) {
             console.log('ASCII conversion failed, using template');
-            return this.getFullPortrait(character);
+            return { asciiArt: this.getFullPortrait(character), imageUrl: imageUrl };
           }
           
           console.log('ASCII art generated successfully');
-          return asciiArt;
+          return { asciiArt, imageUrl };
         } catch (error) {
           console.error('AI portrait generation error:', error);
           // Fallback to template
-          return this.getFullPortrait(character);
+          return { asciiArt: this.getFullPortrait(character), imageUrl: null };
         }
       },
     };
@@ -1767,6 +1801,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
           hitPoints: 0,
           personalityTrait: '',
           backstory: '',
+          aiPortraitImageUrl: null,
         },
       },
       
@@ -1810,6 +1845,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
             hitPoints: 0,
             personalityTrait: '',
             backstory: '',
+            aiPortraitImageUrl: null,
           },
         };
         this.notify();
@@ -1870,7 +1906,17 @@ Format your response as JSON array of strings, one for each option in order. Exa
           <div class="character-sheet">
             ${(character.race && showPortrait) ? `
               <div class="ascii-portrait" id="character-portrait">${portraitArt}</div>
+              ${character.aiPortraitImageUrl ? `
+                <div style="text-align: center; margin: var(--spacing-md) 0;">
+                  <button class="button-primary" onclick="App.enhancePortrait()" id="enhance-btn">
+                    [ ENHANCE ]
+                  </button>
+                </div>
+              ` : ''}
             ` : ''}
+            
+            <!-- Hidden image container for reveal -->
+            <div id="enhanced-image-container" class="enhanced-image-container hidden"></div>
             
             <div class="sheet-section">
               <div class="sheet-header">[ CHARACTER INFO ]</div>
@@ -2731,11 +2777,17 @@ Format your response as JSON array of strings, one for each option in order. Exa
             
             // Generate AI portrait in background
             try {
-              const aiPortrait = await AsciiArtService.generateAIPortrait(character);
+              const result = await AsciiArtService.generateAIPortrait(character);
+              
+              // Store the image URL in character state
+              if (result.imageUrl) {
+                CharacterState.update({ aiPortraitImageUrl: result.imageUrl });
+              }
+              
               // Update just the portrait section
               const portraitEl = document.getElementById('character-portrait');
               if (portraitEl) {
-                portraitEl.textContent = aiPortrait;
+                portraitEl.textContent = result.asciiArt;
               }
             } catch (error) {
               console.error('Failed to generate AI portrait:', error);
@@ -2799,6 +2851,34 @@ Format your response as JSON array of strings, one for each option in order. Exa
         if (confirm('Start a new character? Current progress will be saved.')) {
           document.getElementById('narrator-panel').innerHTML = '';
           this.init();
+        }
+      },
+      
+      enhancePortrait() {
+        const state = CharacterState.get();
+        const imageUrl = state.character.aiPortraitImageUrl;
+        
+        if (!imageUrl) {
+          console.error('No AI portrait image URL available');
+          return;
+        }
+        
+        // Hide ASCII portrait and enhance button
+        const asciiPortrait = document.getElementById('character-portrait');
+        const enhanceBtn = document.getElementById('enhance-btn');
+        if (asciiPortrait) asciiPortrait.style.display = 'none';
+        if (enhanceBtn) enhanceBtn.parentElement.style.display = 'none';
+        
+        // Show enhanced image container with pixelated transition
+        const container = document.getElementById('enhanced-image-container');
+        if (container) {
+          container.innerHTML = `<img src="${imageUrl}" alt="Enhanced Character Portrait">`;
+          container.classList.remove('hidden');
+          
+          // Scroll to the image
+          setTimeout(() => {
+            container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 100);
         }
       },
     };
