@@ -274,13 +274,14 @@
     
     /* ASCII Art */
     .ascii-portrait {
-      font-size: 12px;
+      font-size: 6px;
       line-height: 1;
       color: var(--terminal-accent);
       text-align: center;
       margin: var(--spacing-md) 0;
       white-space: pre;
       font-family: monospace;
+      overflow: auto;
     }
     
     /* Loading */
@@ -1210,7 +1211,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
       ASCII_CHARS: '$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,"^`\'.  ',
       
       // Convert image URL to ASCII art with Floyd-Steinberg dithering
-      async convertToAscii(imageUrl, width = 60, height = 30) {
+      async convertToAscii(imageUrl, width = 120, height = 60) {
         try {
           // Load image
           const img = await this.loadImage(imageUrl);
@@ -1669,9 +1670,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
           
           console.log('DALL-E image generated:', imageUrl);
           
-          // Step 2: Convert to ASCII with enhanced resolution
+          // Step 2: Convert to ASCII with high resolution
           console.log('Converting to ASCII with Floyd-Steinberg dithering...');
-          const asciiArt = await ImageToAsciiService.convertToAscii(imageUrl, 60, 30);
+          const asciiArt = await ImageToAsciiService.convertToAscii(imageUrl, 120, 60);
           
           if (!asciiArt) {
             console.log('ASCII conversion failed, using template');
