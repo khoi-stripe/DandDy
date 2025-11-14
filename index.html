@@ -704,7 +704,7 @@
     </div>
     
     <div class="terminal-footer">
-      [ v1.0 | Press ↑↓ to navigate, Enter to select ]
+      [ v1.0 | Press ↑↓ to navigate, Enter to select, Tab for chat ]
     </div>
   </div>
   
@@ -1876,6 +1876,28 @@
           this.deactivate();
         }
       },
+      
+      focusChat() {
+        // Find chat input and focus it
+        const chatInput = document.querySelector('.chat-input:not(:disabled)');
+        if (chatInput) {
+          this.clearFocus();
+          chatInput.focus();
+          return true;
+        }
+        return false;
+      },
+      
+      focusFromChat() {
+        // Return focus from chat to buttons
+        const chatInput = document.querySelector('.chat-input');
+        if (chatInput && document.activeElement === chatInput) {
+          chatInput.blur();
+          this.updateFocus();
+          return true;
+        }
+        return false;
+      },
     };
     
     // ===== APP LOGIC =====
@@ -2554,15 +2576,32 @@
       window.addEventListener('keydown', (e) => {
         if (splashActive) return; // Don't interfere with splash screen
         
-        if (e.key === 'ArrowUp') {
+        // Check if user is typing in chat input
+        const chatInput = document.querySelector('.chat-input');
+        const isChatFocused = chatInput && document.activeElement === chatInput;
+        
+        if (e.key === 'Tab') {
           e.preventDefault();
-          KeyboardNav.moveUp();
-        } else if (e.key === 'ArrowDown') {
+          if (isChatFocused) {
+            KeyboardNav.focusFromChat();
+          } else {
+            KeyboardNav.focusChat();
+          }
+        } else if (e.key === 'Escape' && isChatFocused) {
           e.preventDefault();
-          KeyboardNav.moveDown();
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          KeyboardNav.select();
+          KeyboardNav.focusFromChat();
+        } else if (!isChatFocused) {
+          // Only handle these keys when NOT in chat input
+          if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            KeyboardNav.moveUp();
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            KeyboardNav.moveDown();
+          } else if (e.key === 'Enter') {
+            e.preventDefault();
+            KeyboardNav.select();
+          }
         }
       });
     });
