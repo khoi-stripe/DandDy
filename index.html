@@ -1060,6 +1060,41 @@
         return `${character.name} is a ${character.race} ${character.class} with a mysterious past. They don't talk about it much. Probably for the best.`;
       },
       
+      async generateOptionVariations(questionText, options) {
+        const optionDescriptions = options.map(opt => 
+          `Value: "${opt.value}", Default text: "${opt.text}"`
+        ).join('\n');
+        
+        const prompt = `For the question: "${questionText}"
+
+Generate fresh, creative variations for these D&D character creation options. Keep each variation to 4-8 words, punchy and clear. Match the tone of each original but make them feel unique:
+
+${optionDescriptions}
+
+Format your response as JSON array of strings, one for each option in order. Example: ["text1", "text2", "text3", "text4"]`;
+        
+        const systemPrompt = 'You are a creative D&D character creation assistant. Generate engaging option text that feels fresh but maintains the same meaning. Be concise and direct. Return ONLY valid JSON.';
+        
+        const response = await this.generateCompletion(prompt, systemPrompt);
+        
+        if (response) {
+          try {
+            // Try to extract JSON from response
+            const jsonMatch = response.match(/\[.*\]/s);
+            if (jsonMatch) {
+              const variations = JSON.parse(jsonMatch[0]);
+              if (Array.isArray(variations) && variations.length === options.length) {
+                return variations;
+              }
+            }
+          } catch (error) {
+            console.log('Failed to parse AI option variations:', error);
+          }
+        }
+        
+        // Fallback: return original texts
+        return options.map(opt => opt.text);
+      },
     };
     
     // Storage service for localStorage
@@ -1244,6 +1279,37 @@
         }
         
         return art;
+      },
+    };
+    
+    // ===== OPTION VARIATIONS CACHE =====
+    // Store AI-generated option variations per session
+    const OptionVariationsCache = {
+      cache: {},
+      
+      async get(questionId, question) {
+        // Return cached if exists
+        if (this.cache[questionId]) {
+          return this.cache[questionId];
+        }
+        
+        // Generate new variations
+        const variations = await AIService.generateOptionVariations(question.text, question.options);
+        
+        // Create new options array with varied text but same underlying data
+        const variedOptions = question.options.map((opt, index) => ({
+          ...opt,
+          text: variations[index]
+        }));
+        
+        // Cache it
+        this.cache[questionId] = variedOptions;
+        
+        return variedOptions;
+      },
+      
+      reset() {
+        this.cache = {};
       },
     };
     
@@ -1734,6 +1800,7 @@
         
         // Start the flow
         CharacterState.reset();
+        OptionVariationsCache.reset(); // Reset option variations for new character
         await this.showQuestion('intro');
       },
       
@@ -1799,7 +1866,11 @@
         const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(messageEl, question.text);
         
-        narratorPanel.innerHTML += Components.renderQuestion(question);
+        // Get varied options (AI-generated or cached)
+        const variedOptions = await OptionVariationsCache.get(question.id, question);
+        const variedQuestion = { ...question, options: variedOptions };
+        
+        narratorPanel.innerHTML += Components.renderQuestion(variedQuestion);
         
         Utils.scrollToBottom(true);
         
@@ -1815,8 +1886,11 @@
         const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(messageEl, question.text);
         
+        // Get varied options (AI-generated or cached)
+        const variedOptions = await OptionVariationsCache.get(question.id, question);
+        
         // Show options in a scrollable list
-        const optionsHTML = question.options.map((opt, index) => `
+        const optionsHTML = variedOptions.map((opt, index) => `
           <button class="button-primary" onclick="App.handleAnswer('${question.id}', ${index})" style="margin-bottom: 8px;">
             ${opt.text}
           </button>
