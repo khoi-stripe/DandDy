@@ -2162,16 +2162,21 @@
         const question = QUESTIONS.find(q => q.id === questionId);
         const option = question.options[optionIndex];
         
-        // Mark the selected button
-        const buttons = document.querySelectorAll('.question-card:last-child .button-primary');
-        buttons.forEach((btn, idx) => {
-          if (idx === optionIndex) {
-            btn.classList.add('is-selected');
-            btn.disabled = true;
-          } else {
-            btn.disabled = true;
-          }
-        });
+        // Mark the selected button - get all question cards and find the last one
+        const allQuestionCards = document.querySelectorAll('.question-card');
+        const lastQuestionCard = allQuestionCards[allQuestionCards.length - 1];
+        
+        if (lastQuestionCard) {
+          const buttons = lastQuestionCard.querySelectorAll('.button-primary');
+          buttons.forEach((btn, idx) => {
+            if (idx === optionIndex) {
+              btn.classList.add('is-selected');
+              btn.disabled = true;
+            } else {
+              btn.disabled = true;
+            }
+          });
+        }
         
         // Save answer
         const state = CharacterState.get();
@@ -2210,14 +2215,19 @@
       },
       
       async handleAbilityMethod(method) {
-        // Mark the selected button
-        const buttons = document.querySelectorAll('.question-card:last-child .button-primary');
-        buttons.forEach((btn) => {
-          if (btn.textContent.includes(method === 'standard' ? 'Standard Array' : 'Roll 4d6')) {
-            btn.classList.add('is-selected');
-          }
-          btn.disabled = true;
-        });
+        // Mark the selected button - get all question cards and find the last one
+        const allQuestionCards = document.querySelectorAll('.question-card');
+        const lastQuestionCard = allQuestionCards[allQuestionCards.length - 1];
+        
+        if (lastQuestionCard) {
+          const buttons = lastQuestionCard.querySelectorAll('.button-primary');
+          buttons.forEach((btn) => {
+            if (btn.textContent.includes(method === 'standard' ? 'Standard Array' : 'Roll 4d6')) {
+              btn.classList.add('is-selected');
+            }
+            btn.disabled = true;
+          });
+        }
         
         const state = CharacterState.get();
         const classData = DND_DATA.classes.find(c => c.id === state.character.class);
@@ -2283,14 +2293,19 @@
       },
       
       async handleNameSelect(name) {
-        // Mark the selected button
-        const buttons = document.querySelectorAll('.question-card:last-child .button-primary');
-        buttons.forEach((btn) => {
-          if (btn.textContent.trim() === name) {
-            btn.classList.add('is-selected');
-          }
-          btn.disabled = true;
-        });
+        // Mark the selected button - get all question cards and find the last one
+        const allQuestionCards = document.querySelectorAll('.question-card');
+        const lastQuestionCard = allQuestionCards[allQuestionCards.length - 1];
+        
+        if (lastQuestionCard) {
+          const buttons = lastQuestionCard.querySelectorAll('.button-primary');
+          buttons.forEach((btn) => {
+            if (btn.textContent.trim() === name) {
+              btn.classList.add('is-selected');
+            }
+            btn.disabled = true;
+          });
+        }
         
         // Disable the custom name input too
         const customInput = document.getElementById('custom-name-input');
@@ -2321,9 +2336,14 @@
         input.style.color = 'var(--terminal-bg)';
         input.disabled = true;
         
-        // Disable all name buttons
-        const buttons = document.querySelectorAll('.question-card:last-child .button-primary');
-        buttons.forEach(btn => btn.disabled = true);
+        // Disable all name buttons - get all question cards and find the last one
+        const allQuestionCards = document.querySelectorAll('.question-card');
+        const lastQuestionCard = allQuestionCards[allQuestionCards.length - 1];
+        
+        if (lastQuestionCard) {
+          const buttons = lastQuestionCard.querySelectorAll('.button-primary');
+          buttons.forEach(btn => btn.disabled = true);
+        }
         
         CharacterState.updateCharacter({ name });
         
