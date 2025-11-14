@@ -374,105 +374,6 @@
       animation: blink 1.5s infinite;
     }
     
-    /* Chat Interface */
-    .chat-container {
-      margin-top: var(--spacing-md);
-      border-top: 1px solid var(--terminal-dim);
-      padding-top: var(--spacing-md);
-    }
-    
-    .chat-toggle {
-      background: transparent;
-      border: 1px solid var(--terminal-dim);
-      color: var(--terminal-dim);
-      padding: var(--spacing-xs) var(--spacing-sm);
-      font-family: var(--font-mono);
-      font-size: var(--font-size-small);
-      cursor: pointer;
-      transition: all var(--transition-speed);
-      margin-bottom: var(--spacing-sm);
-    }
-    
-    .chat-toggle:hover {
-      border-color: var(--terminal-fg);
-      color: var(--terminal-fg);
-    }
-    
-    .chat-interface {
-      margin-top: var(--spacing-sm);
-    }
-    
-    .chat-messages {
-      max-height: 200px;
-      overflow-y: auto;
-      margin-bottom: var(--spacing-sm);
-    }
-    
-    .chat-message {
-      margin-bottom: var(--spacing-sm);
-      padding: var(--spacing-sm);
-      border-left: 2px solid var(--terminal-dim);
-    }
-    
-    .chat-message.user {
-      border-left-color: var(--terminal-accent);
-    }
-    
-    .chat-message.narrator {
-      border-left-color: var(--terminal-fg);
-    }
-    
-    .chat-label {
-      font-size: var(--font-size-small);
-      color: var(--terminal-dim);
-      margin-bottom: var(--spacing-xs);
-    }
-    
-    .chat-text {
-      color: var(--terminal-fg);
-    }
-    
-    .chat-input-container {
-      display: flex;
-      gap: var(--spacing-sm);
-    }
-    
-    .chat-input {
-      flex: 1;
-      background: transparent;
-      border: 1px solid var(--terminal-dim);
-      color: var(--terminal-fg);
-      padding: var(--spacing-sm);
-      font-family: var(--font-mono);
-      font-size: var(--font-size-small);
-    }
-    
-    .chat-input:focus {
-      outline: none;
-      border-color: var(--terminal-fg);
-    }
-    
-    .chat-send {
-      background: transparent;
-      border: 1px solid var(--terminal-fg);
-      color: var(--terminal-fg);
-      padding: var(--spacing-sm) var(--spacing-md);
-      font-family: var(--font-mono);
-      font-size: var(--font-size-small);
-      cursor: pointer;
-      transition: all var(--transition-speed);
-    }
-    
-    .chat-send:hover:not(:disabled) {
-      background: var(--terminal-fg);
-      color: var(--terminal-bg);
-    }
-    
-    .chat-send:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    
     /* ===== STATES ===== */
     .is-typing::after {
       content: '▋';
@@ -1158,23 +1059,6 @@
         return `${character.name} is a ${character.race} ${character.class} with a mysterious past. They don't talk about it much. Probably for the best.`;
       },
       
-      async askNarrator(userQuestion, currentStep, characterSoFar) {
-        const systemPrompt = `You are a deadpan, slightly sarcastic D&D character creation assistant. The user is creating a character and is currently on the step: "${currentStep}". Their character so far: ${JSON.stringify(characterSoFar)}. Answer their question briefly (2-3 sentences max) in a dry, witty tone. Be helpful but maintain your sardonic personality.`;
-        
-        const response = await this.generateCompletion(userQuestion, systemPrompt);
-        
-        if (response) return response;
-        
-        // Fallback
-        const fallbacks = [
-          "Good question. Wish I had a good answer. Try making a choice and see what happens.",
-          "That's... oddly specific. Just pick what feels right.",
-          "I'm supposed to be helpful here. Let me think... no, still drawing a blank.",
-          "[sigh] Look, they're all valid choices. Pick one and we'll move on.",
-        ];
-        
-        return Utils.randomChoice(fallbacks);
-      },
     };
     
     // Storage service for localStorage
@@ -1359,36 +1243,6 @@
         }
         
         return art;
-      },
-    };
-    
-    // ===== CHAT STATE =====
-    const ChatState = {
-      questionsRemaining: 3,
-      messages: [],
-      isOpen: false,
-      currentQuestionId: null,
-      
-      init(questionId) {
-        this.currentQuestionId = questionId;
-        this.questionsRemaining = 3;
-        this.messages = [];
-        this.isOpen = false;
-      },
-      
-      toggle() {
-        this.isOpen = !this.isOpen;
-      },
-      
-      addMessage(text, isUser) {
-        this.messages.push({ text, isUser, timestamp: Date.now() });
-        if (isUser) {
-          this.questionsRemaining--;
-        }
-      },
-      
-      canAsk() {
-        return this.questionsRemaining > 0;
       },
     };
     
@@ -1595,38 +1449,6 @@
                 <br>Without an API key, fallback responses will be used.
               </div>
             </div>
-          </div>
-        `;
-      },
-      
-      renderChat(questionId) {
-        const messagesHTML = ChatState.messages.map(msg => `
-          <div class="chat-message ${msg.isUser ? 'user' : 'narrator'}">
-            <div class="chat-label">${msg.isUser ? 'You' : 'Narrator'}</div>
-            <div class="chat-text">${msg.text}</div>
-          </div>
-        `).join('');
-        
-        const canAsk = ChatState.canAsk();
-        
-        return `
-          <div class="chat-container">
-            <button class="chat-toggle" onclick="App.toggleChat('${questionId}')">
-              ${ChatState.isOpen ? '▼' : '▶'} Ask the narrator (${ChatState.questionsRemaining} questions remaining)
-            </button>
-            ${ChatState.isOpen ? `
-              <div class="chat-interface">
-                ${messagesHTML ? `<div class="chat-messages">${messagesHTML}</div>` : ''}
-                ${canAsk ? `
-                  <div class="chat-input-container">
-                    <input type="text" class="chat-input" id="chat-input-${questionId}" placeholder="Ask a question..." ${canAsk ? '' : 'disabled'} onkeydown="if(event.key==='Enter'){App.sendChatMessage('${questionId}')}">
-                    <button class="chat-send" onclick="App.sendChatMessage('${questionId}')" ${canAsk ? '' : 'disabled'}>SEND</button>
-                  </div>
-                ` : `
-                  <div class="text-dim">No more questions for this step. Make your choice to continue.</div>
-                `}
-              </div>
-            ` : ''}
           </div>
         `;
       },
@@ -1977,12 +1799,6 @@
         await Utils.typewriter(messageEl, question.text);
         
         narratorPanel.innerHTML += Components.renderQuestion(question);
-        
-        // Add chat interface for motivation question (prototype)
-        if (question.id === 'motivation') {
-          ChatState.init(question.id);
-          narratorPanel.innerHTML += Components.renderChat(question.id);
-        }
         
         Utils.scrollToBottom(true);
         
@@ -2393,71 +2209,6 @@
         if (confirm('Start a new character? Current progress will be saved.')) {
           document.getElementById('narrator-panel').innerHTML = '';
           this.init();
-        }
-      },
-      
-      toggleChat(questionId) {
-        ChatState.toggle();
-        
-        // Re-render chat interface
-        const chatContainer = document.querySelector('.chat-container');
-        if (chatContainer) {
-          chatContainer.outerHTML = Components.renderChat(questionId);
-        }
-        
-        Utils.scrollToBottom(true);
-        
-        // Focus input if opening
-        if (ChatState.isOpen) {
-          setTimeout(() => {
-            const input = document.getElementById(`chat-input-${questionId}`);
-            if (input) input.focus();
-          }, 100);
-        }
-      },
-      
-      async sendChatMessage(questionId) {
-        const input = document.getElementById(`chat-input-${questionId}`);
-        if (!input) return;
-        
-        const question = input.value.trim();
-        if (!question) return;
-        
-        if (!ChatState.canAsk()) return;
-        
-        // Add user message
-        ChatState.addMessage(question, true);
-        input.value = '';
-        input.disabled = true;
-        
-        // Re-render to show user message and loading state
-        const chatContainer = document.querySelector('.chat-container');
-        if (chatContainer) {
-          chatContainer.outerHTML = Components.renderChat(questionId);
-        }
-        Utils.scrollToBottom(true);
-        
-        // Get AI response
-        const state = CharacterState.get();
-        const currentStepName = 'character motivation';
-        const answer = await AIService.askNarrator(question, currentStepName, state.character);
-        
-        // Add narrator response
-        ChatState.addMessage(answer, false);
-        
-        // Re-render with response
-        const chatContainerUpdated = document.querySelector('.chat-container');
-        if (chatContainerUpdated) {
-          chatContainerUpdated.outerHTML = Components.renderChat(questionId);
-        }
-        Utils.scrollToBottom(true);
-        
-        // Focus input if still have questions
-        if (ChatState.canAsk()) {
-          setTimeout(() => {
-            const newInput = document.getElementById(`chat-input-${questionId}`);
-            if (newInput) newInput.focus();
-          }, 100);
         }
       },
     };
