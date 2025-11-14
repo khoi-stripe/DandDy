@@ -619,6 +619,7 @@
       OPENAI_MODEL: 'gpt-3.5-turbo',
       STORAGE_KEY: 'dnd_characters',
       API_KEY_STORAGE: 'dnd_openai_key',
+      AI_PORTRAITS_STORAGE: 'dnd_ai_portraits_enabled',
       MAX_RETRIES: 2,
       ENABLE_AI: true, // Set to false to disable all AI features
     };
@@ -1095,6 +1096,164 @@ Format your response as JSON array of strings, one for each option in order. Exa
         // Fallback: return original texts
         return options.map(opt => opt.text);
       },
+      
+      // Generate character portrait image using DALL-E
+      async generatePortraitImage(character) {
+        const apiKey = StorageService.getAPIKey();
+        
+        if (!apiKey || !CONFIG.ENABLE_AI) {
+          console.log('AI service unavailable for image generation');
+          return null;
+        }
+        
+        // Build a detailed prompt from character attributes
+        const prompt = this.buildPortraitPrompt(character);
+        
+        try {
+          const response = await fetch('https://api.openai.com/v1/images/generations', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: 'dall-e-3',
+              prompt: prompt,
+              n: 1,
+              size: '1024x1024',
+              quality: 'standard',
+            }),
+          });
+          
+          if (!response.ok) {
+            throw new Error(`DALL-E API error: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          return data.data[0].url; // Returns the image URL
+        } catch (error) {
+          console.error('DALL-E image generation error:', error);
+          return null;
+        }
+      },
+      
+      // Build detailed DALL-E prompt from character
+      buildPortraitPrompt(character) {
+        const parts = [];
+        
+        // Style directive
+        parts.push('Fantasy character portrait in a classic D&D art style, high contrast, dramatic lighting');
+        
+        // Race
+        if (character.race) {
+          const raceDescriptions = {
+            human: 'human with average features',
+            elf: 'elf with pointed ears and graceful features',
+            dwarf: 'dwarf with a thick beard and stocky build',
+            halfling: 'halfling, small and cheerful',
+            dragonborn: 'dragonborn with scaled skin and dragon-like features',
+            gnome: 'gnome, small with clever eyes',
+            'half-elf': 'half-elf with slightly pointed ears',
+            'half-orc': 'half-orc with tusks and powerful build',
+            tiefling: 'tiefling with horns and a tail',
+          };
+          parts.push(raceDescriptions[character.race] || character.race);
+        }
+        
+        // Class
+        if (character.class) {
+          const classDescriptions = {
+            fighter: 'wearing heavy armor and holding a sword',
+            wizard: 'in flowing robes holding a staff with arcane energy',
+            rogue: 'in dark leather armor with daggers',
+            cleric: 'in holy vestments with a sacred symbol',
+            ranger: 'with a bow and forest attire',
+            paladin: 'in shining armor with a holy shield',
+            barbarian: 'with wild hair wielding a massive axe',
+            bard: 'with a lute and colorful clothing',
+            druid: 'with nature-themed robes and wooden staff',
+            monk: 'in simple robes in a martial stance',
+            sorcerer: 'with crackling magical energy',
+            warlock: 'with dark robes and eldritch symbols',
+          };
+          parts.push(classDescriptions[character.class] || character.class);
+        }
+        
+        // Alignment hint (subtle)
+        if (character.alignment) {
+          if (character.alignment.includes('good')) {
+            parts.push('with noble bearing');
+          } else if (character.alignment.includes('evil')) {
+            parts.push('with a menacing aura');
+          }
+        }
+        
+        parts.push('full body portrait, fantasy art style, detailed');
+        
+        return parts.join(', ');
+      },
+    };
+    
+    // Image-to-ASCII converter
+    const ImageToAsciiService = {
+      // ASCII characters from darkest to lightest
+      ASCII_CHARS: ['@', '#', 'S', '%', '?', '*', '+', ';', ':', ',', '.', ' '],
+      
+      // Convert image URL to ASCII art
+      async convertToAscii(imageUrl, width = 40, height = 20) {
+        try {
+          // Load image
+          const img = await this.loadImage(imageUrl);
+          
+          // Create canvas and draw image
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          
+          // Draw image scaled to canvas size
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Get pixel data
+          const imageData = ctx.getImageData(0, 0, width, height);
+          const pixels = imageData.data;
+          
+          // Convert to ASCII
+          let ascii = '';
+          for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+              const idx = (y * width + x) * 4;
+              const r = pixels[idx];
+              const g = pixels[idx + 1];
+              const b = pixels[idx + 2];
+              
+              // Calculate brightness (0-255)
+              const brightness = (r + g + b) / 3;
+              
+              // Map brightness to ASCII character
+              const charIndex = Math.floor((brightness / 255) * (this.ASCII_CHARS.length - 1));
+              ascii += this.ASCII_CHARS[this.ASCII_CHARS.length - 1 - charIndex];
+            }
+            ascii += '\n';
+          }
+          
+          return ascii;
+        } catch (error) {
+          console.error('Image to ASCII conversion error:', error);
+          return null;
+        }
+      },
+      
+      // Load image from URL (handles CORS)
+      loadImage(url) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'Anonymous'; // Try to handle CORS
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = url;
+        });
+      },
     };
     
     // Storage service for localStorage
@@ -1105,6 +1264,15 @@ Format your response as JSON array of strings, one for each option in order. Exa
       
       setAPIKey(key) {
         localStorage.setItem(CONFIG.API_KEY_STORAGE, key);
+      },
+      
+      getAIPortraitsEnabled() {
+        const value = localStorage.getItem(CONFIG.AI_PORTRAITS_STORAGE);
+        return value === 'true'; // Default to false
+      },
+      
+      setAIPortraitsEnabled(enabled) {
+        localStorage.setItem(CONFIG.AI_PORTRAITS_STORAGE, enabled ? 'true' : 'false');
       },
       
       getCharacters() {
@@ -1430,6 +1598,38 @@ Format your response as JSON array of strings, one for each option in order. Exa
         
         return art;
       },
+      
+      // Generate AI-powered ASCII portrait
+      async generateAIPortrait(character) {
+        try {
+          // Step 1: Generate image with DALL-E
+          console.log('Generating DALL-E portrait...');
+          const imageUrl = await AIService.generatePortraitImage(character);
+          
+          if (!imageUrl) {
+            console.log('DALL-E generation failed, using template');
+            return this.getFullPortrait(character);
+          }
+          
+          console.log('DALL-E image generated:', imageUrl);
+          
+          // Step 2: Convert to ASCII
+          console.log('Converting to ASCII...');
+          const asciiArt = await ImageToAsciiService.convertToAscii(imageUrl, 50, 25);
+          
+          if (!asciiArt) {
+            console.log('ASCII conversion failed, using template');
+            return this.getFullPortrait(character);
+          }
+          
+          console.log('ASCII art generated successfully');
+          return asciiArt;
+        } catch (error) {
+          console.error('AI portrait generation error:', error);
+          // Fallback to template
+          return this.getFullPortrait(character);
+        }
+      },
     };
     
     // ===== OPTION VARIATIONS CACHE =====
@@ -1572,16 +1772,19 @@ Format your response as JSON array of strings, one for each option in order. Exa
         `;
       },
       
-      renderCharacterSheet(character) {
+      renderCharacterSheet(character, portrait = null) {
         const race = DND_DATA.races.find(r => r.id === character.race);
         const classData = DND_DATA.classes.find(c => c.id === character.class);
         const background = DND_DATA.backgrounds.find(b => b.id === character.background);
         const alignment = DND_DATA.alignments.find(a => a.id === character.alignment);
         
+        // Use provided portrait or generate template
+        const portraitArt = portrait || (character.race ? AsciiArtService.getFullPortrait(character) : '');
+        
         return `
           <div class="character-sheet">
             ${character.race ? `
-              <div class="ascii-portrait">${AsciiArtService.getFullPortrait(character)}</div>
+              <div class="ascii-portrait" id="character-portrait">${portraitArt}</div>
             ` : ''}
             
             <div class="sheet-section">
@@ -1643,6 +1846,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
       
       renderSettings() {
         const apiKey = StorageService.getAPIKey() || '';
+        const aiPortraitsEnabled = StorageService.getAIPortraitsEnabled();
         
         return `
           <div class="settings-overlay" onclick="App.closeSettings()"></div>
@@ -1653,6 +1857,14 @@ Format your response as JSON array of strings, one for each option in order. Exa
               <label class="settings-label">OpenAI API Key:</label>
               <input type="password" class="input-field" id="api-key-input" value="${apiKey}" placeholder="sk-...">
               <div class="settings-help">Required for AI-generated dialogue and names. Get yours at platform.openai.com</div>
+            </div>
+            
+            <div class="settings-row" style="margin-top: 16px;">
+              <label class="settings-label" style="display: flex; align-items: center; cursor: pointer;">
+                <input type="checkbox" id="ai-portraits-checkbox" ${aiPortraitsEnabled ? 'checked' : ''} style="margin-right: 8px; cursor: pointer;">
+                <span>Enable AI-Generated Portraits (Experimental)</span>
+              </label>
+              <div class="settings-help">Uses DALL-E 3 to generate unique character portraits. Costs ~$0.04 per character. Falls back to ASCII templates if disabled or if generation fails.</div>
             </div>
             
             <div class="settings-row">
@@ -2413,9 +2625,41 @@ Format your response as JSON array of strings, one for each option in order. Exa
         await this.showQuestion(this.currentQuestion.next);
       },
       
-      updateCharacterPanel(character) {
+      async updateCharacterPanel(character) {
         const panel = document.getElementById('character-panel');
-        panel.innerHTML = Components.renderCharacterSheet(character);
+        const aiPortraitsEnabled = StorageService.getAIPortraitsEnabled();
+        
+        // Show loading state if AI portraits are enabled and character has enough info
+        if (aiPortraitsEnabled && character.race && character.class) {
+          // First render with template and loading indicator
+          panel.innerHTML = Components.renderCharacterSheet(character, `
+            [ GENERATING AI PORTRAIT... ]
+            
+            
+            
+            . . . ( ._.)
+          `);
+          
+          // Generate AI portrait in background
+          try {
+            const aiPortrait = await AsciiArtService.generateAIPortrait(character);
+            // Update just the portrait section
+            const portraitEl = document.getElementById('character-portrait');
+            if (portraitEl) {
+              portraitEl.textContent = aiPortrait;
+            }
+          } catch (error) {
+            console.error('Failed to generate AI portrait:', error);
+            // Fallback already handled in generateAIPortrait
+            const portraitEl = document.getElementById('character-portrait');
+            if (portraitEl) {
+              portraitEl.textContent = AsciiArtService.getFullPortrait(character);
+            }
+          }
+        } else {
+          // Use template portraits
+          panel.innerHTML = Components.renderCharacterSheet(character);
+        }
       },
       
       openSettings() {
@@ -2432,12 +2676,15 @@ Format your response as JSON array of strings, one for each option in order. Exa
       saveSettings() {
         const input = document.getElementById('api-key-input');
         const key = input.value.trim();
+        const aiPortraitsCheckbox = document.getElementById('ai-portraits-checkbox');
         
         if (key) {
           StorageService.setAPIKey(key);
-          alert('API key saved!');
         }
         
+        StorageService.setAIPortraitsEnabled(aiPortraitsCheckbox.checked);
+        
+        alert('Settings saved!');
         this.closeSettings();
       },
       
