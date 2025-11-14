@@ -1364,31 +1364,57 @@
     
     // ===== CHAT STATE =====
     const ChatState = {
-      questionsRemaining: 3,
-      messages: [],
-      isOpen: false,
-      currentQuestionId: null,
+      // Store state per question ID
+      states: {},
       
       init(questionId) {
-        this.currentQuestionId = questionId;
-        this.questionsRemaining = 3;
-        this.messages = [];
-        this.isOpen = false;
-      },
-      
-      toggle() {
-        this.isOpen = !this.isOpen;
-      },
-      
-      addMessage(text, isUser) {
-        this.messages.push({ text, isUser, timestamp: Date.now() });
-        if (isUser) {
-          this.questionsRemaining--;
+        if (!this.states[questionId]) {
+          this.states[questionId] = {
+            questionsRemaining: 3,
+            messages: [],
+            isOpen: false,
+          };
         }
       },
       
-      canAsk() {
-        return this.questionsRemaining > 0;
+      getState(questionId) {
+        if (!this.states[questionId]) {
+          this.init(questionId);
+        }
+        return this.states[questionId];
+      },
+      
+      toggle(questionId) {
+        const state = this.getState(questionId);
+        state.isOpen = !state.isOpen;
+      },
+      
+      addMessage(questionId, text, isUser) {
+        const state = this.getState(questionId);
+        state.messages.push({ text, isUser, timestamp: Date.now() });
+        if (isUser) {
+          state.questionsRemaining--;
+        }
+      },
+      
+      canAsk(questionId) {
+        const state = this.getState(questionId);
+        return state.questionsRemaining > 0;
+      },
+      
+      isOpen(questionId) {
+        const state = this.getState(questionId);
+        return state.isOpen;
+      },
+      
+      getMessages(questionId) {
+        const state = this.getState(questionId);
+        return state.messages;
+      },
+      
+      getQuestionsRemaining(questionId) {
+        const state = this.getState(questionId);
+        return state.questionsRemaining;
       },
     };
     
@@ -1600,21 +1626,24 @@
       },
       
       renderChat(questionId) {
-        const messagesHTML = ChatState.messages.map(msg => `
+        const messages = ChatState.getMessages(questionId);
+        const messagesHTML = messages.map(msg => `
           <div class="chat-message ${msg.isUser ? 'user' : 'narrator'}">
             <div class="chat-label">${msg.isUser ? 'You' : 'Narrator'}</div>
             <div class="chat-text">${msg.text}</div>
           </div>
         `).join('');
         
-        const canAsk = ChatState.canAsk();
+        const canAsk = ChatState.canAsk(questionId);
+        const isOpen = ChatState.isOpen(questionId);
+        const questionsRemaining = ChatState.getQuestionsRemaining(questionId);
         
         return `
           <div class="chat-container">
             <button class="chat-toggle" onclick="App.toggleChat('${questionId}')">
-              ${ChatState.isOpen ? '▼' : '▶'} Ask the narrator (${ChatState.questionsRemaining} questions remaining)
+              ${isOpen ? '▼' : '▶'} Ask the narrator (${questionsRemaining} questions remaining)
             </button>
-            ${ChatState.isOpen ? `
+            ${isOpen ? `
               <div class="chat-interface">
                 ${messagesHTML ? `<div class="chat-messages">${messagesHTML}</div>` : ''}
                 ${canAsk ? `
@@ -2425,18 +2454,21 @@
       },
       
       toggleChat(questionId) {
-        ChatState.toggle();
+        ChatState.toggle(questionId);
         
-        // Re-render chat interface
-        const chatContainer = document.querySelector('.chat-container');
-        if (chatContainer) {
-          chatContainer.outerHTML = Components.renderChat(questionId);
-        }
+        // Re-render chat interface - find the specific chat container for this question
+        const allChatContainers = document.querySelectorAll('.chat-container');
+        allChatContainers.forEach(container => {
+          const toggleButton = container.querySelector('.chat-toggle');
+          if (toggleButton && toggleButton.getAttribute('onclick').includes(questionId)) {
+            container.outerHTML = Components.renderChat(questionId);
+          }
+        });
         
         Utils.scrollToBottom(true);
         
         // Focus input if opening
-        if (ChatState.isOpen) {
+        if (ChatState.isOpen(questionId)) {
           setTimeout(() => {
             const input = document.getElementById(`chat-input-${questionId}`);
             if (input) input.focus();
@@ -2451,18 +2483,21 @@
         const question = input.value.trim();
         if (!question) return;
         
-        if (!ChatState.canAsk()) return;
+        if (!ChatState.canAsk(questionId)) return;
         
         // Add user message
-        ChatState.addMessage(question, true);
+        ChatState.addMessage(questionId, question, true);
         input.value = '';
         input.disabled = true;
         
-        // Re-render to show user message and loading state
-        const chatContainer = document.querySelector('.chat-container');
-        if (chatContainer) {
-          chatContainer.outerHTML = Components.renderChat(questionId);
-        }
+        // Re-render to show user message and loading state - find the specific chat container
+        const allChatContainers = document.querySelectorAll('.chat-container');
+        allChatContainers.forEach(container => {
+          const toggleButton = container.querySelector('.chat-toggle');
+          if (toggleButton && toggleButton.getAttribute('onclick').includes(questionId)) {
+            container.outerHTML = Components.renderChat(questionId);
+          }
+        });
         Utils.scrollToBottom(true);
         
         // Get AI response with context based on current question
@@ -2472,17 +2507,20 @@
         const answer = await AIService.askNarrator(question, currentStepName, state.character);
         
         // Add narrator response
-        ChatState.addMessage(answer, false);
+        ChatState.addMessage(questionId, answer, false);
         
-        // Re-render with response
-        const chatContainerUpdated = document.querySelector('.chat-container');
-        if (chatContainerUpdated) {
-          chatContainerUpdated.outerHTML = Components.renderChat(questionId);
-        }
+        // Re-render with response - find the specific chat container
+        const allChatContainersUpdated = document.querySelectorAll('.chat-container');
+        allChatContainersUpdated.forEach(container => {
+          const toggleButton = container.querySelector('.chat-toggle');
+          if (toggleButton && toggleButton.getAttribute('onclick').includes(questionId)) {
+            container.outerHTML = Components.renderChat(questionId);
+          }
+        });
         Utils.scrollToBottom(true);
         
         // Focus input if still have questions
-        if (ChatState.canAsk()) {
+        if (ChatState.canAsk(questionId)) {
           setTimeout(() => {
             const newInput = document.getElementById(`chat-input-${questionId}`);
             if (newInput) newInput.focus();
