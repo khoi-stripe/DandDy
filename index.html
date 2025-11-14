@@ -2122,8 +2122,8 @@ Format your response as JSON array of strings, one for each option in order. Exa
       cache: {},
       
       async get(questionId, question) {
-        // Don't vary race or class choices - keep classic D&D names
-        const noVariationQuestions = ['race-choice', 'class-choice'];
+        // Don't vary race, class, background, or alignment choices - keep classic D&D terms
+        const noVariationQuestions = ['race-choice', 'class-choice', 'background-choice', 'alignment-choice'];
         if (noVariationQuestions.includes(questionId)) {
           return question.options;
         }
