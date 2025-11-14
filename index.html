@@ -1137,70 +1137,80 @@ Format your response as JSON array of strings, one for each option in order. Exa
         }
       },
       
-      // Build detailed DALL-E prompt from character
+      // Build DALL-E prompt optimized for ASCII conversion
       buildPortraitPrompt(character) {
         const parts = [];
         
-        // Style directive
-        parts.push('Fantasy character portrait in a classic D&D art style, high contrast, dramatic lighting');
+        // ASCII-optimized style directives
+        // Key: high contrast, bold outlines, simple shapes, dramatic lighting
+        parts.push('High contrast black and white fantasy character portrait');
+        parts.push('bold dark outlines, dramatic chiaroscuro lighting');
+        parts.push('simple clear shapes, strong silhouette');
+        parts.push('ink drawing style with clear shadows and highlights');
         
         // Race
         if (character.race) {
           const raceDescriptions = {
-            human: 'human with average features',
-            elf: 'elf with pointed ears and graceful features',
-            dwarf: 'dwarf with a thick beard and stocky build',
-            halfling: 'halfling, small and cheerful',
-            dragonborn: 'dragonborn with scaled skin and dragon-like features',
-            gnome: 'gnome, small with clever eyes',
-            'half-elf': 'half-elf with slightly pointed ears',
-            'half-orc': 'half-orc with tusks and powerful build',
-            tiefling: 'tiefling with horns and a tail',
+            human: 'human with defined facial features',
+            elf: 'elf with prominent pointed ears and angular face',
+            dwarf: 'dwarf with bold thick beard and strong features',
+            halfling: 'halfling with round cheerful face',
+            dragonborn: 'dragonborn with scaled reptilian face and horns',
+            gnome: 'gnome with large expressive eyes',
+            'half-elf': 'half-elf with subtle pointed ears',
+            'half-orc': 'half-orc with prominent tusks and strong jaw',
+            tiefling: 'tiefling with curved horns and sharp features',
           };
           parts.push(raceDescriptions[character.race] || character.race);
         }
         
-        // Class
+        // Class (emphasize iconic silhouettes)
         if (character.class) {
           const classDescriptions = {
-            fighter: 'wearing heavy armor and holding a sword',
-            wizard: 'in flowing robes holding a staff with arcane energy',
-            rogue: 'in dark leather armor with daggers',
-            cleric: 'in holy vestments with a sacred symbol',
-            ranger: 'with a bow and forest attire',
-            paladin: 'in shining armor with a holy shield',
-            barbarian: 'with wild hair wielding a massive axe',
-            bard: 'with a lute and colorful clothing',
-            druid: 'with nature-themed robes and wooden staff',
-            monk: 'in simple robes in a martial stance',
-            sorcerer: 'with crackling magical energy',
-            warlock: 'with dark robes and eldritch symbols',
+            fighter: 'in bold plate armor with clear geometric shapes, holding sword with strong outline',
+            wizard: 'in flowing robes with distinct pointed hat, staff with clear silhouette',
+            rogue: 'in dark fitted leather with hood, dual daggers with sharp edges',
+            cleric: 'in simple vestments with prominent holy symbol, clear religious iconography',
+            ranger: 'with distinctive bow and quiver, nature-themed attire with clear lines',
+            paladin: 'in shining armor with bold shield design, heroic stance',
+            barbarian: 'with wild dramatic hair, massive axe with strong silhouette',
+            bard: 'with ornate lute and distinctive costume, theatrical pose',
+            druid: 'with nature symbols and wooden staff, organic but clear shapes',
+            monk: 'in simple robes with clear martial pose, defined muscle lines',
+            sorcerer: 'with dramatic magical energy effects, bold hand gestures',
+            warlock: 'with dark robes and clear occult symbols, mysterious stance',
           };
           parts.push(classDescriptions[character.class] || character.class);
         }
         
-        // Alignment hint (subtle)
+        // Alignment hint (affects lighting contrast)
         if (character.alignment) {
           if (character.alignment.includes('good')) {
-            parts.push('with noble bearing');
+            parts.push('lit from above with heroic lighting');
           } else if (character.alignment.includes('evil')) {
-            parts.push('with a menacing aura');
+            parts.push('lit from below with ominous shadows');
+          } else {
+            parts.push('side lighting with balanced light and shadow');
           }
         }
         
-        parts.push('full body portrait, fantasy art style, detailed');
+        // Final ASCII conversion optimization directives
+        parts.push('full body centered portrait, plain background');
+        parts.push('extremely high contrast, no gradual gradients');
+        parts.push('bold clean edges suitable for line art conversion');
         
         return parts.join(', ');
       },
     };
     
-    // Image-to-ASCII converter
+    // Image-to-ASCII converter (Enhanced with Floyd-Steinberg dithering)
     const ImageToAsciiService = {
-      // ASCII characters from darkest to lightest
-      ASCII_CHARS: ['@', '#', 'S', '%', '?', '*', '+', ';', ':', ',', '.', ' '],
+      // Extended ASCII character set from darkest to lightest (70 characters)
+      // More characters = smoother gradients and better detail
+      ASCII_CHARS: '$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,"^`\'.  ',
       
-      // Convert image URL to ASCII art
-      async convertToAscii(imageUrl, width = 40, height = 20) {
+      // Convert image URL to ASCII art with Floyd-Steinberg dithering
+      async convertToAscii(imageUrl, width = 60, height = 30) {
         try {
           // Load image
           const img = await this.loadImage(imageUrl);
@@ -1218,21 +1228,27 @@ Format your response as JSON array of strings, one for each option in order. Exa
           const imageData = ctx.getImageData(0, 0, width, height);
           const pixels = imageData.data;
           
+          // Create grayscale array for Floyd-Steinberg dithering
+          const grayscale = new Float32Array(width * height);
+          for (let i = 0; i < width * height; i++) {
+            const idx = i * 4;
+            // Use proper luminance calculation (better than simple average)
+            grayscale[i] = 0.299 * pixels[idx] + 0.587 * pixels[idx + 1] + 0.114 * pixels[idx + 2];
+          }
+          
+          // Apply Floyd-Steinberg dithering
+          const dithered = this.floydSteinbergDither(grayscale, width, height);
+          
           // Convert to ASCII
           let ascii = '';
           for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
-              const idx = (y * width + x) * 4;
-              const r = pixels[idx];
-              const g = pixels[idx + 1];
-              const b = pixels[idx + 2];
-              
-              // Calculate brightness (0-255)
-              const brightness = (r + g + b) / 3;
+              const brightness = dithered[y * width + x];
               
               // Map brightness to ASCII character
               const charIndex = Math.floor((brightness / 255) * (this.ASCII_CHARS.length - 1));
-              ascii += this.ASCII_CHARS[this.ASCII_CHARS.length - 1 - charIndex];
+              const clampedIndex = Math.max(0, Math.min(this.ASCII_CHARS.length - 1, charIndex));
+              ascii += this.ASCII_CHARS[this.ASCII_CHARS.length - 1 - clampedIndex];
             }
             ascii += '\n';
           }
@@ -1242,6 +1258,46 @@ Format your response as JSON array of strings, one for each option in order. Exa
           console.error('Image to ASCII conversion error:', error);
           return null;
         }
+      },
+      
+      // Floyd-Steinberg dithering algorithm
+      // Distributes quantization error to neighboring pixels for better detail
+      floydSteinbergDither(grayscale, width, height) {
+        const output = new Float32Array(grayscale);
+        
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const idx = y * width + x;
+            const oldPixel = output[idx];
+            
+            // Quantize to ASCII character levels
+            const newPixel = Math.round((oldPixel / 255) * (this.ASCII_CHARS.length - 1)) * (255 / (this.ASCII_CHARS.length - 1));
+            output[idx] = newPixel;
+            
+            // Calculate quantization error
+            const error = oldPixel - newPixel;
+            
+            // Distribute error to neighboring pixels
+            // Floyd-Steinberg matrix:
+            //         X   7/16
+            // 3/16  5/16  1/16
+            
+            if (x + 1 < width) {
+              output[idx + 1] += error * 7 / 16;
+            }
+            if (y + 1 < height) {
+              if (x > 0) {
+                output[idx + width - 1] += error * 3 / 16;
+              }
+              output[idx + width] += error * 5 / 16;
+              if (x + 1 < width) {
+                output[idx + width + 1] += error * 1 / 16;
+              }
+            }
+          }
+        }
+        
+        return output;
       },
       
       // Load image from URL (handles CORS)
@@ -1613,9 +1669,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
           
           console.log('DALL-E image generated:', imageUrl);
           
-          // Step 2: Convert to ASCII
-          console.log('Converting to ASCII...');
-          const asciiArt = await ImageToAsciiService.convertToAscii(imageUrl, 50, 25);
+          // Step 2: Convert to ASCII with enhanced resolution
+          console.log('Converting to ASCII with Floyd-Steinberg dithering...');
+          const asciiArt = await ImageToAsciiService.convertToAscii(imageUrl, 60, 30);
           
           if (!asciiArt) {
             console.log('ASCII conversion failed, using template');
