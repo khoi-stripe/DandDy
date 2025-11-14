@@ -591,8 +591,16 @@
     async function loadImage(url) {
       try {
         console.log('Fetching image as blob to bypass CORS...');
+        
+        // Use CORS proxy for Azure blob storage URLs
+        // Azure doesn't allow CORS from localhost, so we need a proxy
+        const corsProxy = 'https://corsproxy.io/?';
+        const proxiedUrl = corsProxy + encodeURIComponent(url);
+        
+        console.log('Using CORS proxy:', corsProxy);
+        
         // Fetch the image as a blob to bypass CORS restrictions
-        const response = await fetch(url);
+        const response = await fetch(proxiedUrl);
         if (!response.ok) {
           throw new Error(`Failed to fetch image: ${response.status}`);
         }
