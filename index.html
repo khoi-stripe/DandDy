@@ -2039,11 +2039,15 @@ Format your response as JSON array of strings, one for each option in order. Exa
         await Utils.typewriter(messageEl, question.text);
         Utils.scrollToBottom(true);
         
+        // Generate backstory (this might take a moment)
         const backstory = await AIService.generateBackstory(state.character);
         CharacterState.updateCharacter({ backstory });
         
+        // Add new message container and scroll to it
         narratorPanel.innerHTML += Components.renderNarratorMessage('');
         Utils.scrollToBottom(true);
+        
+        // Now type out the backstory
         const backstoryEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(backstoryEl, backstory);
         Utils.scrollToBottom(true);
