@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASCII Encoding Test</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0a;
+      color: #00ff00;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 24px;
+      color: #00ff00;
+      text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    }
+    
+    .section {
+      background: #1a1a1a;
+      border: 1px solid #00ff00;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #00ff00;
+    }
+    
+    pre {
+      background: #0a0a0a;
+      padding: 15px;
+      border: 1px solid #00ff00;
+      border-radius: 4px;
+      overflow-x: auto;
+      white-space: pre;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+    
+    .success {
+      color: #00ff00;
+      font-weight: bold;
+    }
+    
+    .error {
+      color: #ff0000;
+      font-weight: bold;
+    }
+    
+    .info {
+      color: #ffff00;
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(255, 255, 0, 0.1);
+      border-radius: 4px;
+    }
+    
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    
+    @media (max-width: 768px) {
+      .comparison {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>[ ASCII ART ENCODING TEST ]</h1>
+    
+    <div class="section">
+      <h2>🎯 The Problem</h2>
+      <div class="info">
+        ASCII art often contains backslash characters (\) which are escape characters in JavaScript.
+        When embedded in template literals or strings, they can cause syntax errors or display incorrectly.
+      </div>
+      <pre id="problem-example"></pre>
+    </div>
+    
+    <div class="section">
+      <h2>✅ The Solution: Base64 Encoding</h2>
+      <div class="info">
+        By encoding ASCII art in Base64, we avoid ALL escaping issues. The encoded string contains
+        only safe alphanumeric characters, then we decode it at runtime.
+      </div>
+    </div>
+    
+    <div class="comparison">
+      <div class="section">
+        <h2>Method 1: Old Escaping</h2>
+        <pre id="old-method"></pre>
+        <div id="old-result"></div>
+      </div>
+      
+      <div class="section">
+        <h2>Method 2: Base64 Encoding</h2>
+        <pre id="new-method"></pre>
+        <div id="new-result"></div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>📊 Comparison Results</h2>
+      <div id="comparison-results"></div>
+    </div>
+  </div>
+
+  <script>
+    // Test ASCII art with backslashes and other special characters
+    const testArt = `  /\\
+ /  \\
+/____\\
+|    |
+| /\\ |
+|/  \\|
+------`;
+
+    // Show the problem
+    document.getElementById('problem-example').textContent = 
+      `Original ASCII art:\n${testArt}\n\n` +
+      `When embedded directly in JavaScript:\n` +
+      `const art = \`${testArt}\`;\n\n` +
+      `Problem: Backslashes need escaping, which is error-prone!`;
+
+    // Method 1: Old escaping approach
+    function testOldMethod() {
+      try {
+        // This is what the old code did
+        const escaped = testArt
+          .replace(/\\/g, '\\\\')
+          .replace(/`/g, '\\`')
+          .replace(/\${/g, '\\${');
+        
+        const code = `const art = \`${escaped}\`;`;
+        document.getElementById('old-method').textContent = 
+          `JavaScript code:\n${code}\n\n` +
+          `Escaped string length: ${escaped.length}`;
+        
+        // Try to evaluate it
+        const art = eval('`' + escaped + '`');
+        
+        // Check if it matches
+        const matches = art === testArt;
+        document.getElementById('old-result').innerHTML = 
+          `<pre>${art}</pre>` +
+          (matches 
+            ? '<div class="success">✅ Result matches original</div>'
+            : '<div class="error">❌ Result differs from original</div>');
+        
+        return { success: true, matches, size: escaped.length };
+      } catch (e) {
+        document.getElementById('old-result').innerHTML = 
+          `<div class="error">❌ Error: ${e.message}</div>`;
+        return { success: false, error: e.message };
+      }
+    }
+
+    // Method 2: Base64 encoding approach
+    function testNewMethod() {
+      try {
+        // Encode to Base64
+        const encoded = btoa(testArt);
+        
+        const code = `const PORTRAITS_DATA = { test: '${encoded}' };\n` +
+                    `const art = atob(PORTRAITS_DATA.test);`;
+        
+        document.getElementById('new-method').textContent = 
+          `JavaScript code:\n${code}\n\n` +
+          `Encoded string length: ${encoded.length}`;
+        
+        // Decode
+        const art = atob(encoded);
+        
+        // Check if it matches
+        const matches = art === testArt;
+        document.getElementById('new-result').innerHTML = 
+          `<pre>${art}</pre>` +
+          (matches 
+            ? '<div class="success">✅ Result matches original</div>'
+            : '<div class="error">❌ Result differs from original</div>');
+        
+        return { success: true, matches, size: encoded.length };
+      } catch (e) {
+        document.getElementById('new-result').innerHTML = 
+          `<div class="error">❌ Error: ${e.message}</div>`;
+        return { success: false, error: e.message };
+      }
+    }
+
+    // Run tests
+    const oldResult = testOldMethod();
+    const newResult = testNewMethod();
+
+    // Show comparison
+    const comparisonHTML = `
+      <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+        <thead>
+          <tr style="border-bottom: 1px solid #00ff00;">
+            <th style="text-align: left; padding: 10px;">Metric</th>
+            <th style="text-align: center; padding: 10px;">Old Method</th>
+            <th style="text-align: center; padding: 10px;">Base64 Method</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 10px;">Success</td>
+            <td style="text-align: center; padding: 10px;">${oldResult.success ? '✅' : '❌'}</td>
+            <td style="text-align: center; padding: 10px;">${newResult.success ? '✅' : '❌'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px;">Matches Original</td>
+            <td style="text-align: center; padding: 10px;">${oldResult.matches ? '✅' : '❌'}</td>
+            <td style="text-align: center; padding: 10px;">${newResult.matches ? '✅' : '❌'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px;">String Size</td>
+            <td style="text-align: center; padding: 10px;">${oldResult.size || 'N/A'} chars</td>
+            <td style="text-align: center; padding: 10px;">${newResult.size || 'N/A'} chars</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px;">Overhead</td>
+            <td style="text-align: center; padding: 10px;">~0%</td>
+            <td style="text-align: center; padding: 10px;">~33%</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px;">Complexity</td>
+            <td style="text-align: center; padding: 10px;">Medium</td>
+            <td style="text-align: center; padding: 10px;">Low</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px;">Robustness</td>
+            <td style="text-align: center; padding: 10px;">Risky</td>
+            <td style="text-align: center; padding: 10px;">Very Safe</td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <div class="info" style="margin-top: 20px;">
+        <strong>🎯 Recommendation:</strong> Use Base64 encoding for maximum reliability.
+        The 33% size overhead is negligible for ASCII art, and you eliminate all escaping issues.
+      </div>
+    `;
+    
+    document.getElementById('comparison-results').innerHTML = comparisonHTML;
+  </script>
+</body>
+</html>
+
