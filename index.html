@@ -1150,67 +1150,59 @@ Format your response as JSON array of strings, one for each option in order. Exa
         }
       },
       
-      // Build DALL-E prompt optimized for ASCII conversion
+      // Build DALL-E prompt for character portrait
       buildPortraitPrompt(character) {
         const parts = [];
         
-        // ASCII-optimized style directives
-        // Key: high contrast, bold outlines, simple shapes, dramatic lighting
-        parts.push('High contrast black and white fantasy character portrait');
-        parts.push('bold dark outlines, dramatic chiaroscuro lighting');
-        parts.push('simple clear shapes, strong silhouette');
-        parts.push('ink drawing style with clear shadows and highlights');
+        // Style directives
+        parts.push('Fantasy D&D character portrait in classic fantasy art style');
+        parts.push('high contrast, dramatic lighting');
         
         // Race
         if (character.race) {
           const raceDescriptions = {
-            human: 'human with defined facial features',
-            elf: 'elf with prominent pointed ears and angular face',
-            dwarf: 'dwarf with bold thick beard and strong features',
-            halfling: 'halfling with round cheerful face',
-            dragonborn: 'dragonborn with scaled reptilian face and horns',
-            gnome: 'gnome with large expressive eyes',
-            'half-elf': 'half-elf with subtle pointed ears',
-            'half-orc': 'half-orc with prominent tusks and strong jaw',
-            tiefling: 'tiefling with curved horns and sharp features',
+            human: 'human with average features',
+            elf: 'elf with pointed ears and graceful features',
+            dwarf: 'dwarf with a thick beard and stocky build',
+            halfling: 'halfling, small and cheerful',
+            dragonborn: 'dragonborn with scaled skin and dragon-like features',
+            gnome: 'gnome, small with clever eyes',
+            'half-elf': 'half-elf with slightly pointed ears',
+            'half-orc': 'half-orc with tusks and powerful build',
+            tiefling: 'tiefling with horns and a tail',
           };
           parts.push(raceDescriptions[character.race] || character.race);
         }
         
-        // Class (emphasize iconic silhouettes)
+        // Class
         if (character.class) {
           const classDescriptions = {
-            fighter: 'in bold plate armor with clear geometric shapes, holding sword with strong outline',
-            wizard: 'in flowing robes with distinct pointed hat, staff with clear silhouette',
-            rogue: 'in dark fitted leather with hood, dual daggers with sharp edges',
-            cleric: 'in simple vestments with prominent holy symbol, clear religious iconography',
-            ranger: 'with distinctive bow and quiver, nature-themed attire with clear lines',
-            paladin: 'in shining armor with bold shield design, heroic stance',
-            barbarian: 'with wild dramatic hair, massive axe with strong silhouette',
-            bard: 'with ornate lute and distinctive costume, theatrical pose',
-            druid: 'with nature symbols and wooden staff, organic but clear shapes',
-            monk: 'in simple robes with clear martial pose, defined muscle lines',
-            sorcerer: 'with dramatic magical energy effects, bold hand gestures',
-            warlock: 'with dark robes and clear occult symbols, mysterious stance',
+            fighter: 'wearing heavy armor and holding a sword',
+            wizard: 'in flowing robes holding a staff',
+            rogue: 'in dark leather armor with daggers',
+            cleric: 'in holy vestments with a sacred symbol',
+            ranger: 'with a bow and forest attire',
+            paladin: 'in shining armor with a holy shield',
+            barbarian: 'with wild hair wielding a massive axe',
+            bard: 'with a lute and colorful clothing',
+            druid: 'with nature-themed robes and wooden staff',
+            monk: 'in simple robes in a martial stance',
+            sorcerer: 'with crackling magical energy',
+            warlock: 'with dark robes and eldritch symbols',
           };
           parts.push(classDescriptions[character.class] || character.class);
         }
         
-        // Alignment hint (affects lighting contrast)
+        // Alignment
         if (character.alignment) {
           if (character.alignment.includes('good')) {
-            parts.push('lit from above with heroic lighting');
+            parts.push('with noble bearing');
           } else if (character.alignment.includes('evil')) {
-            parts.push('lit from below with ominous shadows');
-          } else {
-            parts.push('side lighting with balanced light and shadow');
+            parts.push('with a menacing aura');
           }
         }
         
-        // Final ASCII conversion optimization directives
-        parts.push('full body centered portrait, plain background');
-        parts.push('extremely high contrast, no gradual gradients');
-        parts.push('bold clean edges suitable for line art conversion');
+        parts.push('full body portrait, fantasy art style, detailed');
         
         return parts.join(', ');
       },

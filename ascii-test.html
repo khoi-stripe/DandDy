@@ -223,6 +223,7 @@
           <button class="button preset-button" onclick="usePreset('tiefling-warlock')">Tiefling Warlock</button>
           <button class="button preset-button" onclick="usePreset('human-paladin')">Human Paladin</button>
           <button class="button preset-button" onclick="usePreset('halfling-rogue')">Halfling Rogue</button>
+          <button class="button preset-button" onclick="usePreset('dragonborn-barbarian')">Dragonborn Barbarian</button>
         </div>
       </div>
       
@@ -312,6 +313,11 @@
         race: 'halfling',
         class: 'rogue',
         alignment: 'chaotic-good'
+      },
+      'dragonborn-barbarian': {
+        race: 'dragonborn',
+        class: 'barbarian',
+        alignment: 'chaotic-neutral'
       }
     };
     
@@ -344,19 +350,18 @@
     function buildPrompt(character) {
       const parts = [];
       
-      // ASCII-optimized style directives
-      parts.push('High contrast black and white fantasy character portrait');
-      parts.push('bold dark outlines, dramatic chiaroscuro lighting');
-      parts.push('simple clear shapes, strong silhouette');
-      parts.push('ink drawing style with clear shadows and highlights');
+      // Style directives
+      parts.push('Fantasy D&D character portrait in classic fantasy art style');
+      parts.push('high contrast, dramatic lighting');
       
       // Race
       const raceDescriptions = {
-        human: 'human with defined facial features',
-        elf: 'elf with prominent pointed ears and angular face',
-        dwarf: 'dwarf with bold thick beard and strong features',
-        halfling: 'halfling with round cheerful face',
-        tiefling: 'tiefling with curved horns and sharp features',
+        human: 'human with average features',
+        elf: 'elf with pointed ears and graceful features',
+        dwarf: 'dwarf with a thick beard and stocky build',
+        halfling: 'halfling, small and cheerful',
+        dragonborn: 'dragonborn with scaled skin and dragon-like features',
+        tiefling: 'tiefling with horns and a tail',
       };
       if (character.race) {
         parts.push(raceDescriptions[character.race] || character.race);
@@ -364,31 +369,27 @@
       
       // Class
       const classDescriptions = {
-        fighter: 'in bold plate armor with clear geometric shapes, holding sword with strong outline',
-        wizard: 'in flowing robes with distinct pointed hat, staff with clear silhouette',
-        rogue: 'in dark fitted leather with hood, dual daggers with sharp edges',
-        paladin: 'in shining armor with bold shield design, heroic stance',
-        warlock: 'with dark robes and clear occult symbols, mysterious stance',
+        fighter: 'wearing heavy armor and holding a sword',
+        wizard: 'in flowing robes holding a staff',
+        rogue: 'in dark leather armor with daggers',
+        paladin: 'in shining armor with a holy shield',
+        barbarian: 'with wild hair wielding a massive axe',
+        warlock: 'with dark robes and eldritch symbols',
       };
       if (character.class) {
         parts.push(classDescriptions[character.class] || character.class);
       }
       
-      // Alignment lighting
+      // Alignment
       if (character.alignment) {
         if (character.alignment.includes('good')) {
-          parts.push('lit from above with heroic lighting');
+          parts.push('with noble bearing');
         } else if (character.alignment.includes('evil')) {
-          parts.push('lit from below with ominous shadows');
-        } else {
-          parts.push('side lighting with balanced light and shadow');
+          parts.push('with a menacing aura');
         }
       }
       
-      // Final directives
-      parts.push('full body centered portrait, plain background');
-      parts.push('extremely high contrast, no gradual gradients');
-      parts.push('bold clean edges suitable for line art conversion');
+      parts.push('full body portrait, fantasy art style, detailed');
       
       return parts.join(', ');
     }
