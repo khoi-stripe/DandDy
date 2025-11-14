@@ -1787,7 +1787,8 @@
       activate() {
         this.isActive = true;
         this.currentFocusIndex = 0;
-        this.updateFocus();
+        // Wait for DOM to update before focusing
+        setTimeout(() => this.updateFocus(), 60);
       },
       
       deactivate() {
