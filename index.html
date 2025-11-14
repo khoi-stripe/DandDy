@@ -1586,10 +1586,31 @@ Format your response as JSON array of strings, one for each option in order. Exa
         type: 'suggestion',
         text: 'Analyzing your responses... ( ._. )',
         getSuggestion: (state) => {
-          // This will be enhanced with AI
+          const answers = state.answers;
+          const suggestions = [];
+          
+          // Map answers to race suggestions
+          if (answers.physicality === 'strong') suggestions.push('dwarf', 'half-orc', 'dragonborn');
+          if (answers.physicality === 'nimble') suggestions.push('elf', 'halfling', 'half-elf');
+          if (answers.physicality === 'mystical') suggestions.push('tiefling', 'elf', 'gnome');
+          if (answers.physicality === 'average') suggestions.push('human', 'half-elf', 'halfling');
+          
+          if (answers.social === 'charismatic') suggestions.push('human', 'half-elf', 'tiefling');
+          if (answers.social === 'observant') suggestions.push('elf', 'gnome');
+          if (answers.social === 'intimidating') suggestions.push('half-orc', 'dragonborn', 'dwarf');
+          if (answers.social === 'awkward') suggestions.push('gnome', 'halfling', 'tiefling');
+          
+          // Get top 3 most suggested
+          const counts = {};
+          suggestions.forEach(s => counts[s] = (counts[s] || 0) + 1);
+          const top3 = Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([race]) => race);
+          
           return {
             message: 'Based on your answers, you seem like the type who would be... let me think...',
-            suggestions: ['elf', 'human', 'dwarf'], // Will be dynamically calculated
+            suggestions: top3.length === 3 ? top3 : ['human', 'elf', 'dwarf'],
           };
         },
         next: 'race-choice',
