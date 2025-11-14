@@ -6,7 +6,9 @@ A retro terminal-styled D&D 5e character creation tool with AI-powered personali
 
 - 🎮 **Retro Terminal Aesthetic** - Green-on-black interface with classic monospace styling
 - 🤖 **AI-Powered Narrator** - Deadpan, cheeky commentary using OpenAI API
+- 💬 **Interactive Chat** - Ask the narrator questions at each step (3 questions per step)
 - ⌨️ **Keyboard Navigation** - Full keyboard support (Arrow keys + Enter)
+- ⚡ **Skip Animations** - Press any key to skip typewriter text
 - 📜 **Step-by-Step Creation** - Conversational flow that guides you through character building
 - 🎨 **ASCII Art Portraits** - Character portraits that build progressively
 - 💾 **Local Storage** - Characters saved in your browser
