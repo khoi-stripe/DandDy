@@ -1960,11 +1960,9 @@
         
         narratorPanel.innerHTML += Components.renderQuestion(question);
         
-        // Add chat interface for motivation question (prototype)
-        if (question.id === 'motivation') {
-          ChatState.init(question.id);
-          narratorPanel.innerHTML += Components.renderChat(question.id);
-        }
+        // Add chat interface for all choice questions
+        ChatState.init(question.id);
+        narratorPanel.innerHTML += Components.renderChat(question.id);
         
         Utils.scrollToBottom(true);
         
@@ -1994,6 +1992,11 @@
             </div>
           </div>
         `;
+        
+        // Add chat interface for all list choice questions
+        ChatState.init(question.id);
+        narratorPanel.innerHTML += Components.renderChat(question.id);
+        
         Utils.scrollToBottom(true);
         
         // Activate keyboard navigation
@@ -2054,6 +2057,11 @@
             </div>
           </div>
         `;
+        
+        // Add chat interface for abilities question
+        ChatState.init(question.id);
+        narratorPanel.innerHTML += Components.renderChat(question.id);
+        
         Utils.scrollToBottom(true);
         
         // Activate keyboard navigation
@@ -2419,9 +2427,10 @@
         }
         Utils.scrollToBottom(true);
         
-        // Get AI response
+        // Get AI response with context based on current question
         const state = CharacterState.get();
-        const currentStepName = 'character motivation';
+        const questionObj = QUESTIONS.find(q => q.id === questionId);
+        const currentStepName = this.getStepName(questionId, questionObj);
         const answer = await AIService.askNarrator(question, currentStepName, state.character);
         
         // Add narrator response
@@ -2441,6 +2450,20 @@
             if (newInput) newInput.focus();
           }, 100);
         }
+      },
+      
+      getStepName(questionId, questionObj) {
+        // Map question IDs to readable step names for AI context
+        const stepNames = {
+          'motivation': 'character motivation',
+          'race': 'choosing character race',
+          'class': 'choosing character class',
+          'background': 'choosing character background',
+          'alignment': 'choosing character alignment',
+          'abilities': 'determining ability scores',
+        };
+        
+        return stepNames[questionId] || (questionObj ? questionObj.text : 'character creation');
       },
     };
     
