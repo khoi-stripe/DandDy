@@ -588,21 +588,42 @@
       return output;
     }
     
-    function loadImage(url) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.onload = () => {
-          console.log('Image onload fired');
-          resolve(img);
-        };
-        img.onerror = (error) => {
-          console.error('Image onerror fired:', error);
-          reject(new Error('Failed to load image - possible CORS issue'));
-        };
-        img.src = url;
-        console.log('Image src set to:', url.substring(0, 100) + '...');
-      });
+    async function loadImage(url) {
+      try {
+        console.log('Fetching image as blob to bypass CORS...');
+        // Fetch the image as a blob to bypass CORS restrictions
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        console.log('Blob loaded:', blob.size, 'bytes');
+        
+        // Create object URL from blob
+        const objectUrl = URL.createObjectURL(blob);
+        console.log('Object URL created:', objectUrl.substring(0, 50) + '...');
+        
+        // Load image from object URL
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            console.log('Image loaded successfully:', img.width, 'x', img.height);
+            // Clean up object URL
+            URL.revokeObjectURL(objectUrl);
+            resolve(img);
+          };
+          img.onerror = (error) => {
+            console.error('Image load error:', error);
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error('Failed to load image from blob'));
+          };
+          img.src = objectUrl;
+        });
+      } catch (error) {
+        console.error('Error in loadImage:', error);
+        throw new Error(`Image loading failed: ${error.message}`);
+      }
     }
     
     // ===== UI HELPERS =====
