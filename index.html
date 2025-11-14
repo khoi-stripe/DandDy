@@ -336,6 +336,145 @@
       margin-top: var(--spacing-xs);
     }
     
+    /* Splash Screen */
+    .splash-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: var(--spacing-md);
+      padding-bottom: 48px;
+    }
+    
+    .splash-art {
+      font-size: 4px;
+      line-height: 1;
+      color: var(--terminal-fg);
+      white-space: pre;
+      font-family: monospace;
+      margin-bottom: var(--spacing-md);
+      overflow: auto;
+      max-height: 50%;
+    }
+    
+    .splash-title {
+      font-size: var(--font-size-large);
+      color: var(--terminal-accent);
+      margin-bottom: var(--spacing-sm);
+    }
+    
+    .splash-subtitle {
+      font-size: var(--font-size-base);
+      color: var(--terminal-dim);
+      margin-bottom: var(--spacing-md);
+    }
+    
+    .splash-prompt {
+      color: var(--terminal-fg);
+      animation: blink 1.5s infinite;
+    }
+    
+    /* Chat Interface */
+    .chat-container {
+      margin-top: var(--spacing-md);
+      border-top: 1px solid var(--terminal-dim);
+      padding-top: var(--spacing-md);
+    }
+    
+    .chat-toggle {
+      background: transparent;
+      border: 1px solid var(--terminal-dim);
+      color: var(--terminal-dim);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      font-family: var(--font-mono);
+      font-size: var(--font-size-small);
+      cursor: pointer;
+      transition: all var(--transition-speed);
+      margin-bottom: var(--spacing-sm);
+    }
+    
+    .chat-toggle:hover {
+      border-color: var(--terminal-fg);
+      color: var(--terminal-fg);
+    }
+    
+    .chat-interface {
+      margin-top: var(--spacing-sm);
+    }
+    
+    .chat-messages {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: var(--spacing-sm);
+    }
+    
+    .chat-message {
+      margin-bottom: var(--spacing-sm);
+      padding: var(--spacing-sm);
+      border-left: 2px solid var(--terminal-dim);
+    }
+    
+    .chat-message.user {
+      border-left-color: var(--terminal-accent);
+    }
+    
+    .chat-message.narrator {
+      border-left-color: var(--terminal-fg);
+    }
+    
+    .chat-label {
+      font-size: var(--font-size-small);
+      color: var(--terminal-dim);
+      margin-bottom: var(--spacing-xs);
+    }
+    
+    .chat-text {
+      color: var(--terminal-fg);
+    }
+    
+    .chat-input-container {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
+    
+    .chat-input {
+      flex: 1;
+      background: transparent;
+      border: 1px solid var(--terminal-dim);
+      color: var(--terminal-fg);
+      padding: var(--spacing-sm);
+      font-family: var(--font-mono);
+      font-size: var(--font-size-small);
+    }
+    
+    .chat-input:focus {
+      outline: none;
+      border-color: var(--terminal-fg);
+    }
+    
+    .chat-send {
+      background: transparent;
+      border: 1px solid var(--terminal-fg);
+      color: var(--terminal-fg);
+      padding: var(--spacing-sm) var(--spacing-md);
+      font-family: var(--font-mono);
+      font-size: var(--font-size-small);
+      cursor: pointer;
+      transition: all var(--transition-speed);
+    }
+    
+    .chat-send:hover:not(:disabled) {
+      background: var(--terminal-fg);
+      color: var(--terminal-bg);
+    }
+    
+    .chat-send:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
     /* ===== STATES ===== */
     .is-typing::after {
       content: '▋';
@@ -426,12 +565,135 @@
     <div class="terminal-header">
       <div class="terminal-title">[ DandDy CHARACTER BUILDER v1.0 ]</div>
       <div class="terminal-status">
-        <span id="status-text">READY</span>
+        <span id="status-text">INITIALIZING SYSTEM...</span>
         <button class="button-secondary" onclick="App.openSettings()" style="margin-left: 16px;">⚙ SETTINGS</button>
       </div>
     </div>
     
-    <div class="split-layout">
+    <!-- Splash content (full width) -->
+    <div class="splash-content" id="splash-content">
+          <div class="splash-art">
+                                                                                                         
+
+                                                                                                         
+
+                                                                                                         
+
+                                                      &$XxxxxXxXxxx$&                                    
+
+                                                 &X+;+xX&&&&&&&&&&&XXX+;+&                               
+
+                                           X+x+;+X&&&&&&$$$XXXXXX$$$$$&&&&X+X                            
+
+                                     $XX  X$&$$XXX&&&&$XXxxXXXXxxxxxxXXX$$$&&$xX&                        
+
+                                X$$X+$&   &&  &&&&&&$$&$&&&&&&&&$XXx+x+x+xXXX$$&XXX                      
+
+                               Xx$;X&&& &X&     &&&$&&&&&XXXX$$$$&&&&Xx++;+++XXX$$$XX&                   
+
+                              XXx;X&&&$X$&&&X$&  &$&$$&&&&&&xXXXXXXX$$&&&xx+++;X$&&$$X$                  
+
+                            &XX;X&&$$$XXXxX&&&    &$&Xx&&&&&&&+xxx+xXxX$$$&$Xx+X     &&X&                
+
+                          &Xx+x$$XX&$$XX;++xX&&&$$ $$&$+$&$$$$&&Xxx++x+++xXX$$XX&      &$&               
+
+                         X+;+XXxXXXxX$&$$X+++$$&&& $$$&Xx$&$$XX$$&Xxx+;+;+++xxX$X$      &&               
+
+                       $XxX$++++xx$&&&$$$$$x;xX$&&&$$$&;x$&&$XXXXX$$xXx+++x$$$&$$XX                      
+
+                       &X;;;+$XXX$&&&&&&&XxX++x$&&&&&&;+$&&&$XxxxXxX$$Xx;$       &$X&                    
+
+                    &;x+;x$&XxX$&&&&    &x;xx+X$&&&$x+X&&&&$$Xxx++x+xXXXx&         &&$                   
+
+                    X+x;$&$X&&&        &X+;xxX$&&$++X&&&&$$XXXxxx++XXXXXXX$          &&                   
+
+          &&&&&&&&   &&$$X$&&        &$x;;+XX$$+;+X$&&&$$XXXXXX&       $&$$          &                   
+
+     &&X:.:;;;;;;;.:X&    &         &$XX+X;XX;;+X$&&&&&$$X$X$$&&&&&&&$&&&&&&                             
+
+   &&+;;:::;;;;;;;::;;;$&          &&x++X;Xx;;x$&&&&&&&&&&&&;::;;;+;;;;;;;;:;X$&                         
+
+     &&X;;;;;&&&&&&x;;;;;$         &Xx;;XXXX;;xX&&&&$$&&&$&&&&x;;;;:&&&&$X;;;;;;$&                       
+
+      &$;;:;;&&   &&&;;;;;$        &$XXxXX$XxX+xx$&&$$$$$&;;&&&:;;;:&&  &&&$;;;;;X&                      
+
+      &$;;;;;&&     &&:;;;:&&      &&$X$$&$&&&&$Xx;X&&&&X::;&&&:;;;:&&&&   &&:;;;;;&                     
+
+      &$;+;;;&&      &&:;:;.&&    &&&&&&$&&&&$XXXX$$&&&&&X:;&&&:;;;:&&&&&&& &&:;;;;X&                    
+
+      &&;;;;;&&       &+;;;;+& &X;;;;X&&&&&$&&&&&&&&&&&&&x:;&&&:;;;:&&&&&$$  &X;;;;;$xx+++X&&&X+++x&&    
+
+      &&;;;;;&&       &X:;;;;&&;;$&;:;x&$;::x;;:;;&&&;;;;::;&&&;+;;:&&&$&&&&&&&;;;;;$&x;;;&& &&;;x&&     
+
+      &&;+;;;&&        &:;;;;&&&&  &.;+&&&::X&&X;:&&+;$&&X:;&&&:;;;:&&$X$$&&  &;;;;;X&&;;:&& &X;+&&      
+
+      &&;+;;;&&        &:;;;;&& &&$;.;+&&&;:$&&$;:&$;;&&&X;;&&&;+;;;&&$Xx$&&&&&;;:;;X&&&;;;& &x;&&       
+
+      &&;;;;;&&        &:;;+;&&X;;$&;;+&&&:;$&&X;:&x;x& &x;;&&&;+;;:&&&XxX&&&&&;;;;;$& &X;;X&$;&&        
+
+      &&;++;;&&        &:;;+;&X;;&&&;;x&&&;;$&&X;:&X;;& &x;;&&&:+;;;&&&XxXX&&&&;;;+;&&  &+;;&Xx&&        
+
+      &&;+;+;&&       &+;;;;X&;;X& &;;x&&&;;$&&X;;&&;;X&&X;;&&&;+;;;&&$X++$$&&+;;;;+&&  &X++;x&&         
+
+       &;x;;;&&       &:;;+:&&+;;;;Xx;;&&&;;X&&X;;$&X;;;;x;:X&&;+;+;&&&XxX$$&$;+;;;&&    &;+;X&&         
+
+       &;x;;;&&      &;;;;;&&&&XXX&&&X$&&X$$X&&$$X$&&&&&&&&&&&&:+;;;&&&$XxX$$;+;+;&&     &X;+&&          
+
+       &;x++;&&    &&;+;+;&&   &&&   &                     &&&&;+;+;&&&$xX$x+;++X&&      &X+$&           
+
+      &$;x;x;&&  &&X;;;;+&&    &&&$x;;;;;+XX&&&&&       &&$x&&$;+++;&&&&$;+x+x;&&&       &+X&&           
+
+     &&x++++++;+;;;+;;+&&&  &X+;++xXXX++;++;;;+;;;;+++++;+&&&X;+++++x++++;++X&&& &&&&   &X+&&            
+
+    &XXXXXxx++++++xX$&&&  &XX&&&&&&&&&&&&&&&&&Xxx+;++xX$&&&&&&&&&&&&&&&&&&&&&&&&&+X&&  &X+&&             
+
+     &&&&&&&&&&&&&&&&    &&&&                 &&&&&&&&&&              &&$&&&&&&&x;&& &&xx&&              
+
+                          &&              &&&&                       &&XXX$&&  &X+++++;&&&               
+
+                                      &&$xXXxxxXX$                  &XxX$$$&&   &&&&&&&&                 
+
+                                     $XXX$&&&&&&X+&               &$xxxX$&&&&                            
+
+                                   &$$X$&       &$X&             $xxxX$$&&&&                             
+
+                                   $$X$&     &  &X&            &X++x$$$&$&                               
+
+                                   &$X$&       &&           &$x+x+X$$&&&&                                
+
+                                   &&$$$&               &$XX++xX$$&&$&                                   
+
+                                    &&$$X$$&&      &&&XxxxxXxX$&&&&&&                                    
+
+                                     &&&$$$xx;xx++++xXXxX$$$&&&&&                                        
+
+                                        &&&&&$$&$$X$$$$&&&&&&                                            
+
+                                          &&&&&&&&&&&&&&                                                 
+
+                                                                                                         
+
+                                                                                                         
+
+                                                                                                         
+
+                                                                                                         
+
+                                                                                                         
+
+                                                                                                         
+
+                                                                                                         
+
+                                                                                                         
+      </div>
+      <div class="splash-title">DandDy CHARACTER BUILDER</div>
+      <div class="splash-subtitle">A D&D 5e Character Creation Experience</div>
+      <div class="splash-prompt">[ Press any key to begin ]</div>
+    </div>
+    
+    <!-- Main content (hidden until splash dismissed) -->
+    <div class="split-layout is-hidden" id="main-content">
       <div class="left-panel" id="narrator-panel">
         <!-- Narrator content will be injected here -->
       </div>
@@ -746,13 +1008,22 @@
       },
       
       // Smooth scroll to bottom of narrator panel
-      scrollToBottom() {
-        const panel = document.getElementById('narrator-panel');
-        if (panel) {
-          panel.scrollTo({
-            top: panel.scrollHeight,
-            behavior: 'smooth'
-          });
+      scrollToBottom(forceDelay = false) {
+        const doScroll = () => {
+          const panel = document.getElementById('narrator-panel');
+          if (panel) {
+            panel.scrollTo({
+              top: panel.scrollHeight,
+              behavior: 'smooth'
+            });
+          }
+        };
+        
+        if (forceDelay) {
+          // Wait for DOM to update
+          setTimeout(doScroll, 50);
+        } else {
+          doScroll();
         }
       },
     };
@@ -867,6 +1138,24 @@
         
         // Fallback
         return `${character.name} is a ${character.race} ${character.class} with a mysterious past. They don't talk about it much. Probably for the best.`;
+      },
+      
+      async askNarrator(userQuestion, currentStep, characterSoFar) {
+        const systemPrompt = `You are a deadpan, slightly sarcastic D&D character creation assistant. The user is creating a character and is currently on the step: "${currentStep}". Their character so far: ${JSON.stringify(characterSoFar)}. Answer their question briefly (2-3 sentences max) in a dry, witty tone. Be helpful but maintain your sardonic personality.`;
+        
+        const response = await this.generateCompletion(userQuestion, systemPrompt);
+        
+        if (response) return response;
+        
+        // Fallback
+        const fallbacks = [
+          "Good question. Wish I had a good answer. Try making a choice and see what happens.",
+          "That's... oddly specific. Just pick what feels right.",
+          "I'm supposed to be helpful here. Let me think... no, still drawing a blank.",
+          "[sigh] Look, they're all valid choices. Pick one and we'll move on.",
+        ];
+        
+        return Utils.randomChoice(fallbacks);
       },
     };
     
@@ -1052,6 +1341,36 @@
         }
         
         return art;
+      },
+    };
+    
+    // ===== CHAT STATE =====
+    const ChatState = {
+      questionsRemaining: 3,
+      messages: [],
+      isOpen: false,
+      currentQuestionId: null,
+      
+      init(questionId) {
+        this.currentQuestionId = questionId;
+        this.questionsRemaining = 3;
+        this.messages = [];
+        this.isOpen = false;
+      },
+      
+      toggle() {
+        this.isOpen = !this.isOpen;
+      },
+      
+      addMessage(text, isUser) {
+        this.messages.push({ text, isUser, timestamp: Date.now() });
+        if (isUser) {
+          this.questionsRemaining--;
+        }
+      },
+      
+      canAsk() {
+        return this.questionsRemaining > 0;
       },
     };
     
@@ -1258,6 +1577,38 @@
                 <br>Without an API key, fallback responses will be used.
               </div>
             </div>
+          </div>
+        `;
+      },
+      
+      renderChat(questionId) {
+        const messagesHTML = ChatState.messages.map(msg => `
+          <div class="chat-message ${msg.isUser ? 'user' : 'narrator'}">
+            <div class="chat-label">${msg.isUser ? 'You' : 'Narrator'}</div>
+            <div class="chat-text">${msg.text}</div>
+          </div>
+        `).join('');
+        
+        const canAsk = ChatState.canAsk();
+        
+        return `
+          <div class="chat-container">
+            <button class="chat-toggle" onclick="App.toggleChat('${questionId}')">
+              ${ChatState.isOpen ? '▼' : '▶'} Ask the narrator (${ChatState.questionsRemaining} questions remaining)
+            </button>
+            ${ChatState.isOpen ? `
+              <div class="chat-interface">
+                ${messagesHTML ? `<div class="chat-messages">${messagesHTML}</div>` : ''}
+                ${canAsk ? `
+                  <div class="chat-input-container">
+                    <input type="text" class="chat-input" id="chat-input-${questionId}" placeholder="Ask a question..." ${canAsk ? '' : 'disabled'} onkeydown="if(event.key==='Enter'){App.sendChatMessage('${questionId}')}">
+                    <button class="chat-send" onclick="App.sendChatMessage('${questionId}')" ${canAsk ? '' : 'disabled'}>SEND</button>
+                  </div>
+                ` : `
+                  <div class="text-dim">No more questions for this step. Make your choice to continue.</div>
+                `}
+              </div>
+            ` : ''}
           </div>
         `;
       },
@@ -1560,11 +1911,11 @@
       async showMessage(question) {
         const narratorPanel = document.getElementById('narrator-panel');
         narratorPanel.innerHTML += Components.renderNarratorMessage('');
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(messageEl, question.text);
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         if (question.next) {
           await Utils.sleep(1500);
@@ -1575,13 +1926,20 @@
       async showChoice(question) {
         const narratorPanel = document.getElementById('narrator-panel');
         narratorPanel.innerHTML += Components.renderNarratorMessage('');
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(messageEl, question.text);
         
         narratorPanel.innerHTML += Components.renderQuestion(question);
-        Utils.scrollToBottom();
+        
+        // Add chat interface for motivation question (prototype)
+        if (question.id === 'motivation') {
+          ChatState.init(question.id);
+          narratorPanel.innerHTML += Components.renderChat(question.id);
+        }
+        
+        Utils.scrollToBottom(true);
         
         // Activate keyboard navigation
         KeyboardNav.activate();
@@ -1590,7 +1948,7 @@
       async showListChoice(question) {
         const narratorPanel = document.getElementById('narrator-panel');
         narratorPanel.innerHTML += Components.renderNarratorMessage('');
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(messageEl, question.text);
@@ -1609,7 +1967,7 @@
             </div>
           </div>
         `;
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         // Activate keyboard navigation
         KeyboardNav.activate();
@@ -1620,19 +1978,19 @@
         const state = CharacterState.get();
         
         narratorPanel.innerHTML += Components.renderNarratorMessage('');
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(messageEl, question.text);
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         // Get AI suggestion if available
         const suggestion = question.getSuggestion(state);
         
         narratorPanel.innerHTML += Components.renderNarratorMessage('');
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         const suggestionEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(suggestionEl, suggestion.message);
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         // Show suggested options
         const suggestedHTML = suggestion.suggestions.map(s => {
@@ -1642,7 +2000,7 @@
         }).join('\n');
         
         narratorPanel.innerHTML += Components.renderNarratorMessage(suggestedHTML);
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         await Utils.sleep(2000);
         await this.showQuestion(question.next);
@@ -1651,7 +2009,7 @@
       async showAbilities(question) {
         const narratorPanel = document.getElementById('narrator-panel');
         narratorPanel.innerHTML += Components.renderNarratorMessage('');
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(messageEl, question.text);
@@ -1669,7 +2027,7 @@
             </div>
           </div>
         `;
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         // Activate keyboard navigation
         KeyboardNav.activate();
@@ -1680,14 +2038,14 @@
         const state = CharacterState.get();
         
         narratorPanel.innerHTML += Components.renderNarratorMessage('');
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(messageEl, question.text);
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         // Generate name suggestions
         narratorPanel.innerHTML += Components.renderNarratorMessage('Consulting the ancient texts... [thinking]');
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         const names = await AIService.generateNames(state.character.race, state.character.class, 3);
         
@@ -1708,7 +2066,7 @@
         `;
         
         narratorPanel.innerHTML = narratorPanel.innerHTML.replace('Consulting the ancient texts... [thinking]', namesHTML);
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         // Activate keyboard navigation
         KeyboardNav.activate();
@@ -1719,19 +2077,19 @@
         const state = CharacterState.get();
         
         narratorPanel.innerHTML += Components.renderNarratorMessage('');
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(messageEl, question.text);
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         const backstory = await AIService.generateBackstory(state.character);
         CharacterState.updateCharacter({ backstory });
         
         narratorPanel.innerHTML += Components.renderNarratorMessage('');
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         const backstoryEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(backstoryEl, backstory);
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         await Utils.sleep(2000);
         await this.showQuestion(question.next);
@@ -1740,11 +2098,11 @@
       async showComplete(question) {
         const narratorPanel = document.getElementById('narrator-panel');
         narratorPanel.innerHTML += Components.renderNarratorMessage('');
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(messageEl, question.text);
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         // Save character
         const state = CharacterState.get();
@@ -1761,7 +2119,7 @@
             </button>
           </div>
         `;
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         // Activate keyboard navigation
         KeyboardNav.activate();
@@ -1794,11 +2152,11 @@
         if (question.aiPromptContext) {
           const narratorPanel = document.getElementById('narrator-panel');
           narratorPanel.innerHTML += Components.renderNarratorMessage('');
-          Utils.scrollToBottom();
+          Utils.scrollToBottom(true);
           
           const commentEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
           commentEl.textContent = '[thinking...]';
-          Utils.scrollToBottom();
+          Utils.scrollToBottom(true);
           
           const comment = await AIService.generateNarratorComment({
             question: question.aiPromptContext,
@@ -1808,7 +2166,7 @@
           
           commentEl.textContent = '';
           await Utils.typewriter(commentEl, comment);
-          Utils.scrollToBottom();
+          Utils.scrollToBottom(true);
           await Utils.sleep(1000);
         }
         
@@ -1873,7 +2231,7 @@
         
         const narratorPanel = document.getElementById('narrator-panel');
         narratorPanel.innerHTML += Components.renderNarratorMessage(`Your abilities have been determined. HP: ${hitPoints}. Good luck with that.`);
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         await Utils.sleep(2000);
         await this.showQuestion(this.currentQuestion.next);
@@ -1909,7 +2267,7 @@
         
         const narratorPanel = document.getElementById('narrator-panel');
         narratorPanel.innerHTML += Components.renderNarratorMessage(`${name}. Sure. Why not.`);
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         await Utils.sleep(1500);
         await this.showQuestion(this.currentQuestion.next);
@@ -1938,7 +2296,7 @@
         
         const narratorPanel = document.getElementById('narrator-panel');
         narratorPanel.innerHTML += Components.renderNarratorMessage(`${name}. Sure. Why not.`);
-        Utils.scrollToBottom();
+        Utils.scrollToBottom(true);
         
         await Utils.sleep(1500);
         await this.showQuestion(this.currentQuestion.next);
@@ -1992,19 +2350,160 @@
           this.init();
         }
       },
+      
+      toggleChat(questionId) {
+        ChatState.toggle();
+        
+        // Re-render chat interface
+        const chatContainer = document.querySelector('.chat-container');
+        if (chatContainer) {
+          chatContainer.outerHTML = Components.renderChat(questionId);
+        }
+        
+        Utils.scrollToBottom(true);
+        
+        // Focus input if opening
+        if (ChatState.isOpen) {
+          setTimeout(() => {
+            const input = document.getElementById(`chat-input-${questionId}`);
+            if (input) input.focus();
+          }, 100);
+        }
+      },
+      
+      async sendChatMessage(questionId) {
+        const input = document.getElementById(`chat-input-${questionId}`);
+        if (!input) return;
+        
+        const question = input.value.trim();
+        if (!question) return;
+        
+        if (!ChatState.canAsk()) return;
+        
+        // Add user message
+        ChatState.addMessage(question, true);
+        input.value = '';
+        input.disabled = true;
+        
+        // Re-render to show user message and loading state
+        const chatContainer = document.querySelector('.chat-container');
+        if (chatContainer) {
+          chatContainer.outerHTML = Components.renderChat(questionId);
+        }
+        Utils.scrollToBottom(true);
+        
+        // Get AI response
+        const state = CharacterState.get();
+        const currentStepName = 'character motivation';
+        const answer = await AIService.askNarrator(question, currentStepName, state.character);
+        
+        // Add narrator response
+        ChatState.addMessage(answer, false);
+        
+        // Re-render with response
+        const chatContainerUpdated = document.querySelector('.chat-container');
+        if (chatContainerUpdated) {
+          chatContainerUpdated.outerHTML = Components.renderChat(questionId);
+        }
+        Utils.scrollToBottom(true);
+        
+        // Focus input if still have questions
+        if (ChatState.canAsk()) {
+          setTimeout(() => {
+            const newInput = document.getElementById(`chat-input-${questionId}`);
+            if (newInput) newInput.focus();
+          }, 100);
+        }
+      },
     };
+    
+    // Splash screen handler
+    let splashActive = true;
+    let loadingInterval = null;
+    
+    const loadingMessages = [
+      'INITIALIZING SYSTEM...',
+      'LOADING D&D 5E RULESET...',
+      'CALIBRATING DICE ROLLER...',
+      'SUMMONING NARRATOR...',
+      'CONSULTING ANCIENT TEXTS...',
+      'PREPARING CHARACTER SHEETS...',
+      'ROLLING FOR INITIATIVE...',
+      'CHECKING ALIGNMENT...',
+      'LOADING ASCII DRAGONS...',
+    ];
+    
+    function startLoadingAnimation() {
+      let index = 0;
+      const statusText = document.getElementById('status-text');
+      
+      loadingInterval = setInterval(() => {
+        if (statusText && splashActive) {
+          statusText.textContent = loadingMessages[index];
+          index = (index + 1) % loadingMessages.length;
+        }
+      }, 800);
+    }
+    
+    function dismissSplash() {
+      const splash = document.getElementById('splash-content');
+      const mainContent = document.getElementById('main-content');
+      const statusText = document.getElementById('status-text');
+      
+      if (splash && splashActive) {
+        splashActive = false;
+        
+        // Stop loading animation
+        if (loadingInterval) {
+          clearInterval(loadingInterval);
+          loadingInterval = null;
+        }
+        
+        // Set to READY
+        if (statusText) {
+          statusText.textContent = 'READY';
+        }
+        
+        splash.style.opacity = '0';
+        splash.style.transition = 'opacity 0.3s ease-out';
+        
+        setTimeout(() => {
+          splash.remove();
+          mainContent.classList.remove('is-hidden');
+          App.init();
+        }, 300);
+      }
+    }
     
     // Initialize on page load
     window.addEventListener('DOMContentLoaded', () => {
-      App.init();
+      // Start loading animation
+      startLoadingAnimation();
+      
+      // Splash screen handlers
+      const splash = document.getElementById('splash-content');
+      if (splash) {
+        // Dismiss on any key press
+        const keyHandler = (e) => {
+          if (splashActive) {
+            dismissSplash();
+          }
+        };
+        window.addEventListener('keydown', keyHandler);
+        
+        // Dismiss on click
+        splash.addEventListener('click', dismissSplash, { once: true });
+      }
       
       // Keep narrator panel scrolled to bottom on resize
       window.addEventListener('resize', () => {
         Utils.scrollToBottom();
       });
       
-      // Keyboard navigation
+      // Keyboard navigation (only after splash is dismissed)
       window.addEventListener('keydown', (e) => {
+        if (splashActive) return; // Don't interfere with splash screen
+        
         if (e.key === 'ArrowUp') {
           e.preventDefault();
           KeyboardNav.moveUp();
