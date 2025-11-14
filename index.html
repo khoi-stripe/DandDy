@@ -1783,22 +1783,32 @@
     const KeyboardNav = {
       currentFocusIndex: 0,
       isActive: false,
+      retryCount: 0,
       
       activate() {
         this.isActive = true;
         this.currentFocusIndex = 0;
-        // Wait for DOM to update before focusing, retry if no buttons found
+        this.retryCount = 0;
+        // Wait for DOM to update before focusing
+        this.tryActivate();
+      },
+      
+      tryActivate() {
         setTimeout(() => {
           const buttons = this.getActiveButtons();
-          console.log('[KeyboardNav] Activating, found buttons:', buttons.length);
+          console.log('[KeyboardNav] Attempt', this.retryCount + 1, '- found buttons:', buttons.length);
+          
           if (buttons.length > 0) {
             this.updateFocus();
-          } else {
-            // Retry after a bit more time
+          } else if (this.retryCount < 10) {
+            // Retry up to 10 times (1 second total)
+            this.retryCount++;
             console.log('[KeyboardNav] No buttons found, retrying...');
-            setTimeout(() => this.updateFocus(), 100);
+            this.tryActivate();
+          } else {
+            console.log('[KeyboardNav] Failed to find buttons after 10 attempts');
           }
-        }, 60);
+        }, 100);
       },
       
       deactivate() {
@@ -1808,12 +1818,19 @@
       },
       
       getActiveButtons() {
-        // Get buttons from the last question card that aren't disabled
-        const lastCard = document.querySelector('.question-card:last-child');
-        if (!lastCard) {
-          console.log('[KeyboardNav] No question card found');
+        // Get ALL question cards
+        const allCards = document.querySelectorAll('.question-card');
+        console.log('[KeyboardNav] Total question cards:', allCards.length);
+        
+        if (allCards.length === 0) {
+          console.log('[KeyboardNav] No question cards found');
           return [];
         }
+        
+        // Get the last one
+        const lastCard = allCards[allCards.length - 1];
+        console.log('[KeyboardNav] Using last question card');
+        
         const buttons = Array.from(lastCard.querySelectorAll('.button-primary:not(:disabled)'));
         console.log('[KeyboardNav] Found', buttons.length, 'active buttons in last card');
         return buttons;
