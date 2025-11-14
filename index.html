@@ -173,26 +173,25 @@
       text-align: left;
     }
     
-    .button-primary:hover:not(:disabled) {
-      background: var(--terminal-fg);
-      color: var(--terminal-bg);
+    .button-primary:hover:not(:disabled):not(.is-selected) {
+      background: rgba(0, 255, 0, 0.25);
     }
     
-    .button-primary:disabled {
+    .button-primary:disabled:not(.is-selected) {
       opacity: 0.6;
       cursor: not-allowed;
     }
     
-    .button-primary:disabled:hover {
+    .button-primary:disabled:not(.is-selected):hover {
       background: transparent;
-      color: var(--terminal-fg);
     }
     
     .button-primary.is-selected {
       background: var(--terminal-fg);
       color: var(--terminal-bg);
       border-color: var(--terminal-fg);
-      opacity: 1;
+      opacity: 1 !important;
+      cursor: default;
     }
     
     .button-primary.is-selected:hover {
@@ -200,7 +199,7 @@
       color: var(--terminal-bg);
     }
     
-    .button-primary.is-focused:not(:disabled) {
+    .button-primary.is-focused:not(:disabled):not(.is-selected) {
       background: rgba(0, 255, 0, 0.25);
     }
     
@@ -704,7 +703,7 @@
     </div>
     
     <div class="terminal-footer">
-      [ v1.0 | Press ↑↓ to navigate, Enter to select, Tab for chat ]
+      [ v1.0 | Press ↑↓ to navigate, Enter to select ]
     </div>
   </div>
   
@@ -1876,28 +1875,6 @@
           this.deactivate();
         }
       },
-      
-      focusChat() {
-        // Find chat input and focus it
-        const chatInput = document.querySelector('.chat-input:not(:disabled)');
-        if (chatInput) {
-          this.clearFocus();
-          chatInput.focus();
-          return true;
-        }
-        return false;
-      },
-      
-      focusFromChat() {
-        // Return focus from chat to buttons
-        const chatInput = document.querySelector('.chat-input');
-        if (chatInput && document.activeElement === chatInput) {
-          chatInput.blur();
-          this.updateFocus();
-          return true;
-        }
-        return false;
-      },
     };
     
     // ===== APP LOGIC =====
@@ -2576,32 +2553,15 @@
       window.addEventListener('keydown', (e) => {
         if (splashActive) return; // Don't interfere with splash screen
         
-        // Check if user is typing in chat input
-        const chatInput = document.querySelector('.chat-input');
-        const isChatFocused = chatInput && document.activeElement === chatInput;
-        
-        if (e.key === 'Tab') {
+        if (e.key === 'ArrowUp') {
           e.preventDefault();
-          if (isChatFocused) {
-            KeyboardNav.focusFromChat();
-          } else {
-            KeyboardNav.focusChat();
-          }
-        } else if (e.key === 'Escape' && isChatFocused) {
+          KeyboardNav.moveUp();
+        } else if (e.key === 'ArrowDown') {
           e.preventDefault();
-          KeyboardNav.focusFromChat();
-        } else if (!isChatFocused) {
-          // Only handle these keys when NOT in chat input
-          if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            KeyboardNav.moveUp();
-          } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            KeyboardNav.moveDown();
-          } else if (e.key === 'Enter') {
-            e.preventDefault();
-            KeyboardNav.select();
-          }
+          KeyboardNav.moveDown();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          KeyboardNav.select();
         }
       });
     });
