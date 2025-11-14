@@ -177,6 +177,10 @@
       background: rgba(0, 255, 0, 0.25);
     }
     
+    .button-primary.is-focused:not(:disabled):not(.is-selected) {
+      background: rgba(0, 255, 0, 0.25);
+    }
+    
     .button-primary:disabled:not(.is-selected) {
       opacity: 0.6;
       cursor: not-allowed;
@@ -186,21 +190,16 @@
       background: transparent;
     }
     
-    .button-primary.is-selected {
-      background: var(--terminal-fg);
-      color: var(--terminal-bg);
-      border-color: var(--terminal-fg);
+    /* Selected state - must come after disabled to override */
+    .button-primary.is-selected,
+    .button-primary.is-selected:disabled,
+    .button-primary.is-selected:hover,
+    .button-primary.is-selected:disabled:hover {
+      background: var(--terminal-fg) !important;
+      color: var(--terminal-bg) !important;
+      border-color: var(--terminal-fg) !important;
       opacity: 1 !important;
-      cursor: default;
-    }
-    
-    .button-primary.is-selected:hover {
-      background: var(--terminal-fg);
-      color: var(--terminal-bg);
-    }
-    
-    .button-primary.is-focused:not(:disabled):not(.is-selected) {
-      background: rgba(0, 255, 0, 0.25);
+      cursor: default !important;
     }
     
     .button-secondary {
