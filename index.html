@@ -274,7 +274,7 @@
     
     /* ASCII Art */
     .ascii-portrait {
-      font-size: 10px;
+      font-size: 7px;
       line-height: 1;
       color: var(--terminal-accent);
       text-align: center;
@@ -1211,7 +1211,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
       ASCII_CHARS: '$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,"^`\'.  ',
       
       // Convert image URL to ASCII art with Floyd-Steinberg dithering
-      async convertToAscii(imageUrl, width = 120, height = 60) {
+      async convertToAscii(imageUrl, width = 160, height = 80) {
         try {
           // Load image
           const img = await this.loadImage(imageUrl);
@@ -1700,7 +1700,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
           
           // Step 2: Convert to ASCII with high resolution
           console.log('Converting to ASCII with Floyd-Steinberg dithering...');
-          const asciiArt = await ImageToAsciiService.convertToAscii(imageUrl, 120, 60);
+          const asciiArt = await ImageToAsciiService.convertToAscii(imageUrl, 160, 80);
           
           if (!asciiArt) {
             console.log('ASCII conversion failed, using template');
@@ -1857,7 +1857,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
         `;
       },
       
-      renderCharacterSheet(character, portrait = null) {
+      renderCharacterSheet(character, portrait = null, showPortrait = true) {
         const race = DND_DATA.races.find(r => r.id === character.race);
         const classData = DND_DATA.classes.find(c => c.id === character.class);
         const background = DND_DATA.backgrounds.find(b => b.id === character.background);
@@ -1868,7 +1868,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
         
         return `
           <div class="character-sheet">
-            ${character.race ? `
+            ${(character.race && showPortrait) ? `
               <div class="ascii-portrait" id="character-portrait">${portraitArt}</div>
             ` : ''}
             
@@ -2715,37 +2715,42 @@ Format your response as JSON array of strings, one for each option in order. Exa
         const aiPortraitsEnabled = StorageService.getAIPortraitsEnabled();
         
         // Only generate AI portrait when character is COMPLETE (has backstory) to save costs
-        // Before that, show template portraits
         const isCharacterComplete = character.backstory && character.backstory.length > 0;
         
-        if (aiPortraitsEnabled && isCharacterComplete && character.race && character.class) {
-          // First render with template and loading indicator
-          panel.innerHTML = Components.renderCharacterSheet(character, `
-            [ GENERATING AI PORTRAIT... ]
+        if (aiPortraitsEnabled) {
+          if (isCharacterComplete && character.race && character.class) {
+            // Character is complete - generate AI portrait
+            // First render with loading indicator
+            panel.innerHTML = Components.renderCharacterSheet(character, `
+              [ GENERATING AI PORTRAIT... ]
+              
+              
+              
+              . . . ( ._.)
+            `);
             
-            
-            
-            . . . ( ._.)
-          `);
-          
-          // Generate AI portrait in background
-          try {
-            const aiPortrait = await AsciiArtService.generateAIPortrait(character);
-            // Update just the portrait section
-            const portraitEl = document.getElementById('character-portrait');
-            if (portraitEl) {
-              portraitEl.textContent = aiPortrait;
+            // Generate AI portrait in background
+            try {
+              const aiPortrait = await AsciiArtService.generateAIPortrait(character);
+              // Update just the portrait section
+              const portraitEl = document.getElementById('character-portrait');
+              if (portraitEl) {
+                portraitEl.textContent = aiPortrait;
+              }
+            } catch (error) {
+              console.error('Failed to generate AI portrait:', error);
+              // Fallback already handled in generateAIPortrait
+              const portraitEl = document.getElementById('character-portrait');
+              if (portraitEl) {
+                portraitEl.textContent = AsciiArtService.getFullPortrait(character);
+              }
             }
-          } catch (error) {
-            console.error('Failed to generate AI portrait:', error);
-            // Fallback already handled in generateAIPortrait
-            const portraitEl = document.getElementById('character-portrait');
-            if (portraitEl) {
-              portraitEl.textContent = AsciiArtService.getFullPortrait(character);
-            }
+          } else {
+            // Character not complete yet - don't show any portrait
+            panel.innerHTML = Components.renderCharacterSheet(character, null, false);
           }
         } else {
-          // Use template portraits (either AI disabled or character not complete yet)
+          // AI disabled - use template portraits
           panel.innerHTML = Components.renderCharacterSheet(character);
         }
       },
