@@ -289,6 +289,7 @@
       text-align: center;
       margin: var(--spacing-md) 0;
       position: relative;
+      overflow: hidden;
     }
     
     .enhanced-image-container.hidden {
@@ -299,23 +300,30 @@
       max-width: 100%;
       border: 1px solid var(--terminal-accent);
       border-radius: 4px;
-      image-rendering: pixelated;
-      animation: depixelate 2s ease-out forwards;
+      animation: wipeIn 0.8s ease-out forwards;
+      transform-origin: left center;
     }
     
-    @keyframes depixelate {
+    @keyframes wipeIn {
       0% {
-        filter: blur(20px) contrast(1.5);
-        transform: scale(0.5);
-      }
-      50% {
-        filter: blur(10px) contrast(1.3);
-        transform: scale(0.75);
+        clip-path: inset(0 100% 0 0);
       }
       100% {
-        filter: blur(0px) contrast(1);
-        transform: scale(1);
+        clip-path: inset(0 0 0 0);
       }
+    }
+    
+    @keyframes wipeOut {
+      0% {
+        clip-path: inset(0 0 0 0);
+      }
+      100% {
+        clip-path: inset(0 100% 0 0);
+      }
+    }
+    
+    .enhanced-image-container img.wipe-out {
+      animation: wipeOut 0.8s ease-out forwards;
     }
     
     /* Loading */
@@ -1906,17 +1914,16 @@ Format your response as JSON array of strings, one for each option in order. Exa
           <div class="character-sheet">
             ${(character.race && showPortrait) ? `
               <div class="ascii-portrait" id="character-portrait">${portraitArt}</div>
+              <!-- Hidden image container for reveal -->
+              <div id="enhanced-image-container" class="enhanced-image-container hidden"></div>
               ${character.aiPortraitImageUrl ? `
                 <div style="text-align: center; margin: var(--spacing-md) 0;">
-                  <button class="button-primary" onclick="App.enhancePortrait()" id="enhance-btn">
+                  <button class="button-primary" onclick="App.toggleEnhance()" id="enhance-toggle">
                     [ ENHANCE ]
                   </button>
                 </div>
               ` : ''}
             ` : ''}
-            
-            <!-- Hidden image container for reveal -->
-            <div id="enhanced-image-container" class="enhanced-image-container hidden"></div>
             
             <div class="sheet-section">
               <div class="sheet-header">[ CHARACTER INFO ]</div>
@@ -2304,9 +2311,13 @@ Format your response as JSON array of strings, one for each option in order. Exa
     const App = {
       currentQuestion: null,
       isGeneratingPortrait: false,
+      isEnhanced: false,
       
       async init() {
         console.log('Initializing Character Builder...');
+        
+        // Reset state
+        this.isEnhanced = false;
         
         // Subscribe to state changes
         CharacterState.subscribe((state) => {
@@ -2865,7 +2876,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
         }
       },
       
-      enhancePortrait() {
+      toggleEnhance() {
         const state = CharacterState.get();
         const imageUrl = state.character.aiPortraitImageUrl;
         
@@ -2874,21 +2885,52 @@ Format your response as JSON array of strings, one for each option in order. Exa
           return;
         }
         
-        // Hide ASCII portrait and enhance button
         const asciiPortrait = document.getElementById('character-portrait');
-        const enhanceBtn = document.getElementById('enhance-btn');
-        if (asciiPortrait) asciiPortrait.style.display = 'none';
-        if (enhanceBtn) enhanceBtn.parentElement.style.display = 'none';
-        
-        // Show enhanced image container with pixelated transition
         const container = document.getElementById('enhanced-image-container');
-        if (container) {
-          container.innerHTML = `<img src="${imageUrl}" alt="Enhanced Character Portrait">`;
-          container.classList.remove('hidden');
+        const toggleBtn = document.getElementById('enhance-toggle');
+        
+        if (this.isEnhanced) {
+          // Switch back to ASCII
+          console.log('Switching to ASCII view');
+          
+          // Add wipe-out animation to image
+          const img = container.querySelector('img');
+          if (img) {
+            img.classList.add('wipe-out');
+            // Wait for animation to complete
+            setTimeout(() => {
+              container.classList.add('hidden');
+              container.innerHTML = '';
+              if (asciiPortrait) asciiPortrait.style.display = '';
+            }, 800);
+          } else {
+            container.classList.add('hidden');
+            if (asciiPortrait) asciiPortrait.style.display = '';
+          }
+          
+          if (toggleBtn) toggleBtn.textContent = '[ ENHANCE ]';
+          this.isEnhanced = false;
+          
+        } else {
+          // Switch to enhanced image
+          console.log('Switching to enhanced view');
+          
+          if (asciiPortrait) asciiPortrait.style.display = 'none';
+          
+          // Show enhanced image with wipe-in animation
+          if (container) {
+            container.innerHTML = `<img src="${imageUrl}" alt="Enhanced Character Portrait">`;
+            container.classList.remove('hidden');
+          }
+          
+          if (toggleBtn) toggleBtn.textContent = '[ ASCII ]';
+          this.isEnhanced = true;
           
           // Scroll to the image
           setTimeout(() => {
-            container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (container) {
+              container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
           }, 100);
         }
       },
