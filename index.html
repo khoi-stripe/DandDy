@@ -2630,6 +2630,11 @@
       window.addEventListener('keydown', (e) => {
         if (splashActive) return; // Don't interfere with splash screen
         
+        // Don't handle keyboard nav if user is typing in an input field
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+          return;
+        }
+        
         if (e.key === 'ArrowUp') {
           e.preventDefault();
           KeyboardNav.moveUp();
