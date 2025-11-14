@@ -621,6 +621,7 @@
       STORAGE_KEY: 'dnd_characters',
       API_KEY_STORAGE: 'dnd_openai_key',
       AI_PORTRAITS_STORAGE: 'dnd_ai_portraits_enabled',
+      DEMO_MODE_STORAGE: 'dnd_demo_mode_enabled',
       MAX_RETRIES: 2,
       ENABLE_AI: true, // Set to false to disable all AI features
     };
@@ -948,6 +949,17 @@
           doScroll();
         }
       },
+    };
+    
+    // ===== DEMO MODE PORTRAITS =====
+    // Pre-generated portraits for demo mode (no API key required)
+    const DEMO_PORTRAITS = {
+      'elf-wizard': `Placeholder for elf wizard ASCII art`,
+      'dwarf-fighter': `Placeholder for dwarf fighter ASCII art`,
+      'human-paladin': `Placeholder for human paladin ASCII art`,
+      'tiefling-warlock': `Placeholder for tiefling warlock ASCII art`,
+      'halfling-rogue': `Placeholder for halfling rogue ASCII art`,
+      'dragonborn-barbarian': `Placeholder for dragonborn barbarian ASCII art`,
     };
     
     // ===== SERVICES =====
@@ -1360,6 +1372,15 @@ Format your response as JSON array of strings, one for each option in order. Exa
         localStorage.setItem(CONFIG.AI_PORTRAITS_STORAGE, enabled ? 'true' : 'false');
       },
       
+      getDemoModeEnabled() {
+        const value = localStorage.getItem(CONFIG.DEMO_MODE_STORAGE);
+        return value === 'true'; // Default to false
+      },
+      
+      setDemoModeEnabled(enabled) {
+        localStorage.setItem(CONFIG.DEMO_MODE_STORAGE, enabled ? 'true' : 'false');
+      },
+      
       getCharacters() {
         const data = localStorage.getItem(CONFIG.STORAGE_KEY);
         return data ? JSON.parse(data) : [];
@@ -1687,6 +1708,25 @@ Format your response as JSON array of strings, one for each option in order. Exa
       // Generate AI-powered ASCII portrait
       async generateAIPortrait(character) {
         try {
+          // Check for demo mode first
+          const demoModeEnabled = StorageService.getDemoModeEnabled();
+          
+          if (demoModeEnabled) {
+            console.log('Demo mode enabled, using pre-generated portrait...');
+            const demoKey = `${character.race}-${character.class}`;
+            const demoPortrait = DEMO_PORTRAITS[demoKey];
+            
+            if (demoPortrait) {
+              console.log(`Found demo portrait for ${demoKey}`);
+              // Simulate loading delay for realism
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              return demoPortrait;
+            } else {
+              console.log(`No demo portrait found for ${demoKey}, falling back to template`);
+              return this.getFullPortrait(character);
+            }
+          }
+          
           // Step 1: Generate image with DALL-E
           console.log('Generating DALL-E portrait...');
           const imageUrl = await AIService.generatePortraitImage(character);
@@ -1932,6 +1972,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
       renderSettings() {
         const apiKey = StorageService.getAPIKey() || '';
         const aiPortraitsEnabled = StorageService.getAIPortraitsEnabled();
+        const demoModeEnabled = StorageService.getDemoModeEnabled();
         
         return `
           <div class="settings-overlay" onclick="App.closeSettings()"></div>
@@ -1950,6 +1991,14 @@ Format your response as JSON array of strings, one for each option in order. Exa
                 <span>Enable AI-Generated Portraits (Experimental)</span>
               </label>
               <div class="settings-help">Uses DALL-E 3 to generate unique character portraits. Costs ~$0.04 per character. Falls back to ASCII templates if disabled or if generation fails.</div>
+            </div>
+            
+            <div class="settings-row" style="margin-top: 16px;">
+              <label class="settings-label" style="display: flex; align-items: center; cursor: pointer;">
+                <input type="checkbox" id="demo-mode-checkbox" ${demoModeEnabled ? 'checked' : ''} style="margin-right: 8px; cursor: pointer;">
+                <span>Demo Mode (No API Key Required)</span>
+              </label>
+              <div class="settings-help">Uses pre-generated portraits for common character combinations. Perfect for sharing without an API key. No cost, limited character options.</div>
             </div>
             
             <div class="settings-row">
@@ -2770,12 +2819,14 @@ Format your response as JSON array of strings, one for each option in order. Exa
         const input = document.getElementById('api-key-input');
         const key = input.value.trim();
         const aiPortraitsCheckbox = document.getElementById('ai-portraits-checkbox');
+        const demoModeCheckbox = document.getElementById('demo-mode-checkbox');
         
         if (key) {
           StorageService.setAPIKey(key);
         }
         
         StorageService.setAIPortraitsEnabled(aiPortraitsCheckbox.checked);
+        StorageService.setDemoModeEnabled(demoModeCheckbox.checked);
         
         alert('Settings saved!');
         this.closeSettings();
