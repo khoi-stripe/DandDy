@@ -1,0 +1,2023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D&D Character Builder - Terminal Edition</title>
+  
+  <style>
+    /* ===== DESIGN TOKENS ===== */
+    /* CHANGE THESE to customize the look and feel */
+    :root {
+      /* Colors */
+      --terminal-bg: #0a0a0a;
+      --terminal-fg: #00ff00;
+      --terminal-dim: #008800;
+      --terminal-accent: #00ffff;
+      --terminal-warning: #ffff00;
+      --terminal-error: #ff0000;
+      --terminal-border: #00ff00;
+      
+      /* Typography */
+      --font-mono: 'Courier New', Courier, monospace;
+      --font-size-base: 16px;
+      --font-size-large: 20px;
+      --font-size-small: 14px;
+      --line-height: 1.6;
+      
+      /* Spacing */
+      --spacing-xs: 4px;
+      --spacing-sm: 8px;
+      --spacing-md: 16px;
+      --spacing-lg: 24px;
+      --spacing-xl: 32px;
+      
+      /* Animation */
+      --typewriter-speed: 30ms;
+      --transition-speed: 0.3s;
+      
+      /* Layout */
+      --max-width: 1400px;
+      --split-ratio: 50%;
+    }
+    
+    /* ===== BASE STYLES ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: var(--font-mono);
+      font-size: var(--font-size-base);
+      line-height: var(--line-height);
+      background-color: #1a1a1a;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+      background-size: 20px 20px;
+      color: var(--terminal-fg);
+      overflow-x: hidden;
+      padding: 64px;
+    }
+    
+    /* ===== LAYOUT ===== */
+    .terminal-container {
+      height: calc(100vh - 128px);
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--terminal-bg);
+      border: 1px solid var(--terminal-border);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6);
+    }
+    
+    .terminal-header {
+      padding: var(--spacing-md);
+      border-bottom: 1px solid var(--terminal-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .terminal-footer {
+      padding: var(--spacing-sm);
+      border-top: 1px solid var(--terminal-border);
+      text-align: center;
+      color: var(--terminal-dim);
+      font-size: var(--font-size-small);
+    }
+    
+    .terminal-title {
+      font-size: var(--font-size-large);
+      color: var(--terminal-accent);
+    }
+    
+    .terminal-status {
+      font-size: var(--font-size-small);
+      color: var(--terminal-dim);
+    }
+    
+    .split-layout {
+      flex: 1;
+      display: flex;
+      width: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+    
+    .left-panel {
+      flex: 1;
+      padding: var(--spacing-xl);
+      border-right: 1px solid var(--terminal-border);
+      overflow-y: auto;
+      min-height: 0;
+    }
+    
+    .right-panel {
+      flex: 1;
+      padding: var(--spacing-xl);
+      overflow-y: auto;
+      min-height: 0;
+    }
+    
+    /* ===== COMPONENTS ===== */
+    
+    /* Narrator */
+    .narrator-message {
+      margin-bottom: var(--spacing-lg);
+    }
+    
+    .narrator-text {
+      color: var(--terminal-fg);
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    
+    .narrator-prompt {
+      color: var(--terminal-accent);
+      margin-top: var(--spacing-sm);
+    }
+    
+    /* Questions */
+    .question-card {
+      margin-top: var(--spacing-lg);
+      padding: var(--spacing-md);
+      border: 1px solid var(--terminal-dim);
+    }
+    
+    .question-text {
+      color: var(--terminal-accent);
+      margin-bottom: var(--spacing-md);
+      font-size: var(--font-size-large);
+    }
+    
+    .options-container {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-sm);
+    }
+    
+    /* Buttons */
+    .button-primary {
+      background: transparent;
+      border: 2px solid var(--terminal-fg);
+      color: var(--terminal-fg);
+      padding: var(--spacing-sm) var(--spacing-md);
+      font-family: var(--font-mono);
+      font-size: var(--font-size-base);
+      cursor: pointer;
+      transition: all var(--transition-speed);
+      text-align: left;
+    }
+    
+    .button-primary:hover:not(:disabled) {
+      background: var(--terminal-fg);
+      color: var(--terminal-bg);
+    }
+    
+    .button-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .button-primary:disabled:hover {
+      background: transparent;
+      color: var(--terminal-fg);
+    }
+    
+    .button-primary.is-selected {
+      background: var(--terminal-fg);
+      color: var(--terminal-bg);
+      border-color: var(--terminal-fg);
+      opacity: 1;
+    }
+    
+    .button-primary.is-selected:hover {
+      background: var(--terminal-fg);
+      color: var(--terminal-bg);
+    }
+    
+    .button-primary.is-focused:not(:disabled) {
+      background: rgba(0, 255, 0, 0.25);
+    }
+    
+    .button-secondary {
+      background: transparent;
+      border: 1px solid var(--terminal-dim);
+      color: var(--terminal-dim);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      font-family: var(--font-mono);
+      font-size: var(--font-size-small);
+      cursor: pointer;
+      transition: all var(--transition-speed);
+    }
+    
+    .button-secondary:hover:not(:disabled) {
+      border-color: var(--terminal-fg);
+      color: var(--terminal-fg);
+    }
+    
+    /* Input */
+    .input-field {
+      background: transparent;
+      border: 2px solid var(--terminal-dim);
+      color: var(--terminal-fg);
+      padding: var(--spacing-sm);
+      font-family: var(--font-mono);
+      font-size: var(--font-size-base);
+      width: 100%;
+      margin-top: var(--spacing-sm);
+    }
+    
+    .input-field:focus {
+      outline: none;
+      border-color: var(--terminal-fg);
+    }
+    
+    /* Character Sheet */
+    .character-sheet {
+      border: 1px solid var(--terminal-border);
+      padding: var(--spacing-md);
+    }
+    
+    .sheet-section {
+      margin-bottom: var(--spacing-lg);
+    }
+    
+    .sheet-header {
+      color: var(--terminal-accent);
+      font-size: var(--font-size-large);
+      margin-bottom: var(--spacing-sm);
+      border-bottom: 1px solid var(--terminal-dim);
+      padding-bottom: var(--spacing-xs);
+    }
+    
+    .sheet-content {
+      color: var(--terminal-fg);
+    }
+    
+    .stat-line {
+      display: flex;
+      justify-content: space-between;
+      padding: var(--spacing-xs) 0;
+    }
+    
+    .stat-label {
+      color: var(--terminal-dim);
+    }
+    
+    .stat-value {
+      color: var(--terminal-fg);
+    }
+    
+    /* ASCII Art */
+    .ascii-portrait {
+      font-size: 12px;
+      line-height: 1;
+      color: var(--terminal-accent);
+      text-align: center;
+      margin: var(--spacing-md) 0;
+      white-space: pre;
+      font-family: monospace;
+    }
+    
+    /* Loading */
+    .loading-indicator {
+      color: var(--terminal-dim);
+      animation: blink 1s infinite;
+    }
+    
+    /* Settings Panel */
+    .settings-panel {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--terminal-bg);
+      border: 2px solid var(--terminal-border);
+      padding: var(--spacing-xl);
+      z-index: 1000;
+      max-width: 500px;
+      width: 90%;
+    }
+    
+    .settings-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 999;
+    }
+    
+    .settings-header {
+      color: var(--terminal-accent);
+      font-size: var(--font-size-large);
+      margin-bottom: var(--spacing-md);
+    }
+    
+    .settings-row {
+      margin-bottom: var(--spacing-md);
+    }
+    
+    .settings-label {
+      display: block;
+      color: var(--terminal-fg);
+      margin-bottom: var(--spacing-xs);
+    }
+    
+    .settings-help {
+      font-size: var(--font-size-small);
+      color: var(--terminal-dim);
+      margin-top: var(--spacing-xs);
+    }
+    
+    /* ===== STATES ===== */
+    .is-typing::after {
+      content: '▋';
+      animation: blink 1s infinite;
+    }
+    
+    .is-hidden {
+      display: none;
+    }
+    
+    .is-disabled {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    
+    /* ===== UTILITIES ===== */
+    .text-center {
+      text-align: center;
+    }
+    
+    .text-dim {
+      color: var(--terminal-dim);
+    }
+    
+    .text-accent {
+      color: var(--terminal-accent);
+    }
+    
+    .text-warning {
+      color: var(--terminal-warning);
+    }
+    
+    .text-error {
+      color: var(--terminal-error);
+    }
+    
+    .mt-sm { margin-top: var(--spacing-sm); }
+    .mt-md { margin-top: var(--spacing-md); }
+    .mt-lg { margin-top: var(--spacing-lg); }
+    .mb-sm { margin-bottom: var(--spacing-sm); }
+    .mb-md { margin-bottom: var(--spacing-md); }
+    .mb-lg { margin-bottom: var(--spacing-lg); }
+    
+    .text-small {
+      font-size: var(--font-size-small);
+    }
+    
+    /* ===== ANIMATIONS ===== */
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+    
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      body {
+        padding: var(--spacing-md);
+      }
+      
+      .terminal-container {
+        height: calc(100vh - 32px);
+      }
+      
+      .split-layout {
+        flex-direction: column;
+      }
+      
+      .left-panel {
+        border-right: none;
+        border-bottom: 1px solid var(--terminal-border);
+        max-height: none;
+      }
+      
+      .right-panel {
+        max-height: none;
+      }
+      
+      :root {
+        --font-size-base: 14px;
+        --font-size-large: 18px;
+        --spacing-xl: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="terminal-container">
+    <div class="terminal-header">
+      <div class="terminal-title">[ DandDy CHARACTER BUILDER v1.0 ]</div>
+      <div class="terminal-status">
+        <span id="status-text">READY</span>
+        <button class="button-secondary" onclick="App.openSettings()" style="margin-left: 16px;">⚙ SETTINGS</button>
+      </div>
+    </div>
+    
+    <div class="split-layout">
+      <div class="left-panel" id="narrator-panel">
+        <!-- Narrator content will be injected here -->
+      </div>
+      
+      <div class="right-panel" id="character-panel">
+        <!-- Character sheet will be injected here -->
+      </div>
+    </div>
+    
+    <div class="terminal-footer">
+      [ v1.0 | Press ↑↓ to navigate, Enter to select ]
+    </div>
+  </div>
+  
+  <script>
+    // ===== CONFIG =====
+    // CHANGE THESE to customize behavior
+    
+    const CONFIG = {
+      TYPEWRITER_SPEED: 30, // milliseconds per character
+      AI_TIMEOUT: 30000, // 30 seconds
+      OPENAI_API_URL: 'https://api.openai.com/v1/chat/completions',
+      OPENAI_MODEL: 'gpt-3.5-turbo',
+      STORAGE_KEY: 'dnd_characters',
+      API_KEY_STORAGE: 'dnd_openai_key',
+      MAX_RETRIES: 2,
+      ENABLE_AI: true, // Set to false to disable all AI features
+    };
+    
+    // ===== D&D 5E DATA =====
+    // FUTURE: Move this to API endpoints
+    
+    const DND_DATA = {
+      races: [
+        {
+          id: 'human',
+          name: 'Human',
+          description: 'Versatile and ambitious, found in every corner of the world.',
+          abilityBonuses: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
+          traits: ['Extra Language', 'Versatile'],
+          size: 'Medium',
+          speed: 30,
+        },
+        {
+          id: 'elf',
+          name: 'Elf',
+          description: 'Graceful and long-lived, masters of magic and nature.',
+          abilityBonuses: { dex: 2 },
+          traits: ['Darkvision', 'Keen Senses', 'Fey Ancestry', 'Trance'],
+          size: 'Medium',
+          speed: 30,
+        },
+        {
+          id: 'dwarf',
+          name: 'Dwarf',
+          description: 'Stout and hardy, renowned craftsmen and warriors.',
+          abilityBonuses: { con: 2 },
+          traits: ['Darkvision', 'Dwarven Resilience', 'Stonecunning'],
+          size: 'Medium',
+          speed: 25,
+        },
+        {
+          id: 'halfling',
+          name: 'Halfling',
+          description: 'Small and nimble, lucky and brave despite their size.',
+          abilityBonuses: { dex: 2 },
+          traits: ['Lucky', 'Brave', 'Halfling Nimbleness'],
+          size: 'Small',
+          speed: 25,
+        },
+        {
+          id: 'dragonborn',
+          name: 'Dragonborn',
+          description: 'Draconic humanoids with breath weapons and scaled skin.',
+          abilityBonuses: { str: 2, cha: 1 },
+          traits: ['Draconic Ancestry', 'Breath Weapon', 'Damage Resistance'],
+          size: 'Medium',
+          speed: 30,
+        },
+        {
+          id: 'gnome',
+          name: 'Gnome',
+          description: 'Clever and curious, lovers of knowledge and tinkering.',
+          abilityBonuses: { int: 2 },
+          traits: ['Darkvision', 'Gnome Cunning'],
+          size: 'Small',
+          speed: 25,
+        },
+        {
+          id: 'half-elf',
+          name: 'Half-Elf',
+          description: 'Walking between two worlds, charismatic and adaptable.',
+          abilityBonuses: { cha: 2 },
+          traits: ['Darkvision', 'Fey Ancestry', 'Skill Versatility'],
+          size: 'Medium',
+          speed: 30,
+        },
+        {
+          id: 'half-orc',
+          name: 'Half-Orc',
+          description: 'Fierce and strong, proving themselves through deeds.',
+          abilityBonuses: { str: 2, con: 1 },
+          traits: ['Darkvision', 'Menacing', 'Relentless Endurance', 'Savage Attacks'],
+          size: 'Medium',
+          speed: 30,
+        },
+        {
+          id: 'tiefling',
+          name: 'Tiefling',
+          description: 'Infernal heritage grants dark powers and distinction.',
+          abilityBonuses: { cha: 2, int: 1 },
+          traits: ['Darkvision', 'Hellish Resistance', 'Infernal Legacy'],
+          size: 'Medium',
+          speed: 30,
+        },
+      ],
+      
+      classes: [
+        {
+          id: 'fighter',
+          name: 'Fighter',
+          description: 'Master of martial combat, skilled with weapons and armor.',
+          hitDie: 10,
+          primaryAbility: ['str', 'dex'],
+          savingThrows: ['str', 'con'],
+          equipment: ['Martial weapons', 'Heavy armor', 'Shield'],
+        },
+        {
+          id: 'wizard',
+          name: 'Wizard',
+          description: 'Scholar of arcane magic, wielding powerful spells.',
+          hitDie: 6,
+          primaryAbility: ['int'],
+          savingThrows: ['int', 'wis'],
+          equipment: ['Spellbook', 'Component pouch', 'Robes'],
+        },
+        {
+          id: 'rogue',
+          name: 'Rogue',
+          description: 'Skilled in stealth and precision, master of skills.',
+          hitDie: 8,
+          primaryAbility: ['dex'],
+          savingThrows: ['dex', 'int'],
+          equipment: ['Light armor', 'Thieves\' tools', 'Rapier'],
+        },
+        {
+          id: 'cleric',
+          name: 'Cleric',
+          description: 'Divine spellcaster, channeling the power of a deity.',
+          hitDie: 8,
+          primaryAbility: ['wis'],
+          savingThrows: ['wis', 'cha'],
+          equipment: ['Medium armor', 'Shield', 'Holy symbol'],
+        },
+        {
+          id: 'ranger',
+          name: 'Ranger',
+          description: 'Wilderness warrior, tracker, and protector of nature.',
+          hitDie: 10,
+          primaryAbility: ['dex', 'wis'],
+          savingThrows: ['str', 'dex'],
+          equipment: ['Longbow', 'Leather armor', 'Survival gear'],
+        },
+        {
+          id: 'paladin',
+          name: 'Paladin',
+          description: 'Holy warrior sworn to an oath, wielding divine magic.',
+          hitDie: 10,
+          primaryAbility: ['str', 'cha'],
+          savingThrows: ['wis', 'cha'],
+          equipment: ['Heavy armor', 'Martial weapons', 'Holy symbol'],
+        },
+        {
+          id: 'barbarian',
+          name: 'Barbarian',
+          description: 'Fierce warrior who channels rage in battle.',
+          hitDie: 12,
+          primaryAbility: ['str'],
+          savingThrows: ['str', 'con'],
+          equipment: ['Greataxe', 'Medium armor', 'Javelins'],
+        },
+        {
+          id: 'bard',
+          name: 'Bard',
+          description: 'Inspiring performer who weaves magic through music.',
+          hitDie: 8,
+          primaryAbility: ['cha'],
+          savingThrows: ['dex', 'cha'],
+          equipment: ['Musical instrument', 'Light armor', 'Rapier'],
+        },
+        {
+          id: 'druid',
+          name: 'Druid',
+          description: 'Nature priest who can shapeshift and wield primal magic.',
+          hitDie: 8,
+          primaryAbility: ['wis'],
+          savingThrows: ['int', 'wis'],
+          equipment: ['Druidic focus', 'Leather armor', 'Wooden shield'],
+        },
+        {
+          id: 'monk',
+          name: 'Monk',
+          description: 'Martial artist who channels ki energy through their body.',
+          hitDie: 8,
+          primaryAbility: ['dex', 'wis'],
+          savingThrows: ['str', 'dex'],
+          equipment: ['Martial arts', 'Simple weapons', 'Unarmored defense'],
+        },
+        {
+          id: 'sorcerer',
+          name: 'Sorcerer',
+          description: 'Innate spellcaster with magic in their blood.',
+          hitDie: 6,
+          primaryAbility: ['cha'],
+          savingThrows: ['con', 'cha'],
+          equipment: ['Arcane focus', 'Light crossbow', 'Component pouch'],
+        },
+        {
+          id: 'warlock',
+          name: 'Warlock',
+          description: 'Pact-bound caster drawing power from otherworldly patrons.',
+          hitDie: 8,
+          primaryAbility: ['cha'],
+          savingThrows: ['wis', 'cha'],
+          equipment: ['Eldritch invocations', 'Light armor', 'Simple weapons'],
+        },
+      ],
+      
+      backgrounds: [
+        { id: 'acolyte', name: 'Acolyte', description: 'Served in a temple' },
+        { id: 'criminal', name: 'Criminal', description: 'Lived outside the law' },
+        { id: 'folk-hero', name: 'Folk Hero', description: 'Champion of the common people' },
+        { id: 'noble', name: 'Noble', description: 'Born to privilege' },
+        { id: 'sage', name: 'Sage', description: 'Scholar and researcher' },
+        { id: 'soldier', name: 'Soldier', description: 'Trained for war' },
+        { id: 'outlander', name: 'Outlander', description: 'Grew up in the wilds' },
+        { id: 'entertainer', name: 'Entertainer', description: 'Performer and artist' },
+      ],
+      
+      alignments: [
+        { id: 'lg', name: 'Lawful Good', description: 'Honor and compassion' },
+        { id: 'ng', name: 'Neutral Good', description: 'Kindness without bias' },
+        { id: 'cg', name: 'Chaotic Good', description: 'Freedom and kindness' },
+        { id: 'ln', name: 'Lawful Neutral', description: 'Order above all' },
+        { id: 'n', name: 'True Neutral', description: 'Balance and pragmatism' },
+        { id: 'cn', name: 'Chaotic Neutral', description: 'Freedom above all' },
+        { id: 'le', name: 'Lawful Evil', description: 'Methodical cruelty' },
+        { id: 'ne', name: 'Neutral Evil', description: 'Pure selfishness' },
+        { id: 'ce', name: 'Chaotic Evil', description: 'Destruction and malice' },
+      ],
+    };
+    
+    // ===== UTILITIES =====
+    // Reusable helper functions
+    
+    const Utils = {
+      // Typewriter effect for text
+      async typewriter(element, text, speed = CONFIG.TYPEWRITER_SPEED) {
+        element.textContent = '';
+        element.classList.add('is-typing');
+        
+        for (let char of text) {
+          element.textContent += char;
+          await this.sleep(speed);
+        }
+        
+        element.classList.remove('is-typing');
+      },
+      
+      // Sleep utility
+      sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+      },
+      
+      // Random number between min and max (inclusive)
+      random(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      },
+      
+      // Pick random item from array
+      randomChoice(array) {
+        return array[Math.floor(Math.random() * array.length)];
+      },
+      
+      // Roll dice (e.g., "3d6" or just 6 for d6)
+      rollDice(notation) {
+        if (typeof notation === 'number') {
+          return this.random(1, notation);
+        }
+        
+        const [count, sides] = notation.toLowerCase().split('d').map(Number);
+        let total = 0;
+        for (let i = 0; i < count; i++) {
+          total += this.random(1, sides);
+        }
+        return total;
+      },
+      
+      // Calculate ability modifier
+      abilityModifier(score) {
+        return Math.floor((score - 10) / 2);
+      },
+      
+      // Format modifier with + or -
+      formatModifier(modifier) {
+        return modifier >= 0 ? `+${modifier}` : `${modifier}`;
+      },
+      
+      // Capitalize first letter
+      capitalize(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      },
+      
+      // Smooth scroll to bottom of narrator panel
+      scrollToBottom() {
+        const panel = document.getElementById('narrator-panel');
+        if (panel) {
+          panel.scrollTo({
+            top: panel.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      },
+    };
+    
+    // ===== SERVICES =====
+    // External service integrations
+    
+    // FUTURE: Abstract for easy provider swaps
+    const AIService = {
+      async generateCompletion(prompt, systemPrompt = null) {
+        const apiKey = StorageService.getAPIKey();
+        
+        if (!apiKey || !CONFIG.ENABLE_AI) {
+          console.log('AI service unavailable, using fallback');
+          return null;
+        }
+        
+        const messages = [];
+        if (systemPrompt) {
+          messages.push({ role: 'system', content: systemPrompt });
+        }
+        messages.push({ role: 'user', content: prompt });
+        
+        try {
+          const response = await fetch(CONFIG.OPENAI_API_URL, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: CONFIG.OPENAI_MODEL,
+              messages: messages,
+              max_tokens: 300,
+              temperature: 0.8,
+            }),
+          });
+          
+          if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          return data.choices[0].message.content.trim();
+        } catch (error) {
+          console.error('AI service error:', error);
+          return null;
+        }
+      },
+      
+      async generateNarratorComment(context) {
+        const systemPrompt = `You are a deadpan, slightly cheeky D&D narrator. Your personality is dry and witty, occasionally using emoticons like ( ._.) when amused. Keep responses under 50 words. Be brief, sarcastic, and occasionally break the fourth wall.`;
+        
+        const prompt = `The player chose: ${context.choice} for ${context.question}. Their character so far: ${JSON.stringify(context.characterSoFar)}. Make a brief, deadpan comment about their choice.`;
+        
+        const response = await this.generateCompletion(prompt, systemPrompt);
+        
+        // Fallback responses if AI fails
+        const fallbacks = [
+          "Interesting choice. ( ._. )",
+          "Well, that's one way to do it.",
+          "[sigh] Fine.",
+          "Bold move. We'll see how that works out.",
+          "Sure. Why not.",
+        ];
+        
+        return response || Utils.randomChoice(fallbacks);
+      },
+      
+      async generateNames(race, classType, count = 3) {
+        const prompt = `Generate ${count} fantasy character names suitable for a ${race} ${classType} in D&D. Just list the names, one per line, nothing else.`;
+        
+        const response = await this.generateCompletion(prompt);
+        
+        if (response) {
+          return response.split('\n').map(n => n.trim()).filter(n => n);
+        }
+        
+        // Fallback: simple name generation
+        return this.generateFallbackNames(race, count);
+      },
+      
+      generateFallbackNames(race, count) {
+        const namePatterns = {
+          dwarf: ['Thorin', 'Gimli', 'Balin', 'Dwalin', 'Grim', 'Thrain'],
+          elf: ['Legolas', 'Galadriel', 'Elrond', 'Arwen', 'Thranduil', 'Celeborn'],
+          human: ['Aragorn', 'Boromir', 'Eowyn', 'Faramir', 'Theodred', 'Eomer'],
+          halfling: ['Bilbo', 'Frodo', 'Sam', 'Merry', 'Pippin', 'Rosie'],
+          dragonborn: ['Drax', 'Razax', 'Thordak', 'Vax', 'Torinn', 'Balasar'],
+          gnome: ['Glim', 'Boddynock', 'Dimble', 'Fonkin', 'Seebo', 'Zook'],
+          'half-elf': ['Tanis', 'Raistlin', 'Laurana', 'Gilthanas', 'Tanthalas', 'Silvara'],
+          'half-orc': ['Grognak', 'Throk', 'Ugak', 'Krod', 'Sharn', 'Dench'],
+          tiefling: ['Zevlor', 'Raven', 'Damakos', 'Akta', 'Therai', 'Nemeia'],
+        };
+        
+        const names = namePatterns[race] || namePatterns.human;
+        const result = [];
+        
+        for (let i = 0; i < count; i++) {
+          result.push(Utils.randomChoice(names) + Utils.random(1, 99));
+        }
+        
+        return result;
+      },
+      
+      async generateBackstory(character) {
+        const prompt = `Create a brief (100 words max) backstory for: ${character.name}, a ${character.race} ${character.class}. Personality: ${character.personalityTrait || 'mysterious'}. Background: ${character.background}. Make it dramatic but deadpan in tone.`;
+        
+        const response = await this.generateCompletion(prompt);
+        
+        if (response) return response;
+        
+        // Fallback
+        return `${character.name} is a ${character.race} ${character.class} with a mysterious past. They don't talk about it much. Probably for the best.`;
+      },
+    };
+    
+    // Storage service for localStorage
+    const StorageService = {
+      getAPIKey() {
+        return localStorage.getItem(CONFIG.API_KEY_STORAGE);
+      },
+      
+      setAPIKey(key) {
+        localStorage.setItem(CONFIG.API_KEY_STORAGE, key);
+      },
+      
+      getCharacters() {
+        const data = localStorage.getItem(CONFIG.STORAGE_KEY);
+        return data ? JSON.parse(data) : [];
+      },
+      
+      saveCharacter(character) {
+        const characters = this.getCharacters();
+        const index = characters.findIndex(c => c.id === character.id);
+        
+        if (index >= 0) {
+          characters[index] = character;
+        } else {
+          characters.push(character);
+        }
+        
+        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(characters));
+      },
+      
+      deleteCharacter(id) {
+        const characters = this.getCharacters().filter(c => c.id !== id);
+        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(characters));
+      },
+    };
+    
+    // ASCII Art service
+    // FUTURE: Replace with AI-generated image → ASCII conversion
+    const AsciiArtService = {
+      getRaceArt(race) {
+        const art = {
+          human: `
+    .-""-.
+   /      \\
+  |  O  O  |
+   \\  __  /
+    '.__.'
+     /||\\
+    / || \\
+   /  ||  \\
+      ||
+     /  \\
+    /    \\`,
+          
+          elf: `
+    .'''.
+   /  o o\\
+  |   ^   |
+   \\  v  /
+    \\___/
+    /|||\\
+   //|||\\\\
+     |||
+     |||
+    // \\\\
+   //   \\\\`,
+          
+          dwarf: `
+   .-'''-.
+  /=o   o=\\
+ |    <    |
+  \\  VVV  /
+   '=====' 
+   |||||||||
+   ||[_]||
+   ||   ||
+   ||   ||
+   ==   ==`,
+          
+          halfling: `
+    .-.
+   /o o\\
+  |  v  |
+   \\ - /
+    '-'
+    /|\\
+   / | \\
+     |
+    / \\
+   /   \\`,
+          
+          dragonborn: `
+   /\\___/\\
+  /  O O  \\
+ <   ~~~   >
+  \\  VVV  /
+   \\|||||/
+   |||||||||
+  <|||||||>
+    |||||
+    || ||
+    || ||`,
+          
+          gnome: `
+   __n__
+  /o   o\\
+ |   v   |
+  \\ === /
+   '-=-'
+    /|\\
+   / | \\
+     |
+    / \\`,
+          
+          'half-elf': `
+    .---.
+   / o o \\
+  |   ^   |
+   \\  v  /
+    '-+-'
+    /|||\\
+   //|||\\
+     |||
+    / | \\
+   /  |  \\`,
+          
+          'half-orc': `
+   /-----\\
+  | O   O |
+  |   ^   |
+  |  VVV  |
+   \\_____|
+   |||||||
+   |||||||
+    |||||
+    || ||
+    || ||`,
+          
+          tiefling: `
+  /\\ _ /\\
+ /  O O  \\
+|    ^    |
+ \\   v   /
+  \\____/
+   /||\\
+  //||\\\\
+    ||
+   /  \\
+  /    \\`,
+        };
+        
+        return art[race] || art.human;
+      },
+      
+      addClassDecoration(baseArt, classType) {
+        // Add simple indicators for different classes
+        const decorations = {
+          fighter: '  [SWORD]',
+          wizard: '  *STAFF*',
+          rogue: '  ~DAGGER~',
+          cleric: '  +HOLY+',
+          ranger: '  {BOW}',
+          paladin: '  [SHIELD]',
+          barbarian: '  >AXE<',
+          bard: '  ♪LUTE♪',
+          druid: '  @NATURE@',
+          monk: '  ◎ZEN◎',
+          sorcerer: '  ★MAGIC★',
+          warlock: '  ◆PACT◆',
+        };
+        
+        return baseArt + '\n' + (decorations[classType] || '');
+      },
+      
+      getFullPortrait(character) {
+        if (!character.race) return '';
+        
+        let art = this.getRaceArt(character.race);
+        
+        if (character.class) {
+          art = this.addClassDecoration(art, character.class);
+        }
+        
+        return art;
+      },
+    };
+    
+    // ===== STATE MANAGEMENT =====
+    // FUTURE: Replace with Redux/Zustand
+    
+    const CharacterState = {
+      current: {
+        id: null,
+        step: 0,
+        answers: {},
+        character: {
+          name: '',
+          race: '',
+          class: '',
+          background: '',
+          alignment: '',
+          abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+          level: 1,
+          hitPoints: 0,
+          personalityTrait: '',
+          backstory: '',
+        },
+      },
+      
+      listeners: [],
+      
+      get() {
+        return this.current;
+      },
+      
+      set(updates) {
+        this.current = { ...this.current, ...updates };
+        this.notify();
+      },
+      
+      updateCharacter(updates) {
+        this.current.character = { ...this.current.character, ...updates };
+        this.notify();
+      },
+      
+      subscribe(listener) {
+        this.listeners.push(listener);
+      },
+      
+      notify() {
+        this.listeners.forEach(listener => listener(this.current));
+      },
+      
+      reset() {
+        this.current = {
+          id: Date.now().toString(),
+          step: 0,
+          answers: {},
+          character: {
+            name: '',
+            race: '',
+            class: '',
+            background: '',
+            alignment: '',
+            abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+            level: 1,
+            hitPoints: 0,
+            personalityTrait: '',
+            backstory: '',
+          },
+        };
+        this.notify();
+      },
+    };
+    
+    // ===== UI COMPONENTS =====
+    // FUTURE: Convert to React components
+    
+    const Components = {
+      renderNarratorMessage(text) {
+        return `
+          <div class="narrator-message">
+            <div class="narrator-text">${text}</div>
+          </div>
+        `;
+      },
+      
+      renderQuestion(question) {
+        const optionsHTML = question.options.map((opt, index) => `
+          <button class="button-primary" onclick="App.handleAnswer('${question.id}', ${index})">
+            > ${opt.text}
+          </button>
+        `).join('');
+        
+        return `
+          <div class="question-card">
+            <div class="question-text">${question.text}</div>
+            <div class="options-container">
+              ${optionsHTML}
+            </div>
+          </div>
+        `;
+      },
+      
+      renderTextInput(question) {
+        return `
+          <div class="question-card">
+            <div class="question-text">${question.text}</div>
+            <input type="text" class="input-field" id="text-input" placeholder="${question.placeholder || 'Type here...'}">
+            <button class="button-primary mt-md" onclick="App.handleTextInput('${question.id}')">
+              > CONTINUE
+            </button>
+          </div>
+        `;
+      },
+      
+      renderCharacterSheet(character) {
+        const race = DND_DATA.races.find(r => r.id === character.race);
+        const classData = DND_DATA.classes.find(c => c.id === character.class);
+        const background = DND_DATA.backgrounds.find(b => b.id === character.background);
+        const alignment = DND_DATA.alignments.find(a => a.id === character.alignment);
+        
+        return `
+          <div class="character-sheet">
+            ${character.race ? `
+              <div class="ascii-portrait">${AsciiArtService.getFullPortrait(character)}</div>
+            ` : ''}
+            
+            <div class="sheet-section">
+              <div class="sheet-header">[ CHARACTER INFO ]</div>
+              <div class="sheet-content">
+                ${character.name ? `<div class="stat-line"><span class="stat-label">Name:</span> <span class="stat-value">${character.name}</span></div>` : ''}
+                ${race ? `<div class="stat-line"><span class="stat-label">Race:</span> <span class="stat-value">${race.name}</span></div>` : ''}
+                ${classData ? `<div class="stat-line"><span class="stat-label">Class:</span> <span class="stat-value">${classData.name}</span></div>` : ''}
+                ${background ? `<div class="stat-line"><span class="stat-label">Background:</span> <span class="stat-value">${background.name}</span></div>` : ''}
+                ${alignment ? `<div class="stat-line"><span class="stat-label">Alignment:</span> <span class="stat-value">${alignment.name}</span></div>` : ''}
+                <div class="stat-line"><span class="stat-label">Level:</span> <span class="stat-value">${character.level}</span></div>
+              </div>
+            </div>
+            
+            ${character.class ? `
+              <div class="sheet-section">
+                <div class="sheet-header">[ ABILITIES ]</div>
+                <div class="sheet-content">
+                  <div class="stat-line"><span class="stat-label">STR:</span> <span class="stat-value">${character.abilities.str} (${Utils.formatModifier(Utils.abilityModifier(character.abilities.str))})</span></div>
+                  <div class="stat-line"><span class="stat-label">DEX:</span> <span class="stat-value">${character.abilities.dex} (${Utils.formatModifier(Utils.abilityModifier(character.abilities.dex))})</span></div>
+                  <div class="stat-line"><span class="stat-label">CON:</span> <span class="stat-value">${character.abilities.con} (${Utils.formatModifier(Utils.abilityModifier(character.abilities.con))})</span></div>
+                  <div class="stat-line"><span class="stat-label">INT:</span> <span class="stat-value">${character.abilities.int} (${Utils.formatModifier(Utils.abilityModifier(character.abilities.int))})</span></div>
+                  <div class="stat-line"><span class="stat-label">WIS:</span> <span class="stat-value">${character.abilities.wis} (${Utils.formatModifier(Utils.abilityModifier(character.abilities.wis))})</span></div>
+                  <div class="stat-line"><span class="stat-label">CHA:</span> <span class="stat-value">${character.abilities.cha} (${Utils.formatModifier(Utils.abilityModifier(character.abilities.cha))})</span></div>
+                  ${character.hitPoints > 0 ? `<div class="stat-line"><span class="stat-label">HP:</span> <span class="stat-value">${character.hitPoints}</span></div>` : ''}
+                </div>
+              </div>
+            ` : ''}
+            
+            ${race && race.traits.length > 0 ? `
+              <div class="sheet-section">
+                <div class="sheet-header">[ RACIAL TRAITS ]</div>
+                <div class="sheet-content">
+                  ${race.traits.map(t => `<div class="text-dim">• ${t}</div>`).join('')}
+                </div>
+              </div>
+            ` : ''}
+            
+            ${classData && classData.equipment.length > 0 ? `
+              <div class="sheet-section">
+                <div class="sheet-header">[ EQUIPMENT ]</div>
+                <div class="sheet-content">
+                  ${classData.equipment.map(e => `<div class="text-dim">• ${e}</div>`).join('')}
+                </div>
+              </div>
+            ` : ''}
+            
+            ${character.backstory ? `
+              <div class="sheet-section">
+                <div class="sheet-header">[ BACKSTORY ]</div>
+                <div class="sheet-content text-dim">
+                  ${character.backstory}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      },
+      
+      renderSettings() {
+        const apiKey = StorageService.getAPIKey() || '';
+        
+        return `
+          <div class="settings-overlay" onclick="App.closeSettings()"></div>
+          <div class="settings-panel">
+            <div class="settings-header">⚙ SETTINGS</div>
+            
+            <div class="settings-row">
+              <label class="settings-label">OpenAI API Key:</label>
+              <input type="password" class="input-field" id="api-key-input" value="${apiKey}" placeholder="sk-...">
+              <div class="settings-help">Required for AI-generated dialogue and names. Get yours at platform.openai.com</div>
+            </div>
+            
+            <div class="settings-row">
+              <button class="button-primary" onclick="App.saveSettings()">SAVE</button>
+              <button class="button-secondary" onclick="App.closeSettings()" style="margin-left: 8px;">CANCEL</button>
+            </div>
+            
+            <div class="settings-row mt-lg">
+              <div class="text-dim text-small">
+                Your API key is stored locally in your browser only.
+                <br>Without an API key, fallback responses will be used.
+              </div>
+            </div>
+          </div>
+        `;
+      },
+    };
+    
+    // ===== QUESTION FLOW =====
+    // FUTURE: Move to CMS/backend
+    
+    const QUESTIONS = [
+      {
+        id: 'intro',
+        type: 'message',
+        text: `> SYSTEM INITIALIZED...
+> LOADING CHARACTER CREATION PROTOCOL...
+> 
+> Ah. Another soul seeking adventure. Or at least, trying to.
+> 
+> Look, I've done this a thousand times. You'll make choices. I'll pretend they matter. We'll both get through this.
+> 
+> Let's start with something easy...`,
+        next: 'motivation',
+      },
+      
+      {
+        id: 'motivation',
+        type: 'choice',
+        text: 'What draws you to the adventuring life?',
+        options: [
+          { text: 'Glory and heroism', value: 'glory', trait: 'heroic' },
+          { text: 'Gold and treasure', value: 'gold', trait: 'greedy' },
+          { text: 'Escaping my past', value: 'escape', trait: 'mysterious' },
+          { text: 'Just bored, honestly', value: 'bored', trait: 'casual' },
+        ],
+        aiPromptContext: 'player motivation for adventuring',
+        next: 'physicality',
+      },
+      
+      {
+        id: 'physicality',
+        type: 'choice',
+        text: 'And physically, how would you describe yourself?',
+        options: [
+          { text: 'Strong and imposing', value: 'strong', suggests: ['fighter', 'barbarian', 'paladin'] },
+          { text: 'Quick and nimble', value: 'nimble', suggests: ['rogue', 'ranger', 'monk'] },
+          { text: 'Mystically gifted', value: 'mystical', suggests: ['wizard', 'sorcerer', 'warlock'] },
+          { text: 'Unremarkable, honestly', value: 'average', suggests: ['bard', 'cleric', 'druid'] },
+        ],
+        aiPromptContext: 'player physical description',
+        next: 'social',
+      },
+      
+      {
+        id: 'social',
+        type: 'choice',
+        text: 'In social situations, you tend to be...',
+        options: [
+          { text: 'Charismatic and charming', value: 'charismatic', suggests: ['bard', 'paladin', 'sorcerer', 'warlock'] },
+          { text: 'Observant and quiet', value: 'observant', suggests: ['rogue', 'ranger', 'druid'] },
+          { text: 'Intimidating', value: 'intimidating', suggests: ['barbarian', 'fighter'] },
+          { text: 'Awkward but well-meaning', value: 'awkward', suggests: ['wizard', 'cleric', 'monk'] },
+        ],
+        aiPromptContext: 'player social tendencies',
+        next: 'race-suggest',
+      },
+      
+      {
+        id: 'race-suggest',
+        type: 'suggestion',
+        text: 'Analyzing your responses... ( ._. )',
+        getSuggestion: (state) => {
+          // This will be enhanced with AI
+          return {
+            message: 'Based on your answers, you seem like the type who would be... let me think...',
+            suggestions: ['elf', 'human', 'dwarf'], // Will be dynamically calculated
+          };
+        },
+        next: 'race-choice',
+      },
+      
+      {
+        id: 'race-choice',
+        type: 'list-choice',
+        text: 'Choose your race:',
+        options: DND_DATA.races.map(r => ({ text: `${r.name} - ${r.description}`, value: r.id })),
+        saveTo: 'race',
+        next: 'class-suggest',
+      },
+      
+      {
+        id: 'class-suggest',
+        type: 'suggestion',
+        text: 'Interesting choice. Now for your class...',
+        getSuggestion: (state) => {
+          const answers = state.answers;
+          const suggestions = [];
+          
+          // Simple logic to suggest classes based on previous answers
+          if (answers.physicality === 'strong') suggestions.push('fighter', 'barbarian', 'paladin');
+          if (answers.physicality === 'nimble') suggestions.push('rogue', 'ranger', 'monk');
+          if (answers.physicality === 'mystical') suggestions.push('wizard', 'sorcerer', 'warlock');
+          if (answers.social === 'charismatic') suggestions.push('bard', 'paladin');
+          
+          return {
+            message: 'Given your choices, might I suggest...',
+            suggestions: suggestions.length ? suggestions.slice(0, 3) : ['fighter', 'wizard', 'rogue'],
+          };
+        },
+        next: 'class-choice',
+      },
+      
+      {
+        id: 'class-choice',
+        type: 'list-choice',
+        text: 'Choose your class:',
+        options: DND_DATA.classes.map(c => ({ text: `${c.name} - ${c.description}`, value: c.id })),
+        saveTo: 'class',
+        next: 'abilities',
+      },
+      
+      {
+        id: 'abilities',
+        type: 'abilities',
+        text: 'Time to roll your ability scores. Choose your method:',
+        options: [
+          { text: 'Standard Array (15, 14, 13, 12, 10, 8)', value: 'standard' },
+          { text: 'Roll 4d6 (drop lowest)', value: 'roll' },
+        ],
+        next: 'background-choice',
+      },
+      
+      {
+        id: 'background-choice',
+        type: 'list-choice',
+        text: 'What was your life before adventuring?',
+        options: DND_DATA.backgrounds.map(b => ({ text: `${b.name} - ${b.description}`, value: b.id })),
+        saveTo: 'background',
+        next: 'alignment-choice',
+      },
+      
+      {
+        id: 'alignment-choice',
+        type: 'list-choice',
+        text: 'And your moral compass points toward...',
+        options: DND_DATA.alignments.map(a => ({ text: `${a.name} - ${a.description}`, value: a.id })),
+        saveTo: 'alignment',
+        next: 'name-choice',
+      },
+      
+      {
+        id: 'name-choice',
+        type: 'name',
+        text: 'Finally, what shall we call you?',
+        next: 'backstory',
+      },
+      
+      {
+        id: 'backstory',
+        type: 'backstory',
+        text: 'Generating your backstory...',
+        next: 'complete',
+      },
+      
+      {
+        id: 'complete',
+        type: 'complete',
+        text: 'Well. That\'s done. Your character is ready. Try not to die immediately.',
+      },
+    ];
+    
+    // ===== KEYBOARD NAVIGATION =====
+    
+    const KeyboardNav = {
+      currentFocusIndex: 0,
+      isActive: false,
+      
+      activate() {
+        this.isActive = true;
+        this.currentFocusIndex = 0;
+        this.updateFocus();
+      },
+      
+      deactivate() {
+        this.isActive = false;
+        this.clearFocus();
+      },
+      
+      getActiveButtons() {
+        // Get buttons from the last question card that aren't disabled
+        const lastCard = document.querySelector('.question-card:last-child');
+        if (!lastCard) return [];
+        return Array.from(lastCard.querySelectorAll('.button-primary:not(:disabled)'));
+      },
+      
+      updateFocus() {
+        const buttons = this.getActiveButtons();
+        if (buttons.length === 0) return;
+        
+        // Remove focus from all buttons
+        buttons.forEach(btn => btn.classList.remove('is-focused'));
+        
+        // Add focus to current index
+        if (buttons[this.currentFocusIndex]) {
+          buttons[this.currentFocusIndex].classList.add('is-focused');
+        }
+      },
+      
+      clearFocus() {
+        const buttons = this.getActiveButtons();
+        buttons.forEach(btn => btn.classList.remove('is-focused'));
+      },
+      
+      moveUp() {
+        if (!this.isActive) return;
+        const buttons = this.getActiveButtons();
+        if (buttons.length === 0) return;
+        
+        this.currentFocusIndex = (this.currentFocusIndex - 1 + buttons.length) % buttons.length;
+        this.updateFocus();
+      },
+      
+      moveDown() {
+        if (!this.isActive) return;
+        const buttons = this.getActiveButtons();
+        if (buttons.length === 0) return;
+        
+        this.currentFocusIndex = (this.currentFocusIndex + 1) % buttons.length;
+        this.updateFocus();
+      },
+      
+      select() {
+        if (!this.isActive) return;
+        const buttons = this.getActiveButtons();
+        if (buttons.length === 0) return;
+        
+        const button = buttons[this.currentFocusIndex];
+        if (button) {
+          button.click();
+          this.deactivate();
+        }
+      },
+    };
+    
+    // ===== APP LOGIC =====
+    
+    const App = {
+      currentQuestion: null,
+      
+      async init() {
+        console.log('Initializing Character Builder...');
+        
+        // Subscribe to state changes
+        CharacterState.subscribe((state) => {
+          this.updateCharacterPanel(state.character);
+        });
+        
+        // Start the flow
+        CharacterState.reset();
+        await this.showQuestion('intro');
+      },
+      
+      async showQuestion(questionId) {
+        const question = QUESTIONS.find(q => q.id === questionId);
+        if (!question) {
+          console.error('Question not found:', questionId);
+          return;
+        }
+        
+        this.currentQuestion = question;
+        const narratorPanel = document.getElementById('narrator-panel');
+        
+        // Handle different question types
+        switch (question.type) {
+          case 'message':
+            await this.showMessage(question);
+            break;
+          case 'choice':
+            await this.showChoice(question);
+            break;
+          case 'list-choice':
+            await this.showListChoice(question);
+            break;
+          case 'suggestion':
+            await this.showSuggestion(question);
+            break;
+          case 'abilities':
+            await this.showAbilities(question);
+            break;
+          case 'name':
+            await this.showNameChoice(question);
+            break;
+          case 'backstory':
+            await this.showBackstory(question);
+            break;
+          case 'complete':
+            await this.showComplete(question);
+            break;
+        }
+      },
+      
+      async showMessage(question) {
+        const narratorPanel = document.getElementById('narrator-panel');
+        narratorPanel.innerHTML += Components.renderNarratorMessage('');
+        Utils.scrollToBottom();
+        
+        const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+        await Utils.typewriter(messageEl, question.text);
+        Utils.scrollToBottom();
+        
+        if (question.next) {
+          await Utils.sleep(1500);
+          await this.showQuestion(question.next);
+        }
+      },
+      
+      async showChoice(question) {
+        const narratorPanel = document.getElementById('narrator-panel');
+        narratorPanel.innerHTML += Components.renderNarratorMessage('');
+        Utils.scrollToBottom();
+        
+        const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+        await Utils.typewriter(messageEl, question.text);
+        
+        narratorPanel.innerHTML += Components.renderQuestion(question);
+        Utils.scrollToBottom();
+        
+        // Activate keyboard navigation
+        KeyboardNav.activate();
+      },
+      
+      async showListChoice(question) {
+        const narratorPanel = document.getElementById('narrator-panel');
+        narratorPanel.innerHTML += Components.renderNarratorMessage('');
+        Utils.scrollToBottom();
+        
+        const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+        await Utils.typewriter(messageEl, question.text);
+        
+        // Show options in a scrollable list
+        const optionsHTML = question.options.map((opt, index) => `
+          <button class="button-primary" onclick="App.handleAnswer('${question.id}', ${index})" style="margin-bottom: 8px;">
+            ${opt.text}
+          </button>
+        `).join('');
+        
+        narratorPanel.innerHTML += `
+          <div class="question-card">
+            <div class="options-container">
+              ${optionsHTML}
+            </div>
+          </div>
+        `;
+        Utils.scrollToBottom();
+        
+        // Activate keyboard navigation
+        KeyboardNav.activate();
+      },
+      
+      async showSuggestion(question) {
+        const narratorPanel = document.getElementById('narrator-panel');
+        const state = CharacterState.get();
+        
+        narratorPanel.innerHTML += Components.renderNarratorMessage('');
+        Utils.scrollToBottom();
+        const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+        await Utils.typewriter(messageEl, question.text);
+        Utils.scrollToBottom();
+        
+        // Get AI suggestion if available
+        const suggestion = question.getSuggestion(state);
+        
+        narratorPanel.innerHTML += Components.renderNarratorMessage('');
+        Utils.scrollToBottom();
+        const suggestionEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+        await Utils.typewriter(suggestionEl, suggestion.message);
+        Utils.scrollToBottom();
+        
+        // Show suggested options
+        const suggestedHTML = suggestion.suggestions.map(s => {
+          const data = DND_DATA.races.find(r => r.id === s) || DND_DATA.classes.find(c => c.id === s);
+          if (data) return `• ${data.name}`;
+          return `• ${s}`;
+        }).join('\n');
+        
+        narratorPanel.innerHTML += Components.renderNarratorMessage(suggestedHTML);
+        Utils.scrollToBottom();
+        
+        await Utils.sleep(2000);
+        await this.showQuestion(question.next);
+      },
+      
+      async showAbilities(question) {
+        const narratorPanel = document.getElementById('narrator-panel');
+        narratorPanel.innerHTML += Components.renderNarratorMessage('');
+        Utils.scrollToBottom();
+        
+        const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+        await Utils.typewriter(messageEl, question.text);
+        
+        const optionsHTML = question.options.map((opt, index) => `
+          <button class="button-primary" onclick="App.handleAbilityMethod('${opt.value}')" style="margin-bottom: 8px;">
+            ${opt.text}
+          </button>
+        `).join('');
+        
+        narratorPanel.innerHTML += `
+          <div class="question-card">
+            <div class="options-container">
+              ${optionsHTML}
+            </div>
+          </div>
+        `;
+        Utils.scrollToBottom();
+        
+        // Activate keyboard navigation
+        KeyboardNav.activate();
+      },
+      
+      async showNameChoice(question) {
+        const narratorPanel = document.getElementById('narrator-panel');
+        const state = CharacterState.get();
+        
+        narratorPanel.innerHTML += Components.renderNarratorMessage('');
+        Utils.scrollToBottom();
+        const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+        await Utils.typewriter(messageEl, question.text);
+        Utils.scrollToBottom();
+        
+        // Generate name suggestions
+        narratorPanel.innerHTML += Components.renderNarratorMessage('Consulting the ancient texts... [thinking]');
+        Utils.scrollToBottom();
+        
+        const names = await AIService.generateNames(state.character.race, state.character.class, 3);
+        
+        const namesHTML = `
+          <div class="question-card">
+            <div class="narrator-text mb-md">Here are some suggestions:</div>
+            ${names.map(name => `
+              <button class="button-primary" onclick="App.handleNameSelect('${name}')" style="margin-bottom: 8px;">
+                ${name}
+              </button>
+            `).join('')}
+            <div class="narrator-text mt-md mb-sm">Or enter your own:</div>
+            <input type="text" class="input-field" id="custom-name-input" placeholder="Your character's name">
+            <button class="button-primary mt-md" onclick="App.handleCustomName()">
+              > CONTINUE
+            </button>
+          </div>
+        `;
+        
+        narratorPanel.innerHTML = narratorPanel.innerHTML.replace('Consulting the ancient texts... [thinking]', namesHTML);
+        Utils.scrollToBottom();
+        
+        // Activate keyboard navigation
+        KeyboardNav.activate();
+      },
+      
+      async showBackstory(question) {
+        const narratorPanel = document.getElementById('narrator-panel');
+        const state = CharacterState.get();
+        
+        narratorPanel.innerHTML += Components.renderNarratorMessage('');
+        Utils.scrollToBottom();
+        const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+        await Utils.typewriter(messageEl, question.text);
+        Utils.scrollToBottom();
+        
+        const backstory = await AIService.generateBackstory(state.character);
+        CharacterState.updateCharacter({ backstory });
+        
+        narratorPanel.innerHTML += Components.renderNarratorMessage('');
+        Utils.scrollToBottom();
+        const backstoryEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+        await Utils.typewriter(backstoryEl, backstory);
+        Utils.scrollToBottom();
+        
+        await Utils.sleep(2000);
+        await this.showQuestion(question.next);
+      },
+      
+      async showComplete(question) {
+        const narratorPanel = document.getElementById('narrator-panel');
+        narratorPanel.innerHTML += Components.renderNarratorMessage('');
+        Utils.scrollToBottom();
+        
+        const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+        await Utils.typewriter(messageEl, question.text);
+        Utils.scrollToBottom();
+        
+        // Save character
+        const state = CharacterState.get();
+        StorageService.saveCharacter(state.character);
+        
+        // Show completion options
+        narratorPanel.innerHTML += `
+          <div class="question-card mt-lg">
+            <button class="button-primary" onclick="App.exportCharacter()" style="margin-bottom: 8px;">
+              > EXPORT CHARACTER (JSON)
+            </button>
+            <button class="button-primary" onclick="App.startNew()">
+              > CREATE ANOTHER CHARACTER
+            </button>
+          </div>
+        `;
+        Utils.scrollToBottom();
+        
+        // Activate keyboard navigation
+        KeyboardNav.activate();
+      },
+      
+      async handleAnswer(questionId, optionIndex) {
+        const question = QUESTIONS.find(q => q.id === questionId);
+        const option = question.options[optionIndex];
+        
+        // Mark the selected button
+        const buttons = document.querySelectorAll('.question-card:last-child .button-primary');
+        buttons.forEach((btn, idx) => {
+          if (idx === optionIndex) {
+            btn.classList.add('is-selected');
+            btn.disabled = true;
+          } else {
+            btn.disabled = true;
+          }
+        });
+        
+        // Save answer
+        const state = CharacterState.get();
+        state.answers[questionId] = option.value;
+        
+        if (question.saveTo) {
+          CharacterState.updateCharacter({ [question.saveTo]: option.value });
+        }
+        
+        // Get AI commentary if configured
+        if (question.aiPromptContext) {
+          const narratorPanel = document.getElementById('narrator-panel');
+          narratorPanel.innerHTML += Components.renderNarratorMessage('');
+          Utils.scrollToBottom();
+          
+          const commentEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+          commentEl.textContent = '[thinking...]';
+          Utils.scrollToBottom();
+          
+          const comment = await AIService.generateNarratorComment({
+            question: question.aiPromptContext,
+            choice: option.text,
+            characterSoFar: state.character,
+          });
+          
+          commentEl.textContent = '';
+          await Utils.typewriter(commentEl, comment);
+          Utils.scrollToBottom();
+          await Utils.sleep(1000);
+        }
+        
+        // Move to next question
+        if (question.next) {
+          await this.showQuestion(question.next);
+        }
+      },
+      
+      async handleAbilityMethod(method) {
+        // Mark the selected button
+        const buttons = document.querySelectorAll('.question-card:last-child .button-primary');
+        buttons.forEach((btn) => {
+          if (btn.textContent.includes(method === 'standard' ? 'Standard Array' : 'Roll 4d6')) {
+            btn.classList.add('is-selected');
+          }
+          btn.disabled = true;
+        });
+        
+        const state = CharacterState.get();
+        const classData = DND_DATA.classes.find(c => c.id === state.character.class);
+        
+        let abilities = {};
+        
+        if (method === 'standard') {
+          // Standard array: let user assign them (for now, auto-assign based on class)
+          const scores = [15, 14, 13, 12, 10, 8];
+          const primary = classData.primaryAbility[0];
+          
+          // Simple auto-assignment based on class
+          abilities = {
+            str: primary === 'str' ? 15 : 10,
+            dex: primary === 'dex' ? 15 : 12,
+            con: 14,
+            int: primary === 'int' ? 15 : 8,
+            wis: primary === 'wis' ? 15 : 13,
+            cha: primary === 'cha' ? 15 : 10,
+          };
+        } else {
+          // Roll 4d6 drop lowest
+          abilities = {
+            str: this.rollAbility(),
+            dex: this.rollAbility(),
+            con: this.rollAbility(),
+            int: this.rollAbility(),
+            wis: this.rollAbility(),
+            cha: this.rollAbility(),
+          };
+        }
+        
+        // Apply racial bonuses
+        const race = DND_DATA.races.find(r => r.id === state.character.race);
+        Object.keys(race.abilityBonuses).forEach(ability => {
+          abilities[ability] += race.abilityBonuses[ability];
+        });
+        
+        // Calculate HP
+        const conMod = Utils.abilityModifier(abilities.con);
+        const hitPoints = classData.hitDie + conMod;
+        
+        CharacterState.updateCharacter({ abilities, hitPoints });
+        
+        const narratorPanel = document.getElementById('narrator-panel');
+        narratorPanel.innerHTML += Components.renderNarratorMessage(`Your abilities have been determined. HP: ${hitPoints}. Good luck with that.`);
+        Utils.scrollToBottom();
+        
+        await Utils.sleep(2000);
+        await this.showQuestion(this.currentQuestion.next);
+      },
+      
+      rollAbility() {
+        const rolls = [
+          Utils.rollDice(6),
+          Utils.rollDice(6),
+          Utils.rollDice(6),
+          Utils.rollDice(6),
+        ].sort((a, b) => b - a);
+        
+        // Drop lowest, sum the rest
+        return rolls[0] + rolls[1] + rolls[2];
+      },
+      
+      async handleNameSelect(name) {
+        // Mark the selected button
+        const buttons = document.querySelectorAll('.question-card:last-child .button-primary');
+        buttons.forEach((btn) => {
+          if (btn.textContent.trim() === name) {
+            btn.classList.add('is-selected');
+          }
+          btn.disabled = true;
+        });
+        
+        // Disable the custom name input too
+        const customInput = document.getElementById('custom-name-input');
+        if (customInput) customInput.disabled = true;
+        
+        CharacterState.updateCharacter({ name });
+        
+        const narratorPanel = document.getElementById('narrator-panel');
+        narratorPanel.innerHTML += Components.renderNarratorMessage(`${name}. Sure. Why not.`);
+        Utils.scrollToBottom();
+        
+        await Utils.sleep(1500);
+        await this.showQuestion(this.currentQuestion.next);
+      },
+      
+      async handleCustomName() {
+        const input = document.getElementById('custom-name-input');
+        const name = input.value.trim();
+        
+        if (!name) {
+          alert('Please enter a name.');
+          return;
+        }
+        
+        // Mark the input as selected
+        input.classList.add('is-selected');
+        input.style.background = 'var(--terminal-fg)';
+        input.style.color = 'var(--terminal-bg)';
+        input.disabled = true;
+        
+        // Disable all name buttons
+        const buttons = document.querySelectorAll('.question-card:last-child .button-primary');
+        buttons.forEach(btn => btn.disabled = true);
+        
+        CharacterState.updateCharacter({ name });
+        
+        const narratorPanel = document.getElementById('narrator-panel');
+        narratorPanel.innerHTML += Components.renderNarratorMessage(`${name}. Sure. Why not.`);
+        Utils.scrollToBottom();
+        
+        await Utils.sleep(1500);
+        await this.showQuestion(this.currentQuestion.next);
+      },
+      
+      updateCharacterPanel(character) {
+        const panel = document.getElementById('character-panel');
+        panel.innerHTML = Components.renderCharacterSheet(character);
+      },
+      
+      openSettings() {
+        document.body.insertAdjacentHTML('beforeend', Components.renderSettings());
+      },
+      
+      closeSettings() {
+        const overlay = document.querySelector('.settings-overlay');
+        const panel = document.querySelector('.settings-panel');
+        if (overlay) overlay.remove();
+        if (panel) panel.remove();
+      },
+      
+      saveSettings() {
+        const input = document.getElementById('api-key-input');
+        const key = input.value.trim();
+        
+        if (key) {
+          StorageService.setAPIKey(key);
+          alert('API key saved!');
+        }
+        
+        this.closeSettings();
+      },
+      
+      exportCharacter() {
+        const state = CharacterState.get();
+        const json = JSON.stringify(state.character, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${state.character.name || 'character'}.json`;
+        a.click();
+        
+        URL.revokeObjectURL(url);
+      },
+      
+      startNew() {
+        if (confirm('Start a new character? Current progress will be saved.')) {
+          document.getElementById('narrator-panel').innerHTML = '';
+          this.init();
+        }
+      },
+    };
+    
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      App.init();
+      
+      // Keep narrator panel scrolled to bottom on resize
+      window.addEventListener('resize', () => {
+        Utils.scrollToBottom();
+      });
+      
+      // Keyboard navigation
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          KeyboardNav.moveUp();
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          KeyboardNav.moveDown();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          KeyboardNav.select();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+
