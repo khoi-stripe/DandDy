@@ -454,7 +454,8 @@
         
       } catch (error) {
         console.error('Generation error:', error);
-        showStatus(`Error: ${error.message}`, 'error');
+        console.error('Error stack:', error.stack);
+        showStatus(`Error: ${error.message || 'Unknown error'}`, 'error');
       } finally {
         btn.disabled = false;
         btn.textContent = 'GENERATE';
@@ -489,47 +490,68 @@
     
     // ===== ASCII CONVERTER =====
     async function convertToAscii(imageUrl, width, height, charsetType) {
-      const charset = CHARSETS[charsetType];
-      
-      // Load image
-      const img = await loadImage(imageUrl);
-      
-      // Create canvas
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      
-      // Draw image
-      ctx.drawImage(img, 0, 0, width, height);
-      
-      // Get pixel data
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const pixels = imageData.data;
-      
-      // Convert to grayscale
-      const grayscale = new Float32Array(width * height);
-      for (let i = 0; i < width * height; i++) {
-        const idx = i * 4;
-        grayscale[i] = 0.299 * pixels[idx] + 0.587 * pixels[idx + 1] + 0.114 * pixels[idx + 2];
-      }
-      
-      // Apply Floyd-Steinberg dithering
-      const dithered = floydSteinbergDither(grayscale, width, height, charset.length);
-      
-      // Convert to ASCII
-      let ascii = '';
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const brightness = dithered[y * width + x];
-          const charIndex = Math.floor((brightness / 255) * (charset.length - 1));
-          const clampedIndex = Math.max(0, Math.min(charset.length - 1, charIndex));
-          ascii += charset[charset.length - 1 - clampedIndex];
+      try {
+        console.log('Starting ASCII conversion...', { imageUrl, width, height, charsetType });
+        
+        const charset = CHARSETS[charsetType];
+        console.log('Charset loaded:', charset ? `${charset.length} characters` : 'MISSING');
+        
+        if (!charset) {
+          throw new Error(`Invalid charset type: ${charsetType}`);
         }
-        ascii += '\n';
+        
+        // Load image
+        console.log('Loading image...');
+        const img = await loadImage(imageUrl);
+        console.log('Image loaded:', img.width, 'x', img.height);
+        
+        // Create canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        
+        // Draw image
+        ctx.drawImage(img, 0, 0, width, height);
+        console.log('Image drawn to canvas');
+        
+        // Get pixel data
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const pixels = imageData.data;
+        console.log('Pixel data extracted:', pixels.length, 'values');
+        
+        // Convert to grayscale
+        const grayscale = new Float32Array(width * height);
+        for (let i = 0; i < width * height; i++) {
+          const idx = i * 4;
+          grayscale[i] = 0.299 * pixels[idx] + 0.587 * pixels[idx + 1] + 0.114 * pixels[idx + 2];
+        }
+        console.log('Converted to grayscale');
+        
+        // Apply Floyd-Steinberg dithering
+        console.log('Applying Floyd-Steinberg dithering...');
+        const dithered = floydSteinbergDither(grayscale, width, height, charset.length);
+        console.log('Dithering complete');
+        
+        // Convert to ASCII
+        console.log('Converting to ASCII characters...');
+        let ascii = '';
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const brightness = dithered[y * width + x];
+            const charIndex = Math.floor((brightness / 255) * (charset.length - 1));
+            const clampedIndex = Math.max(0, Math.min(charset.length - 1, charIndex));
+            ascii += charset[charset.length - 1 - clampedIndex];
+          }
+          ascii += '\n';
+        }
+        console.log('ASCII conversion complete:', ascii.length, 'characters');
+        
+        return ascii;
+      } catch (error) {
+        console.error('Error in convertToAscii:', error);
+        throw new Error(`ASCII conversion failed: ${error.message}`);
       }
-      
-      return ascii;
     }
     
     function floydSteinbergDither(grayscale, width, height, levels) {
@@ -570,9 +592,16 @@
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'Anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = reject;
+        img.onload = () => {
+          console.log('Image onload fired');
+          resolve(img);
+        };
+        img.onerror = (error) => {
+          console.error('Image onerror fired:', error);
+          reject(new Error('Failed to load image - possible CORS issue'));
+        };
         img.src = url;
+        console.log('Image src set to:', url.substring(0, 100) + '...');
       });
     }
     
