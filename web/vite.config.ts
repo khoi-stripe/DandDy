@@ -12,6 +12,10 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
       }
+    },
+    fs: {
+      // Allow serving files from parent directory (for generated_portraits)
+      allow: ['..']
     }
   }
 })

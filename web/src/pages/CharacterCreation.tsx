@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useCharacterStore } from '../stores/characterStore'
 import { CharacterCreate } from '../types'
+import { loadAsciiArt, getPlaceholderAscii } from '../lib/asciiArt'
 
 const RACES = ['Dwarf', 'Elf', 'Halfling', 'Human', 'Dragonborn', 'Gnome', 'Half-Elf', 'Half-Orc', 'Tiefling']
 const CLASSES = ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard']
@@ -23,6 +24,26 @@ export default function CharacterCreation() {
     wisdom: 10,
     charisma: 10,
   })
+
+  // ASCII art state
+  const [asciiArt, setAsciiArt] = useState<string>(getPlaceholderAscii())
+  const [isLoadingArt, setIsLoadingArt] = useState(false)
+
+  // Load ASCII art when race or class changes
+  useEffect(() => {
+    const loadArt = async () => {
+      setIsLoadingArt(true)
+      const art = await loadAsciiArt(formData.race, formData.character_class)
+      if (art) {
+        setAsciiArt(art)
+      } else {
+        setAsciiArt(getPlaceholderAscii())
+      }
+      setIsLoadingArt(false)
+    }
+
+    loadArt()
+  }, [formData.race, formData.character_class])
 
   const calculateModifier = (score: number) => Math.floor((score - 10) / 2)
 
@@ -91,7 +112,7 @@ export default function CharacterCreation() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       <button
         onClick={() => navigate('/characters')}
         className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
@@ -102,7 +123,10 @@ export default function CharacterCreation() {
 
       <h1 className="text-3xl font-bold text-gray-900">Create New Character</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column - Character Form */}
+        <div className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Info */}
         <div className="card">
           <h2 className="text-xl font-bold mb-4">Basic Information</h2>
@@ -197,24 +221,51 @@ export default function CharacterCreation() {
           </div>
         </div>
 
-        {/* Submit */}
-        <div className="flex items-center justify-end space-x-4">
-          <button
-            type="button"
-            onClick={() => navigate('/characters')}
-            className="btn btn-secondary"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="btn btn-primary"
-          >
-            {isLoading ? 'Creating...' : 'Create Character'}
-          </button>
+            {/* Submit */}
+            <div className="flex items-center justify-end space-x-4">
+              <button
+                type="button"
+                onClick={() => navigate('/characters')}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="btn btn-primary"
+              >
+                {isLoading ? 'Creating...' : 'Create Character'}
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
+
+        {/* Right Column - ASCII Art Preview */}
+        <div className="lg:sticky lg:top-6 lg:self-start">
+          <div className="card bg-gray-900 p-6 overflow-hidden">
+            <h2 className="text-xl font-bold mb-4 text-white">Character Preview</h2>
+            <div className="relative">
+              {isLoadingArt && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-75 z-10">
+                  <div className="text-white">Loading...</div>
+                </div>
+              )}
+              <pre className="text-green-400 font-mono text-[0.5rem] leading-tight overflow-x-auto whitespace-pre"
+                   style={{ 
+                     textShadow: '0 0 5px rgba(74, 222, 128, 0.5)',
+                     fontFamily: 'monospace',
+                     letterSpacing: '-0.05em'
+                   }}>
+                {asciiArt}
+              </pre>
+            </div>
+            <div className="mt-4 text-sm text-gray-400 text-center">
+              {formData.race} {formData.character_class && `• ${formData.character_class}`}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Art Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #4ade80;
+            padding: 20px;
+        }
+        pre {
+            font-size: 8px;
+            line-height: 1.1;
+            letter-spacing: -0.05em;
+            text-shadow: 0 0 5px rgba(74, 222, 128, 0.5);
+            overflow-x: auto;
+            background: #000;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        select, button {
+            font-size: 16px;
+            padding: 10px;
+            margin: 10px 5px;
+        }
+        #status {
+            color: #fbbf24;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>ASCII Art Loader Test</h1>
+    
+    <div>
+        <label>Race: 
+            <select id="race">
+                <option value="human">Human</option>
+                <option value="elf">Elf</option>
+                <option value="dwarf">Dwarf</option>
+                <option value="halfling">Halfling</option>
+                <option value="dragonborn">Dragonborn</option>
+                <option value="gnome">Gnome</option>
+                <option value="half-elf">Half-Elf</option>
+                <option value="half-orc">Half-Orc</option>
+                <option value="tiefling">Tiefling</option>
+            </select>
+        </label>
+        
+        <label>Class: 
+            <select id="class">
+                <option value="">None</option>
+                <option value="barbarian">Barbarian</option>
+                <option value="bard">Bard</option>
+                <option value="cleric">Cleric</option>
+                <option value="druid">Druid</option>
+                <option value="fighter">Fighter</option>
+                <option value="monk">Monk</option>
+                <option value="paladin">Paladin</option>
+                <option value="ranger">Ranger</option>
+                <option value="rogue">Rogue</option>
+                <option value="sorcerer">Sorcerer</option>
+                <option value="warlock">Warlock</option>
+                <option value="wizard">Wizard</option>
+            </select>
+        </label>
+        
+        <button onclick="loadArt()">Load ASCII Art</button>
+    </div>
+    
+    <div id="status"></div>
+    
+    <pre id="ascii-display">Select a race and click "Load ASCII Art" to see the portrait.</pre>
+    
+    <script>
+        async function loadArt() {
+            const race = document.getElementById('race').value;
+            const cls = document.getElementById('class').value;
+            const status = document.getElementById('status');
+            const display = document.getElementById('ascii-display');
+            
+            status.textContent = 'Loading...';
+            
+            // Try race-class combination first
+            if (cls) {
+                const combinedPath = `/generated_portraits/ascii/${race}-${cls}.txt`;
+                try {
+                    const response = await fetch(combinedPath);
+                    if (response.ok) {
+                        const art = await response.text();
+                        display.textContent = art;
+                        status.textContent = `✅ Loaded: ${race}-${cls}`;
+                        return;
+                    }
+                } catch (error) {
+                    console.warn('Failed to load combined portrait:', error);
+                }
+            }
+            
+            // Fall back to race-only portrait
+            const racePath = `/generated_portraits/ascii/${race}.txt`;
+            try {
+                const response = await fetch(racePath);
+                if (response.ok) {
+                    const art = await response.text();
+                    display.textContent = art;
+                    status.textContent = `✅ Loaded: ${race}`;
+                } else {
+                    status.textContent = `❌ Failed to load: ${racePath}`;
+                    display.textContent = 'Error loading ASCII art';
+                }
+            } catch (error) {
+                status.textContent = `❌ Error: ${error.message}`;
+                display.textContent = 'Error loading ASCII art';
+            }
+        }
+        
+        // Auto-load on change
+        document.getElementById('race').addEventListener('change', loadArt);
+        document.getElementById('class').addEventListener('change', loadArt);
+        
+        // Load default on page load
+        loadArt();
+    </script>
+</body>
+</html>
+

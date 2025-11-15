@@ -333,6 +333,43 @@
             const [wis, setWis] = useState(10);
             const [cha, setCha] = useState(10);
             const [loading, setLoading] = useState(false);
+            
+            // ASCII art state
+            const [asciiArt, setAsciiArt] = useState('');
+            const [loadingArt, setLoadingArt] = useState(false);
+            
+            // Load ASCII art when race or class changes
+            useEffect(() => {
+                const loadArt = async () => {
+                    setLoadingArt(true);
+                    const raceLower = race.toLowerCase().replace(/ /g, '-');
+                    const classLower = characterClass.toLowerCase();
+                    
+                    // Try race-class combo first
+                    try {
+                        const response = await fetch(`/generated_portraits/ascii/${raceLower}-${classLower}.txt`);
+                        if (response.ok) {
+                            setAsciiArt(await response.text());
+                            setLoadingArt(false);
+                            return;
+                        }
+                    } catch (e) {}
+                    
+                    // Fallback to race only
+                    try {
+                        const response = await fetch(`/generated_portraits/ascii/${raceLower}.txt`);
+                        if (response.ok) {
+                            setAsciiArt(await response.text());
+                        } else {
+                            setAsciiArt('No portrait available');
+                        }
+                    } catch (e) {
+                        setAsciiArt('Error loading portrait');
+                    }
+                    setLoadingArt(false);
+                };
+                loadArt();
+            }, [race, characterClass]);
 
             const races = ['Dwarf', 'Elf', 'Halfling', 'Human', 'Dragonborn', 'Gnome', 'Half-Elf', 'Half-Orc', 'Tiefling'];
             const classes = ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard'];
