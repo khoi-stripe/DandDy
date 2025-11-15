@@ -2047,8 +2047,8 @@ Format your response as JSON array of strings, one for each option in order. Exa
           return this.getFullPortrait(character);
         } catch (error) {
           console.error('Portrait loading error:', error);
-          return this.getFullPortrait(character);
-        }
+              return this.getFullPortrait(character);
+            }
       },
       
       // Generate CUSTOM AI portrait with DALL-E (user-initiated)
@@ -2963,41 +2963,53 @@ Format your response as JSON array of strings, one for each option in order. Exa
         const narratorPanel = document.getElementById('narrator-panel');
         const state = CharacterState.get();
         
+        // Show the question text with typewriter effect
         narratorPanel.innerHTML += Components.renderNarratorMessage('');
         Utils.scrollToBottom(true);
         const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(messageEl, question.text);
+        
+        // Show temporary loading message
+        const loadingMsg = Components.renderNarratorMessage('Consulting the ancient texts... [thinking]');
+        narratorPanel.innerHTML += loadingMsg;
         Utils.scrollToBottom(true);
         
-        // Generate name suggestions
-        narratorPanel.innerHTML += Components.renderNarratorMessage('Consulting the ancient texts... [thinking]');
-        Utils.scrollToBottom(true);
-        
+        // Generate name suggestions using AI
         const names = await AIService.generateNames(state.character.race, state.character.class, 3);
         
-        const namesHTML = `
+        // Remove the loading message
+        narratorPanel.lastElementChild.remove();
+        
+        // Build the name selection UI with proper styling matching other sections
+        narratorPanel.innerHTML += `
           <div class="question-card">
             <div class="options-container">
-              ${names.map(name => `
-                <button class="button-primary" onclick="App.handleNameSelect('${name}')">
-                  > ${name}
-                </button>
-              `).join('')}
+              ${names.map((name, index) => `<button class="button-primary" onclick="App.handleNameSelect(${index})" style="margin-bottom: 8px;">${name}</button>`).join('\n              ')}
             </div>
-            <div class="name-input-container" style="margin-top: var(--spacing-md);">
-              <input type="text" class="input-field" id="custom-name-input" placeholder="Your character's name">
+            <div class="name-input-container">
+              <input 
+                type="text" 
+                class="input-field" 
+                id="custom-name-input" 
+                placeholder="Or enter your own name..."
+                onkeypress="if(event.key === 'Enter') App.handleCustomName()"
+              >
               <button class="button-primary" onclick="App.handleCustomName()">
-                > CONTINUE
+                SUBMIT
               </button>
             </div>
           </div>
         `;
         
-        narratorPanel.innerHTML = narratorPanel.innerHTML.replace('Consulting the ancient texts... [thinking]', namesHTML);
-        Utils.scrollToBottom(true);
+        // Store generated names for later reference
+        this._generatedNames = names;
         
         // Activate keyboard navigation
         KeyboardNav.activate();
+        
+        // Wait for DOM to settle, then scroll
+        await Utils.sleep(150);
+        Utils.scrollToBottom(true);
       },
       
       async showBackstory(question) {
@@ -3252,27 +3264,54 @@ Format your response as JSON array of strings, one for each option in order. Exa
         return rolls[0] + rolls[1] + rolls[2];
       },
       
-      async handleNameSelect(name) {
-        // Mark the selected button
-        const buttons = document.querySelectorAll('.question-card:last-child .button-primary');
-        buttons.forEach((btn) => {
-          if (btn.textContent.trim() === name) {
+      async handleNameSelect(nameIndex) {
+        // Get the selected name from the generated names array
+        const name = this._generatedNames[nameIndex];
+        
+        if (!name) {
+          console.error('Name not found at index:', nameIndex);
+          return;
+        }
+        
+        // Find all buttons in the last question card
+        const questionCard = document.querySelector('.question-card:last-child');
+        const buttons = questionCard.querySelectorAll('.button-primary');
+        
+        // Mark the selected button and lock others
+        buttons.forEach((btn, index) => {
+          // Skip the submit button (last button in the card)
+          if (btn.textContent.includes('SUBMIT')) return;
+          
+          if (index === nameIndex) {
             btn.classList.add('is-selected');
           } else {
             btn.classList.add('is-locked');
           }
         });
         
-        // Disable the custom name input too
+        // Disable and lock the custom name input
         const customInput = document.getElementById('custom-name-input');
-        if (customInput) customInput.disabled = true;
+        if (customInput) {
+          customInput.disabled = true;
+          customInput.style.opacity = '0.5';
+        }
         
+        // Disable the submit button
+        const submitBtn = questionCard.querySelector('.button-primary:last-child');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.style.opacity = '0.5';
+        }
+        
+        // Save the character name
         CharacterState.updateCharacter({ name });
         
+        // Show narrator response
         const narratorPanel = document.getElementById('narrator-panel');
         narratorPanel.innerHTML += Components.renderNarratorMessage(`${name}. Sure. Why not.`);
         Utils.scrollToBottom(true);
         
+        // Continue to next question
         await Utils.sleep(1500);
         await this.showQuestion(this.currentQuestion.next);
       },
@@ -3465,27 +3504,49 @@ Format your response as JSON array of strings, one for each option in order. Exa
         const input = document.getElementById('custom-name-input');
         const name = input.value.trim();
         
+        // Validate that user entered a name
         if (!name) {
           alert('Please enter a name.');
+          input.focus();
           return;
         }
         
-        // Mark the input as selected
+        // Find the question card and all its buttons
+        const questionCard = document.querySelector('.question-card:last-child');
+        const buttons = questionCard.querySelectorAll('.button-primary');
+        
+        // Lock all name suggestion buttons
+        buttons.forEach((btn) => {
+          // Skip the submit button itself
+          if (!btn.textContent.includes('SUBMIT')) {
+            btn.classList.add('is-locked');
+            btn.disabled = true;
+          }
+        });
+        
+        // Mark the input field as selected with proper styling
         input.classList.add('is-selected');
         input.style.background = 'var(--terminal-fg)';
         input.style.color = 'var(--terminal-bg)';
+        input.style.borderColor = 'var(--terminal-fg)';
         input.disabled = true;
         
-        // Lock all name buttons
-        const buttons = document.querySelectorAll('.question-card:last-child .button-primary');
-        buttons.forEach(btn => btn.classList.add('is-locked'));
+        // Disable and style the submit button
+        const submitBtn = questionCard.querySelector('.button-primary:last-child');
+        if (submitBtn) {
+          submitBtn.classList.add('is-selected');
+          submitBtn.disabled = true;
+        }
         
+        // Save the character name
         CharacterState.updateCharacter({ name });
         
+        // Show narrator response
         const narratorPanel = document.getElementById('narrator-panel');
         narratorPanel.innerHTML += Components.renderNarratorMessage(`${name}. Sure. Why not.`);
         Utils.scrollToBottom(true);
         
+        // Continue to next question
         await Utils.sleep(1500);
         await this.showQuestion(this.currentQuestion.next);
       },
@@ -3498,41 +3559,41 @@ Format your response as JSON array of strings, one for each option in order. Exa
         // Show portrait as soon as race is selected (demo mode)
         if (character.race) {
           console.log('✅ Race selected:', character.race, 'Class:', character.class);
-          // First render with loading indicator
-          panel.innerHTML = Components.renderCharacterSheet(character, `
+            // First render with loading indicator
+            panel.innerHTML = Components.renderCharacterSheet(character, `
             [ LOADING PORTRAIT... ]
+              
+              
+              
+              . . . ( ._.)
+            `);
             
-            
-            
-            . . . ( ._.)
-          `);
-          
           // Load portrait in background
-          try {
+            try {
             console.log('🎨 Calling generateAIPortrait...');
             const portrait = await AsciiArtService.generateAIPortrait(character);
             console.log('🖼️ Portrait loaded, length:', portrait ? portrait.length : 0);
-            // Update just the portrait section
-            const portraitEl = document.getElementById('character-portrait');
-            if (portraitEl) {
+              // Update just the portrait section
+              const portraitEl = document.getElementById('character-portrait');
+              if (portraitEl) {
               portraitEl.textContent = portrait;
               console.log('✅ Portrait displayed');
             } else {
               console.error('❌ Portrait element not found');
-            }
-          } catch (error) {
+              }
+            } catch (error) {
             console.error('❌ Failed to load portrait:', error);
             // Fallback to template
-            const portraitEl = document.getElementById('character-portrait');
-            if (portraitEl) {
-              portraitEl.textContent = AsciiArtService.getFullPortrait(character);
+              const portraitEl = document.getElementById('character-portrait');
+              if (portraitEl) {
+                portraitEl.textContent = AsciiArtService.getFullPortrait(character);
+              }
             }
-          }
-        } else {
+          } else {
           console.log('⏳ No race selected yet');
           // No race selected yet - don't show portrait
-          panel.innerHTML = Components.renderCharacterSheet(character, null, false);
-        }
+            panel.innerHTML = Components.renderCharacterSheet(character, null, false);
+          }
       },
       
       buildPromptForCharacter(character) {
@@ -3608,7 +3669,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
               console.log('✅ Textarea found, focusing...');
               textarea.focus();
               textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-            } else {
+        } else {
               console.error('❌ Textarea not found');
             }
           }, 100);
