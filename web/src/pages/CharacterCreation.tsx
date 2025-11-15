@@ -126,7 +126,7 @@ export default function CharacterCreation() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Character Form */}
         <div className="space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Info */}
         <div className="card">
           <h2 className="text-xl font-bold mb-4">Basic Information</h2>
@@ -221,24 +221,24 @@ export default function CharacterCreation() {
           </div>
         </div>
 
-            {/* Submit */}
-            <div className="flex items-center justify-end space-x-4">
-              <button
-                type="button"
-                onClick={() => navigate('/characters')}
-                className="btn btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="btn btn-primary"
-              >
-                {isLoading ? 'Creating...' : 'Create Character'}
-              </button>
-            </div>
-          </form>
+        {/* Submit */}
+        <div className="flex items-center justify-end space-x-4">
+          <button
+            type="button"
+            onClick={() => navigate('/characters')}
+            className="btn btn-secondary"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="btn btn-primary"
+          >
+            {isLoading ? 'Creating...' : 'Create Character'}
+          </button>
+        </div>
+      </form>
         </div>
 
         {/* Right Column - ASCII Art Preview */}
