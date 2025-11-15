@@ -147,6 +147,7 @@
       margin-bottom: var(--spacing-xl);
       padding: var(--spacing-md);
       border: 1px solid var(--terminal-dim);
+      position: relative;
     }
     
     .question-text {
@@ -159,6 +160,67 @@
       display: flex;
       flex-direction: column;
       gap: var(--spacing-sm);
+      align-items: flex-start;
+    }
+    
+    /* Recommendations */
+    .recommendations-header {
+      color: var(--terminal-accent);
+      font-weight: bold;
+      font-size: var(--font-size-base);
+      margin-bottom: var(--spacing-md);
+      letter-spacing: 2px;
+    }
+    
+    .recommendations-divider {
+      border: none;
+      border-top: 1px solid var(--terminal-dim);
+      margin: var(--spacing-md) 0;
+      opacity: 0.6;
+    }
+    
+    /* Confirmation Overlay */
+    .confirmation-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.95);
+      border: 2px solid var(--terminal-warning);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-lg);
+      z-index: 1000;
+      animation: fadeIn 0.2s ease-in;
+    }
+    
+    .confirmation-message {
+      color: var(--terminal-warning);
+      text-align: center;
+      margin-bottom: var(--spacing-lg);
+      font-size: var(--font-size-base);
+    }
+    
+    .confirmation-buttons {
+      display: flex;
+      gap: var(--spacing-md);
+    }
+    
+    .fade-out {
+      animation: fadeOut 0.5s ease-out forwards;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0.2; }
     }
     
     /* Buttons */
@@ -178,8 +240,16 @@
       background: rgba(0, 255, 0, 0.25);
     }
     
-    .button-primary.is-focused:not(:disabled):not(.is-selected) {
+    /* Focused state for keyboard navigation */
+    .button-primary.is-focused:not(.is-selected) {
       background: rgba(0, 255, 0, 0.25);
+      outline: 2px solid var(--terminal-accent);
+      outline-offset: -2px;
+    }
+    
+    .button-primary.is-focused.is-selected {
+      outline: 2px solid var(--terminal-accent);
+      outline-offset: -2px;
     }
     
     .button-primary:disabled:not(.is-selected) {
@@ -191,6 +261,17 @@
       background: transparent;
     }
     
+    /* Locked buttons look normal but are still clickable */
+    .button-primary.is-locked:not(.is-selected) {
+      opacity: 1;
+      cursor: pointer;
+      background: transparent;
+    }
+    
+    .button-primary.is-locked:not(.is-selected):hover {
+      background: rgba(0, 255, 0, 0.1);
+    }
+    
     /* Selected state - must come after disabled to override */
     .button-primary.is-selected,
     .button-primary.is-selected:disabled,
@@ -200,7 +281,7 @@
       color: var(--terminal-bg) !important;
       border-color: var(--terminal-fg) !important;
       opacity: 1 !important;
-      cursor: default !important;
+      cursor: pointer !important;
     }
     
     .button-secondary {
@@ -229,11 +310,30 @@
       font-size: var(--font-size-base);
       width: 100%;
       margin-top: var(--spacing-sm);
+      text-align: left;
     }
     
     .input-field:focus {
       outline: none;
       border-color: var(--terminal-fg);
+    }
+    
+    /* Name Input Container */
+    .name-input-container {
+      display: flex;
+      gap: var(--spacing-sm);
+      align-items: stretch;
+      margin-top: var(--spacing-sm);
+    }
+    
+    .name-input-container .input-field {
+      flex: 1;
+      margin-top: 0;
+    }
+    
+    .name-input-container .button-primary {
+      flex-shrink: 0;
+      white-space: nowrap;
     }
     
     /* Character Sheet */
@@ -252,6 +352,166 @@
       margin-bottom: var(--spacing-sm);
       border-bottom: 1px solid var(--terminal-dim);
       padding-bottom: var(--spacing-xs);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .sheet-header-title {
+      flex: 1;
+    }
+    
+    .sheet-header-action {
+      flex-shrink: 0;
+    }
+    
+    .generate-ai-btn {
+      background: transparent;
+      border: 1px solid var(--terminal-accent);
+      color: var(--terminal-accent);
+      padding: 4px 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-radius: 2px;
+    }
+    
+    .generate-ai-btn:hover {
+      background: rgba(0, 255, 255, 0.1);
+      box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+    }
+    
+    .generate-ai-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .generate-ai-btn.generating {
+      animation: pulse 1.5s infinite;
+    }
+    
+    /* Prompt Modal */
+    .prompt-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      padding: 20px;
+      pointer-events: all;
+      cursor: default;
+    }
+    
+    .prompt-modal {
+      background: var(--terminal-bg);
+      border: 2px solid var(--terminal-accent);
+      border-radius: 8px;
+      padding: var(--spacing-xl);
+      max-width: 700px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 255, 255, 0.3);
+    }
+    
+    .prompt-modal-header {
+      color: var(--terminal-accent);
+      font-size: var(--font-size-large);
+      margin-bottom: var(--spacing-md);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .prompt-modal-close {
+      background: transparent;
+      border: none;
+      color: var(--terminal-fg);
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+    
+    .prompt-modal-close:hover {
+      color: var(--terminal-accent);
+      transform: scale(1.2);
+    }
+    
+    .prompt-modal-instructions {
+      color: var(--terminal-dim);
+      font-size: 14px;
+      margin-bottom: var(--spacing-md);
+      line-height: 1.5;
+    }
+    
+    .prompt-modal-textarea {
+      width: 100%;
+      min-height: 200px;
+      background: #0a0a0a;
+      border: 1px solid var(--terminal-fg);
+      color: var(--terminal-fg);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      padding: var(--spacing-md);
+      border-radius: 4px;
+      resize: vertical;
+      margin-bottom: var(--spacing-md);
+    }
+    
+    .prompt-modal-textarea:focus {
+      outline: none;
+      border-color: var(--terminal-accent);
+      box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+    }
+    
+    .prompt-modal-buttons {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: flex-end;
+    }
+    
+    .prompt-modal-btn {
+      background: transparent;
+      border: 1px solid var(--terminal-fg);
+      color: var(--terminal-fg);
+      padding: var(--spacing-sm) var(--spacing-lg);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    
+    .prompt-modal-btn:hover {
+      background: rgba(0, 255, 0, 0.1);
+      border-color: var(--terminal-accent);
+      color: var(--terminal-accent);
+    }
+    
+    .prompt-modal-btn.primary {
+      background: var(--terminal-accent);
+      color: var(--terminal-bg);
+      border-color: var(--terminal-accent);
+    }
+    
+    .prompt-modal-btn.primary:hover {
+      background: var(--terminal-fg);
+      box-shadow: 0 0 12px rgba(0, 255, 255, 0.5);
+    }
+    
+    .prompt-modal-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
     
     .sheet-content {
@@ -957,15 +1217,15 @@
     
     // Base64-encoded ASCII art data
     const DEMO_PORTRAITS_DATA = {
-      'elf-wizard': 'JCRAJCQkJCQkQCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJEAkQEAlOCZNbyNhYSNvb29vbyNhYWFhYWFhYWhoaGJoYnFiZGJhYW84JCQkQCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkCiRAQEBAQEBAQCRAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQCVAJTg4ODhNYWFhZENDWVlKQzBPT09PTzBMMExKQ0NMTG1id09PT0xYQ0N3ZDBvQEBAQEBAQEBAQCRAQEBAQEAkQEBAQEBAQEBAQEAkQAokQCRoK2lpISEhaT4+Pj5paWkhaWkhISEhIWkhISFpaSEhIWk+IWk+PDxbWylbXHwpXFx8XGp2WVlZMExPME9PT09tT0NDWVl2eGp0XFwpKXtbfn4hbCE7Oiw7aWkhIWlpaSEhIWlpaWlpaSFpbGw7OywsLCwsIT4KJCRAcSAgICAgICAgICAgICAgICAgICAgICAgICAgICAnICAgXA==',
-      'dwarf-fighter': 'ICAgICAgICAgIHRvJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI3UgICAgICAgICAgCiAgICAgICAgICAgQyYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmdHRYKSk4ODgmJiYmJiYmTSYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiZNJk8gICAgICAgICAgIAogICAgICAgICAgICBkJiYmJk0mTSZNJk0mJiYmJiZNJk0mTSYmJiYmJiZNJk0mJk1NJiZifGwnICxc',
-      'human-paladin': 'IFxcIUA4YyB+XSw6Ozo6LCwsLCwsLCwsLCwsLDosLCwiLCwiLCwsJyAgICAgICA+dnZMOEAlQEBAQEBAQEBAQEBAQEBAQCZDdnZc',
-      'tiefling-warlock': 'TU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NCk1NTU1NTU1NTTglJSUlJSUlJSU4YUxqanc4JSU4JSUlJTglJSU4JSU4JTglOCU4JSUlOCU4JSU4TU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU0mTU1NTU1NTU1NTU1NTU1NTU1NTU1NJk1NTU1NTU1NTU1NTU1NTQpNTU1NTU1NTU04QCRAJCR2eF0haWktMCZiJjgjOCQpJCQkQCRAJEAkJEAkJCQkJEAkQCQkJEAkJEAmTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU0KTU1NTU1NTU1NOCQkJDogICAgICAgICAgICAgICA4JEBNMCQkJEAkQCQkQCRAQCQlTCtKdit0I0AkTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NCk1NTU1NTU1NTTg4PiAgICAgICAgICAgICAgICAnICAnSkAmaDg4Y3w7cThibSVtTUA4TU0jd3dMKWJNTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTQpNTU1NTU1NTU1iPCAgICAgICAgICAgICAgICAgICAgICAsSk13PiAgXA==',
-      'halfling-rogue': 'QCUlJSUlJSUlOCUlJSUlOCUlJSUlJSUlJSUlOCUlJSU4JUBAJEAkQCRAJEAkQCRAJEAkQCQkJDh2dHYweHRqZCQkJEAkQCRAJEAkQCRAJEAkQCRAQEAlOCUlJSU4JSU4JSUlOCUlJSUlJSUlJSUlJSUlJTglJSUlCiUlODglOCUlJSUlJSU4JTglOCU4JSU4OCU4JSUlODglJSVAQEBAQEBAQEAkQEBAQEBAQCZjPicgbHQmYWQsIiAgLFtMJCRAQEAkQEBAQEBAQEBAQEAlJSUlODglJTglJTglOCUlJSU4ODg4JTglJTglODglOCU4JQolJSU4ODg4JSUlOCUlJTglJTglOCU4JTglOCUlJTglOCUlQEBAQEBAJEBAQEAkQEAkbykgICAgIDt2OCRAZCsnICAgICIrZCRAQCRAQEAkQCRAQEBAQCUlOCUlODg4JTg4OCU4ODg4OCU4OCUlJTg4OCU4JTg4ODgKJSU4OCUlODglOCU4OCUlODglOCU4OCUlJTglJTg4JTglJUBAQCRAJEBAJEBAQEAkcSAgICAgID50TyUwSiVDPiwgICAgICAnYSRAQCRAQEBAJEBAQEAlJTg4JSUlODg4JSU4JTglOCU4JSU4ODg4JTg4JTglJSUlCkA4JTg4OCU4ODglODg4ODg4JTglODglOCUlJTg4ODg4OEBAJEBAQEAkQEBAJEBAbSAgICAgLCdcXHtZQyAnaFspdlw=',
-      'dragonborn-barbarian': 'JycnJycnXFxcXFxcXFxcXFxc',
+      'elf-wizard': 'ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAgLiAuLgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiAuIC4gLiAuIC4gLiAuIC4gLiAuIC4gLiAuIC4gLiAuIC4gLiAuIC4gLiAuIC4gLiAuIC4gLiAuLi4gLi4gLi4gLi4gLi4gLi4gLi4gLi4uLi4uLi4uLi4uLi4uLi4uCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAuIC4gLiAgLiAgLiAuIC4uIC4uIC4uIC4uIC4uIC4uIC4uIC4uIC4uIC4uIC4uIC4uIC4uIC4uIC4uIC4uLiAuLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC4gIC4gLiAuICAuICAuLi4gLi4gLi4uLiAuLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uIC4uLi4uIC4uIC4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLicuJy4uJy4uLi4uLi4uLi4uLi4uLgogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiAgLiAuIC4gIC4gIC4uIC4uLiAuLiAuIC4uLi4uLiAuJy4uLicnJy4nLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4nLi4nLicuLiAuICAgICAgLicnJy4uLicuJy4nLicuCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLiAuIC4gLiAgLiAuICAuIC4uIC4uIC4uLi4uLi4uLi4uLi4uLicnJyAgIC4uICAgICAuLi4uJycnLi4uLi4uLi4uJy4nLi4uLi4uLi4uLi4uLi4uJy4uJy4uJy4nLicnLicuJy4gLicsOjtJISEhbDteICAuJycnLicuJy4nJy4KICAgICAgICAgICAgICAgICAgICAgICAgICAgLiAuICAuICAuICAgLi4gLiAuLiAuLiAuLiAuLi4uLi4uLi4uLi4nLicnICAgLCFJYCI8W1s/bF5gJycgICAuJ2AnJycnJy4nLi4uJy4uJy4nLicuJy4nJy4nLicuJycuJy4nLicnLicuLmx+Xys+bDoiOmw+K1sxX2AgJycnJycnJycnJwogICAgICAgICAgICAgICAgICAgIC4gLiAuIC4gICAuIC4gLiAuLi4gLi4uLiAuLiAuLi4uLi4uLi4uLi4uLicuJycnIC4rckNadi9dLSgxWyt+WygxXS08SV4gIC4nJy4nLicuJy4nLicuJy4nLicuJy4uJy4nLicuLicnJycuJy5gIDp7Wz46ICAuSV9fPz9sLGx8dl8nJycnJycnJycnCiAgICAgICAgICAuICAuIC4gLiAuICAgLiAuIC4uLiAuLi4gLi4gLi4gLiAuLi4uLi4uLi4uLi4uLi4nLicuJycnJyBdVUNYeC8vIWw7LFtmXT48ISE7SVt4eCgtXiBgJycnLicnJycnLicuJy4nLi4nLicuJy4nJycnLicuJycnYCBJcl0iIC4/bk9ufF8rMTxJKzo8WTFeYCcnJycnYGAKICAgICAuIC4gLiAuICAuICAuIC4uLi4gLi4gLiAuLiAuIC4uLi4uLi4uLi4uLi4uLi4uLi4nLi4nLicuJycnJycuemt4W1sxfDExflt2bWFVSTs+K3tbIT9KcFpVPyBgJycnJycnJy4nJycuJycnJycnJycuJycuJycnJycnJycnIll7LC4nVU0mbSgxXyE6LiAxV0pfWT8sJ2BgYGBgYAogIC4gLiAgLiAuIC4uLiAuLiAuIC4gLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLicuJy4nJy4nLicnJydgLlhwWytfX2ZVdnJ4fFtdbnBbYCJsLXhKanxDKmtkfCBgYCcnJydgJycuJycnLicnLicnJycnJycnJycnJ2BgYCAxMCEnIFtCKipaMT9sYCdgJ15YZHQrLzwiJ2BgYGBgCiAgLi4gLi4gLi4uIC4gLi4gLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLicuJycuJy4nLi4nLicnJycnYCAtYWZbP2woYipxUXZ0Wz8xUXQ+XmBeIXt6Q1haOG9rWy5eYGAnLiAgJ14nJycnJycnJycnJycnJycnJ2AnYCdeIHhtIS4ibSVXV1ohYCdgYF5eJztXeixdPztgXl5gXl4KLiAuIC4uIC4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uJy4uJy4nLicuJy4nJycnLicnJydgIHxvanshWyolV2tPWXh8MXt2LyEhLF5eSV9mUWJXQCRrXicuYF5sPygoIS4nJycnJycnJycnJycnJ2AnYCdgJ14gWyotJyJ2azAweF1+ImBeYGBsdGs8ISt7Il5eXl4iIgogLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4uLicuJy4nLicuJy4nLicuJycuJycnJycnYGAnIWtKe35aOEImYTBueys+bF9mXiI7OjshW25DYiY4V2E/PF18dlh0KyIuJ2AnJydgJycnJ2AnJ2AnYCdgYCdgYGAnUVE+Xl5mSm14fHxbPjo+MXZZLSJ+e34nIl4iIiIiCi4uLi4uLi4uLi4uLi4uLi4uLi4uLi4nLi4uLi4uLicuLicnLicuJy4nLicnLicnLicnLicnJycnJycnJ2AnYCIgdmt0X2Z2bSZtPyxgYDssXnstXiw6KGZ8ZmZ4cnxbXS91VVh7LCAgJ2AnJ2AnYCcnYCdgJ2AnYCdgYCdgYGBgYCciVTAxbCc7W3JmL3wvMVt7Wy8hLXs/YF4iIiIiLCwKLi4uLi4uLi4uLi4uLi4uLi4uLi4nLicuJy4nJy4nLicuLicuJycnJycuJycnJy4nJycnJycnJycnJ2BgYGBeLiEqYm4rOnxuKlo7Xixbdls7LF0rK34xa3pmbCF+K3t8dXVdXiAnYGAnYCdgJ2AnYCdgJ2AnYGAnYGBgYGBgYGBgYCcuKEN6MSFgLklddD8/P3soWXxbficiIiIsLCwsOgouLi4nLicuJy4nJy4nJy4nJycuJy4nLicuJy4uJy4nLicuJy4nLicuJycnLicnJycuJycnJycnJydgJ2BgYCd+b0IwdntbYSVvMTosK3J2fD4nXiFfZnt1a20xX1sodjBhfiBgXmBgYGAnYGAnYCdgYCdgJ2AnYGBgYGBgYGBgYF5gXl4gLHQwblshICFye1t+IVtuSl1gIiwiLCw6Ojo7CicuJy4nLicnLicuJy4uJycuLicnLicuJy4nLicuJy4nLicuJycnJycnLicnLicuJycnJycnJydgJ2AnYF4nWyYjT0p4fGEkTTE7O15Jfn47YGBebHRwdnJ1TXJ2dkNkJjhdJ15gYGBgYGBgYGBgYCdgYGBgYGBgYGBgYGBgYF5gYF5gLHshID5Rdj8rbD4/LX4rMXhKen4iLCw6LDo7OzsKLicnJycnLicnJy4nJycnLicnJycnJycuJy4nJycnJycnJycnLicuJycnLicnJycnJycnJydgJ2AnYGBgYCIjYVlVeHJmYSQla1g8Xjs6XmBeXiFmYUpkVzFabXptbXBvQitgIl5gYGBgJ2BgJ2BgYGAnYGBgYGBgYGBgYF5gYF5gXmAhb211YDtxKC1qKDFYdUp8ISEsLCwsOjo6Ozo7SQonJycuJycnLicnJycuJycnJy4nLicuJycnJycuJy4nLicuJycnJycuJycnJycnJycnJ2AnJ2AnYCdgJ2BeJ3Ztdkp2eHJ4OCQ4SissOjsiXl5JWzBKUSRDP25RKDBrcGtXdC4iXmBeYGBgYGBgYGBgYGBgYGBgYGBgXmBeYF5eYF5gIF5ZWmR7bGtYKzExai18MSxeIiw6Ojo7Ojs7SUlJCi4nJycnJycnJy4nJycuJy4nJycnJycnLicuJycnJycnJycuJy4nJycnJycnJycnJ2AnJ2BgJ2AnYCdgYGBeJ3t2MGttQ3ZDQFdaciE6OjoiOitybW1RVT48X1lYdm9kI2tvWyciXmBgXmBgYGBgYGBgYGBeYF5gXmBeYF5gXl5eYH51dnpKWjBDI3VdX24xIF5gIjo6Ojo6Ozs7O0lJbGwKLicnJycnJycnJy4nJycnJycuJy4nLicnJycnJycnLicnJycnJycnJycnJycnJ2AnYCdgJ2BgYGBgYGAnXmA7e2xdb2tibUNxQkJvaiE6Oz5banZ1KDxfK2x+P3h2TyNhOE1NIWBeXmBeYF5gXmBeYGBeYGBeYF5eYF5eXl5eXl5eLDFZWTBZellqVXxfWF8hOzo6Ojo6Ozs7SUlJbElsbAonJycnJycnJycnJy4nLicuJycnJycnJycnJycnJycnJycnJy4nJycnJycnJ2AnYCdgYGBgJy4uLideLnR8Ln5hT21NcXAqWEpKb012Xz8vcnRbPmxJISEtPD4/LXx2ayYmJTBJXl5eXmBeYGBeYGBeYF5gXl5eYF5eXl5eXl5eIiJbfHZYenRbXXZuIV1ydlhKMSw7Ojs7O0lJSUlsbGwhCicnJydgJycnJycnJycnJycnJy4nLicnJycnJycnJycnJycnJycnJycnJ2AnYCdgYCdgIC4sITw+SSIgbHJ2dXZwKmtra212bVl8L3tbUXBxWTE8ISEhIWwhIV8/LXtucDhKIC5eIiJeXmBeXmBeXmBeXl5gXmBeXl5eXl5eXiJgInJrYUMvdHh8al0rfHVVenVdLDs7O0k7SUlsbElsISEKJycnYCcnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnYCcnYCdgYCdgXidbdlhRIzhvcEN1ckNva0NKUUNKWXFDdSgxXTxPcXBwWFshISEhIT5sPl8rPDxbWG1YMUkuXiJeXl5eXl5eXl5eXl5eXl5eXl4iXiIiXiFrQldDP1FvbigxP1tRPD5sLCw7OztJSUlJbElsbGxsIQonJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnJycnYCcnYGAnYCdgYC4gWy9JYF5JVSZhYnBxcWthSkpKSkpKbi90dHxsckNZZnRyfDwhISEhISE+ITw+IWxJX3Zia3ZJYCIiXl5eXl5eXl5eXl5eIl4iXiIiIiJgfFFyXTonMVtyTy8hL21yIjo7Ozs7SUlJSWxsbGxsISEhCidgJ2AnYCcnJycnJycnJycnJycnJycnJycnJycnJycnJycnYCcnYCdgJ2BgYCciKy9YckptcE9tcTBKSlFtVVphMFV2bmp4dWpbITFKWlp6KCs8PD4hPiEsIX5+bD4+Pitbe3RxQmExIiIiIl5eXl5eXiJeIl4iXiJeIl4iIiwiJydgLCJeIVhZLSE+dkNJSTtJO0lJSUlJbGxsbGwhISEKJydgJycnJ2AnJycnJycnJycnJycnJycnJycnJycnJycnJycnYCdgJ2BgYGAuK1pwcGtXb2Ijb3FtT09xa2FrcW9rT09ka2JDLy9RbUNYdnh0fFs8SSF+bDpsITwhISE8KzF2WEMqJGE7LCIiIl4iIl4iXiJeIiIiIiIiIiIsIiwsLDpeX3VtSnQ/IVt6fjs7OztJSUlJSWxJbGxsIWwhIQonJ2AnYCcnJycnJ2AnJycnJycnJycnJycnJycnJycnJ2AnYCdgJ2BgJ2BgXl5DZEpKZEpYMGJxcVowayVCQCQkQm9Pei9bP11bWzFmdnZ1aihbLS1sOkk6Ozs7SUlsbGw8W2pZSlojMDpeLCIiIiJeIiIiIiJeIiIiIiIsIiwiLCw6InxRcU9adn5fdjo6STtJO0lJSWxJbGxsbGxsIWwhCicnYCdgJ2AnYCdgJycnJydgJycnJycnJycnJydgJ2AnJycnYCdgJ2BgYGBgSWtRPnFwQ21rZHBkWmtCJEImazBZbnQxLT5JbCFfXShbe3t7KDF7XSs7OjtsITosOjohfnxYcE9PbWthel1gIiIiIiIiXiJeIiIiIiIiIiIsIiwsLF4tbW1KW2R6IXsvOkk7STtJSUlJbElsbGxsbCFsISEKJ2AnYCdgJycnJycnYCcnJycnJycnJydgJydgJycnJ2AnYCdgYCdgYCdgYF4nem4ubW1tWm1hT204JCQ4cHVbIUlJST4rXz9dPytbfGw6IStbKF0tKzx7PiEhIUkiPHwtfGp2ck9rV2I/UTEsLCIiIiIiIiIiIiIiIiwiLCwiLCwsIn5kKnYsZFVsZjE6STs7SUlJSWxJbElJbGxsbGxsbAonYGAnYCdgJ2AnYCcnYCcnJycnJycnJycnJydgJ2AnJycnYCdgJ2BgYGBgYF5gW34xa2FPQyolQipRbnx7W1sxfC8oW18hSToiO35JPmw6LDFfISsrSUlsX35+LGA/anwtW3x0dkNwKiNXYiEsLCIsIiIiIiIsIiIsIiwiLCwsLCw6XnVCan5hZiFyXzo7STtJO0lJSUlJSWxJbGxJbGxsCicnYCdgJycnJ2AnJ2AnJycnJycnJycnYCcnJycnJ2AnYGAnYCdgYGBgYF5gXmAubF4+Sk0mJWJKekowbW1tSnUxK0kiYF5gXiIiXklsOz4hX3Ixe3xmfFstXzE8bCI+WzFbWy92SlprOGJfLmBeLCIiLCIsIiIsIiwsIiwsLCwsOjoibGFffG9bfmpJO0k7O0lJSUlJSUlJSWxJSWxsbGwKJydgYCdgYCdgJydgJycnJycnJycnJycnJ2AnYCdgJ2AnYCdgYCdgYGBgYF5gIjEhISAtJFdtcVckJCZiVXwrSSwiXl5eXl5eXmAiLGA6PHpmfE9aWG52enp4ez8tPiIiIV9bMSh8fCgvZnh6KD5eLCwiIiIsIiwiLCIsIiwsLCJeIiF8MWBVbTxbfDpJOztJOztJO0lJSUlJSUlJSUlJbAonJ2AnYCcnJydgJycnJycnJycnJycnJycnJycnYCcnYCdgJ2AnYGAnYGBeYF46UVtDWmQjYkIkJCowZi0hIWw7OiJgXmBgXl5gXmAnO3hqL1p2MVVib3EwSkpPej97dl8sXic6bCFJSSFbem9rZHteLCwsLCIsLCIsIiwsLGAsPlsvdCsiSXB2PnQtLDs7OztJOztJO0k7SUlJSUlJSUlJCidgJ2AnYCdgJycnYCcnJydgJycnJycnJydgJ2AnJydgJ2BgJ2BgYGBgYGBeXicrQ2Q4QmEmV1p1MS08fjxsSUk6OiwiXl5eYGBgYF5+dUNVWGRKW2pKKipkcTBRT3pqanIxezshfj9bWzF2YnBhfGA6LCIsLCIsIiwsLCwsP3QoPyFeIiw/by8hdi06STs7Ozs7Ozs7O0k7STtJO0k7STsKJycnYCcnYCcnJ2AnJycnJycnJycnJycnJycnJydgJ2BgJ2AnYCdgYGBgXmBeXidgISFwQm9rbVV6dnQ/K1tbPz8+OiJeXmAnYGBeIjF2Q09aUWRKfl0xYiNkKnF2dltZelEjSj5KL3JufHRZYU0xOmAsLCIsIiwsIiwsXn58OmBgIjo7Xi9wMS1PbzEsSTs7Ozs7Ozs7Ozs7Ozs7Ozs7OwonYCcnYCcnJycnJycnJycnJycnJycnJ2AnYCdgJydgJ2AnYCdgYGBgYGBeXl5eIiJeJzEmJiNwZHB6fC9yZnx7ISwsXmBgYGBgYGAsMXZKWlpDdkN0YDorYipPJmF2eFtyVyV6ZkphZiVrSnp0dm1tWyIsIiwsIiwiLCIsOiJeOjoiXl4sSnA/ZnFmITo7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7CicnJycnYCcnJycnJycnJycnJycnJycnJ2AnJydgJ2AnYCdgYCdgYGBgXmBgXl5eIixeISNNa2tPeHh6enV8PiwiLF5gYGBgYGBeXiJdeFlxVWp8XS8hYC58TWJDb3FyWnJKVUp1MW8/TSQ4YW12dnFKXiwsIiwiLCIsLCIiLDpeYEl7dkpZMT58VUpfOkk7Ozs6Ozo7Ojo7Ojo7Ojo7OjsKJycnYCcnJycnJycnJycnJycnJycnJycnJ2AnYCcnYGAnYCdgJ2BgYGBgXl5eXiIsXiFiQCNxdnZVSlVyKywsOiJgXmBgXmBgYGBeXl8vSlg/KF0+bFtgJzpPb3YvbXYxT0lKQy5ueltrYkJka0pDT3xgLCwiLCwiLCIsLDo6YH52WjB4WysrK2xdSl86Ozo6Ozo7Ojo7Ojo6Ojo6Ozo6OgonJycnJycnJycnJycnJycnJycnJycnJ2AnJycnYCdgJ2BgJ2BgYGBgYGBeYF5eLCcrKiRrWXZDUUp2WzosOiJgJ15gYGBgYGBgYF5eIXxVK0ldbC07XyJgYDFtKDwxSntdcVlsO0NdelVrJm0qUS8tLCIiLCwiLCwiLDoiXmAxcFEvfiFdfF1sPnZvKzo7Ozo6Ojo7Ojo6Ojo6Ojo6Ojo6CicnJycnJycnJycnJycnJycnJycnJycnJydgJ2AnJydgJ2AnYGAnYGBgXl5eXiwnWzgmT1UwWkp2fCE6OiJgYGBgXmBgYGBgYGBeXmBsfHgsXmwsWzs8LCcnPHU/X19mdjxyey58dnxKT2ttbW1tVT4sOjsiLCwiOiwiYCFbblp1e188Ky8oKyEhMCR8LDs6Ojo6OjosLDosOiw6LCwsLCwKJycnJycnJycnJycnJycnJycnJycnJycnJycnJydgJ2AnYCdgYGBgYGBgXl4sJzE4a21wcVF6cjF+ISxeYGBgYF5gYGBeXl5gXmBeXiF8W2BgOl48OyE7JychMV9dP1tyMUldfkoxQ0pKT0phJXwoalstPiwsOixgXjx2WkpDdnx7XX4/anwtPzFuZiEsOiw6LDosLCwsLCwsLCwsLCwsLAonLicnJycnJycnJycnJycnJycnJycnJycnJ2AnYCdgJ2AnYCdgYGBgXl5eIid0V2Fra09VVXYxfixeYGBgYGBeXmBgYGAsLF5gYF5ePjFJYCc6OiI6OzsnJzsrK18oPnwtLCFDfHZZdk92SiNkISdeLF4nYF5gLF11UTB6dGZ8LyhbMXx4XUl0PyInIiwsLCwsLCwsLCwsLCwiLCwiIiIiCi4nJycuJycnJycnJycnJycnJycnJycnJycnJycnJ2AnYGAnYGBgYF5gImBedkIja21DMEp0fixgYGBgYGBgXiJgYGBgOjssYF5eXiw8bGBgYCwiYCIiIicnLGw8IWohKyw6dXx8cnIwWVlPQjBbbCxsX1s/fnx6bVFubnh7Wys/MVh1ZnY8ISheLDosLCIsIiwiLCIsIiIiIiwiIiIiIiIKJycuJycnLicuJycnLicnJy4nJycnJycnJ2AnYCdgJ2AnYCdgYGBgXiInbG0ka21abTB0PmBgYGBgYF5gYDosYCdgYCxfPDsiIiIiLCxgYF5eYGAnYGBgJydeLEksfD5JST9fMWovbnV4VWIqV1dkWHBhTWttSlVVeHR8KFstXXRaSmx7ZiErW2AsIiIiIiIiIiIiIiIiIiIiIiIiIl4iXgouLicnLicnJycnLicnJy4nJycnJycnJycnJycnYCcnYCdgYGBgYF5gJ1sqV2RiazB8IWBeIi4nXmBeJydJSWBgYF5gOntmdC0hLCJgJ2AnYGBgJycnJycnJydgYF46IT5dMW5DWnBtbnhKQ3FtT1piSlEwSlgoai8xKDEoL3xbXVteYHIxLFstYCIiIiIiIiIiIiIiIiIiXiJeXl5eXl5eCi4nLicuJy4uLicnJy4nLicnLicuJycnJycnYCcnJ2AnYCdgYGBeJzpYJk1XYVVbOi4uJyF4MSwnYGAiPCFgYGBgXmBJMXh2fCssIl5gJ2AnYCcnYCdgJycnJycnYF5eST4he3ZYWVlyZm5KMEN1Q0pmVXp4fD9bPy1deHFPSSJgYCI7cl07KCFeIiIiIiIiIl4iXiJeXl5eXl5eXl5eXl4KLi4uJy4nLicuJy4nJycnJy4nJycnJycnJycnYCdgJ2BgJ2BgIi4tayRXcGo8Ozs6WyteYD54Zj5JPl8hXidgYGAiYCEodmp8MSIiIl5gYCdgJycnJycnJycnYGBeLCErPF8veFhKcjFmcnJ2L3wvW2Z1dHw/LS0xfHpRMG0hIiwsXltuK354LCIiIl5eXl5eXl5eXl5eXl5eXl5eXmBeYAouLi4uLicuJycuJy4uJy4uJycuJycnJycnJycnJydgJ2BgYF4gMSVXTy9bKCw/UXhbL3Q/IVt6fDosIidgYGBgXl5gK3R6L3x0OiIsXmAnYCdgJ2AnJycnJycnJ2AnSTF8fD8xdnwofDFbai9bdDEhfHQofFt2WW1rSlhDZF9eLCIrdi8tP1F+Xl4iXl5eXl5eXl5eXl5eXl5gXmBgXmBgCi4uLi4uLi4uJy4nLicuJy4nJycnLicnJycnYCdgJ2AnYGBgLmZCYlFkcSMlbTF1WTE8X3x8eyhdImBeYCdgYGBeYCJdeHoxZnQrIl5gYGAnYCcnJycnJycnJydgJ2AsbF1mWUNYdFs/Pyh8LT98MSEofDF6L21wZGR6SkphXWAsIiF4fDwhfGxeXl5eXl5gXl5eYGBgYGBgYGBgYGBgYGAKIC4uLicuLi4nLicuJy4nLi4nLicnJycnJycnJydgJ2BgJ0lDOGFhTTgja3BtWSg8bCs6LD9bO15gXmAnYGBgXmBgOjF1dntmL35eXmBgJycnYCcnJycnJycnYCcsbGx+ISEhcnUoPy1bKF0hXVtbPCgxKFV0Wm1xWnZRSiNdYCxeOnR7Oj8rLiJeXmBgYF5gYGBeYF5gYGBeYGBgYGBgYAouLi4uLi4nLicuJycnJycnJycnJydgJydgJydgJ2BeYGA6cSNtbyNaSngxL3QxXWxeLCJgJ2wiYF5gYGBgYF5gYCc+fHZmMWooO15eYGAnYCcnJycnJycnXmAuJ14+Ky1be1svWyErK3tdISFbfj9dKF18WHxabW1KekNRKn5gIl47fFsseyEnXl5gXmBgYGBgYGBgYGBgYGBgYGBgJ2AnCiAuLi4uLi4nLi4gICAgICAuICAgICAgIC4nJ2BgLiAuLkMlYW9rbTBqSj4nOzosIl5gYGAnJ2BgYGBgYGBeJ2BgYD9mdjF8fGwiXl4nJycnJycnJy4uJ2AhOy5gXmBJXy96TzBZbF1bXyFJflshKzF7LXRue1pPT3ZKQ21rSV4iYGwoPyExImBgYGBgYF5gYGBgYGBgYGBgJydgJ2AnJycKIC4uLi4uICAgJzpJIV9bWy1fLV9fWz8+OyInLiAhWG1KT21PVXRbLTxfL14nYGBgJ15gYCdgJydgYGBgXmAnYCc6e3huMXshXiJgYCcnJycnJycnYCc6YCJeYCw6XiI+WzF8T3ExP2ZJST5fWz4+KD8tMTExMFFKbjBVa1pgIl5gPC8tfl0nXmBgYGBgYGBgYGAnYCdgJydgJycnJ2AnYAogLiAuLi5JXV8rXV1bW10/fn5+K18tXV17fC8vdVFia20vLV0+STpeXi4hISdgYGAnYGBgJ2AnYGBgYF5gJ2BgJz4odXJsIiJeYCdgJycnJycnJ2BeSSwgLF5eOmwhfjF7dnpPcGJ8dD4+PC0/Kz9bXz8tLTEwSnp1WnpNbi4iIicrdD5+LS5gYGBgYGBgJydgJydgJycnYCcnYCdgJycnCiAuIC4uIC4sIVt8fDFdWzExMS0rLSshOydgITFycnxyLzw6LCwnJydgJy5gYCcnJ2AnYCdgYCcnJ2BgJydgJ2BeP3R2Wzs6XmBgXl5gXidgYCdgYC46LF4nLidgIjs8P3t6bWsqa3IsSSs8LS0/Wy0rXytfMVFYeFhRejh7LiJeYDEoOjEhLmBgYCdgJ2AnJydgJydgJycnJycnJycnJycKICAuLi4sfnt8XTFyfHh2dCh7Pz9bW1t8fHwxWz8/bGBJLCcnYGBgYGAnJydgYCcnJydgJ2BgYGAnYCcnJydgJ2wxcj87LF4nYCIiJyJgYCxgYCcnJ15eOicnJycnLideIV1aMG5KbS0hKzw/LV1dK35fX34xQ3VyQ1VKIyFgXmAtai1sWF0uYGAnYCcnJydgJydgJycnJycnJycnJy4nLgogLiAuXltbPid+bmp2Zl86Xi4gXn4odHQxfjs7LF5gYCcnYCcnYF5gXiJeYCcnYCcnYCdgJydgJ2AnJ2AnYGBgLS8rLCJgYGBeLCdgLCdeOmBeYF4hIi4uYF5gOl5eImwvIWxKdEpkdjw8fj8/W188PF0tfjFKcm4wdXFtYCJeO3R8fjt4bi5gYCcnYCcnJycnJycnJycnJycnJy4nLicuCiAgIC4uICAgPG5bdlteICAgOn4/Xz46YF5eJ2BgXiJeXl5eXmBeIiIiLCInJydgJydgJydgJ2BgYGAnYGBgJ2wofiIiJ2AnXixgJywsJywsYF5gLDxeLCdeIi5fSSI7P1k8J3VmdnBtP34/P1stPD5+KCt+fFhmelF4b24gIic7W18rLF1dIGAnYCcnJycnJycnJy4nLicuJy4nLicuJy4KICAgICAuLjovIWY/YCAuXi0/SV4uIC4nXmx2MXtufDExSV4iLCIsIiIsImAnJydgJycnJ2BgJydgYGBgYCciWyssXidgYGAiXidgOl4uOixeXmAhPF5JJ2BgJystIkktWCsndWZ4MGRmX11dP348PjExXytydnRKenYjKy5eYGA+PCE7PmAnJycnJycnJycnJycnJy4nLicuJy4uLi4uLgogICAuIC4gJyAuXiAgJy4iOyAgLicnJycgbkpqZkovdHg7YCIiIiIiXiIiYCcnJ2AnYCcnJ2BgJycnJ2BgLl8/IiInYGAnXiJgJ14sYC47LF4iYH4hXj5eJ2AnPlssbF9ZX2B0fGpZcXZdPz8rPD4tL1stLXZqdUpqQ2ReYGBgJyF+SSEiLicnJycnJy4nJy4uLi4nLicuJy4uLi4nLi4uCiAgICAgIC4gIC4gLi4uLiAgLi4nLi5gIFswaihyWXx0cjpgIiIiIl5gIiJgLicnJydgJycnJ2AnYCcnYC5sWzteYCdgYCdeXicnLCJgJ0kiXiInLSEifiwuYCdsMSxsflVbJ2Z7fHZtSjE/fjw+KygoPy0oei9ZenxieCBeYGAuKy08fiBgJycnJy4nLicuJy4nLicuLi4uLi4nLi4uLi4KICAgICAgIC4gIC4gLi4uLicuLi4uJyBJMHJmW1luKHRqLGBeIl4iXmBeImAnJycnYGAnJycnJ2AnYGAuLFs8ImAnJ2AnYF5gJ2AsXicnSV4iXiBdISIrbC5gJywxOyEhQzEuW3sxcjBadCghPn4xfHstP3VyalV0cmtsJ2AnYC4xKyshICcnLicnLicuJy4uLi4uLi4uJy4uLi4uLi4uLgogICAgICAgIC4gLi4gLi4uLi4uJy4nLlh1dChbMHwofGYiYF5eXl5eYGBeYCcnJycnJycnJycnJ2BgLiI/LSwiJydgJydeYCcuXiJgJ2AsXiInIFshIl8rLmBgYFtsIWx2MSBde1svSnF4al0hWygxLV8vdnx2dTFKVSBgJ2AnXi8+LSwuJycnLi4nLi4uLicuJy4uJy4uLi4uLi4uLiAuCiAgICAgICAgICAgIC4gLiAuLi4uYCB8WXx8W3xaWyh8fF5gXl5eXl4nYF5gJy4nJycnYCcuJycnJy4sKz9JIl4nJ2AnYGBgJyciXicnXixeYC4gW0ksX1snJ2AnP35sSWpmID8/PyhYbVl0Zj8xey1+e24ocnZ8KHA/IGBgJy47LyE/JycnLicuLi4nLi4uLi4uLi4uLi4uLi4uLiAuIC4KICAgICAgICAgLiAuIC4uLi4uLicgPlV8KHtddUotMXx8YGBeYF5eYCcnYGAnJy4nYCcnYCdgJy5gSStfPiwiJydgJycnYCcnJ15gJydeXl5gLiBbOl4tfCwnYCc8LWxsfGogLS0tMXZaQ2p4MVtffl1qMXxqZnt2Si5gJydgIDwxPl8gJy4nLi4nLi4uJy4nLi4uLi4gLiAuIC4gIC4gIAogICAgICAgICAgICAuICAuIC4uLid2LzFbWz9KdV8xMXxeJ2BgYF5gYCdgYCcnLicnJycnYC4nbD8rfn5JLCInJycnJ2AnJy4nYGAnYGBgIi4uLlssXi14IS5gXkldbCF8dCArKy0xam1VWGZyPH5bdDF8ai8oe09dIGAnJ2AgW1s8ISAnJy4uLi4uLi4uLi4uLiAuLi4gLiAuIC4gICAgCiAgICAgICAgICAgICAuIC4uLicgfHJ7W1tbXTB8X3sxKGBgXmBgYGAnJ2BgLicnLicnYCdgOysoLT5+ISwsYCcnJycnJycnJ2AnYCdgYCJgIC4uWyJeLVgtJ2AiOlshPlkxICE8LXsvbXpDKHZbWzFbfHQvfFt4WScnJycnJy4oK346ICcuLi4uLi4uLi4gLiAuLiAuICAuICAgICAgICAKICAgICAgICAgICAuICAuICAuIH51W1s/XS17UT8rW1soXidgYCdeYGAnJ2AnLi4nJycuXjwte1shPj5JLCxgJycnJycnJycnJycnYGAnIi4gLictXl48WXwiXiw6MX48ZnwgbDwtWyhtekp0L3gtXXwvfHxbW0M/ICcnJy4uXnwhK2AuLi4uLi4uLi4gLi4gLiAgLiAgLiAgICAgICAgIAogICAgICAgICAgICAgICAuLi5geFtdXy0/fmZKPitdXTEiJ2BgJ2BgJycnJy4nLi4nJy4iKz9bXyEhITosXicnJy4nJycnLicnJycnJydeIC4gYCsnXmx1cjxgOjt7P34rWyI6Pl9be1pZenY/dVsoKHx8MS1ydi4nJy4nJyBJfCF+IC4uLi4uLi4gLi4gLiAuIC4gIC4gICAgLiAgICAgCiAgICAgICAgICAgICAgICAuIHwxLV8rX18+dnVJfj8tMSwuYGAnYGAnJydgJy4nLi4nLjpfXVshISFJLCJeJycnLicnLicuJycnJycuYGAgLiAiPCBgLHh4KF46SVsxfl9sISwhfl1dT0puSj9qL1soMTEtW3ohICcuJy4nIDx7ISEgJy4uLiAuIC4gIC4gICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAuLiA8dH5fPCsrKzxVfEk8LX4xOy5gJ2BgYCcuLicnLi4uJycubF9dX2whbCwsXmAnJy4nJycuJy4uLi4uLi5eLiAgICw+ICdgbmpqIV5sLWZ+X14rOzshPy1RQ2pVKFt0ezF7Pyt4MSAnLi4uLicgP188OyAuLiAuLiAuIC4gIC4gICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgXnR+Kz48fn4+X0o/Oz5fPntJIGAnJycnJy4uLicuLi4uJyc+Xz8hSUlJIiJeJ2AuLi4nLi4uJycuJy4uLl4gICAuOjsgJyByeC97YD4rajwtLl9JYGxfX0MwfHZufnwxW108MWYuLicuLi4uJyB7PjxeIC4gLiAgLiAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgLiAxXT48Pjw8PCFbWT46ISshWz4gYCcnYCcnLi4uJy4uLi4uIjxfK0k7OywiImAnJy4nLicuLi4uLicuLiAnYCAgIC4sIiAnIHx2MWosIStmfl8gIUlgOysrVVooano8KDE/Pi10LCAuLi4uLi4gYDFsPC4gIC4gIC4gICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgPjFsPiEhPiE+SXx1OjshPGw/fiBgJycnJycuLi4uLi4uICAsfl8hOjo7XiJgJycuLi4uJy4nLicuLiAuICcuICAgLiInLi4gW0pfcjwhK2YrKy4hOy46fjx6WjF8eitbMT48fDsgLi4uLi4uLiA7e0khIC4gIC4gICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgIF58ISFsbCEhISE7anReLGw+OytfICcnLicuJy4gIC4uICAuIGB+PDosOjpgIicnJy4uLicuLi4uLi4gICAgJyAgICAuYC4uLiArQyt8MSErZl8rXixgJzs8Pm5tMTF1XSsxPls7ICcuLi4gLiAuID4/bEkgLiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAge347bDtsISFsbEl2WycsSSE6Pl8gJy4uJy4uLi4gIC4gIC4gYDxsLCw6Xl5gJycuLi4uLi4gLi4uLiAgICAuICAgIC5gICAuLiFKPy1qPit0LV8sLiBgOz4ham17W2ooIXstIiAuLiAuIC4gLi4gX34hLCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgIH5dImw6O0lJbEk6IXY+JyI6SSxJLSAuJy4nLi4uICAuLiAgICAnISxeLCJgYCcnLi4uIC4uIC4gLiAgICAgIC4gICAgLi4uIC4nLFh7IWo/fi8/KzsgJyc6ISF0bXtdfHQ7XTogLi4gIC4gLiAgIC4/bD4nICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAsMSw6LCw6Ozs7OyJ+eDonIiw7XiwtIC4uIC4uIC4gICAgLiAgIC47Il4iXidgJy4uIC4gLi4gIC4uICAgICAgICAgICAgLiAgLmBgeHxJKDE8fF1+bC4uYDpsbHxtMT9bajorSSAuIC4gIC4gIC4gYC07ISAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg',
+      'dwarf-fighter': 'XiIiIiIiLCIsIiwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCw6LCw6LCw6LCw6Oiw6LDosLDosOiw6OjosOiw6Oiw6LDo6Oiw6OjosOjo6OjosOjosOjo6LCw7STosOiwsLCwsOiw6LCw6LDosLCw6LCwsLCwsLCwsLCwsLCwsLCwsLCwsIiwsIiwiLCIsIiIiLCIiIiIiIiIiIiJeIl5eXgoiLCIsLCwsLCwsLCwsLCwsLCwsLCw6LDosOjo6Ojo6Ojo6Oiw6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo7Ojs6SWxsSWw+XT9fPys+ISFsOjosOjo6Oiw6LDo6Oiw6Ojo6Ojo6LDosOiw6LDosOiwsLCwsLCwsLCwsLCwsLCwsLCwsLCIsIiIiIiIiIiJeCiIsLCwsLCwsLCw6LDosOiw6Oiw6LDosOjo6Ojo6Ojo6Ojo6Ojo6Ojo6Ojo6Ozs7Ojs6Ozo6Ozo6Ozo7Ozo7Ozs6Ozs7Ojs6OjosLCIiLDshSSE8PH5+P3x7KHxbPytffiE7STs6OjosOjo6LDo6Oiw6LDosOiw6OjosLDosLDosOiw6LCw6LCwsLCwsLCwsLCwiLCwiLCIsIiwiIiIiIiIKIiwsLCwsLCw6LDosOiwsOiwsOiw6Oiw6Ojo6Ojo6Ojo6Ojo6Ojo6Ojs6Ozs6Ojs6Ozo6Ozo7Ojs6Ozo6Ozo6Ozo7Ojo6LCIiIiIsOjs6ST5+K117XS18dChmKCh0dF0tW1tfbDoiIjo6Ojo6Ojo6Ojo6Ojo6OjosOjo6LDo6LCw6LDosOiw6Oiw6LCwsLCwsLCwsLCwsLCIsIiwiLCIiIgoiLCIsLCw6LCw6LDosOjo6Ojo6Ojo6Ojo6Ojo6Ojo7Ojo7Ojs7Ozs6Ozo7Ojs6Ozo7Ozo7Ojs6Ozo7Ojs6Ozs6Ozo6LCIiIl5eXl4sOzs7Pis/Py97P3x8MTF8MTEtfj9bXV8tLX4hOyw6Ojo6Ojo6Ojo6Ojo6Ojo6Oiw6Ojo6Oiw6LDosOiwsOiwsLCwsLCwsLCwiLCwsLCwsLCwiIiwiCiwsLDosOiw6LDo6Ojo6LDosOjo6Ojo6Ojo6Ozo7Ozo7Ozo7Ojo6Ozo7Ojs6Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ojs7OywiXl5eXl5eXiIiLDpJITwrP1stW3tdMTExMTExLT4hfl1bP18+IWw7Ojo6Ojo7Ojs6Ojo6Ojo6Ojo6OjosOjosOjosLDosOiw6LCwsLCwsLCwsLCwsLCwiLCwiIiIKIiwsOiwsOiw6LDosOiw6Ojo6Ojo7Ojs6Ozo7Ojs6Ozo7Ojs6Ozs7Ozs7Ozs7Ozo7Ojs6Ozs7Ozs7Ozs7Ozs7OzosLCIiXl5gIiw6O2xsISEhIX5+LV17MXR4dlVKSkpZbnshSWw+PDwhSTssOjo7Ojs6Ozo7Ojo6Ojo6Ojo6Ojo6Ojo6LDosOiwsOiw6Oiw6LDosLCwsLCwiLCwsIiwsIgosOjosOjosOjo6Ojo6Ojo6Ozs6Ozo7Ojs6Ozo7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7O0k7Ozs7Ozs7Ozs7OzoiIl5eXl5gXiw6SWwhPF8/W3sxMSgvdHJ2WFVKSkpDSkpKSm4tOj4rXz8rPmw7Ozo7Ozs7Ozo7Ozs7Ojo6Ojo6Ojo6Ojo6OjosOjo6LCwsOiw6LCw6LCwsLCwsLCwsIiwiCiwsOjo6LDo6LDo6Ojo6Ozs6Ozo7Ojs6Ozs7Ozs6Ozs7Ozs7Ozs7Ozs7Ozs7OztJSTtJO0lJSUlJSUlJO2xsOiIiIl4iXiIsO0lJISE8X1sxKHx0anhuam51dlhZSkpDSlVVVUp8PistPyshSTtJSTo7Ojs7Ozo6Ojs6Ozs6Ozo6Ojo6Ojo6Ojo6Oiw6Ojo6LDosOiw6LCwsLCwsLCwsIiwKLDosOjo6Ojo6Ojo6Ojs6Ozo7Ojs6Ozs6Ozs7Ozs7Ozs7Ozs7OztJOzs7SUlJSTtJO0lJSUk7STtJSUlsITosLDo6Ozs7OztJbCEhPn5dMS9qanJ4cmZ0cnh1WFlVSkpKVUpVWEp6fHwoMV08LCxJOzs7Ozs7Ozs7Ozs6Ozs6Ozs7Ojs6Ojo6Ojo6Ojo6LDo6OjosOiw6LDosLCwsLCwsLAosOjo6Ojo6Ojo6Ojs7Ojs6Ozo7Ozs6Ozs7Ozs7OztJO0k7STtJSTtJSUlJO0lJSUlJSUlJSUlJSUlJO2xsOjosOjtJbGxJbCEhPjx+K19bKGZudnp2bmZmdnpYSkpKQ0MwUVFDSkpDWHUoP18hOjpsOzs7Ozs7Ozs7Ozs7Ozs7Ojs6Ozo7Ojs6Ojo6Ojo6Ojo6LDo6LDosLDosLCwsLCwsCjosOjo6Ojo6Ozs6Ozo7Ojs7Ozo7Ozs7Ozs7O0lJSTtJO0k7SUlJSUlJSUlJSUlJSUlJSUlJSUlJSUkhITs6LCw7O0lJSUlsISEhPH5+fl9fXTF0amZuKF18ZnJudXV4ZnwxfHZDSkpKVXYxfiFsLCxJOzs7STtJOzs7Ozs7Ojs7Ozo7Ojs6Ozo7Ojo6Ojo6Ojo6Ojo6Oiw6LDosLCwsLCwKLDo6Ojo7Ozo7Ojs6Ozs7Ojs7Ozs7STtJSUlJO0lJSUlJSUlJSUlJSUlJSWxJbElsSWxsSWxsbGxJITxsSTs7Ojs7Ozs6OzosIiIsOjpJSWwhIX5ffns/O0lJO0lJSToiIiIsbFt6SnZ1dnh7LT5JLDo7SUk7STtJO0k7Ozs7Ozs7Ozs6Ozs6Ozo7Ozs7Ojo6Ojo6Oiw6Oiw6LDosOiwsLAo6Ojs7Ojs6Ozo7Ozs7Ojs7OztJO0k7STtJSUlJSUlJSUlJSUlJbElsSWxsbGxJbGxsSWxsbGxsbGxJSS0rIWw7OjosLDosXmBgYF5eIl5eXiIiLDpsX1s+O0k7Oiw6STwtLT47OytYenx0eHRdPiwsLDtJO0lJSUk7SUk7O0k7Ozs7Ozs7Ozs7Ozo7Ojo7Ozo7Ojo6Ojo6Oiw6OjosLDosCjo6Ojs6Ozo7Ozo7Ozs7STtJSTtJSUlJSUlJSUlJSUlJbElsSWxsbElsbGxsbGxsbGxsbGxsbGwhbDpJfj4+bDssIiIsLF5gYGBeXl4iIjosXl5gOl1qWXorLCw6Oiw7bGw+Xz4sfnZReF9dMV0+IiIsSUlJSUlJSUlJO0lJO0k7OztJOzs7Ozs7Ozs6Ozo7Ojs6Ojo6Ojo6Oiw6LDosLCwKOjs6Ozo7Ozs7Ozs7O0k7STtJSUlJSUlJSUlsSWxJbGxsbGxsbGxsbGxsbGxsIWwhISEhISEhbCFsLCJsPD4hOiIiLCJeYGBgXmBgXiIsISE7LF4sXXZPSmpdPmxsbD5+Pj4+Py0oelVDfH5+PD46IiwhbGxsSUlJSUlJSUlJSUk7STs7Ozs7Ozs7Ozs7Ozs7Ojs6Ozo6Ojo6Ojo6Oiw6LAo6Ojs7Ozs7Ozs7O0k7SUlJSUlJSUlJbElsSWxsSWxsbGxsbGxsbCFsISEhISEhISEhISEhISEhIWwsIiErITssXiIiXmBgXl5gXiI6SSE8PCFJLCEodjAwVXp2cnQvdGp2VVhYSlVYdnp1W1srbDosLGwhIUlJSWxJbElJSUlJSUk7SUk7STs7Ozs7Ozo7Ojs7Ozo7Ojo6Ojo6Oiw6OjosCjo7Ozs7Ozs7O0k7SUlJSUlJSUlsSWxsbElsbGxsbGxsbGwhbCFsISEhISEhISEhISEhISEhISFJOiwibDxJLCJgXl5eIiw6O2whPH4rKysrPCFsW3huek9aQ0NDSkpKSkNRUTAwMEpZdm5bW11JOiw6O0khITtJbElsSWxJSUlJSUlJSTtJO0k7Ozs7Ozs7Ozo7Ozo7Ozo6Ojo6OjosOjoKOjs6Ozs7O0k7SUlJSTtJSUlsSWxsSWxsbGxsbGxsISFsISEhISEhISEhISEhISEhISEhISE+IUk6Xl5eLDssXl5eIiw6O0lsIT5+X18tXS0hOiI6IT4+Wyh8Zm5YQ0NKSkpKSkpKSlVYbl1dPyE6Ijo7SUk8bDpsbGxsbGxsSUlsSUlJSUlJO0lJO0k7Ozs7Ozs7Ozs6Ozs6Ojo6Ojo6LAo6Ozs7O0k7SUlJO0lJSWxJbGxsSWxsbGxsbCEhISEhISEhISEhISEhISEhISEhISEhPj4+PiEhSSJeXiIiLCJeXl4iOjs7SUlJbD5+X11bPCIiLCIiLCw7LF4ifl0vWFFPMEp2cm52dnovXys/PyEsOzpsbDshIWxsbGxsbGxsbElsSWxJSUlJO0lJOztJOzs7Ozs6Ozs7Ojs7Ojo6Ojo6Cjo7O0k7SUlJSUlJSWxJbGxsbGxsbGwhbCEhISEhISEhISEhISEhISEhISE+Pj4+Pj4+Pjw+bCFsLCIiLDo6Ojo6Oiw6Ojo6OjshPF9bMT8rfi1ffiFJOjo6SWxJbEk+P3xuenZ0MVt7Wy1+fitfXz47LEkhO2xJIWwhbGxsbGxsbGxsSWxJSUlJSTtJSTs7Ozs7Ozs7Ojs7Ozo7Ozo6OiwKOztJO0lJSUlJSWxJbGxsbGxsbGwhbCEhISEhISEhISEhISEhISEhIT4+Pj4+Pj48PDx+fjw7fl87Iiw6Ojo7Ozs7O0khITwrLV0/XV0/LStffn4rPjssLDtsIWxsbGxJSSErXT8/Kzw+PDw8fjx+PEk6SV9+PklsISFsISFsbGxsbGxsSWxJSUlJSUk7STtJOzs7Ozs7Ojs7Ozo6Ozo6Ogo7O0lJSUlJSWxJbGxsbGxsbCFsISEhISEhISEhISEhISEhISE+Pj4+Pj4+PDw8PH48fjw+SUl+P188Pj4hISEhITwrXy0tPy0rKytfKys8PiEhIWw6Il4iIiw7OztJbCEhPiE+fitfK35+fjx+PH48ISFfW1tfSTshISEhISEhIWxsbGxsbGxJbElJSUlJSTtJOzs7Ozs7Ozo7Ozo7Ojo6CjtJSUlJSWxJbGxsbGxsIWwhISEhISEhISEhISEhPiE+Pj4+Pj4+Pjw8PDw8PH5+fn4+PH4hbGx+KysrX19fLT8/XS1fKzw8Pjw8PiEhIWxJbGw7bGw7LCJeXl4iLCwsO2whPiE8fitfLS0tLS0/XT9dW11fXX5JbGxsISEhIWwhIWxsbGxsbGxsSWxJSUlJO0k7STs7Ozs7Ozs7Ozo7OjoKO0lJSWxsbGxsbGwhbCEhIWwhISEhISEhISE+IT4+Pj4+Pjw+PDw8PDx+fn5+fisrfjxfLT46OkkhIUlJSUlsSWwhIT4hIWxJSTs7Ozo7SWwhISsrKz5sOiIiXl5eXiIiLDo7bCEhPj5+K18tXy1fKys8IStfSTpJISFsISEhISEhISEhIWxsbGxJbElJSUlJSUk7O0k7Ozs7Ozo7Ozo6OwpJSUlsbGxsbGxsISEhISEhISEhISEhIT4hPj4+Pj4+PD48PDw8PH5+fn5+KysrK19fPC0/fjs6LCw7OzosLCIiIiJeIiIiIl5eLDo7SSE+fit+PDwrPCE7OjosOiwsIiJeIl4iLCwsOztJSUlJSUlJSSE+PCE7STs7SWwhISEhISEhISEhIWwhbGxsbGxJSUlJSUk7O0k7Ozs7Ozs7Ozo6CklsbGxsbGwhISFsISEhISEhISEhISE+Pj4+Pj48PDx+fn5+fit+K34rKytfX19fLS0tK34+OywsIiJeIiJeXl5gYGBgYGBeLEkhPitfXys8IUlsPjwhOzs7ISE+PD4hOzssIiJeIiIiIiIiLCw7bCErLT8/PElJSUk7OiEhISEhISEhISEhISFsbGxsbGxJbElJSUlJOzs7Ozs7Ojs7OjsKSWxsbCFsIWwhISEhISEhISEhPj4+Pj4+PDx+fn5+PD4+IT4hPjx+Xy0tLV8tLS0/P11fK0k6LCxeXl5eYGBeYF4iIiwsOjshP19dLX48XytdLTw8PmwhPiEhITw8fit+PiEhSToiIiIiIiw6O0khfi1dXVtdKyFJbDo7ISE+ISE+ISEhISEhISEhbGxsbGxJSUlJSTtJO0k7Ozs7Ozs6OwpsbGxsISEhISEhISEhISE+Pj4+Pj48PH48PmxJOywsLCIiXiJeLCw6bDwtXV0/XV1bXV8hLCIiIiJeIiI6SWw+IT4+ISFsbCE8X10tfjw8PFsxXV9+Pj4+IUkhPlsxW3tbfl9fKyFsOjo6O0lsISEhPjx+Xy0tKyFsOzs+PDw8Pj4hISEhISEhISEhbGxsbGxJSUlJSTtJOzs7Ozs7Ojs6CmwhbCEhISEhISEhISE+Pj4+Pj48fj4hOywiIiIiIiIiXl5eXl4iIl4iXiJsK1tbW1stITosIiwiLDo6bCE+PDw+ISEhIWwhbEkhK10te3t7P3tbMV9sPj4hSSE8LVt8Zl8rLV17W19+bDtJbCE+fl9fK348fisrPGw7bDwhbDo6LDo6OklsISEhIWwhbGxsbGxsSUlJSTs7STs7Ozs7OzsKISEhISEhISEhISE+Pj4+Pjx+PCFJLCIiXl5eYGBeYF4iIiwiIl5eXiw6OiJeOjwtK2w6LCwsOklsISEhISFsbGwhISEhPiFJSSw6IT5+Py9mdCgxWyEhIT4hSTosSS9KMSF+P1t8e10rIWxsITxfPz9dPy1ffn48IWxsOiIiIiJeXiIiIjpJbCEhISEhbGxsSWxJSUk7STs7Ozs7Ozs6OwohISEhISEhISE+Pj4+PDx+fj5JOjosLCIiIiIiXl5eXl5eXiI6OzosLF5eOjssXjohISIsO0lJbEkhSUlJbCEhIT4hITw+PiFJOiwsLDo7IVtqfFtdPDs7SUlJIixsKyh6XSFfXVsxe1srfj4+PjwtLV1dW1s/Xys+ITsiXl5eYF5gYGBeXjohISEhISEhISFJSWxsbGxsITs7Ozs7Ozs7CiEhISEhISE+Pjw8PD48ISFJLCwsLCwsLCwsOjs6OjosLDosIiIiOmwhOixeXkkhOywhfmw7SWxJSUlsbCE+ISEhPj4+Kzw+IWw7OjsiImxfeGQoPCE7OiwsIiwiLCI7ZnRbITx+P1tbMVtfK34rPj5+Kz9dW1tdLSs+bCJgXmBeYF5eXl5gXix+fjw+IUlsSSE+Xzwhfj8tfiE6LDs7OjsKISEhISE+PjwhbDs6LDoiXiIiLDohPjosOjosOjs7O0k7Ozs7OzoiLEkhbEk7Xiw+Kzs6IUlJbCFsISEhIT4hPDw8Kyt+PiEhIUk6OiwsOn4xeig6OztJOywsIl5eXiIxdShbIX5+LV1be1tffitfKys8Kys/XVtdP18+OiJgXl5eXl5gXl5gYCwxMT9JbEk8Pl97MXtbW19fX1stOjs7OwohISEhPD5sOiwiXl5gXl5eXl5eIiw7Ozs6ITw6SWxsIWxsbGwhbCE7LDt+PiEhO14hXyEiO0k7SWxsISFsISE+PD4+PiEhPiEhbDssXl46ezEvWyEhbDs7OiwiIl4iIkkxfFkhfit+Ky1dW1srfjwrK188PH5fLV0/PyshOiJgYGBgXl5gXmBeLiF2cjE8PmwhP1s/W3xdOzs7PF07Ozs7CiEhIT4hOiwsIl5eYGBgYCdgJ2AnYGBeLDshPmxsIT4+PiEhISE+PDwhOztbPytfITosLV8sOjs7OztJSSEhISEhISEhIT4+PCEhSToiImw8LXpqIT4hbEk7OywiXl5eOjwodTE8Xy1ffl9dWz9+PDx+fl8rPH4rXy0tLT47STosIiJgYF5gYF5eIDFqK2xsLT8hbGwhK2w6OzssIjs7OjsKIT4hIUk7SSxeYGBgYGBgYGBgYGAnYCcnYCJsPH4+PF8tP11dXVtbW3t7ISFme3woKF8sPCs6LCw7SWxsbGwhbGxsIWw+IT4+IT4hOyIsSTo7MXwrPDwhIWw7OywiIiIiOzEocnx+XVstX19dW10rfjw8fl8rK34rXyt+KyFsLDo7LCxeXmBeJ2A7IWw7flstISEhfj47O0k7SUlJOzs7Owo+IV8rbEksXl5gXmBgYGBgYGBgJ2AnJ2BgJyciPnsxWzFmdVVZenpVWVlYPF92ZlhVWHRsOjssOklJSUlJO0lJbGxsISEhISE8fj5JIjssPC1fPj5+PDw+ISFsOzosXiI6LCEhSSF+Xz8/P18/Pz9fKzw+PjwrX35+fit+fmwiLCI6LCwiYGAsIT5sPDExfiEhIX4hOzs7SUk7O0k7STs7CiFbWztJLCwiIl4iXl4iXiJeXiJeXl5eYCdgYCcnLHt1ZmpZMG1tT09tT1owPC9ZdU9RSnRsLDo6Ozs6OztJSUlJbCFsPjx+K18tXyFsIT4hOzFyfj48PD4hPiEhISwiIjo7OjtsbCE8Xy0/LS0rXy0rK34+Pj48PDw+PDw+bF86YCIsIl4sITwhITFmWz4+ITxfbDo7IUk6OklJOzs7OzsKPFsiXl5eYF5gXl5eIl4iIiwsLDo6Ojo6Il4nYGAnLiFydm52UW1xbXFwbXBVPFh2WUN1KDw7LCwsOjo6OztJO0lJSWwhITwrK34hSUk6SUkhIT9dXzwhIT4hISEhSSJeOzs7SWwhISE8fitfX18rK35+K34+PiE+Pj4+IT4/IV4iXl46IX4+IV1ual8+fiErLSFsIWw7PCE7OjtJIUk6OwosYGBeYGAnYCcnJycnJycnYGBeXiw6SSEhPiE7IidgLmA/WFhuWE9RSlpxcGsxMVhmdnw/PkksLCwsOjo6Ojs6OztJISEhPjx+bDtJbDshISEhIX5dKyFsIWxsISFsOiw6SUk7SWwhISE+PH5fX19+PDw8fjw+PiEhIT4rPyEiOl5eOzx+IV9uVSg8fn5+Wz88K188PiFJP19sLDs7PCtsCl5eYGAnYGBgYGBeXl5eIl4iXmBgJ2BgXiI7PF9dX0leLiA6dEpyfHRmcnhDcVgreHx0KC0hSTo6LCwsOjo6Ojo7OztJbGwhISFJO0lJbCFsIT4hPn48PiEhbElJISFJLDo7O0k7bCEhIT4+PD4rXys8PD48fjw+PiEhPj5JO0k6OiFfPH4vQ3pdPF88XSh0X11dfDFfPD5sfFs+ST5JIT8KLCIiXl5eXiIiIiIiLCw6Ojo7SSEhO0k7OixgYCwhLVtfOmAufm50WzF8L3VKVV8ofFsxKyFJOiwsLCwsLCwsOjo7O0lsbGxsSTtJSUlJIWwhISE+PH4hIWwhbElsbCFsOjo7SUlJISEhISEhISE8fn4+PD48PDwhISEhISFsSSFfXysxVTB0X19ffi98LC18WHxbZnZ8WysrdXx+ITxJOwpeYGBgYGBgYGBgYF5eXl4iLDs7IT5sPn4tWzEoeytJOiE7YF4nYFtKWTFqSllYXy17X18+bDsiIiIiIiIsLDo6Ojo7STtJSUk7Okk7O2xJISEhPiEhPCFsSWwhbElJbCFsSTtJSUlsISEhIT4hISE+fjw+IT48PH4+Pj4hISF+Xytbdm1VMS1dLVt6fGAuSSgxeFstWE92dC0oWWY+SSFsCicnJycnJycnJycnJycnYCcnJycnXixJPj9bL25YWVV2L11JJ15eLkl0bS9bL3wrPltdPF9sSSIiXl5eIiIiLCw6Ojo7Ozs7Oyw7STs7SWxsISEhIWwhIWxsbGxsSUlsSSEhbElJSUlsIWwhISEhISEhPjw+ISEhPD48PjwrLV9dbk9tdVtbe3tuT1sgYF4nMT9bMT5qYVpKLy12WXQhIUkKXmAsLCIiIixJIV4sLCwsLCwsLCJeYCcnYDo+XShqdkpRMHZfXl5eYCA8T3whXyFfPjEhOl0/IixeXmBeXiwiIiw6Ojs7OjosLEk7OztJSWwhbCEhbCFsbGxsSUlJSUlJSSEhbElJSWxsIWwhISEhISEhIT4+ISEhISF+XT9dck9wUXQxfHx0MFo+IF5eXichfH47fGtrbUpuWz9KenRfPgpeIiIiIiIiOjs6Ojo6OztJO0lsbCE+PCFsSSInYCw8ey91dXJbOyJgXidsQygrMTE+ITF+IX4sOiJeXl5eXiIsIiwsLCw6LCw6Ozo6STs7IWxsIWwhIWxsbElsbElJSUk7SWwhbGxJSWxsbGxsISFsIWwhISEhISEhPzExZjBkWnYvL2ZmdmRVOi5eYGBeYCIxW1t1ZDBRUVgvIXJVWXQxCl5eXl5eIiJeIiwsO0lsISE8PD48Ky1bL3h6VXZmXWxeYDp+MXR8W2wiXid+QyhqZnx+ISs7OiIsXmBgYF5eIiIiIiIsIiwsLCw7Ojs7STtsbGwhbGxsO0lJbGxJSWw7SUlJSUlsIUlJbGxsSWxsbCFsbGxsbCFsKzF8fEpkWll6dW5ubkpreGAnImBeYGBeYF47ISt4VVh6di9+PnZ4dm4KLicnJycnJycnJ2BgYCIsSSF+P1t7ezF8eHZRbXFtMEpmP0lgXiFfPiJgYGBsK18/XV1fLS1+OyIiXmBeYF5eXl4iIiIsIiIsLDo6OjtJO2xJbGxJbEk7OztJSUlJSUlJSTs7SUlsbGxJSWxsbElJbGxJbGxJPlt8L25xcFhZMEp2dXZPYjEuLCxeYF5gXmBgYGAsSWxdfDExWzxJXWZucgonLicnJycnJycnJycnJycuYF47PF18cnhqZnJ6Snp8eEpDUXVbXz9dfkksLGBgJy4nJycuJydgYGBgYGBgYGBgXl4iIiIiIiIsLDo6Okk6SUlJSUlJOzs7OjtJSUk7STs7STs7SUlsSWxJSWxJSUlsSWw7ST8odHZtYlFVcGtDdXZZZGQ/LiwsLCwiXmBgYGBgXmBeSUlsPD4hISFsey9bCi4nJycnJydgJycnJycnJ2AnJycuJyIhW2Z2enVybl0xdHZKVXp1bmYxe1tdLS1fKzwhIUlJSToiYGAnYGBgYGBgXl4iIl5eIiwiLDo7OzpJOzs7Ozs6Ojo6Ozs7Ozs7Ozs7Ozs7O0lJSUlJSUlJSUlJOn4xdHZta0NZcSpibVFVQ2tPPjshLCwiIjssIl5gYGBgYGBeOklsbElsITstL3sKJycnYGAiIjteXiIiIiIiIl5eYGAnLi4uJ0ldZnV4W3R2fGZ8KCh8KHwoKCgoKDExe3tbXV88IUksYGAnYGBgYGBgYF5eXiJeIiIiLDo7Ojo6Ojo6Ozs6Ozo6Ozs7Ozs7OjtJOztJSUk7SUk7SUlJOmxbZnhPKm12SmEqMFFicXAqWns/LSEhOyxeLElJLCxgYGBgYGBgXixJSSEhO34oLwpeYF5eXiIiLCw6Ojs7SWwhPn4rfjxsLF5gLi4nOy0xMXV2dXVubm5udXV1bnVudW54aihbKz46XidgJ2AnJ2AnYCdgXl5eXl4iIiIsLDo6LCw6LDosOjo6Ojo6Ozs7Ozs6OjtJOzs7STtJOztJOjpfZnJ6YmFKdnEjb1FKYWJrI3hfZnhqWyE8PkleImwhOzteYGBgYGBgYF4sSUk7ST8vCl5eXl5eIl5eIiIiLCwsOkkhK1soZmp0KD8hLGAnLl4hX11bMTExKHx8fDExMVtdXz5JLGAuJy4nYGAnYGAnYCdgYGBgYF5eXl5eIiIsLCwsImAiLCwiXl4iLDo6Ozs6Ozo6Ojs7Ozs7Ozs7Ozo+L3p6WiNielVvTWFRSmtrYWFyXVt8dHx1eys/XyEsIiEhISEsYGBgYGBgYGBeLDo7IX4KYGBgJycnJycnLi4uJycuJycuYCI6Pj98cnh8WyEiYC4gLiAuIC4uLiAuLi4gICAgLi4nYGBgYGAnYCdgJ2BgJ2AnYGBgYF5eXl4iIiIsLCI8fHwxK10/PCFJSTsiLCIiLCIsLCw6Ozs7O0k7MVlZdm1rQ3pxOCNiSjBhayNwMTFbMXx4amZyXS0tKzwsXiEhIT5JXmBgYGBgYGBgXiw6IQouLi4nJycnJycnYCdgYGBeYF5eYCcgICAuO35bLygtKz46Il5eYGBeXmBgYF5gXl5eYGBgJydgJ2AnYCdgJ2AnJydgJ2BgYF5eIl4iIiwsIigxbF97eEoxMXsoZltdP188Pj5JSTs6OjpJISF+fn4rKzwodlVtcDBkb2FNVT5dcjEoWzExe2Z7LVtfKyEsIiEhISFsXmBgXmBgYGBgYF4iCicuJycuJydgYF5eXmAiOjtsIX5de3t7Pzw6YC4nIV0ofixgYGBeXl5gXmBeXl5gYGBeYCdgYGBgJ2BgYGAnJ2AnYCcnYCdgYF5eXiIiYGBgJ0lJJ2wrLTFffn5+fn5+fj4rK35ffn4+PDw+ISE+PDw+blluai90Siojb3IhSSwtcnYxW3tbeHI/fn5fKyEiIiFJPjxJXmBgYGBgYCdgJ2AKJydgXjpeXl4iIjo7P2w7bCE+LVt8ZnZ6dnIvKHRmXSE6LCIsIiJeLCwsIiIiIiJeYGBeYCcnYGAnYGBgYGBgYCcnJ2AnYGBgYF5gXiIhPDxsOyErXzw7Il4nLi4uLi4uJy4uJ2BeIjo7SSE8fistfmZKdnZuamZ8fFUofitbLX4/P3xycnVZdj9bPj48fiFgOyFJPj5JIiJgJ2AnYGBgXgpgXiIsOiwiIiw6O0k8bEkhPH4/Wz8rMXxudVVKdjErKz4hISE7SSwiIiwsOiw6LCIiYGBgYGBgYCdgYGBeXmAnJ2AnJydgJ2BgYF5eYHxbISEhPiEiJydgYF5eXl5eYGBgXl5eYGBgJycuLicnIixddnZYenp4L3wxPD4tLTFybnQxP11bXVtdPiFfIWwhPkleSSEhPCE7LDpgJ2BgYGBeCiIiYCJeIiIsLDo6SUk8Kz97MTExMXs/dFlKSmo8YF48fkk+PD4hSWw7XmAiOjo6LCwiXmBgJ2BgJ2BeXl5eYCdgJydgJydgJ2BgYF5eIjs6Xl4nJ2BeXl5eYF5gYF4sLCwsXl5eXiI6bDwrLV88bCJgLGw+K11bMTExXz8xKHRqaigxfC8xey07O10hbGxsbCxeIUk+PiE7OyJgYGBgXiwKYGBeYGAnYCcnJydgXl46STxdKHRqci9qWXVbLCxgYCcnLiI6SUlsITtJSWBgXjo7LCxeYGAnYGAnYF5gXl5gJydgJydgJydgYGBgYF5gJ2BgYGBeYF5gYGBgXiw7Ozo6Ojo6OmxfWzEvcnZ1dlVKWC8hXicnIC4iOiErXSgodHR8LTw/Py0tPElJPiFsSWw6Ol47SWw+PmxJLGBgXiIiLAouLi4uJy4nLicnJycuJy4nLiAuXjs+WzF8PF4sOycuYDshbEkhfl8/PCEhISxeYCwsLCJgYCdgJydgYGBeXmBgJydgJydgJycnYGBgYF5eYGBgYGAnYF5eXiw7O2xfOjo6O2w7bF9dWzF8ZnZDbWJrYXF4PCEtIV4uJydgIkl+MTFbe1tJSTo7O0lsO0k7Ozo6XiJJSSE+IWw6XiIiLCJeCi4uJycnJ2BeYCIiIiIiOiw7Ozo6OiJeOiwsSUkhW3R2elhYWG58PzwhOzo6OjoiIiIsLF4nJydgJydeXmBeXmAnJycnYCcnYCdgYGAnYCdgXmBgXiwsOiwsSWw+Pj97OklJPEksPj9bKHxmdVFwa29vKmFVfltaWXs6LF4uJydgLD57ai8xezxJOjsiOjpsOyxeYDo7bD4hIUk6Il4iXiIKJ14nXl5gIiwsOiEsSTssOjs7SSw6IWxJSUlse3ZuKEpPWS9fbDs6Ozs7Ozo6Ojo6OjosLCwsLCIiXiIiIl5eXmBgYCcnJ2AnYC4gLmAnYCcnYCI7Ojs7LDshIT5sSWorOkk7O0khMXwvfHxqblhKT3FwT2otO3wwMHxsPi0sYGBeLi5efnx6Ly8xKyE6Xi1sXiInIklJISEhbDpeXiJeLAo6LCJsLDssOywsbCw6Okk6LDpJOzo7OyI7bHsvW3ZhWHs+IWwhISE+ISEhIWxJbGxsSUlsIWxJOzs7Ozo7Ojo6LCwsLCwsLF4ubF0tIToiLGw6LDs6OzoiO2xsbF4nMXg7bGxsSTs/Zih8fC98L2p2Q1pPdD5sIT5+P0k+ZGtYLyEhbCIuLjwoXXZVel0tISIsImBgLDshISFsO14iIl5eCl5eSV5sIjosXiIsSWAiIiw6SWA7OyIsOyEhITxYWV1sIT4+fl9fXyt+fjw+PjwrfisrLS1+ISEhPj4+PiEhIT48PD4hISEhIVVPdCs6Okl+PCIsOkk6XmAiO0lsLCchWFs7STosLCx7MSh8dHRqdVkwcWRwdi1JOywsIkkxZnhyPjxffj46LixdISsrLWZKPEk6YGAsOjshbGxJIiIiXl4KXiwiIiJeLCw6IixeO2xeYDpJOiIsIiI7IUkrblssOyEhITxfXy0tKysrfn4rP3sxe3wvL3wofHwxKCgofHwvfCh8KDF7K35rT3hbITxsIVtJXl46OixeYF47OkksYGB8ZjosO2whJyFbW1tdP1t8blFwa29XWi1JbEk6XmBgJycibGwhISFJJ3t7X2wnPD47OyxgYCI6OiEhbGw6LDosXgouXl5gYGBgIiJeXmBeIl4nXjpgYGAsOjsiK2ohLElJO0lsIT48PH4rKzwrXVsxMXwvL3h1WFh1anh1dlVKWG58KC98fFtsZFp2MSE/fiE8WzteYCI6IiIiYCw6OiJeLiFmPiIsLDpeImxJSTtJSWwhITxfW3x8PDtJISE+OicnXixsSTs6LDteLFt+XT9eXiIiXmAnXjosbCEhSSwiIiIiCkknYF4iXiJeIjo7ImAsLF5eXl5gXiwsIn5mbCw7Ojs6OztfP0lsISEhPjx+PDxdKDExL2pybnJ4WHpZWVl2dXR4bnJ8SShtdmY6PD9+bD4/SV5gIiIsXmBgIiIiLCIiXl1dXiJeXl5eOjo6OjosLCIsIiIiXl4iLDs6fm1rWT9gOmw7OmxsIixgXjs8XywiIiJeYCdgLCxJbGxJLF5eIiIKXzsiIidgYGAuIiInYF4nJydgIiIsIiwhW107LDo6Ojo6OjtJO2whbCEhbCEhPH4/XVtbW1t7L3R0L3RmMVsvdHh4fD9edXt4bCE8fiE6bF88J2BeIiJeYCdeIjo6IixeO18iXl5eXmAiOjo6OiwsLCwsXl5eXiIsIiIxekpRSj46OzoiIT4iLCwiXl4nXix+XmAnJydeXjtsbGw7Il4iXgo7fideXl5eXiJeXl5gYF5eYGAiXiwsOiInIT4iOjo6Ozo7Ojs7O0k7SUlsbGxsISE+PCsrKytfPz9dWz88Pl8tXy08IV5dWytbOmxJbCw7bF0nYF5eXiJgYGBeXl5eJ2BeSSxgYGBgYGAsLCw6O0lsPD97X2wsLCJgXmAuLideOj4hPCEhISEhIWxsO2xJOzssLGAnJ2BeLElsSTsiIl5eCi4rbC5gJycnYCJeIiIsImBeXiIsImBgYF5eXiwsLCwsOiwsOiw6LDo7Ozs7OztJSUlsISEhIUlJbGxsISFsbCEhSTs6Il4vOl1+IiwsLF5ePiEuXl5eYGAnYCdgYGBgJycsLCdgYF5eYCIsLCw6O2x+dDBaZiEsLF5gXl5gYGAsbCFJSSEhbDs7LCxJPkksIjosXicnJ14sSUkhSSxeXl4KLiJfYCcnYF4nJ2BeXmAuYGAnXitgYF5eIl5eXl4iXiIiIiIiIiwiLCIsLCwsLCw6Ojo7Ozs7Ozs6LDs6Ojs6Ojo7LCIiLiF8YD8hXiwsXmBefiwnJ2AnYGAnJ2BgYGAnYF4sYGBeLCInYF4iIiIsOkl+KHh0ISwiLCcgYCIiLCw6Ozs6Ojo6IiJeXjoiLF5eYF5gJycnXiJsSWxJOl5eXgouLmBgJ2AnImAnYGA6ISFgJycnPjsnYGBgXjtgYF5eXl5eXl5eIl4iIiIiIiIiIiIiLCIiLCwiIiIiIiIsIiIiIiIiXl5eLl8/J347Xl5eYCcibCcnJ2BgYGAnYGBgYCcnYF5gJ2AnJ2BgYGBgYF5eYF5gYF4iXiw6Pz4iOjo6Ijo7LCwiLCwiIiJeOiJeYGBeXl4nJydgXklJSUk6LCxeCi4nYCcnJydgJycnJy4nOyEiJy4sbCdgYCdgLF4nIjpgYGBgYGBgXl5gXmBgXmBeXl5eIl5eXl5eXl5eXl5gXl5gXmBeYGBgLis+J2w6YGBgYCdgLCdgJ2AnJycnYGAnYCdgXmBgJ2AnYGBgYGBgYGBgYGBgYGBeXjpqSlteLCIsLCJeLDwiIl5eXiIsXmBsO2AiXicuJ2BeOjtJSToiYF4KJycnLicuJycnJycnJycuLiJgJy5JXicnJycnJydgYGBgJ2BgYGBgYGBgYGBgYGBgYF5gXl5gXmBgYF5gYGBgYGBgYGBgYGAnJz47JzoiJycnJydgXicnJ2AnYCdgYGAnJydgYCcnJ2AnJ2BgYGAnYGBgYGBgYGBgIiJJbCI6Ozo6LDo6bDo6LCwsIiJgJ2w6YF4nJycnJ2A6STtJOyJgYAouLicuJydgLicnLicnJycnLmAnLl46LicnJycnJ2AnJydgJycnYCcnYCdgJydgJ2BgYGBgYGBgYGBgYGBgYGBgYGAnYCcnYGAnJyEsJyJeJycnJydgXicnYCcnJ2AnYCcnJ2AnJ2AnJydgYF5gYGBgYGBgYGAnJycnJyciPF9+IUkhfiEhPj4hISFJbEk7Ojo7OiInJy4nYCJJSUlJLGBgCi4uJy4nJ2AnJycnJycnJy4nYCcnJyxgJycnJycnJydgJycnYCcnYCcnJydgJ2AnYCcnYCcnYCdgJ2AnYCdgJ2AnYCdgYCdgJ2AnYDoiJ2BgJycnJydgYCcnYCcnJ2BgYGAnYCcnJydgJ2BgYGBeXl5eXiJeYGAnXiIiOklJOjosOkk6IWw6OiwsIiI6bEksOjo6ImAnJydgImxJSUksJ2AKLicnJycnLicnJycnLicnJycnYCcuYCInJycnJycnJycnJycnJycnJycnJydgJycnYCcnJycnJycnJycnJycnJydgJydgJ2AnJycnJyJeJycnJycnJydgYCcnJycnJycnYCcnJycnJycnJydgYGBgYGBeXl47XiI7Ozo6LCwsIiIiOzo7OiIiLCIiXiwsIl4sOiIiJy4uJydeOzs7STonJwouLi4nLicnJycnJycnJycnLicnYCcuXicuJy4nJycnJycnJycnJycnJycnJycnJycnJycnJycnJydgJ2AnYCdgJydgJycnJ2AnYCcnJ15gJydgJycnJycnJycnJycnJycnJ2AnJycnJycnJycnJycnJycnIiIiIiIsLDo6LCIiIiI6OiwiLCIiXiJeLCIiXjpJLF4uJycuJ146STtJOicu',
+      'human-paladin': 'IFxcIUA4YyB+XSw6Ozo6LCwsLCwsLCwsLCwsLDosLCwiLCwiLCwsJyAgICAgICA+dnZMOEAlQEBAQEBAQEBAQEBAQEBAQCZDdnZcYCAgICAgICAnIiwsLCwsLCwsIiwsIiwsLCIsLCwsLCwsLCwsIT4gICBKQEAhOiAKIFshQDh2IC1cXCwgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLFkwJUBAQEBAJUBAQEAkdF1pdnEmOE1AQEBAJUBAQEBAQCZPWCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsWyAgIEpAQCE+IAoga2xAOHYgLVxcOiAgICAgICAgICAgICAgICAgICAgICAgICAgICBqYThAQEBAJUAlQCVAQCUjWyAgICAgIGx+MDspTUBAQCVAQEBAJUBAQDhoaiAgICAgICAgICAgICAgICAgICAgICAgICAgICFbICAgSiRAbDwgCiApIUA4diBbdCwgICAgICAgLGp8WUN2JkxZbCBxJyAgICAndDhAQEBAJUAlQEBAQEAlQEB4ICAgICAgICA4OG0tcW0lQEBAQEAlQEAlQCVAJUBAJXsgICAgXGBhIDt7emh2d3xDeysgICAgICBsWyAgIEokQCE+IAogKWxAOHYgW3QsICAgJyBAMTx3LVkpYzwsWywgICAgICtAQEBAQEAlQEBAQEAlQCVAJUAlWFxgICAgICAgIG8lQEAwJyx0OEBAQCVAJUBAQEBAQCVAJUBAJCsgICAgJy0hW10tO1xcdGE+TSQgICAgbFsgICBKQEAhPiAKICkhQDhjIFtcXCwgICBcYCAgcW11bGxsenQsICAgICx2QEBAQEAlQCVAJSVAJUBAJSVAQDh4ICAgICAgICA8ICAgIVsndjg4QEAlQEBAJSVAJUBAJUBAQEBAQC0gICAgLF10WG17bEp3cSAgICAgbHsgICBKJEAhaSAKICkhQDh2IF1cXCwgICAnTylbXFxZeHt7KSEgICBcYGMlQEBAJUAlQCVAJUBAJUAlQEBAQDh3XSAgICAgICAgQGEpKVlZIFxcYk1AQEBAJUBAQCVAQCVAJUAlQEBAQCV7ICAgICt4W1t7dnxbKUogICBsWyAgIEpAQCErIAogKWwkOHYgW1xcLCAgICdqJ0phTzBqfiAgICApTUBAQEBAQEBAQEAlQEAlQEAlQCUlJThPaSAgICAgICAgICxAJmM+IFthQEAlQCVAJUBAJUAlQEBAQCVAJUAlQEBNKSAgICBsK3dtaHYhdSAgIGxbICAgSiRAbDwgCiApIUA4diBbXFwsICAgJ3QsLHtdeCEgICB7YUBAQEBAJUAlJUAlQEAlQEBAQEBAQEBAJXF+ICAgICAgICAgQ1ltICAgeEAlQEAlQEBAQCVAQEAlQCVAQCVAQEBAQEBAcSEgICA8dl17J1xbICAgbFsgICBKQEAhPCAKIHxsJDh2IF1cXCwgICBcYGM7Jzp1ICAgIHRNQEBAQCVAQCVAQCVAJUBAJUAlJX5AQEAlJW9cXCAgICAgICAgIG1NKSAgXFxAQEBAQEBAOE9AQEAlQEAlQCVAQCVAJUAlQCVATXQgICAgWDpsOmEgICBsWyAgIEokQCE+IAogKSFAOHUgW3QsICAgJ2E4J1xcICAgIHhAQEAlJSVAJSVAJUBAWXZAQCVAQEwnIG9AQEBAJmh7ICAgICAgOnVDICAgJ3ZAQCVAQFsgIkBAQEAlQFlDQCVAJUBAQCVAQCVAJWogICAgbSw4diAgIGxbICAgSkBAITwgCiApIUA4dSBdXFwsICAgICAnISAgICdqQEBAJUBAQCVAQEBAQEB2IFxgQ0BAOCx8YSw4QEBZICAgICAgICAgICAgICAgICAgSkBAeyBcXCAsQEBAaHsgY0BAQEBAQEBAJUBAQCVAdCAgICBYJyAgICBsWyAgIEokQCE+IAogXFwhQDh2IFtcXCwgICAgJ3QgICBcYHhAQEBAQCVAJUAlaCVAQDh4ICApLSc6ISA4WyE4WCAgICB+LCA6ICAgIGxsfDh2ICAgWCZsTyYgPCAiPiwgIHYlQEBNTSVAJUBAJUBAQEBqJyAgIE8gICAgbFsgICBKJEAhKyAKICkhQDh1IF1cXCwgICAgcSAgIFxgeEBAQEBAQEBAQEA4ICBdYXsgICAgJ1tDO3t0KSAgICAgIDw7IHw+YVh4eHxKLSciICc7JyAgdXs4LGhcXCAnXGAgIFxcb3VcYFxcJUBAQEBAQCVAQEB8ICAgIGEgICAheyAgIEokQGwrIAogKSFAOHYgW1xcLCAgICAgICAgK0BAQEAlQCVAJUBAOCAgICwrLC1PJWQpWU9tfCZbIlxgbCkpbCAgKSJ7e2p0WHZcXFxcdlkhICAgajgpWU9qPmFNQ1xcLSEnICB7OEBAJUAlQEBAQEBAPCAgICAgICBsWyAgIEpAQCE+IAogKWxAOHYgW3QsICAgICAgICFAQEBAJUBAJUBAQEApICAsaillW0owb21tKyAjd0MgICFcXE8jYU9YY2NjTWpATVl7PiIgICAgdXslIHtqT013eFxcY1h8XGAgIFxcQEBAJUAlQEBAJUB3LCAgICAgIGxbICAgSiRAIT4gCiB8IUA4dSBdXFwsICAgICAgIC1AQEBAQCVAQEBAWyBcYCJid09AJWRcXHtjfiAhICUtfiwtICAgOml7aEBdIV0tJ35oeDonWysgIHR2QCBjIC13Q0olQEBPZG0iLCB7QEBAQCVAQEBAQCEgICAgICBsWyAgIEpAQCE+IAogKSFAOHYgXVxcLCAgICAgICwlQEBAJUBAQEBAISAgICkheCk4QEAle1xian53aVt3dyd7XFwtdGp8dXswYndhYlxcamMpWU9tfDtsYWMwXWQnLXtjTUBATSkhdFsgICA+QEBAQEAlQCVAWCcgICAgIGxbICAgSiRAbD4gCiB8bEA4diBdXFwsICAgICAgLCRAQEBAJUBAQH4gICAgICc+XFw7PjwwQz5ZQz5iQy1hMFxce0NhYUBxQ0N3e3d3Q3g4JSU4ait1YSM8W2p7WVk+d3Y+SnswYXsnICAgICtAQCVAQEBAQEAsICAgICBsWyAgIEpAJCE8IAogXFwhQDh2IFt0LCAgICAgICxAQEAlQEAlQEA8ICAgICAgIDorPnstOnVpXXQgKSAgbDB3Y3RoWWNKTWFAQENoSnV4bVtDdWo7ICEsXXt2OjonOl07J35cYCAgICAgIDxAQEAlQCVAQEAsICAgICBsWyAgIEokQGx+IAogXFwhQDh2IFtcXCwgICAgIFxgLFhAQCVAJUAlTiAgICAgICB8TUNYTVxgXGA=',
+      'tiefling-warlock': 'TU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NCk1NTU1NTU1NTTglJSUlJSUlJSU4YUxqanc4JSU4JSUlJTglJSU4JSU4JTglOCU4JSUlOCU4JSU4TU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU0mTU1NTU1NTU1NTU1NTU1NTU1NTU1NJk1NTU1NTU1NTU1NTU1NTQpNTU1NTU1NTU04QCRAJCR2eF0haWktMCZiJjgjOCQpJCQkQCRAJEAkJEAkJCQkJEAkQCQkJEAkJEAmTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU0KTU1NTU1NTU1NOCQkJDogICAgICAgICAgICAgICA4JEBNMCQkJEAkQCQkQCRAQCQlTCtKdit0I0AkTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NCk1NTU1NTU1NTTg4PiAgICAgICAgICAgICAgICAnICAnSkAmaDg4Y3w7cThibSVtTUA4TU0jd3dMKWJNTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTQpNTU1NTU1NTU1iPCAgICAgICAgICAgICAgICAgICAgICAsSk13PiAgXGAgXGB3LUNiQ1xgICAgICAgICAnQ01NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU0KTU1NTU1NTU13PCAgICAgICAgIDp7KSktXGAgICAgICAgICAnIXVkT2opKycgXGAgJyI6ICAgICAgICAgIHRNTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU0KTU1NTU1NTU0pICAgICAgIHRPQCQkJCRAJEBKXFwnICAgICAgIDwwJiRPYTBcYCAgXGAgICAgICAgICAgICAgTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NCk1NTU1NTU1aiAgICAgICBhJCQkJCRAJEAkQHZhIz4gICAgID53dSAgLFtjLUonICAgPDgkYVsgICAgICAgLE1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NCk1NTU1NTU1dCAgICAgIE0kQCRAJCRAJCQkbz4gICAgICBpaG9cXCdqW1xgWU0sICAgLUAkJEAkdScgICAgICBNTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTQpNTU1NTU1NWTogICAgIDgkJCUjWSAnJ1xgLCwnICAgICAgICAgICAgISwtID0gICBcYCwhJUBAJCRAJEAmIE1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NCk1NTU1NTU1dCAgICAgIE0lYyAnWzo+PitcXCw6LCwsLDotWzl8LCAgIHVtICAgICAgLHgkQCRAJEN5TU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTU1NTQo=',
+      'halfling-rogue': 'QCUlJSUlJSUlOCUlJSUlOCUlJSUlJSUlJSUlOCUlJSU4JUBAJEAkQCRAJEAkQCRAJEAkQCQkJDh2dHYweHRqZCQkJEAkQCRAJEAkQCRAJEAkQCRAQEAlOCUlJSU4JSU4JSUlOCUlJSUlJSUlJSUlJSUlJTglJSUlCiUlODglOCUlJSUlJSU4JTglOCU4JSU4OCU4JSUlODglJSVAQEBAQEBAQEAkQEBAQEBAQCZjPicgbHQmYWQsIiAgLFtMJCRAQEAkQEBAQEBAQEBAQEAlJSUlODglJTglJTglOCUlJSU4ODg4JTglJTglODglOCU4JQolJSU4ODg4JSUlOCUlJTglJTglOCU4JTglOCUlJTglOCUlQEBAQEBAJEBAQEAkQEAkbykgICAgIDt2OCRAZCsnICAgICIrZCRAQCRAQEAkQCRAQEBAQCUlOCUlODg4JTg4OCU4ODg4OCU4OCUlJTg4OCU4JTg4ODgKJSU4OCUlODglOCU4OCUlODglOCU4OCUlJTglJTg4JTglJUBAQCRAJEBAJEBAQEAkcSAgICAgID50TyUwSiVDPiwgICAgICAnYSRAQCRAQEBAJEBAQEAlJTg4JSUlODg4JSU4JTglOCU4JSU4ODg4JTg4JTglJSUlCkA4JTg4OCU4ODglODg4ODg4JTglODglOCUlJTg4ODg4OEBAJEBAQEAkQEBAJEBAbSAgICAgLCdcXHtZQyAnaFspdlxgICAgICAgIGIkQEBAJEAkQEBAJEAlJSUlJTg4ODglOCU4OCUlODg4ODg4JTg4OCU4JTg4JTg4CiUlJTglJTg4JTg4OCU4OCU4ODg4JSU4ODglODglODg4JUBAQEAkQCRAQCRAJCV4ICAgICAgXGA7fnRcYFxgK1lcXHwpOiAgICAgIGpZJCRAQCRAQEAlQCUlJSU4OCU4OCA4OCUlOCU4ODglODg4JSU4OCA4OCA4OAolJSUlJSU4JTglOCU4JSU4OCU4OCUlJSU4JTg4ODglQEBAQEAkQEBAQEBAJSxcYCAnLGx8MCwrXGBMeiA+diF1O2kgICAgIGh2QCRAJEBAQEAlOCU4JTglJTglODglOCU4OCU4JTg4JTglODglOCUlJTglCg==',
+      'dragonborn-barbarian': 'fn4sImAnYCIiIiIiIiIsLF4iIl4iLCwsIl4iIiIiIiwsLCwsLCwsLCwsLCwsOiIsLCwsLCwiLCwsLCwiIiIiLCwsOjosLCwiLCwsOiwiLDs7Ozs7OyxeLCwsIiwiIjosIiIiLCwiLDosOiw6Oiw6LCwsLCIiIiIiIiIsLCwsLCwsLCwsLCIiLCwiIiIiLCIiXiJeIl5gYCIiSX4hbEksOgorfmxJKzsiOjpgIjosLCwsIiwsIjo6LCIsLCwsLCwsOjo6LCwsOjs6Ojs6Ojs7Ozo7Ojs7Ozo6Ojo7Oiw6LDo6Ozo6Ojo6Ojo6OjosOjwhOiw7SUk7OzosOjosLCI6OjosOjosLCwiLCwsLDo6Ojo6LCIiXiIiIl5eIiIsIiwsLCwsLCwiLDo6LDosLDo6LDo6Xl5JLF48Xzs8K18tKyFJCiIsLEkhITosIl4sSWBgXl5eIiIsLCw6LCw6Ojo6Ojs6Ojo6Ojo7Ozs7Ozs7Ozs7O0k7Ozs7STtJOzs7Ozs6Ojs7Ojo7OjtJOzo7Pjw/P3stPD5JO0lsOjs7OzosOjo6Ojo6Ojo6LDo6Ojs6LDo6Ojs6Ozo6Ojo6OiwsLCw6Ojo7LDo6LCw6Ojo6LCJeIl5gLGwiIiIsbD4hOyw6OiI7O0kKXiIsLCxJXy07IiIiO2xJbCFsbElJSTs6bGwhISEhISEhISEhISEhISEhISEhISEhISEhISEhPiEhISEhISEhISEhIWxJIT5sIT5JIV9fPytJbDxJIX4hIWwhPj4+PD4+Pj4hPiE+IT4hISEhIT4hPiEhISEhISEhISEhISEhISEhISFJOjtJSUkhbGxsO0k6IiIiIV8hOiI6LCJeYC5gYAosLF4iLDs6ISEsIjo7Ozs7O0lsbCEsLDtsISEhISEhISFsIWwhISEhISEhISEhPj4hISEhISEhISEhISE+Pj48Pj48STo7STs6IUlsSSFsbElsITs7STs6SSE8PDw8PDw+Pj4+Pj4+Pj4+Pj4hPiE+PiE+IT4hISE+ISEhISEhISEhISFJLDo7O2xJOzo7STosIkk8STtJOyIiLDpsOl4nCjtsOiI6LDosOiJgIl46O0k+IWxsISE+fj8/XVtbXT8/Pz8/XT9bXV1bXV1dW1tbW1tbW1tbXVtbW1tbW1tbe3t7MTExXT8tXyFJbGw7OjpJIWw7Pj8tLVt7W1sxMTExe1tbe3t7e3sxMXtbW3tbW1tbW1tbe3tbW1tbW1tdPz9dPz9dP18hISFsbGwhIWw6XiIiSTo6Ozo6LDpsIT4sLCAKOywiIiw6LCwsSSE8Xzw+STwxe1t7e3t7MTExMTExMTExMXsxMTExKDExMTExMSgxKDFbe1sxKCgofCgoMXx8MXx8fHx8fHx8fHtbXV1dLV1bW1soKDExfHx8Ly98ZmZ0L3R8fHR8fC8vLy98fHx8fHx8MSgoKDEoKHx8MXsxezFbW3t7W1tbW1tbW1tbXT9fPCE6LCw6OjosOixJISwnLgosOjs7Il4sOixsXVtbWyFJOiFbKDEoMSgxKCgxKCgofCh8MTExMSgoMSgoMXwoKCh8X3h6digoMTFbe1svMSh8MTF0KDF0KDExKHx8LzFqdXQoalsvVVh0KHx7KHwoKC8oMXR0KGZ8MSgxKDEvfC8vfHx8fHx8fHx8KCgoMTExe3sxMTExMTExMTF7MXsxe3tbXTxJOixgOmxsLDoiJ2BeCjs7ImBeOz5+XyFJIX4/fiw6OjsxL3x8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHx8fHQ/cGpVUUpZZHEwbS8tbW50Q3xKSnhKQ2txWGsxW3ZRMSh8MUptMU1aUU9tMDAxKnZKdlt2bnpKa2R1Wy90fC98fHx8fHx8fHwxKDExMTExMTExMTEoMXwoMTExe3sxMXt7Wy0rITtgYDpJOyJgLiIKSWwhIjp+P1tdWyE6LCw7Oyw6Ojx0L3R0dHR0dC90dHR0L3RmZnRmdGZ0dHR0L3R0alttSlFRbUNicG1xUVpwdWZkfFpkcm1wZE0xSm1db3hkbWZbWWJucHFrSm1kMFhha2tKbUN2WXFxYlkxdC98fHx8Ly90ZmZ0Ly8vfHwoKHx8KCgoMSgxMXx8MTExMTF7W3sxe1stPjosITs+OmAnIgohIT47SSs/P10/XSs7LCIsLCw7O11qanJmamZ0ZmZqampmanhycnJycnJqcmpqcnJqKHh2anRufGp8fHt1eGpmMTF2dHx6cmYxezF8fFtydnRudD9qdXYxamZ0Zi9manRyfHh2MXZ4fGYxLzF0dC8vZmZmampmamZqamp0dGZmdCgxMXx8fHx8fHwoMSgxMTExMXt7XT88bEl+ISEiYGAiCj4hbElJKz9bP1s/PEk6LCwsLCw7SVtqamZybnV2dXVubnV2dXZ2dXZ1dnVubm54bm5ucmZ0fDExW3tbWz9fX18tLStfPytfXzwhKysrLX5+K35fLV8rKz9fKy0tPy0tPz9dXT9bWzEvdGpmanRmdGZycnJ4cnJ4eG52eGp8fHx7fl8tMXsxfDF8fHwvfHwofHwoMTExWytsST5JImAiXiIKIUlsO0lfP1tdXT8hOzo6LCIsLDshXyh8Ly8vL3J1dnZ2dnZ2enp6enZ2dnZ2dXZ2dXh1bm51bm5ubm5yamZqampmZmZ0ZnR8fCgxMTEoMSh8KCgoKC8vLy90ZmZ0ZmZ4ampyanJycmpqanRmZmZmZnJyeG51bnV1Zih0KFtqZls8KytfLyg+ISFJSTw/ezEoMXwoMTExLSFJISE6YF5eIgo+LCI6O19bXV0/K2wiLCwsLDpsPFsodHZ6dnJ0MXt8dnp6WFlVWFhYWFhYelh6WHp2dnZudW51bm5udXhueHh4eHhycmZmdHx8KCh8fHx8fHx8fC8vdGZqcnJmcnJyeG5ueHV1dXV1eHJueHJ4eGpqcnV1bnZ2dnp4XT5bfHZKfDxbWzFbfDFbe18vdXVmfCgoMVsxe1tfITsiSUlgIl4iCiInIiJeOjxdWz8rbDo6Oiw7STwtXSgvdUpKWHZqe35bdnpVVVl6enpYWHp2enpYWHp2dnZ2dnVueG52dXJ0L3x8fHx8fCgxe11dLV8rK35+K18tXVsxMSh8fHx8fGZycnh2dnZ1dnV1bnVueG5ucmpqeG5udW51bm4/IT98ajEhO3tfe3xuUXV8dmFxbVpZMVsrXTF7WytsOmAnXl5eXiIKIixJOmBeImw/P34hOiw6Okk+X18/KHJKSkNDWXZ8W34re2ZqbnZ2elhYWFl6WFhYdnZ2dnZ2dnZ2dXR8fHx8KFs/KyE7LGAnICAgICAgICAgICAgLmAiO2x+P1sxfHx8L2pudXZ2dXZ2dnVudW5qcnh4dXZ1dnY/bH5bXzshSSEtK18tW3J1bW1mbnVycig+Pi0xMXtbXyE6SWAiLCxeIgoiLCE7IiIsImxfITo7OztsPis+O2whPl18anVyL1srbCEhPHxuenpYWFlVWVhYWHp2dnZ2dm5ydC98fHs/PDteICAgICAuLi4uJycnJycnJycnLi4uJy4gICAgLiJJPF17KHwvZnh2enp6dnZ2dW51dnZ2dnZ1eHwrPC1JLCw/ejBPdV8/MT9bW2w/ci9mbihfW1tbe1stITshXiw6LF4iCiI6IUkiLCIsIiwsLCwsOiFsbCFfLV0/PF9mZj4+IWxsISE/bnZZSllZVUpYelh6dnZ2dXgvfHwoWys7YCAgICAgLi4nJydgYGBeXiJeYF4iIl5eXiJgJ2BgJycgICAgIGA7K1sofHxmeHZ2dXV2dnZ6dnp6dnZudnIrSToiK1gwT21rbXQtLTwhIUkhenpqLzEhKzExW18hSSFeLDosIiIKOzohSTtsOyIiIiwiIiIsOjs7Oyt7fHh2L3RqMXRbfmwhIWw7MXp8dVlZWVlYWFh6dm58MTFbfjsnICAuJycuLidgXiIsLCwsLDs7LCw7O0lJSWxJLCIiJyw6OiJgJycuICAgLjore3x8L3J1dnZ6enZ2dXZ1bnJycnRsXiwtfHZKVVl2cltfbDtsSUkodXwoLTohMTF7LSE7ISIsOzpeXgo6OyFsOys/KyE7LCwsIjosOjtJISEtdHovXyt8L35JbD4+ISE+Wy91ellZWVh6dnh8MTE/bCcgIC4nJycnYF5gXiwiOyEhPn5+fitdW1t7Wz8rITs7SWw8PjosLDsiXmAnJycuLiBgIV0oKHxyelh6enZubnJycnh0KyJeXklsK3JYdF9fPy17LWwhSSxsLCxgPnsxMVt+ITshIiw6OiJeCjo7IWxebDw/PyE6LCwiOjo7IWw+XTExez9+fnsofFstfiEhISF1SllZSlVZWG58MXstOy4gLi4nJ2BgXjs7LCIiIkk+PitdW10xdGpybnhqfFsxZjEtPCstfkkiLDteXl5gYCcnJy4gLkldMTF8eHp2dnZubnhyMToiOl4sMXh2UW1wbUpZQ21KXSI6OywiYGAiKzF7XTxsSSEiLDo6IiIKOjshSWBeXiI6STsiIiwsO0lsPl8/KzwrP3wxLT8tW3s/fjwhITx7bnYxXXZ8MTE/OyAgLi4uJydgXl5sITs7Ojs8fl8tXTEvdHV6VVFRMFFVdUpPdmYxW11dPklJOyw6Ol5gXmAnJy4uIC5sWzExL25ubnh4eHJ0K34xSV4xdnh2WE9xbVpRdmZbLStJIl4iYGBeIT8/PGw7bCIsO0ksXgo6OyFJYF4iIiIiXiIiLCw6OyEhPjwtL2pmdnZudngoW3tdPz8rPiEhITwrW1tbIScgJycnJ2BgYF4sLDo+Pj48X35fdFVrb2Fxdm1vKk1NV01rT1FRWXJqZjErPD4hbEkhPCEiImBgJycnJy5gPDFbMXR4eHh4cnJqZmY8YCx7MVtuQ0pKdnhqfCs8IV4iOjpeIiwiSTwhbElsIjtJOywiCjs7ITtgXl5eIjo7OzoiOjtJSSE+PF18fHxydm5udnZuZi8oez9+IWw/Wz9bP14uYGAnYGAnYGBeLCw6OyF+W3woMS9udkNra1VwKiMmOCpxdjFfMTAjWm5qdHx7LTwhIUlsX0kiImBgYCcnJycuOl17W3xycnJyamYxbCwiYDotPz8ocnJqLzFfSV46JywiLF5gXiJgSWxJSWwiO0lJLCIKOjshO2BeIjo6Oj5fISwsOztJbCE8X1t7fGpudnV2dXV1cmp8MV0rPjxfXTwuICdgXl5gXl4iIjo6bF98Zm5YUW1rdis6bCF4VUpabVpVKC0rPitfXXptdXxbX1tbKz4hIWwiXiwsIiIiYGBgJycgYF9bXTFmanJqMTs7ImAiJzpfMXR8Wz88IS08LDo7LCxeImAnYGAsOklJSSw7SUksIgo6OyE7XiI7bCEhOyFsSTs6OjtJbCE8P3t7KGp1dXV1bnhqL3wxMVs+Kz8hLicnJycnXiwsLDs7ST5fXTF8KG5DWXZuX35qKGpYL0NKZjFdMVt4T0pyWyh2bi98MTFbW10rITpeLDs6LCIiXmBgJycnJz5dLVsvdGovXTteIl5eJ147SSEhITwxfCssSWwsLCwiIl5gXl5gOklsLElsSSwiCjs7ITsiOjtJO0lJSWxsIWxJSTs7bD4rLXtbW3xydGZqfHx8fHtbfistbCdgYGBgJ2BgXixJISE+ITosIkkxanh1eHVuKDFdWy94eHxbPHwxfHQ/PCE+bF9YKiNiSnhmfDExKywsOzs7LCJeYGBgJ2BgJyE/LVsvZmY/ITpeXl5gJydgbD4rMXwoXyxeYF4iLCwsLCJgYCcsSTsiO0lJIiIKOjohOyI7SUlsbCFJOyEhbDw8bDtJbD4hfltbXTExMXx8KDEoMS0rLSEgJ2BgYGAnYF4iIiw7PF8hO2wrL0piWnJbe2p2elh4fHhKbj8oKDExLVtbW1s8bCFqbTBVclstPjo6OiwsSUk7LCJeYGBgYF5gLjwtX11bPj4hIl5gYGBgXl5sflsxKHRbOzx+STsiXmBgXl5gJyI7SSI6SWwsIgo7OyE6IjohISFJOjpJISErKzx+Ojw8bCFsXy0tXy1dLT9bPy0tPCs8Li5gYGBgYF5eIl4iOyxsSTt+MXx7MWpbITx8ekpPcWtrZGJvcW1aZGRkcGRkT0p0LV4xcD8tPz47OjsiXiw7bDs7LCwiXmBeYF4uJ35fPiE7Xl5eYF5eIiJeIiEtP3t0fC0+MXwoXSEhSTosXl4uIjs7IklsbCxeCkk7IToiLDpJOiw6Ojs7K3whIUkianJ+ISxbMT4rPCsrPjwrfiF+fl4uJydeXl5eXl4iXiI6SWwhbCtdW18+LD9fK2pKT21ia2FvKiNNV1dNI29va2RwWll8P3Q/Oi1bfiIsLF5gSWxsbDs6IiJeXl5eYGAgOn4+IiIiLCIiLCwhOjo8LT8/fDErXzExe11dXV0tfiFJLGAsSUksSWxsOl4KSUkhOiI6Oiw7Ojo7O0ksWytbX352MCgxLVshISEhITw8Pj4hITxJLi4nYF5eXl5eXiwsIiIsIX48PD4/SWBeO35bfHowWnBrYW9vKiMjKipvb29rZG0wSmZbXTxdWzwsIl5eXl5eIiw7OzosXl5eYGBeJy4ubD46XjoiIjoiPiFJPj8xW1tbXysrK18tP18rPiFJLCwiXiI7OyxJIWwsIgo7O2w6IiwsOztsbGxsOl5eOj98W3x2WGYrIiJJbCEhISEhIWwhIV4uLmBgYF5eXiIiIjoiYC4nIjtJSUkhPmxsX3x1VVpwYmtrYSpvKiMqKm9vYWtrZG1Ddi8tfjwhOiwiYF5eXmAnJzpJOzoiXl5gYGAnJyAsIUleIiI6Ijp+SUl+KysrPj48PCtfKzxsSTs7Oyw6OjsiLElJLGwhbDpeCjtJbDpeLDo6OjpsOztsOl5gYElfe3RbbF4iO2xsISFsIWxJSSE7Li4nYGBeXl4iIiw6OywnLmAuLmBeIkk7LCEte3x4Sm1rTTgmJiMqb29vVyYmJipiMHYvey0+LCIiIl5eJy4nYCdgIjs7OiwiXl5gJ2AnLichbF4iLDo6ISEhbCEhSTtJISEhbGw6Ojo6LCwsISErW35JOzssbCFJLCIKOztsLCI6O0lsSSEtITpsLF5eLCErKyE6IjpsSTo7IUlJbDo7bDouJy5gYF5eXiwsO0lJOywsSSE6JycsIjo7IX4/W18hbD5dalhPa2Fra2FwSnUxXyEhPl1bfj47OkkiJyBgSWwiLCIsLEk7LCwiXl5gJy4uLkkhIl47LCE+IWxsOzo7O2xJITosLCwsIiIiLF8xXTFbPEk7OyxsbEksXgo7O0ksIjo6Xl46OzwvPjs7OiwsPiFJPiw6SSxeYEkhOzs7Ijo7IicnJ2BeXiIiLCw6OztJOjo7SX5dISIsSSEhOyFsOixeJy4nXiF8WENKdT86XicnXmBeOyE7O0k7O14iKz8+XiciYCxJOjo6LCxeIl5gJycuO0kiYDssLEk7Ojo7SWwhWyF+STosIl5eLDtfKFtbXSshSTo7IjtsSSxeCjo7SSxeOzpeIiI7OiEvfiw6LEk+bGx+SToiXiI6fjo6OiJeIiJeJydgXl4iIiwsOjo6STtJLGBeXiFbXTsiSSshICBJPis+IUk8PD8xamZ7LSshbCF+fj4iIF48ISxeIXtfLF4nYCciOjs7OzosOiIiXmBgYCciLCJeIjoiIiw6O2x+LVtqWzE/PCEsOjs+fltdLT9+PCFJOjssSWxsLCIKLF46LCw6LDshW3QvXz9DSSBgbH4hPC0sYCIiIj5JLDo7O2BeIl4nYGBeXiIiLDo6Ozs7STosOyxeIiw7SV4sKzEoX357dG5YMFpVWEptT1VZUVpKdWZ8XTxbL1shXixJLCIiIjshbGxsOzs6OjosLCJeXl5gJ14iXl5gXiIsLDtsbF8xL3hyals8fiFsbCErXyt+KyF+PDs6OyxJbGwsXgpeOklJbD4/fHhZMHFKbnZqXl5gXl5gYCJ+Pl46OiIhfissIiI6IicnJ2BgXiIsLDo6OztJSTs6Xi46OidgOiwhX25KUVFPcGtibW1PT2FwMFpacWtibVFDSnYoK0kiIideOyIuIjs6Ikk7Ozo6LCwsLCJeYC4gLDpeLmBeXl46Oz4rXTFqWHZmfF08PGxJIX5+Pjw+IV8hOjo7LElsbCxeCiJeLGwhK1t8dkowbVpKdHRfOn4tXT9dPy0hOjsnLiEoP2wsXjosJycnYF5eXiIsOiw7SUlsSTonJ2AsOiI6LGw8e2pKMG1tbU9RQ0pKWjBKSkMwWm1tWkN2KF8hOiwsIjosJ2AuJ146SUk7Ozo6LCJeXl4ifn46OicnXl4iLCw6PHtmWEpRSlVudFs+O0k+Pj4+IUk8K2w6LEkiO0lJIl4KIl4nYCwhMTF8KGp2VXZ1MSh7LV98dXZ2dWZbISEiIls8K2wiLDpgJ2BgXiIiOjo7Ozo7OzosIl4iYCcsOiIiLCFdZnV6VUNRUUNKWFlPUXZVQ0NRQ1V2bmYofjpeIiw6Xi4nYCw7SUlJSTs6OiwiIiIiYGx7WzwsLl5eXiw+PjxdW2ZKbW0wWWpqai0rXyEhISFsIX48STosOyI6SToiXgo7LCxJfl9bL1tfPDF2dllmKFshMUpPUVVPSlkxPi1JLT4hITosLCIuJ2AiLDs7STssImAnYCwsOzs6JydeOjsiOmw/L252WEpDMHJmdW1Dcih2UUpYdXh0ez46LCw7ImAuLl4iO2xJOzs7OjosLCIiXl5gYCxsPGwuYF4iIjs8LVtfPzF4SnYoWzF4fF0hSSEhbGw8PD47LCw6Ijo7OyxeCi4uJyI+L1V2ezEhIDohXicubFt0WUNacGJtVWZbPyErfiFJImBgLCw6bCFsSTsiXmBgYCIiSWxsbCIiYC4uLic7SWxfKGpuWEptfDohLStJIVgwWHZqfF0hOkksLicuICcnYDtsbElJOzosOiwiXl5gYCcnJzp+XydeXiI7STohP3xYT0NtcXFRdXxbPj5JbElsIT4hITs6IjpeOiwsIl4KICAuIC4sIS10fGxgLicgXjshIVsxfHx0dHVVQ3IrYCAgLidsIX4tK34+ISFsLGBgYCI7SUk7bGxsOzoiLi4uLjohIWxfMXRuekNaLzwhIVtYMFV2anw/PjshbF4uJy4nSTo6bGxsSUk7OiwsIl5eYF5eLF4sIjpbIl4iLDshbDshLXx2dC9ZSnhbLXtffmw6OiEhISEhbCwiLF46OixeXgo7ImAiLD5dIWAiXicgJyc7Ol4iOixJPl1dK34rPiI6Ky91dXJ0MT88IUk+bF4nJ2AiSUlJbCEhISFsOiJgJycnYGwhbCEre3x0cmZ8LTxfe3xmdHwxPyFJbCE7J2BgJ2AsOmwhISFsSTs6OiwiIl5eXiw8SSIiID8+XkkhISE+ISEsOz8xfC9bISFbfDFbLX4hbGxsISE7LCI6Xiw6Ol5eCiIuLidgOyE7PCEuICAgLi4nIiw7PkkiLEkrXTFmVVptbVhyMTw7ISE+bCInXmBgIklJSUlJSTssLCJeXmBgJycuYEkhbGw8Kyt+Pn4rLT8rPj4rK34hSWwhOicnYGAnYF4iIiw6OztJOywsLCIiIiwsOiE6Ii4gSVs8X18/Kzw+OzoiLDwrIT4te3Z6dnV2cnxbIWxJbDssIixeLDosXl4KLF4sSX48X0kiJy4uJycnLi4uLmA6flsxdHVZVVhye35sLCFeYCxfLSE6XicnYGA6OkkhbEk6Ojo7OzoiXl5gJycgYCJJbGwhPDw+ISFsISEhPn48bGxJOyIuLidgXl4iLDo7Ozo6O2whISIiIl5eIixJSTtgJyxJXV1fX35sO2w7Ozs7bEk+PzFYT3FxbTBKenR7XyFsIl4iLF4iLCxeYAosIX4oW35JOyIuJycuLl4uXjt+W3wvfCh7XzxJJyAgICAuYF46J2BeYGBgXmBgXic7Pys8LSs8PiFsOjosXl5gJy4iYCciO2xJISE+X10/fj4hbGxJO14nXicnYGBeXiw6O2whITwtLTwtfl5gXmBeOklJSSw6IT5fXUk6OjshIT5+fn5qfFsvfDFbalFtcW0wWHgvMSsnJyIiYCIsLF5gCjs+ISEheyEnLi4uXiwhKys/W10/fj4hLDpsOl5gYF5gICdgJyAuLmBgYCdgImAnPnx7WzExKDFdKyEhSSJeYCcuLl4sJyAuImwhK3t0amZ8XX4hO14uIGAiJyAuYGAiLEkhIV9bKCgxMV0oWywnYCwibEksO0khPj57IUk8X10tfl0te1luL3woKHR8KHxyWEpYdmYoW19sXixeIiIiXmAKIiIuX2Z+bCI7bDx+fjw+bCxeXiwsOyE6PFs/PCJeLF5gLi4uLiAgLmBgXjpeO1t0Ly94eHJqbnRbPD47YCcuIC4uYCwsJy4gLiI7bGwhIWxJLGAuIC4nXiIuLicuLidebCErMXhyanJ4ZigvfH4sIjohOiI6Oiw6O1tbK11ddFh8Wyh4cnJqdk92dll2cntbW3x4anw/fjwsXideLCJeYApgIjp+Pz4hISEhOiJsOyxeYGBeXl4iISwiSWxJYCIsJycnLmAnLi4uJyc6SS18ZmZ1ellVdnZZdnw8SWAuICAuJydeLGw7Li4gICAgLiAuIC4gIC4gLmAiImBgLiAgICBeST9melh2WFV6dnh0dHwhOkk7OiwiSWxJfjF+e3VYWEpuMSh6MHBrYlF4dXh4L2YvKyFdMTErISF+IUk6ImBgCkk7OzshO0leLiAnOiE7LGBgJy5gXiIsYF4iSTouJ2BgJy4nYGAnLicgID50bmp4WUpKME9VSkN6dD8iICAgLiAgJydeLDx+YCAuICAgICAgICAgLjs8SV5gJy4gIC4gICA7W3hVUVVKWlFKWXZqcm4oPDs6Okkhfj9dWytfe3R0ZnwxdHZZQ09aVXwxZnwxWy8oKzpJfltdK18/Xz5sLGAKYF4iIT9sLC4uYCI6Il4nLmBeLEk6Xi4nYCIsIicgLl4iXicnYCcgIF5bbnV4dVhKMFpaWjBDQ3h0LS4gICAgIC4nJycuIiE+OyAgICAgICAgIGA8fmxgLicnJyAgICAgICdbdHZRQ09tWlpDVXZyanZyXTs7SWwhISEtXzohIT48XTEoe3sofFs/KzpffFtfPzFdPjoiOj4rKysrK35JYAouLDpJIUksYGAiLCInLmBeOklsbCIgLmBgXiJgJycgLiIsImAnJyxbdlhuSkNKWVVKT21aT0p4KHxJICAgIC4nLicnJy5gJyI6ICAgIC4gICAgYDtgLicnLicuLicuICAgIH4ofHYwWm1aMENVSkpKenh2Zi1JOjo6XiFdLCw6bCF+LV8/Xz5sbDs6Xl4/Wys+XT8rITsiYF4iIjo6STpgCiciOjosPj47bCwiJ2BeXl4sOzsiLi4nXi4nXidgJyAgLl4sIidefi1+ISE8XWZ6SkNRWjBKWS9dMWAgJydgXicuLiAnJycnXl4uICAgICAgICAnImAnJycuLiAuYF5gJycgO3tdbkMwT20wQ0p6al08Pn5dXTw6OjosOj8hIiw7SSEhPDw+bGw7LCxeYCwtXz4+LSs+bDssXiIiIiwiJycKYF4sbCJJOiAsIi4nYCInYCJeIicuYCcsLGBgYF5gYGBgYGBeYGAuIGA6XiAgIGwrWyh8WE9YMV1fLi5eOl4gICAnICAnJycnJyAuYCJ+PiInIC5gJydgLi4uLiAgLiIsYCAiXT90UUN2MX5+PF4gIF46IicuXiJeIl4iPisiLDo7OyFsfn4hSUk7ImBeJ0ktPCE+fjwhbDssIiwiIl5gYApeXl4sImBgJyIuJ2AnJ14iIiJgJydgYCc7Pjs7STtJSTosIl5gYCdgYDo/WzonPkk8X147clVyXUkgICBgOjosXi4gLicnLidgLideIlstImAuJ2AnLicuLiAuXjo7LGAgIC48KFhVe2AiISshYCdfW0leYCdgYF5eLDo7Ozs7O0khOichIWxJOyJgYF5gJ2w/PmwhPCFsbDsiIiIsImBgCl5gYC4nJ2AnLi4nJ2BeIiIiYCcnJydgYCdJPys8fjw8PD5sLCIiYGBgJy4hX0kuOz47ImAgPjExOyAuLiAuIkk8K34hXi5eXiwgIC4uJy4uICBgXl4nJywhXy08SWAuICcuIF8xWzogYCxsPl4iPz9eLmAnYF4iLGwhPj48PDxfLTonYCwhbDssIl5gYF5eYCEtPCEhPkk7bDoiLCIiJ2AKJy4uLi4uIC4uJydgImBgXmAnJycnJ15gXmA7MXwxMXx7ezFfOyxeYGBeXmAnPyEgYGA6SScgLCEhIC5eJy4uLmA6K3t8KChbW11JJyAnJyAiPFtbKCh8fHs8LCcuLi4nYCBeIUksICI7OmAgYHtJLl5eYGAsIjorW1tbMXt7KFssYCJeJ2A6STs7OzsiXl5gYDstKyEhITs7SToiLF4nYAouLi4nJy4uLi4nYF5gYF5eJycnJydgIiwsOiJJfGpqai9uenUxKD5gLmBeXmAuOl4gJzpsYC4nO0kuICcnLi4uJ2AuYDp+W3RudnItIidgLHx1enV0Wz4iJy5gLi4nLicuICxsOi4nLGwsLi5sXideXl4nJzpbe251cnxqZmooLCw6IixeYCciO2wrfiFsOiJeJyx+KyFsbDs6OywiIidgCi4nJycuLi4uLidgYGAnJ2AnJydgYF4iLDshISEhfHVudVhKSk9wUVsuLidgYGBgIiJeImAuYC4nOicuXiInLicnYF4sIl4nOyE/fHVVQ0pZbigrISIuXiwsYGAnJy5gXicgXjsgYGAnYF5eO2AnYF4nLi4hWW0wWVl6dW52L2whPiE7LF5eYCdgIiFbPys8bDoiYCdsPCFJOzosOiIiYCcKJycuLi4uLi4nJydgYCcnJycnYGBeIjpJISE8X34hfEpVQ21wUXZuWX4gIGBeYGBgfig/LCcuYGAnLiBgOjsiXl5eIjo7LCw6OjpsITwxWyEhOjs6LCw6OzpeIl5eLDsiLiBgYCIsXicsW3tsJ2BgXi4gXnh2bkNtbU9KSnQhXz88Pj5JLCJeXmAnYGwrX19+PEk6OiIiOzs7OiwsIiJgJwogLi4uLi4uLidgYGAnJy4nYF5eXiwsOyE8PH4rPz9+bmJtdmZ8L3x8MTogLl5gYCdeIjssJy4nIiIgJyJeIjtsbDsiLCwiOzpsISF+PD8tPj4hIUk6OiIsLDo7bEksXmAnLmAiXicuYCw7Il5gYGAnICctL3RmfHR6UWRVLV1dLV88Xz5JOiwsIiJgJ14+ISEhPjw+ITsiIiw6OiwiImAnCi4nLi4uLidgYGAnLicnJycnJ2BgXiIiO2whfn4tXStfW3t7K35+LS1+PEkuIiIuJ15eLGAnLi4gPl9gIiJgJydJPD4hbGw7LDtsbElsXV8hO2xJOixsIWwhPCEiJydeXidsK14gIC4uYGBeYCcnLCdeIX4/XS1fKzF8Wy0rPz9fK34+STosIl5gYCdgIjohSUlsbCEhbGw7LCwsOiIiYGAKJycuLidgYGAnJy4nJ2AnLicnYGBgXiIiIiIsLDo7LDssO10tfj4+ISFJIV4gOy4gJ14nYC4uJychXWxJbCFsOiIiOyF+fn4hOklJbElfKzs7STo6IX5+PGwsIiI7bGw6IjxfIicuICAuLl4uICI6IElJbCE+fjxfWyEsSTo7STo6OiwsLCIiYCcnLideXiwsSTs6OmxsSToiIl5eIiInYAouLmBgYGAnJ2AnJycnYCcnYCcnXiwiXiIsOjtJbDpJOjtJOj4rIWxsSWw6JyBgJyAuYGAnIC4uIC4sL18hK19bLT9+bDs6OkkhbGw7Ozw+O2xsISFsOjo7bCstXz9fPGw/P14uIC4uLiwiJy4gXi4uIkk7SSEhfitsbCFJbEkhIUlJOywiLDpeJ2AnJ2AiXiIiOiw6IjoiXl5eXl5eImAnCidgXmAnJydgLicnYGBgYCcnYGBgIl4iXiIiIiw6OjoiIiwsLCEhPCt+bCw6YCAuIC4gIC4nLiAgLichWHshLS0rMXRqZnwxLUleYCIsIWw6Xl4sIV0ofC90KHtfXyshKHJJJyAgIGBgLDonJy4gICIsOiE8fj4+bDo6IixJSTs6OiIiIiIiXmBgYCdgYGBeIl5eIiIiXl5eYF5gXl5gYGAKJ2AnJydgYCcnJ2BgYCcnJycnYGBeXiJeXl5eIiIiLCw6LCxeLCw7O0kiLCwiICAgICAuJycnYCIuLiJbfjshPF1bW3xqdVVDWHw/PiJeXjo8XXJKQ1huZjFdPy0+SSx+K2AuICAgXl4iOmAgLiAuLCwiLGxsLDosLDpJOzs7LCwiIiIiXl5gYGAnJydgYGBgIiIiXmBeYF5eXmBeYF4nYAonYCcnYCcnJydgYGAnJy4nYCcnYGBeYCcuLi4uJy4gLidgLDoiOzssLCwsIiwgLicgJydgLCdebF4gICI+bH4+P11dLV0/e3QvcnhyW3wxfG52amZ8Wy0tXz8/KyE8bGxgIC4nICBgLCw7LC4uIGA6IjosLDpJOyw6IicuLi4nJy4uJ2BeXmAnYGAnLi4nYGBgXiJeXl5eXl5eXmBgXicnCicnJycuJycnLicuLicuJycnYGBeYC4uJydgXiIiXicnJy4uJy5gIiIsLCwiIi4nLideJyJsICw7IiAgICAsISE7SUk+Ky1dMVs/MVtbW1tbMTEtMVtdLX4hOzs7bEk6ICAgICcnICAiLidgICAgJ2BgIiJeLCInYC4uLicnIiIiIl4nJy5gYGBgJ2AnJycnJ15gJ15eYGBgYGAnYGBeJycKLV9+fjw+ISEhIWxsLCwsLCw6ImBgJycgLi4nLiAuIC4uJy4nJ2BgIl4iXl5gIC4uXmAnOkkuOj8hPDtJOyFfIX4tP1tdWz8xMXxmdHQofHR0dCgoe1tbXV8/fiE7KzwsbD4hPDw6LDwhbH4+OmwhISE+ISteYCcuJycnJ2AnJ2BgXl5gLi4nYGAnJycnJycnJ15gJ15gYGBgXidgYGAnYAp8fHwxKCh8fHwofDExW1tdXz4/e35fLT9fLV8tXT9bXV1dXV0/LSt+PCFJSTssIiIiJyc7Oi4sLTw8Pjw+ISE+K34rXSstPy0/W11bWy97e3tdXT8/P19fX18hKzw8ISE8PDwrfiFJITw8ISs+PmwhITw+PideIiIiXl5gJy4uLi4uLicnYGAnJ2BgJydgJycnLmBeXl5gYF5eLidgYCdgCjBtbW1PbVpwbTBaMENtbWRrQ1oqYnBhb21icW1xbU9icXBwUVtdLSs8IWw7OywiIl4uYDssJzpdPGw8Pjw8ISE+fn4hIV08PD88KystP1tdPzwrKysrKystK18rSWx+XyIhPD4rfn4hKzw+fis8IWwhISFsLCAnJ2BeYGBeXl5eXl5gYGBgYGBgYGBeYF5gYCcuJ2BgYCdgXl5eXicnYCcKL2Z8dC8vfC8vfHQoLzF7MShbMS9uZih8fHx8KHx8dHwxMTE/ISFJOzo6LCcgLi5eJy5eOiwuIi0rIT4+ISEhbCE8PiFJfjw+fitfW1tdIT4rMXstPD4hIT4rPCF+Kz4hIT4+PklsIT4hISEhISxJITshSUlsXi4uLi4nYGAnJycuLi4uLi4uLi4nLicnJ2AnYCcnJ2BgJ2AiLCxeJ2AnYApbW1tbW3t7W1tbXVtdPyshOicgICAuLicnIl4iIiJeYGAnLi4uIC4uLi4nLidgXmAnJ146Xicifj4hSWxsIWxsISE+IWw8PD4+PH5fLSssIV9fKys8IX4+Pis8PH4+ITw+ITwrOkkhISEhISFsOj47LEkhbEkiLi4uLiAuIC4uLi4uLi4uIC4gLi4uLi4uLicnYCcnJydgYCI6Il4nJydgCis8PCEhSSwsIiwsLDosOjssIl5gJy4nLi4nJydgJy4uIC4uLiAuLi4nLicnYF5eYCcuXiJgYCxdPj48ITwhPH5+fn4hK35JITw8LT9dKy0tXysrXyE7PystPjw8fn48PmxJISE8PCE8fn48PCFfISFfXz88Pj86IC4uLi4uLi4nJy4nLicuLicuJy4nLicuJycnYGBgYCdgIjssIi5gJ2AKXmAnIC4uJycnYCcuLi4uLi4uLi4nJycnJy4nJy4uLi4uJy4nLi4uJycnLmBeXmBgJydeImBgIl5gJydgYF5eXideOiFJIiwiXiw7LDo6Ojs6OiJeLCwsSWw6Il5eXmBgYC5gYGBgYCJeXmAnJ2BgYCciImBeLF4uLi4uIC4uJycnJycnJ2AnJycnJycnJy4uJy4nJydgJ2AnIl4sYGAnYApgXmAnLicnYCcnJycnJycnLicuJy4uJy4nLicnLi4uLi4uLicuLicnJy4nXl5eXmAnJ15eYGBeXicuJy4nJycnXiJeIiwiIiIsXl5eIl4iXl5eXiIiIiIsXl4iXmBgJ2AnJy4nJydgXl5gLi4uLicnLi4uICAgIC4uLicuLiAuLicnYCcnXmAnJycnJy4nLicuJy4nJ2AnLidgIl5eJy4nCmBgYGAnYGBgYCcnJycuLicnJy4nLi4uLi4nLi4uJy4uLi4uJy4uLicnJ2BeXl5gJycnXl5gYF5gYCdgJycnJyIiLCxeYF4iIiIiIixeIl4iIiwsIiJeYGAiLCIsXicnJ2AnJycnYGBeXmAnLi4nJycnJycuJy4uLi4nLi4gLi4uJycnJycuJy4nJy4nJy4nJy4nJ15gYCdgXl5gYGAnJ2AKXl5gYGBgXl5eYC4nLicuLi4uLi4nJycuLi4uLi4uLi4uLi4uLi4nLi4nYF5eYF5gJ2BeXmBgYGBgLi4nJ2BgYF5eXidgXiIiXl4iXiJeIl4iIl5gXl5eJydgXmBgYGAnJy4nJycnYGBeYCcuLi4nJycuLi4uLi4uLi4uIC4uLicuJy4nJycuLi4uLi4uJycuJydgXl5eYGBgXl4iOmAnJwpeLGAnYGBgXiJgJycnYGAnJ2BeYGBgJycnYGAnYCcnJycnJycnJycnJ2BgYGBgYCcnYGBgYGBgYCcnYCdgYCcnYCcnXiIiXiJgIl4iXiIiXl4iIl5eXiJeYCdgYCcnYGAnYCdgJ2BgYGBgJycnJycnJycnJycuJycuJycnJycnJ2AnJ2AnJ2BgYGBgYGBgYCcnJ14iImBeYGBeLDo6YGAg',
     };
     
-    // Helper function to decode Base64 ASCII art
+    // Helper function to decode Base64 ASCII art (DEPRECATED - now using pre-generated portraits)
     function decodeAsciiArt(base64) {
       try {
         return atob(base64);
@@ -975,10 +1235,12 @@
       }
     }
     
+    // DEPRECATED: Using pre-generated portraits now, but keeping for backwards compatibility
     // Decode all portraits on load
-    const DEMO_PORTRAITS = Object.fromEntries(
-      Object.entries(DEMO_PORTRAITS_DATA).map(([key, value]) => [key, decodeAsciiArt(value)])
-    );
+    const DEMO_PORTRAITS = {}; // Empty - we now load from /generated_portraits/ascii/
+    // Object.fromEntries(
+    //   Object.entries(DEMO_PORTRAITS_DATA).map(([key, value]) => [key, decodeAsciiArt(value)])
+    // );
 
     
     // ===== SERVICES =====
@@ -1140,6 +1402,18 @@ Format your response as JSON array of strings, one for each option in order. Exa
         
         // Build a detailed prompt from character attributes
         const prompt = this.buildPortraitPrompt(character);
+        
+        return await this.generateImageFromPrompt(prompt);
+      },
+      
+      // Generate image from custom prompt
+      async generateImageFromPrompt(prompt) {
+        const apiKey = StorageService.getAPIKey();
+        
+        if (!apiKey || !CONFIG.ENABLE_AI) {
+          console.log('AI service unavailable for image generation');
+          return null;
+        }
         
         try {
           const response = await fetch('https://api.openai.com/v1/images/generations', {
@@ -1716,54 +1990,125 @@ Format your response as JSON array of strings, one for each option in order. Exa
         return art;
       },
       
-      // Generate AI-powered ASCII portrait
+      // Load pre-generated ASCII portrait from files
+      async loadPreGeneratedPortrait(race, classType) {
+        const raceLower = race.toLowerCase().replace(/ /g, '-');
+        const classLower = classType ? classType.toLowerCase() : '';
+        
+        // Try race-class combo first
+        if (classLower) {
+          const path = `generated_portraits/ascii/${raceLower}-${classLower}.txt`;
+          console.log(`📂 Trying to load: ${path}`);
+          try {
+            const response = await fetch(path);
+            console.log(`📡 Response status: ${response.status}`);
+            if (response.ok) {
+              const text = await response.text();
+              console.log(`✅ Loaded ${raceLower}-${classLower}, length: ${text.length}`);
+              return text;
+            }
+          } catch (e) {
+            console.log(`❌ Error loading ${raceLower}-${classLower}:`, e);
+          }
+        }
+        
+        // Fallback to race-only
+        const path = `generated_portraits/ascii/${raceLower}.txt`;
+        console.log(`📂 Trying fallback: ${path}`);
+        try {
+          const response = await fetch(path);
+          console.log(`📡 Response status: ${response.status}`);
+          if (response.ok) {
+            const text = await response.text();
+            console.log(`✅ Loaded ${raceLower}, length: ${text.length}`);
+            return text;
+          }
+        } catch (e) {
+          console.log(`❌ Error loading ${raceLower}:`, e);
+        }
+        
+        console.log(`❌ No portrait found for ${raceLower}`);
+        return null;
+      },
+      
+      // Load portrait (pre-generated or fallback to template)
       async generateAIPortrait(character) {
         try {
-          // Check for demo mode first
-          const demoModeEnabled = StorageService.getDemoModeEnabled();
-          
-          if (demoModeEnabled) {
-            console.log('Demo mode enabled, using pre-generated portrait...');
-            const demoKey = `${character.race}-${character.class}`;
-            const demoPortrait = DEMO_PORTRAITS[demoKey];
-            
-            if (demoPortrait) {
-              console.log(`Found demo portrait for ${demoKey}`);
-              // Simulate loading delay for realism
-              await new Promise(resolve => setTimeout(resolve, 1500));
-              return demoPortrait;
-            } else {
-              console.log(`No demo portrait found for ${demoKey}, falling back to template`);
-              return this.getFullPortrait(character);
-            }
+          // Try loading pre-generated portrait from files
+          console.log('Loading pre-generated portrait...');
+          const preGenerated = await this.loadPreGeneratedPortrait(character.race, character.class);
+          if (preGenerated) {
+            console.log(`✅ Found pre-generated portrait for ${character.race}-${character.class}`);
+            return preGenerated;
           }
           
+          // Fallback to template art
+          console.log('No pre-generated portrait, using template');
+          return this.getFullPortrait(character);
+        } catch (error) {
+          console.error('Portrait loading error:', error);
+          return this.getFullPortrait(character);
+        }
+      },
+      
+      // Generate CUSTOM AI portrait with DALL-E (user-initiated)
+      async generateCustomAIPortrait(character) {
+        try {
+          console.log('🎨 Generating custom AI portrait with DALL-E...');
+          
           // Step 1: Generate image with DALL-E
-          console.log('Generating DALL-E portrait...');
           const imageUrl = await AIService.generatePortraitImage(character);
           
           if (!imageUrl) {
-            console.log('DALL-E generation failed, using template');
-            return this.getFullPortrait(character);
+            throw new Error('DALL-E generation failed');
           }
           
-          console.log('DALL-E image generated:', imageUrl);
+          console.log('✅ DALL-E image generated:', imageUrl);
           
           // Step 2: Convert to ASCII with high resolution
           console.log('Converting to ASCII with Floyd-Steinberg dithering...');
           const asciiArt = await ImageToAsciiService.convertToAscii(imageUrl, 160, 80);
           
           if (!asciiArt) {
-            console.log('ASCII conversion failed, using template');
-            return this.getFullPortrait(character);
+            throw new Error('ASCII conversion failed');
           }
           
-          console.log('ASCII art generated successfully');
+          console.log('✅ Custom ASCII art generated successfully');
           return asciiArt;
         } catch (error) {
-          console.error('AI portrait generation error:', error);
-          // Fallback to template
-          return this.getFullPortrait(character);
+          console.error('Custom AI portrait generation error:', error);
+          throw error;
+        }
+      },
+      
+      // Generate CUSTOM AI portrait with custom prompt
+      async generateCustomAIPortraitWithPrompt(customPrompt) {
+        try {
+          console.log('🎨 Generating custom AI portrait with custom prompt...');
+          console.log('Prompt:', customPrompt);
+          
+          // Step 1: Generate image with DALL-E using custom prompt
+          const imageUrl = await AIService.generateImageFromPrompt(customPrompt);
+          
+          if (!imageUrl) {
+            throw new Error('DALL-E generation failed');
+          }
+          
+          console.log('✅ DALL-E image generated:', imageUrl);
+          
+          // Step 2: Convert to ASCII with high resolution
+          console.log('Converting to ASCII with Floyd-Steinberg dithering...');
+          const asciiArt = await ImageToAsciiService.convertToAscii(imageUrl, 160, 80);
+          
+          if (!asciiArt) {
+            throw new Error('ASCII conversion failed');
+          }
+          
+          console.log('✅ Custom ASCII art generated successfully');
+          return asciiArt;
+        } catch (error) {
+          console.error('Custom AI portrait generation error:', error);
+          throw error;
         }
       },
     };
@@ -1930,7 +2275,16 @@ Format your response as JSON array of strings, one for each option in order. Exa
             ` : ''}
             
             <div class="sheet-section">
-              <div class="sheet-header">[ CHARACTER INFO ]</div>
+              <div class="sheet-header">
+                <div class="sheet-header-title">[ CHARACTER INFO ]</div>
+                ${(race && classData) ? `
+                  <div class="sheet-header-action">
+                    <button class="generate-ai-btn" onclick="App.generateCustomAIPortrait()" title="Generate a unique AI portrait with DALL-E">
+                      ✨ Generate Custom AI Portrait
+                    </button>
+                  </div>
+                ` : ''}
+              </div>
               <div class="sheet-content">
                 ${character.name ? `<div class="stat-line"><span class="stat-label">Name:</span> <span class="stat-value">${character.name}</span></div>` : ''}
                 ${race ? `<div class="stat-line"><span class="stat-label">Race:</span> <span class="stat-value">${race.name}</span></div>` : ''}
@@ -1943,7 +2297,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
             
             ${character.class ? `
               <div class="sheet-section">
-                <div class="sheet-header">[ ABILITIES ]</div>
+                <div class="sheet-header">
+                  <div class="sheet-header-title">[ ABILITIES ]</div>
+                </div>
                 <div class="sheet-content">
                   <div class="stat-line"><span class="stat-label">STR:</span> <span class="stat-value">${character.abilities.str} (${Utils.formatModifier(Utils.abilityModifier(character.abilities.str))})</span></div>
                   <div class="stat-line"><span class="stat-label">DEX:</span> <span class="stat-value">${character.abilities.dex} (${Utils.formatModifier(Utils.abilityModifier(character.abilities.dex))})</span></div>
@@ -1958,7 +2314,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
             
             ${race && race.traits.length > 0 ? `
               <div class="sheet-section">
-                <div class="sheet-header">[ RACIAL TRAITS ]</div>
+                <div class="sheet-header">
+                  <div class="sheet-header-title">[ RACIAL TRAITS ]</div>
+                </div>
                 <div class="sheet-content">
                   ${race.traits.map(t => `<div class="text-dim">• ${t}</div>`).join('')}
                 </div>
@@ -1967,7 +2325,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
             
             ${classData && classData.equipment.length > 0 ? `
               <div class="sheet-section">
-                <div class="sheet-header">[ EQUIPMENT ]</div>
+                <div class="sheet-header">
+                  <div class="sheet-header-title">[ EQUIPMENT ]</div>
+                </div>
                 <div class="sheet-content">
                   ${classData.equipment.map(e => `<div class="text-dim">• ${e}</div>`).join('')}
                 </div>
@@ -1976,7 +2336,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
             
             ${character.backstory ? `
               <div class="sheet-section">
-                <div class="sheet-header">[ BACKSTORY ]</div>
+                <div class="sheet-header">
+                  <div class="sheet-header-title">[ BACKSTORY ]</div>
+                </div>
                 <div class="sheet-content text-dim">
                   ${character.backstory}
                 </div>
@@ -2228,7 +2590,22 @@ Format your response as JSON array of strings, one for each option in order. Exa
       
       activate() {
         this.isActive = true;
-        this.currentFocusIndex = 0;
+        // Focus on the first button of the last question by default
+        const buttons = this.getActiveButtons();
+        if (buttons.length > 0) {
+          // Find the first button in the last question card
+          const allCards = document.querySelectorAll('.question-card');
+          const lastCard = allCards[allCards.length - 1];
+          const lastCardButtons = buttons.filter(btn => lastCard.contains(btn));
+          
+          if (lastCardButtons.length > 0) {
+            this.currentFocusIndex = buttons.indexOf(lastCardButtons[0]);
+          } else {
+            this.currentFocusIndex = 0;
+          }
+        } else {
+          this.currentFocusIndex = 0;
+        }
         this.retryCount = 0;
         // Wait for DOM to update before focusing
         this.tryActivate();
@@ -2261,11 +2638,20 @@ Format your response as JSON array of strings, one for each option in order. Exa
           return [];
         }
         
-        // Get the last one
-        const lastCard = allCards[allCards.length - 1];
+        // Get ALL clickable buttons from ALL cards
+        const allButtons = [];
+        allCards.forEach(card => {
+          const cardButtons = Array.from(card.querySelectorAll('.button-primary'));
+          // Include all buttons (selected, locked, etc) - they're all clickable now
+          cardButtons.forEach(btn => {
+            // Skip only truly disabled buttons (like name input buttons after selection)
+            if (!btn.hasAttribute('disabled')) {
+              allButtons.push(btn);
+            }
+          });
+        });
         
-        const buttons = Array.from(lastCard.querySelectorAll('.button-primary:not(:disabled)'));
-        return buttons;
+        return allButtons;
       },
       
       updateFocus() {
@@ -2279,7 +2665,15 @@ Format your response as JSON array of strings, one for each option in order. Exa
         
         // Add focus to current index
         if (buttons[this.currentFocusIndex]) {
-          buttons[this.currentFocusIndex].classList.add('is-focused');
+          const focusedButton = buttons[this.currentFocusIndex];
+          focusedButton.classList.add('is-focused');
+          
+          // Scroll the focused button into view
+          focusedButton.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'nearest'
+          });
         }
       },
       
@@ -2406,10 +2800,12 @@ Format your response as JSON array of strings, one for each option in order. Exa
         
         narratorPanel.innerHTML += Components.renderQuestion(variedQuestion);
         
-        Utils.scrollToBottom(true);
-        
-        // Activate keyboard navigation
+        // Activate keyboard navigation first
         KeyboardNav.activate();
+        
+        // Wait for DOM and keyboard nav to settle, then scroll
+        await Utils.sleep(150);
+        Utils.scrollToBottom(true);
       },
       
       async showListChoice(question) {
@@ -2423,12 +2819,59 @@ Format your response as JSON array of strings, one for each option in order. Exa
         // Get varied options (AI-generated or cached)
         const variedOptions = await OptionVariationsCache.get(question.id, question);
         
-        // Show options in a scrollable list
-        const optionsHTML = variedOptions.map((opt, index) => `
-          <button class="button-primary" onclick="App.handleAnswer('${question.id}', ${index})" style="margin-bottom: 8px;">
-            ${opt.text}
-          </button>
-        `).join('');
+        // Check for recommendations
+        const state = CharacterState.get();
+        const recommendations = state.recommendations?.[question.id] || [];
+        
+        // Separate options into recommended and non-recommended
+        const recommendedOptions = [];
+        const otherOptions = [];
+        
+        variedOptions.forEach((opt, index) => {
+          // Check if this option's value is in the recommendations list
+          const isRecommended = recommendations.includes(opt.value);
+          if (isRecommended) {
+            recommendedOptions.push({ opt, originalIndex: index });
+          } else {
+            otherOptions.push({ opt, originalIndex: index });
+          }
+        });
+        
+        // Reorder options: recommended first, then others
+        const reorderedOptions = [...recommendedOptions, ...otherOptions];
+        
+        // Store the reordered mapping for handleAnswer to use
+        if (!this._optionIndexMapping) this._optionIndexMapping = {};
+        this._optionIndexMapping[question.id] = reorderedOptions.map(item => item.originalIndex);
+        
+        // Build the HTML with recommendations first
+        let optionsHTML = '';
+        let displayIndex = 0;
+        
+        if (recommendedOptions.length > 0) {
+          optionsHTML += '<div class="recommendations-header">RECOMMENDED</div>';
+          optionsHTML += recommendedOptions.map(({ opt, originalIndex }) => {
+            const currentIndex = displayIndex++;
+            return `
+              <button class="button-primary" onclick="App.handleListAnswer('${question.id}', ${currentIndex})" style="margin-bottom: 8px;">
+                ${opt.text}
+              </button>
+            `;
+          }).join('');
+          
+          if (otherOptions.length > 0) {
+            optionsHTML += '<hr class="recommendations-divider">';
+          }
+        }
+        
+        optionsHTML += otherOptions.map(({ opt, originalIndex }) => {
+          const currentIndex = displayIndex++;
+          return `
+            <button class="button-primary" onclick="App.handleListAnswer('${question.id}', ${currentIndex})" style="margin-bottom: 8px;">
+              ${opt.text}
+            </button>
+          `;
+        }).join('');
         
         narratorPanel.innerHTML += `
           <div class="question-card">
@@ -2437,10 +2880,13 @@ Format your response as JSON array of strings, one for each option in order. Exa
             </div>
           </div>
         `;
-        Utils.scrollToBottom(true);
         
-        // Activate keyboard navigation
+        // Activate keyboard navigation first
         KeyboardNav.activate();
+        
+        // Wait for DOM and keyboard nav to settle, then scroll
+        await Utils.sleep(150);
+        Utils.scrollToBottom(true);
       },
       
       async showSuggestion(question) {
@@ -2456,6 +2902,12 @@ Format your response as JSON array of strings, one for each option in order. Exa
         // Get AI suggestion if available
         const suggestion = question.getSuggestion(state);
         
+        // Store recommendations in state for the next question
+        if (!state.recommendations) {
+          state.recommendations = {};
+        }
+        state.recommendations[question.next] = suggestion.suggestions;
+        
         narratorPanel.innerHTML += Components.renderNarratorMessage('');
         Utils.scrollToBottom(true);
         const suggestionEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
@@ -2470,6 +2922,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
         }).join('\n');
         
         narratorPanel.innerHTML += Components.renderNarratorMessage(suggestedHTML);
+        await Utils.sleep(100);
         Utils.scrollToBottom(true);
         
         await Utils.sleep(2000);
@@ -2497,10 +2950,13 @@ Format your response as JSON array of strings, one for each option in order. Exa
             </div>
           </div>
         `;
-        Utils.scrollToBottom(true);
         
-        // Activate keyboard navigation
+        // Activate keyboard navigation first
         KeyboardNav.activate();
+        
+        // Wait for DOM and keyboard nav to settle, then scroll
+        await Utils.sleep(150);
+        Utils.scrollToBottom(true);
       },
       
       async showNameChoice(question) {
@@ -2521,17 +2977,19 @@ Format your response as JSON array of strings, one for each option in order. Exa
         
         const namesHTML = `
           <div class="question-card">
-            <div class="narrator-text mb-md">Here are some suggestions:</div>
-            ${names.map(name => `
-              <button class="button-primary" onclick="App.handleNameSelect('${name}')" style="margin-bottom: 8px;">
-                ${name}
+            <div class="options-container">
+              ${names.map(name => `
+                <button class="button-primary" onclick="App.handleNameSelect('${name}')">
+                  > ${name}
+                </button>
+              `).join('')}
+            </div>
+            <div class="name-input-container" style="margin-top: var(--spacing-md);">
+              <input type="text" class="input-field" id="custom-name-input" placeholder="Your character's name">
+              <button class="button-primary" onclick="App.handleCustomName()">
+                > CONTINUE
               </button>
-            `).join('')}
-            <div class="narrator-text mt-md mb-sm">Or enter your own:</div>
-            <input type="text" class="input-field" id="custom-name-input" placeholder="Your character's name">
-            <button class="button-primary mt-md" onclick="App.handleCustomName()">
-              > CONTINUE
-            </button>
+            </div>
           </div>
         `;
         
@@ -2599,7 +3057,79 @@ Format your response as JSON array of strings, one for each option in order. Exa
         KeyboardNav.activate();
       },
       
+      async handleListAnswer(questionId, displayIndex) {
+        // Check if this is a previous question being changed
+        const state = CharacterState.get();
+        const isChangingPrevious = state.answers[questionId] !== undefined;
+        
+        if (isChangingPrevious) {
+          // Show confirmation overlay
+          await this.showChangeConfirmation(questionId, displayIndex, true);
+          return;
+        }
+        
+        // Translate display index to original index using the mapping
+        const originalIndex = this._optionIndexMapping?.[questionId]?.[displayIndex] ?? displayIndex;
+        
+        const question = QUESTIONS.find(q => q.id === questionId);
+        const option = question.options[originalIndex];
+        
+        // Mark the selected button using the DISPLAY index
+        const buttons = document.querySelectorAll('.question-card:last-child .button-primary');
+        buttons.forEach((btn, idx) => {
+          if (idx === displayIndex) {
+            btn.classList.add('is-selected');
+          } else {
+            btn.classList.add('is-locked');
+          }
+        });
+        
+        // Save answer
+        state.answers[questionId] = option.value;
+        
+        if (question.saveTo) {
+          CharacterState.updateCharacter({ [question.saveTo]: option.value });
+        }
+        
+        // Get AI commentary if configured
+        if (question.aiPromptContext) {
+          const narratorPanel = document.getElementById('narrator-panel');
+          narratorPanel.innerHTML += Components.renderNarratorMessage('');
+          Utils.scrollToBottom(true);
+          
+          const commentEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+          commentEl.textContent = '[thinking...]';
+          Utils.scrollToBottom(true);
+          
+          const comment = await AIService.generateNarratorComment({
+            question: question.aiPromptContext,
+            choice: option.text,
+            characterSoFar: state.character,
+          });
+          
+          commentEl.textContent = '';
+          await Utils.typewriter(commentEl, comment);
+          Utils.scrollToBottom(true);
+          await Utils.sleep(1000);
+        }
+        
+        // Move to next question
+        if (question.next) {
+          await this.showQuestion(question.next);
+        }
+      },
+      
       async handleAnswer(questionId, optionIndex) {
+        // Check if this is a previous question being changed
+        const state = CharacterState.get();
+        const isChangingPrevious = state.answers[questionId] !== undefined;
+        
+        if (isChangingPrevious) {
+          // Show confirmation overlay
+          await this.showChangeConfirmation(questionId, optionIndex, false);
+          return;
+        }
+        
         const question = QUESTIONS.find(q => q.id === questionId);
         const option = question.options[optionIndex];
         
@@ -2608,14 +3138,12 @@ Format your response as JSON array of strings, one for each option in order. Exa
         buttons.forEach((btn, idx) => {
           if (idx === optionIndex) {
             btn.classList.add('is-selected');
-            btn.disabled = true;
           } else {
-            btn.disabled = true;
+            btn.classList.add('is-locked');
           }
         });
         
         // Save answer
-        const state = CharacterState.get();
         state.answers[questionId] = option.value;
         
         if (question.saveTo) {
@@ -2656,8 +3184,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
         buttons.forEach((btn) => {
           if (btn.textContent.includes(method === 'standard' ? 'Standard Array' : 'Roll 4d6')) {
             btn.classList.add('is-selected');
+          } else {
+            btn.classList.add('is-locked');
           }
-          btn.disabled = true;
         });
         
         const state = CharacterState.get();
@@ -2729,8 +3258,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
         buttons.forEach((btn) => {
           if (btn.textContent.trim() === name) {
             btn.classList.add('is-selected');
+          } else {
+            btn.classList.add('is-locked');
           }
-          btn.disabled = true;
         });
         
         // Disable the custom name input too
@@ -2745,6 +3275,190 @@ Format your response as JSON array of strings, one for each option in order. Exa
         
         await Utils.sleep(1500);
         await this.showQuestion(this.currentQuestion.next);
+      },
+      
+      async showChangeConfirmation(questionId, optionIndex, isListChoice) {
+        // Find the question card that contains this question
+        const allCards = Array.from(document.querySelectorAll('.question-card'));
+        const targetCard = allCards.find(card => {
+          const buttons = card.querySelectorAll('.button-primary');
+          return buttons.length > 0 && buttons[0].getAttribute('onclick')?.includes(questionId);
+        });
+        
+        if (!targetCard) return;
+        
+        // Create confirmation overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'confirmation-overlay';
+        overlay.innerHTML = `
+          <div class="confirmation-message">
+            ⚠️ WARNING ⚠️<br><br>
+            Going back will reset all choices after this point.<br><br>
+            Continue?
+          </div>
+          <div class="confirmation-buttons">
+            <button class="button-primary" id="confirm-yes">YES</button>
+            <button class="button-primary" id="confirm-no">NO</button>
+          </div>
+        `;
+        
+        targetCard.appendChild(overlay);
+        
+        // Focus on YES button and set up keyboard navigation for the overlay
+        const yesBtn = document.getElementById('confirm-yes');
+        const noBtn = document.getElementById('confirm-no');
+        yesBtn.classList.add('is-focused');
+        
+        let focusOnYes = true;
+        
+        const overlayKeyHandler = (e) => {
+          if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            focusOnYes = !focusOnYes;
+            yesBtn.classList.toggle('is-focused');
+            noBtn.classList.toggle('is-focused');
+          } else if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            if (focusOnYes) {
+              yesBtn.click();
+            } else {
+              noBtn.click();
+            }
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            noBtn.click();
+          }
+        };
+        
+        document.addEventListener('keydown', overlayKeyHandler);
+        
+        // Handle confirmation
+        return new Promise((resolve) => {
+          yesBtn.onclick = async () => {
+            document.removeEventListener('keydown', overlayKeyHandler);
+            overlay.remove();
+            await this.resetFromQuestion(questionId, optionIndex, isListChoice, targetCard);
+            resolve(true);
+          };
+          
+          noBtn.onclick = () => {
+            document.removeEventListener('keydown', overlayKeyHandler);
+            overlay.remove();
+            KeyboardNav.activate(); // Re-activate keyboard nav
+            resolve(false);
+          };
+        });
+      },
+      
+      async resetFromQuestion(questionId, optionIndex, isListChoice, targetCard) {
+        const question = QUESTIONS.find(q => q.id === questionId);
+        const allCards = Array.from(document.querySelectorAll('.question-card'));
+        const targetIndex = allCards.indexOf(targetCard);
+        
+        // Find all narrator messages and question cards after this point
+        const narratorMessages = Array.from(document.querySelectorAll('.narrator-message'));
+        const allElements = [...narratorMessages, ...allCards];
+        
+        // Get the index of the target card in the overall DOM
+        const narratorPanel = document.getElementById('narrator-panel');
+        const allChildren = Array.from(narratorPanel.children);
+        const targetCardIndex = allChildren.indexOf(targetCard);
+        
+        // Fade out and remove everything after this card
+        const elementsToRemove = allChildren.slice(targetCardIndex + 1);
+        
+        // Add fade-out class
+        elementsToRemove.forEach(el => el.classList.add('fade-out'));
+        
+        // Wait for fade animation
+        await Utils.sleep(500);
+        
+        // Remove elements
+        elementsToRemove.forEach(el => el.remove());
+        
+        // Clear the state for this question and all subsequent ones
+        this.clearStateFrom(questionId);
+        
+        // First, completely reset all buttons in the target card
+        const buttons = targetCard.querySelectorAll('.button-primary');
+        buttons.forEach((btn) => {
+          btn.classList.remove('is-selected', 'is-locked', 'is-focused');
+          btn.removeAttribute('disabled');
+          btn.style.background = '';
+          btn.style.color = '';
+          btn.style.borderColor = '';
+          btn.style.opacity = '';
+        });
+        
+        // Process the new choice
+        if (isListChoice) {
+          const originalIndex = this._optionIndexMapping?.[questionId]?.[optionIndex] ?? optionIndex;
+          const option = question.options[originalIndex];
+          
+          const state = CharacterState.get();
+          state.answers[questionId] = option.value;
+          
+          if (question.saveTo) {
+            CharacterState.updateCharacter({ [question.saveTo]: option.value });
+          }
+          
+          // Update button styling in the target card
+          buttons.forEach((btn, idx) => {
+            if (idx === optionIndex) {
+              btn.classList.add('is-selected');
+            } else {
+              btn.classList.add('is-locked');
+            }
+          });
+        } else {
+          const option = question.options[optionIndex];
+          
+          const state = CharacterState.get();
+          state.answers[questionId] = option.value;
+          
+          if (question.saveTo) {
+            CharacterState.updateCharacter({ [question.saveTo]: option.value });
+          }
+          
+          // Update button styling in the target card
+          buttons.forEach((btn, idx) => {
+            if (idx === optionIndex) {
+              btn.classList.add('is-selected');
+            } else {
+              btn.classList.add('is-locked');
+            }
+          });
+        }
+        
+        // Continue from the next question
+        if (question.next) {
+          await this.showQuestion(question.next);
+        }
+      },
+      
+      clearStateFrom(questionId) {
+        // Find this question's position in the flow
+        const questionIndex = QUESTIONS.findIndex(q => q.id === questionId);
+        const questionsToReset = QUESTIONS.slice(questionIndex + 1);
+        
+        const state = CharacterState.get();
+        
+        // Clear answers for all subsequent questions
+        questionsToReset.forEach(q => {
+          delete state.answers[q.id];
+          
+          // Clear character properties that were saved
+          if (q.saveTo) {
+            delete state.character[q.saveTo];
+          }
+        });
+        
+        // Clear recommendations for subsequent questions
+        if (state.recommendations) {
+          questionsToReset.forEach(q => {
+            delete state.recommendations[q.id];
+          });
+        }
       },
       
       async handleCustomName() {
@@ -2762,9 +3476,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
         input.style.color = 'var(--terminal-bg)';
         input.disabled = true;
         
-        // Disable all name buttons
+        // Lock all name buttons
         const buttons = document.querySelectorAll('.question-card:last-child .button-primary');
-        buttons.forEach(btn => btn.disabled = true);
+        buttons.forEach(btn => btn.classList.add('is-locked'));
         
         CharacterState.updateCharacter({ name });
         
@@ -2777,47 +3491,244 @@ Format your response as JSON array of strings, one for each option in order. Exa
       },
       
       async updateCharacterPanel(character) {
+        console.log('📝 updateCharacterPanel called with:', character);
         const panel = document.getElementById('character-panel');
         const aiPortraitsEnabled = StorageService.getAIPortraitsEnabled();
         
-        // Only generate AI portrait when character is COMPLETE (has backstory) to save costs
-        const isCharacterComplete = character.backstory && character.backstory.length > 0;
-        
-        if (aiPortraitsEnabled) {
-          if (isCharacterComplete && character.race && character.class) {
-            // Character is complete - generate AI portrait
-            // First render with loading indicator
-            panel.innerHTML = Components.renderCharacterSheet(character, `
-              [ GENERATING AI PORTRAIT... ]
-              
-              
-              
-              . . . ( ._.)
-            `);
+        // Show portrait as soon as race is selected (demo mode)
+        if (character.race) {
+          console.log('✅ Race selected:', character.race, 'Class:', character.class);
+          // First render with loading indicator
+          panel.innerHTML = Components.renderCharacterSheet(character, `
+            [ LOADING PORTRAIT... ]
             
-            // Generate AI portrait in background
-            try {
-              const aiPortrait = await AsciiArtService.generateAIPortrait(character);
-              // Update just the portrait section
-              const portraitEl = document.getElementById('character-portrait');
-              if (portraitEl) {
-                portraitEl.textContent = aiPortrait;
-              }
-            } catch (error) {
-              console.error('Failed to generate AI portrait:', error);
-              // Fallback already handled in generateAIPortrait
-              const portraitEl = document.getElementById('character-portrait');
-              if (portraitEl) {
-                portraitEl.textContent = AsciiArtService.getFullPortrait(character);
-              }
+            
+            
+            . . . ( ._.)
+          `);
+          
+          // Load portrait in background
+          try {
+            console.log('🎨 Calling generateAIPortrait...');
+            const portrait = await AsciiArtService.generateAIPortrait(character);
+            console.log('🖼️ Portrait loaded, length:', portrait ? portrait.length : 0);
+            // Update just the portrait section
+            const portraitEl = document.getElementById('character-portrait');
+            if (portraitEl) {
+              portraitEl.textContent = portrait;
+              console.log('✅ Portrait displayed');
+            } else {
+              console.error('❌ Portrait element not found');
             }
-          } else {
-            // Character not complete yet - don't show any portrait
-            panel.innerHTML = Components.renderCharacterSheet(character, null, false);
+          } catch (error) {
+            console.error('❌ Failed to load portrait:', error);
+            // Fallback to template
+            const portraitEl = document.getElementById('character-portrait');
+            if (portraitEl) {
+              portraitEl.textContent = AsciiArtService.getFullPortrait(character);
+            }
           }
         } else {
-          // AI disabled - use template portraits
-          panel.innerHTML = Components.renderCharacterSheet(character);
+          console.log('⏳ No race selected yet');
+          // No race selected yet - don't show portrait
+          panel.innerHTML = Components.renderCharacterSheet(character, null, false);
+        }
+      },
+      
+      buildPromptForCharacter(character) {
+        const race = DND_DATA.races.find(r => r.id === character.race);
+        const classData = DND_DATA.classes.find(c => c.id === character.class);
+        
+        const parts = [];
+        
+        // ASCII optimization instructions
+        parts.push("Fantasy D&D character portrait");
+        parts.push("high contrast black and white ink drawing style");
+        parts.push("bold clear outlines strong shadows");
+        parts.push("dramatic lighting simple background");
+        parts.push("clear distinctive features");
+        
+        // Character description
+        if (race) {
+          parts.push(race.name.toLowerCase() + " race");
+        }
+        
+        if (classData) {
+          parts.push(classData.name.toLowerCase() + " class");
+        }
+        
+        if (character.alignment) {
+          const alignment = DND_DATA.alignments.find(a => a.id === character.alignment);
+          if (alignment) {
+            parts.push(alignment.name.toLowerCase() + " alignment");
+          }
+        }
+        
+        // Ending style reinforcement
+        parts.push("full body portrait centered composition");
+        parts.push("bold linework high detail monochromatic");
+        
+        return parts.join(", ");
+      },
+      
+      showPromptModal(character) {
+        return new Promise((resolve, reject) => {
+          const defaultPrompt = this.buildPromptForCharacter(character);
+          console.log('📝 Generated default prompt:', defaultPrompt);
+          
+          const modalHTML = `
+            <div class="prompt-modal-overlay" id="prompt-modal" onclick="event.stopPropagation();">
+              <div class="prompt-modal" onclick="event.stopPropagation();">
+                <div class="prompt-modal-header">
+                  <span>✨ Customize AI Portrait Prompt</span>
+                  <button class="prompt-modal-close" onclick="App.closePromptModal(false)">×</button>
+                </div>
+                
+                <div class="prompt-modal-instructions">
+                  Edit the prompt below to customize your portrait. The prompt is optimized for ASCII art conversion with high contrast and clear features.
+                </div>
+                
+                <textarea class="prompt-modal-textarea" id="custom-prompt">${defaultPrompt}</textarea>
+                
+                <div class="prompt-modal-buttons">
+                  <button class="prompt-modal-btn" onclick="App.closePromptModal(false)">Cancel</button>
+                  <button class="prompt-modal-btn primary" onclick="App.confirmPromptModal()">Generate Portrait</button>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          document.body.insertAdjacentHTML('beforeend', modalHTML);
+          console.log('✅ Modal added to DOM');
+          
+          // Focus the textarea
+          setTimeout(() => {
+            const textarea = document.getElementById('custom-prompt');
+            if (textarea) {
+              console.log('✅ Textarea found, focusing...');
+              textarea.focus();
+              textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            } else {
+              console.error('❌ Textarea not found');
+            }
+          }, 100);
+          
+          // Store resolve/reject for later use
+          this._promptModalResolve = resolve;
+          this._promptModalReject = reject;
+        });
+      },
+      
+      closePromptModal(confirmed) {
+        // Get the textarea value BEFORE removing the modal
+        const textarea = document.getElementById('custom-prompt');
+        const customPrompt = textarea ? textarea.value.trim() : null;
+        console.log(`🔍 Modal closing - confirmed: ${confirmed}, prompt: "${customPrompt}"`);
+        
+        const modal = document.getElementById('prompt-modal');
+        if (modal) {
+          modal.remove();
+        }
+        
+        if (this._promptModalResolve) {
+          if (confirmed) {
+            this._promptModalResolve(customPrompt);
+          } else {
+            this._promptModalReject(new Error('User cancelled'));
+          }
+          this._promptModalResolve = null;
+          this._promptModalReject = null;
+        }
+      },
+      
+      confirmPromptModal() {
+        this.closePromptModal(true);
+      },
+      
+      async generateCustomAIPortrait() {
+        try {
+          console.log('🎨 generateCustomAIPortrait called');
+          const state = CharacterState.current;
+          const character = state.character;  // Get the nested character object
+          console.log('👤 State:', state);
+          console.log('👤 Character:', character);
+          
+          if (!character.race || !character.class) {
+            console.log('❌ Missing race or class');
+            alert('Please select both race and class before generating a custom AI portrait');
+            return;
+          }
+          
+          console.log('✅ Race and class selected, showing modal...');
+          
+          // Show prompt modal and wait for user input
+          let customPrompt;
+          try {
+            console.log('📝 Calling showPromptModal...');
+            customPrompt = await this.showPromptModal(character);
+            console.log('✅ Modal returned with prompt:', customPrompt);
+          } catch (error) {
+            // User cancelled
+            console.log('❌ User cancelled prompt customization:', error);
+            return;
+          }
+          
+          if (!customPrompt) {
+            alert('Please enter a prompt for the portrait');
+            return;
+          }
+          
+          // Get the button and update UI
+          const button = document.querySelector('.generate-ai-btn');
+          const portraitEl = document.getElementById('character-portrait');
+          
+          if (button) {
+            button.disabled = true;
+            button.classList.add('generating');
+            button.textContent = '⏳ Generating...';
+          }
+          
+          if (portraitEl) {
+            portraitEl.textContent = `
+[ GENERATING CUSTOM AI PORTRAIT... ]
+
+This may take 10-15 seconds...
+
+        🎨
+       /   \\
+      /     \\
+     /_______\\
+            `;
+          }
+          
+          // Generate custom portrait with custom prompt
+          const customPortrait = await AsciiArtService.generateCustomAIPortraitWithPrompt(customPrompt);
+          
+          // Update portrait
+          if (portraitEl) {
+            portraitEl.textContent = customPortrait;
+          }
+          
+          // Reset button
+          if (button) {
+            button.disabled = false;
+            button.classList.remove('generating');
+            button.textContent = '✨ Generate Another';
+          }
+          
+          console.log('✅ Custom AI portrait generated and displayed');
+          
+        } catch (error) {
+          console.error('Failed to generate custom AI portrait:', error);
+          
+          const button = document.querySelector('.generate-ai-btn');
+          if (button) {
+            button.disabled = false;
+            button.classList.remove('generating');
+            button.textContent = '✨ Generate Custom AI Portrait';
+          }
+          
+          alert('Failed to generate custom AI portrait. Please check your API key in settings and try again.');
         }
       },
       
@@ -2957,6 +3868,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
       // Keyboard navigation (only after splash is dismissed)
       window.addEventListener('keydown', (e) => {
         if (splashActive) return; // Don't interfere with splash screen
+        
+        // Don't interfere if there's a confirmation overlay open
+        if (document.querySelector('.confirmation-overlay')) return;
         
         if (e.key === 'ArrowUp') {
           e.preventDefault();
