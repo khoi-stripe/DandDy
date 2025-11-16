@@ -54,11 +54,14 @@ class Character(Base):
     saving_throw_proficiencies = Column(JSON, default=list, nullable=False)  # ["str", "con"]
     skill_proficiencies = Column(JSON, default=list, nullable=False)  # ["athletics", "perception"]
     skill_expertises = Column(JSON, default=list, nullable=False)  # ["stealth"]
+    tool_proficiencies = Column(JSON, default=list, nullable=False)  # ["thieves-tools", "gaming-set"]
+    languages = Column(JSON, default=list, nullable=False)  # ["Common", "Elvish", "Dwarvish"]
     
     # Features and Traits
     racial_traits = Column(JSON, default=list, nullable=False)
     class_features = Column(JSON, default=list, nullable=False)
     feats = Column(JSON, default=list, nullable=False)
+    background_feature = Column(JSON, default=dict, nullable=False)  # {"name": "...", "description": "..."}
     
     # Personality
     personality_traits = Column(String, nullable=True)

@@ -35,11 +35,14 @@ class CharacterBase(BaseModel):
     saving_throw_proficiencies: List[str] = []
     skill_proficiencies: List[str] = []
     skill_expertises: List[str] = []
+    tool_proficiencies: List[str] = []
+    languages: List[str] = []
     
     # Features
     racial_traits: List[Dict] = []
     class_features: List[Dict] = []
     feats: List[Dict] = []
+    background_feature: Dict = {}
     
     # Personality
     personality_traits: Optional[str] = None

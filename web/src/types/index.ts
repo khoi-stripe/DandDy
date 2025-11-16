@@ -56,11 +56,14 @@ export interface Character {
   saving_throw_proficiencies: string[]
   skill_proficiencies: string[]
   skill_expertises: string[]
+  tool_proficiencies: string[]
+  languages: string[]
   
   // Features
   racial_traits: Record<string, any>[]
   class_features: Record<string, any>[]
   feats: Record<string, any>[]
+  background_feature: Record<string, any>
   
   // Personality
   personality_traits?: string
