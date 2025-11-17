@@ -1,0 +1,9 @@
+# Files to ignore during Heroku deployment
+*.pyc
+__pycache__/
+.env
+.venv/
+venv/
+tests/
+*.md
+
