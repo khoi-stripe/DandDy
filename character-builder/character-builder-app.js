@@ -2205,6 +2205,12 @@ function dismissSplash() {
 window.addEventListener('DOMContentLoaded', () => {
   // Start loading animation
   startLoadingAnimation();
+  
+  // 🔥 Wake up the backend server early (Render cold start can take 30-50s)
+  if (CONFIG.ENABLE_AI) {
+    console.log('%c🚀 SPLASH: Waking up backend server early...', 'color: #0ff; font-weight: bold');
+    AIService.warmupBackend();
+  }
 
   // Splash screen handlers
   const splash = document.getElementById('splash-content');
