@@ -352,6 +352,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: var(--spacing-md);
   padding-bottom: var(--spacing-sm);
   border-bottom: 1px solid var(--terminal-border);
@@ -360,6 +361,18 @@ body {
 .sheet-title {
   color: var(--terminal-accent);
   font-size: var(--font-size-large);
+  flex: 1 1 auto;
+  min-width: 0; /* Allow flex item to shrink below content size */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.sheet-title-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0; /* Prevent buttons from wrapping */
+  white-space: nowrap;
 }
 
 .sheet-section {

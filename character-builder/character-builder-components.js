@@ -57,7 +57,7 @@ const Components = (window.Components = {
       <div class="character-sheet">
         <div class="sheet-title-header">
           <div class="sheet-title">${character.name ? character.name : '[ CHARACTER SHEET ]'}</div>
-          <div style="display: flex; gap: 8px; align-items: center;">
+          <div class="sheet-title-buttons">
             ${character.name ? `
               <button class="button-secondary" onclick="App.openNameModal()" title="Change character name" style="font-size: 12px; padding: 4px 12px;">
                 ✏ RENAME
