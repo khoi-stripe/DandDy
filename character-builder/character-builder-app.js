@@ -1091,6 +1091,15 @@ const App = (window.App = {
       return;
     }
 
+    // Check portrait generation limit (3 per character)
+    const portraitCount = character.customPortraitCount || 0;
+    if (portraitCount >= 3) {
+      this.showSystemMessage(
+        'Portrait limit reached. You can generate up to 3 custom AI portraits per character.',
+      );
+      return;
+    }
+
     // Check if AI portraits are enabled
     if (!StorageService.getAIPortraitsEnabled()) {
       this.showSystemMessage(
@@ -1239,9 +1248,12 @@ const App = (window.App = {
         );
 
       // Store both the original image URL and custom ASCII art in character state
+      // Also increment the custom portrait counter
+      const currentCount = CharacterState.get().character.customPortraitCount || 0;
       CharacterState.updateCharacter({
         originalPortraitUrl: result.imageUrl,
         customPortraitAscii: result.asciiArt,
+        customPortraitCount: currentCount + 1,
       });
 
       // Update the last portrait art to trigger animation

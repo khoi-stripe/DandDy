@@ -76,8 +76,8 @@ const Components = (window.Components = {
             <img id="original-portrait" class="original-portrait" style="display: none;" alt="Character portrait">
             <div class="portrait-actions">
               ${(race && classData) ? `
-                <button class="generate-ai-btn" onclick="App.generateCustomAIPortrait()" title="Generate a unique AI portrait">
-                  ✨ Custom AI Portrait
+                <button class="generate-ai-btn" onclick="App.generateCustomAIPortrait()" title="Generate a unique AI portrait (${3 - (character.customPortraitCount || 0)} remaining)">
+                  ✨ Custom AI Portrait ${character.customPortraitCount ? `(${3 - character.customPortraitCount})` : '(3)'}
                 </button>
               ` : ''}
               ${character.originalPortraitUrl ? `
