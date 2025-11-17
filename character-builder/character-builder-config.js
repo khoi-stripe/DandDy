@@ -6,12 +6,17 @@ const isLocalDevelopment = window.location.hostname === 'localhost' ||
                           window.location.hostname === '127.0.0.1' ||
                           window.location.protocol === 'file:';
 
-// IMPORTANT: Update this with your Render app URL after deployment
-const PRODUCTION_BACKEND_URL = 'https://your-render-app-name.onrender.com'; // ⚠️ Update this!
+// Production backend URL (deployed on Render)
+const PRODUCTION_BACKEND_URL = 'https://danddy-api.onrender.com';
 
 window.CONFIG = {
   TYPEWRITER_SPEED: 30, // milliseconds per character
   AI_TIMEOUT: 30000, // 30 seconds
+  
+  // AI Feature Toggle
+  // Set to false to disable AI features (will use fallback text instead)
+  // Set to true to enable AI features (requires backend server to be running)
+  ENABLE_AI: false, // Default: false (change to true when backend is ready)
   
   // SECURE: Use backend proxy instead of direct OpenAI calls
   // Local dev: localhost:8000, Production: Render URL
