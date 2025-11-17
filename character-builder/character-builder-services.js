@@ -430,7 +430,7 @@ const AIService = (window.AIService = {
     }
 
     try {
-      const response = await fetch(`${CONFIG.BACKEND_URL}/api/ai/chat/completion`, {
+      const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/chat/completion`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -561,8 +561,9 @@ const AIService = (window.AIService = {
     try {
       console.log('%c📛 NAMES: Calling backend AI...', 'color: #0ff; font-weight: bold');
       console.log('  Request:', { race, classType, count });
+      console.log('  Note: May take 30-50s if backend is waking up...');
       
-      const response = await fetch(`${CONFIG.BACKEND_URL}/api/ai/characters/names`, {
+      const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/names`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -572,7 +573,7 @@ const AIService = (window.AIService = {
           class_type: classType,
           count: count,
         }),
-      });
+      }, 60000);
 
       if (!response.ok) {
         console.log('%c📛 NAMES (Fallback - API Error)', 'color: #f80; font-weight: bold');
@@ -586,8 +587,13 @@ const AIService = (window.AIService = {
         return data.names;
       }
     } catch (error) {
-      console.log('%c📛 NAMES (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
-      console.error('  Error:', error);
+      if (error.message.includes('timed out')) {
+        console.log('%c📛 NAMES (Fallback - Backend Timeout)', 'color: #f80; font-weight: bold');
+        console.log('  Backend may be waking up from sleep. Using fallback.');
+      } else {
+        console.log('%c📛 NAMES (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
+        console.error('  Error:', error);
+      }
     }
 
     // Fallback: simple name generation
@@ -668,8 +674,9 @@ const AIService = (window.AIService = {
     try {
       console.log('%c📖 BACKSTORY: Calling backend AI...', 'color: #0ff; font-weight: bold');
       console.log('  Request:', { name: character.name, race: character.race, class: character.class });
+      console.log('  Note: May take 30-50s if backend is waking up...');
       
-      const response = await fetch(`${CONFIG.BACKEND_URL}/api/ai/characters/backstory`, {
+      const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/backstory`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -681,7 +688,7 @@ const AIService = (window.AIService = {
           personality: character.personalityTrait || 'mysterious',
           background: character.background,
         }),
-      });
+      }, 60000);
 
       if (!response.ok) {
         console.log('%c📖 BACKSTORY (Fallback - API Error)', 'color: #f80; font-weight: bold');
@@ -695,8 +702,13 @@ const AIService = (window.AIService = {
         return data.backstory;
       }
     } catch (error) {
-      console.log('%c📖 BACKSTORY (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
-      console.error('  Error:', error);
+      if (error.message.includes('timed out')) {
+        console.log('%c📖 BACKSTORY (Fallback - Backend Timeout)', 'color: #f80; font-weight: bold');
+        console.log('  Backend may be waking up from sleep. Using fallback.');
+      } else {
+        console.log('%c📖 BACKSTORY (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
+        console.error('  Error:', error);
+      }
     }
 
     console.log('%c📖 BACKSTORY (Fallback)', 'color: #f80; font-weight: bold');
@@ -764,8 +776,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
     try {
       console.log('%c🎨 DALL-E: Calling backend AI...', 'color: #0ff; font-weight: bold');
       console.log('  Prompt:', prompt.substring(0, 100) + '...');
+      console.log('  Note: May take 30-50s if backend is waking up...');
       
-      const response = await fetch(`${CONFIG.BACKEND_URL}/api/ai/images/generate`, {
+      const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -775,7 +788,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
           size: '1024x1024',
           quality: 'standard',
         }),
-      });
+      }, 60000);
 
       if (!response.ok) {
         const errorData = await response.json();
