@@ -258,16 +258,6 @@ const Components = (window.Components = {
           Configure how the narrator uses AI and how portraits are generated.
         </div>
         
-        <div class="settings-row" style="background-color: rgba(0, 255, 0, 0.1); padding: 12px; border-radius: 4px; margin-bottom: 16px;">
-          <div class="settings-label" style="color: #0f0; font-weight: bold;">🔒 Secure Mode Active</div>
-          <div class="settings-help" style="margin-top: 8px;">
-            API keys are stored securely on the backend server. 
-            The backend handles all AI API calls safely.
-            <br><br>
-            Backend status: <span id="backend-status" style="color: #0f0;">Checking...</span>
-          </div>
-        </div>
-        
         <div class="settings-row">
           <label class="settings-label" style="display: flex; align-items: center; cursor: pointer;">
             <input type="checkbox" id="ai-portraits-checkbox" ${aiPortraitsEnabled ? 'checked' : ''} style="margin-right: 8px; cursor: pointer;">
@@ -279,13 +269,6 @@ const Components = (window.Components = {
         <div class="settings-row">
           <button class="button-primary" onclick="App.saveSettings()">SAVE</button>
           <button class="button-secondary" onclick="App.closeSettings()" style="margin-left: 8px;">CANCEL</button>
-        </div>
-        
-        <div class="settings-row mt-lg" style="border-top: 1px solid #0f0; padding-top: 16px;">
-          <div class="text-dim text-small">
-            All AI features are powered by the secure backend server.
-            <br>API keys never leave the server, ensuring your security.
-          </div>
         </div>
       </div>
     `;
