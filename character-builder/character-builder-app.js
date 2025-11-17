@@ -1103,7 +1103,7 @@ const App = (window.App = {
     try {
       const statusCheck = await fetch(`${CONFIG.BACKEND_URL}/api/ai/status`);
       if (!statusCheck.ok) {
-        this.showSystemMessage(
+      this.showSystemMessage(
           'Backend server is not available. Make sure the backend is running on port 8000.',
         );
         return;
@@ -1111,7 +1111,7 @@ const App = (window.App = {
       const statusData = await statusCheck.json();
       if (!statusData.available) {
         this.showSystemMessage(
-          'AI features are not available. The backend needs an OpenAI API key configured.',
+          'AI features are not available. The backend server is not configured.',
         );
         return;
       }
@@ -1140,7 +1140,7 @@ const App = (window.App = {
           </div>
           
           <div class="prompt-modal-instructions">
-            Describe your character's appearance. DALL-E will generate a portrait optimized for ASCII art.
+            Describe your character's appearance. AI will generate a portrait optimized for ASCII art.
             Be descriptive! (e.g., "a stoic dwarf fighter with a braided beard, holding a glowing axe")
           </div>
           
@@ -1259,9 +1259,9 @@ const App = (window.App = {
           'Rate limit exceeded. Please wait a moment before generating another portrait. Try again in a few minutes.',
         );
       } else {
-        this.showSystemMessage(
-          'Failed to generate custom AI portrait. Falling back to template.',
-        );
+      this.showSystemMessage(
+        'Failed to generate custom AI portrait. Falling back to template.',
+      );
       }
       
       // Fallback to template

@@ -63,9 +63,9 @@ const Components = (window.Components = {
                 ✏ RENAME
               </button>
             ` : ''}
-            <button class="generate-ai-btn sheet-print-btn" onclick="App.printCharacterSheet()" title="Print this character">
-              🖨 Print
-            </button>
+          <button class="generate-ai-btn sheet-print-btn" onclick="App.printCharacterSheet()" title="Print this character">
+            🖨 Print
+          </button>
           </div>
         </div>
         
@@ -76,7 +76,7 @@ const Components = (window.Components = {
             <img id="original-portrait" class="original-portrait" style="display: none;" alt="Character portrait">
             <div class="portrait-actions">
               ${(race && classData) ? `
-                <button class="generate-ai-btn" onclick="App.generateCustomAIPortrait()" title="Generate a unique AI portrait with DALL-E">
+                <button class="generate-ai-btn" onclick="App.generateCustomAIPortrait()" title="Generate a unique AI portrait">
                   ✨ Custom AI Portrait
                 </button>
               ` : ''}
@@ -262,7 +262,7 @@ const Components = (window.Components = {
           <div class="settings-label" style="color: #0f0; font-weight: bold;">🔒 Secure Mode Active</div>
           <div class="settings-help" style="margin-top: 8px;">
             API keys are stored securely on the backend server. 
-            The backend handles all OpenAI API calls safely.
+            The backend handles all AI API calls safely.
             <br><br>
             Backend status: <span id="backend-status" style="color: #0f0;">Checking...</span>
           </div>
@@ -273,7 +273,7 @@ const Components = (window.Components = {
             <input type="checkbox" id="ai-portraits-checkbox" ${aiPortraitsEnabled ? 'checked' : ''} style="margin-right: 8px; cursor: pointer;">
             <span>Enable AI-Generated Portraits (Experimental)</span>
           </label>
-          <div class="settings-help">Uses DALL-E 3 to generate unique character portraits. Costs ~$0.04 per character. Falls back to pre-generated ASCII templates if disabled or if generation fails.</div>
+          <div class="settings-help">Uses AI to generate unique character portraits. Falls back to pre-generated ASCII templates if disabled or if generation fails.</div>
         </div>
         
         <div class="settings-row">
