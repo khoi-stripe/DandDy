@@ -1,7 +1,7 @@
 # Generated portraits - only ignore PNG images (too large)
 # Keep the ASCII .txt files for GitHub Pages
-generated_portraits/images/
-*.png
+generated_portraits/images/*.png
+web/generated_portraits/images/*.png
 scripts/venv/
 
 # Python
