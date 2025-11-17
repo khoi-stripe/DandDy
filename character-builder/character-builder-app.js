@@ -822,6 +822,9 @@ const App = (window.App = {
       }
     });
 
+    // Show spinning d20 animation
+    await this.showRollingAnimation();
+
     const state = CharacterState.get();
     const classData = DND_DATA.classes.find(
       (c) => c.id === state.character.class,
@@ -925,6 +928,138 @@ const App = (window.App = {
     const select = document.getElementById('ability-method-select');
     const method = select?.value || 'standard';
     await this.handleAbilityMethod(method);
+  },
+
+  async showRollingAnimation() {
+    const container = document.querySelector('.ability-method-container');
+    if (!container) return;
+
+    // Store original content and height
+    const originalContent = container.innerHTML;
+    const originalHeight = container.offsetHeight;
+
+    // Replace with canvas
+    container.innerHTML = `
+      <div class="rolling-animation" style="height: ${originalHeight}px; display: flex; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s;">
+        <canvas id="rolling-canvas" width="200" height="200"></canvas>
+      </div>
+    `;
+
+    const canvas = document.getElementById('rolling-canvas');
+    if (!canvas) return;
+
+    // Icosahedron class (d20)
+    class Icosahedron {
+      constructor(canvas, speed = 0.05) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.width = canvas.width;
+        this.height = canvas.height;
+        this.speed = speed;
+        this.rotation = { x: -0.3, y: 0 };
+        this.setupGeometry();
+      }
+
+      setupGeometry() {
+        const phi = (1 + Math.sqrt(5)) / 2;
+        const scale = 60;
+        const vertices = [
+          [-1,phi,0],[1,phi,0],[-1,-phi,0],[1,-phi,0],
+          [0,-1,phi],[0,1,phi],[0,-1,-phi],[0,1,-phi],
+          [phi,0,-1],[phi,0,1],[-phi,0,-1],[-phi,0,1]
+        ];
+        this.vertices = vertices.map(v => {
+          const len = Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+          return [v[0]/len*scale, v[1]/len*scale, v[2]/len*scale];
+        });
+        this.edges = [
+          [0,11],[0,5],[0,1],[0,7],[0,10],[1,5],[1,9],[1,8],[1,7],
+          [2,11],[2,10],[2,6],[2,3],[2,4],[3,4],[3,9],[3,8],[3,6],
+          [4,5],[4,11],[4,9],[5,11],[6,7],[6,8],[6,10],[7,8],[7,10],[8,9],[9,5],[10,11]
+        ];
+      }
+
+      rotateX(p, a) {
+        const c = Math.cos(a), s = Math.sin(a);
+        return [p[0], p[1]*c - p[2]*s, p[1]*s + p[2]*c];
+      }
+
+      rotateY(p, a) {
+        const c = Math.cos(a), s = Math.sin(a);
+        return [p[0]*c + p[2]*s, p[1], -p[0]*s + p[2]*c];
+      }
+
+      project(p) {
+        const d = 250, z = p[2] + d, sc = d / z;
+        return [p[0]*sc + this.width/2, p[1]*sc + this.height/2, z];
+      }
+
+      draw() {
+        this.ctx.fillStyle = '#000';
+        this.ctx.fillRect(0, 0, this.width, this.height);
+        const rotated = this.vertices.map(v => this.rotateY(this.rotateX(v, this.rotation.x), this.rotation.y));
+        const projected = rotated.map(v => this.project(v));
+        const edgesWithDepth = this.edges.map(([i,j]) => ({
+          i, j, z: (projected[i][2] + projected[j][2]) / 2
+        })).sort((a, b) => b.z - a.z);
+
+        edgesWithDepth.forEach(e => {
+          const v1 = projected[e.i], v2 = projected[e.j];
+          const op = Math.min(1, Math.max(0.3, (e.z - 220) / 80));
+          this.ctx.strokeStyle = `rgba(0, 255, 0, ${op})`;
+          this.ctx.lineWidth = 2;
+          this.ctx.shadowBlur = 4;
+          this.ctx.shadowColor = '#0f0';
+          this.ctx.beginPath();
+          this.ctx.moveTo(v1[0], v1[1]);
+          this.ctx.lineTo(v2[0], v2[1]);
+          this.ctx.stroke();
+        });
+
+        projected.forEach(v => {
+          const op = Math.min(1, Math.max(0.4, (v[2] - 220) / 80));
+          this.ctx.fillStyle = `rgba(0, 255, 0, ${op})`;
+          this.ctx.shadowBlur = 8;
+          this.ctx.shadowColor = '#0f0';
+          this.ctx.beginPath();
+          this.ctx.arc(v[0], v[1], 3, 0, Math.PI * 2);
+          this.ctx.fill();
+        });
+        this.ctx.shadowBlur = 0;
+      }
+
+      animate() {
+        this.rotation.y += this.speed;
+        this.draw();
+      }
+    }
+
+    const dice = new Icosahedron(canvas, 0.05);
+    
+    // Fade in
+    await Utils.sleep(50);
+    const animDiv = document.querySelector('.rolling-animation');
+    if (animDiv) animDiv.style.opacity = '1';
+
+    // Animate for 2 seconds
+    let animationId;
+    const animate = () => {
+      dice.animate();
+      animationId = requestAnimationFrame(animate);
+    };
+    animate();
+
+    await Utils.sleep(2000);
+
+    // Fade out
+    if (animDiv) animDiv.style.opacity = '0';
+    await Utils.sleep(300);
+
+    // Stop animation
+    cancelAnimationFrame(animationId);
+
+    // Restore original content
+    container.innerHTML = originalContent;
   },
 
   rollAbility() {

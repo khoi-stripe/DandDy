@@ -562,7 +562,7 @@ const AIService = (window.AIService = {
       console.log('%c📛 NAMES: Calling backend AI...', 'color: #0ff; font-weight: bold');
       console.log('  Request:', { race, classType, count });
       console.log('  Note: May take 30-50s if backend is waking up...');
-      
+
       const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/names`, {
         method: 'POST',
         headers: {
