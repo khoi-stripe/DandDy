@@ -1034,13 +1034,6 @@ const App = (window.App = {
     // Check backend status
     this.checkBackendStatus();
 
-    // Add event listeners for settings checkboxes
-    document
-      .getElementById('ai-portraits-checkbox')
-      .addEventListener('change', (e) => {
-        StorageService.setAIPortraitsEnabled(e.target.checked);
-      });
-
     // ESC key to close
     this._settingsEscHandler = (e) => {
       if (e.key === 'Escape') this.closeSettings();
@@ -1094,12 +1087,6 @@ const App = (window.App = {
       StorageService.setNarratorId(narratorSelect.value);
     }
 
-    // Save AI portraits checkbox
-    const aiPortraitsCheckbox = document.getElementById('ai-portraits-checkbox');
-    if (aiPortraitsCheckbox) {
-      StorageService.setAIPortraitsEnabled(aiPortraitsCheckbox.checked);
-    }
-
     this.showSystemMessage('Settings saved!');
     this.closeSettings();
   },
@@ -1120,14 +1107,6 @@ const App = (window.App = {
     if (portraitCount >= 3) {
       this.showSystemMessage(
         'Portrait limit reached. You can generate up to 3 custom AI portraits per character.',
-      );
-      return;
-    }
-
-    // Check if AI portraits are enabled
-    if (!StorageService.getAIPortraitsEnabled()) {
-      this.showSystemMessage(
-        'AI-generated portraits are disabled in settings. Enable them to use this feature.',
       );
       return;
     }

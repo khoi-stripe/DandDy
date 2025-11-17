@@ -243,7 +243,6 @@ const Components = (window.Components = {
   },
 
   renderSettings() {
-    const aiPortraitsEnabled = StorageService.getAIPortraitsEnabled();
     const currentNarratorId = StorageService.getNarratorId();
     const narratorsList = getNarratorList();
 
@@ -269,14 +268,6 @@ const Components = (window.Components = {
             `).join('')}
           </select>
           <div class="settings-help" style="margin-top: 8px;">Choose your narrator's personality. This affects all commentary during character creation.</div>
-        </div>
-        
-        <div class="settings-row" style="border-top: 1px solid #0f0; padding-top: 16px; margin-top: 16px;">
-          <label class="settings-label" style="display: flex; align-items: center; cursor: pointer;">
-            <input type="checkbox" id="ai-portraits-checkbox" ${aiPortraitsEnabled ? 'checked' : ''} style="margin-right: 8px; cursor: pointer;">
-            <span>Enable AI-Generated Portraits (Experimental)</span>
-          </label>
-          <div class="settings-help">Uses AI to generate unique character portraits. Falls back to pre-generated ASCII templates if disabled or if generation fails.</div>
         </div>
         
         <div class="settings-row">
