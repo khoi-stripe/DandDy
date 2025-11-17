@@ -518,12 +518,15 @@ const App = (window.App = {
       narratorPanel.lastElementChild.querySelector('.narrator-text');
     await Utils.typewriter(messageEl, question.text);
 
-    // Show temporary loading message
-    const loadingMsg = Components.renderNarratorMessage(
-      'Consulting the ancient texts... [thinking]',
+    // Show progressive thinking message
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
     );
-    narratorPanel.insertAdjacentHTML('beforeend', loadingMsg);
     Utils.scrollToBottom(true);
+    const nameThinkingEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    this.showProgressiveThinking(nameThinkingEl);
 
     // Generate name suggestions using AI
     const names = await AIService.generateNames(
@@ -532,7 +535,8 @@ const App = (window.App = {
       3,
     );
 
-    // Remove the loading message
+    // Remove the thinking message
+    this.stopProgressiveThinking();
     narratorPanel.lastElementChild.remove();
 
     // Build the name selection UI with proper styling matching other sections
@@ -588,21 +592,24 @@ const App = (window.App = {
     await Utils.typewriter(messageEl, question.text);
     Utils.scrollToBottom(true);
 
-    // Generate backstory (this might take a moment)
-    const backstory = await AIService.generateBackstory(state.character);
-    CharacterState.updateCharacter({ backstory });
-
-    // Add new message container and scroll to it
+    // Show progressive thinking message for backstory generation
     narratorPanel.insertAdjacentHTML(
       'beforeend',
       Components.renderNarratorMessage(''),
     );
     Utils.scrollToBottom(true);
-
-    // Now type out the backstory
-    const backstoryEl =
+    const backstoryThinkingEl =
       narratorPanel.lastElementChild.querySelector('.narrator-text');
-    await Utils.typewriter(backstoryEl, backstory);
+    this.showProgressiveThinking(backstoryThinkingEl);
+
+    // Generate backstory (this might take a moment)
+    const backstory = await AIService.generateBackstory(state.character);
+    CharacterState.updateCharacter({ backstory });
+
+    // Stop thinking and clear the element, then type out the backstory
+    this.stopProgressiveThinking();
+    backstoryThinkingEl.textContent = '';
+    await Utils.typewriter(backstoryThinkingEl, backstory);
     Utils.scrollToBottom(true);
 
     await Utils.sleep(2000);
@@ -1265,15 +1272,41 @@ const App = (window.App = {
 
     const portraitEl = document.getElementById('character-portrait');
 
-    // Show loading state
-    if (portraitEl) {
-      portraitEl.textContent = `
-[ GENERATING CUSTOM AI PORTRAIT... ]
+    // Show progressive loading state
+    let portraitElapsed = 0;
+    let portraitLoadingInterval = null;
+    
+    const updatePortraitLoading = () => {
+      if (!portraitEl) return;
       
-      
-      
+      if (portraitElapsed < 3) {
+        portraitEl.textContent = `
+[ GENERATING PORTRAIT... ]
+
+
       . . . ( ._.)
       `;
+      } else if (portraitElapsed < 6) {
+        portraitEl.textContent = `
+[ STILL GENERATING... ]
+
+
+      . . . ( ._.)
+      `;
+      } else {
+        portraitEl.textContent = `
+[ WAKING UP SERVER... ]
+
+
+      . . . ( ._.)
+      `;
+      }
+      portraitElapsed++;
+    };
+    
+    if (portraitEl) {
+      updatePortraitLoading();
+      portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
     }
 
     try {
@@ -1304,6 +1337,11 @@ const App = (window.App = {
         customPortraitCount: currentCount + 1,
       });
 
+      // Stop the loading animation
+      if (portraitLoadingInterval) {
+        clearInterval(portraitLoadingInterval);
+      }
+
       // Update the last portrait art to trigger animation
       this._lastPortraitArt = null;
 
@@ -1312,6 +1350,11 @@ const App = (window.App = {
       await this.updateCharacterPanel(state.character);
     } catch (error) {
       console.error('Error generating custom AI portrait with prompt:', error);
+      
+      // Stop the loading animation
+      if (portraitLoadingInterval) {
+        clearInterval(portraitLoadingInterval);
+      }
       
       // Check if it's a rate limit error
       if (error.isRateLimit) {
