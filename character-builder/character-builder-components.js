@@ -256,7 +256,7 @@ const Components = (window.Components = {
         
         <div class="settings-row">
           <div class="settings-label">Narrator Voice</div>
-          <select id="narrator-select" style="width: 100%; padding: 8px; background: #000; color: #0f0; border: 1px solid #0f0; border-radius: 4px; font-family: 'Courier New', monospace; margin-top: 8px;">
+          <select id="narrator-select" class="narrator-select">
             ${narratorsList.map(narrator => `
               <option value="${narrator.id}" ${narrator.id === currentNarratorId ? 'selected' : ''}>
                 ${narrator.emoji} ${narrator.name} - ${narrator.description}
