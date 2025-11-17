@@ -254,10 +254,6 @@ const Components = (window.Components = {
           <button class="prompt-modal-close" onclick="App.closeSettings()">×</button>
         </div>
         
-        <div class="prompt-modal-instructions">
-          Configure your narrator's personality and how portraits are generated.
-        </div>
-        
         <div class="settings-row">
           <div class="settings-label">Narrator Voice</div>
           <select id="narrator-select" style="width: 100%; padding: 8px; background: #000; color: #0f0; border: 1px solid #0f0; border-radius: 4px; font-family: 'Courier New', monospace; margin-top: 8px;">
