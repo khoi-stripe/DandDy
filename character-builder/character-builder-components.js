@@ -244,7 +244,8 @@ const Components = (window.Components = {
 
   renderSettings() {
     const aiPortraitsEnabled = StorageService.getAIPortraitsEnabled();
-    const demoModeEnabled = StorageService.getDemoModeEnabled();
+    const currentNarratorId = StorageService.getNarratorId();
+    const narratorsList = getNarratorList();
 
     return `
       <div class="prompt-modal-overlay settings-overlay" onclick="App.closeSettings()"></div>
@@ -255,10 +256,22 @@ const Components = (window.Components = {
         </div>
         
         <div class="prompt-modal-instructions">
-          Configure how the narrator uses AI and how portraits are generated.
+          Configure your narrator's personality and how portraits are generated.
         </div>
         
         <div class="settings-row">
+          <div class="settings-label">Narrator Voice</div>
+          <select id="narrator-select" style="width: 100%; padding: 8px; background: #000; color: #0f0; border: 1px solid #0f0; border-radius: 4px; font-family: 'Courier New', monospace; margin-top: 8px;">
+            ${narratorsList.map(narrator => `
+              <option value="${narrator.id}" ${narrator.id === currentNarratorId ? 'selected' : ''}>
+                ${narrator.emoji} ${narrator.name} - ${narrator.description}
+              </option>
+            `).join('')}
+          </select>
+          <div class="settings-help" style="margin-top: 8px;">Choose your narrator's personality. This affects all commentary during character creation.</div>
+        </div>
+        
+        <div class="settings-row" style="border-top: 1px solid #0f0; padding-top: 16px; margin-top: 16px;">
           <label class="settings-label" style="display: flex; align-items: center; cursor: pointer;">
             <input type="checkbox" id="ai-portraits-checkbox" ${aiPortraitsEnabled ? 'checked' : ''} style="margin-right: 8px; cursor: pointer;">
             <span>Enable AI-Generated Portraits (Experimental)</span>

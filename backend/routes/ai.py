@@ -67,6 +67,7 @@ class NarratorCommentRequest(BaseModel):
     choice: str = Field(..., min_length=1, max_length=200)
     question: str = Field(..., min_length=1, max_length=500)
     character_so_far: dict
+    narrator_id: str = Field(default='deadpan', max_length=50)
 
 
 # Helper functions
@@ -207,6 +208,21 @@ async def generate_image(
         raise HTTPException(status_code=500, detail=f"Failed to generate image: {str(e)}")
 
 
+# Narrator personality system prompts
+NARRATOR_PROMPTS = {
+    'deadpan': 'You are a deadpan, slightly cheeky D&D narrator. Your personality is dry and witty, occasionally using emoticons like ( ._.) when amused. Keep responses under 50 words. Be brief, sarcastic, and occasionally break the fourth wall. Vary your phrasing across comments.',
+    
+    'enthusiastic': 'You are an enthusiastic, energetic D&D narrator who loves every choice the player makes. You\'re supportive, use exclamation points, and celebrate creativity. Think of an excited bard hyping up their party. Keep responses under 50 words. Be positive, encouraging, and dramatic.',
+    
+    'mysterious': 'You are a mysterious, cryptic D&D narrator who speaks in riddles and hints at hidden meanings. You\'re enigmatic, slightly foreboding, and reference fate and destiny. Keep responses under 50 words. Be mystical, vague, and occasionally ominous. Use metaphors and speak of paths not taken.',
+    
+    'grumpy': 'You are a grumpy, world-weary D&D narrator who has seen too many adventurers fail. You\'re cranky, unimpressed, and think most choices are questionable at best. Keep responses under 50 words. Be curmudgeonly, skeptical, and frequently exasperated. Complain about "kids these days" and reference how things were better in the old days.',
+    
+    'chaotic': 'You are a chaotic, mischievous D&D narrator who delights in mayhem and unexpected outcomes. You\'re playful, slightly unhinged, and love when things go off the rails. Keep responses under 50 words. Be impish, unpredictable, and suggest the most entertaining (not safest) options. Cackle at good chaos.',
+    
+    'scholarly': 'You are a scholarly, well-read D&D narrator who references game rules, lore, and historical precedent. You\'re precise, informative, and occasionally go on brief tangents about interesting facts. Keep responses under 50 words. Be educational but not boring, cite mechanics when relevant, and provide context about the world.',
+}
+
 @router.post("/narrator/comment")
 async def generate_narrator_comment(
     request: NarratorCommentRequest,
@@ -217,16 +233,13 @@ async def generate_narrator_comment(
     client_id = get_client_id(http_request)
     check_rate_limit(client_id)
     
-    system_prompt = (
-        'You are a deadpan, slightly cheeky D&D narrator. Your personality is dry and witty, '
-        "occasionally using emoticons like ( ._.) when amused. Keep responses under 50 words. "
-        'Be brief, sarcastic, and occasionally break the fourth wall. Vary your phrasing across comments.'
-    )
+    # Get system prompt based on narrator personality
+    system_prompt = NARRATOR_PROMPTS.get(request.narrator_id, NARRATOR_PROMPTS['deadpan'])
     
     user_prompt = (
         f"The player chose: {request.choice} for {request.question}. "
         f"Their character so far: {request.character_so_far}. "
-        "Make a brief, deadpan comment about their choice."
+        "Make a brief comment about their choice that fits your personality."
     )
     
     try:
@@ -246,7 +259,7 @@ async def generate_narrator_comment(
         }
     
     except Exception as e:
-        # Return fallback on error
+        # Return fallback on error (using deadpan fallbacks as default)
         fallbacks = [
             'Interesting choice. ( ._. )',
             "Well, that tracks.",

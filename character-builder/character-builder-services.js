@@ -189,6 +189,15 @@ const StorageService = (window.StorageService = {
     );
   },
 
+  getNarratorId() {
+    const value = localStorage.getItem('dnd_narrator_id');
+    return value || 'deadpan'; // Default to deadpan narrator
+  },
+
+  setNarratorId(narratorId) {
+    localStorage.setItem('dnd_narrator_id', narratorId);
+  },
+
   getCharacters() {
     const data = localStorage.getItem(CONFIG.STORAGE_KEY);
     return data ? JSON.parse(data) : [];
@@ -459,18 +468,10 @@ const AIService = (window.AIService = {
   },
 
   async generateNarratorComment(context) {
-    // Fallback responses if AI fails
-    const fallbacks = [
-      'Interesting choice. ( ._. )',
-      "Well, that tracks.",
-      "Bold move. We\'ll see how that works out.",
-      'Ah yes, a decision has been made. Consequences to follow.',
-      'I would have picked differently, but I\'m just the narrator.',
-      'Sure. Why not.',
-      '[sigh] Very well.',
-      'The dice gods are taking notes.',
-      "Not what I expected, but I respect the chaos.",
-    ];
+    // Get current narrator and fallbacks
+    const narratorId = StorageService.getNarratorId();
+    const narrator = getNarrator(narratorId);
+    const fallbacks = narrator.fallbacks;
 
     if (!CONFIG.ENABLE_AI) {
       console.log('%c🤖 NARRATOR (Fallback - AI Disabled)', 'color: #ff0; font-weight: bold');
@@ -479,7 +480,7 @@ const AIService = (window.AIService = {
 
     try {
       console.log('%c🤖 NARRATOR: Calling backend AI...', 'color: #0ff; font-weight: bold');
-      console.log('  Request:', { choice: context.choice, question: context.question });
+      console.log('  Request:', { choice: context.choice, question: context.question, narrator: narratorId });
       
       const response = await fetch(`${CONFIG.BACKEND_URL}/api/ai/narrator/comment`, {
         method: 'POST',
@@ -490,6 +491,7 @@ const AIService = (window.AIService = {
           choice: context.choice,
           question: context.question,
           character_so_far: context.characterSoFar,
+          narrator_id: narratorId,
         }),
       });
 
@@ -509,42 +511,42 @@ const AIService = (window.AIService = {
       let responseText = text;
 
       // Light post-processing to avoid obvious repetition
-      const normalize = (s) => (s || '').trim().toLowerCase();
-      const startsWithClassic = (s) =>
-        s.startsWith('ah, the classic') || s.startsWith('ah the classic');
+    const normalize = (s) => (s || '').trim().toLowerCase();
+    const startsWithClassic = (s) =>
+      s.startsWith('ah, the classic') || s.startsWith('ah the classic');
 
-      const last = this._lastNarratorComment;
-      const lastNorm = normalize(last);
+    const last = this._lastNarratorComment;
+    const lastNorm = normalize(last);
       let newNorm = normalize(responseText);
 
-      if (last) {
-        if (newNorm === lastNorm) {
+    if (last) {
+      if (newNorm === lastNorm) {
           const alts = fallbacks.filter((f) => normalize(f) !== lastNorm);
-          if (alts.length) {
+        if (alts.length) {
             responseText = Utils.randomChoice(alts);
             newNorm = normalize(responseText);
-          }
-        }
-
-        if (startsWithClassic(newNorm) && startsWithClassic(lastNorm)) {
-          const alts = fallbacks.filter((f) => !startsWithClassic(normalize(f)));
-          if (alts.length) {
-            responseText = Utils.randomChoice(alts);
-            newNorm = normalize(responseText);
-          }
         }
       }
 
-      if (startsWithClassic(newNorm)) {
-        if (this._usedClassicThisRun) {
+      if (startsWithClassic(newNorm) && startsWithClassic(lastNorm)) {
           const alts = fallbacks.filter((f) => !startsWithClassic(normalize(f)));
-          if (alts.length) {
+        if (alts.length) {
             responseText = Utils.randomChoice(alts);
-          }
-        } else {
-          this._usedClassicThisRun = true;
+            newNorm = normalize(responseText);
         }
       }
+    }
+
+    if (startsWithClassic(newNorm)) {
+      if (this._usedClassicThisRun) {
+          const alts = fallbacks.filter((f) => !startsWithClassic(normalize(f)));
+        if (alts.length) {
+            responseText = Utils.randomChoice(alts);
+        }
+      } else {
+        this._usedClassicThisRun = true;
+      }
+    }
 
       this._lastNarratorComment = responseText;
       return responseText;

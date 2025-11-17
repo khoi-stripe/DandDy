@@ -1075,7 +1075,18 @@ const App = (window.App = {
   },
 
   saveSettings() {
-    // API keys are now handled server-side, nothing to save
+    // Save narrator selection
+    const narratorSelect = document.getElementById('narrator-select');
+    if (narratorSelect) {
+      StorageService.setNarratorId(narratorSelect.value);
+    }
+
+    // Save AI portraits checkbox
+    const aiPortraitsCheckbox = document.getElementById('ai-portraits-checkbox');
+    if (aiPortraitsCheckbox) {
+      StorageService.setAIPortraitsEnabled(aiPortraitsCheckbox.checked);
+    }
+
     this.showSystemMessage('Settings saved!');
     this.closeSettings();
   },
