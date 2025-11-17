@@ -1744,6 +1744,17 @@ const App = (window.App = {
 
     // Try to auto-generate a name
     let name = '';
+    
+    // Show thinking message for name generation
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+    const nameThinkingEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    this.showProgressiveThinking(nameThinkingEl);
+    
     try {
       const names = await AIService.generateNames(race.id, cls.id, 1);
       if (Array.isArray(names) && names[0]) {
@@ -1752,6 +1763,10 @@ const App = (window.App = {
     } catch (e) {
       // Ignore AI errors; we'll fall back below
     }
+    
+    // Stop thinking and remove the message
+    this.stopProgressiveThinking();
+    nameThinkingEl.parentElement.remove();
 
     if (!name) {
       const fallbackNames = [
@@ -1808,6 +1823,17 @@ const App = (window.App = {
 
     // Try to auto-generate a backstory
     let backstory = '';
+    
+    // Show thinking message for backstory generation
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+    const backstoryThinkingEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+    this.showProgressiveThinking(backstoryThinkingEl);
+    
     try {
       const current = CharacterState.get();
       backstory = await AIService.generateBackstory(current.character);
@@ -1817,15 +1843,13 @@ const App = (window.App = {
         'A mysterious past, a questionable present, and a future that depends entirely on your dice.';
     }
     CharacterState.updateCharacter({ backstory });
-
-    narratorPanel.insertAdjacentHTML(
-      'beforeend',
-      Components.renderNarratorMessage(''),
-    );
-    Utils.scrollToBottom(true);
-    const backstoryEl =
-      narratorPanel.lastElementChild.querySelector('.narrator-text');
-    await Utils.typewriter(backstoryEl, backstory);
+    
+    // Stop thinking and clear the message
+    this.stopProgressiveThinking();
+    backstoryThinkingEl.textContent = '';
+    
+    // Show the actual backstory
+    await Utils.typewriter(backstoryThinkingEl, backstory);
     Utils.scrollToBottom(true);
 
     await Utils.sleep(1500);
