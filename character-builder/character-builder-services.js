@@ -402,6 +402,27 @@ const AIService = (window.AIService = {
     this._usedClassicThisRun = false;
   },
 
+  // Helper to add timeout to fetch requests (for Render cold starts)
+  async fetchWithTimeout(url, options, timeoutMs = CONFIG.AI_TIMEOUT) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out - backend may be waking up');
+      }
+      throw error;
+    }
+  },
+
   async generateCompletion(prompt, systemPrompt = null) {
     if (!CONFIG.ENABLE_AI) {
       console.log('AI service disabled in config');
@@ -449,8 +470,9 @@ const AIService = (window.AIService = {
     try {
       console.log('%c🤖 NARRATOR: Calling backend AI...', 'color: #0ff; font-weight: bold');
       console.log('  Request:', { choice: context.choice, question: context.question, narrator: narratorId });
+      console.log('  Note: May take 30-50s if backend is waking up...');
       
-      const response = await fetch(`${CONFIG.BACKEND_URL}/api/ai/narrator/comment`, {
+      const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/narrator/comment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -461,7 +483,7 @@ const AIService = (window.AIService = {
           character_so_far: context.characterSoFar,
           narrator_id: narratorId,
         }),
-      });
+      }, 60000); // 60 seconds for cold start
 
       if (!response.ok) {
         console.log('%c🤖 NARRATOR (Fallback - API Error)', 'color: #f80; font-weight: bold');
@@ -519,8 +541,13 @@ const AIService = (window.AIService = {
       this._lastNarratorComment = responseText;
       return responseText;
     } catch (error) {
-      console.log('%c🤖 NARRATOR (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
-      console.error('  Error:', error);
+      if (error.message.includes('timed out')) {
+        console.log('%c🤖 NARRATOR (Fallback - Backend Timeout)', 'color: #f80; font-weight: bold');
+        console.log('  Backend may be waking up from sleep. Using fallback.');
+      } else {
+        console.log('%c🤖 NARRATOR (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
+        console.error('  Error:', error);
+      }
       return Utils.randomChoice(fallbacks);
     }
   },

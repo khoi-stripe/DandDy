@@ -11,7 +11,7 @@ const PRODUCTION_BACKEND_URL = 'https://danddy-api.onrender.com';
 
 window.CONFIG = {
   TYPEWRITER_SPEED: 30, // milliseconds per character
-  AI_TIMEOUT: 30000, // 30 seconds
+  AI_TIMEOUT: 60000, // 60 seconds (allows time for Render cold start)
   
   // AI Feature Toggle
   // Set to false to disable AI features (will use fallback text instead)
