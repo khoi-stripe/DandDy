@@ -17,6 +17,10 @@ const NARRATORS = (window.NARRATORS = {
 > 
 > Let's start with something easy...`,
     completeText: "Well. That's done. Your character is ready. Try not to die immediately.",
+    quickCreateIntro: `> QUICK-CREATE MODE ENGAGED...\n> Generating a character while you sit back and enjoy the show.`,
+    quickCreateSummary: (race, cls, background, alignment) => 
+      `> All right, here's what I've cobbled together:\n> ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Try not to waste my hard work.`,
+    quickCreateName: (name) => `${name}. That will do.`,
     fallbacks: [
       'Interesting choice. ( ._. )',
       "Well, that tracks.",
@@ -45,6 +49,10 @@ const NARRATORS = (window.NARRATORS = {
 > 
 > Let's dive right in! ✨`,
     completeText: "INCREDIBLE! Your character is COMPLETE and they are MAGNIFICENT! The world won't know what hit it! Adventure awaits, hero! ✨",
+    quickCreateIntro: `> QUICK-CREATE MODE: ACTIVATED! ✨\n> This is going to be SO EXCITING! I'm creating something AMAZING for you!`,
+    quickCreateSummary: (race, cls, background, alignment) =>
+      `> HERE THEY ARE! Your MAGNIFICENT hero!\n> ${race} ${cls}, ${background} background, ${alignment} alignment!\n> I LOVE THEM ALREADY! ✨`,
+    quickCreateName: (name) => `${name}! WHAT A PERFECT NAME! I can already hear the LEGENDS! ✨`,
     fallbacks: [
       'YES! Love this energy!',
       'Now THAT\'S what I\'m talking about! ✨',
@@ -72,6 +80,10 @@ const NARRATORS = (window.NARRATORS = {
 > 
 > Let us begin to unravel your fate... 🔮`,
     completeText: "The tapestry is woven. Your fate is sealed... or perhaps, just beginning. The path ahead is shrouded, yet inevitable. Go forth, seeker. 🔮",
+    quickCreateIntro: `> THE FATES HAVE SPOKEN...\n> The threads weave themselves... Your destiny takes form without your hand...`,
+    quickCreateSummary: (race, cls, background, alignment) =>
+      `> The cards reveal their truth:\n> ${race} ${cls}, walking the path of ${background}, aligned with ${alignment}.\n> So it is written... 🔮`,
+    quickCreateName: (name) => `${name}... Yes. The name was always meant to be. The prophecy unfolds.`,
     fallbacks: [
       'The threads of fate shift... interesting.',
       'Ah, a choice is made. The consequences ripple outward.',
@@ -99,6 +111,10 @@ const NARRATORS = (window.NARRATORS = {
 > 
 > Let's get this over with...`,
     completeText: "There. Your character's done. Marginally competent, I suppose. Don't expect me to save you when things go south. And they will. They always do.",
+    quickCreateIntro: `> *sigh* Quick create. Of course.\n> Fine. I'll just do all the work while you sit there.`,
+    quickCreateSummary: (race, cls, background, alignment) =>
+      `> Here's what you're getting:\n> ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Could be worse, I suppose.`,
+    quickCreateName: (name) => `${name}. Passable, I guess. Don't blame me when you die.`,
     fallbacks: [
       'Ugh. Fine. Whatever.',
       'Back in my day, we didn\'t have such ridiculous options.',
@@ -126,6 +142,10 @@ const NARRATORS = (window.NARRATORS = {
 > 
 > Ohoho, let the mayhem begin!`,
     completeText: "*CACKLING INTENSIFIES* YESSSS! Your character is COMPLETE and they are GLORIOUSLY UNPREDICTABLE! Now go forth and cause MAGNIFICENT CHAOS! 😈",
+    quickCreateIntro: `> *CACKLING* OHOHO! Quick create?! Let's RANDOMIZE EVERYTHING!\n> This is going to be DELIGHTFULLY CHAOTIC! 😈`,
+    quickCreateSummary: (race, cls, background, alignment) =>
+      `> *giggling maniacally* BEHOLD YOUR CHAOS AGENT!\n> ${race} ${cls}, ${background} background, ${alignment} alignment!\n> The MAYHEM they'll cause! *chef's kiss* 😈`,
+    quickCreateName: (name) => `${name}! PERFECT! A name that SCREAMS chaos! I LOVE IT! *cackling*`,
     fallbacks: [
       'Ohoho! This will be FUN! 😈',
       '*cackling* Oh the CHAOS this will cause!',
@@ -153,6 +173,10 @@ const NARRATORS = (window.NARRATORS = {
 > 
 > Let us proceed methodically... 📚`,
     completeText: "Character creation: Complete. All parameters within acceptable ranges. Statistical viability: High. You are now adequately prepared for adventure. Proceed with confidence, student. 📚",
+    quickCreateIntro: `> QUICK-CREATE PROTOCOL: Initiated.\n> Randomizing parameters according to standard probability distributions...`,
+    quickCreateSummary: (race, cls, background, alignment) =>
+      `> Character profile generated:\n> Race: ${race}. Class: ${cls}. Background: ${background}. Alignment: ${alignment}.\n> Statistical analysis: Within acceptable parameters. 📚`,
+    quickCreateName: (name) => `${name}. Name selection: Approved. Phonetically sound. Proceed.`,
     fallbacks: [
       'A textbook choice, really.',
       'Historically, this decision has a 47% success rate.',
@@ -180,6 +204,10 @@ const NARRATORS = (window.NARRATORS = {
 > 
 > Let's just like... start, man. 🥃`,
     completeText: "Alright, man. Your character's all set. Pretty cool, dude. Now go out there and just... be yourself, you know? The Dude abides. 🥃",
+    quickCreateIntro: `> Quick create, huh? Cool, cool.\n> Just gonna roll some dice here, take it easy, see what happens, man.`,
+    quickCreateSummary: (race, cls, background, alignment) =>
+      `> Alright, so here's what we got:\n> ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Pretty chill combo, man. I dig it. 🥃`,
+    quickCreateName: (name) => `${name}. Yeah, man. That's a solid name. Really ties it all together, you know?`,
     fallbacks: [
       'Yeah, well, that\'s just like, your opinion, man.',
       'The Dude abides.',

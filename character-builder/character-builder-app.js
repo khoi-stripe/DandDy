@@ -1682,7 +1682,10 @@ const App = (window.App = {
     // Reset portrait tracking to ensure animation happens
     this._lastPortraitArt = null;
 
-    // Intro message for quick create
+    // Intro message for quick create (narrator-specific)
+    const narratorId = StorageService.getNarratorId();
+    const narrator = getNarrator(narratorId);
+    
     narratorPanel.insertAdjacentHTML(
       'beforeend',
       Components.renderNarratorMessage(''),
@@ -1692,8 +1695,7 @@ const App = (window.App = {
       narratorPanel.lastElementChild.querySelector('.narrator-text');
     await Utils.typewriter(
       introEl,
-      `> QUICK-CREATE MODE ENGAGED...
-> Generating a character while you sit back and enjoy the show.`,
+      narrator.quickCreateIntro,
     );
     Utils.scrollToBottom(true);
 
@@ -1763,7 +1765,7 @@ const App = (window.App = {
     });
     CharacterState.set({ abilityMethod: 'roll' });
 
-    // Show a short summary of what we picked
+    // Show a short summary of what we picked (narrator-specific)
     narratorPanel.insertAdjacentHTML(
       'beforeend',
       Components.renderNarratorMessage(''),
@@ -1773,9 +1775,7 @@ const App = (window.App = {
       narratorPanel.lastElementChild.querySelector('.narrator-text');
     await Utils.typewriter(
       summaryEl,
-      `> All right, here's what I've cobbled together:
-> ${race.name} ${cls.name}, ${background.name} background, ${alignment.name} alignment.
-> Try not to waste my hard work.`,
+      narrator.quickCreateSummary(race.name, cls.name, background.name, alignment.name),
     );
     Utils.scrollToBottom(true);
 
@@ -1786,7 +1786,7 @@ const App = (window.App = {
     Utils.scrollToBottom(true);
     const nameEl =
       narratorPanel.lastElementChild.querySelector('.narrator-text');
-    await Utils.typewriter(nameEl, `${name}. That will do.`);
+    await Utils.typewriter(nameEl, narrator.quickCreateName(name));
     Utils.scrollToBottom(true);
 
     // Try to auto-generate a backstory
