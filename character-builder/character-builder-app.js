@@ -431,12 +431,17 @@ const App = (window.App = {
       narratorPanel.lastElementChild.querySelector('.narrator-text');
     await Utils.typewriter(messageEl, question.text);
 
+    // Helper to truncate option text
+    const truncate = (text, maxLength) => {
+      return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+    };
+
     const optionsHTML = question.options
       .map(
         (opt, index) => `
           <option value="${opt.value}" ${
             index === 0 ? 'selected' : ''
-          }>${opt.text}</option>
+          }>${truncate(opt.text, 45)}</option>
         `,
       )
       .join('');

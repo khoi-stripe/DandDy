@@ -245,6 +245,11 @@ const Components = (window.Components = {
   renderSettings() {
     const currentNarratorId = StorageService.getNarratorId();
     const narratorsList = getNarratorList();
+    
+    // Helper to truncate text for options
+    const truncate = (text, maxLength) => {
+      return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+    };
 
     return `
       <div class="prompt-modal-overlay settings-overlay" onclick="App.closeSettings()"></div>
@@ -257,11 +262,15 @@ const Components = (window.Components = {
         <div class="settings-row">
           <div class="settings-label">Narrator Voice</div>
           <select id="narrator-select" class="narrator-select">
-            ${narratorsList.map(narrator => `
-              <option value="${narrator.id}" ${narrator.id === currentNarratorId ? 'selected' : ''}>
-                ${narrator.emoji} ${narrator.name} - ${narrator.description}
-              </option>
-            `).join('')}
+            ${narratorsList.map(narrator => {
+              const optionText = `${narrator.emoji} ${narrator.name} - ${narrator.description}`;
+              const truncatedText = truncate(optionText, 60);
+              return `
+                <option value="${narrator.id}" ${narrator.id === currentNarratorId ? 'selected' : ''}>
+                  ${truncatedText}
+                </option>
+              `;
+            }).join('')}
           </select>
           <div class="settings-help" style="margin-top: 8px;">Choose your narrator's personality. This affects all commentary during character creation.</div>
         </div>

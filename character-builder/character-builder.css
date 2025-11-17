@@ -334,9 +334,6 @@ body {
   flex: 1;
   margin-top: 0;
   padding-right: calc(var(--spacing-lg) * 2);
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
 }
 
 .ability-method-roll {
@@ -765,9 +762,6 @@ body {
   border-radius: 4px;
   font-family: 'Courier New', monospace;
   margin-top: 8px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
 }
 
 /* Splash Screen */
