@@ -580,9 +580,14 @@ const App = (window.App = {
     );
     Utils.scrollToBottom(true);
 
+    // Use narrator-specific completion text
+    const narratorId = StorageService.getNarratorId();
+    const narrator = getNarrator(narratorId);
+    const completionText = narrator.completeText || question.text;
+
     const messageEl =
       narratorPanel.lastElementChild.querySelector('.narrator-text');
-    await Utils.typewriter(messageEl, question.text);
+    await Utils.typewriter(messageEl, completionText);
     Utils.scrollToBottom(true);
 
     // Save character

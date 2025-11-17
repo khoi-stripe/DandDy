@@ -16,6 +16,7 @@ const NARRATORS = (window.NARRATORS = {
 > Look, I've done this a thousand times. You'll make choices. I'll pretend they matter. We'll both get through this.
 > 
 > Let's start with something easy...`,
+    completeText: "Well. That's done. Your character is ready. Try not to die immediately.",
     fallbacks: [
       'Interesting choice. ( ._. )',
       "Well, that tracks.",
@@ -43,6 +44,7 @@ const NARRATORS = (window.NARRATORS = {
 > This is going to be AMAZING! We're going to create something absolutely LEGENDARY together! Every choice you make is going to be perfect because YOU'RE making it!
 > 
 > Let's dive right in! ✨`,
+    completeText: "INCREDIBLE! Your character is COMPLETE and they are MAGNIFICENT! The world won't know what hit it! Adventure awaits, hero! ✨",
     fallbacks: [
       'YES! Love this energy!',
       'Now THAT\'S what I\'m talking about! ✨',
@@ -69,6 +71,7 @@ const NARRATORS = (window.NARRATORS = {
 > The threads of destiny have brought you here. Your choices will echo through realms unseen. The future whispers, but its words are unclear...
 > 
 > Let us begin to unravel your fate... 🔮`,
+    completeText: "The tapestry is woven. Your fate is sealed... or perhaps, just beginning. The path ahead is shrouded, yet inevitable. Go forth, seeker. 🔮",
     fallbacks: [
       'The threads of fate shift... interesting.',
       'Ah, a choice is made. The consequences ripple outward.',
@@ -95,6 +98,7 @@ const NARRATORS = (window.NARRATORS = {
 > Listen kid, I've done this a thousand times. Most of you don't make it past level 3. But sure, let's go through the motions. Try not to make it too painful for me.
 > 
 > Let's get this over with...`,
+    completeText: "There. Your character's done. Marginally competent, I suppose. Don't expect me to save you when things go south. And they will. They always do.",
     fallbacks: [
       'Ugh. Fine. Whatever.',
       'Back in my day, we didn\'t have such ridiculous options.',
@@ -121,6 +125,7 @@ const NARRATORS = (window.NARRATORS = {
 > Welcome, welcome! Let's make something BEAUTIFULLY CHAOTIC together! Forget boring! Forget safe! Let's create something that makes the dice gods GIGGLE! 😈
 > 
 > Ohoho, let the mayhem begin!`,
+    completeText: "*CACKLING INTENSIFIES* YESSSS! Your character is COMPLETE and they are GLORIOUSLY UNPREDICTABLE! Now go forth and cause MAGNIFICENT CHAOS! 😈",
     fallbacks: [
       'Ohoho! This will be FUN! 😈',
       '*cackling* Oh the CHAOS this will cause!',
@@ -147,6 +152,7 @@ const NARRATORS = (window.NARRATORS = {
 > I shall guide you through this process with precision and historical context. Each decision you make has statistical implications and narrative weight. Fascinating, really.
 > 
 > Let us proceed methodically... 📚`,
+    completeText: "Character creation: Complete. All parameters within acceptable ranges. Statistical viability: High. You are now adequately prepared for adventure. Proceed with confidence, student. 📚",
     fallbacks: [
       'A textbook choice, really.',
       'Historically, this decision has a 47% success rate.',
@@ -173,6 +179,7 @@ const NARRATORS = (window.NARRATORS = {
 > So like, we're gonna make a character together, yeah? No pressure, dude. Just take it easy, go with the flow. Whatever feels right to you, that's cool with me.
 > 
 > Let's just like... start, man. 🥃`,
+    completeText: "Alright, man. Your character's all set. Pretty cool, dude. Now go out there and just... be yourself, you know? The Dude abides. 🥃",
     fallbacks: [
       'Yeah, well, that\'s just like, your opinion, man.',
       'The Dude abides.',
