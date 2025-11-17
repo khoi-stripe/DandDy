@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D&D Portrait Viewer (Simple)</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0a;
+      color: #00ff00;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1800px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 32px;
+      color: #00ff00;
+      text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    }
+    
+    .info {
+      background: #1a1a1a;
+      border: 1px solid #00ff00;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    
+    .controls {
+      background: #1a1a1a;
+      border: 1px solid #00ff00;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    label {
+      color: #00ff00;
+      font-size: 14px;
+    }
+    
+    input[type="range"] {
+      width: 200px;
+    }
+    
+    .button {
+      background: transparent;
+      border: 1px solid #00ff00;
+      color: #00ff00;
+      padding: 8px 16px;
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    
+    .button:hover {
+      background: rgba(0, 255, 0, 0.2);
+    }
+    
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+      gap: 20px;
+    }
+    
+    .portrait-card {
+      background: #1a1a1a;
+      border: 1px solid #00ff00;
+      border-radius: 8px;
+      padding: 20px;
+      transition: all 0.3s;
+    }
+    
+    .portrait-card:hover {
+      border-color: #00ffff;
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    }
+    
+    .portrait-title {
+      color: #00ffff;
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #00ff00;
+      text-align: center;
+    }
+    
+    .portrait-content {
+      display: flex;
+      gap: 20px;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+    .portrait-image {
+      max-width: 300px;
+    }
+    
+    .portrait-image img {
+      width: 100%;
+      border: 1px solid #00ff00;
+      border-radius: 4px;
+      display: block;
+    }
+    
+    .portrait-ascii {
+      background: #0a0a0a;
+      padding: 10px;
+      border: 1px solid #00ff00;
+      border-radius: 4px;
+      overflow: auto;
+      max-height: 500px;
+      width: 100%;
+    }
+    
+    .portrait-ascii pre {
+      font-family: monospace;
+      font-size: 4px;
+      line-height: 1;
+      color: #00ff00;
+      white-space: pre;
+      margin: 0;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>[ D&D CHARACTER PORTRAIT GALLERY ]</h1>
+    
+    <div class="info">
+      <h2 style="color: #00ffff; margin-bottom: 10px;">Your Generated Portraits</h2>
+      <p>Total portraits: <span id="count" style="color: #00ff00; font-weight: bold;">Loading...</span></p>
+    </div>
+    
+    <div class="controls">
+      <label>ASCII Font Size:</label>
+      <input type="range" id="font-size" min="2" max="10" value="4" step="0.5">
+      <span id="font-size-value" style="color: #00ffff;">4px</span>
+      
+      <button class="button" onclick="toggleImages()">
+        <span id="toggle-text">Hide Images</span>
+      </button>
+    </div>
+    
+    <div id="gallery" class="gallery">
+      <div class="loading">Loading portraits...</div>
+    </div>
+  </div>
+
+  <script>
+    // List of expected portrait files
+    const portraitFiles = [
+      'dwarf',
+      'dwarf-wizard',
+      'dwarf-fighter',
+      'elf',
+      'elf-wizard',
+      'elf-fighter',
+      'human',
+      'human-wizard',
+      'human-fighter'
+    ];
+    
+    let portraits = [];
+    let showImages = true;
+    
+    async function loadPortraits() {
+      const gallery = document.getElementById('gallery');
+      
+      for (const key of portraitFiles) {
+        try {
+          // Load ASCII
+          const asciiResponse = await fetch(`./ascii/${key}.txt`);
+          if (!asciiResponse.ok) continue;
+          
+          const ascii = await asciiResponse.text();
+          
+          // Format title
+          const title = key.split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+          
+          portraits.push({
+            key: key,
+            title: title,
+            ascii: ascii,
+            imageUrl: `./images/${key}.png`
+          });
+          
+        } catch (error) {
+          console.error(`Failed to load ${key}:`, error);
+        }
+      }
+      
+      // Update count
+      document.getElementById('count').textContent = portraits.length;
+      
+      // Render gallery
+      renderGallery();
+    }
+    
+    function renderGallery() {
+      const gallery = document.getElementById('gallery');
+      
+      if (portraits.length === 0) {
+        gallery.innerHTML = '<div class="loading">No portraits found.</div>';
+        return;
+      }
+      
+      const html = portraits.map(portrait => `
+        <div class="portrait-card">
+          <div class="portrait-title">${portrait.title}</div>
+          <div class="portrait-content">
+            ${showImages ? `
+              <div class="portrait-image">
+                <img src="${portrait.imageUrl}" alt="${portrait.title}" 
+                     onerror="this.style.display='none'">
+              </div>
+            ` : ''}
+            <div class="portrait-ascii">
+              <pre>${escapeHtml(portrait.ascii)}</pre>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      
+      gallery.innerHTML = html;
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function toggleImages() {
+      showImages = !showImages;
+      document.getElementById('toggle-text').textContent = 
+        showImages ? 'Hide Images' : 'Show Images';
+      renderGallery();
+    }
+    
+    // Font size control
+    document.getElementById('font-size').addEventListener('input', (e) => {
+      const size = e.target.value;
+      document.getElementById('font-size-value').textContent = size + 'px';
+      document.querySelectorAll('.portrait-ascii pre').forEach(pre => {
+        pre.style.fontSize = size + 'px';
+      });
+    });
+    
+    // Load on page load
+    loadPortraits();
+  </script>
+</body>
+</html>
+

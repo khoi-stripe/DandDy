@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D&D Portrait Gallery</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0a;
+      color: #00ff00;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1800px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 32px;
+      color: #00ff00;
+      text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    }
+    
+    .stats {
+      background: #1a1a1a;
+      border: 1px solid #00ff00;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    
+    .stats h2 {
+      color: #00ffff;
+      margin-bottom: 15px;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .stat-item {
+      background: #0a0a0a;
+      padding: 10px;
+      border: 1px solid #00ff00;
+      border-radius: 4px;
+    }
+    
+    .stat-label {
+      color: #888;
+      font-size: 12px;
+    }
+    
+    .stat-value {
+      color: #00ff00;
+      font-size: 24px;
+      font-weight: bold;
+    }
+    
+    .controls {
+      background: #1a1a1a;
+      border: 1px solid #00ff00;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .filter-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    label {
+      color: #00ff00;
+      font-size: 14px;
+    }
+    
+    select, input {
+      background: #0a0a0a;
+      border: 1px solid #00ff00;
+      color: #00ff00;
+      padding: 8px 12px;
+      font-family: 'Courier New', monospace;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .button {
+      background: transparent;
+      border: 1px solid #00ff00;
+      color: #00ff00;
+      padding: 8px 16px;
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    
+    .button:hover {
+      background: rgba(0, 255, 0, 0.2);
+    }
+    
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(600px, 1fr));
+      gap: 20px;
+    }
+    
+    .portrait-card {
+      background: #1a1a1a;
+      border: 1px solid #00ff00;
+      border-radius: 8px;
+      padding: 20px;
+      transition: all 0.3s;
+    }
+    
+    .portrait-card:hover {
+      border-color: #00ffff;
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+    }
+    
+    .portrait-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #00ff00;
+    }
+    
+    .portrait-title {
+      color: #00ffff;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    
+    .portrait-type {
+      color: #888;
+      font-size: 12px;
+      background: #0a0a0a;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #00ff00;
+    }
+    
+    .portrait-content {
+      display: flex;
+      gap: 20px;
+    }
+    
+    .portrait-image {
+      flex: 0 0 256px;
+    }
+    
+    .portrait-image img {
+      width: 100%;
+      border: 1px solid #00ff00;
+      border-radius: 4px;
+    }
+    
+    .portrait-ascii {
+      flex: 1;
+      background: #0a0a0a;
+      padding: 10px;
+      border: 1px solid #00ff00;
+      border-radius: 4px;
+      overflow: auto;
+      max-height: 400px;
+    }
+    
+    .portrait-ascii pre {
+      font-family: monospace;
+      font-size: 4px;
+      line-height: 1;
+      color: #00ff00;
+      white-space: pre;
+      margin: 0;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+    }
+    
+    .no-results {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+      background: #1a1a1a;
+      border: 1px solid #00ff00;
+      border-radius: 8px;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .loading {
+      animation: pulse 1.5s infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>[ D&D CHARACTER PORTRAIT GALLERY ]</h1>
+    
+    <div class="stats" id="stats">
+      <h2>Generation Statistics</h2>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-item">
+          <div class="stat-label">Total Portraits</div>
+          <div class="stat-value" id="total-count">-</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Race Only</div>
+          <div class="stat-value" id="race-count">-</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Race + Class</div>
+          <div class="stat-value" id="class-count">-</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Generated At</div>
+          <div class="stat-value" style="font-size: 14px;" id="generated-at">-</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <div class="filter-group">
+        <label>Filter:</label>
+        <select id="type-filter">
+          <option value="all">All</option>
+          <option value="race">Race Only</option>
+          <option value="race-class">Race + Class</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label>Search:</label>
+        <input type="text" id="search" placeholder="Type to search...">
+      </div>
+      
+      <div class="filter-group">
+        <label>Font Size:</label>
+        <input type="range" id="font-size" min="2" max="8" value="4" step="0.5">
+        <span id="font-size-value">4px</span>
+      </div>
+      
+      <button class="button" onclick="toggleImages()">Toggle Images</button>
+      <button class="button" onclick="downloadAll()">Download All ASCII</button>
+    </div>
+    
+    <div id="gallery" class="gallery">
+      <div class="loading">Loading portraits...</div>
+    </div>
+  </div>
+
+  <script>
+    let portraits = [];
+    let manifest = null;
+    let showImages = true;
+    
+    // Load manifest and portraits
+    async function loadPortraits() {
+      try {
+        // Load manifest
+        const manifestResponse = await fetch('./manifest.json');
+        manifest = await manifestResponse.json();
+        
+        // Update stats
+        updateStats(manifest);
+        
+        // Get all ASCII files
+        const asciiFiles = [];
+        
+        // Add race portraits
+        for (const [key, success] of Object.entries(manifest.results.races || {})) {
+          if (success) {
+            asciiFiles.push({
+              key: key,
+              type: 'race',
+              title: formatTitle(key)
+            });
+          }
+        }
+        
+        // Add race+class portraits
+        for (const [key, success] of Object.entries(manifest.results.race_class || {})) {
+          if (success) {
+            asciiFiles.push({
+              key: key,
+              type: 'race-class',
+              title: formatTitle(key)
+            });
+          }
+        }
+        
+        // Load each portrait
+        for (const file of asciiFiles) {
+          try {
+            const asciiResponse = await fetch(`./ascii/${file.key}.txt`);
+            const ascii = await asciiResponse.text();
+            
+            portraits.push({
+              key: file.key,
+              type: file.type,
+              title: file.title,
+              ascii: ascii,
+              imageUrl: `./images/${file.key}.png`
+            });
+          } catch (error) {
+            console.error(`Failed to load ${file.key}:`, error);
+          }
+        }
+        
+        // Render gallery
+        renderGallery();
+        
+      } catch (error) {
+        console.error('Failed to load portraits:', error);
+        document.getElementById('gallery').innerHTML = 
+          '<div class="no-results">Failed to load portraits. Make sure you\'re running a local server.</div>';
+      }
+    }
+    
+    function updateStats(manifest) {
+      document.getElementById('total-count').textContent = manifest.stats.successful || 0;
+      document.getElementById('race-count').textContent = 
+        Object.values(manifest.results.races || {}).filter(v => v).length;
+      document.getElementById('class-count').textContent = 
+        Object.values(manifest.results.race_class || {}).filter(v => v).length;
+      document.getElementById('generated-at').textContent = 
+        manifest.generated_at ? new Date(manifest.generated_at).toLocaleString() : 'Unknown';
+    }
+    
+    function formatTitle(key) {
+      return key.split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+    
+    function renderGallery() {
+      const typeFilter = document.getElementById('type-filter').value;
+      const searchTerm = document.getElementById('search').value.toLowerCase();
+      
+      let filtered = portraits.filter(p => {
+        if (typeFilter !== 'all' && p.type !== typeFilter) return false;
+        if (searchTerm && !p.title.toLowerCase().includes(searchTerm)) return false;
+        return true;
+      });
+      
+      if (filtered.length === 0) {
+        document.getElementById('gallery').innerHTML = 
+          '<div class="no-results">No portraits match your filters.</div>';
+        return;
+      }
+      
+      const html = filtered.map(portrait => `
+        <div class="portrait-card">
+          <div class="portrait-header">
+            <div class="portrait-title">${portrait.title}</div>
+            <div class="portrait-type">${portrait.type === 'race' ? 'Race Only' : 'Race + Class'}</div>
+          </div>
+          <div class="portrait-content">
+            ${showImages ? `
+              <div class="portrait-image">
+                <img src="${portrait.imageUrl}" alt="${portrait.title}" 
+                     onerror="this.parentElement.style.display='none'">
+              </div>
+            ` : ''}
+            <div class="portrait-ascii">
+              <pre>${escapeHtml(portrait.ascii)}</pre>
+            </div>
+          </div>
+        </div>
+      `).join('');
+      
+      document.getElementById('gallery').innerHTML = html;
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function toggleImages() {
+      showImages = !showImages;
+      renderGallery();
+    }
+    
+    function downloadAll() {
+      const allAscii = portraits.map(p => 
+        `${'='.repeat(80)}\n${p.title}\n${'='.repeat(80)}\n\n${p.ascii}\n\n`
+      ).join('\n');
+      
+      const blob = new Blob([allAscii], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'all-portraits.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    
+    // Event listeners
+    document.getElementById('type-filter').addEventListener('change', renderGallery);
+    document.getElementById('search').addEventListener('input', renderGallery);
+    document.getElementById('font-size').addEventListener('input', (e) => {
+      const size = e.target.value;
+      document.getElementById('font-size-value').textContent = size + 'px';
+      document.querySelectorAll('.portrait-ascii pre').forEach(pre => {
+        pre.style.fontSize = size + 'px';
+      });
+    });
+    
+    // Load on page load
+    loadPortraits();
+  </script>
+</body>
+</html>
+

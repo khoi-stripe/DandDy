@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Portrait Viewer</title>
+  <style>
+    body {
+      background: #000;
+      color: #0f0;
+      font-family: monospace;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .portrait {
+      margin: 30px 0;
+      padding: 20px;
+      border: 1px solid #0f0;
+    }
+    .title {
+      font-size: 20px;
+      color: #0ff;
+      margin-bottom: 10px;
+    }
+    pre {
+      font-size: 3px;
+      line-height: 1;
+      overflow: auto;
+    }
+    img {
+      max-width: 300px;
+      border: 1px solid #0f0;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Your D&D Portraits</h1>
+  
+  <div class="portrait">
+    <div class="title">Dwarf</div>
+    <img src="images/dwarf.png" onerror="this.style.display='none'">
+    <pre id="dwarf">Loading...</pre>
+  </div>
+  
+  <div class="portrait">
+    <div class="title">Dwarf Wizard</div>
+    <img src="images/dwarf-wizard.png" onerror="this.style.display='none'">
+    <pre id="dwarf-wizard">Loading...</pre>
+  </div>
+  
+  <div class="portrait">
+    <div class="title">Dwarf Fighter</div>
+    <img src="images/dwarf-fighter.png" onerror="this.style.display='none'">
+    <pre id="dwarf-fighter">Loading...</pre>
+  </div>
+  
+  <div class="portrait">
+    <div class="title">Elf</div>
+    <img src="images/elf.png" onerror="this.style.display='none'">
+    <pre id="elf">Loading...</pre>
+  </div>
+  
+  <div class="portrait">
+    <div class="title">Elf Wizard</div>
+    <img src="images/elf-wizard.png" onerror="this.style.display='none'">
+    <pre id="elf-wizard">Loading...</pre>
+  </div>
+  
+  <div class="portrait">
+    <div class="title">Elf Fighter</div>
+    <img src="images/elf-fighter.png" onerror="this.style.display='none'">
+    <pre id="elf-fighter">Loading...</pre>
+  </div>
+  
+  <div class="portrait">
+    <div class="title">Human</div>
+    <img src="images/human.png" onerror="this.style.display='none'">
+    <pre id="human">Loading...</pre>
+  </div>
+  
+  <div class="portrait">
+    <div class="title">Human Wizard</div>
+    <img src="images/human-wizard.png" onerror="this.style.display='none'">
+    <pre id="human-wizard">Loading...</pre>
+  </div>
+  
+  <div class="portrait">
+    <div class="title">Human Fighter</div>
+    <img src="images/human-fighter.png" onerror="this.style.display='none'">
+    <pre id="human-fighter">Loading...</pre>
+  </div>
+
+  <script>
+    const portraits = [
+      'dwarf', 'dwarf-wizard', 'dwarf-fighter',
+      'elf', 'elf-wizard', 'elf-fighter',
+      'human', 'human-wizard', 'human-fighter'
+    ];
+    
+    portraits.forEach(id => {
+      fetch(`ascii/${id}.txt`)
+        .then(r => r.text())
+        .then(text => {
+          document.getElementById(id).textContent = text;
+        })
+        .catch(err => {
+          document.getElementById(id).textContent = 'Failed to load';
+        });
+    });
+  </script>
+</body>
+</html>
+

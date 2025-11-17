@@ -28,8 +28,8 @@ CLASSES = [
     "Rogue", "Sorcerer", "Warlock", "Wizard"
 ]
 
-# ASCII character sets
-ASCII_CHARS = '$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,"^`\'.  '
+# ASCII character sets (reversed so black=light, white=dense)
+ASCII_CHARS = '  .`\'",;:Il!i><~+_-?][}{1)(|/\\trjxnuvczXYUJCLQ0OZmwqpdbkha*o#MW&8%B@$'
 ASCII_WIDTH = 160
 ASCII_HEIGHT = 80
 

@@ -10,8 +10,15 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     
+    # AI API settings (optional, used by AI routes)
+    openai_api_key: str = ""
+    max_requests_per_user_per_minute: int = 10
+    max_requests_per_user_per_day: int = 100
+    allowed_origins: str = "http://localhost:5173,http://localhost:3000"
+    
     class Config:
         env_file = ".env"
+        extra = "ignore"  # Ignore extra fields in .env
 
 @lru_cache()
 def get_settings():

@@ -1,7 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database.database import engine, Base
-from routes import auth, characters, campaigns
+from routes import auth, characters, campaigns, ai
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -12,11 +17,20 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware for iOS app
+# Get allowed origins from environment or use defaults
+# For development, allow all origins. In production, specify exact origins.
+if os.getenv("PRODUCTION"):
+    allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
+    allowed_origins = allowed_origins_str.split(",") if allowed_origins_str else []
+else:
+    # Development mode - allow all origins
+    allowed_origins = ["*"]
+
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your iOS app's domain
-    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_credentials=True if allowed_origins != ["*"] else False,  # credentials=True requires specific origins
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -25,6 +39,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(characters.router)
 app.include_router(campaigns.router)
+app.include_router(ai.router)
 
 @app.get("/")
 def root():
