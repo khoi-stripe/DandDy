@@ -396,10 +396,49 @@ const AIService = (window.AIService = {
   // Track whether we've already allowed an "Ah, the classic..."-style line
   // for the current character generation run.
   _usedClassicThisRun: false,
+  
+  // Backend availability tracking (for Render cold starts)
+  _backendAvailable: null, // null = unknown, true = available, false = waking up
+  _warmupInProgress: false,
 
   resetNarratorSession() {
     this._lastNarratorComment = null;
     this._usedClassicThisRun = false;
+  },
+  
+  // Background warmup: Keep trying to wake up the backend
+  async warmupBackend() {
+    if (this._warmupInProgress || this._backendAvailable === true) {
+      return;
+    }
+    
+    this._warmupInProgress = true;
+    console.log('%c🔄 WARMUP: Waking up backend server...', 'color: #fa0; font-weight: bold');
+    
+    while (this._backendAvailable !== true) {
+      try {
+        const response = await fetch(`${CONFIG.BACKEND_URL}/api/ai/status`, {
+          method: 'GET',
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.available) {
+            this._backendAvailable = true;
+            console.log('%c✅ WARMUP: Backend is now ready!', 'color: #0f0; font-weight: bold');
+            this._warmupInProgress = false;
+            return;
+          }
+        }
+      } catch (error) {
+        // Keep trying
+      }
+      
+      // Wait 5 seconds before trying again
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+    
+    this._warmupInProgress = false;
   },
 
   // Helper to add timeout to fetch requests (for Render cold starts)
@@ -413,10 +452,19 @@ const AIService = (window.AIService = {
         signal: controller.signal
       });
       clearTimeout(timeoutId);
+      
+      // Mark backend as available on successful response
+      if (response.ok) {
+        this._backendAvailable = true;
+      }
+      
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
+        // Backend is waking up - start background warmup
+        this._backendAvailable = false;
+        this.warmupBackend(); // Don't await - let it run in background
         throw new Error('Request timed out - backend may be waking up');
       }
       throw error;
@@ -470,7 +518,7 @@ const AIService = (window.AIService = {
     try {
       console.log('%c🤖 NARRATOR: Calling backend AI...', 'color: #0ff; font-weight: bold');
       console.log('  Request:', { choice: context.choice, question: context.question, narrator: narratorId });
-      console.log('  Note: May take 30-50s if backend is waking up...');
+      console.log('  Note: Will fallback after 10s if server is cold, but keep warming up in background...');
       
       const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/narrator/comment`, {
         method: 'POST',
@@ -483,7 +531,7 @@ const AIService = (window.AIService = {
           character_so_far: context.characterSoFar,
           narrator_id: narratorId,
         }),
-      }, 60000); // 60 seconds for cold start
+      }); // Uses CONFIG.AI_TIMEOUT (10s), then fallback + background warmup
 
       if (!response.ok) {
         console.log('%c🤖 NARRATOR (Fallback - API Error)', 'color: #f80; font-weight: bold');
@@ -542,8 +590,9 @@ const AIService = (window.AIService = {
       return responseText;
     } catch (error) {
       if (error.message.includes('timed out')) {
-        console.log('%c🤖 NARRATOR (Fallback - Backend Timeout)', 'color: #f80; font-weight: bold');
-        console.log('  Backend may be waking up from sleep. Using fallback.');
+        console.log('%c🤖 NARRATOR (Fallback - Backend Waking Up)', 'color: #f80; font-weight: bold');
+        console.log('  ⏰ 10s timeout reached. Using fallback now, but backend warmup continues...');
+        console.log('  ✅ Once awake, subsequent requests will use AI!');
       } else {
         console.log('%c🤖 NARRATOR (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
         console.error('  Error:', error);
@@ -561,7 +610,7 @@ const AIService = (window.AIService = {
     try {
       console.log('%c📛 NAMES: Calling backend AI...', 'color: #0ff; font-weight: bold');
       console.log('  Request:', { race, classType, count });
-      console.log('  Note: May take 30-50s if backend is waking up...');
+      console.log('  Note: Will fallback after 10s if server is cold, but keep warming up in background...');
 
       const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/names`, {
         method: 'POST',
@@ -573,7 +622,7 @@ const AIService = (window.AIService = {
           class_type: classType,
           count: count,
         }),
-      }, 60000);
+      }); // Uses CONFIG.AI_TIMEOUT (10s)
 
       if (!response.ok) {
         console.log('%c📛 NAMES (Fallback - API Error)', 'color: #f80; font-weight: bold');
@@ -588,8 +637,9 @@ const AIService = (window.AIService = {
       }
     } catch (error) {
       if (error.message.includes('timed out')) {
-        console.log('%c📛 NAMES (Fallback - Backend Timeout)', 'color: #f80; font-weight: bold');
-        console.log('  Backend may be waking up from sleep. Using fallback.');
+        console.log('%c📛 NAMES (Fallback - Backend Waking Up)', 'color: #f80; font-weight: bold');
+        console.log('  ⏰ 10s timeout reached. Using fallback now, but backend warmup continues...');
+        console.log('  ✅ Once awake, subsequent requests will use AI!');
       } else {
         console.log('%c📛 NAMES (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
         console.error('  Error:', error);
@@ -674,7 +724,7 @@ const AIService = (window.AIService = {
     try {
       console.log('%c📖 BACKSTORY: Calling backend AI...', 'color: #0ff; font-weight: bold');
       console.log('  Request:', { name: character.name, race: character.race, class: character.class });
-      console.log('  Note: May take 30-50s if backend is waking up...');
+      console.log('  Note: Will fallback after 10s if server is cold, but keep warming up in background...');
       
       const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/backstory`, {
         method: 'POST',
@@ -688,7 +738,7 @@ const AIService = (window.AIService = {
           personality: character.personalityTrait || 'mysterious',
           background: character.background,
         }),
-      }, 60000);
+      }); // Uses CONFIG.AI_TIMEOUT (10s)
 
       if (!response.ok) {
         console.log('%c📖 BACKSTORY (Fallback - API Error)', 'color: #f80; font-weight: bold');
@@ -703,8 +753,9 @@ const AIService = (window.AIService = {
       }
     } catch (error) {
       if (error.message.includes('timed out')) {
-        console.log('%c📖 BACKSTORY (Fallback - Backend Timeout)', 'color: #f80; font-weight: bold');
-        console.log('  Backend may be waking up from sleep. Using fallback.');
+        console.log('%c📖 BACKSTORY (Fallback - Backend Waking Up)', 'color: #f80; font-weight: bold');
+        console.log('  ⏰ 10s timeout reached. Using fallback now, but backend warmup continues...');
+        console.log('  ✅ Once awake, subsequent requests will use AI!');
       } else {
         console.log('%c📖 BACKSTORY (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
         console.error('  Error:', error);
@@ -776,7 +827,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
     try {
       console.log('%c🎨 DALL-E: Calling backend AI...', 'color: #0ff; font-weight: bold');
       console.log('  Prompt:', prompt.substring(0, 100) + '...');
-      console.log('  Note: May take 30-50s if backend is waking up...');
+      console.log('  Note: Will fallback after 10s if server is cold, but keep warming up in background...');
       
       const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`, {
         method: 'POST',
@@ -788,7 +839,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
           size: '1024x1024',
           quality: 'standard',
         }),
-      }, 60000);
+      }); // Uses CONFIG.AI_TIMEOUT (10s)
 
       if (!response.ok) {
         const errorData = await response.json();

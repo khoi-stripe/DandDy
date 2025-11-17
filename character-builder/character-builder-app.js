@@ -699,7 +699,7 @@ const App = (window.App = {
 
       const commentEl =
         narratorPanel.lastElementChild.querySelector('.narrator-text');
-      commentEl.textContent = '[thinking...]';
+      commentEl.textContent = '[rolling the dice...]';
       Utils.scrollToBottom(true);
 
       const comment = await AIService.generateNarratorComment({
@@ -784,7 +784,7 @@ const App = (window.App = {
 
       const commentEl =
         narratorPanel.lastElementChild.querySelector('.narrator-text');
-      commentEl.textContent = '[thinking...]';
+      commentEl.textContent = '[rolling the dice...]';
       Utils.scrollToBottom(true);
 
       const comment = await AIService.generateNarratorComment({
