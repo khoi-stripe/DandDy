@@ -156,6 +156,38 @@ const App = (window.App = {
     await this.showQuestion('intro');
   },
 
+  // Show progressive "thinking" messages while waiting for AI
+  showProgressiveThinking(element) {
+    if (!element) return;
+    
+    // Clear any existing interval
+    if (this._thinkingInterval) {
+      clearInterval(this._thinkingInterval);
+    }
+    
+    let elapsed = 0;
+    element.textContent = '[rolling the dice...]';
+    
+    this._thinkingInterval = setInterval(() => {
+      elapsed++;
+      
+      if (elapsed < 3) {
+        element.textContent = '[rolling the dice...]';
+      } else if (elapsed < 6) {
+        element.textContent = '[still rolling...]';
+      } else {
+        element.textContent = '[server waking up... hang tight!]';
+      }
+    }, 1000); // Update every second
+  },
+  
+  stopProgressiveThinking() {
+    if (this._thinkingInterval) {
+      clearInterval(this._thinkingInterval);
+      this._thinkingInterval = null;
+    }
+  },
+
   async showQuestion(questionId) {
     const question = QUESTIONS.find((q) => q.id === questionId);
     if (!question) {
@@ -699,7 +731,9 @@ const App = (window.App = {
 
       const commentEl =
         narratorPanel.lastElementChild.querySelector('.narrator-text');
-      commentEl.textContent = '[rolling the dice...]';
+      
+      // Show progressive thinking messages
+      this.showProgressiveThinking(commentEl);
       Utils.scrollToBottom(true);
 
       const comment = await AIService.generateNarratorComment({
@@ -708,6 +742,8 @@ const App = (window.App = {
         characterSoFar: state.character,
       });
 
+      // Stop thinking animation and clear
+      this.stopProgressiveThinking();
       commentEl.textContent = '';
       await Utils.typewriter(commentEl, comment);
       Utils.scrollToBottom(true);
@@ -784,7 +820,9 @@ const App = (window.App = {
 
       const commentEl =
         narratorPanel.lastElementChild.querySelector('.narrator-text');
-      commentEl.textContent = '[rolling the dice...]';
+      
+      // Show progressive thinking messages
+      this.showProgressiveThinking(commentEl);
       Utils.scrollToBottom(true);
 
       const comment = await AIService.generateNarratorComment({
@@ -793,6 +831,8 @@ const App = (window.App = {
         characterSoFar: state.character,
       });
 
+      // Stop thinking animation and clear
+      this.stopProgressiveThinking();
       commentEl.textContent = '';
       await Utils.typewriter(commentEl, comment);
       Utils.scrollToBottom(true);
