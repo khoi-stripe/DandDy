@@ -65,10 +65,11 @@ class PortraitGenerator:
         
         # Base style - OPTIMIZED FOR ASCII CONVERSION
         parts.append("Fantasy D&D character portrait")
-        parts.append("high contrast black and white ink drawing style")
-        parts.append("bold clear outlines strong shadows")
-        parts.append("dramatic lighting simple background")
-        parts.append("clear distinctive features")
+        parts.append("Create a high-contrast, grayscale illustration on a pure black background")
+        parts.append("Use bold, graphic shapes with thick outlines and minimal fine detail")
+        parts.append("The image should have bright highlights and deep shadows to maximize tonal separation")
+        parts.append("Center the subject in the frame and avoid background texture")
+        parts.append("Style should be simple, iconic, and optimized for ASCII art conversion")
         
         # Race descriptions
         race_descriptions = {

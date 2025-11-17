@@ -1,0 +1,23 @@
+# Jekyll configuration for GitHub Pages
+exclude:
+  - node_modules/
+  - scripts/
+  - generated_portraits/
+  - web/
+  - .git/
+  - .gitignore
+  - README.md
+  - package.json
+  - package-lock.json
+  - requirements.txt
+  - "*.py"
+
+# Tell Jekyll to keep these directories
+keep_files:
+  - character-builder
+  - generated_portraits
+
+# Only process the character-builder directory
+include:
+  - character-builder
+
