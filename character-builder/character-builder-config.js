@@ -16,7 +16,7 @@ window.CONFIG = {
   // AI Feature Toggle
   // Set to false to disable AI features (will use fallback text instead)
   // Set to true to enable AI features (requires backend server to be running)
-  ENABLE_AI: false, // Default: false (change to true when backend is ready)
+  ENABLE_AI: true, // ✅ Backend is deployed and ready!
   
   // SECURE: Use backend proxy instead of direct OpenAI calls
   // Local dev: localhost:8000, Production: Render URL
