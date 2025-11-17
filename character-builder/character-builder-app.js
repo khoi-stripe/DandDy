@@ -153,7 +153,7 @@ const App = (window.App = {
     CharacterState.reset();
     OptionVariationsCache.reset(); // Reset option variations for new character
     this._lastPortraitArt = null; // Reset portrait tracking for new character
-    await this.showQuestion('entry-mode');
+    await this.showQuestion('intro');
   },
 
   async showQuestion(questionId) {
@@ -1829,7 +1829,7 @@ const App = (window.App = {
         this._lastPortraitArt = null; // Reset portrait tracking for new character
         document.getElementById('narrator-panel').innerHTML = ''; // Clear narrator
         document.getElementById('character-panel').innerHTML = ''; // Clear character sheet
-        this.showQuestion('entry-mode');
+        this.showQuestion('intro');
       },
     );
   },

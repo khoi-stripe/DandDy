@@ -3,6 +3,20 @@
 
 const QUESTIONS = (window.QUESTIONS = [
   {
+    id: 'intro',
+    type: 'message',
+    text: `> SYSTEM INITIALIZED...
+> LOADING CHARACTER CREATION PROTOCOL...
+> 
+> Ah. Another soul seeking adventure. Or at least, trying to.
+> 
+> Look, I've done this a thousand times. You'll make choices. I'll pretend they matter. We'll both get through this.
+> 
+> Let's start with something easy...`,
+    next: 'entry-mode',
+  },
+
+  {
     id: 'entry-mode',
     type: 'choice',
     text: 'How would you like to create your character?',
@@ -16,20 +30,6 @@ const QUESTIONS = (window.QUESTIONS = [
         value: 'quick',
       },
     ],
-    next: 'intro',
-  },
-
-  {
-    id: 'intro',
-    type: 'message',
-    text: `> SYSTEM INITIALIZED...
-> LOADING CHARACTER CREATION PROTOCOL...
-> 
-> Ah. Another soul seeking adventure. Or at least, trying to.
-> 
-> Look, I've done this a thousand times. You'll make choices. I'll pretend they matter. We'll both get through this.
-> 
-> Let's start with something easy...`,
     next: 'motivation',
   },
 
