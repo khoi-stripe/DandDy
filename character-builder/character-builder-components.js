@@ -75,7 +75,7 @@ const Components = (window.Components = {
             <div class="ascii-portrait" id="character-portrait"></div>
             <img id="original-portrait" class="original-portrait" style="display: none;" alt="Character portrait">
             <div class="portrait-actions">
-              ${(race && classData && window.CONFIG && window.CONFIG.ENABLE_AI) ? `
+              ${(race && classData) ? `
                 <button class="generate-ai-btn" onclick="App.generateCustomAIPortrait()" title="Generate a unique AI portrait with DALL-E">
                   ✨ Custom AI Portrait
                 </button>

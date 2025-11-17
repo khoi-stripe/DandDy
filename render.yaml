@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: danddy-api
+    runtime: python
+    buildCommand: cd backend && pip install -r requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.6
+      - key: DATABASE_URL
+        value: sqlite:///./danddy.db
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+      - key: MAX_REQUESTS_PER_USER_PER_MINUTE
+        value: 10
+      - key: MAX_REQUESTS_PER_USER_PER_DAY
+        value: 100
+      - key: PRODUCTION
+        value: true
+      - key: ALLOWED_ORIGINS
+        value: https://khoi-stripe.github.io
+      - key: SECRET_KEY
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false  # Set manually in Render dashboard (keep it secret!)
+
