@@ -223,9 +223,17 @@ const App = (window.App = {
     );
     Utils.scrollToBottom(true);
 
+    // For intro message, use narrator-specific intro text
+    let messageText = question.text;
+    if (question.id === 'intro') {
+      const narratorId = StorageService.getNarratorId();
+      const narrator = getNarrator(narratorId);
+      messageText = narrator.introText;
+    }
+
     const messageEl =
       narratorPanel.lastElementChild.querySelector('.narrator-text');
-    await Utils.typewriter(messageEl, question.text);
+    await Utils.typewriter(messageEl, messageText);
     Utils.scrollToBottom(true);
 
     if (question.next) {
