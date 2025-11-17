@@ -1091,6 +1091,14 @@ const App = (window.App = {
       return;
     }
 
+    // Check if AI features are available
+    if (!CONFIG.ENABLE_AI) {
+      this.showSystemMessage(
+        'Custom AI portraits are only available in local development mode. Use the pre-generated portraits or run locally with a backend server.',
+      );
+      return;
+    }
+
     // Check if AI portraits are enabled
     if (!StorageService.getAIPortraitsEnabled()) {
       this.showSystemMessage(
