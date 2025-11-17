@@ -46,6 +46,6 @@ The codebase is architected for easy migration:
 
 ---
 
-**Version:** 1.0  
+**Version:** 1.4  
 **Just for fun** - A personal project for D&D enthusiasts
 
