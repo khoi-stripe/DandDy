@@ -1637,11 +1637,8 @@ const App = (window.App = {
   },
 
   async applyNameChange(newName) {
-    const state = CharacterState.get();
-    const character = state.character;
-
-    character.name = newName;
-    CharacterState.update({ character });
+    // Update the character name in state (this will trigger observers)
+    CharacterState.updateCharacter({ name: newName });
 
     const narratorPanel = document.getElementById('narrator-panel');
     narratorPanel.insertAdjacentHTML(
@@ -1651,8 +1648,6 @@ const App = (window.App = {
       ),
     );
     Utils.scrollToBottom(true);
-
-    await this.updateCharacterPanel(character);
   },
 
   // ===== QUICK CREATE MODE =====
