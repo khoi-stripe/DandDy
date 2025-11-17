@@ -157,38 +157,6 @@ const ImageToAsciiService = (window.ImageToAsciiService = {
 
 // Storage service for localStorage
 const StorageService = (window.StorageService = {
-  getAPIKey() {
-    return localStorage.getItem(CONFIG.API_KEY_STORAGE);
-  },
-
-  setAPIKey(key) {
-    localStorage.setItem(CONFIG.API_KEY_STORAGE, key);
-  },
-
-  getAIPortraitsEnabled() {
-    const value = localStorage.getItem(CONFIG.AI_PORTRAITS_STORAGE);
-    return value === 'true'; // Default to false
-  },
-
-  setAIPortraitsEnabled(enabled) {
-    localStorage.setItem(
-      CONFIG.AI_PORTRAITS_STORAGE,
-      enabled ? 'true' : 'false',
-    );
-  },
-
-  getDemoModeEnabled() {
-    const value = localStorage.getItem(CONFIG.DEMO_MODE_STORAGE);
-    return value === 'true'; // Default to false
-  },
-
-  setDemoModeEnabled(enabled) {
-    localStorage.setItem(
-      CONFIG.DEMO_MODE_STORAGE,
-      enabled ? 'true' : 'false',
-    );
-  },
-
   getNarratorId() {
     const value = localStorage.getItem('dnd_narrator_id');
     return value || 'deadpan'; // Default to deadpan narrator

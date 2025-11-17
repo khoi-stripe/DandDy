@@ -1678,8 +1678,6 @@ const App = (window.App = {
     );
     Utils.scrollToBottom(true);
 
-    const state = CharacterState.get();
-
     // Randomly choose race, class, background, alignment
     const race = Utils.randomChoice(DND_DATA.races);
     const cls = Utils.randomChoice(DND_DATA.classes);

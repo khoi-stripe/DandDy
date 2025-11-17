@@ -27,9 +27,6 @@ window.CONFIG = {
   OPENAI_MODEL: 'gpt-3.5-turbo',
   
   STORAGE_KEY: 'dnd_characters',
-  API_KEY_STORAGE: 'dnd_openai_key', // DEPRECATED: Keys should be on backend
-  AI_PORTRAITS_STORAGE: 'dnd_ai_portraits_enabled',
-  DEMO_MODE_STORAGE: 'dnd_demo_mode_enabled',
   MAX_RETRIES: 2,
 };
 
