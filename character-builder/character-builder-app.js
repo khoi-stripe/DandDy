@@ -716,7 +716,6 @@ const App = (window.App = {
   },
 
   async handleAnswer(questionId, optionIndex) {
-    console.log(`📝 handleAnswer called: questionId=${questionId}, optionIndex=${optionIndex}`);
     // Check if this is a previous question being changed (see comment in
     // handleListAnswer for rationale).
     const narratorPanel = document.getElementById('narrator-panel');
@@ -739,13 +738,11 @@ const App = (window.App = {
 
     // Special handling for entry mode selection
     if (questionId === 'entry-mode') {
-      console.log('Entry mode selected:', option.value);
       if (option.value === 'quick') {
         await this.quickCreateCharacter();
         return;
       }
       // Guided mode just continues into the normal flow below.
-      console.log('Continuing with guided mode...');
     }
 
     // Mark the selected button
@@ -798,12 +795,8 @@ const App = (window.App = {
     }
 
     // Move to next question
-    console.log(`Checking for next question. question.next = ${question.next}`);
     if (question.next) {
-      console.log(`Moving to next question: ${question.next}`);
       await this.showQuestion(question.next);
-    } else {
-      console.log('No next question defined');
     }
   },
 
