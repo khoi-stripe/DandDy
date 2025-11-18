@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 from functools import lru_cache
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql://user:password@localhost:5432/dandy_db"
+    database_url: str = "sqlite:///./danddy.db"  # Default for local dev; Render overrides with PostgreSQL
     secret_key: str = "your-secret-key-here"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30

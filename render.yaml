@@ -7,7 +7,9 @@ services:
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
-        value: sqlite:///./danddy.db
+        fromDatabase:
+          name: danddy-db
+          property: connectionString
       - key: ALGORITHM
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
@@ -24,4 +26,10 @@ services:
         generateValue: true
       - key: OPENAI_API_KEY
         sync: false  # Set manually in Render dashboard (keep it secret!)
+
+databases:
+  - name: danddy-db
+    databaseName: danddy
+    user: danddy
+    plan: free  # Free tier - 90 days, then $7/month
 
