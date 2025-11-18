@@ -81,7 +81,7 @@ const Components = (window.Components = {
                 </button>
               ` : ''}
               ${character.originalPortraitUrl ? `
-                <button class="generate-ai-btn" onclick="App.togglePortraitView()" id="toggle-portrait-btn" title="Toggle between ASCII and original art">
+                <button class="generate-ai-btn-secondary" onclick="App.togglePortraitView()" id="toggle-portrait-btn" title="Toggle between ASCII and original art">
                   👁 View Original Art
                 </button>
               ` : ''}
