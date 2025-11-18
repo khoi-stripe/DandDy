@@ -762,7 +762,7 @@ const App = (window.App = {
       await Utils.typewriter(commentEl, comment);
       Utils.scrollToBottom(true);
       commentEl.classList.add('is-waiting');
-      await Utils.sleep(500);
+      await Utils.sleep(750);
       commentEl.classList.remove('is-waiting');
     }
 
@@ -853,7 +853,7 @@ const App = (window.App = {
       await Utils.typewriter(commentEl, comment);
       Utils.scrollToBottom(true);
       commentEl.classList.add('is-waiting');
-      await Utils.sleep(500);
+      await Utils.sleep(750);
       commentEl.classList.remove('is-waiting');
     }
 
@@ -1314,8 +1314,8 @@ const App = (window.App = {
       } else {
         portraitEl.innerHTML = `
 [<span class="spinner">↻</span>] ALMOST DONE...
-
-
+      
+      
       . . . ( ._.)
       `;
       }
@@ -1904,7 +1904,7 @@ const App = (window.App = {
         'A mysterious past, a questionable present, and a future that depends entirely on your dice.';
     }
     CharacterState.updateCharacter({ backstory });
-    
+
     // Stop thinking and clear the message
     this.stopProgressiveThinking();
     backstoryThinkingEl.textContent = '';

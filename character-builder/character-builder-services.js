@@ -405,7 +405,7 @@ const AIService = (window.AIService = {
     this._lastNarratorComment = null;
     this._usedClassicThisRun = false;
   },
-  
+
   // Background warmup: Keep trying to wake up the backend
   async warmupBackend() {
     if (this._warmupInProgress || this._backendAvailable === true) {
