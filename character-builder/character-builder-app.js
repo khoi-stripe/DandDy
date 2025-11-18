@@ -166,17 +166,17 @@ const App = (window.App = {
     }
     
     let elapsed = 0;
-    element.textContent = '[rolling the dice...]';
+    element.innerHTML = '[<span class="spinner">↻</span>] rolling the dice...';
     
     this._thinkingInterval = setInterval(() => {
       elapsed++;
       
       if (elapsed < 3) {
-        element.textContent = '[rolling the dice...]';
+        element.innerHTML = '[<span class="spinner">↻</span>] rolling the dice...';
       } else if (elapsed < 6) {
-        element.textContent = '[still rolling...]';
+        element.innerHTML = '[<span class="spinner">↻</span>] still rolling...';
       } else {
-        element.textContent = '[server waking up... hang tight!]';
+        element.innerHTML = '[<span class="spinner">↻</span>] server waking up... hang tight!';
       }
     }, 1000); // Update every second
   },
@@ -269,7 +269,9 @@ const App = (window.App = {
     Utils.scrollToBottom(true);
 
     if (question.next) {
+      messageEl.classList.add('is-waiting');
       await Utils.sleep(1500);
+      messageEl.classList.remove('is-waiting');
       await this.showQuestion(question.next);
     }
   },
@@ -447,7 +449,10 @@ const App = (window.App = {
     await Utils.sleep(100);
     Utils.scrollToBottom(true);
 
+    const suggestedListEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+    suggestedListEl.classList.add('is-waiting');
     await Utils.sleep(2000);
+    suggestedListEl.classList.remove('is-waiting');
     await this.showQuestion(question.next);
   },
 
@@ -612,7 +617,9 @@ const App = (window.App = {
     await Utils.typewriter(backstoryThinkingEl, backstory);
     Utils.scrollToBottom(true);
 
+    backstoryThinkingEl.classList.add('is-waiting');
     await Utils.sleep(2000);
+    backstoryThinkingEl.classList.remove('is-waiting');
     await this.showQuestion(question.next);
   },
 
@@ -754,7 +761,9 @@ const App = (window.App = {
       commentEl.textContent = '';
       await Utils.typewriter(commentEl, comment);
       Utils.scrollToBottom(true);
-      await Utils.sleep(1000);
+      commentEl.classList.add('is-waiting');
+      await Utils.sleep(500);
+      commentEl.classList.remove('is-waiting');
     }
 
     // Move to next question
@@ -843,7 +852,9 @@ const App = (window.App = {
       commentEl.textContent = '';
       await Utils.typewriter(commentEl, comment);
       Utils.scrollToBottom(true);
-      await Utils.sleep(1000);
+      commentEl.classList.add('is-waiting');
+      await Utils.sleep(500);
+      commentEl.classList.remove('is-waiting');
     }
 
     // Move to next question
@@ -1280,29 +1291,29 @@ const App = (window.App = {
       if (!portraitEl) return;
       
       if (portraitElapsed < 5) {
-        portraitEl.textContent = `
-[ GENERATING PORTRAIT... ]
+        portraitEl.innerHTML = `
+[<span class="spinner">↻</span>] GENERATING PORTRAIT...
 
 
       . . . ( ._.)
       `;
       } else if (portraitElapsed < 15) {
-        portraitEl.textContent = `
-[ CREATING IMAGE... ]
+        portraitEl.innerHTML = `
+[<span class="spinner">↻</span>] CREATING IMAGE...
 
 
       . . . ( ._.)
       `;
       } else if (portraitElapsed < 30) {
-        portraitEl.textContent = `
-[ CONVERTING TO ASCII... ]
+        portraitEl.innerHTML = `
+[<span class="spinner">↻</span>] CONVERTING TO ASCII...
 
 
       . . . ( ._.)
       `;
       } else {
-        portraitEl.textContent = `
-[ ALMOST DONE... ]
+        portraitEl.innerHTML = `
+[<span class="spinner">↻</span>] ALMOST DONE...
 
 
       . . . ( ._.)
@@ -1902,7 +1913,9 @@ const App = (window.App = {
     await Utils.typewriter(backstoryThinkingEl, backstory);
     Utils.scrollToBottom(true);
 
+    backstoryThinkingEl.classList.add('is-waiting');
     await Utils.sleep(1500);
+    backstoryThinkingEl.classList.remove('is-waiting');
 
     // Jump straight to the completion screen
     const completeQuestion = QUESTIONS.find((q) => q.id === 'complete');

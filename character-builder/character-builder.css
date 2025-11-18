@@ -839,8 +839,9 @@ body {
 }
 
 /* ===== STATES ===== */
-.is-typing::after {
-  content: '▋';
+.is-typing::after,
+.is-waiting::after {
+  content: '▌';
   animation: blink 1s infinite;
 }
 
@@ -889,6 +890,17 @@ body {
 @keyframes blink {
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes splash-glow {
