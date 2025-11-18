@@ -1279,23 +1279,30 @@ const App = (window.App = {
     const updatePortraitLoading = () => {
       if (!portraitEl) return;
       
-      if (portraitElapsed < 3) {
+      if (portraitElapsed < 5) {
         portraitEl.textContent = `
 [ GENERATING PORTRAIT... ]
 
 
       . . . ( ._.)
       `;
-      } else if (portraitElapsed < 6) {
+      } else if (portraitElapsed < 15) {
         portraitEl.textContent = `
-[ STILL GENERATING... ]
+[ CREATING IMAGE... ]
+
+
+      . . . ( ._.)
+      `;
+      } else if (portraitElapsed < 30) {
+        portraitEl.textContent = `
+[ CONVERTING TO ASCII... ]
 
 
       . . . ( ._.)
       `;
       } else {
         portraitEl.textContent = `
-[ WAKING UP SERVER... ]
+[ ALMOST DONE... ]
 
 
       . . . ( ._.)

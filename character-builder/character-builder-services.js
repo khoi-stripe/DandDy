@@ -827,7 +827,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
     try {
       console.log('%c🎨 DALL-E: Calling backend AI...', 'color: #0ff; font-weight: bold');
       console.log('  Prompt:', prompt.substring(0, 100) + '...');
-      console.log('  Note: Will fallback after 10s if server is cold, but keep warming up in background...');
+      console.log('  Note: Image generation takes 20-30s (longer than text AI)...');
       
       const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`, {
         method: 'POST',
@@ -839,7 +839,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
           size: '1024x1024',
           quality: 'standard',
         }),
-      }); // Uses CONFIG.AI_TIMEOUT (10s)
+      }, 45000); // 45 seconds for image generation (DALL-E is slower than text)
 
       if (!response.ok) {
         const errorData = await response.json();
