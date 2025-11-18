@@ -4,6 +4,7 @@
   --terminal-fg: #00ff00;
   --terminal-dim: #008800;
   --terminal-accent: #00ffff;
+  --terminal-accent-dim: #008888;
   --terminal-warning: #ffff00;
   --terminal-error: #ff0000;
   --terminal-border: #00ff00;
@@ -424,6 +425,29 @@ body {
   animation: pulse 1.5s infinite;
 }
 
+.generate-ai-btn-secondary {
+  background: transparent;
+  border: 1px solid var(--terminal-accent-dim);
+  color: var(--terminal-accent-dim);
+  padding: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 2px;
+}
+
+.generate-ai-btn-secondary:hover:not(:disabled) {
+  border-color: var(--terminal-accent);
+  color: var(--terminal-accent);
+  background: rgba(0, 255, 255, 0.1);
+}
+
+.generate-ai-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .sheet-print-btn {
   margin-left: var(--spacing-sm);
 }
@@ -723,6 +747,7 @@ body {
   }
 
   .generate-ai-btn,
+  .generate-ai-btn-secondary,
   .button-secondary,
   .sheet-print-btn,
   #toggle-portrait-btn {
