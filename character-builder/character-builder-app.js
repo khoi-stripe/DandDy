@@ -107,8 +107,8 @@ const KeyboardNav = (window.KeyboardNav = {
     const buttons = this.getActiveButtons();
     if (buttons.length === 0) return;
 
-    this.currentFocusIndex =
-      (this.currentFocusIndex - 1 + buttons.length) % buttons.length;
+    // Don't wrap - stop at the top
+    this.currentFocusIndex = Math.max(0, this.currentFocusIndex - 1);
     this.updateFocus();
   },
 
@@ -117,8 +117,8 @@ const KeyboardNav = (window.KeyboardNav = {
     const buttons = this.getActiveButtons();
     if (buttons.length === 0) return;
 
-    this.currentFocusIndex =
-      (this.currentFocusIndex + 1) % buttons.length;
+    // Don't wrap - stop at the bottom
+    this.currentFocusIndex = Math.min(buttons.length - 1, this.currentFocusIndex + 1);
     this.updateFocus();
   },
 

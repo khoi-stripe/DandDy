@@ -58,11 +58,6 @@ const Components = (window.Components = {
         <div class="sheet-title-header">
           <div class="sheet-title">${character.name ? character.name : '[ CHARACTER SHEET ]'}</div>
           <div class="sheet-title-buttons">
-            ${character.name ? `
-              <button class="button-secondary" onclick="App.openNameModal()" title="Change character name">
-                ✏ RENAME
-              </button>
-            ` : ''}
           <button class="button-secondary sheet-print-btn" onclick="App.printCharacterSheet()" title="Print this character">
             🖨 Print
           </button>
@@ -78,6 +73,11 @@ const Components = (window.Components = {
               ${(race && classData) ? `
                 <button class="button-secondary" onclick="App.generateCustomAIPortrait()" title="Generate a unique AI portrait (${3 - (character.customPortraitCount || 0)} remaining)">
                   ✨ Custom AI Portrait ${character.customPortraitCount ? `(${3 - character.customPortraitCount})` : '(3)'}
+                </button>
+              ` : ''}
+              ${character.name ? `
+                <button class="button-secondary" onclick="App.openNameModal()" title="Change character name">
+                  ✏ RENAME
                 </button>
               ` : ''}
               ${character.originalPortraitUrl ? `
