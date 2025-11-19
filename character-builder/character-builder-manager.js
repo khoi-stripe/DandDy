@@ -422,11 +422,17 @@ const CharacterManager = (window.CharacterManager = {
     if (!newName) return;
     
     try {
-      const duplicate = { ...char };
-      delete duplicate.id;
-      duplicate.name = newName;
+      if (AuthService.isAuthenticated() && char.id && !String(char.id).startsWith('local_')) {
+        // Use backend API for authenticated users with backend characters
+        await CharacterAPI.duplicateCharacter(char.id, newName);
+      } else {
+        // Use localStorage for guest mode or local characters
+        const duplicate = { ...char };
+        delete duplicate.id;
+        duplicate.name = newName;
+        await StorageService.saveCharacter(duplicate);
+      }
       
-      await StorageService.saveCharacter(duplicate);
       await this.loadData();
       this.renderCharacterList();
       

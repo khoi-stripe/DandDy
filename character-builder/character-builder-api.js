@@ -301,5 +301,25 @@ const CharacterAPI = (window.CharacterAPI = {
       campaign_id: campaignId,
     });
   },
+  
+  // ==== ADDITIONAL CHARACTER OPERATIONS ====
+  
+  // Duplicate a character
+  async duplicateCharacter(id, newName) {
+    const response = await this.request('POST', `/api/characters/${id}/duplicate?new_name=${encodeURIComponent(newName || '')}`);
+    return this.toFrontendFormat(response);
+  },
+  
+  // Export character
+  async exportCharacter(id) {
+    return await this.request('GET', `/api/characters/${id}/export`);
+  },
+  
+  // Import character
+  async importCharacter(characterData) {
+    const backendData = this.toBackendFormat(characterData);
+    const response = await this.request('POST', '/api/characters/import', backendData);
+    return this.toFrontendFormat(response);
+  },
 });
 
