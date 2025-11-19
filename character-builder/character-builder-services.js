@@ -155,6 +155,155 @@ const ImageToAsciiService = (window.ImageToAsciiService = {
   },
 });
 
+// Authentication service
+const AuthService = (window.AuthService = {
+  TOKEN_KEY: 'dnd_auth_token',
+  USER_KEY: 'dnd_current_user',
+
+  // Get stored token
+  getToken() {
+    return localStorage.getItem(this.TOKEN_KEY);
+  },
+
+  // Set token
+  setToken(token) {
+    localStorage.setItem(this.TOKEN_KEY, token);
+  },
+
+  // Remove token
+  clearToken() {
+    localStorage.removeItem(this.TOKEN_KEY);
+    localStorage.removeItem(this.USER_KEY);
+  },
+
+  // Get current user info
+  getCurrentUser() {
+    const data = localStorage.getItem(this.USER_KEY);
+    return data ? JSON.parse(data) : null;
+  },
+
+  // Set current user info
+  setCurrentUser(user) {
+    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+  },
+
+  // Check if user is authenticated
+  isAuthenticated() {
+    return !!this.getToken();
+  },
+
+  // Register new user
+  async register(email, username, password, role = 'player') {
+    try {
+      const response = await fetch(`${CONFIG.BACKEND_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          username,
+          password,
+          role,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Registration failed');
+      }
+
+      const userData = await response.json();
+      
+      // After registration, log in
+      return await this.login(email, password);
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
+  },
+
+  // Login user
+  async login(email, password) {
+    try {
+      const response = await fetch(`${CONFIG.BACKEND_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Login failed');
+      }
+
+      const data = await response.json();
+      this.setToken(data.access_token);
+
+      // Fetch user info
+      const userInfo = await this.fetchUserInfo();
+      this.setCurrentUser(userInfo);
+
+      return userInfo;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  },
+
+  // Fetch current user info from backend
+  async fetchUserInfo() {
+    const token = this.getToken();
+    if (!token) {
+      throw new Error('No authentication token');
+    }
+
+    try {
+      const response = await fetch(`${CONFIG.BACKEND_URL}/api/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired or invalid
+          this.clearToken();
+          throw new Error('Session expired. Please log in again.');
+        }
+        throw new Error('Failed to fetch user info');
+      }
+
+      const userInfo = await response.json();
+      return userInfo;
+    } catch (error) {
+      console.error('Fetch user info error:', error);
+      throw error;
+    }
+  },
+
+  // Logout user
+  logout() {
+    this.clearToken();
+  },
+
+  // Verify token is still valid
+  async verifyToken() {
+    try {
+      await this.fetchUserInfo();
+      return true;
+    } catch (error) {
+      return false;
+    }
+  },
+});
+
 // Storage service for localStorage
 const StorageService = (window.StorageService = {
   getNarratorId() {
@@ -492,14 +641,19 @@ const AIService = (window.AIService = {
       });
 
       if (!response.ok) {
-        console.error(`Backend API error: ${response.status}`);
+        console.log(`Backend API error: ${response.status} - will use fallback`);
         return null;
       }
 
       const data = await response.json();
       return data.success ? data.content : null;
     } catch (error) {
-      console.error('AI service error:', error);
+      // Don't log scary errors - let the calling function handle fallback gracefully
+      if (error.message.includes('timed out')) {
+        console.log('⏰ AI request timed out - caller will use fallback mode');
+      } else {
+        console.log('AI service unavailable - caller will use fallback mode');
+      }
       return null;
     }
   },
@@ -767,6 +921,11 @@ const AIService = (window.AIService = {
   },
 
   async generateOptionVariations(questionText, options) {
+    if (!CONFIG.ENABLE_AI) {
+      console.log('%c🎲 OPTIONS (Fallback - AI Disabled)', 'color: #ff0; font-weight: bold');
+      return options.map((opt) => opt.text);
+    }
+
     const optionDescriptions = options
       .map((opt) => `Value: "${opt.value}", Default text: "${opt.text}"`)
       .join('\n');
@@ -783,6 +942,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
       'You are a creative D&D character creation assistant. Generate engaging option text that feels fresh but maintains the same meaning. ' +
       'Be concise and direct. Return ONLY valid JSON.';
 
+    console.log('%c🎲 OPTIONS: Calling backend AI...', 'color: #0ff; font-weight: bold');
+    console.log('  Note: Will fallback to original option texts if unavailable...');
+
     const response = await this.generateCompletion(prompt, systemPrompt);
 
     if (response) {
@@ -792,6 +954,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
         if (jsonMatch) {
           const variations = JSON.parse(jsonMatch[0]);
           if (Array.isArray(variations) && variations.length === options.length) {
+            console.log('%c🎲 OPTIONS (AI Generated) ✨', 'color: #0f0; font-weight: bold');
             return variations;
           }
         }
@@ -801,6 +964,8 @@ Format your response as JSON array of strings, one for each option in order. Exa
     }
 
     // Fallback: return original texts
+    console.log('%c🎲 OPTIONS (Fallback - Using Original Texts) ✅', 'color: #f80; font-weight: bold');
+    console.log('  The original option texts will be used instead of AI variations');
     return options.map((opt) => opt.text);
   },
 

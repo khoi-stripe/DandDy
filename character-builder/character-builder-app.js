@@ -2267,11 +2267,45 @@ const App = (window.App = {
     // Final update to ensure all text is shown
     element.textContent = currentText;
   },
+
+  // Show authentication screen (login or register)
+  showAuthScreen(mode = 'login') {
+    if (mode === 'login') {
+      AuthUI.showLogin(
+        // onSuccess
+        (user) => {
+          console.log('Login successful:', user);
+          dismissSplashAfterAuth(true);
+        },
+        // onSwitchToRegister
+        () => {
+          this.showAuthScreen('register');
+        },
+        // onGuestMode
+        () => {
+          dismissSplashAfterAuth(false);
+        }
+      );
+    } else if (mode === 'register') {
+      AuthUI.showRegister(
+        // onSuccess
+        (user) => {
+          console.log('Registration successful:', user);
+          dismissSplashAfterAuth(true);
+        },
+        // onSwitchToLogin
+        () => {
+          this.showAuthScreen('login');
+        }
+      );
+    }
+  },
 });
 
-// ===== SPLASH SCREEN / BOOTSTRAP =====
+// ===== AUTHENTICATION & SPLASH SCREEN / BOOTSTRAP =====
 
 let splashActive = true;
+let authHandled = false;
 let loadingInterval = null;
 
 const loadingMessages = [
@@ -2298,7 +2332,32 @@ function startLoadingAnimation() {
   }, 800);
 }
 
-function dismissSplash() {
+// Show auth options on splash screen
+function showAuthOptions() {
+  const splashPrompt = document.querySelector('.splash-prompt');
+  const splashActions = document.querySelector('.splash-actions');
+  
+  if (splashPrompt && splashActions) {
+    splashPrompt.style.display = 'none';
+    splashActions.style.display = 'block';
+    
+    // Add button handlers
+    document.getElementById('splash-login')?.addEventListener('click', () => {
+      App.showAuthScreen('login');
+    });
+    
+    document.getElementById('splash-register')?.addEventListener('click', () => {
+      App.showAuthScreen('register');
+    });
+    
+    document.getElementById('splash-guest')?.addEventListener('click', () => {
+      dismissSplashAfterAuth(false);
+    });
+  }
+}
+
+// Dismiss splash and start app (called after auth or as guest)
+function dismissSplashAfterAuth(isAuthenticated) {
   const splash = document.getElementById('splash-content');
   const mainContent = document.getElementById('main-content');
   const statusText = document.getElementById('status-text');
@@ -2312,9 +2371,12 @@ function dismissSplash() {
       loadingInterval = null;
     }
 
-    // Set to READY
-    if (statusText) {
-      statusText.textContent = 'READY';
+    // Update header
+    if (isAuthenticated) {
+      const user = AuthService.getCurrentUser();
+      AuthUI.updateHeaderWithUser(user);
+    } else {
+      AuthUI.showGuestBanner();
     }
 
     splash.style.opacity = '0';
@@ -2328,8 +2390,17 @@ function dismissSplash() {
   }
 }
 
+// Legacy function - now shows auth options first
+function dismissSplash() {
+  if (!authHandled) {
+    // First interaction - show auth options
+    authHandled = true;
+    showAuthOptions();
+  }
+}
+
 // Initialize on page load
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   // Start loading animation
   startLoadingAnimation();
   
@@ -2337,6 +2408,23 @@ window.addEventListener('DOMContentLoaded', () => {
   if (CONFIG.ENABLE_AI) {
     console.log('%c🚀 SPLASH: Waking up backend server early...', 'color: #0ff; font-weight: bold');
     AIService.warmupBackend();
+  }
+
+  // Check if user is already authenticated
+  if (AuthService.isAuthenticated()) {
+    console.log('User already authenticated, verifying token...');
+    const isValid = await AuthService.verifyToken();
+    if (isValid) {
+      // Auto-login with valid token
+      console.log('Token valid, auto-login successful');
+      // Show auth actions but with different messaging
+      authHandled = true; // Skip first auth prompt
+      dismissSplashAfterAuth(true);
+      return; // Skip splash screen interaction setup
+    } else {
+      console.log('Token invalid or expired, clearing auth');
+      AuthService.clearToken();
+    }
   }
 
   // Splash screen handlers
