@@ -347,6 +347,11 @@ const CharacterManager = (window.CharacterManager = {
           <button class="card-btn" data-action="edit" title="Edit Character">
             <span>✏️ EDIT</span>
           </button>
+          ${AuthService.isAuthenticated() && this.campaigns.length > 0 ? `
+          <button class="card-btn" data-action="assign-campaign" title="Assign to Campaign">
+            <span>📋 CAMPAIGN</span>
+          </button>
+          ` : ''}
           <button class="card-btn" data-action="duplicate" title="Duplicate Character">
             <span>📋 COPY</span>
           </button>
@@ -390,6 +395,9 @@ const CharacterManager = (window.CharacterManager = {
       case 'edit':
         this.editCharacter(char);
         break;
+      case 'assign-campaign':
+        await this.assignToCampaign(char);
+        break;
       case 'duplicate':
         await this.duplicateCharacter(char);
         break;
@@ -414,6 +422,83 @@ const CharacterManager = (window.CharacterManager = {
     console.log('Edit character:', char.name);
     // TODO: Load character in builder for editing
     alert(`Edit ${char.name} (Coming soon!)`);
+  },
+  
+  // Assign character to campaign
+  async assignToCampaign(char) {
+    if (!AuthService.isAuthenticated()) {
+      alert('Please log in to assign characters to campaigns');
+      return;
+    }
+    
+    if (this.campaigns.length === 0) {
+      alert('No campaigns available. Create a campaign first!');
+      return;
+    }
+    
+    // Build options HTML
+    const currentCampaignName = this.getCampaignName(char.campaignId) || 'None';
+    let optionsHTML = '<option value="">Unassigned</option>';
+    this.campaigns.forEach(campaign => {
+      const selected = campaign.id === char.campaignId ? 'selected' : '';
+      optionsHTML += `<option value="${campaign.id}" ${selected}>${campaign.name}</option>`;
+    });
+    
+    // Show modal with campaign selector
+    const modal = document.createElement('div');
+    modal.className = 'prompt-modal-overlay';
+    modal.innerHTML = `
+      <div class="prompt-modal">
+        <div class="prompt-title">ASSIGN TO CAMPAIGN</div>
+        <div class="prompt-message">
+          Character: <strong>${char.name}</strong><br>
+          Current: <strong>${currentCampaignName}</strong>
+        </div>
+        <div class="form-group">
+          <label class="form-label">[ SELECT CAMPAIGN ]</label>
+          <select id="campaign-select" class="terminal-select">
+            ${optionsHTML}
+          </select>
+        </div>
+        <div class="prompt-buttons">
+          <button class="prompt-modal-btn primary" id="assign-confirm">ASSIGN</button>
+          <button class="prompt-modal-btn" id="assign-cancel">CANCEL</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Handle confirm
+    document.getElementById('assign-confirm').addEventListener('click', async () => {
+      const select = document.getElementById('campaign-select');
+      const campaignId = select.value ? parseInt(select.value) : null;
+      
+      try {
+        await CharacterAPI.assignToCampaign(char.id, campaignId);
+        await this.loadData();
+        this.renderCharacterList();
+        modal.remove();
+        
+        const campaignName = campaignId ? this.getCampaignName(campaignId) : 'Unassigned';
+        alert(`✅ ${char.name} assigned to: ${campaignName}`);
+      } catch (error) {
+        alert(`❌ Failed to assign character: ${error.message}`);
+        modal.remove();
+      }
+    });
+    
+    // Handle cancel
+    document.getElementById('assign-cancel').addEventListener('click', () => {
+      modal.remove();
+    });
+    
+    // Handle escape key
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
   },
   
   // Duplicate character
