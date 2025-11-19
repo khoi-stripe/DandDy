@@ -2384,8 +2384,14 @@ function dismissSplashAfterAuth(isAuthenticated) {
 
     setTimeout(() => {
       splash.remove();
-      mainContent.classList.remove('is-hidden');
-      App.init();
+      
+      // Authenticated users go to character manager, guests go to character builder
+      if (isAuthenticated) {
+        CharacterManager.show();
+      } else {
+        mainContent.classList.remove('is-hidden');
+        App.init();
+      }
     }, 300);
   }
 }

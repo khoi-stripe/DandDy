@@ -290,7 +290,12 @@ const AuthUI = (window.AuthUI = {
     const statusText = document.getElementById('status-text');
     if (statusText && user) {
       const roleIcon = user.role === 'dm' ? '🎲' : '⚔️';
-      statusText.innerHTML = `${roleIcon} ${user.username.toUpperCase()} | <button class="link-button" id="header-logout">LOGOUT</button>`;
+      statusText.innerHTML = `${roleIcon} ${user.username.toUpperCase()} | <button class="link-button" id="header-characters">MY CHARACTERS</button> | <button class="link-button" id="header-logout">LOGOUT</button>`;
+      
+      // Add characters button handler
+      document.getElementById('header-characters')?.addEventListener('click', () => {
+        CharacterManager.show();
+      });
       
       // Add logout handler
       document.getElementById('header-logout')?.addEventListener('click', () => {
