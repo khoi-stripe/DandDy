@@ -28,6 +28,13 @@ window.CONFIG = {
   
   STORAGE_KEY: 'dnd_characters',
   MAX_RETRIES: 2,
+  
+  // DEV MODE: Auto-login for development
+  DEV_AUTO_LOGIN: isLocalDevelopment,
+  DEV_CREDENTIALS: {
+    email: 'dev@test.com',
+    password: 'dev123',
+  },
 };
 
 

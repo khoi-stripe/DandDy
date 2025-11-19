@@ -2416,6 +2416,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     AIService.warmupBackend();
   }
 
+  // DEV MODE: Auto-login for development
+  if (CONFIG.DEV_AUTO_LOGIN && !AuthService.isAuthenticated()) {
+    console.log('%c🔧 DEV MODE: Auto-login enabled', 'color: #ff0; font-weight: bold');
+    try {
+      const user = await AuthService.login(CONFIG.DEV_CREDENTIALS.email, CONFIG.DEV_CREDENTIALS.password);
+      console.log('%c✅ DEV MODE: Auto-logged in as', user.username, 'color: #0f0; font-weight: bold');
+      authHandled = true;
+      dismissSplashAfterAuth(true);
+      return;
+    } catch (error) {
+      console.log('%c⚠️  DEV MODE: Auto-login failed, user needs to be created first', 'color: #f80; font-weight: bold');
+      console.log('   Create account via browser: Login → Register with dev@test.com / dev123');
+      // Fall through to normal flow
+    }
+  }
+  
   // Check if user is already authenticated
   if (AuthService.isAuthenticated()) {
     console.log('User already authenticated, verifying token...');

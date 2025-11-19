@@ -35,11 +35,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(auth.router)
-app.include_router(characters.router)
-app.include_router(campaigns.router)
-app.include_router(ai.router)
+# Include routers with /api prefix
+app.include_router(auth.router, prefix="/api")
+app.include_router(characters.router, prefix="/api")
+app.include_router(campaigns.router, prefix="/api")
+app.include_router(ai.router, prefix="/api")
 
 @app.get("/")
 def root():
