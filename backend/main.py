@@ -18,19 +18,24 @@ app = FastAPI(
 )
 
 # Get allowed origins from environment or use defaults
-# For development, allow all origins. In production, specify exact origins.
+# For development, allow localhost. In production, specify exact origins.
 if os.getenv("PRODUCTION"):
     allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
     allowed_origins = allowed_origins_str.split(",") if allowed_origins_str else []
 else:
-    # Development mode - allow all origins
-    allowed_origins = ["*"]
+    # Development mode - allow localhost with various ports
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ]
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True if allowed_origins != ["*"] else False,  # credentials=True requires specific origins
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
