@@ -304,7 +304,7 @@ const AuthService = (window.AuthService = {
   },
 });
 
-// Storage service for localStorage
+// Storage service - uses API when authenticated, localStorage for guest mode
 const StorageService = (window.StorageService = {
   getNarratorId() {
     const value = localStorage.getItem('dnd_narrator_id');
@@ -315,27 +315,148 @@ const StorageService = (window.StorageService = {
     localStorage.setItem('dnd_narrator_id', narratorId);
   },
 
-  getCharacters() {
+  // ==== CHARACTER STORAGE (API + localStorage hybrid) ====
+  
+  // Get all characters (API if authenticated, localStorage if guest)
+  async getCharacters() {
+    if (AuthService.isAuthenticated()) {
+      try {
+        const characters = await CharacterAPI.getCharacters();
+        // Cache in localStorage for offline access
+        this._cacheCharactersLocally(characters);
+        return characters;
+      } catch (error) {
+        console.error('Failed to fetch characters from API, using cache:', error);
+        return this._getCharactersFromLocalStorage();
+      }
+    } else {
+      return this._getCharactersFromLocalStorage();
+    }
+  },
+  
+  // Save character (API if authenticated, localStorage if guest)
+  async saveCharacter(character) {
+    if (AuthService.isAuthenticated()) {
+      try {
+        let savedCharacter;
+        if (character.id && character._backendData) {
+          // Update existing character
+          savedCharacter = await CharacterAPI.updateCharacter(character.id, character);
+        } else {
+          // Create new character
+          savedCharacter = await CharacterAPI.createCharacter(character);
+        }
+        
+        // Cache in localStorage
+        this._cacheCharacterLocally(savedCharacter);
+        return savedCharacter;
+      } catch (error) {
+        console.error('Failed to save character to API, saving locally:', error);
+        return this._saveCharacterToLocalStorage(character);
+      }
+    } else {
+      return this._saveCharacterToLocalStorage(character);
+    }
+  },
+  
+  // Delete character (API if authenticated, localStorage if guest)
+  async deleteCharacter(id) {
+    if (AuthService.isAuthenticated()) {
+      try {
+        await CharacterAPI.deleteCharacter(id);
+        this._deleteCharacterFromLocalStorage(id);
+        return true;
+      } catch (error) {
+        console.error('Failed to delete character from API:', error);
+        throw error;
+      }
+    } else {
+      this._deleteCharacterFromLocalStorage(id);
+      return true;
+    }
+  },
+  
+  // ==== LOCALSTORAGE HELPERS (private) ====
+  
+  _getCharactersFromLocalStorage() {
     const data = localStorage.getItem(CONFIG.STORAGE_KEY);
     return data ? JSON.parse(data) : [];
   },
-
-  saveCharacter(character) {
-    const characters = this.getCharacters();
+  
+  _saveCharacterToLocalStorage(character) {
+    const characters = this._getCharactersFromLocalStorage();
+    
+    // Assign a temporary ID if none exists (for guest mode)
+    if (!character.id) {
+      character.id = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+    
     const index = characters.findIndex((c) => c.id === character.id);
-
+    
     if (index >= 0) {
       characters[index] = character;
     } else {
       characters.push(character);
     }
-
+    
+    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(characters));
+    return character;
+  },
+  
+  _deleteCharacterFromLocalStorage(id) {
+    const characters = this._getCharactersFromLocalStorage().filter((c) => c.id !== id);
     localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(characters));
   },
-
-  deleteCharacter(id) {
-    const characters = this.getCharacters().filter((c) => c.id !== id);
-    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(characters));
+  
+  _cacheCharactersLocally(characters) {
+    localStorage.setItem(CONFIG.STORAGE_KEY + '_cache', JSON.stringify(characters));
+  },
+  
+  _cacheCharacterLocally(character) {
+    const cached = this._getCharactersFromLocalStorage();
+    const index = cached.findIndex((c) => c.id === character.id);
+    
+    if (index >= 0) {
+      cached[index] = character;
+    } else {
+      cached.push(character);
+    }
+    
+    this._cacheCharactersLocally(cached);
+  },
+  
+  // ==== MIGRATION HELPER ====
+  
+  // Migrate localStorage characters to backend (one-time operation)
+  async migrateToBackend() {
+    if (!AuthService.isAuthenticated()) {
+      throw new Error('Must be authenticated to migrate characters');
+    }
+    
+    const localCharacters = this._getCharactersFromLocalStorage();
+    const migrated = [];
+    const failed = [];
+    
+    for (const character of localCharacters) {
+      // Skip if already has a backend ID (not a local temp ID)
+      if (character.id && !String(character.id).startsWith('local_')) {
+        continue;
+      }
+      
+      try {
+        // Remove temporary local ID before creating
+        const charToMigrate = { ...character };
+        delete charToMigrate.id;
+        
+        const saved = await CharacterAPI.createCharacter(charToMigrate);
+        migrated.push(saved);
+      } catch (error) {
+        console.error('Failed to migrate character:', character.name, error);
+        failed.push({ character, error: error.message });
+      }
+    }
+    
+    return { migrated, failed };
   },
 });
 
