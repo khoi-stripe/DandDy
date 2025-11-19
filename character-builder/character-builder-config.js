@@ -34,6 +34,7 @@ window.CONFIG = {
   DEV_CREDENTIALS: {
     email: 'dev@test.com',
     password: 'dev123',
+    role: 'player', // lowercase - will be converted by backend
   },
 };
 
