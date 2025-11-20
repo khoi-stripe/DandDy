@@ -122,6 +122,17 @@ const KeyboardNav = (window.KeyboardNav = {
     this.updateFocus();
   },
 
+  // Horizontal navigation mirrors vertical movement for now:
+  // buttons are laid out linearly, but when they appear side by side,
+  // Left/Right should feel like moving between siblings.
+  moveLeft() {
+    this.moveUp();
+  },
+
+  moveRight() {
+    this.moveDown();
+  },
+
   select() {
     if (!this.isActive) return;
     const buttons = this.getActiveButtons();
@@ -641,9 +652,15 @@ const App = (window.App = {
     await Utils.typewriter(messageEl, completionText);
     Utils.scrollToBottom(true);
 
-    // Save character
+    // Save character once it's complete, and store the saved version (with ID)
     const state = CharacterState.get();
-    StorageService.saveCharacter(state.character);
+    try {
+      const saved = await StorageService.saveCharacter(state.character);
+      // Persist saved character (including assigned ID / backend fields) back into state
+      CharacterState.updateCharacter(saved);
+    } catch (error) {
+      console.error('Error saving completed character:', error);
+    }
 
     // Show completion options
     narratorPanel.insertAdjacentHTML(
@@ -662,6 +679,24 @@ const App = (window.App = {
 
     // Activate keyboard navigation
     KeyboardNav.activate();
+  },
+
+  // Persist changes to shared storage only after a character has been saved once.
+  // This keeps manager in sync for post-completion edits (rename, level, portrait, etc.)
+  async persistIfAlreadySaved() {
+    const state = CharacterState.get();
+    const character = state.character;
+    
+    // If there's no ID yet, this character hasn't been saved to shared storage.
+    if (!character || !character.id) {
+      return;
+    }
+    
+    try {
+      await StorageService.saveCharacter(character);
+    } catch (error) {
+      console.error('Error persisting character changes:', error);
+    }
   },
 
   async handleListAnswer(questionId, displayIndex) {
@@ -1113,18 +1148,18 @@ const App = (window.App = {
       if (response.ok) {
         const data = await response.json();
         if (data.available) {
-          statusElement.textContent = '✅ Connected & Ready';
+          statusElement.textContent = '● Connected & Ready';
           statusElement.style.color = '#0f0';
         } else {
-          statusElement.textContent = '⚠️  Connected (No API Key)';
+          statusElement.textContent = '▲ Connected (No API Key)';
           statusElement.style.color = '#ff0';
         }
       } else {
-        statusElement.textContent = '❌ Offline';
+        statusElement.textContent = '× Offline';
         statusElement.style.color = '#f00';
       }
     } catch (error) {
-      statusElement.textContent = '❌ Cannot Connect';
+      statusElement.textContent = '× Cannot Connect';
       statusElement.style.color = '#f00';
       console.error('Backend status check failed:', error);
     }
@@ -1210,7 +1245,7 @@ const App = (window.App = {
       <div class="prompt-modal-overlay" id="prompt-modal-overlay">
         <div class="prompt-modal" onclick="event.stopPropagation();">
           <div class="prompt-modal-header">
-            <span>✨ Customize AI Portrait</span>
+            <span>★ Customize AI Portrait</span>
             <button class="prompt-modal-close" onclick="App.closePromptModal(false)">×</button>
           </div>
           
@@ -1408,35 +1443,215 @@ const App = (window.App = {
       // Switch to original
       asciiPortrait.style.display = 'none';
       originalPortrait.style.display = 'block';
-      toggleBtn.textContent = '📝 View ASCII Art';
+      toggleBtn.textContent = '≡ View ASCII Art';
       toggleBtn.title = 'Toggle between ASCII and original art';
     } else {
       // Switch to ASCII
       asciiPortrait.style.display = 'block';
       originalPortrait.style.display = 'none';
-      toggleBtn.textContent = '👁 View Original Art';
+      toggleBtn.textContent = '◉ View Original Art';
       toggleBtn.title = 'Toggle between ASCII and original art';
     }
   },
 
   exportCharacter() {
+    console.log('🔥 EXPORT CALLED - Starting export process...');
     const state = CharacterState.get();
-    const characterJson = JSON.stringify(state.character, null, 2);
-    const blob = new Blob([characterJson], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${state.character.name || 'dnd-character'}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    console.log('🔥 Raw character state:', state.character);
+    
+    try {
+      const completeCharacter = this.buildCompleteCharacter(state.character);
+      console.log('🔥 Complete character built:', completeCharacter);
+      console.log('🔥 Portrait data:', completeCharacter.portrait);
+      
+      const characterJson = JSON.stringify(completeCharacter, null, 2);
+      console.log('🔥 JSON length:', characterJson.length);
+      
+      const blob = new Blob([characterJson], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${state.character.name || 'dnd-character'}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
-    const narratorPanel = document.getElementById('narrator-panel');
-    narratorPanel.innerHTML += Components.renderNarratorMessage(
-      'Character exported as JSON. Check your downloads!',
-    );
-    Utils.scrollToBottom(true);
+      const narratorPanel = document.getElementById('narrator-panel');
+      narratorPanel.innerHTML += Components.renderNarratorMessage(
+        'Character exported as JSON with complete stats and ASCII art. Check your downloads!',
+      );
+      Utils.scrollToBottom(true);
+    } catch (error) {
+      console.error('🔥 EXPORT ERROR:', error);
+      alert('Export failed: ' + error.message);
+    }
+  },
+
+  buildCompleteCharacter(character) {
+    // Get data from DND_DATA
+    const race = DND_DATA.races.find((r) => r.id === character.race);
+    const classData = DND_DATA.classes.find((c) => c.id === character.class);
+    const background = DND_DATA.backgrounds.find((b) => b.id === character.background);
+
+    // Calculate ability modifiers
+    const abilityMods = {
+      str: Utils.abilityModifier(character.abilities.str),
+      dex: Utils.abilityModifier(character.abilities.dex),
+      con: Utils.abilityModifier(character.abilities.con),
+      int: Utils.abilityModifier(character.abilities.int),
+      wis: Utils.abilityModifier(character.abilities.wis),
+      cha: Utils.abilityModifier(character.abilities.cha)
+    };
+
+    // Calculate derived stats
+    const proficiencyBonus = Math.ceil(character.level / 4) + 1;
+    const initiative = abilityMods.dex;
+    const armorClass = 10 + abilityMods.dex; // Base AC (can be enhanced with armor)
+    const speed = race?.speed || 30;
+
+    // Calculate HP (if not already set)
+    const hitPoints = character.hitPoints || (classData ? classData.hitDie + abilityMods.con : 0);
+
+    // Build skill modifiers
+    const skills = {};
+    if (character.skillProficiencies) {
+      character.skillProficiencies.forEach(skill => {
+        const abilityForSkill = this.getSkillAbility(skill);
+        const abilityMod = abilityMods[abilityForSkill];
+        skills[skill] = abilityMod + proficiencyBonus;
+      });
+    }
+
+    // Get portrait data
+    const portraitContainer = document.getElementById('character-portrait');
+    console.log('🎨 Export Debug - portraitContainer:', portraitContainer);
+    console.log('🎨 Export Debug - portraitContainer.textContent:', portraitContainer ? portraitContainer.textContent : 'NO CONTAINER');
+    
+    const portraitElement = portraitContainer ? portraitContainer.querySelector('pre') : null;
+    const asciiArt = portraitElement ? portraitElement.textContent : (portraitContainer ? portraitContainer.textContent.trim() : null);
+    console.log('🎨 Export Debug - asciiArt length:', asciiArt ? asciiArt.length : 0);
+    console.log('🎨 Export Debug - asciiArt preview:', asciiArt ? asciiArt.substring(0, 100) : 'NULL');
+    
+    const originalPortrait = character.portrait?.url || character.portraitUrl || character.originalPortraitUrl || null;
+    
+    // Get ASCII art from various possible sources
+    const portraitAscii = character.customPortraitAscii || character.asciiPortrait || asciiArt || null;
+
+    // Ensure character has a stable UID for cross-app identity
+    let stableUid = character.characterUid;
+    if (!stableUid) {
+      stableUid = `danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      if (window.CharacterState) {
+        window.CharacterState.updateCharacter({ characterUid: stableUid });
+      } else {
+        character.characterUid = stableUid;
+      }
+    }
+
+    // Build complete character object
+    return {
+      // Export metadata (used by Character Manager to detect true duplicates)
+      metadata: {
+        exportVersion: '1.1',
+        exportDate: new Date().toISOString(),
+        exportedBy: 'DandDy Character Builder v1.4',
+        characterUid: stableUid,
+        source: 'builder',
+      },
+
+      // Basic info (original)
+      ...character,
+
+      // Normalized portrait object for compatibility with character manager
+      portrait: portraitAscii || originalPortrait ? {
+        ascii: portraitAscii,
+        url: originalPortrait
+      } : null,
+
+      // Calculated stats
+      abilityModifiers: abilityMods,
+      proficiencyBonus,
+      initiative,
+      armorClass,
+      speed,
+      hitPoints,
+
+      // Skills with modifiers
+      skillModifiers: skills,
+
+      // Saving throws
+      savingThrows: classData?.savingThrows || [],
+      savingThrowModifiers: this.calculateSavingThrows(abilityMods, classData?.savingThrows || [], proficiencyBonus),
+
+      // Derived data from DND_DATA
+      raceData: race ? {
+        name: race.name,
+        size: race.size,
+        speed: race.speed,
+        traits: race.traits,
+        languages: race.languages
+      } : null,
+
+      classData: classData ? {
+        name: classData.name,
+        hitDie: classData.hitDie,
+        primaryAbility: classData.primaryAbility,
+        savingThrows: classData.savingThrows,
+        skills: classData.skills,
+        equipment: classData.equipment,
+        spellcaster: classData.spellcaster || false
+      } : null,
+
+      backgroundData: background ? {
+        name: background.name,
+        description: background.description,
+        feature: background.feature,
+        skillProficiencies: background.skillProficiencies,
+        toolProficiencies: background.toolProficiencies,
+        languages: background.languages,
+        equipment: background.equipment
+      } : null,
+
+      // Portrait data
+      portrait: {
+        ascii: asciiArt,
+        original: originalPortrait
+      }
+    };
+  },
+
+  getSkillAbility(skill) {
+    const skillAbilities = {
+      'acrobatics': 'dex',
+      'animal-handling': 'wis',
+      'arcana': 'int',
+      'athletics': 'str',
+      'deception': 'cha',
+      'history': 'int',
+      'insight': 'wis',
+      'intimidation': 'cha',
+      'investigation': 'int',
+      'medicine': 'wis',
+      'nature': 'int',
+      'perception': 'wis',
+      'performance': 'cha',
+      'persuasion': 'cha',
+      'religion': 'int',
+      'sleight-of-hand': 'dex',
+      'stealth': 'dex',
+      'survival': 'wis'
+    };
+    return skillAbilities[skill] || 'str';
+  },
+
+  calculateSavingThrows(abilityMods, savingThrows, proficiencyBonus) {
+    const saves = {};
+    ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(ability => {
+      const isProficient = savingThrows.includes(ability);
+      saves[ability] = abilityMods[ability] + (isProficient ? proficiencyBonus : 0);
+    });
+    return saves;
   },
 
   printCharacterSheet() {
@@ -1633,6 +1848,9 @@ const App = (window.App = {
     this.showSystemMessage(
       `Level set to ${newLevel}. Ability scores and hit points have been re-rolled.`,
     );
+
+    // Persist level/stat changes so manager stays in sync
+    await this.persistIfAlreadySaved();
   },
 
   // ===== NAME CHANGE =====
@@ -1749,6 +1967,9 @@ const App = (window.App = {
       ),
     );
     Utils.scrollToBottom(true);
+
+    // Persist rename so manager sees updated name
+    await this.persistIfAlreadySaved();
   },
 
   // ===== QUICK CREATE MODE =====
@@ -1938,7 +2159,8 @@ const App = (window.App = {
         this._lastPortraitArt = null; // Reset portrait tracking for new character
         document.getElementById('narrator-panel').innerHTML = ''; // Clear narrator
         document.getElementById('character-panel').innerHTML = ''; // Clear character sheet
-        this.showQuestion('intro');
+        // Skip intro and go directly to entry-mode for returning users
+        this.showQuestion('entry-mode');
       },
     );
   },
@@ -2268,38 +2490,6 @@ const App = (window.App = {
     element.textContent = currentText;
   },
 
-  // Show authentication screen (login or register)
-  showAuthScreen(mode = 'login') {
-    if (mode === 'login') {
-      AuthUI.showLogin(
-        // onSuccess
-        (user) => {
-          console.log('Login successful:', user);
-          dismissSplashAfterAuth(true);
-        },
-        // onSwitchToRegister
-        () => {
-          this.showAuthScreen('register');
-        },
-        // onGuestMode
-        () => {
-          dismissSplashAfterAuth(false);
-        }
-      );
-    } else if (mode === 'register') {
-      AuthUI.showRegister(
-        // onSuccess
-        (user) => {
-          console.log('Registration successful:', user);
-          dismissSplashAfterAuth(true);
-        },
-        // onSwitchToLogin
-        () => {
-          this.showAuthScreen('login');
-        }
-      );
-    }
-  },
 });
 
 // ===== AUTHENTICATION & SPLASH SCREEN / BOOTSTRAP =====
@@ -2332,32 +2522,9 @@ function startLoadingAnimation() {
   }, 800);
 }
 
-// Show auth options on splash screen
-function showAuthOptions() {
-  const splashPrompt = document.querySelector('.splash-prompt');
-  const splashActions = document.querySelector('.splash-actions');
-  
-  if (splashPrompt && splashActions) {
-    splashPrompt.style.display = 'none';
-    splashActions.style.display = 'block';
-    
-    // Add button handlers
-    document.getElementById('splash-login')?.addEventListener('click', () => {
-      App.showAuthScreen('login');
-    });
-    
-    document.getElementById('splash-register')?.addEventListener('click', () => {
-      App.showAuthScreen('register');
-    });
-    
-    document.getElementById('splash-guest')?.addEventListener('click', () => {
-      dismissSplashAfterAuth(false);
-    });
-  }
-}
 
-// Dismiss splash and start app (called after auth or as guest)
-function dismissSplashAfterAuth(isAuthenticated) {
+// Dismiss splash screen and start the character builder
+function dismissSplash() {
   const splash = document.getElementById('splash-content');
   const mainContent = document.getElementById('main-content');
   const statusText = document.getElementById('status-text');
@@ -2368,40 +2535,20 @@ function dismissSplashAfterAuth(isAuthenticated) {
     // Stop loading animation
     if (loadingInterval) {
       clearInterval(loadingInterval);
-      loadingInterval = null;
     }
 
-    // Update header
-    if (isAuthenticated) {
-      const user = AuthService.getCurrentUser();
-      AuthUI.updateHeaderWithUser(user);
-    } else {
-      AuthUI.showGuestBanner();
+    // Update status
+    if (statusText) {
+      statusText.textContent = 'READY';
     }
 
+    // Fade out splash screen
     splash.style.opacity = '0';
-    splash.style.transition = 'opacity 0.3s ease-out';
-
     setTimeout(() => {
-      splash.remove();
-      
-      // Authenticated users go to character manager, guests go to character builder
-      if (isAuthenticated) {
-        CharacterManager.show();
-      } else {
-        mainContent.classList.remove('is-hidden');
-        App.init();
-      }
+      splash.style.display = 'none';
+      mainContent.classList.remove('is-hidden');
+      App.init();
     }, 300);
-  }
-}
-
-// Legacy function - now shows auth options first
-function dismissSplash() {
-  if (!authHandled) {
-    // First interaction - show auth options
-    authHandled = true;
-    showAuthOptions();
   }
 }
 
@@ -2414,39 +2561,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (CONFIG.ENABLE_AI) {
     console.log('%c🚀 SPLASH: Waking up backend server early...', 'color: #0ff; font-weight: bold');
     AIService.warmupBackend();
-  }
-
-  // DEV MODE: Auto-login for development
-  if (CONFIG.DEV_AUTO_LOGIN && !AuthService.isAuthenticated()) {
-    console.log('%c🔧 DEV MODE: Auto-login enabled', 'color: #ff0; font-weight: bold');
-    try {
-      const user = await AuthService.login(CONFIG.DEV_CREDENTIALS.email, CONFIG.DEV_CREDENTIALS.password);
-      console.log('%c✅ DEV MODE: Auto-logged in as', user.username, 'color: #0f0; font-weight: bold');
-      authHandled = true;
-      dismissSplashAfterAuth(true);
-      return;
-    } catch (error) {
-      console.log('%c⚠️  DEV MODE: Auto-login failed, user needs to be created first', 'color: #f80; font-weight: bold');
-      console.log('   Create account via browser: Login → Register with dev@test.com / dev123');
-      // Fall through to normal flow
-    }
-  }
-  
-  // Check if user is already authenticated
-  if (AuthService.isAuthenticated()) {
-    console.log('User already authenticated, verifying token...');
-    const isValid = await AuthService.verifyToken();
-    if (isValid) {
-      // Auto-login with valid token
-      console.log('Token valid, auto-login successful');
-      // Show auth actions but with different messaging
-      authHandled = true; // Skip first auth prompt
-      dismissSplashAfterAuth(true);
-      return; // Skip splash screen interaction setup
-    } else {
-      console.log('Token invalid or expired, clearing auth');
-      AuthService.clearToken();
-    }
   }
 
   // Splash screen handlers
@@ -2482,6 +2596,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       KeyboardNav.moveDown();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      KeyboardNav.moveLeft();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      KeyboardNav.moveRight();
     } else if (e.key === 'Enter') {
       e.preventDefault();
       KeyboardNav.select();

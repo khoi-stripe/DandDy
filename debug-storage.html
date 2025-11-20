@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storage Debugger - DandDy</title>
+    <link rel="stylesheet" href="terminal-theme.css">
+    <style>
+        body {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .character-item {
+            background: rgba(0, 255, 0, 0.05);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .character-item h3 {
+            margin-top: 0;
+            color: #0f0;
+        }
+        .character-details {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #0f0;
+            margin: 10px 0;
+        }
+        .btn-delete {
+            background: #f00;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            border-radius: 3px;
+        }
+        .btn-delete:hover {
+            background: #c00;
+        }
+        .btn-clear-all {
+            background: #ff6600;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            border-radius: 3px;
+            margin: 20px 0;
+        }
+        .btn-clear-all:hover {
+            background: #cc5500;
+        }
+        .info-box {
+            background: rgba(0, 150, 255, 0.1);
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            color: #0cf;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Storage Debugger</h1>
+    
+    <div class="info-box">
+        <strong>Purpose:</strong> This tool shows all characters in your browser's localStorage and lets you delete them individually or clear all storage.
+    </div>
+    
+    <button class="btn-clear-all" onclick="clearAllStorage()">⚠️ CLEAR ALL CHARACTER DATA</button>
+    
+    <div id="characterList"></div>
+    
+    <script>
+        const STORAGE_KEY = 'dnd_characters';
+        
+        function loadCharacters() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            const characters = data ? JSON.parse(data) : [];
+            
+            console.log('📦 Found', characters.length, 'characters in localStorage');
+            
+            const listEl = document.getElementById('characterList');
+            
+            if (characters.length === 0) {
+                listEl.innerHTML = '<div class="info-box">No characters found in localStorage.</div>';
+                return;
+            }
+            
+            listEl.innerHTML = `<h2>Characters (${characters.length} total)</h2>` + 
+                characters.map((char, index) => `
+                    <div class="character-item">
+                        <h3>${char.name || 'Unnamed'}</h3>
+                        <div class="character-details">
+                            <strong>ID:</strong> ${char.id || 'N/A'}<br>
+                            <strong>Race:</strong> ${char.race || char.raceData?.name || 'Unknown'}<br>
+                            <strong>Class:</strong> ${char.class || char.classData?.name || 'Unknown'}<br>
+                            <strong>Level:</strong> ${char.level || 1}<br>
+                            <strong>Character UID:</strong> ${char.characterUid || char.metadata?.characterUid || 'N/A'}<br>
+                            <strong>Created:</strong> ${char.createdAt || 'Unknown'}<br>
+                            <strong>Index in array:</strong> ${index}
+                        </div>
+                        <button class="btn-delete" onclick="deleteCharacter('${char.id}', ${index})">
+                            🗑️ DELETE "${char.name || 'Unnamed'}"
+                        </button>
+                    </div>
+                `).join('');
+        }
+        
+        function deleteCharacter(id, index) {
+            const data = localStorage.getItem(STORAGE_KEY);
+            const characters = data ? JSON.parse(data) : [];
+            const char = characters[index];
+            
+            if (!char) {
+                alert('Character not found!');
+                return;
+            }
+            
+            if (!confirm(`Delete "${char.name}"?\n\nID: ${id}\nIndex: ${index}\n\nThis cannot be undone.`)) {
+                return;
+            }
+            
+            console.log('🗑️ Deleting character:', char.name, 'at index', index);
+            
+            // Filter by ID
+            const filtered = characters.filter(c => c.id !== id);
+            
+            console.log('Before:', characters.length, 'After:', filtered.length);
+            
+            if (filtered.length === characters.length) {
+                // ID didn't work, try removing by index
+                console.warn('ID filter failed, removing by index instead');
+                characters.splice(index, 1);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(characters));
+            } else {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+            }
+            
+            alert(`Deleted: ${char.name}`);
+            loadCharacters();
+        }
+        
+        function clearAllStorage() {
+            if (!confirm('⚠️ DELETE ALL CHARACTERS?\n\nThis will remove ALL character data from localStorage.\n\nThis cannot be undone!')) {
+                return;
+            }
+            
+            if (!confirm('Are you ABSOLUTELY SURE?\n\nThis is your last chance!')) {
+                return;
+            }
+            
+            console.log('🧹 Clearing all character storage');
+            localStorage.removeItem(STORAGE_KEY);
+            alert('✅ All character data cleared!');
+            loadCharacters();
+        }
+        
+        // Load on page load
+        loadCharacters();
+    </script>
+</body>
+</html>
+

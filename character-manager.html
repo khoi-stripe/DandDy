@@ -65,8 +65,8 @@
         <div class="header-content">
             <div class="terminal-title">[ DandDy CHARACTER MANAGER v1.0 ]</div>
             <div class="header-actions">
-                <button id="importBtn" class="button-secondary">↓ IMPORT</button>
-                <button id="newCharacterBtn" class="button-secondary">+ NEW CHARACTER</button>
+                <button id="importBtn" class="button-primary">↓ IMPORT</button>
+                <button id="newCharacterBtn" class="button-primary">+ NEW CHARACTER</button>
             </div>
         </div>
     </header>
@@ -80,11 +80,6 @@
                 <div class="search-bar">
                     <input type="text" id="searchInput" class="terminal-input" placeholder="⌕ Search characters...">
                 </div>
-            </div>
-
-            <!-- Character Count -->
-            <div class="character-count">
-                <span id="countText">0 characters</span>
             </div>
 
             <!-- Character Grid -->
@@ -133,10 +128,29 @@
         </div>
     </div>
 
+    <!-- Duplicate Resolution Modal -->
+    <div id="duplicateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">⚠ Duplicate Character Detected</h2>
+            </div>
+            <div class="modal-body">
+                <p class="terminal-text">A character named "<span id="duplicateCharName"></span>" already exists in your collection.</p>
+                <p class="terminal-text" style="margin-top: var(--spacing-md);">What would you like to do?</p>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: var(--spacing-sm); justify-content: center;">
+                <button class="terminal-btn" onclick="closeDuplicateModal()">CANCEL</button>
+                <button class="terminal-btn terminal-btn-warning" onclick="resolveDuplicate('overwrite')">REPLACE EXISTING</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="resolveDuplicate('keep-both')">KEEP BOTH</button>
+            </div>
+        </div>
+    </div>
+
     </div><!-- /main-content -->
     
     </div><!-- /terminal-frame -->
     
+    <script src="shared-character-sheet.js"></script>
     <script src="character-manager.js"></script>
 </body>
 </html>

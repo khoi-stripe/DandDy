@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import openai
 from database.database import get_settings
 
-router = APIRouter(prefix="/api/ai", tags=["AI"])
+router = APIRouter(tags=["AI"])
 
 # Rate limiting in-memory storage (use Redis in production)
 _rate_limit_store = defaultdict(list)

@@ -53,6 +53,9 @@ const CharacterState = (window.CharacterState = {
     abilityMethod: null,
     answers: {},
     character: {
+      // Stable identity for this character across renames/exports/imports
+      // Used by Character Manager to detect "this is the same character"
+      characterUid: null,
       name: '',
       race: '',
       class: '',
@@ -111,6 +114,8 @@ const CharacterState = (window.CharacterState = {
       abilityMethod: null,
       answers: {},
       character: {
+        // Generate a fresh stable UID for this new character
+        characterUid: `danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: '',
         race: '',
         class: '',

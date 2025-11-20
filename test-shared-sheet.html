@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Shared Character Sheet</title>
+    <link rel="stylesheet" href="terminal-theme.css">
+    <link rel="stylesheet" href="character-builder/character-builder.css">
+    <link rel="stylesheet" href="character-manager.css">
+    <style>
+        body {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #0f0;
+            border-radius: 4px;
+        }
+        .test-title {
+            font-size: 24px;
+            color: #0f0;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+        }
+        .split-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .error {
+            color: #f00;
+            padding: 10px;
+            background: #300;
+            border: 1px solid #f00;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .success {
+            color: #0f0;
+            padding: 10px;
+            background: #030;
+            border: 1px solid #0f0;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="color: #0f0; font-family: 'Courier New', monospace;">Unified Character Sheet Test</h1>
+    
+    <div class="test-section">
+        <div class="test-title">[ COMPONENT LOADING TEST ]</div>
+        <div id="load-status">Testing...</div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">[ FORMATTING VERIFICATION ]</div>
+        <p style="color: #0f0;">Both contexts should have IDENTICAL formatting. Only the action buttons should differ.</p>
+        <div style="margin: 10px 0; padding: 10px; background: #030; border: 1px solid #0f0; border-radius: 4px;">
+            <strong>Expected Differences:</strong><br>
+            <strong>Builder:</strong> RENAME, CHANGE LEVEL, PRINT, Custom AI Portrait, Toggle View<br>
+            <strong>Manager:</strong> RENAME, COPY, EXPORT, DELETE, Custom AI Portrait, View Original
+        </div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-title">[ SIDE-BY-SIDE COMPARISON ]</div>
+        <div class="split-view">
+            <div>
+                <h3 style="color: #0f0;">Builder Context</h3>
+                <div id="builder-sheet"></div>
+            </div>
+            <div>
+                <h3 style="color: #0f0;">Manager Context</h3>
+                <div id="manager-sheet"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load dependencies -->
+    <script src="character-builder/character-builder-dnd-data.js"></script>
+    <script src="character-builder/character-builder-utils.js"></script>
+    <script src="shared-character-sheet.js"></script>
+    
+    <script>
+        // Test character data
+        const testCharacter = {
+            id: 'test-123',
+            name: 'Thorin Ironforge',
+            race: 'dwarf',
+            class: 'fighter',
+            level: 5,
+            background: 'soldier',
+            alignment: 'Lawful Good',
+            hitPoints: 52,
+            armorClass: 18,
+            initiative: 1,
+            speed: 25,
+            proficiencyBonus: 3,
+            abilities: {
+                str: 16,
+                dex: 12,
+                con: 16,
+                int: 10,
+                wis: 13,
+                cha: 8
+            },
+            abilityModifiers: {
+                str: 3,
+                dex: 1,
+                con: 3,
+                int: 0,
+                wis: 1,
+                cha: -1
+            },
+            savingThrows: ['str', 'con'],
+            savingThrowModifiers: {
+                str: 6,
+                dex: 1,
+                con: 6,
+                int: 0,
+                wis: 1,
+                cha: -1
+            },
+            skillProficiencies: ['athletics', 'intimidation', 'perception'],
+            skillModifiers: {
+                'athletics': 6,
+                'intimidation': 2,
+                'perception': 4
+            },
+            equipment: ["Warhammer", "Shield", "Plate Armor"],
+            raceData: {
+                name: "Dwarf",
+                traits: ["Darkvision", "Dwarven Resilience", "Stonecunning"],
+            },
+            classData: {
+                name: "Fighter",
+                hitDie: 10,
+                equipment: ["Chain Mail", "Martial Weapon"]
+            },
+            backstory: "A veteran soldier from the mountain halls.",
+            asciiPortrait: `    ___
+   |   |
+   |O O|
+   | ^ |
+   |___|`
+        };
+
+        // Test loading
+        const loadStatus = document.getElementById('load-status');
+        
+        try {
+            if (typeof CharacterSheet === 'undefined') {
+                throw new Error('CharacterSheet component not loaded!');
+            }
+            
+            if (typeof CharacterSheet.render !== 'function') {
+                throw new Error('CharacterSheet.render() is not a function!');
+            }
+            
+            loadStatus.innerHTML = '<div class="success">✓ Component loaded successfully!</div>';
+            
+            // Test builder context
+            try {
+                const builderHTML = CharacterSheet.render(testCharacter, {
+                    context: 'builder',
+                    showPortrait: true,
+                    onGeneratePortrait: true,
+                    onRename: true,
+                    onTogglePortrait: true,
+                    onLevelChange: true,
+                    onPrint: true,
+                });
+                
+                document.getElementById('builder-sheet').innerHTML = builderHTML;
+                CharacterSheet.populatePortrait(testCharacter, 'builder');
+                
+                loadStatus.innerHTML += '<div class="success">✓ Builder context renders correctly!</div>';
+            } catch (error) {
+                loadStatus.innerHTML += '<div class="error">✗ Builder context error: ' + error.message + '</div>';
+                console.error('Builder error:', error);
+            }
+            
+            // Test manager context
+            try {
+                const managerHTML = CharacterSheet.render(testCharacter, {
+                    context: 'manager',
+                    showPortrait: true,
+                    onRename: true,
+                    onDuplicate: true,
+                    onExport: true,
+                    onDelete: true,
+                    onGeneratePortrait: true,
+                });
+                
+                document.getElementById('manager-sheet').innerHTML = managerHTML;
+                CharacterSheet.populatePortrait(testCharacter, 'manager');
+                
+                loadStatus.innerHTML += '<div class="success">✓ Manager context renders correctly!</div>';
+            } catch (error) {
+                loadStatus.innerHTML += '<div class="error">✗ Manager context error: ' + error.message + '</div>';
+                console.error('Manager error:', error);
+            }
+            
+        } catch (error) {
+            loadStatus.innerHTML = '<div class="error">✗ ' + error.message + '</div>';
+            console.error('Loading error:', error);
+        }
+        
+        // Mock functions for buttons
+        window.App = {
+            printCharacterSheet: () => alert('Builder: Print function'),
+            generateCustomAIPortrait: () => alert('Builder: Generate portrait'),
+            openNameModal: () => alert('Builder: Rename modal'),
+            togglePortraitView: () => alert('Builder: Toggle portrait'),
+            openLevelModal: () => alert('Builder: Level modal')
+        };
+        
+        window.renameCharacter = (id) => alert('Manager: Rename character: ' + id);
+        window.duplicateCharacter = (id) => alert('Manager: Duplicate character: ' + id);
+        window.exportCharacter = (id) => alert('Manager: Export character: ' + id);
+        window.deleteCharacter = (id) => alert('Manager: Delete character: ' + id);
+        window.generatePortraitForCharacter = (id) => alert('Manager: Generate portrait for: ' + id);
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Portrait Import Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #000;
+            color: #0f0;
+        }
+        .test-section {
+            border: 1px solid #0f0;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .portrait-container {
+            position: relative;
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .ascii-portrait {
+            font-size: 6px;
+            line-height: 1.2;
+            color: #0ff;
+            text-align: center;
+            white-space: pre;
+            font-family: monospace;
+            overflow-x: auto;
+            overflow-y: hidden;
+            width: 100%;
+            max-width: 100%;
+        }
+        button {
+            background: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 10px 20px;
+            font-family: monospace;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0f0;
+            color: #000;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            background: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            font-family: monospace;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>[ ASCII PORTRAIT IMPORT TEST ]</h1>
+    
+    <div class="test-section">
+        <h2>1. Test Portrait Extraction Logic</h2>
+        <p>This tests the logic used in character-manager.js to extract ASCII portraits from various field names:</p>
+        <button onclick="testPortraitExtraction()">Run Test</button>
+        <pre id="testResults"></pre>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Load Test Character</h2>
+        <p>Paste the Elladan Songweaver JSON to test ASCII display:</p>
+        <textarea id="characterJson" placeholder='Paste character JSON here...'></textarea>
+        <button onclick="loadCharacter()">Load & Display</button>
+        <div id="characterDisplay"></div>
+    </div>
+
+    <script>
+        // Test the portrait extraction logic
+        function testPortraitExtraction() {
+            const results = document.getElementById('testResults');
+            let output = '=== PORTRAIT EXTRACTION TEST RESULTS ===\n\n';
+            
+            // Test case 1: New format with portrait object
+            const char1 = {
+                name: "Test Character 1",
+                portrait: {
+                    ascii: "  ASCII ART HERE  ",
+                    url: "https://example.com/image.png"
+                }
+            };
+            const ascii1 = char1.portrait?.ascii || char1.customPortraitAscii || char1.asciiPortrait || null;
+            output += `Test 1 (portrait.ascii): ${ascii1 ? '✅ PASS' : '❌ FAIL'}\n`;
+            output += `  Value: "${ascii1}"\n\n`;
+            
+            // Test case 2: Old format with customPortraitAscii
+            const char2 = {
+                name: "Test Character 2",
+                customPortraitAscii: "  CUSTOM ASCII  "
+            };
+            const ascii2 = char2.portrait?.ascii || char2.customPortraitAscii || char2.asciiPortrait || null;
+            output += `Test 2 (customPortraitAscii): ${ascii2 ? '✅ PASS' : '❌ FAIL'}\n`;
+            output += `  Value: "${ascii2}"\n\n`;
+            
+            // Test case 3: Old format with asciiPortrait
+            const char3 = {
+                name: "Test Character 3",
+                asciiPortrait: "  PRE-GEN ASCII  "
+            };
+            const ascii3 = char3.portrait?.ascii || char3.customPortraitAscii || char3.asciiPortrait || null;
+            output += `Test 3 (asciiPortrait): ${ascii3 ? '✅ PASS' : '❌ FAIL'}\n`;
+            output += `  Value: "${ascii3}"\n\n`;
+            
+            // Test case 4: No ASCII art
+            const char4 = {
+                name: "Test Character 4"
+            };
+            const ascii4 = char4.portrait?.ascii || char4.customPortraitAscii || char4.asciiPortrait || null;
+            output += `Test 4 (no ASCII): ${ascii4 === null ? '✅ PASS' : '❌ FAIL'}\n`;
+            output += `  Value: ${ascii4}\n\n`;
+            
+            // Test case 5: Priority check (portrait.ascii should override others)
+            const char5 = {
+                name: "Test Character 5",
+                portrait: {
+                    ascii: "  NEW FORMAT  "
+                },
+                customPortraitAscii: "  OLD FORMAT  "
+            };
+            const ascii5 = char5.portrait?.ascii || char5.customPortraitAscii || char5.asciiPortrait || null;
+            output += `Test 5 (priority check): ${ascii5 === "  NEW FORMAT  " ? '✅ PASS' : '❌ FAIL'}\n`;
+            output += `  Value: "${ascii5}"\n`;
+            output += `  Expected: "  NEW FORMAT  " (should use portrait.ascii first)\n\n`;
+            
+            output += '=== ALL TESTS COMPLETE ===\n';
+            results.textContent = output;
+        }
+        
+        // Load and display a character with ASCII art
+        function loadCharacter() {
+            const input = document.getElementById('characterJson');
+            const display = document.getElementById('characterDisplay');
+            
+            try {
+                const char = JSON.parse(input.value);
+                
+                // Extract ASCII using same logic as character-manager.js
+                const asciiPortrait = char.portrait?.ascii || char.customPortraitAscii || char.asciiPortrait || null;
+                const originalPortraitUrl = char.portrait?.url || char.originalPortraitUrl || null;
+                
+                if (asciiPortrait) {
+                    display.innerHTML = `
+                        <div style="margin-top: 20px;">
+                            <h3>✅ Successfully loaded: ${char.name || 'Unnamed Character'}</h3>
+                            <p>ASCII Art Length: ${asciiPortrait.length} characters</p>
+                            ${originalPortraitUrl ? `<p>Original Portrait URL: <a href="${originalPortraitUrl}" target="_blank" style="color: #0ff;">${originalPortraitUrl.substring(0, 50)}...</a></p>` : ''}
+                            <div class="portrait-container">
+                                <div class="ascii-portrait" id="test-portrait"></div>
+                            </div>
+                        </div>
+                    `;
+                    // Set text content after rendering
+                    document.getElementById('test-portrait').textContent = asciiPortrait;
+                } else {
+                    display.innerHTML = `
+                        <div style="margin-top: 20px; color: #ff0;">
+                            <h3>⚠️ Character loaded but no ASCII portrait found</h3>
+                            <p>Character: ${char.name || 'Unnamed Character'}</p>
+                            <p>This is expected for characters exported before ASCII art was implemented.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                display.innerHTML = `
+                    <div style="margin-top: 20px; color: #f00;">
+                        <h3>❌ Error loading character</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
+

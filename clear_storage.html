@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Storage</title>
+</head>
+<body>
+    <h1>Clearing localStorage...</h1>
+    <script>
+        localStorage.removeItem('dnd_characters');
+        alert('Storage cleared! Click OK to go to Character Manager');
+        window.location.href = '/character-manager.html';
+    </script>
+</body>
+</html>

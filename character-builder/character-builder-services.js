@@ -382,7 +382,7 @@ const StorageService = (window.StorageService = {
     const data = localStorage.getItem(CONFIG.STORAGE_KEY);
     return data ? JSON.parse(data) : [];
   },
-  
+
   _saveCharacterToLocalStorage(character) {
     const characters = this._getCharactersFromLocalStorage();
     
@@ -392,17 +392,17 @@ const StorageService = (window.StorageService = {
     }
     
     const index = characters.findIndex((c) => c.id === character.id);
-    
+
     if (index >= 0) {
       characters[index] = character;
     } else {
       characters.push(character);
     }
-    
+
     localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(characters));
     return character;
   },
-  
+
   _deleteCharacterFromLocalStorage(id) {
     const characters = this._getCharactersFromLocalStorage().filter((c) => c.id !== id);
     localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(characters));
@@ -545,13 +545,25 @@ const AsciiArtService = (window.AsciiArtService = {
   // Load portrait (pre-generated or fallback to template)
   async generateAIPortrait(character) {
     try {
+      if (!character) return '';
+
       // If there's custom AI-generated ASCII art, use that first
       if (character.customPortraitAscii) {
         console.log('✅ Using custom AI-generated portrait');
         return character.customPortraitAscii;
       }
 
+      // Determine the current race/class key for this character
       const key = `${character.race || ''}|${character.class || ''}`;
+
+      // If there's already ASCII art stored in character (from pre-generated or previous load)
+      // and it matches the current race/class combination, reuse it.
+      if (character.asciiPortrait && character.asciiPortraitKey === key) {
+        console.log('✅ Using stored ASCII portrait for current race/class');
+        return character.asciiPortrait;
+      }
+
+      // If we have a cached portrait for this race/class combo, use it.
       if (this._portraitCache[key]) {
         return this._portraitCache[key];
       }
@@ -567,6 +579,14 @@ const AsciiArtService = (window.AsciiArtService = {
           `✅ Found pre-generated portrait for ${character.race}-${character.class}`,
         );
         this._portraitCache[key] = preGenerated;
+
+        // Store ASCII art in character for export
+        if (window.CharacterState) {
+          window.CharacterState.updateCharacter({
+            asciiPortrait: preGenerated,
+            asciiPortraitKey: key,
+          });
+        }
         
         // Note: We don't set originalPortraitUrl for pre-generated portraits
         // to avoid showing "View Original" button when images aren't available
@@ -579,12 +599,30 @@ const AsciiArtService = (window.AsciiArtService = {
       console.log('No pre-generated portrait, using template');
       const fallback = this.getFullPortrait(character);
       this._portraitCache[key] = fallback;
+
+      // Store fallback ASCII art in character for export
+      if (window.CharacterState) {
+        window.CharacterState.updateCharacter({
+          asciiPortrait: fallback,
+          asciiPortraitKey: key,
+        });
+      }
+      
       return fallback;
     } catch (error) {
       console.error('Portrait loading error:', error);
       const key = `${character.race || ''}|${character.class || ''}`;
       const fallback = this.getFullPortrait(character);
       this._portraitCache[key] = fallback;
+
+      // Store fallback ASCII art in character for export
+      if (window.CharacterState) {
+        window.CharacterState.updateCharacter({
+          asciiPortrait: fallback,
+          asciiPortraitKey: key,
+        });
+      }
+      
       return fallback;
     }
   },

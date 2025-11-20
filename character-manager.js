@@ -152,12 +152,17 @@ const CharacterStorage = {
     // Get all characters from localStorage
     getAll() {
         const data = localStorage.getItem(this.STORAGE_KEY);
-        return data ? JSON.parse(data) : [];
+        const characters = data ? JSON.parse(data) : [];
+        console.log('💾 STORAGE.GETALL: Retrieved', characters.length, 'characters from localStorage');
+        return characters;
     },
 
     // Save all characters to localStorage
     saveAll(characters) {
+        console.log('💾 STORAGE.SAVEALL: Saving', characters.length, 'characters to localStorage');
+        console.log('💾 STORAGE.SAVEALL: Character names:', characters.map(c => c.name).join(', '));
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(characters));
+        console.log('💾 STORAGE.SAVEALL: Save complete');
     },
 
     // Get single character by ID
@@ -168,12 +173,16 @@ const CharacterStorage = {
 
     // Add new character
     add(character) {
+        console.log('💾 STORAGE.ADD: Adding character:', character.name);
         const characters = this.getAll();
+        console.log('💾 STORAGE.ADD: Current storage has', characters.length, 'characters before add');
         character.id = this.generateId();
         character.createdAt = new Date().toISOString();
         character.updatedAt = new Date().toISOString();
         characters.push(character);
+        console.log('💾 STORAGE.ADD: After push, array has', characters.length, 'characters');
         this.saveAll(characters);
+        console.log('💾 STORAGE.ADD: Character added with ID:', character.id);
         return character;
     },
 
@@ -195,10 +204,21 @@ const CharacterStorage = {
 
     // Delete character
     delete(id) {
+        console.log('🗑️ STORAGE.DELETE: Deleting character with ID:', id);
         const characters = this.getAll();
+        const toDelete = characters.find(char => char.id === id);
+        if (toDelete) {
+            console.log('🗑️ STORAGE.DELETE: Found character to delete:', toDelete.name);
+        } else {
+            console.log('🗑️ STORAGE.DELETE: Character not found!');
+        }
+        console.log('🗑️ STORAGE.DELETE: Storage had', characters.length, 'characters before delete');
         const filtered = characters.filter(char => char.id !== id);
+        console.log('🗑️ STORAGE.DELETE: After filter, have', filtered.length, 'characters');
         this.saveAll(filtered);
-        return filtered.length < characters.length;
+        const success = filtered.length < characters.length;
+        console.log('🗑️ STORAGE.DELETE: Delete', success ? 'successful' : 'failed');
+        return success;
     },
 
     // Duplicate character
@@ -238,7 +258,49 @@ const CharacterStorage = {
             console.log('📥 IMPORT: Starting import...');
             const character = JSON.parse(jsonString);
             console.log('📥 IMPORT: Parsed character:', character.name);
-            // Remove ID to generate new one
+
+            // Always work with the latest list from storage
+            const existing = this.getAll();
+
+            // Extract stable character UID from metadata (preferred) or top-level field
+            const importedUid =
+                character.metadata?.characterUid ||
+                character.characterUid ||
+                null;
+
+            console.log('📥 IMPORT: characterUid from JSON:', importedUid);
+
+            if (importedUid) {
+                // Look for an indisputable duplicate: same stable UID already stored
+                const uidMatches = existing.filter(
+                    c =>
+                        c.metadata?.characterUid === importedUid ||
+                        c.characterUid === importedUid
+                );
+
+                if (uidMatches.length > 0) {
+                    const match = uidMatches[0];
+                    console.warn('📥 IMPORT: Stable UID match found - this is the same logical character.');
+                    console.warn('📥 IMPORT: Existing match:', {
+                        id: match.id,
+                        name: match.name,
+                    });
+
+                    return {
+                        isDuplicate: true,
+                        reason: 'uid',
+                        name: character.name || match.name,
+                        existingIds: uidMatches.map(d => d.id),
+                        characterUid: importedUid,
+                        importedCharacter: character,
+                    };
+                }
+            }
+
+            // If we get here, we treat this as a new character. We intentionally
+            // do NOT block on name or stat similarity – only on stable UID.
+
+            // Remove ID to generate new one (even if no duplicate found, we want a fresh ID)
             delete character.id;
             const result = this.add(character);
             console.log('📥 IMPORT: Added character with new ID:', result.id);
@@ -267,10 +329,19 @@ const AppState = {
     loadCharacters() {
         this.characters = CharacterStorage.getAll();
         console.log('📚 LOAD: Loaded', this.characters.length, 'characters from storage');
+        console.log('📚 LOAD: Full character list with IDs:');
+        this.characters.forEach((c, i) => {
+            console.log(`  ${i+1}. ${c.name} (ID: ${c.id})`);
+        });
         const names = this.characters.map(c => c.name);
         const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
         if (duplicates.length > 0) {
             console.warn('⚠️ DUPLICATE NAMES DETECTED:', duplicates);
+            // Show which IDs have duplicate names
+            duplicates.forEach(dupName => {
+                const matches = this.characters.filter(c => c.name === dupName);
+                console.warn(`  "${dupName}" appears ${matches.length} times with IDs:`, matches.map(m => m.id));
+            });
         }
         this.applyFilters();
     },
@@ -391,14 +462,14 @@ const UI = {
     },
 
     updateCount() {
-        const countText = document.getElementById('countText');
+        const searchInput = document.getElementById('searchInput');
         const total = AppState.characters.length;
         const filtered = AppState.filteredCharacters.length;
         
         if (total === filtered) {
-            countText.textContent = `${total} character${total !== 1 ? 's' : ''}`;
+            searchInput.placeholder = `⌕ Search ${total} character${total !== 1 ? 's' : ''}`;
         } else {
-            countText.textContent = `${filtered} of ${total} character${total !== 1 ? 's' : ''}`;
+            searchInput.placeholder = `⌕ Search ${filtered} of ${total} character${total !== 1 ? 's' : ''}`;
         }
     },
 
@@ -408,293 +479,22 @@ const UI = {
 
         placeholder.classList.add('is-hidden');
         sheetContainer.classList.remove('is-hidden');
-        sheetContainer.innerHTML = this.renderCharacterSheet(character);
         
-        // Set ASCII portrait text content after rendering (to avoid HTML escaping issues)
-        const portraitEl = document.getElementById(`character-portrait-${character.id || 'current'}`);
-        const asciiPortrait = character.portrait?.ascii || character.customPortraitAscii || character.asciiPortrait || null;
-        if (portraitEl && asciiPortrait) {
-            portraitEl.textContent = asciiPortrait;
-        }
+        // Use the shared CharacterSheet component
+        sheetContainer.innerHTML = CharacterSheet.render(character, {
+            context: 'manager',
+            showPortrait: true,
+            onRename: true,
+            onDuplicate: true,
+            onExport: true,
+            onDelete: true,
+            onGeneratePortrait: true,
+        });
+        
+        // Populate ASCII portrait after rendering
+        CharacterSheet.populatePortrait(character);
     },
 
-    renderCharacterSheet(char) {
-        // Handle both old and new format
-        const hp = char.hitPoints || { current: 0, max: 0 };
-        const hpValue = typeof hp === 'number' ? hp : hp.max || 0;
-        const hpCurrent = typeof hp === 'number' ? hp : hp.current || hpValue;
-        
-        // Abilities (handle both old 'abilityScores' and new 'abilities' format)
-        const abilities = char.abilities || char.abilityScores || {};
-        const abilityMods = char.abilityModifiers || {};
-        
-        // Skills (use skillModifiers from enhanced export if available)
-        const skills = char.skillModifiers || char.skills || {};
-        const skillProfs = char.skillProficiencies || [];
-        
-        // Equipment
-        const equipment = char.equipment || [];
-        const classEquipment = char.classData?.equipment || [];
-        const allEquipment = [...new Set([...equipment, ...classEquipment])];
-        
-        // Other data
-        const raceName = char.raceData?.name || char.race || 'Unknown';
-        const className = char.classData?.name || char.class || 'Unknown';
-        const backgroundName = char.backgroundData?.name || char.background || 'None';
-        const profBonus = char.proficiencyBonus || 2;
-        const speed = char.speed || 30;
-        
-        // Get ASCII portrait from various possible sources
-        const asciiPortrait = char.portrait?.ascii || char.customPortraitAscii || char.asciiPortrait || null;
-        const originalPortraitUrl = char.portrait?.url || char.originalPortraitUrl || null;
-
-        return `
-            <div class="sheet-title-header">
-                <div class="sheet-title">${char.name || 'Unnamed Character'}</div>
-                <div class="sheet-title-buttons">
-                    <button class="button-secondary" onclick="editCharacter('${char.id}')">✎ EDIT</button>
-                    <button class="button-secondary" onclick="duplicateCharacter('${char.id}')">⎘ COPY</button>
-                    <button class="button-secondary" onclick="exportCharacter('${char.id}')">↑ EXPORT</button>
-                    <button class="button-secondary" onclick="deleteCharacter('${char.id}')">× DELETE</button>
-                </div>
-            </div>
-
-            ${asciiPortrait ? `
-                <div class="portrait-container">
-                    <div class="ascii-portrait" id="character-portrait-${char.id || 'current'}"></div>
-                    ${originalPortraitUrl ? `
-                        <div class="portrait-actions">
-                            <a href="${originalPortraitUrl}" target="_blank" class="button-secondary">
-                                👁 View Original Art
-                            </a>
-                        </div>
-                    ` : ''}
-                </div>
-            ` : ''}
-
-            <div class="sheet-section">
-                <div class="sheet-header">
-                </div>
-                <div class="sheet-content">
-                    ${raceName && raceName !== 'Unknown' ? `<div class="stat-line"><span class="stat-label">Race:</span> <span class="stat-value">${raceName}</span></div>` : ''}
-                    ${className && className !== 'Unknown' ? `<div class="stat-line"><span class="stat-label">Class:</span> <span class="stat-value">${className}</span></div>` : ''}
-                    ${backgroundName && backgroundName !== 'None' ? `<div class="stat-line"><span class="stat-label">Background:</span> <span class="stat-value">${backgroundName}</span></div>` : ''}
-                    ${char.alignment ? `<div class="stat-line"><span class="stat-label">Alignment:</span> <span class="stat-value">${char.alignment}</span></div>` : ''}
-                    <div class="stat-line">
-                        <span class="stat-label">Level:</span>
-                        <span class="stat-value">${char.level || 1}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="sheet-section">
-                <div class="sheet-header">
-                    <div class="sheet-header-title">[ COMBAT STATS ]</div>
-                </div>
-                <div class="stat-grid">
-                    <div class="stat-box">
-                        <div class="stat-box-label">HIT POINTS</div>
-                        <div class="stat-box-value">${hpCurrent} / ${hpValue}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-box-label">ARMOR CLASS</div>
-                        <div class="stat-box-value">${char.armorClass || 10}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-box-label">INITIATIVE</div>
-                        <div class="stat-box-value">${this.formatModifier(char.initiative || 0)}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-box-label">SPEED</div>
-                        <div class="stat-box-value">${speed} ft</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-box-label">PROF BONUS</div>
-                        <div class="stat-box-value">+${profBonus}</div>
-                    </div>
-                    <div class="stat-box">
-                        <div class="stat-box-label">HIT DIE</div>
-                        <div class="stat-box-value">d${char.classData?.hitDie || 6}</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="sheet-section">
-                <div class="sheet-header">
-                    <div class="sheet-header-title">[ ABILITY SCORES ]</div>
-                </div>
-                <div class="ability-grid">
-                    ${['str', 'dex', 'con', 'int', 'wis', 'cha'].map(ability => {
-                        const score = abilities[ability] || 10;
-                        const modifier = abilityMods[ability] !== undefined 
-                            ? abilityMods[ability] 
-                            : Math.floor((score - 10) / 2);
-                        const modStr = this.formatModifier(modifier);
-                        return `
-                            <div class="ability-box">
-                                <div class="ability-name">${ability.toUpperCase()}</div>
-                                <div class="ability-score">${score} <span class="ability-modifier">(${modStr})</span></div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-
-            ${char.savingThrowModifiers ? `
-                <div class="sheet-section">
-                    <div class="sheet-header">
-                        <div class="sheet-header-title">[ SAVING THROWS ]</div>
-                    </div>
-                    <div class="sheet-content">
-                        ${Object.entries(char.savingThrowModifiers).map(([ability, value]) => {
-                            const isProficient = char.savingThrows?.includes(ability);
-                            return `
-                                <div class="stat-line">
-                                    <span class="stat-label">${ability.toUpperCase()}:</span>
-                                    <span class="stat-value">${this.formatModifier(value)}${isProficient ? ' ★' : ''}</span>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            ` : ''}
-
-            ${Object.keys(skills).length > 0 || skillProfs.length > 0 ? `
-                <div class="sheet-section">
-                    <div class="sheet-header">
-                        <div class="sheet-header-title">[ SKILLS ]</div>
-                    </div>
-                    <div class="sheet-content">
-                        ${Object.keys(skills).length > 0 ? 
-                            Object.entries(skills).map(([skill, value]) => `
-                                <div class="stat-line">
-                                    <span class="stat-label">${this.formatSkillName(skill)}:</span>
-                                    <span class="stat-value">${this.formatModifier(value)} ★</span>
-                                </div>
-                            `).join('')
-                        : skillProfs.map(skill => `
-                            <div class="stat-line">
-                                <span class="stat-label">${this.formatSkillName(skill)}:</span>
-                                <span class="stat-value">★ Proficient</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            ` : ''}
-
-            ${char.raceData?.traits?.length > 0 ? `
-                <div class="sheet-section">
-                    <div class="sheet-header">
-                        <div class="sheet-header-title">[ RACIAL TRAITS ]</div>
-                    </div>
-                    <div class="sheet-content">
-                        ${char.raceData.traits.map(trait => `<div class="text-dim">• ${trait}</div>`).join('')}
-                    </div>
-                </div>
-            ` : ''}
-
-            ${allEquipment.length > 0 ? `
-                <div class="sheet-section">
-                    <div class="sheet-header">
-                        <div class="sheet-header-title">[ EQUIPMENT ]</div>
-                    </div>
-                    <div class="sheet-content">
-                        ${allEquipment.map(item => `<div class="text-dim">• ${item}</div>`).join('')}
-                    </div>
-                </div>
-            ` : ''}
-
-            ${char.toolProficiencies?.length > 0 ? `
-                <div class="sheet-section">
-                    <div class="sheet-header">
-                        <div class="sheet-header-title">[ TOOL PROFICIENCIES ]</div>
-                    </div>
-                    <div class="sheet-content">
-                        ${char.toolProficiencies.map(tool => `<div class="text-dim">• ${this.formatSkillName(tool)}</div>`).join('')}
-                    </div>
-                </div>
-            ` : ''}
-
-            ${char.languages?.length > 0 || char.raceData?.languages?.length > 0 ? `
-                <div class="sheet-section">
-                    <div class="sheet-header">
-                        <div class="sheet-header-title">[ LANGUAGES ]</div>
-                    </div>
-                    <div class="sheet-content">
-                        ${[...(char.languages || []), ...(char.raceData?.languages || [])].map(lang => `<div class="text-dim">• ${lang}</div>`).join('')}
-                    </div>
-                </div>
-            ` : ''}
-
-            ${char.backgroundData?.description ? `
-                <div class="sheet-section">
-                    <div class="sheet-header">
-                        <div class="sheet-header-title">[ BACKGROUND: ${backgroundName.toUpperCase()} ]</div>
-                    </div>
-                    <div class="sheet-content text-dim">
-                        ${char.backgroundData.description}
-                    </div>
-                </div>
-            ` : ''}
-
-            ${char.backgroundFeature || char.backgroundData?.feature ? `
-                <div class="sheet-section">
-                    <div class="sheet-header">
-                        <div class="sheet-header-title">[ BACKGROUND FEATURE ]</div>
-                    </div>
-                    <div class="sheet-content">
-                        <div class="stat-line"><span class="stat-label">${(char.backgroundFeature?.name || char.backgroundData?.feature?.name || 'Feature')}:</span></div>
-                        <div class="text-dim">${(char.backgroundFeature?.description || char.backgroundData?.feature?.description || '')}</div>
-                    </div>
-                </div>
-            ` : ''}
-
-            ${char.backstory ? `
-                <div class="sheet-section">
-                    <div class="sheet-header">
-                        <div class="sheet-header-title">[ BACKSTORY ]</div>
-                    </div>
-                    <div class="sheet-content text-dim">
-                        ${char.backstory}
-                    </div>
-                </div>
-            ` : ''}
-
-            ${char.exportDate ? `
-                <div class="sheet-section">
-                    <div class="sheet-header">
-                        <div class="sheet-header-title">[ EXPORT INFO ]</div>
-                    </div>
-                    <div class="sheet-content">
-                        <div class="stat-line">
-                            <span class="stat-label">Exported:</span>
-                            <span class="stat-value">${new Date(char.exportDate).toLocaleDateString()}</span>
-                        </div>
-                        ${char.exportedBy ? `
-                        <div class="stat-line">
-                            <span class="stat-label">Source:</span>
-                            <span class="stat-value">${char.exportedBy}</span>
-                        </div>
-                        ` : ''}
-                        <div class="stat-line">
-                            <span class="stat-label">Version:</span>
-                            <span class="stat-value">${char.exportVersion || '1.0'}</span>
-                        </div>
-                    </div>
-                </div>
-            ` : ''}
-        `;
-    },
-
-    formatModifier(value) {
-        return value >= 0 ? `+${value}` : `${value}`;
-    },
-
-    formatSkillName(skill) {
-        return skill.split('-').map(word => 
-            word.charAt(0).toUpperCase() + word.slice(1)
-        ).join(' ');
-    },
 
     renderCharacterDetails_OLD(char) {
         const abilities = char.abilityScores || {};
@@ -842,6 +642,24 @@ function editCharacter(id) {
     alert('Edit functionality coming soon!\n\nFor now, you can duplicate and modify the character.');
 }
 
+function renameCharacter(id) {
+    const character = CharacterStorage.getById(id);
+    if (!character) return;
+    
+    const newName = prompt('Enter new name for character:', character.name);
+    if (newName && newName.trim() !== '') {
+        CharacterStorage.update(id, { name: newName.trim() });
+        AppState.loadCharacters();
+        UI.render();
+        viewCharacter(id);
+        showNotification(`Character renamed to: ${newName.trim()}`);
+    }
+}
+
+function generatePortraitForCharacter(id) {
+    alert('AI Portrait generation coming soon!\n\nThis feature will allow you to generate custom AI portraits for your character.');
+}
+
 function duplicateCharacter(id) {
     if (confirm('Create a copy of this character?')) {
         const duplicate = CharacterStorage.duplicate(id);
@@ -882,21 +700,148 @@ let isImporting = false;  // Flag to prevent concurrent imports
 
 function showImportModal() {
     document.getElementById('importModal').classList.add('show');
+    
+    // Disable import button until file is selected
+    const importButton = document.querySelector('#importModal .modal-footer .terminal-btn-primary');
+    if (importButton) {
+        importButton.disabled = true;
+    }
 }
 
 function closeImportModal() {
+    console.log('🚪 closeImportModal() called, isImporting was:', isImporting);
     document.getElementById('importModal').classList.remove('show');
     document.getElementById('importFile').value = '';
     document.getElementById('fileName').textContent = '';
     
-    // Re-enable the import button
+    // Re-enable the import button and reset text
     const importButton = document.querySelector('.modal-footer .terminal-btn-primary');
     if (importButton) {
-        importButton.disabled = false;
+        importButton.disabled = true;  // Disable for next time modal opens
         importButton.textContent = 'IMPORT';
     }
     
     isImporting = false;  // Reset flag when closing
+    console.log('🚪 closeImportModal() done, isImporting now:', isImporting);
+}
+
+// Store duplicate resolution data temporarily
+let pendingDuplicateResolution = null;
+
+function showDuplicateResolutionModal(characterName, existingId, importData) {
+    console.log('⚠️ DUPLICATE MODAL: Showing resolution options for', characterName);
+    
+    // Store the data for resolution
+    pendingDuplicateResolution = {
+        characterName,
+        existingId,
+        importData
+    };
+    
+    // Update modal content
+    document.getElementById('duplicateCharName').textContent = characterName;
+    
+    // Close import modal and show duplicate modal
+    document.getElementById('importModal').classList.remove('show');
+    document.getElementById('duplicateModal').classList.add('show');
+}
+
+function closeDuplicateModal() {
+    console.log('🚪 DUPLICATE MODAL: Closing');
+    document.getElementById('duplicateModal').classList.remove('show');
+    pendingDuplicateResolution = null;
+    isImporting = false;  // Reset flag
+}
+
+function resolveDuplicate(action) {
+    if (!pendingDuplicateResolution) {
+        console.error('No pending duplicate resolution!');
+        return;
+    }
+    
+    const { existingId, importData } = pendingDuplicateResolution;
+    
+    console.log('🔧 DUPLICATE RESOLUTION: Action =', action);
+    
+    if (action === 'overwrite') {
+        handleOverwriteCharacter(existingId, importData);
+    } else if (action === 'keep-both') {
+        handleKeepBothCharacters(importData);
+    }
+    
+    // Close modal and cleanup
+    closeDuplicateModal();
+}
+
+function handleOverwriteCharacter(existingId, importData) {
+    console.log('🔄 OVERWRITE: Replacing existing character with ID:', existingId);
+    
+    // Delete the existing character
+    CharacterStorage.delete(existingId);
+    
+    // Import the new one (bypassing duplicate check but preserving stable UID)
+    const character = JSON.parse(importData);
+    delete character.id;
+    
+    // Preserve stable UID on overwrite so future exports/imports still match
+    const importedUid =
+        character.metadata?.characterUid ||
+        character.characterUid ||
+        null;
+    if (importedUid) {
+        if (!character.metadata) character.metadata = {};
+        character.metadata.characterUid = importedUid;
+        character.characterUid = importedUid;
+    }
+
+    const result = CharacterStorage.add(character);
+    
+    if (result) {
+        console.log('✅ OVERWRITE SUCCESS: Character replaced');
+        AppState.loadCharacters();
+        UI.render();
+        closeImportModal();
+        showNotification(`Replaced: ${result.name}`);
+        setTimeout(() => viewCharacter(result.id), 100);
+    }
+}
+
+function handleKeepBothCharacters(importData) {
+    console.log('📋 KEEP BOTH: Importing with modified name');
+    
+    // Parse and modify the character name
+    const character = JSON.parse(importData);
+    const originalName = character.name;
+    
+    // Find a unique name by adding (Copy N)
+    const existing = CharacterStorage.getAll();
+    let copyNumber = 1;
+    let newName = `${originalName} (Copy)`;
+    
+    while (existing.some(c => c.name === newName)) {
+        copyNumber++;
+        newName = `${originalName} (Copy ${copyNumber})`;
+    }
+    
+    character.name = newName;
+    
+    // For "keep both", treat this as a new logical character: give it a new UID
+    const newUid = `danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    if (!character.metadata) character.metadata = {};
+    character.metadata.characterUid = newUid;
+    character.characterUid = newUid;
+    delete character.id;
+    
+    const result = CharacterStorage.add(character);
+    
+    if (result) {
+        console.log('✅ KEEP BOTH SUCCESS: Character imported as', newName);
+        AppState.loadCharacters();
+        UI.render();
+        closeImportModal();
+        showNotification(`Imported as: ${result.name}`);
+        setTimeout(() => viewCharacter(result.id), 100);
+    }
 }
 
 function importCharacter() {
@@ -908,6 +853,10 @@ function importCharacter() {
         return;
     }
     
+    // Set flag IMMEDIATELY to prevent race condition
+    isImporting = true;
+    console.log('🔒 Import locked, isImporting =', isImporting);
+    
     // Disable the import button immediately
     const importButton = document.querySelector('.modal-footer .terminal-btn-primary');
     if (importButton) {
@@ -918,14 +867,38 @@ function importCharacter() {
     const fileInput = document.getElementById('importFile');
 
     if (fileInput.files.length > 0) {
-        isImporting = true;  // Set flag
         const file = fileInput.files[0];
+        console.log('📂 FILE: Selected file:', file.name, 'Size:', file.size);
         const reader = new FileReader();
+        console.log('📖 READER: Created new FileReader');
         reader.onload = (e) => {
-            const result = CharacterStorage.import(e.target.result);
+            console.log('📖 READER.ONLOAD: Callback triggered, isImporting =', isImporting);
+            const importData = e.target.result;
+            const result = CharacterStorage.import(importData);
+            
+            // Check if it's a duplicate
+            if (result && result.isDuplicate) {
+                console.warn('⚠️ DUPLICATE: Character already exists');
+                
+                // Show duplicate resolution modal instead of simple alert
+                showDuplicateResolutionModal(result.name, result.existingIds[0], importData);
+                
+                // Re-enable button
+                const importButton = document.querySelector('.modal-footer .terminal-btn-primary');
+                if (importButton) {
+                    importButton.disabled = false;
+                    importButton.textContent = 'IMPORT';
+                }
+                isImporting = false;  // Reset flag
+                return;
+            }
+            
             if (result) {
+                console.log('✅ SUCCESS: Character imported, calling loadCharacters()');
                 AppState.loadCharacters();
+                console.log('🎨 RENDER: Calling UI.render()');
                 UI.render();
+                console.log('🚪 MODAL: Calling closeImportModal()');
                 closeImportModal();
                 showNotification(`Imported: ${result.name}`);
                 // Auto-select the imported character
@@ -951,15 +924,17 @@ function importCharacter() {
             }
             isImporting = false;  // Reset on error
         };
+        console.log('📖 READER: Starting readAsText()');
         reader.readAsText(file);
     } else {
         alert('Please select a file to import.');
-        // Re-enable button
+        // Re-enable button and reset flag
         const importButton = document.querySelector('.modal-footer .terminal-btn-primary');
         if (importButton) {
             importButton.disabled = false;
             importButton.textContent = 'IMPORT';
         }
+        isImporting = false;  // Reset flag
     }
 }
 
@@ -1004,11 +979,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // Splash screen handlers
     const splash = document.getElementById('splash-content');
     if (splash) {
-        // Dismiss on any key press
-        const keyHandler = () => {
-            if (splashActive) {
-                dismissSplash();
-            }
+        // Dismiss on any key press (and don't let that key also trigger app shortcuts)
+        const keyHandler = (e) => {
+            if (!splashActive) return;
+            
+            // Prevent browser find/scroll and our main key handler
+            e.preventDefault();
+            e.stopPropagation();
+            
+            dismissSplash();
+            
+            // After main content fades in, move focus to search for immediate typing
+            setTimeout(() => {
+                if (!splashActive && typeof KeyboardNav !== 'undefined' && KeyboardNav.focusSearch) {
+                    KeyboardNav.focusSearch();
+                }
+            }, 350);
         };
         window.addEventListener('keydown', keyHandler);
         
@@ -1033,10 +1019,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update filename display when file is selected
     document.getElementById('importFile').addEventListener('change', (e) => {
         const fileNameDisplay = document.getElementById('fileName');
+        const importButton = document.querySelector('#importModal .modal-footer .terminal-btn-primary');
+        
         if (e.target.files.length > 0) {
             fileNameDisplay.textContent = e.target.files[0].name;
+            // Enable import button when file is selected
+            if (importButton) {
+                importButton.disabled = false;
+            }
         } else {
             fileNameDisplay.textContent = '';
+            // Disable import button when no file
+            if (importButton) {
+                importButton.disabled = true;
+            }
         }
     });
 
@@ -1044,6 +1040,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('importModal').addEventListener('click', (e) => {
         if (e.target.id === 'importModal') {
             closeImportModal();
+        }
+    });
+    
+    // Close duplicate modal on outside click
+    document.getElementById('duplicateModal').addEventListener('click', (e) => {
+        if (e.target.id === 'duplicateModal') {
+            closeDuplicateModal();
         }
     });
     
@@ -1067,6 +1070,16 @@ document.addEventListener('DOMContentLoaded', () => {
             // ESC to close modal
             if (e.key === 'Escape') {
                 closeImportModal();
+            }
+            return;
+        }
+        
+        // Don't interfere if duplicate modal is open
+        const duplicateModal = document.getElementById('duplicateModal');
+        if (duplicateModal && duplicateModal.classList.contains('show')) {
+            // ESC to close modal
+            if (e.key === 'Escape') {
+                closeDuplicateModal();
             }
             return;
         }
@@ -1110,192 +1123,4 @@ document.addEventListener('DOMContentLoaded', () => {
             KeyboardNav.select();
         }
     });
-
-    // Add some sample data if empty (for demo purposes)
-    if (AppState.characters.length === 0) {
-        addSampleCharacters();
-    }
 });
-
-// ========================================
-// SAMPLE DATA (for demo)
-// ========================================
-
-function addSampleCharacters() {
-    const samples = [
-        {
-            name: "Thorin Ironforge",
-            race: "dwarf",
-            class: "fighter",
-            level: 5,
-            background: "soldier",
-            alignment: "Lawful Good",
-            hitPoints: 52,
-            armorClass: 18,
-            initiative: 1,
-            speed: 25,
-            proficiencyBonus: 3,
-            abilities: {
-                str: 16,
-                dex: 12,
-                con: 16,
-                int: 10,
-                wis: 13,
-                cha: 8
-            },
-            abilityModifiers: {
-                str: 3,
-                dex: 1,
-                con: 3,
-                int: 0,
-                wis: 1,
-                cha: -1
-            },
-            savingThrows: ['str', 'con'],
-            savingThrowModifiers: {
-                str: 6,
-                dex: 1,
-                con: 6,
-                int: 0,
-                wis: 1,
-                cha: -1
-            },
-            skillProficiencies: ['athletics', 'intimidation', 'perception'],
-            skillModifiers: {
-                'athletics': 6,
-                'intimidation': 2,
-                'perception': 4
-            },
-            equipment: ["Warhammer", "Shield", "Plate Armor", "Adventurer's Pack"],
-            raceData: {
-                name: "Dwarf",
-                size: "Medium",
-                speed: 25,
-                traits: ["Darkvision", "Dwarven Resilience", "Stonecunning"],
-                languages: ["Common", "Dwarvish"]
-            },
-            classData: {
-                name: "Fighter",
-                hitDie: 10,
-                primaryAbility: "Strength",
-                savingThrows: ['str', 'con'],
-                equipment: ["Chain Mail", "Martial Weapon", "Shield"]
-            },
-            backgroundData: {
-                name: "Soldier",
-                feature: {
-                    name: "Military Rank",
-                    description: "You have a military rank from your career as a soldier."
-                }
-            },
-            backstory: "A veteran soldier from the mountain halls, seeking glory in battle.",
-            portrait: {
-                ascii: `
-    _____
-   |     |
-   | O O |
-   |  ^  |
-   | \\_/ |
-   |_____|
-     | |
-    /| |\\
-   / | | \\
-     | |
-    /   \\
-   /     \\
-  /_______\\`,
-                original: null
-            }
-        },
-        {
-            name: "Elara Moonwhisper",
-            race: "elf",
-            class: "wizard",
-            level: 3,
-            background: "sage",
-            alignment: "Neutral Good",
-            hitPoints: 18,
-            armorClass: 12,
-            initiative: 2,
-            speed: 30,
-            proficiencyBonus: 2,
-            abilities: {
-                str: 8,
-                dex: 14,
-                con: 13,
-                int: 17,
-                wis: 12,
-                cha: 10
-            },
-            abilityModifiers: {
-                str: -1,
-                dex: 2,
-                con: 1,
-                int: 3,
-                wis: 1,
-                cha: 0
-            },
-            savingThrows: ['int', 'wis'],
-            savingThrowModifiers: {
-                str: -1,
-                dex: 2,
-                con: 1,
-                int: 5,
-                wis: 3,
-                cha: 0
-            },
-            skillProficiencies: ['arcana', 'history', 'investigation'],
-            skillModifiers: {
-                'arcana': 5,
-                'history': 5,
-                'investigation': 5
-            },
-            equipment: ["Spellbook", "Component Pouch", "Quarterstaff", "Scholar's Pack"],
-            raceData: {
-                name: "Elf",
-                size: "Medium",
-                speed: 30,
-                traits: ["Darkvision", "Fey Ancestry", "Trance"],
-                languages: ["Common", "Elvish"]
-            },
-            classData: {
-                name: "Wizard",
-                hitDie: 6,
-                primaryAbility: "Intelligence",
-                savingThrows: ['int', 'wis'],
-                equipment: ["Spellbook", "Arcane Focus"],
-                spellcaster: true
-            },
-            backgroundData: {
-                name: "Sage",
-                feature: {
-                    name: "Researcher",
-                    description: "When you attempt to learn or recall a piece of lore, if you do not know that information, you often know where and from whom you can obtain it."
-                }
-            },
-            backstory: "A young scholar fascinated by ancient magic and forgotten lore.",
-            portrait: {
-                ascii: `
-     /\\
-    /  \\
-   | () |
-    \\  /
-     \\/
-    _||_
-   /    \\
-  |  /\\  |
-  | |  | |
-   \\|  |/
-    |  |
-   /|  |\\
-  / |  | \\`,
-                original: null
-            }
-        }
-    ];
-
-    samples.forEach(char => CharacterStorage.add(char));
-    AppState.loadCharacters();
-    UI.render();
-}
-
