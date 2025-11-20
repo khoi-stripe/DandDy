@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Character Manager</title>
+    <link rel="stylesheet" href="terminal-theme.css">
+    <link rel="stylesheet" href="character-manager.css">
+</head>
+<body>
+    <div class="terminal-frame">
+    
+    <!-- Splash Screen -->
+    <div class="splash-content" id="splash-content">
+        <div class="splash-art">
+                                                                            
+                                       444444444                            
+                                  44444444444444444444                      
+                              44444444444444444444444444444                 
+                          4444444444444444444444444444444444444             
+                       44444444444444444444444444444444444444444444         
+                     4444444444444444444444444444444444444444444444444      
+                   444444444444444444444444444444444444444444444444444444   
+                  44444444444444444444444444444444444444444444444444444444  
+                 4444444444444444444444444444444444444444444444444444444444 
+                444444444444444444444444444444444444444444444444444444444444
+                444444444                                         444444444
+                444444444  44444  444  44444  44444  44444  444  444444444
+                444444444  44444  444  44444  44444  44444  444  444444444
+                444444444                                         444444444
+                444444444  44444  444  44444  44444  44444  444  444444444
+                444444444  44444  444  44444  44444  44444  444  444444444
+                444444444                                         444444444
+                444444444  44444  444  44444  44444  44444  444  444444444
+                444444444  44444  444  44444  44444  44444  444  444444444
+                444444444                                         444444444
+                444444444  44444  444  44444  44444  44444  444  444444444
+                444444444  44444  444  44444  44444  44444  444  444444444
+                444444444                                         444444444
+                444444444  44444  444  44444  44444  44444  444  444444444
+                444444444  44444  444  44444  44444  44444  444  444444444
+                444444444                                         444444444
+                 4444444444444444444444444444444444444444444444444444444444
+                  44444444444444444444444444444444444444444444444444444444 
+                   444444444444444444444444444444444444444444444444444444  
+                     4444444444444444444444444444444444444444444444444     
+                       44444444444444444444444444444444444444444444        
+                          4444444444444444444444444444444444444            
+                              44444444444444444444444444444                
+                                  44444444444444444444                     
+                                       444444444                           
+        </div>
+        <div class="splash-text">
+            <div class="splash-title">DandDy CHARACTER MANAGER</div>
+            <div class="splash-subtitle">Organize & Manage Your D&D Characters</div>
+            <div class="splash-prompt">[ Press any key to begin ]</div>
+        </div>
+    </div>
+    
+    <!-- Main Content (hidden until splash dismissed) -->
+    <div class="main-content is-hidden" id="main-content">
+    
+    <!-- Header -->
+    <header class="terminal-header">
+        <div class="header-content">
+            <div class="terminal-title">[ DandDy CHARACTER MANAGER v1.0 ]</div>
+            <div class="header-actions">
+                <button id="importBtn" class="button-secondary">↓ IMPORT</button>
+                <button id="newCharacterBtn" class="button-secondary">+ NEW CHARACTER</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Split Layout -->
+    <div class="split-layout">
+        <!-- Left Panel: Character List -->
+        <div class="left-panel" id="character-list-panel">
+            <!-- Controls Section -->
+            <div class="controls-section">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" class="terminal-input" placeholder="⌕ Search characters...">
+                </div>
+            </div>
+
+            <!-- Character Count -->
+            <div class="character-count">
+                <span id="countText">0 characters</span>
+            </div>
+
+            <!-- Character Grid -->
+            <div id="characterGrid" class="character-grid">
+                <!-- Character cards will be inserted here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state">
+                <div class="empty-icon">≡</div>
+                <h2 class="empty-title">No Characters Yet</h2>
+                <p class="empty-message">Create your first character to get started!</p>
+                <button class="button-primary" onclick="createNewCharacter()">+ CREATE CHARACTER</button>
+            </div>
+        </div>
+
+        <!-- Right Panel: Character Sheet -->
+        <div class="right-panel" id="character-sheet-panel">
+            <div class="sheet-placeholder">
+                <div class="placeholder-icon">⚔</div>
+                <div class="placeholder-text">Select a character to view details</div>
+            </div>
+            <div id="characterSheet" class="character-sheet is-hidden">
+                <!-- Character sheet will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">↓ Import Character</h2>
+                <button class="modal-close" onclick="closeImportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="terminal-text">Upload a character JSON file:</p>
+                <input type="file" id="importFile" accept=".json" class="file-input-hidden">
+                <button class="terminal-btn" onclick="document.getElementById('importFile').click()">CHOOSE FILE</button>
+                <span id="fileName" class="terminal-text-dim" style="margin-left: var(--spacing-sm);"></span>
+            </div>
+            <div class="modal-footer">
+                <button class="terminal-btn" onclick="closeImportModal()">CANCEL</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="importCharacter()">IMPORT</button>
+            </div>
+        </div>
+    </div>
+
+    </div><!-- /main-content -->
+    
+    </div><!-- /terminal-frame -->
+    
+    <script src="character-manager.js"></script>
+</body>
+</html>
+
