@@ -64,9 +64,13 @@
     <header class="terminal-header">
         <div class="header-content">
             <div class="terminal-title">[ DandDy CHARACTER MANAGER v1.0 ]</div>
+            <div class="header-user-info">
+                <span id="userInfoDisplay" class="terminal-text-dim"></span>
+                <button id="authBtn" class="terminal-btn terminal-btn-small">LOGIN</button>
+            </div>
             <div class="header-actions">
-                <button id="importBtn" class="button-primary">↓ IMPORT</button>
-                <button id="newCharacterBtn" class="button-primary">+ NEW CHARACTER</button>
+                <button id="importBtn" class="terminal-btn">↓ IMPORT</button>
+                <button id="newCharacterBtn" class="terminal-btn">+ NEW CHARACTER</button>
             </div>
         </div>
     </header>
@@ -92,7 +96,7 @@
                 <div class="empty-icon">≡</div>
                 <h2 class="empty-title">No Characters Yet</h2>
                 <p class="empty-message">Create your first character to get started!</p>
-                <button class="button-primary" onclick="createNewCharacter()">+ CREATE CHARACTER</button>
+                <button class="terminal-btn" onclick="createNewCharacter()">+ CREATE CHARACTER</button>
             </div>
         </div>
 
@@ -119,7 +123,7 @@
                 <p class="terminal-text">Upload a character JSON file:</p>
                 <input type="file" id="importFile" accept=".json" class="file-input-hidden">
                 <button class="terminal-btn" onclick="document.getElementById('importFile').click()">CHOOSE FILE</button>
-                <span id="fileName" class="terminal-text-dim" style="margin-left: var(--spacing-sm);"></span>
+                <span id="fileName" class="terminal-text-dim file-name-label"></span>
             </div>
             <div class="modal-footer">
                 <button class="terminal-btn" onclick="closeImportModal()">CANCEL</button>
@@ -136,12 +140,44 @@
             </div>
             <div class="modal-body">
                 <p class="terminal-text">A character named "<span id="duplicateCharName"></span>" already exists in your collection.</p>
-                <p class="terminal-text" style="margin-top: var(--spacing-md);">What would you like to do?</p>
+                <p class="terminal-text modal-body-question">What would you like to do?</p>
             </div>
-            <div class="modal-footer" style="display: flex; gap: var(--spacing-sm); justify-content: center;">
+            <div class="modal-footer modal-footer-centered">
                 <button class="terminal-btn" onclick="closeDuplicateModal()">CANCEL</button>
                 <button class="terminal-btn terminal-btn-warning" onclick="resolveDuplicate('overwrite')">REPLACE EXISTING</button>
                 <button class="terminal-btn terminal-btn-primary" onclick="resolveDuplicate('keep-both')">KEEP BOTH</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Details Modal -->
+    <div id="editDetailsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">✎ Edit Character Details</h2>
+                <button class="modal-close" onclick="closeEditDetailsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="terminal-text">Adjust campaign-specific details. These edits affect this saved copy only.</p>
+
+                <p class="terminal-text-small">Skill Proficiencies <span class="terminal-text-dim">(one per line)</span></p>
+                <textarea id="editSkills" class="terminal-textarea terminal-input" placeholder="e.g. Perception&#10;Stealth&#10;Investigation"></textarea>
+
+                <p class="terminal-text-small modal-section-label">Class Equipment / Gear <span class="terminal-text-dim">(one item per line)</span></p>
+                <textarea id="editEquipment" class="terminal-textarea terminal-input" placeholder="e.g. Longsword&#10;Chain Mail&#10;Explorer&#39;s Pack"></textarea>
+
+                <p class="terminal-text-small modal-section-label">Tool Proficiencies <span class="terminal-text-dim">(one per line)</span></p>
+                <textarea id="editTools" class="terminal-textarea terminal-input" placeholder="e.g. Thieves&#39; Tools&#10;Disguise Kit"></textarea>
+
+                <p class="terminal-text-small modal-section-label">Languages <span class="terminal-text-dim">(one per line)</span></p>
+                <textarea id="editLanguages" class="terminal-textarea terminal-input" placeholder="e.g. Common&#10;Elvish"></textarea>
+
+                <p class="terminal-text-small modal-section-label">Backstory</p>
+                <textarea id="editBackstory" class="terminal-textarea terminal-input" placeholder="Write your character&#39;s backstory here..."></textarea>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="closeEditDetailsModal()">CANCEL</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="saveEditDetails()">SAVE CHANGES</button>
             </div>
         </div>
     </div>
@@ -150,7 +186,89 @@
     
     </div><!-- /terminal-frame -->
     
+    <!-- Auth Modal (Login/Register) -->
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="authModalTitle">🔐 Login</h2>
+                <button class="modal-close" onclick="closeAuthModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="loginForm">
+                    <p class="terminal-text">Sign in to sync your characters to the cloud.</p>
+                    <p class="terminal-text-small">Username:</p>
+                    <input type="text" id="loginUsername" class="terminal-input" placeholder="Enter username">
+                    <p class="terminal-text-small modal-section-label">Password:</p>
+                    <input type="password" id="loginPassword" class="terminal-input" placeholder="Enter password">
+                    <p class="terminal-text-small modal-section-label terminal-text-dim">
+                        Don't have an account? <a href="#" onclick="showRegisterForm(); return false;" class="terminal-link">Register here</a>
+                    </p>
+                </div>
+                <div id="registerForm" class="is-hidden">
+                    <p class="terminal-text">Create an account to sync your characters across devices.</p>
+                    <p class="terminal-text-small">Username:</p>
+                    <input type="text" id="registerUsername" class="terminal-input" placeholder="Choose username">
+                    <p class="terminal-text-small modal-section-label">Email:</p>
+                    <input type="email" id="registerEmail" class="terminal-input" placeholder="Enter email">
+                    <p class="terminal-text-small modal-section-label">Password:</p>
+                    <input type="password" id="registerPassword" class="terminal-input" placeholder="Choose password">
+                    <p class="terminal-text-small modal-section-label terminal-text-dim">
+                        Already have an account? <a href="#" onclick="showLoginForm(); return false;" class="terminal-link">Login here</a>
+                    </p>
+                </div>
+                <div id="authError" class="terminal-text-error is-hidden"></div>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="closeAuthModal()">CANCEL</button>
+                <button id="loginBtn" class="terminal-btn terminal-btn-primary" onclick="handleLogin()">LOGIN</button>
+                <button id="registerBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handleRegister()">REGISTER</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Migration Modal -->
+    <div id="migrationModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">☁️ Migrate to Cloud Storage</h2>
+            </div>
+            <div class="modal-body">
+                <p class="terminal-text">You have <strong id="migrationCount">0</strong> character(s) stored locally.</p>
+                <p class="terminal-text">Would you like to migrate them to cloud storage? This will sync your characters across devices.</p>
+                <p class="terminal-text-small terminal-text-dim">Note: A backup will be automatically downloaded before migration.</p>
+                <div id="migrationStatus" class="terminal-text is-hidden"></div>
+            </div>
+            <div class="modal-footer modal-footer-centered">
+                <button class="terminal-btn" onclick="closeMigrationModal()">SKIP</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="startMigration()">MIGRATE NOW</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Portrait Prompt Modal (hidden by default) -->
+    <div id="portraitPromptModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">★ Customize AI Portrait</h2>
+                <button class="modal-close" onclick="closePortraitPromptModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="terminal-text">Describe your character's appearance. AI will generate a portrait optimized for ASCII art.</p>
+                <p class="terminal-text-small terminal-text-dim">Be descriptive! (e.g., "a stoic dwarf fighter with a braided beard, holding a glowing axe")</p>
+                <textarea id="portraitPrompt" class="terminal-textarea terminal-input" rows="6" placeholder="Enter custom description..."></textarea>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="closePortraitPromptModal()">CANCEL</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="confirmGeneratePortrait()">GENERATE PORTRAIT</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="character-builder/character-builder-config.js"></script>
+    <script src="character-builder/character-builder-utils.js"></script>
+    <script src="character-builder/character-builder-services.js"></script>
     <script src="shared-character-sheet.js"></script>
+    <script src="character-manager-api.js"></script>
     <script src="character-manager.js"></script>
 </body>
 </html>

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Storage Test Suite</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { color: #0ff; border-bottom: 2px solid #0ff; padding-bottom: 10px; }
+        h2 { color: #ff0; margin-top: 30px; }
+        .test-section { 
+            border: 1px solid #333;
+            padding: 15px;
+            margin: 15px 0;
+            background: rgba(0, 255, 0, 0.05);
+        }
+        .status { 
+            display: inline-block;
+            padding: 2px 8px;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+        .status.pending { color: #fa0; }
+        .status.running { color: #0ff; }
+        .status.success { color: #0f0; }
+        .status.error { color: #f00; }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-family: monospace;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0ff; }
+        button:disabled { 
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+        .log {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+            padding: 10px;
+            margin: 10px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .log-entry { margin: 2px 0; }
+        .log-entry.error { color: #f00; }
+        .log-entry.success { color: #0f0; }
+        .log-entry.info { color: #0ff; }
+        .log-entry.warn { color: #fa0; }
+        pre {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+            padding: 10px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>☁️ DandDy Cloud Storage Test Suite</h1>
+    
+    <div class="test-section">
+        <h2>🔧 Prerequisites</h2>
+        <div id="prereqStatus">
+            <div>Backend Server: <span id="backendStatus" class="status pending">Checking...</span></div>
+            <div>Database Connection: <span id="dbStatus" class="status pending">Checking...</span></div>
+            <div>API Key Configured: <span id="apiKeyStatus" class="status pending">Checking...</span></div>
+        </div>
+        <button onclick="checkPrerequisites()">Check Prerequisites</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🔐 Authentication Tests</h2>
+        <div id="authStatus">
+            <div>User Registration: <span id="registerStatus" class="status pending">Not tested</span></div>
+            <div>User Login: <span id="loginStatus" class="status pending">Not tested</span></div>
+            <div>Token Persistence: <span id="tokenStatus" class="status pending">Not tested</span></div>
+            <div>User Profile Fetch: <span id="profileStatus" class="status pending">Not tested</span></div>
+        </div>
+        <button onclick="runAuthTests()">Run Auth Tests</button>
+        <button onclick="clearTestUser()">Clear Test User</button>
+        <div id="authLog" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>💾 Character CRUD Tests</h2>
+        <div id="crudStatus">
+            <div>Create Character: <span id="createStatus" class="status pending">Not tested</span></div>
+            <div>Read Character: <span id="readStatus" class="status pending">Not tested</span></div>
+            <div>Update Character: <span id="updateStatus" class="status pending">Not tested</span></div>
+            <div>Delete Character: <span id="deleteStatus" class="status pending">Not tested</span></div>
+            <div>Duplicate Character: <span id="duplicateStatus" class="status pending">Not tested</span></div>
+        </div>
+        <button onclick="runCrudTests()" id="crudBtn" disabled>Run CRUD Tests (Login First)</button>
+        <div id="crudLog" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔄 Migration Tests</h2>
+        <div id="migrationStatus">
+            <div>LocalStorage Detection: <span id="localDetectStatus" class="status pending">Not tested</span></div>
+            <div>Backup Creation: <span id="backupStatus" class="status pending">Not tested</span></div>
+            <div>Cloud Migration: <span id="migrationCompleteStatus" class="status pending">Not tested</span></div>
+        </div>
+        <button onclick="setupMigrationTest()">Setup Test Data</button>
+        <button onclick="runMigrationTests()" id="migrateBtn" disabled>Run Migration Tests (Login First)</button>
+        <div id="migrationLog" class="log"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Test Results Summary</h2>
+        <pre id="summary">No tests run yet. Click buttons above to start testing.</pre>
+    </div>
+
+    <script src="character-builder/character-builder-config.js"></script>
+    <script src="character-manager-api.js"></script>
+    <script>
+        const testResults = {
+            prerequisites: {},
+            auth: {},
+            crud: {},
+            migration: {}
+        };
+
+        let testCharacterId = null;
+        const testUsername = `test_${Date.now()}`;
+        const testPassword = 'TestPass123!';
+
+        // Logging helpers
+        function log(category, message, type = 'info') {
+            const logEl = document.getElementById(category + 'Log');
+            if (logEl) {
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                logEl.appendChild(entry);
+                logEl.scrollTop = logEl.scrollHeight;
+            }
+            console.log(`[${category}] ${message}`);
+        }
+
+        function updateStatus(id, status, text = null) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.className = `status ${status}`;
+                if (text) el.textContent = text;
+            }
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('summary');
+            const counts = {
+                total: 0,
+                passed: 0,
+                failed: 0,
+                pending: 0
+            };
+
+            Object.values(testResults).forEach(category => {
+                Object.values(category).forEach(result => {
+                    counts.total++;
+                    if (result === 'success') counts.passed++;
+                    else if (result === 'error') counts.failed++;
+                    else counts.pending++;
+                });
+            });
+
+            summary.textContent = `
+Total Tests: ${counts.total}
+Passed: ${counts.passed} ✓
+Failed: ${counts.failed} ✗
+Pending: ${counts.pending} ⋯
+
+Pass Rate: ${counts.total > 0 ? Math.round((counts.passed / counts.total) * 100) : 0}%
+            `.trim();
+        }
+
+        // Prerequisite checks
+        async function checkPrerequisites() {
+            log('prereq', 'Checking prerequisites...', 'info');
+            
+            // Check backend
+            try {
+                updateStatus('backendStatus', 'running', 'Checking...');
+                const response = await fetch('http://localhost:8000/api/ai/status');
+                if (response.ok) {
+                    updateStatus('backendStatus', 'success', '✓ Running');
+                    testResults.prerequisites.backend = 'success';
+                    log('prereq', 'Backend server is running', 'success');
+                } else {
+                    throw new Error('Server responded with error');
+                }
+            } catch (error) {
+                updateStatus('backendStatus', 'error', '✗ Not running');
+                testResults.prerequisites.backend = 'error';
+                log('prereq', 'Backend server is NOT running. Start it with: cd backend && python main.py', 'error');
+            }
+
+            updateSummary();
+        }
+
+        // Authentication tests
+        async function runAuthTests() {
+            log('auth', 'Starting authentication tests...', 'info');
+            
+            // Test registration
+            try {
+                updateStatus('registerStatus', 'running', 'Testing...');
+                log('auth', `Registering user: ${testUsername}`, 'info');
+                
+                const result = await window.AuthService.register(
+                    testUsername,
+                    `${testUsername}@test.com`,
+                    testPassword
+                );
+                
+                if (result.success) {
+                    updateStatus('registerStatus', 'success', '✓ Passed');
+                    testResults.auth.register = 'success';
+                    log('auth', 'Registration successful', 'success');
+                    
+                    // Enable CRUD button
+                    document.getElementById('crudBtn').disabled = false;
+                    document.getElementById('migrateBtn').disabled = false;
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                updateStatus('registerStatus', 'error', '✗ Failed');
+                testResults.auth.register = 'error';
+                log('auth', `Registration failed: ${error.message}`, 'error');
+            }
+
+            // Test token persistence
+            try {
+                updateStatus('tokenStatus', 'running', 'Testing...');
+                const token = window.AuthService.getToken();
+                if (token) {
+                    updateStatus('tokenStatus', 'success', '✓ Passed');
+                    testResults.auth.token = 'success';
+                    log('auth', 'Token persisted in localStorage', 'success');
+                } else {
+                    throw new Error('No token found');
+                }
+            } catch (error) {
+                updateStatus('tokenStatus', 'error', '✗ Failed');
+                testResults.auth.token = 'error';
+                log('auth', `Token persistence failed: ${error.message}`, 'error');
+            }
+
+            // Test profile fetch
+            try {
+                updateStatus('profileStatus', 'running', 'Testing...');
+                const profile = await window.AuthService.fetchUserProfile();
+                if (profile && profile.username === testUsername) {
+                    updateStatus('profileStatus', 'success', '✓ Passed');
+                    testResults.auth.profile = 'success';
+                    log('auth', `Profile fetched: ${profile.username}`, 'success');
+                } else {
+                    throw new Error('Profile mismatch');
+                }
+            } catch (error) {
+                updateStatus('profileStatus', 'error', '✗ Failed');
+                testResults.auth.profile = 'error';
+                log('auth', `Profile fetch failed: ${error.message}`, 'error');
+            }
+
+            updateSummary();
+        }
+
+        // CRUD tests
+        async function runCrudTests() {
+            log('crud', 'Starting CRUD tests...', 'info');
+            
+            const testChar = {
+                name: 'Test Character',
+                race: 'Human',
+                class: 'Fighter',
+                level: 5,
+                abilities: {
+                    str: 16,
+                    dex: 14,
+                    con: 15,
+                    int: 10,
+                    wis: 12,
+                    cha: 8
+                },
+                hitPoints: { max: 45, current: 45 },
+                armorClass: 18,
+                background: 'Soldier',
+                alignment: 'Lawful Good'
+            };
+
+            // Create
+            try {
+                updateStatus('createStatus', 'running', 'Testing...');
+                log('crud', 'Creating character...', 'info');
+                
+                const created = await window.CharacterCloudStorage.add(testChar);
+                testCharacterId = created.id;
+                
+                updateStatus('createStatus', 'success', '✓ Passed');
+                testResults.crud.create = 'success';
+                log('crud', `Character created with ID: ${testCharacterId}`, 'success');
+            } catch (error) {
+                updateStatus('createStatus', 'error', '✗ Failed');
+                testResults.crud.create = 'error';
+                log('crud', `Create failed: ${error.message}`, 'error');
+                return;
+            }
+
+            // Read
+            try {
+                updateStatus('readStatus', 'running', 'Testing...');
+                log('crud', `Reading character ${testCharacterId}...`, 'info');
+                
+                const read = await window.CharacterCloudStorage.getById(testCharacterId);
+                if (read && read.name === testChar.name) {
+                    updateStatus('readStatus', 'success', '✓ Passed');
+                    testResults.crud.read = 'success';
+                    log('crud', 'Character read successfully', 'success');
+                } else {
+                    throw new Error('Data mismatch');
+                }
+            } catch (error) {
+                updateStatus('readStatus', 'error', '✗ Failed');
+                testResults.crud.read = 'error';
+                log('crud', `Read failed: ${error.message}`, 'error');
+            }
+
+            // Update
+            try {
+                updateStatus('updateStatus', 'running', 'Testing...');
+                log('crud', 'Updating character...', 'info');
+                
+                const updated = await window.CharacterCloudStorage.update(testCharacterId, {
+                    name: 'Updated Test Character',
+                    level: 6
+                });
+                
+                if (updated && updated.name === 'Updated Test Character' && updated.level === 6) {
+                    updateStatus('updateStatus', 'success', '✓ Passed');
+                    testResults.crud.update = 'success';
+                    log('crud', 'Character updated successfully', 'success');
+                } else {
+                    throw new Error('Update failed');
+                }
+            } catch (error) {
+                updateStatus('updateStatus', 'error', '✗ Failed');
+                testResults.crud.update = 'error';
+                log('crud', `Update failed: ${error.message}`, 'error');
+            }
+
+            // Duplicate
+            try {
+                updateStatus('duplicateStatus', 'running', 'Testing...');
+                log('crud', 'Duplicating character...', 'info');
+                
+                const duplicated = await window.CharacterCloudStorage.duplicate(testCharacterId);
+                if (duplicated && duplicated.id !== testCharacterId) {
+                    updateStatus('duplicateStatus', 'success', '✓ Passed');
+                    testResults.crud.duplicate = 'success';
+                    log('crud', `Character duplicated with ID: ${duplicated.id}`, 'success');
+                    
+                    // Clean up duplicate
+                    await window.CharacterCloudStorage.delete(duplicated.id);
+                } else {
+                    throw new Error('Duplicate failed');
+                }
+            } catch (error) {
+                updateStatus('duplicateStatus', 'error', '✗ Failed');
+                testResults.crud.duplicate = 'error';
+                log('crud', `Duplicate failed: ${error.message}`, 'error');
+            }
+
+            // Delete
+            try {
+                updateStatus('deleteStatus', 'running', 'Testing...');
+                log('crud', 'Deleting character...', 'info');
+                
+                const deleted = await window.CharacterCloudStorage.delete(testCharacterId);
+                if (deleted) {
+                    updateStatus('deleteStatus', 'success', '✓ Passed');
+                    testResults.crud.delete = 'success';
+                    log('crud', 'Character deleted successfully', 'success');
+                } else {
+                    throw new Error('Delete failed');
+                }
+            } catch (error) {
+                updateStatus('deleteStatus', 'error', '✗ Failed');
+                testResults.crud.delete = 'error';
+                log('crud', `Delete failed: ${error.message}`, 'error');
+            }
+
+            updateSummary();
+        }
+
+        // Migration tests
+        function setupMigrationTest() {
+            log('migration', 'Setting up test data in localStorage...', 'info');
+            
+            const testChars = [
+                { id: 'test1', name: 'Gandalf', race: 'Human', class: 'Wizard', level: 20 },
+                { id: 'test2', name: 'Aragorn', race: 'Human', class: 'Ranger', level: 16 },
+            ];
+            
+            localStorage.setItem('dnd_characters', JSON.stringify(testChars));
+            log('migration', `Created ${testChars.length} test characters in localStorage`, 'success');
+        }
+
+        async function runMigrationTests() {
+            log('migration', 'Starting migration tests...', 'info');
+            
+            // Detect local storage
+            try {
+                updateStatus('localDetectStatus', 'running', 'Testing...');
+                const hasLocal = window.MigrationService.hasLocalCharacters();
+                const count = window.MigrationService.getLocalCharacterCount();
+                
+                if (hasLocal && count > 0) {
+                    updateStatus('localDetectStatus', 'success', `✓ Passed (${count} chars)`);
+                    testResults.migration.detect = 'success';
+                    log('migration', `Detected ${count} characters in localStorage`, 'success');
+                } else {
+                    throw new Error('No local characters found. Run "Setup Test Data" first.');
+                }
+            } catch (error) {
+                updateStatus('localDetectStatus', 'error', '✗ Failed');
+                testResults.migration.detect = 'error';
+                log('migration', error.message, 'error');
+                return;
+            }
+
+            // Test migration
+            try {
+                updateStatus('migrationCompleteStatus', 'running', 'Testing...');
+                log('migration', 'Starting migration...', 'info');
+                
+                const results = await window.MigrationService.migrateToCloud();
+                
+                if (results.success > 0) {
+                    updateStatus('migrationCompleteStatus', 'success', `✓ Passed (${results.success} migrated)`);
+                    testResults.migration.migrate = 'success';
+                    log('migration', `Migrated ${results.success} characters successfully`, 'success');
+                    
+                    if (results.failed > 0) {
+                        log('migration', `${results.failed} characters failed to migrate`, 'warn');
+                    }
+                } else {
+                    throw new Error('No characters migrated');
+                }
+            } catch (error) {
+                updateStatus('migrationCompleteStatus', 'error', '✗ Failed');
+                testResults.migration.migrate = 'error';
+                log('migration', `Migration failed: ${error.message}`, 'error');
+            }
+
+            updateSummary();
+        }
+
+        // Cleanup
+        async function clearTestUser() {
+            if (confirm(`Delete test user ${testUsername}?`)) {
+                window.AuthService.logout();
+                log('auth', 'Test user session cleared', 'info');
+                updateStatus('registerStatus', 'pending', 'Not tested');
+                updateStatus('loginStatus', 'pending', 'Not tested');
+                document.getElementById('crudBtn').disabled = true;
+                document.getElementById('migrateBtn').disabled = true;
+            }
+        }
+
+        // Auto-run prerequisites on load
+        window.addEventListener('load', () => {
+            setTimeout(checkPrerequisites, 500);
+        });
+    </script>
+</body>
+</html>
+

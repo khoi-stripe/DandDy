@@ -144,51 +144,168 @@ const KeyboardNav = {
 };
 
 // ========================================
-// STORAGE SERVICE
+// HYBRID STORAGE SERVICE (Cloud + Local)
 // ========================================
 const CharacterStorage = {
     STORAGE_KEY: 'dnd_characters',
-
-    // Get all characters from localStorage
-    getAll() {
-        const data = localStorage.getItem(this.STORAGE_KEY);
-        const characters = data ? JSON.parse(data) : [];
-        console.log('💾 STORAGE.GETALL: Retrieved', characters.length, 'characters from localStorage');
-        return characters;
+    
+    // Check if user is authenticated and should use cloud
+    useCloud() {
+        return window.AuthService && window.AuthService.isAuthenticated();
     },
 
-    // Save all characters to localStorage
-    saveAll(characters) {
-        console.log('💾 STORAGE.SAVEALL: Saving', characters.length, 'characters to localStorage');
-        console.log('💾 STORAGE.SAVEALL: Character names:', characters.map(c => c.name).join(', '));
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(characters));
-        console.log('💾 STORAGE.SAVEALL: Save complete');
+    // Get all characters (cloud or local)
+    async getAll() {
+        if (this.useCloud()) {
+            try {
+                return await window.CharacterCloudStorage.getAll();
+            } catch (error) {
+                console.error('☁️ Cloud fetch failed, falling back to local:', error);
+                showNotification('⚠️ Cloud sync failed. Showing local data.');
+                return this._getLocalAll();
+            }
+        }
+        return this._getLocalAll();
     },
 
     // Get single character by ID
-    getById(id) {
-        const characters = this.getAll();
-        return characters.find(char => char.id === id);
+    async getById(id) {
+        if (this.useCloud()) {
+            try {
+                return await window.CharacterCloudStorage.getById(id);
+            } catch (error) {
+                console.error('☁️ Cloud fetch failed, falling back to local:', error);
+                return this._getLocalById(id);
+            }
+        }
+        return this._getLocalById(id);
     },
 
     // Add new character
-    add(character) {
-        console.log('💾 STORAGE.ADD: Adding character:', character.name);
-        const characters = this.getAll();
-        console.log('💾 STORAGE.ADD: Current storage has', characters.length, 'characters before add');
+    async add(character) {
+        if (this.useCloud()) {
+            try {
+                return await window.CharacterCloudStorage.add(character);
+            } catch (error) {
+                console.error('☁️ Cloud add failed:', error);
+                showNotification('❌ Failed to save to cloud. Please try again.');
+                throw error;
+            }
+        }
+        return this._localAdd(character);
+    },
+
+    // Update existing character
+    async update(id, updates) {
+        if (this.useCloud()) {
+            try {
+                return await window.CharacterCloudStorage.update(id, updates);
+            } catch (error) {
+                console.error('☁️ Cloud update failed:', error);
+                showNotification('❌ Failed to update in cloud. Please try again.');
+                throw error;
+            }
+        }
+        return this._localUpdate(id, updates);
+    },
+
+    // Delete character
+    async delete(id) {
+        if (this.useCloud()) {
+            try {
+                return await window.CharacterCloudStorage.delete(id);
+            } catch (error) {
+                console.error('☁️ Cloud delete failed:', error);
+                showNotification('❌ Failed to delete from cloud. Please try again.');
+                throw error;
+            }
+        }
+        return this._localDelete(id);
+    },
+
+    // Duplicate character
+    async duplicate(id) {
+        if (this.useCloud()) {
+            try {
+                return await window.CharacterCloudStorage.duplicate(id);
+            } catch (error) {
+                console.error('☁️ Cloud duplicate failed:', error);
+                showNotification('❌ Failed to duplicate in cloud. Please try again.');
+                throw error;
+            }
+        }
+        return this._localDuplicate(id);
+    },
+
+    // Export character as JSON
+    async export(id) {
+        if (this.useCloud()) {
+            try {
+                return await window.CharacterCloudStorage.export(id);
+            } catch (error) {
+                console.error('☁️ Cloud export failed:', error);
+                const character = this._getLocalById(id);
+                return character ? JSON.stringify(character, null, 2) : null;
+            }
+        }
+        const character = this._getLocalById(id);
+        return character ? JSON.stringify(character, null, 2) : null;
+    },
+
+    // Import character from JSON
+    async import(jsonString) {
+        if (this.useCloud()) {
+            try {
+                return await window.CharacterCloudStorage.import(jsonString);
+            } catch (error) {
+                console.error('☁️ Cloud import failed:', error);
+                showNotification('❌ Failed to import to cloud. Please try again.');
+                return null;
+            }
+        }
+        return this._localImport(jsonString);
+    },
+
+    // Generate unique ID
+    generateId() {
+        return `char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    },
+
+    // ========================================
+    // LOCAL STORAGE IMPLEMENTATIONS (Fallback)
+    // ========================================
+
+    _getLocalAll() {
+        const data = localStorage.getItem(this.STORAGE_KEY);
+        const characters = data ? JSON.parse(data) : [];
+        console.log('💾 LOCAL.GETALL: Retrieved', characters.length, 'characters from localStorage');
+        return characters;
+    },
+
+    _getLocalById(id) {
+        const characters = this._getLocalAll();
+        return characters.find(char => char.id === id);
+    },
+
+    _localSaveAll(characters) {
+        console.log('💾 LOCAL.SAVEALL: Saving', characters.length, 'characters to localStorage');
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(characters));
+    },
+
+    _localAdd(character) {
+        console.log('💾 LOCAL.ADD: Adding character:', character.name);
+        const characters = this._getLocalAll();
         character.id = this.generateId();
         character.createdAt = new Date().toISOString();
         character.updatedAt = new Date().toISOString();
         characters.push(character);
-        console.log('💾 STORAGE.ADD: After push, array has', characters.length, 'characters');
-        this.saveAll(characters);
-        console.log('💾 STORAGE.ADD: Character added with ID:', character.id);
+        this._localSaveAll(characters);
+        console.log('💾 LOCAL.ADD: Character added with ID:', character.id);
         return character;
     },
 
-    // Update existing character
-    update(id, updates) {
-        const characters = this.getAll();
+    _localUpdate(id, updates) {
+        const characters = this._getLocalAll();
         const index = characters.findIndex(char => char.id === id);
         if (index !== -1) {
             characters[index] = {
@@ -196,34 +313,22 @@ const CharacterStorage = {
                 ...updates,
                 updatedAt: new Date().toISOString()
             };
-            this.saveAll(characters);
+            this._localSaveAll(characters);
             return characters[index];
         }
         return null;
     },
 
-    // Delete character
-    delete(id) {
-        console.log('🗑️ STORAGE.DELETE: Deleting character with ID:', id);
-        const characters = this.getAll();
-        const toDelete = characters.find(char => char.id === id);
-        if (toDelete) {
-            console.log('🗑️ STORAGE.DELETE: Found character to delete:', toDelete.name);
-        } else {
-            console.log('🗑️ STORAGE.DELETE: Character not found!');
-        }
-        console.log('🗑️ STORAGE.DELETE: Storage had', characters.length, 'characters before delete');
+    _localDelete(id) {
+        console.log('🗑️ LOCAL.DELETE: Deleting character with ID:', id);
+        const characters = this._getLocalAll();
         const filtered = characters.filter(char => char.id !== id);
-        console.log('🗑️ STORAGE.DELETE: After filter, have', filtered.length, 'characters');
-        this.saveAll(filtered);
-        const success = filtered.length < characters.length;
-        console.log('🗑️ STORAGE.DELETE: Delete', success ? 'successful' : 'failed');
-        return success;
+        this._localSaveAll(filtered);
+        return filtered.length < characters.length;
     },
 
-    // Duplicate character
-    duplicate(id) {
-        const character = this.getById(id);
+    _localDuplicate(id) {
+        const character = this._getLocalById(id);
         if (!character) return null;
         
         const duplicate = {
@@ -234,58 +339,28 @@ const CharacterStorage = {
             updatedAt: new Date().toISOString()
         };
         
-        const characters = this.getAll();
+        const characters = this._getLocalAll();
         characters.push(duplicate);
-        this.saveAll(characters);
+        this._localSaveAll(characters);
         return duplicate;
     },
 
-    // Generate unique ID
-    generateId() {
-        return `char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    },
-
-    // Export character as JSON
-    export(id) {
-        const character = this.getById(id);
-        if (!character) return null;
-        return JSON.stringify(character, null, 2);
-    },
-
-    // Import character from JSON
-    import(jsonString) {
+    _localImport(jsonString) {
         try {
-            console.log('📥 IMPORT: Starting import...');
+            console.log('📥 LOCAL.IMPORT: Starting import...');
             const character = JSON.parse(jsonString);
-            console.log('📥 IMPORT: Parsed character:', character.name);
+            console.log('📥 LOCAL.IMPORT: Parsed character:', character.name);
 
-            // Always work with the latest list from storage
-            const existing = this.getAll();
-
-            // Extract stable character UID from metadata (preferred) or top-level field
-            const importedUid =
-                character.metadata?.characterUid ||
-                character.characterUid ||
-                null;
-
-            console.log('📥 IMPORT: characterUid from JSON:', importedUid);
+            const existing = this._getLocalAll();
+            const importedUid = character.metadata?.characterUid || character.characterUid || null;
 
             if (importedUid) {
-                // Look for an indisputable duplicate: same stable UID already stored
                 const uidMatches = existing.filter(
-                    c =>
-                        c.metadata?.characterUid === importedUid ||
-                        c.characterUid === importedUid
+                    c => c.metadata?.characterUid === importedUid || c.characterUid === importedUid
                 );
 
                 if (uidMatches.length > 0) {
                     const match = uidMatches[0];
-                    console.warn('📥 IMPORT: Stable UID match found - this is the same logical character.');
-                    console.warn('📥 IMPORT: Existing match:', {
-                        id: match.id,
-                        name: match.name,
-                    });
-
                     return {
                         isDuplicate: true,
                         reason: 'uid',
@@ -297,18 +372,12 @@ const CharacterStorage = {
                 }
             }
 
-            // If we get here, we treat this as a new character. We intentionally
-            // do NOT block on name or stat similarity – only on stable UID.
-
-            // Remove ID to generate new one (even if no duplicate found, we want a fresh ID)
             delete character.id;
-            const result = this.add(character);
-            console.log('📥 IMPORT: Added character with new ID:', result.id);
-            const allChars = this.getAll();
-            console.log('📥 IMPORT: Total characters in storage now:', allChars.length);
+            const result = this._localAdd(character);
+            console.log('📥 LOCAL.IMPORT: Added character with new ID:', result.id);
             return result;
         } catch (error) {
-            console.error('Import error:', error);
+            console.error('Local import error:', error);
             return null;
         }
     }
@@ -321,29 +390,37 @@ const AppState = {
     characters: [],
     filteredCharacters: [],
     searchTerm: '',
+    loading: false,
 
     init() {
         this.loadCharacters();
     },
 
-    loadCharacters() {
-        this.characters = CharacterStorage.getAll();
-        console.log('📚 LOAD: Loaded', this.characters.length, 'characters from storage');
-        console.log('📚 LOAD: Full character list with IDs:');
-        this.characters.forEach((c, i) => {
-            console.log(`  ${i+1}. ${c.name} (ID: ${c.id})`);
-        });
-        const names = this.characters.map(c => c.name);
-        const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
-        if (duplicates.length > 0) {
-            console.warn('⚠️ DUPLICATE NAMES DETECTED:', duplicates);
-            // Show which IDs have duplicate names
-            duplicates.forEach(dupName => {
-                const matches = this.characters.filter(c => c.name === dupName);
-                console.warn(`  "${dupName}" appears ${matches.length} times with IDs:`, matches.map(m => m.id));
+    async loadCharacters() {
+        try {
+            this.loading = true;
+            this.characters = await CharacterStorage.getAll();
+            console.log('📚 LOAD: Loaded', this.characters.length, 'characters from storage');
+            console.log('📚 LOAD: Full character list with IDs:');
+            this.characters.forEach((c, i) => {
+                console.log(`  ${i+1}. ${c.name} (ID: ${c.id})`);
             });
+            const names = this.characters.map(c => c.name);
+            const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
+            if (duplicates.length > 0) {
+                console.warn('⚠️ DUPLICATE NAMES DETECTED:', duplicates);
+                duplicates.forEach(dupName => {
+                    const matches = this.characters.filter(c => c.name === dupName);
+                    console.warn(`  "${dupName}" appears ${matches.length} times with IDs:`, matches.map(m => m.id));
+                });
+            }
+            this.applyFilters();
+            this.loading = false;
+        } catch (error) {
+            console.error('Failed to load characters:', error);
+            this.loading = false;
+            showNotification('❌ Failed to load characters');
         }
-        this.applyFilters();
     },
 
     applyFilters() {
@@ -485,8 +562,7 @@ const UI = {
             context: 'manager',
             showPortrait: true,
             onRename: true,
-            onDuplicate: true,
-            onExport: true,
+            onEdit: true,
             onDelete: true,
             onGeneratePortrait: true,
         });
@@ -614,8 +690,8 @@ function createNewCharacter() {
     alert('This will link to your character builder!\n\nFor now, use Import to add characters.');
 }
 
-function viewCharacter(id) {
-    const character = CharacterStorage.getById(id);
+async function viewCharacter(id) {
+    const character = await CharacterStorage.getById(id);
     if (character) {
         UI.showCharacterSheet(character);
         
@@ -638,43 +714,336 @@ function viewCharacter(id) {
     }
 }
 
-function editCharacter(id) {
-    alert('Edit functionality coming soon!\n\nFor now, you can duplicate and modify the character.');
+let currentEditCharacterId = null;
+
+async function editCharacter(id) {
+    const character = await CharacterStorage.getById(id);
+    if (!character) return;
+
+    currentEditCharacterId = id;
+
+    // Use parsed data to pre-fill, so we respect any derived values
+    const parsed = CharacterSheet._parseCharacterData(character);
+
+    // Helper to safely set textarea values
+    const setValue = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.value = value || '';
+    };
+
+    // SKILL PROFICIENCIES (text-only list, one per line)
+    const skillList = (parsed.skillProficiencies || []).map(s => CharacterSheet.formatSkillName(s)).join('\n');
+    setValue('editSkills', skillList);
+
+    // CLASS EQUIPMENT / EQUIPMENT (one per line)
+    const equipmentList = (parsed.equipment || []).join('\n');
+    setValue('editEquipment', equipmentList);
+
+    // TOOL PROFICIENCIES (one per line)
+    const toolList = (parsed.toolProficiencies || []).map(t => CharacterSheet.formatSkillName(t)).join('\n');
+    setValue('editTools', toolList);
+
+    // LANGUAGES (one per line)
+    const languageList = (parsed.languages || []).join('\n');
+    setValue('editLanguages', languageList);
+
+    // BACKSTORY (free text)
+    setValue('editBackstory', character.backstory || '');
+
+    // Show modal
+    const modal = document.getElementById('editDetailsModal');
+    if (modal) {
+        modal.classList.add('show');
+    }
 }
 
-function renameCharacter(id) {
-    const character = CharacterStorage.getById(id);
+function closeEditDetailsModal() {
+    const modal = document.getElementById('editDetailsModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+    currentEditCharacterId = null;
+}
+
+async function saveEditDetails() {
+    if (!currentEditCharacterId) {
+        closeEditDetailsModal();
+        return;
+    }
+
+    const character = await CharacterStorage.getById(currentEditCharacterId);
+    if (!character) {
+        closeEditDetailsModal();
+        return;
+    }
+
+    const getLines = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return [];
+        return el.value
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+    };
+
+    const skillLines = getLines('editSkills');
+    const equipmentLines = getLines('editEquipment');
+    const toolLines = getLines('editTools');
+    const languageLines = getLines('editLanguages');
+
+    const backstoryEl = document.getElementById('editBackstory');
+    const backstoryText = backstoryEl ? backstoryEl.value.trim() : '';
+
+    const updates = {
+        // Store raw IDs/names; CharacterSheet will format as needed
+        skillProficiencies: skillLines.map(s => s.toLowerCase().replace(/\s+/g, '-')),
+        equipment: equipmentLines,
+        toolProficiencies: toolLines.map(t => t.toLowerCase().replace(/\s+/g, '-')),
+        languages: languageLines,
+        backstory: backstoryText,
+    };
+
+    await CharacterStorage.update(currentEditCharacterId, updates);
+    await AppState.loadCharacters();
+    UI.render();
+    viewCharacter(currentEditCharacterId);
+    showNotification('Character details updated');
+    closeEditDetailsModal();
+}
+
+async function renameCharacter(id) {
+    const character = await CharacterStorage.getById(id);
     if (!character) return;
     
     const newName = prompt('Enter new name for character:', character.name);
     if (newName && newName.trim() !== '') {
-        CharacterStorage.update(id, { name: newName.trim() });
-        AppState.loadCharacters();
+        await CharacterStorage.update(id, { name: newName.trim() });
+        await AppState.loadCharacters();
         UI.render();
         viewCharacter(id);
         showNotification(`Character renamed to: ${newName.trim()}`);
     }
 }
 
-function generatePortraitForCharacter(id) {
-    alert('AI Portrait generation coming soon!\n\nThis feature will allow you to generate custom AI portraits for your character.');
+let currentPortraitCharacterId = null;
+
+async function generatePortraitForCharacter(id) {
+    const character = await CharacterStorage.getById(id);
+    if (!character) return;
+
+    // Check if race and class are defined
+    if (!character.race || !character.class) {
+        alert('This character needs both a race and class to generate a custom portrait.');
+        return;
+    }
+
+    // Check portrait generation limit (3 per character)
+    const portraitCount = character.customPortraitCount || 0;
+    if (portraitCount >= 3) {
+        alert('Portrait limit reached. You can generate up to 3 custom AI portraits per character.');
+        return;
+    }
+
+    // Check if backend is available
+    try {
+        const statusCheck = await fetch(`${window.CONFIG.BACKEND_URL}/api/ai/status`);
+        if (!statusCheck.ok) {
+            alert('Backend server is not available. Make sure the backend is running on port 8000.');
+            return;
+        }
+        const statusData = await statusCheck.json();
+        if (!statusData.available) {
+            alert('AI features are not available. The backend server is not configured properly.');
+            return;
+        }
+    } catch (error) {
+        alert('Cannot connect to backend server. Make sure it is running on http://localhost:8000');
+        return;
+    }
+
+    // Show prompt modal
+    currentPortraitCharacterId = id;
+    
+    // Build default prompt using character data
+    const defaultPrompt = window.AIService && window.AIService.buildCharacterDescription
+        ? window.AIService.buildCharacterDescription(character)
+        : `${character.race} ${character.class}`;
+    
+    document.getElementById('portraitPrompt').value = defaultPrompt;
+    document.getElementById('portraitPromptModal').classList.add('show');
 }
 
-function duplicateCharacter(id) {
+function closePortraitPromptModal() {
+    document.getElementById('portraitPromptModal').classList.remove('show');
+    document.getElementById('portraitPrompt').value = '';
+    currentPortraitCharacterId = null;
+}
+
+async function confirmGeneratePortrait() {
+    if (!currentPortraitCharacterId) {
+        closePortraitPromptModal();
+        return;
+    }
+
+    const character = CharacterStorage.getById(currentPortraitCharacterId);
+    if (!character) {
+        closePortraitPromptModal();
+        return;
+    }
+
+    const customPrompt = document.getElementById('portraitPrompt').value.trim();
+    if (!customPrompt) {
+        alert('Please enter a description for your character portrait.');
+        return;
+    }
+
+    // Close modal
+    closePortraitPromptModal();
+
+    // Show loading state in the portrait area
+    const portraitId = `character-portrait-${currentPortraitCharacterId}`;
+    const portraitEl = document.getElementById(portraitId);
+    
+    let portraitLoadingInterval;
+    let portraitElapsed = 0;
+    
+    const updatePortraitLoading = () => {
+        if (!portraitEl) return;
+        
+        if (portraitElapsed < 5) {
+            portraitEl.textContent = `[<span class="spinner">↻</span>] GENERATING AI PORTRAIT...\n\n  Calling DALL-E...`;
+        } else if (portraitElapsed < 15) {
+            portraitEl.innerHTML = `[<span class="spinner">↻</span>] GENERATING AI PORTRAIT...\n\n  DALL-E is working...\n  (this takes 20-30 seconds)`;
+        } else if (portraitElapsed < 25) {
+            portraitEl.innerHTML = `[<span class="spinner">↻</span>] GENERATING AI PORTRAIT...\n\n  Converting to ASCII art...`;
+        } else {
+            portraitEl.innerHTML = `[<span class="spinner">↻</span>] ALMOST DONE...\n\n  . . . ( ._.)`;
+        }
+        portraitElapsed++;
+    };
+    
+    if (portraitEl) {
+        updatePortraitLoading();
+        portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
+    }
+
+    console.log('%c🎨 PORTRAIT: Starting AI portrait generation...', 'color: #0ff; font-weight: bold');
+    console.log('  Note: DALL-E takes 20-30s when backend is warm, 60s+ on cold start...');
+    showNotification('Generating custom AI portrait... This may take 20-30 seconds.');
+
+    try {
+        // Add rendering instructions to the user's character description
+        const renderingInstructions = [
+            'Fantasy D&D character portrait',
+            'Create a high-contrast, grayscale illustration on a pure black background',
+            'Use bold, graphic shapes with thick outlines and minimal fine detail',
+            'The image should have bright highlights and deep shadows to maximize tonal separation',
+            'Center the subject in the frame and avoid background texture',
+            'Style should be simple, iconic, and optimized for ASCII art conversion',
+        ];
+        
+        const fullPrompt = [...renderingInstructions, customPrompt].join(', ');
+        
+        // Generate custom portrait with full prompt
+        const result = await window.AsciiArtService.generateCustomAIPortraitWithPrompt(fullPrompt);
+
+        // Check if generation actually succeeded
+        if (!result || !result.asciiArt || !result.imageUrl) {
+            throw new Error('Portrait generation returned incomplete result');
+        }
+
+        // Stop the loading animation
+        if (portraitLoadingInterval) {
+            clearInterval(portraitLoadingInterval);
+        }
+
+        console.log('%c🎨 PORTRAIT (Success) ✨', 'color: #0f0; font-weight: bold');
+
+        // Update character in storage
+        const currentCount = character.customPortraitCount || 0;
+        const updates = {
+            originalPortraitUrl: result.imageUrl,
+            customPortraitAscii: result.asciiArt,
+            customPortraitCount: currentCount + 1,
+        };
+
+        // Also update portrait object for consistency
+        if (!updates.portrait) {
+            updates.portrait = {};
+        }
+        updates.portrait = {
+            ...character.portrait,
+            url: result.imageUrl,
+            ascii: result.asciiArt,
+        };
+
+        await CharacterStorage.update(currentPortraitCharacterId, updates);
+        
+        // Reload characters and UI
+        await AppState.loadCharacters();
+        UI.render();
+        viewCharacter(currentPortraitCharacterId);
+        
+        showNotification(`Custom AI portrait generated! (${3 - (currentCount + 1)} remaining)`);
+    } catch (error) {
+        console.error('Error generating custom AI portrait:', error);
+        
+        // Stop the loading animation
+        if (portraitLoadingInterval) {
+            clearInterval(portraitLoadingInterval);
+        }
+        
+        // Restore previous portrait first
+        if (portraitEl) {
+            const asciiPortrait = window.CharacterSheet.getAsciiPortrait(character);
+            if (asciiPortrait) {
+                portraitEl.textContent = asciiPortrait;
+            } else {
+                portraitEl.textContent = '[ NO PORTRAIT ]';
+            }
+        }
+        
+        // Graceful error handling - inform but don't block
+        if (error.isRateLimit) {
+            console.log('%c🎨 PORTRAIT (Rate Limited)', 'color: #fa0; font-weight: bold');
+            showNotification('⚠️ Rate limit exceeded. Please wait a few minutes before trying again.');
+        } else if (error.name === 'AbortError' || (error.message && error.message.includes('timed out'))) {
+            console.log('%c🎨 PORTRAIT (Timeout - Backend Waking Up)', 'color: #fa0; font-weight: bold');
+            console.log('  ⏰ Request timed out. Backend may be waking up from cold start.');
+            console.log('  ✅ Try again in a moment - server should be warm now!');
+            showNotification('⏰ Request timed out. Backend may be waking up. Try again in a moment!');
+            
+            // Trigger background warmup like other AI features
+            if (window.AIService && window.AIService.warmupBackend) {
+                window.AIService.warmupBackend();
+            }
+        } else if (error.message && error.message.includes('fetch')) {
+            console.log('%c🎨 PORTRAIT (Connection Error)', 'color: #f00; font-weight: bold');
+            console.log('  Cannot connect to backend server');
+            showNotification('🔌 Cannot connect to backend server. Check that it\'s running.');
+        } else {
+            console.log('%c🎨 PORTRAIT (Failed)', 'color: #f00; font-weight: bold');
+            console.log('  Error:', error.message);
+            showNotification('❌ Portrait generation failed. Check console for details and try again.');
+        }
+    }
+}
+
+async function duplicateCharacter(id) {
     if (confirm('Create a copy of this character?')) {
-        const duplicate = CharacterStorage.duplicate(id);
+        const duplicate = await CharacterStorage.duplicate(id);
         if (duplicate) {
-            AppState.loadCharacters();
+            await AppState.loadCharacters();
             UI.render();
             showNotification(`Created: ${duplicate.name}`);
         }
     }
 }
 
-function exportCharacter(id) {
-    const json = CharacterStorage.export(id);
+async function exportCharacter(id) {
+    const json = await CharacterStorage.export(id);
     if (json) {
-        const character = CharacterStorage.getById(id);
+        const character = await CharacterStorage.getById(id);
         const blob = new Blob([json], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -686,11 +1055,11 @@ function exportCharacter(id) {
     }
 }
 
-function deleteCharacter(id) {
-    const character = CharacterStorage.getById(id);
+async function deleteCharacter(id) {
+    const character = await CharacterStorage.getById(id);
     if (character && confirm(`Delete ${character.name}?\n\nThis cannot be undone.`)) {
-        CharacterStorage.delete(id);
-        AppState.loadCharacters();
+        await CharacterStorage.delete(id);
+        await AppState.loadCharacters();
         UI.render();
         showNotification('Character deleted');
     }
@@ -773,11 +1142,11 @@ function resolveDuplicate(action) {
     closeDuplicateModal();
 }
 
-function handleOverwriteCharacter(existingId, importData) {
+async function handleOverwriteCharacter(existingId, importData) {
     console.log('🔄 OVERWRITE: Replacing existing character with ID:', existingId);
     
     // Delete the existing character
-    CharacterStorage.delete(existingId);
+    await CharacterStorage.delete(existingId);
     
     // Import the new one (bypassing duplicate check but preserving stable UID)
     const character = JSON.parse(importData);
@@ -794,11 +1163,11 @@ function handleOverwriteCharacter(existingId, importData) {
         character.characterUid = importedUid;
     }
 
-    const result = CharacterStorage.add(character);
+    const result = await CharacterStorage.add(character);
     
     if (result) {
         console.log('✅ OVERWRITE SUCCESS: Character replaced');
-        AppState.loadCharacters();
+        await AppState.loadCharacters();
         UI.render();
         closeImportModal();
         showNotification(`Replaced: ${result.name}`);
@@ -806,7 +1175,7 @@ function handleOverwriteCharacter(existingId, importData) {
     }
 }
 
-function handleKeepBothCharacters(importData) {
+async function handleKeepBothCharacters(importData) {
     console.log('📋 KEEP BOTH: Importing with modified name');
     
     // Parse and modify the character name
@@ -814,7 +1183,7 @@ function handleKeepBothCharacters(importData) {
     const originalName = character.name;
     
     // Find a unique name by adding (Copy N)
-    const existing = CharacterStorage.getAll();
+    const existing = await CharacterStorage.getAll();
     let copyNumber = 1;
     let newName = `${originalName} (Copy)`;
     
@@ -832,11 +1201,11 @@ function handleKeepBothCharacters(importData) {
     character.characterUid = newUid;
     delete character.id;
     
-    const result = CharacterStorage.add(character);
+    const result = await CharacterStorage.add(character);
     
     if (result) {
         console.log('✅ KEEP BOTH SUCCESS: Character imported as', newName);
-        AppState.loadCharacters();
+        await AppState.loadCharacters();
         UI.render();
         closeImportModal();
         showNotification(`Imported as: ${result.name}`);
@@ -844,7 +1213,7 @@ function handleKeepBothCharacters(importData) {
     }
 }
 
-function importCharacter() {
+async function importCharacter() {
     console.log('🔵 importCharacter() called, isImporting =', isImporting);
     
     // Prevent concurrent imports
@@ -871,10 +1240,10 @@ function importCharacter() {
         console.log('📂 FILE: Selected file:', file.name, 'Size:', file.size);
         const reader = new FileReader();
         console.log('📖 READER: Created new FileReader');
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             console.log('📖 READER.ONLOAD: Callback triggered, isImporting =', isImporting);
             const importData = e.target.result;
-            const result = CharacterStorage.import(importData);
+            const result = await CharacterStorage.import(importData);
             
             // Check if it's a duplicate
             if (result && result.isDuplicate) {
@@ -895,7 +1264,7 @@ function importCharacter() {
             
             if (result) {
                 console.log('✅ SUCCESS: Character imported, calling loadCharacters()');
-                AppState.loadCharacters();
+                await AppState.loadCharacters();
                 console.log('🎨 RENDER: Calling UI.render()');
                 UI.render();
                 console.log('🚪 MODAL: Calling closeImportModal()');
@@ -938,9 +1307,39 @@ function importCharacter() {
     }
 }
 
+function togglePortraitView(characterId) {
+    const asciiPortrait = document.getElementById(`character-portrait-${characterId}`);
+    const originalPortrait = document.getElementById(`original-portrait-${characterId}`);
+    const toggleBtn = document.getElementById(`toggle-portrait-btn-${characterId}`);
+
+    if (!asciiPortrait || !originalPortrait || !toggleBtn) {
+        console.warn('Portrait elements not found for character:', characterId);
+        return;
+    }
+
+    const isShowingAscii = !asciiPortrait.classList.contains('is-hidden');
+
+    if (isShowingAscii) {
+        // Switch to original
+        asciiPortrait.classList.add('is-hidden');
+        originalPortrait.classList.remove('is-hidden');
+        toggleBtn.textContent = '≡ View ASCII Art';
+        toggleBtn.title = 'Toggle between ASCII and original art';
+    } else {
+        // Switch to ASCII
+        asciiPortrait.classList.remove('is-hidden');
+        originalPortrait.classList.add('is-hidden');
+        toggleBtn.textContent = '👁 View Original';
+        toggleBtn.title = 'Toggle between ASCII and original art';
+    }
+}
+
 function showNotification(message) {
-    // Simple console notification for now
-    console.log('✓', message);
+    // Console notification with visual styling
+    console.log('%c✓ ' + message, 'color: #0f0; font-weight: bold');
+    
+    // TODO: Could add a toast notification UI element here in the future
+    // For now, console is sufficient for debugging
 }
 
 // ========================================
@@ -972,10 +1371,209 @@ function dismissSplash() {
 }
 
 // ========================================
+// AUTHENTICATION UI HANDLERS
+// ========================================
+
+function showAuthModal() {
+    document.getElementById('authModal').classList.add('show');
+    showLoginForm();
+}
+
+function closeAuthModal() {
+    document.getElementById('authModal').classList.remove('show');
+    document.getElementById('authError').classList.add('is-hidden');
+    // Clear form fields
+    document.getElementById('loginUsername').value = '';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('registerUsername').value = '';
+    document.getElementById('registerEmail').value = '';
+    document.getElementById('registerPassword').value = '';
+}
+
+function showLoginForm() {
+    document.getElementById('loginForm').classList.remove('is-hidden');
+    document.getElementById('registerForm').classList.add('is-hidden');
+    document.getElementById('authModalTitle').textContent = '🔐 Login';
+    document.getElementById('loginBtn').classList.remove('is-hidden');
+    document.getElementById('registerBtn').classList.add('is-hidden');
+    document.getElementById('authError').classList.add('is-hidden');
+}
+
+function showRegisterForm() {
+    document.getElementById('loginForm').classList.add('is-hidden');
+    document.getElementById('registerForm').classList.remove('is-hidden');
+    document.getElementById('authModalTitle').textContent = '📝 Register';
+    document.getElementById('loginBtn').classList.add('is-hidden');
+    document.getElementById('registerBtn').classList.remove('is-hidden');
+    document.getElementById('authError').classList.add('is-hidden');
+}
+
+async function handleLogin() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errorEl = document.getElementById('authError');
+
+    if (!username || !password) {
+        errorEl.textContent = 'Please enter both username and password';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
+    try {
+        const result = await window.AuthService.login(username, password);
+        if (result.success) {
+            closeAuthModal();
+            updateAuthUI();
+            showNotification(`✓ Logged in as ${username}`);
+            
+            // Check if should migrate
+            if (window.MigrationService.hasLocalCharacters()) {
+                showMigrationModal();
+            } else {
+                // Reload characters from cloud
+                await AppState.loadCharacters();
+                UI.render();
+            }
+        } else {
+            errorEl.textContent = result.error || 'Login failed';
+            errorEl.classList.remove('is-hidden');
+        }
+    } catch (error) {
+        errorEl.textContent = 'Login failed. Please try again.';
+        errorEl.classList.remove('is-hidden');
+    }
+}
+
+async function handleRegister() {
+    const username = document.getElementById('registerUsername').value.trim();
+    const email = document.getElementById('registerEmail').value.trim();
+    const password = document.getElementById('registerPassword').value;
+    const errorEl = document.getElementById('authError');
+
+    if (!username || !email || !password) {
+        errorEl.textContent = 'Please fill in all fields';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
+    try {
+        const result = await window.AuthService.register(username, email, password);
+        if (result.success) {
+            closeAuthModal();
+            updateAuthUI();
+            showNotification(`✓ Registered as ${username}`);
+            
+            // Check if should migrate
+            if (window.MigrationService.hasLocalCharacters()) {
+                showMigrationModal();
+            }
+        } else {
+            errorEl.textContent = result.error || 'Registration failed';
+            errorEl.classList.remove('is-hidden');
+        }
+    } catch (error) {
+        errorEl.textContent = 'Registration failed. Please try again.';
+        errorEl.classList.remove('is-hidden');
+    }
+}
+
+function handleLogout() {
+    if (confirm('Log out? Your characters will remain in the cloud and can be accessed after logging back in.')) {
+        window.AuthService.logout();
+        updateAuthUI();
+        showNotification('✓ Logged out');
+        
+        // Reload with local storage
+        AppState.loadCharacters();
+        UI.render();
+    }
+}
+
+function updateAuthUI() {
+    const authBtn = document.getElementById('authBtn');
+    const userInfoDisplay = document.getElementById('userInfoDisplay');
+    
+    if (window.AuthService && window.AuthService.isAuthenticated()) {
+        const user = window.AuthService.getCurrentUser();
+        userInfoDisplay.textContent = user ? `☁️ ${user.username}` : '☁️ Logged In';
+        authBtn.textContent = 'LOGOUT';
+        authBtn.onclick = handleLogout;
+    } else {
+        userInfoDisplay.textContent = '💾 Local Storage';
+        authBtn.textContent = 'LOGIN';
+        authBtn.onclick = showAuthModal;
+    }
+}
+
+// ========================================
+// MIGRATION UI HANDLERS
+// ========================================
+
+function showMigrationModal() {
+    const count = window.MigrationService.getLocalCharacterCount();
+    document.getElementById('migrationCount').textContent = count;
+    document.getElementById('migrationModal').classList.add('show');
+}
+
+function closeMigrationModal() {
+    document.getElementById('migrationModal').classList.remove('show');
+    // Reload characters after closing (whether migrated or not)
+    AppState.loadCharacters().then(() => UI.render());
+}
+
+async function startMigration() {
+    const statusEl = document.getElementById('migrationStatus');
+    statusEl.classList.remove('is-hidden');
+    statusEl.textContent = '📦 Creating backup...';
+    
+    try {
+        // Create backup first
+        window.MigrationService.backupLocalStorage();
+        
+        statusEl.textContent = '☁️ Migrating to cloud...';
+        
+        // Migrate
+        const results = await window.MigrationService.migrateToCloud();
+        
+        if (results.success > 0) {
+            statusEl.textContent = `✓ Migrated ${results.success} character(s) successfully!`;
+            
+            if (results.failed > 0) {
+                statusEl.textContent += `\n⚠️ ${results.failed} character(s) failed to migrate.`;
+            }
+            
+            // Clear local storage after successful migration
+            if (results.failed === 0) {
+                setTimeout(() => {
+                    window.MigrationService.clearLocalStorage();
+                    showNotification(`✓ Migrated ${results.success} characters to cloud`);
+                    closeMigrationModal();
+                }, 2000);
+            } else {
+                setTimeout(() => {
+                    showNotification(`⚠️ Migration completed with ${results.failed} error(s)`);
+                    closeMigrationModal();
+                }, 3000);
+            }
+        } else {
+            statusEl.textContent = '❌ Migration failed. Your local data is safe.';
+            setTimeout(() => closeMigrationModal(), 2000);
+        }
+    } catch (error) {
+        console.error('Migration error:', error);
+        statusEl.textContent = '❌ Migration failed: ' + error.message;
+        setTimeout(() => closeMigrationModal(), 3000);
+    }
+}
+
+// ========================================
 // INITIALIZATION
 // ========================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize auth UI
+    updateAuthUI();
+    
     // Splash screen handlers
     const splash = document.getElementById('splash-content');
     if (splash) {
@@ -1002,7 +1600,7 @@ document.addEventListener('DOMContentLoaded', () => {
         splash.addEventListener('click', dismissSplash, { once: true });
     }
     
-    // Initialize app state
+    // Initialize app state (async)
     AppState.init();
     UI.render();
 
@@ -1050,6 +1648,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
+    // Close portrait prompt modal on outside click
+    document.getElementById('portraitPromptModal').addEventListener('click', (e) => {
+        if (e.target.id === 'portraitPromptModal') {
+            closePortraitPromptModal();
+        }
+    });
+    
     // Clear keyboard focus when hovering over any card (mouse takes over)
     const characterGrid = document.getElementById('characterGrid');
     characterGrid.addEventListener('mouseenter', (e) => {
@@ -1080,6 +1685,16 @@ document.addEventListener('DOMContentLoaded', () => {
             // ESC to close modal
             if (e.key === 'Escape') {
                 closeDuplicateModal();
+            }
+            return;
+        }
+        
+        // Don't interfere if portrait prompt modal is open
+        const portraitPromptModal = document.getElementById('portraitPromptModal');
+        if (portraitPromptModal && portraitPromptModal.classList.contains('show')) {
+            // ESC to close modal
+            if (e.key === 'Escape') {
+                closePortraitPromptModal();
             }
             return;
         }

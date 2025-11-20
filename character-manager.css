@@ -1,6 +1,13 @@
 /* ========================================
    CHARACTER MANAGER SPECIFIC STYLES
    Base terminal theme loaded from terminal-theme.css
+   
+   SCROLLBAR STRUCTURE:
+   - Left panel (character grid): scrolls when content overflows
+   - Right panel (character sheet): scrolls when content overflows
+   - Splash content: scrolls if ASCII art is too large
+   - Modal content: scrolls if form content is too large
+   All scrollbars inherit from terminal-theme.css custom scrollbar styles
    ======================================== */
 
 .main-content {
@@ -12,6 +19,14 @@
 
 .main-content.is-hidden {
     display: none;
+}
+
+/* Ensure splash content can scroll if needed */
+.terminal-frame .splash-content {
+    min-height: 0;
+    height: 100%;
+    box-sizing: border-box;
+    overflow: auto;
 }
 
 /* ===== HEADER LAYOUT ===== */
@@ -33,6 +48,13 @@
 .right-panel {
     display: flex;
     flex-direction: column;
+}
+
+/* Right panel uses teal scrollbars to match character sheet theme */
+.right-panel {
+    --scrollbar-track-color: #041f20;
+    --scrollbar-thumb-color: rgba(32, 178, 170, 0.5);
+    --scrollbar-thumb-hover-color: rgba(0, 206, 209, 0.9);
 }
 
 /* ===== CONTROLS SECTION ===== */
@@ -72,22 +94,12 @@
     aspect-ratio: 3 / 4;
 }
 
-.character-card.is-selected {
+/* Hover and keyboard focus (unselected) - green accent, translucent bg */
+.character-card:hover:not(.is-selected),
+.character-card.is-keyboard-focused:not(.is-selected) {
     border-color: var(--terminal-accent);
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-}
-
-/* Selected card has teal ASCII art */
-.character-card.is-selected .card-thumbnail {
-    color: var(--terminal-accent);
-}
-
-/* Hover and keyboard focus - teal border with outline */
-.character-card:hover,
-.character-card.is-keyboard-focused {
-    border-color: var(--terminal-accent);
-    outline: 1px solid var(--terminal-accent);
-    outline-offset: 2px;
+    background-color: rgba(0, 255, 0, 0.08);
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.25);
 }
 
 .card-thumbnail {
@@ -114,6 +126,7 @@
 .card-name {
     color: var(--terminal-fg);
     font-size: var(--font-size-small);
+    line-height: 1;
     margin-bottom: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -123,6 +136,7 @@
 .card-info {
     color: var(--terminal-dim);
     font-size: var(--font-size-small);
+    line-height: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -218,6 +232,16 @@
     overflow-y: hidden;
     width: 100%;
     max-width: 100%;
+}
+
+.original-portrait {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+    text-align: center;
+    margin: 0 auto;
 }
 
 /* Removed - using .text-dim from builder instead */
@@ -321,6 +345,63 @@
     padding: var(--spacing-sm) var(--spacing-lg);
 }
 
+/* Inline-style replacements from HTML */
+.file-name-label {
+    margin-left: var(--spacing-sm);
+}
+
+.modal-body-question {
+    margin-top: var(--spacing-md);
+}
+
+.modal-footer-centered {
+    justify-content: center;
+}
+
+.modal-footer-end {
+    justify-content: flex-end;
+}
+
+/* ===== AUTH UI ===== */
+.header-user-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-right: var(--spacing-md);
+}
+
+#userInfoDisplay {
+    font-size: var(--font-size-small);
+}
+
+.terminal-text-error {
+    color: #f00;
+    font-weight: bold;
+    margin-top: var(--spacing-sm);
+}
+
+.terminal-link {
+    color: var(--color-accent);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.terminal-link:hover {
+    text-decoration: underline;
+}
+
+/* ===== MIGRATION STATUS ===== */
+#migrationStatus {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-sm);
+    border: 1px solid var(--color-border);
+    background: rgba(0, 255, 0, 0.05);
+}
+
+.modal-section-label {
+    margin-top: var(--spacing-lg);
+}
+
 /* ===== TEAL THEME OVERRIDES ===== */
 /* Teal color variables */
 :root {
@@ -329,10 +410,18 @@
     --panel-teal-bg: #0d4d4a;
 }
 
+/* Manager screen scrollbars use teal theme */
+.manager-screen {
+    --scrollbar-track-color: #041f20;
+    --scrollbar-thumb-color: rgba(32, 178, 170, 0.5);
+    --scrollbar-thumb-hover-color: rgba(0, 206, 209, 0.9);
+}
+
 /* LEFT PANEL - Only selected card is teal */
 .character-card.is-selected {
     border-color: var(--panel-teal) !important;
     box-shadow: 0 0 15px rgba(32, 178, 170, 0.5) !important;
+    background-color: rgba(0, 206, 209, 0.05);
 }
 
 .character-card.is-selected .card-thumbnail {
@@ -347,11 +436,12 @@
     color: var(--panel-teal-dim) !important;
 }
 
-/* Hover and keyboard focus for selected cards - keep teal */
+/* Hover and keyboard focus for selected cards - teal border + translucent teal bg */
 .character-card.is-selected:hover,
 .character-card.is-selected.is-keyboard-focused {
     border-color: var(--panel-teal) !important;
-    outline-color: var(--panel-teal) !important;
+    background-color: rgba(0, 206, 209, 0.14);
+    box-shadow: 0 0 18px rgba(32, 178, 170, 0.7) !important;
 }
 
 /* Modals in manager - teal theme */
@@ -389,6 +479,33 @@
     box-shadow: 0 0 5px rgba(32, 178, 170, 0.5) !important;
 }
 
+/* ===== ANIMATIONS ===== */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+  font-size: 16px;
+  color: var(--terminal-fg);
+  text-shadow: none;
+}
+
+.loading-indicator {
+  text-align: center;
+  padding: var(--spacing-xl);
+}
+
+.loading-text {
+  color: var(--terminal-accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  text-shadow: 0 0 10px var(--terminal-accent);
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
     .header-content {
@@ -406,7 +523,7 @@
         border-right: none;
         border-bottom: 1px solid var(--terminal-border);
         padding: var(--spacing-md);
-        overflow-y: visible;
+        overflow-y: auto;
     }
     
     .right-panel {
