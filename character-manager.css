@@ -516,8 +516,8 @@
 /* ===== TEAL THEME OVERRIDES ===== */
 /* Teal color variables */
 :root {
-    --panel-teal: #20B2AA;
-    --panel-teal-dim: #107070;
+    --panel-teal: #00CED1;  /* Bright Dark Turquoise - for highlighted elements */
+    --panel-teal-dim: #20B2AA;  /* Muted Light Sea Green - for secondary text */
     --panel-teal-bg: #0d4d4a;
 }
 
