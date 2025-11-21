@@ -22,16 +22,12 @@ app = FastAPI(
 if os.getenv("PRODUCTION"):
     allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
     allowed_origins = allowed_origins_str.split(",") if allowed_origins_str else []
+    allow_origin_regex = None
 else:
-    # Development mode - allow localhost with various ports
-    allowed_origins = [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:8080",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:8080",
-    ]
+    # Development mode - allow all origins for local testing
+    # This includes file://, localhost, and 127.0.0.1 with any port
+    allowed_origins = ["*"]
+    allow_origin_regex = None
 
 # CORS middleware
 app.add_middleware(
