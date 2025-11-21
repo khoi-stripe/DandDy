@@ -392,8 +392,8 @@ const AppState = {
     searchTerm: '',
     loading: false,
 
-    init() {
-        this.loadCharacters();
+    async init() {
+        await this.loadCharacters();
     },
 
     async loadCharacters() {
@@ -416,10 +416,12 @@ const AppState = {
             }
             this.applyFilters();
             this.loading = false;
+            UI.render(); // Re-render after characters load
         } catch (error) {
             console.error('Failed to load characters:', error);
             this.loading = false;
             showNotification('❌ Failed to load characters');
+            UI.render(); // Render empty state on error
         }
     },
 
@@ -1570,7 +1572,7 @@ async function startMigration() {
 // INITIALIZATION
 // ========================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Initialize auth UI
     updateAuthUI();
     
@@ -1600,9 +1602,8 @@ document.addEventListener('DOMContentLoaded', () => {
         splash.addEventListener('click', dismissSplash, { once: true });
     }
     
-    // Initialize app state (async)
-    AppState.init();
-    UI.render();
+    // Initialize app state (async) - will render when done
+    await AppState.init();
 
     // Setup event listeners
     document.getElementById('searchInput').addEventListener('input', (e) => {
