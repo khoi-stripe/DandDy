@@ -1765,7 +1765,7 @@ function togglePortraitView(characterId) {
         // Switch to ASCII
         asciiPortrait.classList.remove('is-hidden');
         originalPortrait.classList.add('is-hidden');
-        toggleBtn.textContent = '👁 View Original';
+        toggleBtn.textContent = '◉ View Original';
         toggleBtn.title = 'Toggle between ASCII and original art';
     }
 }
@@ -2185,81 +2185,108 @@ async function startMigration() {
 // ========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Initialize auth UI
-    updateAuthUI();
-    
-    // Splash screen handlers
-    const splash = document.getElementById('splash-content');
-    if (splash) {
-        // Dismiss on any key press (and don't let that key also trigger app shortcuts)
-        const keyHandler = (e) => {
-            if (!splashActive) return;
-            
-            // Prevent browser find/scroll and our main key handler
-            e.preventDefault();
-            e.stopPropagation();
-            
-            dismissSplash();
-            
-            // After main content fades in, move focus to the first card
-            // (including the "+ New Character" empty card when there are none yet).
-            setTimeout(() => {
-                if (!splashActive && typeof KeyboardNav !== 'undefined') {
-                    if (KeyboardNav.focusFirstCard) {
-                        KeyboardNav.focusFirstCard();
-                    }
-                }
-            }, 350);
-        };
-        window.addEventListener('keydown', keyHandler);
-        
-        // Dismiss on click anywhere on the splash background
-        splash.addEventListener('click', dismissSplash, { once: true });
-
-        // Splash action buttons
-        const loginBtn = document.getElementById('splash-login');
-        if (loginBtn) {
-            loginBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Don't trigger background click handler
-                showAuthModal();
-            });
-        }
-
-        const registerBtn = document.getElementById('splash-register');
-        if (registerBtn) {
-            registerBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                showAuthModal();
-                showRegisterForm();
-            });
-        }
-
-        const guestBtn = document.getElementById('splash-guest');
-        if (guestBtn) {
-            guestBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                dismissSplash();
-            });
-        }
-
-        // If we arrived here from the builder (e.g., via EXIT), skip the splash
-        // and go straight to the manager grid + sheet view without animation.
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('from') === 'builder') {
-            dismissSplash(true);
-            
-            // Remove the query param so a manual refresh or new visit
-            // shows the splash screen again.
+    // Determine auth state up front (and validate token) so the UI and
+    // storage mode (cloud vs local) start in a consistent state.
+    let isAuthenticated = false;
+    if (window.AuthService) {
+        if (typeof window.AuthService.verifyToken === 'function') {
             try {
-                const url = new URL(window.location.href);
-                url.searchParams.delete('from');
-                window.history.replaceState(null, '', url.toString());
+                isAuthenticated = await window.AuthService.verifyToken();
             } catch (e) {
-                // Non-fatal; if URL API is not available, we simply leave the param.
+                isAuthenticated = false;
             }
+        } else if (typeof window.AuthService.isAuthenticated === 'function') {
+            isAuthenticated = window.AuthService.isAuthenticated();
         }
     }
-    
+
+    // Sync header / guest notice with actual auth state
+    updateAuthUI();
+
+    // Show welcome modal (splash art + three choices) only when not logged in.
+    const welcomeModal = document.getElementById('welcomeModal');
+    // Wire welcome modal buttons: LOG IN, CREATE ACCOUNT, DEMO MODE
+    const welcomeLoginBtn = document.getElementById('welcomeLoginBtn');
+    if (welcomeLoginBtn) {
+        welcomeLoginBtn.addEventListener('click', () => {
+            if (welcomeModal) welcomeModal.classList.remove('show');
+            showAuthModal();
+        });
+    }
+
+    const welcomeRegisterBtn = document.getElementById('welcomeRegisterBtn');
+    if (welcomeRegisterBtn) {
+        welcomeRegisterBtn.addEventListener('click', () => {
+            if (welcomeModal) welcomeModal.classList.remove('show');
+            showAuthModal();
+            showRegisterForm();
+        });
+    }
+
+    const welcomeDemoBtn = document.getElementById('welcomeDemoBtn');
+    if (welcomeDemoBtn) {
+        welcomeDemoBtn.addEventListener('click', () => {
+            // Simply close the modal; user continues in local "demo" mode.
+            if (welcomeModal) welcomeModal.classList.remove('show');
+        });
+    }
+
+    // Keyboard navigation inside welcome modal (splash screen)
+    if (welcomeModal) {
+        const welcomeButtons = Array.from(
+            welcomeModal.querySelectorAll('.welcome-actions .terminal-btn'),
+        );
+        let welcomeIndex = 0;
+
+        const focusWelcomeButton = (index) => {
+            if (!welcomeButtons.length) return;
+            const clamped = (index + welcomeButtons.length) % welcomeButtons.length;
+            welcomeIndex = clamped;
+            const btn = welcomeButtons[clamped];
+            if (btn) {
+                btn.focus();
+            }
+        };
+
+        // If not authenticated, show modal and focus the first button.
+        if (!isAuthenticated) {
+            welcomeModal.classList.add('show');
+            if (welcomeButtons.length) {
+                focusWelcomeButton(0);
+            } else if (typeof focusFirstFieldInModal === 'function') {
+                focusFirstFieldInModal(welcomeModal);
+            }
+        }
+
+        welcomeModal.addEventListener('keydown', (e) => {
+            if (!welcomeModal.classList.contains('show')) return;
+
+            // Limit handling to arrow keys and Enter. We intentionally do NOT
+            // handle Escape here so users must make an explicit choice.
+            const navKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'];
+            if (!navKeys.includes(e.key)) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (e.key === 'Enter') {
+                const btn = document.activeElement.classList.contains('terminal-btn')
+                    ? document.activeElement
+                    : welcomeButtons[welcomeIndex] || welcomeButtons[0];
+                if (btn && typeof btn.click === 'function') {
+                    btn.click();
+                }
+                return;
+            }
+
+            if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                focusWelcomeButton(welcomeIndex - 1);
+            } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                focusWelcomeButton(welcomeIndex + 1);
+            }
+        });
+    }
+
     // Initialize app state (async) - will render when done
     await AppState.init();
 

@@ -207,14 +207,14 @@ const CharacterSheet = (window.CharacterSheet = {
           ${originalPortraitUrl && (onTogglePortrait || context === 'manager')
             ? `
             <button class="terminal-btn terminal-btn-small" onclick="${toggleFn}" id="${toggleBtnId}" title="Toggle between ASCII and original art">
-              👁 View Original
+              ◉ View Original
             </button>
           `
             : ''}
           ${hasHistory && historyFn
             ? `
             <button class="terminal-btn terminal-btn-small" onclick="${historyFn}" title="View saved portrait history">
-              ⌛ Portrait History
+              ⧖ Portrait History
             </button>
           `
             : ''}

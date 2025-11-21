@@ -3,7 +3,17 @@
 // ========================================
 // Handles authentication and cloud storage operations for character-manager
 
-const API_BASE_URL = 'http://localhost:8000/api';
+// Auto-detect environment (local file / localhost vs deployed on GitHub Pages)
+const isLocalEnvironment =
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.protocol === 'file:';
+
+// Use localhost in dev, Render in production (avoid global name collision)
+const API_BASE_URL = isLocalEnvironment
+  ? 'http://localhost:8000/api'
+  : 'https://danddy-api.onrender.com/api';
+
 const TOKEN_STORAGE_KEY = 'dnd_auth_token';
 const USER_STORAGE_KEY = 'dnd_user_info';
 
