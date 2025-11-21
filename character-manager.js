@@ -311,6 +311,43 @@ const CharacterStorage = {
         const data = localStorage.getItem(this.STORAGE_KEY);
         const characters = data ? JSON.parse(data) : [];
         console.log('💾 LOCAL.GETALL: Retrieved', characters.length, 'characters from localStorage');
+
+        // Normalize timestamps so we can reliably sort by recency.
+        // Older builder-saved characters may not have createdAt/updatedAt.
+        let changed = false;
+        let maxExistingTime = 0;
+
+        // First pass: find the most recent existing timestamp (if any)
+        characters.forEach((char) => {
+            const t = new Date(char.updatedAt || char.createdAt || 0).getTime();
+            if (t > maxExistingTime) {
+                maxExistingTime = t;
+            }
+        });
+
+        const baseTime = maxExistingTime || Date.now();
+        let newCounter = 0;
+
+        characters.forEach((char, index) => {
+            if (!char.createdAt) {
+                // Treat characters without timestamps as *newer* than anything
+                // we've seen so far so they float to the top of the grid.
+                newCounter += 1;
+                const t = baseTime + newCounter * 1000;
+                char.createdAt = new Date(t).toISOString();
+                changed = true;
+            }
+            if (!char.updatedAt) {
+                char.updatedAt = char.createdAt;
+                changed = true;
+            }
+        });
+
+        if (changed) {
+            // Persist normalized timestamps so future loads are consistent.
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(characters));
+        }
+
         return characters;
     },
 
@@ -470,15 +507,9 @@ const AppState = {
             );
         }
 
-        // Sort by most recently updated (fallback to createdAt), newest first
-        filtered.sort((a, b) => {
-            const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
-            const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
-            if (aTime === bTime) {
-                return (a.name || '').localeCompare(b.name || '');
-            }
-            return bTime - aTime;
-        });
+        // Preserve original order from storage.
+        // Local and cloud storage both append new characters to the end,
+        // so the grid naturally shows newest characters at the bottom.
 
         this.filteredCharacters = filtered;
     }
@@ -997,14 +1028,59 @@ async function confirmGeneratePortrait() {
 
         // Update character in storage and append a new portrait version
         const currentCount = character.customPortraitCount || 0;
-        const updatedMetadata =
-            window.PortraitHistory &&
-            typeof window.PortraitHistory.addVersion === 'function'
-                ? window.PortraitHistory.addVersion(character, result.asciiArt, result.imageUrl, {
-                      source: 'custom-ai',
-                      prompt: customPrompt,
-                  })
-                : character.portraitMetadata || {};
+
+        let updatedMetadata;
+        if (window.PortraitHistory && typeof window.PortraitHistory.addVersion === 'function') {
+            const existingMetadata = character.portraitMetadata || {};
+            const existingVersions = Array.isArray(existingMetadata.versions)
+                ? existingMetadata.versions
+                : [];
+
+            let baseCharacterForHistory = character;
+
+            // If this character already has a portrait but no version history yet,
+            // seed the history with the *current* portrait before we overwrite it.
+            if (existingVersions.length === 0) {
+                const priorAscii =
+                    character.customPortraitAscii ||
+                    character.asciiPortrait ||
+                    character.portrait?.ascii ||
+                    '';
+                const priorUrl =
+                    character.originalPortraitUrl ||
+                    character.portrait?.url ||
+                    null;
+
+                if (priorAscii || priorUrl) {
+                    const seededMetadata = window.PortraitHistory.addVersion(
+                        character,
+                        priorAscii,
+                        priorUrl,
+                        {
+                            source: 'original-ai',
+                            prompt: null,
+                        },
+                    );
+
+                    baseCharacterForHistory = {
+                        ...character,
+                        portraitMetadata: seededMetadata,
+                    };
+                }
+            }
+
+            updatedMetadata = window.PortraitHistory.addVersion(
+                baseCharacterForHistory,
+                result.asciiArt,
+                result.imageUrl,
+                {
+                    source: 'custom-ai',
+                    prompt: customPrompt,
+                },
+            );
+        } else {
+            updatedMetadata = character.portraitMetadata || {};
+        }
 
         const updates = {
             originalPortraitUrl: result.imageUrl,
@@ -1922,10 +1998,12 @@ function dismissGuestNotice() {
 }
 
 // ========================================
-// SPLASH SCREEN
+// SPLASH SCREEN (manager uses welcome modal instead of a full-page splash)
 // ========================================
 
-let splashActive = true;
+// In the manager we don't actually block interaction behind a separate splash
+// screen, so keep this false to ensure global keyboard shortcuts always work.
+let splashActive = false;
 
 function dismissSplash(instant = false) {
     const splash = document.getElementById('splash-content');
