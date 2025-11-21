@@ -41,6 +41,7 @@
 
 .header-actions {
     display: flex;
+    align-items: center;
     gap: var(--spacing-sm);
     margin-left: auto;
 }
@@ -363,15 +364,9 @@
 }
 
 /* ===== AUTH UI ===== */
-.header-user-info {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-    margin-right: var(--spacing-md);
-}
-
 #userInfoDisplay {
     font-size: var(--font-size-small);
+    white-space: nowrap;
 }
 
 .terminal-text-error {
