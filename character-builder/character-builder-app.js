@@ -368,7 +368,7 @@ const App = (window.App = {
         .map(({ opt, originalIndex }) => {
           const currentIndex = displayIndex++;
           return `
-              <button class="button-primary" onclick="App.handleListAnswer('${question.id}', ${currentIndex})" style="margin-bottom: 8px;">
+              <button class="button-primary" onclick="App.handleListAnswer('${question.id}', ${currentIndex})">
                 ${opt.text}
               </button>
             `;
@@ -384,7 +384,7 @@ const App = (window.App = {
       .map(({ opt, originalIndex }) => {
         const currentIndex = displayIndex++;
         return `
-            <button class="button-primary" onclick="App.handleListAnswer('${question.id}', ${currentIndex})" style="margin-bottom: 8px;">
+            <button class="button-primary" onclick="App.handleListAnswer('${question.id}', ${currentIndex})">
               ${opt.text}
             </button>
           `;
@@ -564,7 +564,7 @@ const App = (window.App = {
           ${names
             .map(
               (name, index) =>
-                `<button class="button-primary" onclick="App.handleNameSelect(${index})" style="margin-bottom: 8px;">${name}</button>`,
+                `<button class="button-primary" onclick="App.handleNameSelect(${index})">${name}</button>`,
             )
             .join('\n              ')}
         </div>
@@ -667,7 +667,7 @@ const App = (window.App = {
       'beforeend',
       `
       <div class="question-card mt-lg" data-question-id="${question.id}">
-        <button class="button-primary" onclick="App.exportCharacter()" style="margin-bottom: 8px;">
+        <button class="button-primary completion-export-btn" onclick="App.exportCharacter()">
           > EXPORT CHARACTER (JSON)
         </button>
         <button class="button-primary" onclick="App.startNew()">
@@ -1706,7 +1706,7 @@ const App = (window.App = {
             This cannot be undone. Choose a new level between 1 and 99.
           </div>
 
-          <div style="margin-top: 12px;">
+          <div class="level-modal-row">
             <label for="level-input" class="settings-label">New Level:</label>
             <input
               type="number"
@@ -1715,11 +1715,10 @@ const App = (window.App = {
               min="1"
               max="99"
               value="${currentLevel}"
-              style="width: 100px; margin-top: 4px;"
             >
           </div>
 
-          <div id="level-modal-error" class="prompt-modal-error" style="margin-top: 8px; display: none;">
+          <div id="level-modal-error" class="prompt-modal-error level-modal-error is-hidden">
           </div>
 
           <div class="prompt-modal-buttons">
@@ -1872,19 +1871,18 @@ const App = (window.App = {
             Enter a new name for your character.
           </div>
 
-          <div style="margin-top: 12px;">
+          <div class="name-modal-row">
             <label for="name-input" class="settings-label">New Name:</label>
             <input
               type="text"
               id="name-input"
-              class="input-field"
+              class="input-field name-modal-input"
               value="${currentName}"
               placeholder="Enter character name"
-              style="width: 100%; margin-top: 4px;"
             >
           </div>
 
-          <div id="name-modal-error" class="prompt-modal-error" style="margin-top: 8px; display: none;">
+          <div id="name-modal-error" class="prompt-modal-error name-modal-error is-hidden">
           </div>
 
           <div class="prompt-modal-buttons">

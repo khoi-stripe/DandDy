@@ -16,7 +16,11 @@
       <div class="terminal-title">[ DandDy CHARACTER BUILDER v1.4 ]</div>
       <div class="terminal-status">
         <span id="status-text">INITIALIZING SYSTEM...</span>
-        <button class="button-primary" onclick="App.openSettings()" style="margin-left: 16px;">⚙ SETTINGS</button>
+        <div class="header-user-info">
+          <span id="userInfoDisplay" class="terminal-text-dim"></span>
+          <button id="authBtn" class="button-primary terminal-status-settings-btn" onclick="showAuthModal()">LOGIN</button>
+        </div>
+        <button class="button-primary terminal-status-settings-btn" onclick="App.openSettings()">⚙ SETTINGS</button>
       </div>
     </div>
     
@@ -165,10 +169,10 @@
       <div class="splash-title">DandDy CHARACTER BUILDER</div>
       <div class="splash-subtitle">A D&D 5e Character Creation Experience</div>
       <div class="splash-prompt">[ Press any key to begin ]</div>
-      <div class="splash-actions" style="display: none;">
-        <button id="splash-login" class="button-primary" style="margin: 8px;">LOGIN</button>
-        <button id="splash-register" class="button-primary" style="margin: 8px;">REGISTER</button>
-        <button id="splash-guest" class="button-secondary" style="margin: 8px;">CONTINUE AS GUEST</button>
+      <div class="splash-actions">
+        <button id="splash-login" class="button-primary splash-action-btn">LOGIN</button>
+        <button id="splash-register" class="button-primary splash-action-btn">REGISTER</button>
+        <button id="splash-guest" class="button-secondary splash-action-btn">CONTINUE AS GUEST</button>
       </div>
           </div>
     </div>
@@ -191,6 +195,46 @@
     -->
   </div>
   
+  <!-- Auth Modal (Login/Register) -->
+  <div id="authModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="authModalTitle">🔐 Login</h2>
+        <button class="modal-close" onclick="closeAuthModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="loginForm">
+          <p class="terminal-text">Sign in to save your characters to the cloud.</p>
+          <p class="terminal-text-small">Username:</p>
+          <input type="text" id="loginUsername" class="terminal-input" placeholder="Enter username">
+          <p class="terminal-text-small modal-section-label">Password:</p>
+          <input type="password" id="loginPassword" class="terminal-input" placeholder="Enter password">
+          <p class="terminal-text-small modal-section-label terminal-text-dim">
+            Don't have an account? <a href="#" onclick="showRegisterForm(); return false;" class="terminal-link">Register here</a>
+          </p>
+        </div>
+        <div id="registerForm" class="is-hidden">
+          <p class="terminal-text">Create an account to save your characters to the cloud.</p>
+          <p class="terminal-text-small">Username:</p>
+          <input type="text" id="registerUsername" class="terminal-input" placeholder="Choose username">
+          <p class="terminal-text-small modal-section-label">Email:</p>
+          <input type="email" id="registerEmail" class="terminal-input" placeholder="Enter email">
+          <p class="terminal-text-small modal-section-label">Password:</p>
+          <input type="password" id="registerPassword" class="terminal-input" placeholder="Choose password">
+          <p class="terminal-text-small modal-section-label terminal-text-dim">
+            Already have an account? <a href="#" onclick="showLoginForm(); return false;" class="terminal-link">Login here</a>
+          </p>
+        </div>
+        <div id="authError" class="terminal-text-error is-hidden"></div>
+      </div>
+      <div class="modal-footer modal-footer-end">
+        <button class="terminal-btn" onclick="closeAuthModal()">CANCEL</button>
+        <button id="loginBtn" class="terminal-btn terminal-btn-primary" onclick="handleLogin()">LOGIN</button>
+        <button id="registerBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handleRegister()">REGISTER</button>
+      </div>
+    </div>
+  </div>
+  
   <script src="./character-builder-config.js"></script>
   <script src="./character-builder-dnd-data.js"></script>
   <script src="./character-builder-narrators.js"></script>
@@ -198,11 +242,13 @@
   <script src="./character-builder-auth.js"></script>
   <script src="./character-builder-api.js"></script>
   <script src="./character-builder-services.js"></script>
+  <script src="../character-manager-api.js"></script>
   <script src="./character-builder-state.js"></script>
   <script src="../shared-character-sheet.js"></script>
   <script src="./character-builder-components.js"></script>
   <script src="./character-builder-questions.js"></script>
   <script src="./character-builder-app.js"></script>
+  <script src="./character-builder-manager.js"></script>
 </body>
 </html>
 

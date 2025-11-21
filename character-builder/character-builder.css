@@ -1,3 +1,16 @@
+/* ========================================
+   CHARACTER BUILDER SPECIFIC STYLES
+   Base terminal theme loaded from terminal-theme.css
+   
+   SCROLLBAR STRUCTURE:
+   - Left panel (narrator): scrolls when conversation grows
+   - Right panel (character sheet): scrolls when sheet content overflows
+   - Splash content: scrolls if ASCII art is too large
+   - Modal content: scrolls if form content is too large
+   All scrollbars inherit from terminal-theme.css custom scrollbar styles
+   Right panel uses teal scrollbars (see --scrollbar-* vars below)
+   ======================================== */
+
 .print-logo {
   display: none;
 }
@@ -197,8 +210,10 @@
   cursor: not-allowed;
 }
 
+/* Print button inside sheet header uses the same gap spacing
+   as its siblings; no extra margin so button group spacing is even */
 .sheet-print-btn {
-  margin-left: var(--spacing-sm);
+  margin-left: 0;
 }
 
 /* Prompt Modal */
@@ -484,6 +499,65 @@
   font-size: var(--font-size-small);
   color: var(--terminal-dim);
   margin-top: var(--spacing-xs);
+}
+
+/* Settings modal: narrator select */
+.settings-select {
+  width: 100%;
+  padding: 8px;
+  background: #000;
+  color: #0f0;
+  border: 1px solid #0f0;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  margin-top: 8px;
+}
+
+/* Header settings button */
+.terminal-status-settings-btn {
+  margin-left: 16px;
+}
+
+/* Splash actions */
+.splash-actions {
+  display: none;
+}
+
+.splash-action-btn {
+  margin: 8px;
+}
+
+/* Completion buttons */
+.completion-export-btn {
+  margin-bottom: 8px;
+}
+
+/* Level modal layout */
+.level-modal-row {
+  margin-top: 12px;
+}
+
+.level-modal-row #level-input {
+  width: 100px;
+  margin-top: 4px;
+}
+
+.level-modal-error {
+  margin-top: 8px;
+}
+
+/* Name modal layout */
+.name-modal-row {
+  margin-top: 12px;
+}
+
+.name-modal-input {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.name-modal-error {
+  margin-top: 8px;
 }
 
 /* ===== STATES ===== */
@@ -1000,6 +1074,13 @@
 .right-panel .link-button:hover {
   color: var(--panel-teal) !important;
   text-shadow: 0 0 5px var(--panel-teal) !important;
+}
+
+/* Teal scrollbars in builder right panel */
+.right-panel {
+  --scrollbar-track-color: #041f20;
+  --scrollbar-thumb-color: rgba(32, 178, 170, 0.5);
+  --scrollbar-thumb-hover-color: rgba(0, 206, 209, 0.9);
 }
 
 /* ===== RESPONSIVE ===== */

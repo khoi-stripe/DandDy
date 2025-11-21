@@ -79,7 +79,7 @@ const Components = (window.Components = {
         
         <div class="settings-row">
           <div class="settings-label">Narrator Voice</div>
-          <select id="narrator-select" style="width: 100%; padding: 8px; background: #000; color: #0f0; border: 1px solid #0f0; border-radius: 4px; font-family: 'Courier New', monospace; margin-top: 8px;">
+          <select id="narrator-select" class="settings-select">
             ${narratorsList.map(narrator => {
               const optionText = `${narrator.emoji} ${narrator.name} - ${narrator.description}`;
               const truncatedText = truncate(optionText, 60);
@@ -90,7 +90,7 @@ const Components = (window.Components = {
               `;
             }).join('')}
           </select>
-          <div class="settings-help" style="margin-top: 8px;">Choose your narrator's personality. This affects all commentary during character creation.</div>
+          <div class="settings-help">Choose your narrator's personality. This affects all commentary during character creation.</div>
         </div>
         
         <div class="prompt-modal-buttons">
