@@ -159,6 +159,13 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       appearance: character.appearance || null,
       backstory: character.backstory || null,
       
+      // Portrait Data
+      ascii_portrait: character.asciiPortrait || null,
+      original_portrait_url: character.originalPortraitUrl || null,
+      custom_portrait_ascii: character.customPortraitAscii || null,
+      custom_portrait_count: character.customPortraitCount || 0,
+      portrait_metadata: character.portraitMetadata || {},
+      
       // Inventory
       inventory: (character.equipment || []).map(item => 
         typeof item === 'string' ? { name: item } : item
@@ -275,13 +282,12 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       createdAt: apiChar.created_at,
       updatedAt: apiChar.updated_at,
       
-      // Preserve portrait data if it exists
-      portrait: apiChar.portrait,
-      customPortraitAscii: apiChar.customPortraitAscii,
-      originalPortraitUrl: apiChar.originalPortraitUrl,
-      asciiPortrait: apiChar.asciiPortrait,
-      asciiPortraitKey: apiChar.asciiPortraitKey,
-      customPortraitCount: apiChar.customPortraitCount || 0,
+      // Portrait data (from API snake_case fields)
+      asciiPortrait: apiChar.ascii_portrait,
+      originalPortraitUrl: apiChar.original_portrait_url,
+      customPortraitAscii: apiChar.custom_portrait_ascii,
+      customPortraitCount: apiChar.custom_portrait_count || 0,
+      portraitMetadata: apiChar.portrait_metadata || {},
     };
   },
 
@@ -415,8 +421,12 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       // Text fields
       if (updates.backstory !== undefined) apiUpdates.backstory = updates.backstory;
       
-      // Portrait data (stored as metadata in frontend, not mapped to API)
-      // These stay in frontend format
+      // Portrait data
+      if (updates.asciiPortrait !== undefined) apiUpdates.ascii_portrait = updates.asciiPortrait;
+      if (updates.originalPortraitUrl !== undefined) apiUpdates.original_portrait_url = updates.originalPortraitUrl;
+      if (updates.customPortraitAscii !== undefined) apiUpdates.custom_portrait_ascii = updates.customPortraitAscii;
+      if (updates.customPortraitCount !== undefined) apiUpdates.custom_portrait_count = updates.customPortraitCount;
+      if (updates.portraitMetadata !== undefined) apiUpdates.portrait_metadata = updates.portraitMetadata;
       
       const apiChar = await this._apiRequest(`/characters/${id}`, {
         method: 'PUT',
@@ -424,15 +434,6 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       });
       
       const updatedChar = this._fromAPIFormat(apiChar);
-      
-      // Preserve frontend-only fields from the updates
-      if (updates.asciiPortrait !== undefined) updatedChar.asciiPortrait = updates.asciiPortrait;
-      if (updates.asciiPortraitKey !== undefined) updatedChar.asciiPortraitKey = updates.asciiPortraitKey;
-      if (updates.customPortraitAscii !== undefined) updatedChar.customPortraitAscii = updates.customPortraitAscii;
-      if (updates.originalPortraitUrl !== undefined) updatedChar.originalPortraitUrl = updates.originalPortraitUrl;
-      if (updates.customPortraitCount !== undefined) updatedChar.customPortraitCount = updates.customPortraitCount;
-      if (updates.portrait !== undefined) updatedChar.portrait = updates.portrait;
-      
       return updatedChar;
     } catch (error) {
       console.error('☁️ CLOUD ERROR: Failed to update character:', error);
