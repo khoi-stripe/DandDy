@@ -339,11 +339,13 @@ const StorageService = (window.StorageService = {
     if (AuthService.isAuthenticated()) {
       try {
         let savedCharacter;
-        if (character.id && character._backendData) {
-          // Update existing character
+        if (character.id) {
+          // Update existing character (ID is enough to identify it)
+          console.log('☁️ Updating character in cloud:', character.id);
           savedCharacter = await CharacterAPI.updateCharacter(character.id, character);
         } else {
           // Create new character
+          console.log('☁️ Creating new character in cloud');
           savedCharacter = await CharacterAPI.createCharacter(character);
         }
         
