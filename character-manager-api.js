@@ -8,42 +8,16 @@ const TOKEN_STORAGE_KEY = 'dnd_auth_token';
 const USER_STORAGE_KEY = 'dnd_user_info';
 
 // ========================================
-// AUTH SERVICE
+// AUTH SERVICE (Extend existing if present)
 // ========================================
-const AuthService = (window.AuthService = {
-  // Get stored token
-  getToken() {
-    return localStorage.getItem(TOKEN_STORAGE_KEY);
-  },
+// Extend the existing AuthService from character-builder-services.js
+if (!window.AuthService) {
+  window.AuthService = {};
+}
 
-  // Set token
-  setToken(token) {
-    localStorage.setItem(TOKEN_STORAGE_KEY, token);
-  },
-
-  // Remove token (logout)
-  clearToken() {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
-    localStorage.removeItem(USER_STORAGE_KEY);
-  },
-
-  // Get current user info
-  getCurrentUser() {
-    const data = localStorage.getItem(USER_STORAGE_KEY);
-    return data ? JSON.parse(data) : null;
-  },
-
-  // Set current user info
-  setCurrentUser(user) {
-    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-  },
-
-  // Check if user is authenticated
-  isAuthenticated() {
-    return !!this.getToken();
-  },
-
-  // Register new user
+// Override/add methods for character manager
+Object.assign(window.AuthService, {
+  // Register new user (override existing)
   async register(username, email, password) {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -68,7 +42,7 @@ const AuthService = (window.AuthService = {
     }
   },
 
-  // Login user
+  // Login user (override existing)
   async login(username, password) {
     try {
       // OAuth2 password flow expects form data
@@ -123,12 +97,6 @@ const AuthService = (window.AuthService = {
       console.error('Fetch profile error:', error);
       return null;
     }
-  },
-
-  // Logout
-  logout() {
-    this.clearToken();
-    return { success: true };
   },
 });
 
