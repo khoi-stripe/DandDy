@@ -2537,7 +2537,7 @@ function dismissSplash() {
 
     // Update status
     if (statusText) {
-      statusText.textContent = 'READY';
+      statusText.textContent = '';
     }
 
     // Fade out splash screen
