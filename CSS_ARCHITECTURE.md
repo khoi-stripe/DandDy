@@ -57,9 +57,6 @@ Both apps import the shared theme first, then their specific styles:
   
 - **`.terminal-btn-danger`** - Red border button for destructive actions
   
-- **`.prompt-modal-btn`** - Modal action buttons
-  - `.prompt-modal-btn.primary` - Cyan filled variant
-  
 - **`.link-button`** - Underlined text-style button
 
 **Character Builder Specific Button States:**
@@ -68,8 +65,7 @@ Both apps import the shared theme first, then their specific styles:
 - `.button-primary.is-locked` - Clickable but dimmed
 
 **Button Layout Utilities:**
-- `.button-group` - Flex container for button rows
-- `.prompt-modal-buttons` - Flex container for modal buttons (right-aligned)
+- `.button-group` - Flex container for button rows (builder auth screens, etc.)
 
 #### Other Components
 - **Inputs:** `.terminal-input`, `.terminal-select`, `.terminal-textarea`

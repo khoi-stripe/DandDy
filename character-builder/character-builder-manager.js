@@ -107,34 +107,42 @@ async function handleRegister() {
 }
 
 function handleLogout() {
-    if (confirm('Log out? Your character will be saved to the cloud before logging out.')) {
-        // Save current character to cloud before logout if there is one
-        if (window.CharacterState && window.CharacterState.current.character.name) {
-            saveCurrentCharacterToCloud().then(() => {
-                window.AuthService.logout();
-                updateAuthUI();
-                console.log('✓ Logged out');
-                
-                if (window.App && window.App.showNotification) {
-                    window.App.showNotification('✓ Logged out', 'success');
-                }
-            });
-        } else {
+    if (!window.App || !window.App.showConfirmationOverlay) {
+        // Fallback to immediate logout if confirmation UI is not available
+        window.AuthService.logout();
+        updateAuthUI();
+        return;
+    }
+
+    window.App.showConfirmationOverlay(
+        'Log out? Your character will be saved to the cloud before logging out.',
+        async () => {
+            // Save current character to cloud before logout if there is one
+            if (window.CharacterState && window.CharacterState.current.character.name) {
+                await saveCurrentCharacterToCloud();
+            }
+
             window.AuthService.logout();
             updateAuthUI();
             console.log('✓ Logged out');
-            
+
             if (window.App && window.App.showNotification) {
                 window.App.showNotification('✓ Logged out', 'success');
             }
-        }
-    }
+        },
+    );
 }
 
 function updateAuthUI() {
     const authBtn = document.getElementById('authBtn');
     const userInfoDisplay = document.getElementById('userInfoDisplay');
-    
+
+    // In the integrated app, the builder surface no longer exposes login/logout
+    // UI. If these elements are missing, simply skip any header updates.
+    if (!authBtn || !userInfoDisplay) {
+        return;
+    }
+
     if (window.AuthService && window.AuthService.isAuthenticated()) {
         const user = window.AuthService.getCurrentUser();
         userInfoDisplay.textContent = user ? `☁ ${user.username}` : '☁ Logged In';
@@ -208,24 +216,6 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', updateAuthUI);
 } else {
     updateAuthUI();
-}
-
-// Hook into Builder's save mechanism
-// Override the StorageService to also save to cloud
-if (window.StorageService) {
-    const originalSaveCharacter = window.StorageService.saveCharacter;
-    
-    window.StorageService.saveCharacter = async function(character) {
-        // Always save to localStorage first (for offline support)
-        const result = originalSaveCharacter.call(this, character);
-        
-        // Then try to save to cloud if logged in
-        if (window.AuthService && window.AuthService.isAuthenticated()) {
-            await saveCurrentCharacterToCloud();
-        }
-        
-        return result;
-    };
 }
 
 console.log('☁️ Character Builder Cloud Integration loaded');

@@ -63,8 +63,65 @@
     margin-bottom: var(--spacing-lg);
 }
 
+.guest-notice {
+    margin: 0 0 24px 0;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid #ffd54a;
+    background-color: rgba(255, 213, 74, 0.12);
+    font-size: var(--font-size-small);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.guest-notice .highlight {
+    color: #ffd54a;
+}
+
+.guest-notice-icon {
+    color: #ffd54a;
+}
+
+.guest-notice-close {
+    margin-left: auto;
+}
+
 .search-bar {
     margin-bottom: var(--spacing-sm);
+}
+
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-input-wrapper .terminal-input {
+    padding-right: 28px; /* make room for clear button */
+}
+
+.search-clear-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--terminal-dim);
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0;
+    transition: color var(--transition-speed), transform var(--transition-speed);
+}
+
+.search-clear-btn:hover {
+    color: var(--terminal-accent);
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.search-clear-btn.is-hidden {
+    display: none;
 }
 
 /* ===== CHARACTER COUNT ===== */
@@ -172,6 +229,16 @@
     margin-bottom: var(--spacing-lg);
 }
 
+.new-character-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.new-character-card .card-details {
+    text-align: center;
+}
+
 /* ===== CHARACTER SHEET (Right Panel) ===== */
 .sheet-placeholder {
     display: flex;
@@ -190,6 +257,15 @@
 
 .placeholder-text {
     font-size: var(--font-size-base);
+}
+
+/* ===== EDIT DETAILS MODAL ===== */
+#editDetailsModal .terminal-textarea {
+    min-height: 120px;
+}
+
+#editDetailsModal #editBackstory {
+    min-height: 180px;
 }
 
 /* Remove border for sections with grid layouts */

@@ -597,41 +597,6 @@ body {
   background-color: rgba(255, 0, 0, 0.1);
 }
 
-/* Modal buttons */
-.prompt-modal-btn {
-  background: transparent;
-  border: 1px solid var(--terminal-fg);
-  color: var(--terminal-fg);
-  padding: var(--spacing-sm) var(--spacing-lg);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-base);
-  cursor: pointer;
-  min-width: 120px;
-  transition: all 0.2s;
-}
-
-.prompt-modal-btn:hover {
-  background: rgba(0, 255, 0, 0.1);
-  border-color: var(--terminal-accent);
-  color: var(--terminal-accent);
-}
-
-.prompt-modal-btn.primary {
-  background: var(--terminal-accent);
-  color: var(--terminal-bg);
-  border-color: var(--terminal-accent);
-}
-
-.prompt-modal-btn.primary:hover {
-  background: var(--terminal-fg);
-  box-shadow: 0 0 12px rgba(0, 255, 255, 0.5);
-}
-
-.prompt-modal-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* Link-style button */
 .link-button {
   background: none;
@@ -663,16 +628,10 @@ body {
 }
 
 /* Button group layout utilities */
-.button-group,
-.prompt-modal-buttons {
+.button-group {
   display: flex;
   gap: var(--spacing-md);
   margin-top: var(--spacing-lg);
-}
-
-.prompt-modal-buttons {
-  justify-content: flex-end;
-  margin-top: 0;
 }
 
 .button-group button {

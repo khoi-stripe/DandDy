@@ -672,6 +672,22 @@ const App = (window.App = {
 
     // Activate keyboard navigation
     KeyboardNav.activate();
+
+    // Ensure the completed character is saved to shared storage so it shows
+    // up in the manager view (cloud or local, depending on auth state).
+    try {
+      const state = CharacterState.get();
+      const character = state.character;
+      if (character && window.StorageService) {
+        console.log('💾 Saving completed character to shared storage...');
+        const saved = await window.StorageService.saveCharacter(character);
+        // Update state with any ID or fields returned from backend/local save
+        CharacterState.updateCharacter(saved);
+        console.log('💾 Completed character saved successfully.');
+      }
+    } catch (error) {
+      console.error('Error saving completed character:', error);
+    }
   },
 
   // Persist changes to shared storage only after a character has been saved once.
@@ -1465,7 +1481,7 @@ const App = (window.App = {
       Utils.scrollToBottom(true);
     } catch (error) {
       console.error('🔥 EXPORT ERROR:', error);
-      alert('Export failed: ' + error.message);
+      this.showSystemMessage('Export failed: ' + error.message);
     }
   },
 
@@ -2469,90 +2485,61 @@ const App = (window.App = {
 
 });
 
-// ===== AUTHENTICATION & SPLASH SCREEN / BOOTSTRAP =====
+// ===== AUTHENTICATION & BOOTSTRAP (no splash in builder) =====
 
-let splashActive = true;
-let authHandled = false;
 let loadingInterval = null;
 
-const loadingMessages = [
-  'INITIALIZING SYSTEM...',
-  'LOADING D&D 5E RULESET...',
-  'CALIBRATING DICE ROLLER...',
-  'SUMMONING NARRATOR...',
-  'CONSULTING ANCIENT TEXTS...',
-  'PREPARING CHARACTER SHEETS...',
-  'ROLLING FOR INITIATIVE...',
-  'CHECKING ALIGNMENT...',
-  'LOADING ASCII DRAGONS...',
-];
-
 function startLoadingAnimation() {
-  let index = 0;
   const statusText = document.getElementById('status-text');
+  let index = 0;
+  const messages = [
+    'INITIALIZING SYSTEM...',
+    'LOADING D&D 5E RULESET...',
+    'WARMING UP BACKEND...',
+  ];
 
   loadingInterval = setInterval(() => {
-    if (statusText && splashActive) {
-      statusText.textContent = loadingMessages[index];
-      index = (index + 1) % loadingMessages.length;
+    if (statusText) {
+      statusText.textContent = messages[index];
+      index = (index + 1) % messages.length;
     }
   }, 800);
 }
 
-
-// Dismiss splash screen and start the character builder
-function dismissSplash() {
-  const splash = document.getElementById('splash-content');
-  const mainContent = document.getElementById('main-content');
-  const statusText = document.getElementById('status-text');
-
-  if (splash && splashActive) {
-    splashActive = false;
-
-    // Stop loading animation
-    if (loadingInterval) {
-      clearInterval(loadingInterval);
-    }
-
-    // Update status
-    if (statusText) {
-      statusText.textContent = '';
-    }
-
-    // Fade out splash screen
-    splash.style.opacity = '0';
-    setTimeout(() => {
-      splash.style.display = 'none';
-      mainContent.classList.remove('is-hidden');
-      App.init();
-    }, 300);
-  }
+// Exit back to the Character Manager app from builder mode
+function exitToManager() {
+  // Navigate back to the manager UI. Adjust the path if the entry point changes.
+  window.location.href = '../character-manager.html?from=builder';
 }
 
-// Initialize on page load
+
+// Initialize on page load (no splash gate)
 window.addEventListener('DOMContentLoaded', async () => {
   // Start loading animation
   startLoadingAnimation();
   
   // 🔥 Wake up the backend server early (Render cold start can take 30-50s)
   if (CONFIG.ENABLE_AI) {
-    console.log('%c🚀 SPLASH: Waking up backend server early...', 'color: #0ff; font-weight: bold');
+    console.log('%c🚀 BOOT: Waking up backend server early...', 'color: #0ff; font-weight: bold');
     AIService.warmupBackend();
   }
 
-  // Splash screen handlers
-  const splash = document.getElementById('splash-content');
-  if (splash) {
-    // Dismiss on any key press
-    const keyHandler = () => {
-      if (splashActive) {
-        dismissSplash();
-      }
-    };
-    window.addEventListener('keydown', keyHandler);
+  // Show main content immediately
+  const mainContent = document.getElementById('main-content');
+  if (mainContent) {
+    mainContent.classList.remove('is-hidden');
+  }
 
-    // Dismiss on click
-    splash.addEventListener('click', dismissSplash, { once: true });
+  // Initialize the builder app
+  await App.init();
+
+  // Stop loading animation once initialized
+  if (loadingInterval) {
+    clearInterval(loadingInterval);
+  }
+  const statusText = document.getElementById('status-text');
+  if (statusText) {
+    statusText.textContent = '';
   }
 
   // Keep narrator panel scrolled to bottom on resize
@@ -2560,10 +2547,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     Utils.scrollToBottom();
   });
 
-  // Keyboard navigation (only after splash is dismissed)
+  // Keyboard navigation
   window.addEventListener('keydown', (e) => {
-    if (splashActive) return; // Don't interfere with splash screen
-
     // Don't interfere if there's any modal open
     if (document.querySelector('.modal.show')) return;
 

@@ -29,6 +29,11 @@
 
 /* ===== COMPONENTS ===== */
 
+/* Hide legacy splash screen in integrated app */
+.splash-content {
+  display: none;
+}
+
 /* Narrator */
 .narrator-message {
   margin-bottom: var(--spacing-lg);
@@ -408,11 +413,6 @@
 
 .modal .settings-help {
   color: rgba(255, 215, 0, 0.75);
-}
-
-/* Header settings button */
-.terminal-status-settings-btn {
-  /* margin removed - using gap from terminal-status flex container */
 }
 
 /* Splash actions */

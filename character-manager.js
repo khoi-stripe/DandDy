@@ -490,9 +490,21 @@ const UI = {
         const characters = AppState.filteredCharacters;
 
         if (characters.length === 0) {
-            grid.innerHTML = '';
-            emptyState.classList.add('show');
-            KeyboardNav.isActive = false;
+            // Show a single "New Character" card in the grid, positioned as the
+            // first card would be when characters exist.
+            grid.innerHTML = `
+                <div class="character-card new-character-card" onclick="createNewCharacter()">
+                    <div class="card-details">
+                        <div class="card-name">+ New Character</div>
+                    </div>
+                </div>
+            `;
+
+            if (emptyState) {
+                emptyState.classList.remove('show');
+            }
+            KeyboardNav.isActive = true;
+            KeyboardNav.reset();
             return;
         }
 
@@ -526,9 +538,10 @@ const UI = {
         const endLine = Math.min(totalLines, heightLines);  // Crop bottom if needed
         
         // Get lines from top
-        const topLines = lines.slice(startLine, endLine);
+        const topLines = lines
+            .slice(startLine, endLine)
+            .map(line => line.slice(0, widthChars));
         
-        // Use full width - don't crop horizontally
         return topLines.join('\n');
     },
 
@@ -558,9 +571,18 @@ const UI = {
 
     updateCount() {
         const searchInput = document.getElementById('searchInput');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
         const total = AppState.characters.length;
         const filtered = AppState.filteredCharacters.length;
-        
+
+        // Disable search when there are no characters at all
+        if (searchInput) {
+            searchInput.disabled = total === 0;
+        }
+        if (clearSearchBtn) {
+            clearSearchBtn.disabled = total === 0;
+        }
+
         if (total === filtered) {
             searchInput.placeholder = `⌕ Search ${total} character${total !== 1 ? 's' : ''}`;
         } else {
@@ -705,7 +727,9 @@ const UI = {
 // ========================================
 
 function createNewCharacter() {
-    alert('This will link to your character builder!\n\nFor now, use Import to add characters.');
+    // Launch the Character Builder in the same tab.
+    // The builder has an EXIT button to return to the manager view.
+    window.location.href = 'character-builder/index.html';
 }
 
 async function viewCharacter(id, options = {}) {
@@ -850,14 +874,57 @@ async function saveEditDetails() {
 async function renameCharacter(id) {
     const character = await CharacterStorage.getById(id);
     if (!character) return;
-    
-    const newName = prompt('Enter new name for character:', character.name);
-    if (newName && newName.trim() !== '') {
-        await CharacterStorage.update(id, { name: newName.trim() });
+
+    const existing = document.getElementById('renameModal');
+    if (existing) existing.remove();
+
+    const modalHtml = `
+      <div id="renameModal" class="modal show">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title">[ RENAME CHARACTER ]</h2>
+            <button class="modal-close" onclick="document.getElementById('renameModal').remove()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text-small modal-section-label">New name:</p>
+            <input type="text" id="renameInput" class="terminal-input" value="${character.name || ''}">
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" id="renameCancel">CANCEL</button>
+            <button class="terminal-btn terminal-btn-primary" id="renameOk">APPLY</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('renameModal');
+    const input = document.getElementById('renameInput');
+    const cancelBtn = document.getElementById('renameCancel');
+    const okBtn = document.getElementById('renameOk');
+
+    const close = () => {
+        if (modal) modal.remove();
+    };
+
+    cancelBtn.addEventListener('click', close);
+    okBtn.addEventListener('click', async () => {
+        const newName = input.value.trim();
+        if (!newName) {
+            return;
+        }
+        close();
+        await CharacterStorage.update(id, { name: newName });
         await AppState.loadCharacters();
         UI.render();
         viewCharacter(id);
-        showNotification(`Character renamed to: ${newName.trim()}`);
+        showNotification(`Character renamed to: ${newName}`);
+    });
+
+    // Focus and select existing name
+    if (input) {
+        input.focus();
+        input.select();
     }
 }
 
@@ -869,14 +936,14 @@ async function generatePortraitForCharacter(id) {
 
     // Check if race and class are defined
     if (!character.race || !character.class) {
-        alert('This character needs both a race and class to generate a custom portrait.');
+        showAlertDialog('This character needs both a race and class to generate a custom portrait.');
         return;
     }
 
     // Check portrait generation limit (3 per character)
     const portraitCount = character.customPortraitCount || 0;
     if (portraitCount >= 3) {
-        alert('Portrait limit reached. You can generate up to 3 custom AI portraits per character.');
+        showAlertDialog('Portrait limit reached. You can generate up to 3 custom AI portraits per character.');
         return;
     }
 
@@ -884,16 +951,16 @@ async function generatePortraitForCharacter(id) {
     try {
         const statusCheck = await fetch(`${window.CONFIG.BACKEND_URL}/api/ai/status`);
         if (!statusCheck.ok) {
-            alert('Backend server is not available. Make sure the backend is running on port 8000.');
+            showAlertDialog('Backend server is not available. Make sure the backend is running on port 8000.');
             return;
         }
         const statusData = await statusCheck.json();
         if (!statusData.available) {
-            alert('AI features are not available. The backend server is not configured properly.');
+            showAlertDialog('AI features are not available. The backend server is not configured properly.');
             return;
         }
     } catch (error) {
-        alert('Cannot connect to backend server. Make sure it is running on http://localhost:8000');
+        showAlertDialog('Cannot connect to backend server. Make sure it is running on http://localhost:8000');
         return;
     }
 
@@ -929,7 +996,7 @@ async function confirmGeneratePortrait() {
 
     const customPrompt = document.getElementById('portraitPrompt').value.trim();
     if (!customPrompt) {
-        alert('Please enter a description for your character portrait.');
+        showAlertDialog('Please enter a description for your character portrait.');
         return;
     }
 
@@ -1066,14 +1133,14 @@ async function confirmGeneratePortrait() {
 }
 
 async function duplicateCharacter(id) {
-    if (confirm('Create a copy of this character?')) {
+    showConfirmDialog('Create a copy of this character?', async () => {
         const duplicate = await CharacterStorage.duplicate(id);
         if (duplicate) {
             await AppState.loadCharacters();
             UI.render();
             showNotification(`Created: ${duplicate.name}`);
         }
-    }
+    });
 }
 
 async function exportCharacter(id) {
@@ -1093,12 +1160,14 @@ async function exportCharacter(id) {
 
 async function deleteCharacter(id) {
     const character = await CharacterStorage.getById(id);
-    if (character && confirm(`Delete ${character.name}?\n\nThis cannot be undone.`)) {
+    if (!character) return;
+
+    showConfirmDialog(`Delete ${character.name}?\n\nThis cannot be undone.`, async () => {
         await CharacterStorage.delete(id);
         await AppState.loadCharacters();
         UI.render();
         showNotification('Character deleted');
-    }
+    });
 }
 
 let isImporting = false;  // Flag to prevent concurrent imports
@@ -1309,7 +1378,7 @@ async function importCharacter() {
                 // Auto-select the imported character
                 setTimeout(() => viewCharacter(result.id), 100);
             } else {
-                alert('Invalid character file!');
+                showAlertDialog('Invalid character file!');
                 // Re-enable button on error
                 const importButton = document.querySelector('.modal-footer .terminal-btn-primary');
                 if (importButton) {
@@ -1320,7 +1389,7 @@ async function importCharacter() {
             }
         };
         reader.onerror = () => {
-            alert('Error reading file!');
+            showAlertDialog('Error reading file!');
             // Re-enable button on error
             const importButton = document.querySelector('.modal-footer .terminal-btn-primary');
             if (importButton) {
@@ -1332,7 +1401,7 @@ async function importCharacter() {
         console.log('📖 READER: Starting readAsText()');
         reader.readAsText(file);
     } else {
-        alert('Please select a file to import.');
+        showAlertDialog('Please select a file to import.');
         // Re-enable button and reset flag
         const importButton = document.querySelector('.modal-footer .terminal-btn-primary');
         if (importButton) {
@@ -1378,31 +1447,120 @@ function showNotification(message) {
     // For now, console is sufficient for debugging
 }
 
+// Generic confirmation modal using terminal modal styles
+function showConfirmDialog(message, onConfirm) {
+    const existing = document.getElementById('genericConfirmModal');
+    if (existing) existing.remove();
+
+    const modalHtml = `
+      <div id="genericConfirmModal" class="modal show">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title">[ CONFIRM ]</h2>
+            <button class="modal-close" onclick="document.getElementById('genericConfirmModal').remove()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text">${message}</p>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" id="genericConfirmCancel">CANCEL</button>
+            <button class="terminal-btn terminal-btn-primary" id="genericConfirmOk">OK</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('genericConfirmModal');
+    const cancelBtn = document.getElementById('genericConfirmCancel');
+    const okBtn = document.getElementById('genericConfirmOk');
+
+    const close = () => {
+        if (modal) modal.remove();
+    };
+
+    cancelBtn.addEventListener('click', close);
+    okBtn.addEventListener('click', async () => {
+        close();
+        if (onConfirm) {
+            await onConfirm();
+        }
+    });
+}
+
+// Generic alert modal using terminal modal styles
+function showAlertDialog(message) {
+    const existing = document.getElementById('genericAlertModal');
+    if (existing) existing.remove();
+
+    const modalHtml = `
+      <div id="genericAlertModal" class="modal show">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title">[ NOTICE ]</h2>
+            <button class="modal-close" onclick="document.getElementById('genericAlertModal').remove()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text">${message}</p>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn terminal-btn-primary" id="genericAlertOk">OK</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('genericAlertModal');
+    const okBtn = document.getElementById('genericAlertOk');
+
+    const close = () => {
+        if (modal) modal.remove();
+    };
+
+    okBtn.addEventListener('click', close);
+}
+
+// Dismiss the guest notice banner (per-session only)
+function dismissGuestNotice() {
+    const guestNotice = document.getElementById('guestNotice');
+    if (guestNotice) {
+        guestNotice.classList.add('is-hidden');
+    }
+}
+
 // ========================================
 // SPLASH SCREEN
 // ========================================
 
 let splashActive = true;
 
-function dismissSplash() {
+function dismissSplash(instant = false) {
     const splash = document.getElementById('splash-content');
     const mainContent = document.getElementById('main-content');
     
     if (splash && splashActive) {
         splashActive = false;
         
-        // Fade out splash
-        splash.classList.add('fade-out');
-        
-        setTimeout(() => {
+        if (instant) {
+            // Skip animation entirely (used when returning from builder)
             splash.classList.add('is-hidden');
             mainContent.classList.remove('is-hidden');
+            mainContent.classList.add('fade-in');
+        } else {
+            // Fade out splash
+            splash.classList.add('fade-out');
             
-            // Fade in main content
             setTimeout(() => {
-                mainContent.classList.add('fade-in');
-            }, 50);
-        }, 300);
+                splash.classList.add('is-hidden');
+                mainContent.classList.remove('is-hidden');
+                
+                // Fade in main content
+                setTimeout(() => {
+                    mainContent.classList.add('fade-in');
+                }, 50);
+            }, 300);
+        }
     }
 }
 
@@ -1514,30 +1672,41 @@ async function handleRegister() {
 }
 
 function handleLogout() {
-    if (confirm('Log out? Your characters will remain in the cloud and can be accessed after logging back in.')) {
+    showConfirmDialog('Log out? Your characters will remain in the cloud and can be accessed after logging back in.', async () => {
         window.AuthService.logout();
         updateAuthUI();
         showNotification('✓ Logged out');
         
         // Reload with local storage
-        AppState.loadCharacters();
+        await AppState.loadCharacters();
         UI.render();
-    }
+    });
 }
 
 function updateAuthUI() {
     const authBtn = document.getElementById('authBtn');
     const userInfoDisplay = document.getElementById('userInfoDisplay');
+    const guestNotice = document.getElementById('guestNotice');
     
     if (window.AuthService && window.AuthService.isAuthenticated()) {
         const user = window.AuthService.getCurrentUser();
         userInfoDisplay.textContent = user ? `☁ ${user.username}` : '☁ Logged In';
         authBtn.textContent = 'LOGOUT';
         authBtn.onclick = handleLogout;
+
+        // Hide guest notice when logged in
+        if (guestNotice) {
+            guestNotice.classList.add('is-hidden');
+        }
     } else {
         userInfoDisplay.textContent = '▣ Local Storage';
         authBtn.textContent = 'LOGIN';
         authBtn.onclick = showAuthModal;
+
+        // Show guest notice when not authenticated
+        if (guestNotice) {
+            guestNotice.classList.remove('is-hidden');
+        }
     }
 }
 
@@ -1623,28 +1792,100 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             dismissSplash();
             
-            // After main content fades in, move focus to search for immediate typing
+            // After main content fades in, move focus to the first card
+            // (including the "+ New Character" empty card when there are none yet).
             setTimeout(() => {
-                if (!splashActive && typeof KeyboardNav !== 'undefined' && KeyboardNav.focusSearch) {
-                    KeyboardNav.focusSearch();
+                if (!splashActive && typeof KeyboardNav !== 'undefined') {
+                    if (KeyboardNav.focusFirstCard) {
+                        KeyboardNav.focusFirstCard();
+                    }
                 }
             }, 350);
         };
         window.addEventListener('keydown', keyHandler);
         
-        // Dismiss on click
+        // Dismiss on click anywhere on the splash background
         splash.addEventListener('click', dismissSplash, { once: true });
+
+        // Splash action buttons
+        const loginBtn = document.getElementById('splash-login');
+        if (loginBtn) {
+            loginBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Don't trigger background click handler
+                showAuthModal();
+            });
+        }
+
+        const registerBtn = document.getElementById('splash-register');
+        if (registerBtn) {
+            registerBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showAuthModal();
+                showRegisterForm();
+            });
+        }
+
+        const guestBtn = document.getElementById('splash-guest');
+        if (guestBtn) {
+            guestBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dismissSplash();
+            });
+        }
+
+        // If we arrived here from the builder (e.g., via EXIT), skip the splash
+        // and go straight to the manager grid + sheet view without animation.
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('from') === 'builder') {
+            dismissSplash(true);
+            
+            // Remove the query param so a manual refresh or new visit
+            // shows the splash screen again.
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('from');
+                window.history.replaceState(null, '', url.toString());
+            } catch (e) {
+                // Non-fatal; if URL API is not available, we simply leave the param.
+            }
+        }
     }
     
     // Initialize app state (async) - will render when done
     await AppState.init();
 
     // Setup event listeners
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-        AppState.searchTerm = e.target.value;
-        AppState.applyFilters();
-        UI.render();
-    });
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
+
+    const updateClearSearchVisibility = () => {
+        if (!clearSearchBtn || !searchInput) return;
+        const hasValue = searchInput.value.trim().length > 0;
+        const isDisabled = searchInput.disabled;
+        clearSearchBtn.classList.toggle('is-hidden', !hasValue || isDisabled);
+    };
+
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            AppState.searchTerm = e.target.value;
+            AppState.applyFilters();
+            UI.render();
+            updateClearSearchVisibility();
+        });
+    }
+
+    if (clearSearchBtn && searchInput) {
+        clearSearchBtn.addEventListener('click', () => {
+            if (searchInput.disabled) return;
+            searchInput.value = '';
+            AppState.searchTerm = '';
+            AppState.applyFilters();
+            UI.render();
+            searchInput.focus();
+            updateClearSearchVisibility();
+        });
+        updateClearSearchVisibility();
+    }
 
     document.getElementById('newCharacterBtn').addEventListener('click', createNewCharacter);
     document.getElementById('importBtn').addEventListener('click', showImportModal);
