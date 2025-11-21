@@ -16,8 +16,15 @@
 }
 
 .terminal-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: var(--font-size-small);
   color: var(--terminal-dim);
+}
+
+.terminal-status > span {
+  margin-right: auto;
 }
 
 /* ===== COMPONENTS ===== */
@@ -515,7 +522,7 @@
 
 /* Header settings button */
 .terminal-status-settings-btn {
-  margin-left: 16px;
+  /* margin removed - using gap from terminal-status flex container */
 }
 
 /* Splash actions */
