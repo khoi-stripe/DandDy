@@ -1393,7 +1393,7 @@ function closeAuthModal() {
 function showLoginForm() {
     document.getElementById('loginForm').classList.remove('is-hidden');
     document.getElementById('registerForm').classList.add('is-hidden');
-    document.getElementById('authModalTitle').textContent = '🔐 Login';
+    document.getElementById('authModalTitle').textContent = '[ LOGIN ]';
     document.getElementById('loginBtn').classList.remove('is-hidden');
     document.getElementById('registerBtn').classList.add('is-hidden');
     document.getElementById('authError').classList.add('is-hidden');
@@ -1402,7 +1402,7 @@ function showLoginForm() {
 function showRegisterForm() {
     document.getElementById('loginForm').classList.add('is-hidden');
     document.getElementById('registerForm').classList.remove('is-hidden');
-    document.getElementById('authModalTitle').textContent = '📝 Register';
+    document.getElementById('authModalTitle').textContent = '[ REGISTER ]';
     document.getElementById('loginBtn').classList.add('is-hidden');
     document.getElementById('registerBtn').classList.remove('is-hidden');
     document.getElementById('authError').classList.add('is-hidden');
@@ -1495,11 +1495,11 @@ function updateAuthUI() {
     
     if (window.AuthService && window.AuthService.isAuthenticated()) {
         const user = window.AuthService.getCurrentUser();
-        userInfoDisplay.textContent = user ? `☁️ ${user.username}` : '☁️ Logged In';
+        userInfoDisplay.textContent = user ? `☁ ${user.username}` : '☁ Logged In';
         authBtn.textContent = 'LOGOUT';
         authBtn.onclick = handleLogout;
     } else {
-        userInfoDisplay.textContent = '💾 Local Storage';
+        userInfoDisplay.textContent = '▣ Local Storage';
         authBtn.textContent = 'LOGIN';
         authBtn.onclick = showAuthModal;
     }
