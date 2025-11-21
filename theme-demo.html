@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theme System Demo - DandDy</title>
+    <link rel="stylesheet" href="terminal-theme.css">
+    <link rel="stylesheet" href="character-manager.css">
+    <style>
+        /* Theme presets - just change the hue! */
+        .theme-green {
+            --theme-terminal-h: 120;
+            --theme-teal-h: 181;
+            --theme-yellow-h: 48;
+        }
+        
+        .theme-blue {
+            --theme-terminal-h: 210;
+            --theme-teal-h: 200;
+            --theme-yellow-h: 45;
+        }
+        
+        .theme-purple {
+            --theme-terminal-h: 280;
+            --theme-teal-h: 290;
+            --theme-yellow-h: 50;
+        }
+        
+        .theme-red {
+            --theme-terminal-h: 0;
+            --theme-teal-h: 340;
+            --theme-yellow-h: 39;
+        }
+        
+        .demo-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--terminal-bg);
+            border: 2px solid var(--terminal-border);
+            padding: var(--spacing-md);
+            z-index: 9999;
+            border-radius: 4px;
+        }
+        
+        .demo-controls h3 {
+            margin: 0 0 var(--spacing-sm) 0;
+            color: var(--terminal-accent);
+            font-size: var(--font-size-base);
+        }
+        
+        .demo-controls button {
+            display: block;
+            width: 100%;
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .demo-section {
+            margin-bottom: var(--spacing-xl);
+            padding: var(--spacing-lg);
+            border: 1px solid var(--terminal-border);
+        }
+        
+        .demo-section h2 {
+            color: var(--terminal-accent);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .demo-card {
+            display: inline-block;
+            padding: var(--spacing-md);
+            border: 1px solid var(--sheet-accent);
+            margin-right: var(--spacing-md);
+            background: var(--sheet-box-bg);
+        }
+        
+        .demo-card.selected {
+            border-color: var(--panel-teal);
+            box-shadow: 0 0 15px hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
+            background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.05);
+        }
+        
+        .demo-card h4 {
+            color: var(--sheet-accent);
+            margin: 0 0 var(--spacing-xs) 0;
+        }
+        
+        .demo-card.selected h4 {
+            color: var(--panel-teal);
+        }
+        
+        .demo-card p {
+            color: var(--sheet-label-color);
+            margin: 0;
+            font-size: var(--font-size-small);
+        }
+    </style>
+</head>
+<body class="theme-green">
+    <div class="demo-controls">
+        <h3>🎨 Theme Switcher</h3>
+        <button class="terminal-btn-small" onclick="setTheme('green')">Green (Original)</button>
+        <button class="terminal-btn-small" onclick="setTheme('blue')">Blue Terminal</button>
+        <button class="terminal-btn-small" onclick="setTheme('purple')">Purple Terminal</button>
+        <button class="terminal-btn-small" onclick="setTheme('red')">Red Terminal</button>
+    </div>
+
+    <div class="terminal-container">
+        <div class="terminal-header">
+            <div class="terminal-title">Theme System Demo - DandDy</div>
+        </div>
+        
+        <div class="split-layout">
+            <div class="left-panel">
+                <div class="demo-section">
+                    <h2>Terminal UI Elements</h2>
+                    <p class="terminal-text">Normal terminal text uses <code>--terminal-fg</code></p>
+                    <p class="terminal-text-dim">Dimmed text uses <code>--terminal-dim</code></p>
+                    <p class="terminal-text-accent">Accent text uses <code>--terminal-accent</code></p>
+                    <br>
+                    <button class="terminal-btn">Primary Button</button>
+                    <button class="terminal-btn-small">Small Button</button>
+                    <button class="terminal-btn-primary">Filled Button</button>
+                    <button class="terminal-btn-warning">Warning</button>
+                    <button class="terminal-btn-danger">Danger</button>
+                </div>
+                
+                <div class="demo-section">
+                    <h2>Character Cards</h2>
+                    <div class="demo-card">
+                        <h4>Unselected Card</h4>
+                        <p>Uses sheet-accent (teal)</p>
+                    </div>
+                    <div class="demo-card selected">
+                        <h4>Selected Card</h4>
+                        <p>Uses panel-teal (brighter)</p>
+                    </div>
+                </div>
+                
+                <div class="demo-section">
+                    <h2>How It Works</h2>
+                    <p class="terminal-text-dim">All colors are derived from HSL base values:</p>
+                    <ul style="color: var(--terminal-dim); margin-left: var(--spacing-lg); margin-top: var(--spacing-sm);">
+                        <li><code>--theme-terminal-h</code>: Terminal hue (120 = green)</li>
+                        <li><code>--theme-teal-h</code>: Sheet hue (181 = teal)</li>
+                        <li><code>--theme-yellow-h</code>: Modal hue (48 = yellow)</li>
+                    </ul>
+                    <br>
+                    <p class="terminal-text-accent" style="font-weight: bold;">
+                        Click the theme buttons above to see instant color changes!
+                    </p>
+                    <p class="terminal-text-dim" style="margin-top: var(--spacing-sm);">
+                        Notice how ALL UI elements (50+ colors) update simultaneously because they're all derived from the same HSL foundation.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <div class="character-sheet">
+                    <div class="sheet-title-header">
+                        <div class="sheet-title">Character Sheet Preview</div>
+                        <div class="sheet-title-buttons">
+                            <button class="terminal-btn-small">Rename</button>
+                            <button class="terminal-btn-small">Print</button>
+                        </div>
+                    </div>
+                    
+                    <div class="sheet-section">
+                        <div class="sheet-header">
+                            <div class="sheet-header-title">Basic Info</div>
+                        </div>
+                        <div class="stat-line">
+                            <span class="stat-label">Race:</span>
+                            <span class="stat-value">Human</span>
+                        </div>
+                        <div class="stat-line">
+                            <span class="stat-label">Class:</span>
+                            <span class="stat-value">Fighter</span>
+                        </div>
+                        <div class="stat-line">
+                            <span class="stat-label">Level:</span>
+                            <span class="stat-value">5</span>
+                        </div>
+                    </div>
+                    
+                    <div class="sheet-section">
+                        <div class="sheet-header">
+                            <div class="sheet-header-title">Combat Stats</div>
+                        </div>
+                        <div class="stat-grid">
+                            <div class="stat-box">
+                                <div class="stat-box-label">HP</div>
+                                <div class="stat-box-value">42</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-box-label">AC</div>
+                                <div class="stat-box-value">16</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-box-label">Initiative</div>
+                                <div class="stat-box-value">+2</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="sheet-section">
+                        <div class="sheet-header">
+                            <div class="sheet-header-title">Ability Scores</div>
+                        </div>
+                        <div class="ability-grid">
+                            <div class="ability-box">
+                                <div class="ability-name">STR</div>
+                                <div class="ability-score">16 <span class="ability-modifier">(+3)</span></div>
+                            </div>
+                            <div class="ability-box">
+                                <div class="ability-name">DEX</div>
+                                <div class="ability-score">14 <span class="ability-modifier">(+2)</span></div>
+                            </div>
+                            <div class="ability-box">
+                                <div class="ability-name">CON</div>
+                                <div class="ability-score">15 <span class="ability-modifier">(+2)</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="sheet-section">
+                        <button class="terminal-btn-primary">Save Character</button>
+                        <button class="terminal-btn">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="terminal-footer">
+            Theme System Demo - All colors derived from HSL tokens
+        </div>
+    </div>
+    
+    <script>
+        function setTheme(themeName) {
+            document.body.className = 'theme-' + themeName;
+        }
+    </script>
+</body>
+</html>
+

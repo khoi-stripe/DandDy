@@ -111,3 +111,4 @@ Standardized all button classes across the Character Manager and Shared Characte
 - Main UI buttons keep the default green terminal theme
 - All button classes are fully responsive and work on mobile
 
+

@@ -5,16 +5,85 @@
 
 /* ===== CSS VARIABLES ===== */
 :root {
-  /* Colors */
+  /* ===== THEME FOUNDATION (HSL-based) ===== */
+  /* Terminal Green Theme */
+  --theme-terminal-h: 120;
+  --theme-terminal-s: 100%;
+  --theme-terminal-l-bright: 50%;
+  --theme-terminal-l-dim: 27%;
+  
+  /* Sheet Teal Theme */
+  --theme-teal-h: 181;
+  --theme-teal-s: 100%;
+  --theme-teal-l-bright: 41%;
+  --theme-teal-l-dim: 45%;
+  
+  /* Modal Yellow Theme */
+  --theme-yellow-h: 48;
+  --theme-yellow-s: 100%;
+  --theme-yellow-l-bright: 64%;
+  --theme-yellow-l-dim: 75%;
+  
+  /* Cyan Accent Theme */
+  --theme-cyan-h: 180;
+  --theme-cyan-s: 100%;
+  --theme-cyan-l-bright: 50%;
+  --theme-cyan-l-dim: 27%;
+  
+  /* Danger/Error Theme */
+  --theme-error-h: 0;
+  --theme-error-s: 100%;
+  --theme-error-l: 50%;
+  
+  /* Warning Theme */
+  --theme-warning-h: 39;
+  --theme-warning-s: 100%;
+  --theme-warning-l: 50%;
+  
+  /* ===== DERIVED COLOR TOKENS ===== */
+  /* Background & Neutrals */
   --terminal-bg: #0a0a0a;
-  --terminal-fg: #00ff00;
-  --terminal-dim: #008800;
-  --terminal-accent: #00ffff;
-  --terminal-accent-dim: #008888;
-  --terminal-warning: #ffff00;
-  --terminal-error: #ff0000;
-  --terminal-border: #00ff00;
-  --terminal-hover: rgba(0, 255, 0, 0.1);
+  --scrollbar-track-color: #050505;
+  
+  /* Terminal Green Tokens */
+  --terminal-fg: hsl(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright));
+  --terminal-dim: hsl(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-dim));
+  --terminal-border: hsl(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright));
+  --terminal-hover: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.1);
+  
+  /* Cyan Accent Tokens */
+  --terminal-accent: hsl(var(--theme-cyan-h), var(--theme-cyan-s), var(--theme-cyan-l-bright));
+  --terminal-accent-dim: hsl(var(--theme-cyan-h), var(--theme-cyan-s), var(--theme-cyan-l-dim));
+  
+  /* Yellow Modal/Warning Tokens */
+  --terminal-warning: hsl(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright));
+  --modal-accent: hsl(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright));
+  --modal-accent-dim: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.75);
+  
+  /* Error Token */
+  --terminal-error: hsl(var(--theme-error-h), var(--theme-error-s), var(--theme-error-l));
+  
+  /* Teal Sheet Tokens */
+  --sheet-accent: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+  --sheet-accent-dim: hsl(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim));
+  --sheet-border-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+  --sheet-label-color: hsl(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim));
+  --sheet-value-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+  --sheet-box-border-color: hsl(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim));
+  --sheet-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.08);
+  --sheet-ability-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.08);
+  
+  /* Scrollbar Tokens (derived from terminal green) */
+  --scrollbar-thumb-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-dim), 0.45);
+  --scrollbar-thumb-hover-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.85);
+  
+  /* Generic UI theme tokens (used by buttons, inputs, etc.) */
+  /* Default = green terminal theme */
+  --ui-border-color: var(--terminal-border);
+  --ui-fg-color: var(--terminal-fg);
+  --ui-dim-color: var(--terminal-dim);
+  --ui-primary-bg-color: var(--terminal-border);
+  --ui-on-primary-color: var(--terminal-bg);
   
   /* Typography */
   --font-mono: 'Courier New', Courier, monospace;
@@ -33,29 +102,6 @@
   /* Layout */
   --max-width: 1400px;
   --split-ratio: 50%;
-  
-  /* Shared character sheet theme (overridable per app/panel) */
-  --sheet-accent: #00CED1;           /* primary teal */
-  --sheet-accent-dim: #20B2AA;       /* muted teal for labels/borders */
-  --sheet-border-color: #00CED1;
-  --sheet-label-color: #20B2AA;
-  --sheet-value-color: #00CED1;
-  --sheet-box-border-color: #20B2AA;
-  --sheet-box-bg: rgba(0, 206, 209, 0.08);
-  --sheet-ability-box-bg: rgba(0, 206, 209, 0.08);
-  
-  /* Generic UI theme tokens (used by buttons, inputs, etc.) */
-  /* Default = green terminal theme */
-  --ui-border-color: var(--terminal-border);
-  --ui-fg-color: var(--terminal-fg);
-  --ui-dim-color: var(--terminal-dim);
-  --ui-primary-bg-color: var(--terminal-border);
-  --ui-on-primary-color: var(--terminal-bg);
-
-  /* Scrollbars (base = green terminal theme) */
-  --scrollbar-track-color: #050505;
-  --scrollbar-thumb-color: rgba(0, 136, 0, 0.45);        /* dim green, semi-transparent */
-  --scrollbar-thumb-hover-color: rgba(0, 255, 0, 0.85);  /* brighter on hover */
   
   /* Animation */
   --transition-speed: 0.3s;
@@ -257,9 +303,9 @@ body {
   --ui-on-primary-color: var(--terminal-bg);
 
   /* Teal scrollbars inside character sheets */
-  --scrollbar-track-color: #041f20;
-  --scrollbar-thumb-color: rgba(32, 178, 170, 0.5);      /* teal dim, semi-transparent */
-  --scrollbar-thumb-hover-color: rgba(0, 206, 209, 0.9); /* brighter on hover */
+  --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
+  --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
+  --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
 .sheet-title-header {
@@ -336,10 +382,10 @@ body {
 .character-sheet .terminal-btn:hover:not(:disabled),
 .character-sheet .terminal-btn-small:hover:not(:disabled),
 .character-sheet .prompt-modal-btn:hover:not(:disabled) {
-  background: rgba(0, 206, 209, 0.15);
+  background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
   border-color: var(--sheet-accent);
   color: var(--sheet-accent);
-  box-shadow: 0 0 10px rgba(0, 206, 209, 0.3);
+  box-shadow: 0 0 10px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.3);
 }
 
 .character-sheet .prompt-modal-btn.primary,
@@ -352,7 +398,7 @@ body {
 .character-sheet .prompt-modal-btn.primary:hover:not(:disabled),
 .character-sheet .terminal-btn-primary:hover:not(:disabled) {
   background-color: var(--sheet-accent);
-  box-shadow: 0 0 15px rgba(0, 206, 209, 0.5);
+  box-shadow: 0 0 15px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.5);
 }
 
 .sheet-content {
@@ -455,7 +501,7 @@ body {
 .character-sheet .terminal-select:focus,
 .character-sheet .terminal-textarea:focus {
   border-color: var(--sheet-accent);
-  box-shadow: 0 0 5px rgba(0, 206, 209, 0.5);
+  box-shadow: 0 0 5px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.5);
 }
 
 /* ===== INPUT ELEMENTS ===== */
@@ -477,7 +523,7 @@ body {
 .terminal-textarea:focus {
   outline: none;
   border-color: var(--terminal-accent);
-  box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+  box-shadow: 0 0 5px hsla(var(--theme-cyan-h), var(--theme-cyan-s), var(--theme-cyan-l-bright), 0.5);
 }
 
 .terminal-select {
@@ -508,7 +554,7 @@ body {
 
 .terminal-btn:hover:not(:disabled),
 .button-primary:hover:not(:disabled):not(.is-selected) {
-  background: rgba(0, 255, 0, 0.25);
+  background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.25);
 }
 
 .terminal-btn:disabled,
@@ -568,8 +614,8 @@ body {
 /* Warning button */
 .terminal-btn-warning {
   background: transparent;
-  border: 1px solid #ffa500;
-  color: #ffa500;
+  border: 1px solid hsl(var(--theme-warning-h), var(--theme-warning-s), var(--theme-warning-l));
+  color: hsl(var(--theme-warning-h), var(--theme-warning-s), var(--theme-warning-l));
   padding: var(--spacing-sm) var(--spacing-md);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
@@ -578,7 +624,7 @@ body {
 }
 
 .terminal-btn-warning:hover:not(:disabled) {
-  background-color: rgba(255, 165, 0, 0.1);
+  background-color: hsla(var(--theme-warning-h), var(--theme-warning-s), var(--theme-warning-l), 0.1);
 }
 
 /* Danger button */
@@ -594,7 +640,7 @@ body {
 }
 
 .terminal-btn-danger:hover:not(:disabled) {
-  background-color: rgba(255, 0, 0, 0.1);
+  background-color: hsla(var(--theme-error-h), var(--theme-error-s), var(--theme-error-l), 0.1);
 }
 
 /* Link-style button */
@@ -618,13 +664,13 @@ body {
 /* Links inside modals follow the modal's yellow text theme */
 .modal .terminal-link,
 .modal .link-button {
-  color: var(--terminal-warning);
+  color: var(--modal-accent);
 }
 
 .modal .terminal-link:hover,
 .modal .link-button:hover {
-  color: var(--terminal-warning);
-  text-shadow: 0 0 5px var(--terminal-warning);
+  color: var(--modal-accent);
+  text-shadow: 0 0 5px var(--modal-accent);
 }
 
 /* Button group layout utilities */
@@ -640,7 +686,7 @@ body {
 
 /* Character Builder specific button states */
 .button-primary.is-focused:not(.is-selected) {
-  background: rgba(0, 255, 0, 0.25);
+  background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.25);
   outline: 2px solid var(--terminal-accent);
   outline-offset: -2px;
 }
@@ -661,7 +707,7 @@ body {
 }
 
 .button-primary.is-locked:not(.is-selected):hover {
-  background: rgba(0, 255, 0, 0.1);
+  background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.1);
 }
 
 .button-primary.is-selected,
@@ -687,15 +733,15 @@ body {
   z-index: 1000;
   backdrop-filter: blur(5px);
   /* Modal-specific UI tokens (yellow theme) */
-  --ui-border-color: var(--terminal-warning);
-  --ui-fg-color: var(--terminal-warning);
-  --ui-dim-color: rgba(255, 215, 0, 0.75);
-  --ui-primary-bg-color: var(--terminal-warning);
+  --ui-border-color: var(--modal-accent);
+  --ui-fg-color: var(--modal-accent);
+  --ui-dim-color: var(--modal-accent-dim);
+  --ui-primary-bg-color: var(--modal-accent);
   --ui-on-primary-color: var(--terminal-bg);
   /* Yellow-themed scrollbars inside modals */
-  --scrollbar-track-color: #181200;
-  --scrollbar-thumb-color: rgba(255, 215, 0, 0.6);
-  --scrollbar-thumb-hover-color: rgba(255, 215, 0, 0.9);
+  --scrollbar-track-color: hsl(var(--theme-yellow-h), 100%, 5%);
+  --scrollbar-thumb-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.6);
+  --scrollbar-thumb-hover-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.9);
 }
 
 .modal.show {
@@ -706,12 +752,12 @@ body {
 
 .modal-content {
   background-color: var(--terminal-bg);
-  border: 2px solid var(--terminal-warning);
+  border: 2px solid var(--modal-accent);
   border-radius: 4px;
   max-width: 700px;
   width: 90%;
   max-height: 90vh;
-  box-shadow: 0 20px 60px rgba(255, 215, 0, 0.35);
+  box-shadow: 0 20px 60px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.35);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -727,14 +773,14 @@ body {
 
 .modal-title {
   font-size: var(--font-size-large);
-  color: var(--terminal-warning);
+  color: var(--modal-accent);
   font-weight: normal;
 }
 
 .modal-close {
   background: none;
   border: none;
-  color: var(--terminal-warning);
+  color: var(--modal-accent);
   font-size: 20px;
   cursor: pointer;
   padding: 0;
@@ -747,7 +793,7 @@ body {
 }
 
 .modal-close:hover {
-  color: var(--terminal-warning);
+  color: var(--modal-accent);
   transform: rotate(90deg);
 }
 
@@ -768,40 +814,40 @@ body {
 /* Modal-specific text theming (yellow) */
 .modal .terminal-text,
 .modal .terminal-text-accent {
-  color: var(--terminal-warning);
+  color: var(--modal-accent);
   margin-bottom: var(--spacing-sm);
 }
 
 .modal .terminal-text-small,
 .modal .terminal-text-dim {
-  color: rgba(255, 215, 0, 0.75);
+  color: var(--modal-accent-dim);
 }
 
 /* Modal-specific input theming (yellow) */
 .modal .terminal-input,
 .modal .terminal-textarea,
 .modal .terminal-select {
-  border-color: rgba(255, 215, 0, 0.6);
-  color: var(--terminal-warning);
+  border-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.6);
+  color: var(--modal-accent);
 }
 
 .modal .terminal-input::placeholder,
 .modal .terminal-textarea::placeholder {
-  color: rgba(255, 215, 0, 0.75);
+  color: var(--modal-accent-dim);
 }
 
 .modal .terminal-input:focus,
 .modal .terminal-textarea:focus,
 .modal .terminal-select:focus {
-  border-color: var(--terminal-warning);
-  box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+  border-color: var(--modal-accent);
+  box-shadow: 0 0 5px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5);
 }
 
 /* Modal primary buttons: keep geometry, add subtle yellow glow on hover */
 .modal .terminal-btn-primary:hover:not(:disabled) {
   background-color: var(--ui-primary-bg-color);
   border-color: var(--ui-primary-bg-color);
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+  box-shadow: 0 0 15px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5);
 }
 
 /* ===== TYPOGRAPHY ===== */

@@ -9,6 +9,10 @@ import os
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
+import uuid
+
+import httpx
+import boto3
 import openai
 from database.database import get_settings
 
@@ -23,11 +27,49 @@ OPENAI_API_KEY = settings.openai_api_key
 MAX_REQUESTS_PER_MINUTE = settings.max_requests_per_user_per_minute
 MAX_REQUESTS_PER_DAY = settings.max_requests_per_user_per_day
 
+# Cloudflare R2 configuration (optional)
+R2_ACCOUNT_ID = settings.r2_account_id
+R2_ACCESS_KEY_ID = settings.r2_access_key_id
+R2_SECRET_ACCESS_KEY = settings.r2_secret_access_key
+R2_BUCKET_NAME = settings.r2_bucket_name
+R2_PUBLIC_BASE_URL = settings.r2_public_base_url
+
+# Light debug to confirm whether R2 looks configured (does NOT print secrets).
+print(
+    "☁️  R2 config summary:",
+    {
+        "has_account_id": bool(R2_ACCOUNT_ID),
+        "has_access_key": bool(R2_ACCESS_KEY_ID),
+        "has_secret_key": bool(R2_SECRET_ACCESS_KEY),
+        "bucket_name": R2_BUCKET_NAME or "(empty)",
+        "public_base_url": R2_PUBLIC_BASE_URL or "(empty)",
+    },
+)
+
 if not OPENAI_API_KEY:
     print("⚠️  WARNING: OPENAI_API_KEY not set. AI features will be disabled.")
 
 # Initialize OpenAI client
 openai.api_key = OPENAI_API_KEY
+
+
+def _get_r2_client():
+    """
+    Build an S3-compatible client for Cloudflare R2 if configuration is present.
+    Returns None when R2 is not configured so callers can gracefully fall back.
+    """
+    if not (R2_ACCOUNT_ID and R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY and R2_BUCKET_NAME):
+        return None
+
+    endpoint_url = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+    return boto3.client(
+        "s3",
+        endpoint_url=endpoint_url,
+        aws_access_key_id=R2_ACCESS_KEY_ID,
+        aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+        region_name="auto",
+    )
 
 
 # Request/Response models
@@ -186,21 +228,75 @@ async def generate_image(
     check_rate_limit(client_id)
     
     try:
+        # Step 1: Generate image with DALL-E
         response = openai.images.generate(
             model="dall-e-3",
             prompt=request.prompt,
             n=1,
             size=request.size,
-            quality=request.quality
+            quality=request.quality,
         )
-        
+
+        openai_url = response.data[0].url
+        revised_prompt = response.data[0].revised_prompt
+
+        # Debug logging for DALL-E response
+        print("🎨 DALL-E image generated.")
+        print(f"   Prompt (truncated): {request.prompt[:120]}...")
+        print(f"   OpenAI URL (truncated): {openai_url[:80]}...")
+
+        # Default to OpenAI's temporary URL; we'll overwrite if R2 upload succeeds.
+        final_url = openai_url
+
+        # Step 2: If Cloudflare R2 is configured, download the image and upload it to R2
+        r2_client = _get_r2_client()
+        if r2_client and openai_url:
+            try:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    img_resp = await client.get(openai_url)
+                    img_resp.raise_for_status()
+
+                    content_type = img_resp.headers.get("content-type", "image/png")
+                    # Basic extension detection; defaults to .png
+                    ext = "jpg" if "jpeg" in content_type or "jpg" in content_type else "png"
+
+                    # Use a reasonably unique key for the portrait
+                    timestamp = int(time.time())
+                    key = f"portraits/{timestamp}_{uuid.uuid4().hex}.{ext}"
+
+                    print("☁️  Uploading portrait to Cloudflare R2...")
+                    print(f"   Bucket: {R2_BUCKET_NAME}")
+                    print(f"   Key: {key}")
+                    print(f"   Content-Type: {content_type}")
+
+                    r2_client.put_object(
+                        Bucket=R2_BUCKET_NAME,
+                        Key=key,
+                        Body=img_resp.content,
+                        ContentType=content_type,
+                    )
+
+                    # Prefer explicit public base URL when provided (recommended for R2 dev/public buckets),
+                    # otherwise fall back to the S3-style endpoint.
+                    if R2_PUBLIC_BASE_URL:
+                        base = R2_PUBLIC_BASE_URL.rstrip("/")
+                        final_url = f"{base}/{key}"
+                    else:
+                        final_url = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com/{R2_BUCKET_NAME}/{key}"
+
+                    print("✅ Cloudflare R2 upload complete.")
+                    print(f"   Final image URL: {final_url}")
+            except Exception as r2_error:
+                # Non-fatal: log and fall back to the original OpenAI URL
+                print(f"⚠️  Failed to upload image to Cloudflare R2: {r2_error}")
+
         return {
             "success": True,
-            "url": response.data[0].url,
-            "revised_prompt": response.data[0].revised_prompt
+            "url": final_url,
+            "revised_prompt": revised_prompt,
         }
     
-    except openai.RateLimitError as e:
+    except openai.RateLimitError:
         raise HTTPException(status_code=429, detail="OpenAI rate limit exceeded. Please try again later.")
     except openai.APIError as e:
         raise HTTPException(status_code=502, detail=f"OpenAI API error: {str(e)}")

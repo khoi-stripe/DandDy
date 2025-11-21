@@ -214,6 +214,22 @@ const CharacterStorage = {
     // Update existing character
     async update(id, updates) {
         if (this.useCloud()) {
+            // Guard against invalid cloud IDs (e.g. "null", "undefined", or local-only IDs)
+            const idStr = String(id);
+            const isInvalidCloudId =
+                !idStr ||
+                idStr === 'null' ||
+                idStr === 'undefined' ||
+                idStr.startsWith('local_');
+
+            if (isInvalidCloudId) {
+                console.warn(
+                    '⚠️ Skipping cloud update for character with invalid id; falling back to local update:',
+                    id,
+                );
+                return this._localUpdate(id, updates);
+            }
+
             try {
                 return await window.CharacterCloudStorage.update(id, updates);
             } catch (error) {
@@ -454,6 +470,16 @@ const AppState = {
             );
         }
 
+        // Sort by most recently updated (fallback to createdAt), newest first
+        filtered.sort((a, b) => {
+            const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
+            const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+            if (aTime === bTime) {
+                return (a.name || '').localeCompare(b.name || '');
+            }
+            return bTime - aTime;
+        });
+
         this.filteredCharacters = filtered;
     }
 };
@@ -609,116 +635,6 @@ const UI = {
         
         // Populate ASCII portrait after rendering
         CharacterSheet.populatePortrait(character);
-    },
-
-
-    renderCharacterDetails_OLD(char) {
-        const abilities = char.abilityScores || {};
-        const skills = char.skills || {};
-        const equipment = char.equipment || [];
-        const spells = char.spells || [];
-
-        return `
-            <div class="detail-section">
-                <h3>📊 Basic Info</h3>
-                <div class="detail-grid">
-                    <div class="detail-item">
-                        <div class="detail-label">Race</div>
-                        <div class="detail-value">${char.race || 'Unknown'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Class</div>
-                        <div class="detail-value">${char.class || 'Unknown'}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Level</div>
-                        <div class="detail-value">${char.level || 1}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Background</div>
-                        <div class="detail-value">${char.background || 'None'}</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="detail-section">
-                <h3>⚔️ Combat Stats</h3>
-                <div class="detail-grid">
-                    <div class="detail-item">
-                        <div class="detail-label">Hit Points</div>
-                        <div class="detail-value">${char.hitPoints?.current || 0} / ${char.hitPoints?.max || 0}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Armor Class</div>
-                        <div class="detail-value">${char.armorClass || 10}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Initiative</div>
-                        <div class="detail-value">+${char.initiative || 0}</div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">Speed</div>
-                        <div class="detail-value">${char.speed || 30} ft</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="detail-section">
-                <h3>💪 Ability Scores</h3>
-                <div class="detail-grid">
-                    ${['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'].map(ability => {
-                        const score = abilities[ability] || 10;
-                        const modifier = Math.floor((score - 10) / 2);
-                        const modStr = modifier >= 0 ? `+${modifier}` : modifier;
-                        return `
-                            <div class="detail-item">
-                                <div class="detail-label">${ability.toUpperCase()}</div>
-                                <div class="detail-value">${score} (${modStr})</div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-
-            ${Object.keys(skills).length > 0 ? `
-                <div class="detail-section">
-                    <h3>🎯 Skills</h3>
-                    <div class="detail-grid">
-                        ${Object.entries(skills).map(([skill, value]) => `
-                            <div class="detail-item">
-                                <div class="detail-label">${skill}</div>
-                                <div class="detail-value">${value >= 0 ? '+' : ''}${value}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            ` : ''}
-
-            ${equipment.length > 0 ? `
-                <div class="detail-section">
-                    <h3>🎒 Equipment</h3>
-                    <div class="terminal-text">
-                        ${equipment.map(item => `• ${item}`).join('<br>')}
-                    </div>
-                </div>
-            ` : ''}
-
-            ${spells.length > 0 ? `
-                <div class="detail-section">
-                    <h3>✨ Spells</h3>
-                    <div class="terminal-text">
-                        ${spells.map(spell => `• ${spell}`).join('<br>')}
-                    </div>
-                </div>
-            ` : ''}
-
-            ${char.backstory ? `
-                <div class="detail-section">
-                    <h3>📖 Backstory</h3>
-                    <div class="terminal-text">${char.backstory}</div>
-                </div>
-            ` : ''}
-        `;
     }
 };
 
@@ -918,11 +834,13 @@ async function renameCharacter(id) {
         await AppState.loadCharacters();
         UI.render();
         viewCharacter(id);
-        showNotification(`Character renamed to: ${newName}`);
+        showNotification('Character renamed to: ' + newName);
     });
 
-    // Focus and select existing name
-    if (input) {
+    // Focus first field in the rename modal
+    if (typeof focusFirstFieldInModal === 'function') {
+        focusFirstFieldInModal(modal);
+    } else if (input) {
         input.focus();
         input.select();
     }
@@ -937,13 +855,6 @@ async function generatePortraitForCharacter(id) {
     // Check if race and class are defined
     if (!character.race || !character.class) {
         showAlertDialog('This character needs both a race and class to generate a custom portrait.');
-        return;
-    }
-
-    // Check portrait generation limit (3 per character)
-    const portraitCount = character.customPortraitCount || 0;
-    if (portraitCount >= 3) {
-        showAlertDialog('Portrait limit reached. You can generate up to 3 custom AI portraits per character.');
         return;
     }
 
@@ -973,7 +884,13 @@ async function generatePortraitForCharacter(id) {
         : `${character.race} ${character.class}`;
     
     document.getElementById('portraitPrompt').value = defaultPrompt;
-    document.getElementById('portraitPromptModal').classList.add('show');
+    const promptModal = document.getElementById('portraitPromptModal');
+    if (promptModal) {
+        promptModal.classList.add('show');
+        if (typeof focusFirstFieldInModal === 'function') {
+            focusFirstFieldInModal(promptModal);
+        }
+    }
 }
 
 function closePortraitPromptModal() {
@@ -983,12 +900,16 @@ function closePortraitPromptModal() {
 }
 
 async function confirmGeneratePortrait() {
-    if (!currentPortraitCharacterId) {
+    // Capture the current character ID in a local variable so it's not lost
+    // when we close the modal (which resets currentPortraitCharacterId to null).
+    const portraitCharacterId = currentPortraitCharacterId;
+    
+    if (!portraitCharacterId) {
         closePortraitPromptModal();
         return;
     }
 
-    const character = CharacterStorage.getById(currentPortraitCharacterId);
+    const character = await CharacterStorage.getById(portraitCharacterId);
     if (!character) {
         closePortraitPromptModal();
         return;
@@ -1004,7 +925,7 @@ async function confirmGeneratePortrait() {
     closePortraitPromptModal();
 
     // Show loading state in the portrait area
-    const portraitId = `character-portrait-${currentPortraitCharacterId}`;
+    const portraitId = `character-portrait-${portraitCharacterId}`;
     const portraitEl = document.getElementById(portraitId);
     
     let portraitLoadingInterval;
@@ -1013,19 +934,26 @@ async function confirmGeneratePortrait() {
     const updatePortraitLoading = () => {
         if (!portraitEl) return;
         
+        const phaseOne = `[<span class="spinner">↻</span>] GENERATING AI PORTRAIT...<br><br>  Contacting image service...`;
+        const phaseTwo = `[<span class="spinner">↻</span>] GENERATING AI PORTRAIT...<br><br>  Image is being generated...<br>  (this takes 20-30 seconds)`;
+        const phaseThree = `[<span class="spinner">↻</span>] GENERATING AI PORTRAIT...<br><br>  Converting to ASCII art...`;
+        const phaseFour = `[<span class="spinner">↻</span>] ALMOST DONE...<br><br>  . . . ( ._.)`;
+        
         if (portraitElapsed < 5) {
-            portraitEl.textContent = `[<span class="spinner">↻</span>] GENERATING AI PORTRAIT...\n\n  Calling DALL-E...`;
+            portraitEl.innerHTML = phaseOne;
         } else if (portraitElapsed < 15) {
-            portraitEl.innerHTML = `[<span class="spinner">↻</span>] GENERATING AI PORTRAIT...\n\n  DALL-E is working...\n  (this takes 20-30 seconds)`;
+            portraitEl.innerHTML = phaseTwo;
         } else if (portraitElapsed < 25) {
-            portraitEl.innerHTML = `[<span class="spinner">↻</span>] GENERATING AI PORTRAIT...\n\n  Converting to ASCII art...`;
+            portraitEl.innerHTML = phaseThree;
         } else {
-            portraitEl.innerHTML = `[<span class="spinner">↻</span>] ALMOST DONE...\n\n  . . . ( ._.)`;
+            portraitEl.innerHTML = phaseFour;
         }
         portraitElapsed++;
     };
     
     if (portraitEl) {
+        // Enlarge font to match button/body copy while we're showing the loading message.
+        portraitEl.style.fontSize = 'var(--font-size-small)';
         updatePortraitLoading();
         portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
     }
@@ -1059,41 +987,59 @@ async function confirmGeneratePortrait() {
         if (portraitLoadingInterval) {
             clearInterval(portraitLoadingInterval);
         }
+        // Restore portrait font size back to ASCII default; the sheet will
+        // re-render the portrait element for the newly generated art.
+        if (portraitEl) {
+            portraitEl.style.fontSize = '';
+        }
 
         console.log('%c🎨 PORTRAIT (Success) ✨', 'color: #0f0; font-weight: bold');
 
-        // Update character in storage
+        // Update character in storage and append a new portrait version
         const currentCount = character.customPortraitCount || 0;
+        const updatedMetadata =
+            window.PortraitHistory &&
+            typeof window.PortraitHistory.addVersion === 'function'
+                ? window.PortraitHistory.addVersion(character, result.asciiArt, result.imageUrl, {
+                      source: 'custom-ai',
+                      prompt: customPrompt,
+                  })
+                : character.portraitMetadata || {};
+
         const updates = {
             originalPortraitUrl: result.imageUrl,
             customPortraitAscii: result.asciiArt,
             customPortraitCount: currentCount + 1,
+            portraitMetadata: updatedMetadata,
+            // Keep portrait object in sync for manager sheet rendering
+            portrait: {
+                ...(character.portrait || {}),
+                url: result.imageUrl,
+                ascii: result.asciiArt,
+            },
         };
 
-        // Also update portrait object for consistency
-        if (!updates.portrait) {
-            updates.portrait = {};
-        }
-        updates.portrait = {
-            ...character.portrait,
-            url: result.imageUrl,
-            ascii: result.asciiArt,
-        };
-
-        await CharacterStorage.update(currentPortraitCharacterId, updates);
+        await CharacterStorage.update(portraitCharacterId, updates);
         
         // Reload characters and UI
         await AppState.loadCharacters();
         UI.render();
-        viewCharacter(currentPortraitCharacterId);
+        viewCharacter(portraitCharacterId);
         
         showNotification(`Custom AI portrait generated! (${3 - (currentCount + 1)} remaining)`);
+        
+        // Clear the global pointer once we're done
+        currentPortraitCharacterId = null;
     } catch (error) {
         console.error('Error generating custom AI portrait:', error);
         
         // Stop the loading animation
         if (portraitLoadingInterval) {
             clearInterval(portraitLoadingInterval);
+        }
+        // Restore portrait font size on error as well
+        if (portraitEl) {
+            portraitEl.style.fontSize = '';
         }
         
         // Restore previous portrait first
@@ -1130,6 +1076,369 @@ async function confirmGeneratePortrait() {
             showNotification('❌ Portrait generation failed. Check console for details and try again.');
         }
     }
+}
+
+// ===== PORTRAIT HISTORY (MANAGER) =====
+async function openPortraitHistory(characterId) {
+    const character = await CharacterStorage.getById(characterId);
+    if (!character) return;
+
+    const metadata = character.portraitMetadata || {};
+    const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+
+    if (document.getElementById('portraitHistoryModal')) {
+        return;
+    }
+
+    const hasVersions = versions.length > 0;
+
+    const listHtml = hasVersions
+        ? versions
+              .map((v, index) => {
+                  const isActive = metadata.activeVersionId === v.id;
+                  const createdLabel = v.createdAt
+                      ? new Date(v.createdAt).toLocaleString()
+                      : '';
+                  // Use only the generation date/time as the label for each version.
+                  const title = createdLabel || 'Unknown time';
+                  const infoText = '';
+
+                  const hasImage = !!v.url;
+                  const thumbHtml = `
+            <div class="card-thumbnail">
+              <div class="ascii-portrait portrait-history-preview" data-version-id="${v.id}"></div>
+              ${
+                hasImage
+                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image is-hidden" data-version-id="${v.id}">`
+                  : ''
+              }
+            </div>`;
+
+                  return `
+            <div class="character-card portrait-history-card${isActive ? ' is-selected' : ''}" data-version-id="${v.id}" onclick="selectPortraitHistoryCard('${v.id}')">
+              ${thumbHtml}
+              <div class="card-details">
+                <div class="card-name">${title}</div>
+                <div class="card-info">${infoText || '&nbsp;'}</div>
+              </div>
+              <div class="portrait-history-actions">
+                ${
+                  hasImage
+                    ? `<button class="terminal-btn terminal-btn-small" data-toggle-version-id="${v.id}" onclick="togglePortraitHistoryView('${v.id}')">
+                  View Original
+                </button>`
+                    : ''
+                }
+                <button class="terminal-btn terminal-btn-small portrait-history-delete-btn" onclick="deletePortraitVersion('${characterId}', '${v.id}')" title="Delete this portrait version" aria-label="Delete portrait version">
+                  Del
+                </button>
+              </div>
+            </div>
+          `;
+              })
+              .join('')
+        : `<p class="terminal-text-small terminal-text-dim">No saved portraits yet. Generate a custom AI portrait to start a history.</p>`;
+
+    const modalHTML = `
+      <div id="portraitHistoryModal" class="modal show" onclick="closePortraitHistory()">
+        <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
+          <div class="modal-header">
+            <h2 class="modal-title">Portrait History</h2>
+            <button class="modal-close" onclick="closePortraitHistory()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text-small terminal-text-dim">
+              View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
+            </p>
+            <div class="portrait-history-card-row${versions.length === 1 ? ' is-single' : ''}">
+              ${listHtml}
+            </div>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" onclick="closePortraitHistory()">CANCEL</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="confirmPortraitHistorySelection('${characterId}')">USE SELECTED</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Populate ASCII previews (for versions without an image URL) as plain text,
+    // cropped to the same thumbnail framing as the main character cards.
+    versions.forEach((v) => {
+        const el = document.querySelector(
+            `.portrait-history-preview.ascii-portrait[data-version-id="${v.id}"]`,
+        );
+        if (el && v.ascii) {
+            if (window.UI && typeof UI.cropAsciiForThumbnail === 'function') {
+                el.textContent = UI.cropAsciiForThumbnail(v.ascii);
+            } else {
+                el.textContent = v.ascii;
+            }
+        }
+    });
+
+    // Initialize keyboard-style focus on the first card
+    const cards = getPortraitHistoryCards();
+    if (cards.length > 0) {
+        window._portraitHistoryFocusIndex = 0;
+        updatePortraitHistoryFocus();
+    }
+
+    // ESC / arrow keys / Enter inside the history modal
+    window._portraitHistoryEscHandler = (e) => {
+        if (e.key === 'Escape') closePortraitHistory();
+    };
+    window._portraitHistoryKeyHandler = (e) => {
+        const modal = document.getElementById('portraitHistoryModal');
+        if (!modal) return;
+
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            movePortraitHistoryFocus(-1);
+        } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            movePortraitHistoryFocus(1);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            movePortraitHistoryFocus(-1);
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            movePortraitHistoryFocus(1);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            confirmPortraitHistorySelection(characterId);
+        }
+    };
+
+    document.addEventListener('keydown', window._portraitHistoryEscHandler);
+    document.addEventListener('keydown', window._portraitHistoryKeyHandler);
+}
+
+function closePortraitHistory() {
+    const modal = document.getElementById('portraitHistoryModal');
+    if (modal) modal.remove();
+
+    if (window._portraitHistoryEscHandler) {
+        document.removeEventListener('keydown', window._portraitHistoryEscHandler);
+        window._portraitHistoryEscHandler = null;
+    }
+    if (window._portraitHistoryKeyHandler) {
+        document.removeEventListener('keydown', window._portraitHistoryKeyHandler);
+        window._portraitHistoryKeyHandler = null;
+    }
+    window._portraitHistoryFocusIndex = 0;
+}
+
+function getPortraitHistoryCards() {
+    return Array.from(
+        document.querySelectorAll('#portraitHistoryModal .character-card'),
+    );
+}
+
+function updatePortraitHistoryFocus() {
+    const cards = getPortraitHistoryCards();
+    if (cards.length === 0) return;
+
+    const index =
+        typeof window._portraitHistoryFocusIndex === 'number'
+            ? window._portraitHistoryFocusIndex
+            : 0;
+
+    cards.forEach((card, i) => {
+        const isFocused = i === index;
+        card.classList.toggle('is-keyboard-focused', isFocused);
+        card.classList.toggle('is-selected', isFocused);
+    });
+}
+
+function movePortraitHistoryFocus(delta) {
+    const cards = getPortraitHistoryCards();
+    if (cards.length === 0) return;
+
+    const current =
+        typeof window._portraitHistoryFocusIndex === 'number'
+            ? window._portraitHistoryFocusIndex
+            : 0;
+    const next = Math.max(0, Math.min(cards.length - 1, current + delta));
+    window._portraitHistoryFocusIndex = next;
+    updatePortraitHistoryFocus();
+}
+
+function selectPortraitHistoryCard(versionId) {
+    const cards = getPortraitHistoryCards();
+    if (cards.length === 0) return;
+
+    let targetIndex = 0;
+    cards.forEach((card, i) => {
+        const matches = card.getAttribute('data-version-id') === versionId;
+        if (matches) {
+            targetIndex = i;
+        }
+    });
+
+    window._portraitHistoryFocusIndex = targetIndex;
+    updatePortraitHistoryFocus();
+}
+
+function togglePortraitHistoryView(versionId) {
+    const asciiEl = document.querySelector(
+        `.portrait-history-preview.ascii-portrait[data-version-id="${versionId}"]`,
+    );
+    const imgEl = document.querySelector(
+        `.portrait-history-image[data-version-id="${versionId}"]`,
+    );
+    const btn = document.querySelector(
+        `.portrait-history-actions button[data-toggle-version-id="${versionId}"]`,
+    );
+
+    if (!imgEl || !asciiEl || !btn) return;
+
+    const showingAscii = imgEl.classList.contains('is-hidden');
+
+    if (showingAscii) {
+        // Switch to original image
+        asciiEl.classList.add('is-hidden');
+        imgEl.classList.remove('is-hidden');
+        btn.textContent = 'View ASCII';
+    } else {
+        // Switch back to ASCII art
+        imgEl.classList.add('is-hidden');
+        asciiEl.classList.remove('is-hidden');
+        btn.textContent = 'View Original';
+    }
+}
+
+async function confirmPortraitHistorySelection(characterId) {
+    const cards = getPortraitHistoryCards();
+    if (cards.length === 0) {
+        closePortraitHistory();
+        return;
+    }
+
+    const index =
+        typeof window._portraitHistoryFocusIndex === 'number'
+            ? window._portraitHistoryFocusIndex
+            : 0;
+    const card = cards[index];
+    if (!card) {
+        closePortraitHistory();
+        return;
+    }
+
+    const versionId = card.getAttribute('data-version-id');
+    if (!versionId) {
+        closePortraitHistory();
+        return;
+    }
+
+    await usePortraitVersion(characterId, versionId);
+}
+
+async function usePortraitVersion(characterId, versionId) {
+    const character = await CharacterStorage.getById(characterId);
+    if (!character) return;
+
+    const metadata = character.portraitMetadata || {};
+    const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+    const version = versions.find((v) => v.id === versionId);
+
+    if (!version) {
+        showNotification('Portrait version not found.');
+        return;
+    }
+
+    const updatedMetadata = {
+        ...metadata,
+        activeVersionId: version.id,
+    };
+
+    const updates = {
+        originalPortraitUrl: version.url || character.originalPortraitUrl || null,
+        customPortraitAscii: version.ascii || character.customPortraitAscii || '',
+        portraitMetadata: updatedMetadata,
+        portrait: {
+            ...(character.portrait || {}),
+            url: version.url || (character.portrait && character.portrait.url) || null,
+            ascii: version.ascii || (character.portrait && character.portrait.ascii) || '',
+        },
+    };
+
+    await CharacterStorage.update(characterId, updates);
+    await AppState.loadCharacters();
+    UI.render();
+    viewCharacter(characterId);
+    closePortraitHistory();
+}
+
+async function deletePortraitVersion(characterId, versionId) {
+    const character = await CharacterStorage.getById(characterId);
+    if (!character) return;
+
+    const metadata = character.portraitMetadata || {};
+    const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+
+    if (!versions.length) {
+        closePortraitHistory();
+        return;
+    }
+
+    const onConfirm = async () => {
+        const remaining = versions.filter((v) => v.id !== versionId);
+        const deletedWasActive = metadata.activeVersionId === versionId;
+
+        const updatedMetadata = {
+            ...metadata,
+            versions: remaining,
+            activeVersionId: deletedWasActive
+                ? remaining[0]?.id || null
+                : metadata.activeVersionId,
+        };
+
+        const updates = {
+            portraitMetadata: updatedMetadata,
+        };
+
+        if (deletedWasActive) {
+            if (remaining[0]) {
+                updates.originalPortraitUrl =
+                    remaining[0].url || character.originalPortraitUrl || null;
+                updates.customPortraitAscii =
+                    remaining[0].ascii || character.customPortraitAscii || '';
+                updates.portrait = {
+                    ...(character.portrait || {}),
+                    url: remaining[0].url || (character.portrait && character.portrait.url) || null,
+                    ascii:
+                        remaining[0].ascii || (character.portrait && character.portrait.ascii) || '',
+                };
+            } else {
+                // No remaining custom versions – clear custom portrait so we fall back to pre-generated ASCII.
+                updates.originalPortraitUrl = null;
+                updates.customPortraitAscii = '';
+                updates.portrait = {
+                    ...(character.portrait || {}),
+                    url: null,
+                    ascii: character.asciiPortrait || '',
+                };
+            }
+        }
+
+        await CharacterStorage.update(characterId, updates);
+        await AppState.loadCharacters();
+        UI.render();
+        viewCharacter(characterId);
+
+        closePortraitHistory();
+        if (remaining.length) {
+            openPortraitHistory(characterId);
+        }
+    };
+
+    showConfirmDialog(
+        'Delete this saved portrait version? This cannot be undone.',
+        onConfirm,
+    );
 }
 
 async function duplicateCharacter(id) {
@@ -1172,13 +1481,29 @@ async function deleteCharacter(id) {
 
 let isImporting = false;  // Flag to prevent concurrent imports
 
+// Helper: get the primary action button inside the Import modal only.
+// This avoids accidentally targeting primary buttons from other modals.
+function getImportModalPrimaryButton() {
+    const importModal = document.getElementById('importModal');
+    return importModal
+        ? importModal.querySelector('.modal-footer .terminal-btn-primary')
+        : null;
+}
+
 function showImportModal() {
-    document.getElementById('importModal').classList.add('show');
-    
-    // Disable import button until file is selected
-    const importButton = document.querySelector('#importModal .modal-footer .terminal-btn-primary');
-    if (importButton) {
-        importButton.disabled = true;
+    const modal = document.getElementById('importModal');
+    if (modal) {
+        modal.classList.add('show');
+
+        if (typeof focusFirstFieldInModal === 'function') {
+            focusFirstFieldInModal(modal);
+        }
+
+        // Disable import button until file is selected
+        const importButton = modal.querySelector('.modal-footer .terminal-btn-primary');
+        if (importButton) {
+            importButton.disabled = true;
+        }
     }
 }
 
@@ -1189,7 +1514,7 @@ function closeImportModal() {
     document.getElementById('fileName').textContent = '';
     
     // Re-enable the import button and reset text
-    const importButton = document.querySelector('.modal-footer .terminal-btn-primary');
+    const importButton = getImportModalPrimaryButton();
     if (importButton) {
         importButton.disabled = true;  // Disable for next time modal opens
         importButton.textContent = 'IMPORT';
@@ -1217,7 +1542,13 @@ function showDuplicateResolutionModal(characterName, existingId, importData) {
     
     // Close import modal and show duplicate modal
     document.getElementById('importModal').classList.remove('show');
-    document.getElementById('duplicateModal').classList.add('show');
+    const duplicateModal = document.getElementById('duplicateModal');
+    if (duplicateModal) {
+        duplicateModal.classList.add('show');
+        if (typeof focusFirstFieldInModal === 'function') {
+            focusFirstFieldInModal(duplicateModal);
+        }
+    }
 }
 
 function closeDuplicateModal() {
@@ -1332,7 +1663,7 @@ async function importCharacter() {
     console.log('🔒 Import locked, isImporting =', isImporting);
     
     // Disable the import button immediately
-    const importButton = document.querySelector('.modal-footer .terminal-btn-primary');
+    const importButton = getImportModalPrimaryButton();
     if (importButton) {
         importButton.disabled = true;
         importButton.textContent = 'IMPORTING...';
@@ -1358,7 +1689,7 @@ async function importCharacter() {
                 showDuplicateResolutionModal(result.name, result.existingIds[0], importData);
                 
                 // Re-enable button
-                const importButton = document.querySelector('.modal-footer .terminal-btn-primary');
+                const importButton = getImportModalPrimaryButton();
                 if (importButton) {
                     importButton.disabled = false;
                     importButton.textContent = 'IMPORT';
@@ -1380,7 +1711,7 @@ async function importCharacter() {
             } else {
                 showAlertDialog('Invalid character file!');
                 // Re-enable button on error
-                const importButton = document.querySelector('.modal-footer .terminal-btn-primary');
+                const importButton = getImportModalPrimaryButton();
                 if (importButton) {
                     importButton.disabled = false;
                     importButton.textContent = 'IMPORT';
@@ -1391,7 +1722,7 @@ async function importCharacter() {
         reader.onerror = () => {
             showAlertDialog('Error reading file!');
             // Re-enable button on error
-            const importButton = document.querySelector('.modal-footer .terminal-btn-primary');
+            const importButton = getImportModalPrimaryButton();
             if (importButton) {
                 importButton.disabled = false;
                 importButton.textContent = 'IMPORT';
@@ -1403,7 +1734,7 @@ async function importCharacter() {
     } else {
         showAlertDialog('Please select a file to import.');
         // Re-enable button and reset flag
-        const importButton = document.querySelector('.modal-footer .terminal-btn-primary');
+        const importButton = getImportModalPrimaryButton();
         if (importButton) {
             importButton.disabled = false;
             importButton.textContent = 'IMPORT';
@@ -1447,6 +1778,59 @@ function showNotification(message) {
     // For now, console is sufficient for debugging
 }
 
+// Focus the first meaningful field inside a modal (inputs/textareas/selects first, then primary button).
+function focusFirstFieldInModal(modal) {
+    if (!modal || typeof modal.querySelector !== 'function') return;
+
+    const fieldSelectors = [
+        // High-priority: styled terminal inputs
+        'input.terminal-input:not([type="hidden"]):not(.file-input-hidden):not([disabled])',
+        'textarea.terminal-input:not([disabled])',
+        'textarea.terminal-textarea:not([disabled])',
+        'select.terminal-select:not([disabled])',
+        // Generic fallbacks
+        'input:not([type="hidden"]):not(.file-input-hidden):not([disabled])',
+        'textarea:not([disabled])',
+        'select:not([disabled])',
+    ];
+
+    let target = null;
+    for (const selector of fieldSelectors) {
+        target = modal.querySelector(selector);
+        if (target) break;
+    }
+
+    if (!target) {
+        const fallbackSelectors = [
+            '.modal-footer .terminal-btn-primary:not([disabled])',
+            '.modal-footer button:not([disabled])',
+            'button.terminal-btn-primary:not([disabled])',
+            'button:not([disabled])',
+            '[tabindex]:not([tabindex="-1"])',
+        ];
+        for (const selector of fallbackSelectors) {
+            target = modal.querySelector(selector);
+            if (target) break;
+        }
+    }
+
+    if (target && typeof target.focus === 'function') {
+        setTimeout(() => {
+            try {
+                target.focus();
+                if (
+                    typeof target.select === 'function' &&
+                    (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')
+                ) {
+                    target.select();
+                }
+            } catch (e) {
+                // Non-fatal
+            }
+        }, 0);
+    }
+}
+
 // Generic confirmation modal using terminal modal styles
 function showConfirmDialog(message, onConfirm) {
     const existing = document.getElementById('genericConfirmModal');
@@ -1486,6 +1870,10 @@ function showConfirmDialog(message, onConfirm) {
             await onConfirm();
         }
     });
+
+    if (modal) {
+        focusFirstFieldInModal(modal);
+    }
 }
 
 // Generic alert modal using terminal modal styles
@@ -1519,6 +1907,10 @@ function showAlertDialog(message) {
     };
 
     okBtn.addEventListener('click', close);
+
+    if (modal) {
+        focusFirstFieldInModal(modal);
+    }
 }
 
 // Dismiss the guest notice banner (per-session only)
@@ -1569,7 +1961,10 @@ function dismissSplash(instant = false) {
 // ========================================
 
 function showAuthModal() {
-    document.getElementById('authModal').classList.add('show');
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        modal.classList.add('show');
+    }
     showLoginForm();
 }
 
@@ -1591,6 +1986,11 @@ function showLoginForm() {
     document.getElementById('loginBtn').classList.remove('is-hidden');
     document.getElementById('registerBtn').classList.add('is-hidden');
     document.getElementById('authError').classList.add('is-hidden');
+
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        focusFirstFieldInModal(modal);
+    }
 }
 
 function showRegisterForm() {
@@ -1600,6 +2000,11 @@ function showRegisterForm() {
     document.getElementById('loginBtn').classList.add('is-hidden');
     document.getElementById('registerBtn').classList.remove('is-hidden');
     document.getElementById('authError').classList.add('is-hidden');
+
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        focusFirstFieldInModal(modal);
+    }
 }
 
 async function handleLogin() {
@@ -1717,7 +2122,11 @@ function updateAuthUI() {
 function showMigrationModal() {
     const count = window.MigrationService.getLocalCharacterCount();
     document.getElementById('migrationCount').textContent = count;
-    document.getElementById('migrationModal').classList.add('show');
+    const modal = document.getElementById('migrationModal');
+    if (modal) {
+        modal.classList.add('show');
+        focusFirstFieldInModal(modal);
+    }
 }
 
 function closeMigrationModal() {

@@ -98,6 +98,64 @@ const Utils = window.Utils = {
       doScroll();
     }
   },
+
+  /**
+   * Focus the first meaningful field inside a modal.
+   * Prefers visible inputs / textareas / selects. Falls back to primary button.
+   */
+  focusFirstFieldInModal(modal) {
+    if (!modal || typeof modal.querySelector !== 'function') return;
+
+    const fieldSelectors = [
+      // High-priority: styled terminal inputs
+      'input.terminal-input:not([type=\"hidden\"]):not(.file-input-hidden):not([disabled])',
+      'textarea.terminal-input:not([disabled])',
+      'textarea.terminal-textarea:not([disabled])',
+      'select.terminal-select:not([disabled])',
+      // Generic fallbacks for plain form controls
+      'input:not([type=\"hidden\"]):not(.file-input-hidden):not([disabled])',
+      'textarea:not([disabled])',
+      'select:not([disabled])',
+    ];
+
+    let target = null;
+    for (const selector of fieldSelectors) {
+      target = modal.querySelector(selector);
+      if (target) break;
+    }
+
+    // If there are no form fields, focus the primary action button if present
+    if (!target) {
+      const fallbackSelectors = [
+        '.modal-footer .terminal-btn-primary:not([disabled])',
+        '.modal-footer button:not([disabled])',
+        'button.terminal-btn-primary:not([disabled])',
+        'button:not([disabled])',
+        '[tabindex]:not([tabindex=\"-1\"])',
+      ];
+      for (const selector of fallbackSelectors) {
+        target = modal.querySelector(selector);
+        if (target) break;
+      }
+    }
+
+    if (target && typeof target.focus === 'function') {
+      // Defer slightly to ensure any CSS animations / layout are ready
+      setTimeout(() => {
+        try {
+          target.focus();
+          if (
+            typeof target.select === 'function' &&
+            (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')
+          ) {
+            target.select();
+          }
+        } catch (e) {
+          // Non-fatal: if focus fails, we just leave things as-is.
+        }
+      }, 0);
+    }
+  },
 };
 
 

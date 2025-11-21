@@ -151,6 +151,7 @@ const KeyboardNav = (window.KeyboardNav = {
 const App = (window.App = {
   currentQuestion: null,
   _lastRenderedCharacter: null,
+  _PORTRAIT_HISTORY_MAX_VERSIONS: 5,
 
   async init() {
     console.log('Initializing Character Builder...');
@@ -660,8 +661,8 @@ const App = (window.App = {
       'beforeend',
       `
       <div class="question-card mt-lg" data-question-id="${question.id}">
-        <button class="button-primary completion-export-btn" onclick="App.exportCharacter()">
-          > EXPORT CHARACTER (JSON)
+        <button class="button-primary completion-save-btn" onclick="App.saveCharacter()">
+          > SAVE CHARACTER
         </button>
         <button class="button-primary" onclick="App.startNew()">
           > CREATE ANOTHER CHARACTER
@@ -672,22 +673,6 @@ const App = (window.App = {
 
     // Activate keyboard navigation
     KeyboardNav.activate();
-
-    // Ensure the completed character is saved to shared storage so it shows
-    // up in the manager view (cloud or local, depending on auth state).
-    try {
-      const state = CharacterState.get();
-      const character = state.character;
-      if (character && window.StorageService) {
-        console.log('💾 Saving completed character to shared storage...');
-        const saved = await window.StorageService.saveCharacter(character);
-        // Update state with any ID or fields returned from backend/local save
-        CharacterState.updateCharacter(saved);
-        console.log('💾 Completed character saved successfully.');
-      }
-    } catch (error) {
-      console.error('Error saving completed character:', error);
-    }
   },
 
   // Persist changes to shared storage only after a character has been saved once.
@@ -1138,6 +1123,11 @@ const App = (window.App = {
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', settingsHTML);
 
+    const modal = document.getElementById('settingsModal');
+    if (modal && Utils.focusFirstFieldInModal) {
+      Utils.focusFirstFieldInModal(modal);
+    }
+
     // Check backend status
     this.checkBackendStatus();
 
@@ -1196,6 +1186,190 @@ const App = (window.App = {
     this.closeSettings();
   },
 
+  openPortraitHistory() {
+    const state = CharacterState.get();
+    const character = state.character || {};
+    const metadata = character.portraitMetadata || {};
+    const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+
+    if (document.getElementById('portraitHistoryModal')) {
+      return;
+    }
+
+    const hasVersions = versions.length > 0;
+
+    const listHtml = hasVersions
+      ? versions
+          .map((v) => {
+            const isActive = metadata.activeVersionId === v.id;
+            const createdLabel = v.createdAt
+              ? new Date(v.createdAt).toLocaleString()
+              : '';
+            const safeId = String(v.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+            return `
+              <div class="portrait-history-item${
+                isActive ? ' is-active' : ''
+              }" data-version-id="${v.id}">
+                <div class="portrait-history-meta">
+                  <div class="portrait-history-title">${
+                    v.label || 'Saved Portrait'
+                  }</div>
+                  <div class="portrait-history-subtext">${createdLabel}</div>
+                </div>
+                <div class="ascii-portrait portrait-history-preview" id="portrait-version-ascii-${safeId}"></div>
+                <div class="portrait-history-actions">
+                  <button class="terminal-btn terminal-btn-small" onclick="App.usePortraitVersion('${v.id}')">
+                    USE THIS
+                  </button>
+                  <button class="terminal-btn terminal-btn-small" onclick="App.deletePortraitVersion('${v.id}')">
+                    DELETE
+                  </button>
+                </div>
+              </div>
+            `;
+          })
+          .join('')
+      : `<p class="terminal-text-small terminal-text-dim">No saved portraits yet. Generate a custom AI portrait to start a history.</p>`;
+
+    const modalHTML = `
+      <div id="portraitHistoryModal" class="modal show" onclick="App.closePortraitHistory()">
+        <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
+          <div class="modal-header">
+            <h2 class="modal-title">Portrait History</h2>
+            <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text-small terminal-text-dim">
+              View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
+            </p>
+            <div class="portrait-history-list">
+              ${listHtml}
+            </div>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" onclick="App.closePortraitHistory()">CLOSE</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const terminalContainer = document.querySelector('.terminal-container');
+    terminalContainer.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Populate ASCII previews as plain text to avoid HTML parsing issues
+    versions.forEach((v) => {
+      const safeId = String(v.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+      const el = document.getElementById(`portrait-version-ascii-${safeId}`);
+      if (el && v.ascii) {
+        el.textContent = v.ascii;
+      }
+    });
+
+    const modal = document.getElementById('portraitHistoryModal');
+    if (modal && Utils.focusFirstFieldInModal) {
+      Utils.focusFirstFieldInModal(modal);
+    }
+
+    // ESC key to close
+    this._portraitHistoryEscHandler = (e) => {
+      if (e.key === 'Escape') this.closePortraitHistory();
+    };
+    document.addEventListener('keydown', this._portraitHistoryEscHandler);
+  },
+
+  closePortraitHistory() {
+    const modal = document.getElementById('portraitHistoryModal');
+    if (modal) modal.remove();
+
+    if (this._portraitHistoryEscHandler) {
+      document.removeEventListener('keydown', this._portraitHistoryEscHandler);
+      this._portraitHistoryEscHandler = null;
+    }
+  },
+
+  async usePortraitVersion(versionId) {
+    const state = CharacterState.get();
+    const character = state.character || {};
+    const metadata = character.portraitMetadata || {};
+    const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+    const version = versions.find((v) => v.id === versionId);
+
+    if (!version) {
+      this.showSystemMessage('Portrait version not found.');
+      return;
+    }
+
+    const updatedMetadata = {
+      ...metadata,
+      activeVersionId: version.id,
+    };
+
+    CharacterState.updateCharacter({
+      originalPortraitUrl: version.url || character.originalPortraitUrl || null,
+      customPortraitAscii: version.ascii || character.customPortraitAscii || '',
+      portraitMetadata: updatedMetadata,
+    });
+
+    await this.persistIfAlreadySaved();
+    this.closePortraitHistory();
+  },
+
+  async deletePortraitVersion(versionId) {
+    const state = CharacterState.get();
+    const character = state.character || {};
+    const metadata = character.portraitMetadata || {};
+    const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+
+    if (!versions.length) {
+      this.closePortraitHistory();
+      return;
+    }
+
+    const onConfirm = async () => {
+      const remaining = versions.filter((v) => v.id !== versionId);
+      const deletedWasActive = metadata.activeVersionId === versionId;
+
+      const updatedMetadata = {
+        ...metadata,
+        versions: remaining,
+        activeVersionId: deletedWasActive
+          ? remaining[0]?.id || null
+          : metadata.activeVersionId,
+      };
+
+      const updates = {
+        portraitMetadata: updatedMetadata,
+      };
+
+      if (deletedWasActive) {
+        if (remaining[0]) {
+          updates.originalPortraitUrl =
+            remaining[0].url || character.originalPortraitUrl || null;
+          updates.customPortraitAscii =
+            remaining[0].ascii || character.customPortraitAscii || '';
+        } else {
+          // No remaining custom versions – clear custom portrait so we fall back to template/pre-generated art
+          updates.originalPortraitUrl = null;
+          updates.customPortraitAscii = '';
+        }
+      }
+
+      CharacterState.updateCharacter(updates);
+      await this.persistIfAlreadySaved();
+
+      // Re-open modal to reflect updated list (or close if empty)
+      this.closePortraitHistory();
+      if (remaining.length) {
+        this.openPortraitHistory();
+      }
+    };
+
+    this.showConfirmationOverlay(
+      'Delete this saved portrait version? This cannot be undone.',
+      onConfirm,
+    );
+  },
+
   async generateCustomAIPortrait() {
     const state = CharacterState.get();
     const character = state.character;
@@ -1203,15 +1377,6 @@ const App = (window.App = {
     if (!character.race || !character.class) {
       this.showSystemMessage(
         'Select both a race and a class before generating a custom portrait.',
-      );
-      return;
-    }
-
-    // Check portrait generation limit (3 per character)
-    const portraitCount = character.customPortraitCount || 0;
-    if (portraitCount >= 3) {
-      this.showSystemMessage(
-        'Portrait limit reached. You can generate up to 3 custom AI portraits per character.',
       );
       return;
     }
@@ -1277,6 +1442,11 @@ const App = (window.App = {
     `;
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', modalHTML);
+
+    const modal = document.getElementById('promptModal');
+    if (modal && Utils.focusFirstFieldInModal) {
+      Utils.focusFirstFieldInModal(modal);
+    }
 
     // ESC key to close
     this._promptModalEscHandler = (e) => {
@@ -1379,12 +1549,21 @@ const App = (window.App = {
         );
 
       // Store both the original image URL and custom ASCII art in character state
-      // Also increment the custom portrait counter
-      const currentCount = CharacterState.get().character.customPortraitCount || 0;
+      // Also increment the custom portrait counter and append to portrait history
+      const current = CharacterState.get().character;
+      const currentCount = current.customPortraitCount || 0;
+      const updatedMetadata = window.PortraitHistory
+        ? window.PortraitHistory.addVersion(current, result.asciiArt, result.imageUrl, {
+            source: 'custom-ai',
+            prompt: customPrompt,
+          })
+        : current.portraitMetadata || {};
+
       CharacterState.updateCharacter({
         originalPortraitUrl: result.imageUrl,
         customPortraitAscii: result.asciiArt,
         customPortraitCount: currentCount + 1,
+        portraitMetadata: updatedMetadata,
       });
 
       // Stop the loading animation
@@ -1451,37 +1630,31 @@ const App = (window.App = {
     }
   },
 
-  exportCharacter() {
-    console.log('🔥 EXPORT CALLED - Starting export process...');
+  // Explicit save entry point for the completion screen.
+  async saveCharacter(showMessage = true) {
     const state = CharacterState.get();
-    console.log('🔥 Raw character state:', state.character);
-    
-    try {
-      const completeCharacter = this.buildCompleteCharacter(state.character);
-      console.log('🔥 Complete character built:', completeCharacter);
-      console.log('🔥 Portrait data:', completeCharacter.portrait);
-      
-      const characterJson = JSON.stringify(completeCharacter, null, 2);
-      console.log('🔥 JSON length:', characterJson.length);
-      
-      const blob = new Blob([characterJson], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${state.character.name || 'dnd-character'}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+    const character = state.character;
 
-      const narratorPanel = document.getElementById('narrator-panel');
-      narratorPanel.innerHTML += Components.renderNarratorMessage(
-        'Character exported as JSON with complete stats and ASCII art. Check your downloads!',
+    if (!character || !window.StorageService) {
+      this.showSystemMessage(
+        'Unable to save character right now. Please try again shortly.',
       );
-      Utils.scrollToBottom(true);
+      return;
+    }
+
+    try {
+      console.log('💾 Saving character to shared storage (explicit save)...');
+      const saved = await window.StorageService.saveCharacter(character);
+      CharacterState.updateCharacter(saved);
+
+      if (showMessage) {
+        this.showSystemMessage(
+          'Character saved. You can now find it in the Character Manager.',
+        );
+      }
     } catch (error) {
-      console.error('🔥 EXPORT ERROR:', error);
-      this.showSystemMessage('Export failed: ' + error.message);
+      console.error('Error saving character:', error);
+      this.showSystemMessage('Save failed: ' + error.message);
     }
   },
 
@@ -1522,13 +1695,14 @@ const App = (window.App = {
 
     // Get portrait data
     const portraitContainer = document.getElementById('character-portrait');
-    console.log('🎨 Export Debug - portraitContainer:', portraitContainer);
-    console.log('🎨 Export Debug - portraitContainer.textContent:', portraitContainer ? portraitContainer.textContent : 'NO CONTAINER');
-    
-    const portraitElement = portraitContainer ? portraitContainer.querySelector('pre') : null;
-    const asciiArt = portraitElement ? portraitElement.textContent : (portraitContainer ? portraitContainer.textContent.trim() : null);
-    console.log('🎨 Export Debug - asciiArt length:', asciiArt ? asciiArt.length : 0);
-    console.log('🎨 Export Debug - asciiArt preview:', asciiArt ? asciiArt.substring(0, 100) : 'NULL');
+    const portraitElement = portraitContainer
+      ? portraitContainer.querySelector('pre')
+      : null;
+    const asciiArt = portraitElement
+      ? portraitElement.textContent
+      : portraitContainer
+      ? portraitContainer.textContent.trim()
+      : null;
     
     const originalPortrait = character.portrait?.url || character.portraitUrl || character.originalPortraitUrl || null;
     
@@ -1727,6 +1901,11 @@ const App = (window.App = {
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', modalHTML);
 
+    const modal = document.getElementById('levelModal');
+    if (modal && Utils.focusFirstFieldInModal) {
+      Utils.focusFirstFieldInModal(modal);
+    }
+
     // ESC key to close
     this._levelModalEscHandler = (e) => {
       if (e.key === 'Escape') this.closeLevelModal();
@@ -1888,14 +2067,10 @@ const App = (window.App = {
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Focus the input field
-    setTimeout(() => {
-      const input = document.getElementById('name-input');
-      if (input) {
-        input.focus();
-        input.select();
-      }
-    }, 100);
+    const modal = document.getElementById('nameModal');
+    if (modal && Utils.focusFirstFieldInModal) {
+      Utils.focusFirstFieldInModal(modal);
+    }
 
     // ESC key to close
     this._nameModalEscHandler = (e) => {
@@ -2137,23 +2312,52 @@ const App = (window.App = {
   },
 
   startNew() {
-    // Show confirmation overlay
-    this.showConfirmationOverlay(
-      'Are you sure you want to start a new character? All unsaved progress will be lost.',
-      () => {
-        // User confirmed
-        CharacterState.reset();
-        OptionVariationsCache.reset();
-        if (window.AIService && typeof AIService.resetNarratorSession === 'function') {
-          AIService.resetNarratorSession();
-        }
-        this._lastPortraitArt = null; // Reset portrait tracking for new character
-        document.getElementById('narrator-panel').innerHTML = ''; // Clear narrator
-        document.getElementById('character-panel').innerHTML = ''; // Clear character sheet
-        // Skip intro and go directly to entry-mode for returning users
-        this.showQuestion('entry-mode');
-      },
-    );
+    const state = CharacterState.get();
+    const character = state.character;
+
+    // Treat characters without an ID as "unsaved" in shared storage.
+    const hasUnsavedChanges = character && !character.id;
+
+    if (hasUnsavedChanges) {
+      // Ask the user if they want to save before starting over.
+      this.showConfirmationOverlay(
+        'You have not saved this character yet. Save before creating a new one?',
+        async () => {
+          // First attempt to save; if save fails, we keep the current character.
+          await this.saveCharacter(true);
+
+          // Re-check that we now have an ID before clearing.
+          const latest = CharacterState.get().character;
+          if (!latest || !latest.id) {
+            this.showSystemMessage(
+              'Character was not saved. Staying on the current character.',
+            );
+            return;
+          }
+
+          this._startNewInternal();
+        },
+      );
+    } else {
+      // Character is already saved; immediately start a new one with no extra confirmation.
+      this._startNewInternal();
+    }
+  },
+
+  _startNewInternal() {
+    // User confirmed: clear current character and restart flow.
+    CharacterState.reset();
+    OptionVariationsCache.reset();
+    if (window.AIService && typeof AIService.resetNarratorSession === 'function') {
+      AIService.resetNarratorSession();
+    }
+    this._lastPortraitArt = null; // Reset portrait tracking for new character
+    const narratorPanel = document.getElementById('narrator-panel');
+    const characterPanel = document.getElementById('character-panel');
+    if (narratorPanel) narratorPanel.innerHTML = '';
+    if (characterPanel) characterPanel.innerHTML = '';
+    // Skip intro and go directly to entry-mode for returning users
+    this.showQuestion('entry-mode');
   },
 
   showConfirmationOverlay(message, onConfirm, options = {}) {
@@ -2485,25 +2689,18 @@ const App = (window.App = {
 
 });
 
-// ===== AUTHENTICATION & BOOTSTRAP (no splash in builder) =====
+// ===== AUTHENTICATION & BOOTSTRAP (builder splash handling) =====
+
+let builderSplashActive = true;
 
 let loadingInterval = null;
 
 function startLoadingAnimation() {
   const statusText = document.getElementById('status-text');
-  let index = 0;
-  const messages = [
-    'INITIALIZING SYSTEM...',
-    'LOADING D&D 5E RULESET...',
-    'WARMING UP BACKEND...',
-  ];
-
-  loadingInterval = setInterval(() => {
-    if (statusText) {
-      statusText.textContent = messages[index];
-      index = (index + 1) % messages.length;
-    }
-  }, 800);
+  // Previously showed rotating \"fun\" boot messages; now we keep this area quiet.
+  if (statusText) {
+    statusText.textContent = '';
+  }
 }
 
 // Exit back to the Character Manager app from builder mode
@@ -2512,8 +2709,31 @@ function exitToManager() {
   window.location.href = '../character-manager.html?from=builder';
 }
 
+function dismissBuilderSplash(instant = false) {
+  const splash = document.getElementById('splash-content');
+  const mainContent = document.getElementById('main-content');
 
-// Initialize on page load (no splash gate)
+  if (!splash || !builderSplashActive) return;
+  builderSplashActive = false;
+
+  if (instant) {
+    splash.classList.add('is-hidden');
+    if (mainContent) {
+      mainContent.classList.remove('is-hidden');
+    }
+  } else {
+    splash.classList.add('fade-out');
+    setTimeout(() => {
+      splash.classList.add('is-hidden');
+      if (mainContent) {
+        mainContent.classList.remove('is-hidden');
+      }
+    }, 300);
+  }
+}
+
+
+// Initialize on page load
 window.addEventListener('DOMContentLoaded', async () => {
   // Start loading animation
   startLoadingAnimation();
@@ -2524,10 +2744,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     AIService.warmupBackend();
   }
 
-  // Show main content immediately
+  // Show main content immediately (behind splash)
   const mainContent = document.getElementById('main-content');
   if (mainContent) {
     mainContent.classList.remove('is-hidden');
+  }
+
+  // Splash screen handlers (press any key / click to begin)
+  const splash = document.getElementById('splash-content');
+  if (splash) {
+    const keyHandler = (e) => {
+      if (!builderSplashActive) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dismissBuilderSplash();
+    };
+
+    window.addEventListener('keydown', keyHandler);
+    splash.addEventListener('click', () => dismissBuilderSplash(), { once: true });
   }
 
   // Initialize the builder app

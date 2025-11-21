@@ -200,3 +200,4 @@ showNotification('Try again in a moment!');
 - Backend warmup happens automatically in background
 - Consistent with app's graceful degradation philosophy
 
+

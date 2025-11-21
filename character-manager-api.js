@@ -327,14 +327,23 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
     });
 
     if (response.status === 401) {
-      // Token expired or invalid
+      // Token expired or invalid – clear auth state and sync UI so the user
+      // doesn't appear "logged in" while we silently fall back to local data.
       AuthService.clearToken();
+      if (typeof window.updateAuthUI === 'function') {
+        window.updateAuthUI();
+      }
       throw new Error('Session expired. Please log in again.');
     }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-      throw new Error(error.detail || `API error: ${response.status}`);
+      const detail =
+        typeof error.detail === 'string'
+          ? error.detail
+          : JSON.stringify(error.detail || error);
+      console.error('API error response:', error);
+      throw new Error(detail || `API error: ${response.status}`);
     }
 
     // Handle 204 No Content

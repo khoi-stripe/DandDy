@@ -53,9 +53,9 @@
 
 /* Right panel uses teal scrollbars to match character sheet theme */
 .right-panel {
-    --scrollbar-track-color: #041f20;
-    --scrollbar-thumb-color: rgba(32, 178, 170, 0.5);
-    --scrollbar-thumb-hover-color: rgba(0, 206, 209, 0.9);
+    --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
+    --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
+    --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
 /* ===== CONTROLS SECTION ===== */
@@ -66,8 +66,8 @@
 .guest-notice {
     margin: 0 0 24px 0;
     padding: var(--spacing-sm) var(--spacing-md);
-    border: 1px solid #ffd54a;
-    background-color: rgba(255, 213, 74, 0.12);
+    border: 1px solid var(--modal-accent);
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.12);
     font-size: var(--font-size-small);
     display: flex;
     align-items: center;
@@ -75,11 +75,11 @@
 }
 
 .guest-notice .highlight {
-    color: #ffd54a;
+    color: var(--modal-accent);
 }
 
 .guest-notice-icon {
-    color: #ffd54a;
+    color: var(--modal-accent);
 }
 
 .guest-notice-close {
@@ -156,12 +156,13 @@
 .character-card:hover:not(.is-selected),
 .character-card.is-keyboard-focused:not(.is-selected) {
     border-color: var(--terminal-accent);
-    background-color: rgba(0, 255, 0, 0.08);
-    box-shadow: 0 0 15px rgba(0, 255, 0, 0.25);
+    background-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.08);
+    box-shadow: 0 0 15px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.25);
 }
 
 .card-thumbnail {
     width: 100%;
+    aspect-ratio: 3 / 4;
     font-size: 2.2px;
     line-height: 1.1;
     color: var(--terminal-fg); /* Green for unselected cards */
@@ -299,7 +300,7 @@
 }
 
 .ascii-portrait {
-    font-size: 6px;
+    font-size: 7px;
     line-height: 1.2;
     color: var(--terminal-accent);
     text-align: center;
@@ -309,6 +310,107 @@
     overflow-y: hidden;
     width: 100%;
     max-width: 100%;
+}
+
+/* Smaller portrait preview inside history modal to keep it readable
+   without overwhelming the layout. */
+.portrait-history-preview.ascii-portrait {
+    font-size: inherit;   /* Match base card-thumbnail typography */
+    max-height: 100%;
+    overflow-y: hidden;
+}
+
+/* Portrait history card row in modal */
+.portrait-history-card-row {
+    display: flex;
+    gap: var(--spacing-md);
+    overflow-x: auto;
+    padding-bottom: var(--spacing-sm);
+}
+
+.portrait-history-card-row.is-single {
+    justify-content: center;
+}
+
+/* Match character grid card sizing: effectively 3 columns with same gap.
+   This locks card width to the same fraction used in .character-grid. */
+.portrait-history-modal .portrait-history-card {
+    flex: 0 0 calc((100% - 2 * var(--spacing-md)) / 3);
+    max-width: calc((100% - 2 * var(--spacing-md)) / 3);
+    box-sizing: border-box;
+}
+
+/* Ensure thumbnails in history cards render images nicely */
+.portrait-history-modal .card-thumbnail {
+    /* Override grid card flex layout with a fixed 3:4 box that doesn't grow
+       with content. Both ASCII and IMG are absolutely positioned inside. */
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    display: block;
+    overflow: hidden;
+}
+
+.portrait-history-modal .card-thumbnail .ascii-portrait,
+.portrait-history-modal .card-thumbnail img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.portrait-history-modal .card-thumbnail img {
+    object-fit: cover;  /* Scale & crop to fill card thumbnail */
+    display: block;
+}
+
+/* Yellow-themed cards inside portrait history modal */
+.portrait-history-modal .character-card {
+    border-color: var(--modal-accent);
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.06);
+}
+
+.portrait-history-modal .character-card.is-selected,
+.portrait-history-modal .character-card.is-keyboard-focused {
+    border-color: var(--modal-accent);
+    box-shadow: 0 0 16px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.7);
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.14);
+}
+
+.portrait-history-modal .character-card .card-name {
+    color: var(--modal-accent);
+}
+
+.portrait-history-modal .character-card .card-info {
+    color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.8);
+}
+
+/* Default: ASCII art in unselected portrait history cards is yellow */
+.portrait-history-modal .character-card:not(.is-selected) .card-thumbnail,
+.portrait-history-modal .character-card:not(.is-selected) .card-thumbnail .ascii-portrait {
+    color: var(--modal-accent);
+}
+
+/* Yellow-themed buttons inside portrait history cards */
+.portrait-history-modal .portrait-history-actions .terminal-btn {
+    border-color: var(--modal-accent);
+    color: var(--modal-accent);
+    background: transparent;
+}
+
+.portrait-history-modal .portrait-history-actions .terminal-btn:hover {
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.15);
+    box-shadow: 0 0 10px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.6);
+}
+
+/* Add breathing room around history card actions */
+.portrait-history-actions {
+    margin: var(--spacing-sm);
+}
+
+/* Extra spacing between helper text and history cards in the modal */
+.portrait-history-modal .modal-body > .terminal-text-small.terminal-text-dim {
+    margin-bottom: var(--spacing-md);
 }
 
 .original-portrait {
@@ -366,7 +468,7 @@
 }
 
 .terminal-text-error {
-    color: #f00;
+    color: var(--terminal-error);
     font-weight: bold;
     margin-top: var(--spacing-sm);
 }
@@ -384,8 +486,8 @@
 #migrationStatus {
     margin-top: var(--spacing-md);
     padding: var(--spacing-sm);
-    border: 1px solid var(--color-border);
-    background: rgba(0, 255, 0, 0.05);
+    border: 1px solid var(--ui-border-color);
+    background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.05);
 }
 
 .modal-section-label {
@@ -395,23 +497,23 @@
 /* ===== TEAL THEME OVERRIDES (cards, panels) ===== */
 /* Teal color variables (used for cards/panels; modals use yellow theme below) */
 :root {
-    --panel-teal: #00CED1;  /* Bright Dark Turquoise - for highlighted elements */
-    --panel-teal-dim: #20B2AA;  /* Muted Light Sea Green - for secondary text */
-    --panel-teal-bg: #0d4d4a;
+    --panel-teal: var(--sheet-accent);  /* Bright Dark Turquoise - for highlighted elements */
+    --panel-teal-dim: var(--sheet-accent-dim);  /* Muted Light Sea Green - for secondary text */
+    --panel-teal-bg: hsl(var(--theme-teal-h), 60%, 18%);
 }
 
 /* Manager screen scrollbars use teal theme */
 .manager-screen {
-    --scrollbar-track-color: #041f20;
-    --scrollbar-thumb-color: rgba(32, 178, 170, 0.5);
-    --scrollbar-thumb-hover-color: rgba(0, 206, 209, 0.9);
+    --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
+    --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
+    --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
 /* LEFT PANEL - Only selected card is teal */
 .character-card.is-selected {
     border-color: var(--panel-teal) !important;
-    box-shadow: 0 0 15px rgba(32, 178, 170, 0.5) !important;
-    background-color: rgba(0, 206, 209, 0.05);
+    box-shadow: 0 0 15px hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5) !important;
+    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.05);
 }
 
 .character-card.is-selected .card-thumbnail {
@@ -430,8 +532,8 @@
 .character-card.is-selected:hover,
 .character-card.is-selected.is-keyboard-focused {
     border-color: var(--panel-teal) !important;
-    background-color: rgba(0, 206, 209, 0.14);
-    box-shadow: 0 0 18px rgba(32, 178, 170, 0.7) !important;
+    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.14);
+    box-shadow: 0 0 18px hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.7) !important;
 }
 
 /* (All modal theming is now handled by terminal-theme.css so it can be shared across apps.) */
@@ -446,8 +548,8 @@
 .spinner {
   display: inline-block;
   animation: spin 1s linear infinite;
-  font-size: 16px;
-  color: var(--terminal-fg);
+  font-size: 18px;
+  color: var(--panel-teal); /* Teal spinner arrow to match selected card theme */
   text-shadow: none;
 }
 
@@ -459,7 +561,7 @@
 .loading-text {
   color: var(--terminal-accent);
   font-family: var(--font-mono);
-  font-size: var(--font-size-base);
+  font-size: calc(var(--font-size-base) * 1.1);
   text-shadow: 0 0 10px var(--terminal-accent);
 }
 

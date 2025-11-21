@@ -154,3 +154,4 @@ Potential improvements for future iterations:
 **Date**: November 20, 2025  
 **Apps**: Character Builder v1.4, Character Manager v1.0
 
+

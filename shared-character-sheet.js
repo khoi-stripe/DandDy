@@ -156,13 +156,39 @@ const CharacterSheet = (window.CharacterSheet = {
       character.portrait?.url || character.originalPortraitUrl || null;
     
     // Use different IDs for builder vs manager
-    const portraitId = context === 'builder' ? 'character-portrait' : `character-portrait-${character.id || 'current'}`;
-    const originalPortraitId = context === 'builder' ? 'original-portrait' : `original-portrait-${character.id || 'current'}`;
-    const toggleBtnId = context === 'builder' ? 'toggle-portrait-btn' : `toggle-portrait-btn-${character.id || 'current'}`;
+    const safeIdForDom = character.id || 'current';
+    const portraitId = context === 'builder' ? 'character-portrait' : `character-portrait-${safeIdForDom}`;
+    const originalPortraitId =
+      context === 'builder' ? 'original-portrait' : `original-portrait-${safeIdForDom}`;
+    const toggleBtnId =
+      context === 'builder' ? 'toggle-portrait-btn' : `toggle-portrait-btn-${safeIdForDom}`;
     
     // Function names differ by context
-    const generateFn = context === 'builder' ? 'App.generateCustomAIPortrait()' : `generatePortraitForCharacter('${character.id}')`;
-    const toggleFn = context === 'builder' ? 'App.togglePortraitView()' : `togglePortraitView('${character.id}')`;
+    // In manager context we only enable portrait generation when there is a valid character.id,
+    // so we never call generatePortraitForCharacter('null') / 'undefined' and hit the API with
+    // an invalid /characters/null path.
+    const hasValidManagerId = !!character.id;
+    const generateFn =
+      context === 'builder'
+        ? 'App.generateCustomAIPortrait()'
+        : hasValidManagerId
+          ? `generatePortraitForCharacter('${character.id}')`
+          : null;
+    const toggleFn =
+      context === 'builder'
+        ? 'App.togglePortraitView()'
+        : `togglePortraitView('${safeIdForDom}')`;
+
+    const hasHistory =
+      character.portraitMetadata &&
+      Array.isArray(character.portraitMetadata.versions) &&
+      character.portraitMetadata.versions.length > 0;
+    const historyFn =
+      context === 'builder'
+        ? 'App.openPortraitHistory()'
+        : hasValidManagerId
+          ? `openPortraitHistory('${character.id}')`
+          : null;
 
     return `
       <div class="portrait-container">
@@ -171,10 +197,10 @@ const CharacterSheet = (window.CharacterSheet = {
           ? `<img id="${originalPortraitId}" class="original-portrait is-hidden" src="${originalPortraitUrl}" alt="Character portrait">`
           : ''}
         <div class="portrait-actions">
-          ${parsed.hasRace && parsed.hasClass && onGeneratePortrait
+          ${parsed.hasRace && parsed.hasClass && onGeneratePortrait && (context === 'builder' || hasValidManagerId)
             ? `
-            <button class="terminal-btn terminal-btn-small" onclick="${generateFn}" title="Generate a unique AI portrait (${3 - (character.customPortraitCount || 0)} remaining)">
-              ★ Custom AI Portrait ${character.customPortraitCount ? `(${3 - character.customPortraitCount})` : '(3)'}
+            <button class="terminal-btn terminal-btn-small" onclick="${generateFn}" title="Generate a unique custom AI portrait">
+              ★ Custom AI Portrait
             </button>
           `
             : ''}
@@ -182,6 +208,13 @@ const CharacterSheet = (window.CharacterSheet = {
             ? `
             <button class="terminal-btn terminal-btn-small" onclick="${toggleFn}" id="${toggleBtnId}" title="Toggle between ASCII and original art">
               👁 View Original
+            </button>
+          `
+            : ''}
+          ${hasHistory && historyFn
+            ? `
+            <button class="terminal-btn terminal-btn-small" onclick="${historyFn}" title="View saved portrait history">
+              ⌛ Portrait History
             </button>
           `
             : ''}
@@ -475,9 +508,14 @@ const CharacterSheet = (window.CharacterSheet = {
     const abilities = character.abilities || character.abilityScores || {};
     const abilityModifiers = character.abilityModifiers || {};
     
-    // Check if abilities have been actually rolled/populated
-    // baseAbilities is set when abilities are rolled in the builder
-    const abilitiesPopulated = character.baseAbilities !== null && character.baseAbilities !== undefined;
+    // Check if abilities have been actually rolled/populated.
+    // - In the builder, baseAbilities is set when abilities are rolled.
+    // - In manager/cloud-sourced characters, baseAbilities may be undefined,
+    //   but we still want to show abilities when they exist.
+    const hasAbilityKeys = abilities && Object.keys(abilities).length > 0;
+    const abilitiesPopulated =
+      (character.baseAbilities !== null && character.baseAbilities !== undefined) ||
+      hasAbilityKeys;
 
     // Handle race/class/background names (enhanced export has nested data)
     const raceName = character.raceData?.name || character.race || null;
@@ -837,25 +875,12 @@ const CharacterSheet = (window.CharacterSheet = {
           asciiPortraitKey: key,
         });
       } else if (context === 'builder' && window.CharacterState) {
-        // Update state first
+        // In builder context, update local state only. We no longer auto-save
+        // new characters here; the player explicitly saves from the builder UI.
         window.CharacterState.updateCharacter({
           asciiPortrait: ascii,
           asciiPortraitKey: key,
         });
-        
-        // Save to cloud (this is the ONLY save for new characters)
-        if (window.StorageService) {
-          const state = window.CharacterState.get();
-          try {
-            console.log('☁️ Saving character with portrait to cloud...');
-            const saved = await window.StorageService.saveCharacter(state.character);
-            // Update state with backend ID and fields
-            window.CharacterState.updateCharacter(saved);
-            console.log('☁️ Character saved successfully with portrait!');
-          } catch (error) {
-            console.error('Failed to save character with portrait:', error);
-          }
-        }
       }
     } catch (e) {
       console.warn(
@@ -869,6 +894,55 @@ const CharacterSheet = (window.CharacterSheet = {
       portraitEl.textContent = ascii;
       this._centerPortraitScrollSafely(portraitEl);
     }
+  },
+});
+
+// ========================================
+// SHARED PORTRAIT VERSIONING HELPERS
+// ========================================
+
+const PortraitHistory = (window.PortraitHistory = {
+  MAX_VERSIONS: 5,
+
+  /**
+   * Append a new portrait version to a character's metadata.
+   * Returns the updated portraitMetadata object (does not mutate character).
+   *
+   * @param {Object} character
+   * @param {string} asciiArt
+   * @param {string|null} imageUrl
+   * @param {Object} extra - { source, prompt }
+   */
+  addVersion(character, asciiArt, imageUrl, extra = {}) {
+    if (!character) {
+      return character?.portraitMetadata || {};
+    }
+
+    const existingMetadata = character.portraitMetadata || {};
+    const existingVersions = Array.isArray(existingMetadata.versions)
+      ? existingMetadata.versions
+      : [];
+
+    const id = `v_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 5)}`;
+
+    const version = {
+      id,
+      createdAt: new Date().toISOString(),
+      ascii: asciiArt || '',
+      url: imageUrl || null,
+      source: extra.source || 'custom-ai',
+      prompt: extra.prompt || null,
+    };
+
+    const versions = [version, ...existingVersions].slice(0, this.MAX_VERSIONS);
+
+    return {
+      ...existingMetadata,
+      versions,
+      activeVersionId: id,
+    };
   },
 });
 
