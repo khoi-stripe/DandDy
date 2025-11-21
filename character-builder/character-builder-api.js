@@ -2,6 +2,24 @@
 // Exposes CharacterAPI as global on window.
 
 const CharacterAPI = (window.CharacterAPI = {
+  // Helper to convert arrays to dict format for backend
+  arrayToDict(arr) {
+    if (!arr || !Array.isArray(arr)) return [];
+    
+    return arr.map(item => {
+      // If already an object, return as-is
+      if (typeof item === 'object' && item !== null) {
+        return item;
+      }
+      // If string, convert to dict format
+      if (typeof item === 'string') {
+        return { name: item };
+      }
+      // Fallback
+      return { value: item };
+    });
+  },
+  
   // Helper to make authenticated API requests
   async request(method, endpoint, body = null) {
     const token = AuthService.getToken();
@@ -87,9 +105,9 @@ const CharacterAPI = (window.CharacterAPI = {
       tool_proficiencies: character.toolProficiencies || [],
       languages: character.languages || [],
       
-      // Features
-      racial_traits: character.racialTraits || [],
-      class_features: character.classFeatures || [],
+      // Features (convert strings to dict format if needed)
+      racial_traits: this.arrayToDict(character.racialTraits),
+      class_features: this.arrayToDict(character.classFeatures),
       feats: [],
       background_feature: character.backgroundFeature || {},
       
@@ -103,8 +121,8 @@ const CharacterAPI = (window.CharacterAPI = {
       appearance: character.appearance || null,
       backstory: character.backstory || null,
       
-      // Inventory
-      inventory: character.equipment || [],
+      // Inventory (convert strings to dict format)
+      inventory: this.arrayToDict(character.equipment),
       
       // Spellcasting
       spellcasting_ability: character.spellcastingAbility || null,
@@ -112,12 +130,12 @@ const CharacterAPI = (window.CharacterAPI = {
       spell_attack_bonus: character.spellAttackBonus || null,
       spell_slots: character.spellSlots || {},
       spell_slots_used: {},
-      spells_known: character.spells || [],
+      spells_known: this.arrayToDict(character.spells),
       spells_prepared: character.preparedSpells || [],
       
       // Combat
       conditions: [],
-      attacks: character.attacks || [],
+      attacks: this.arrayToDict(character.attacks),
       
       // Currency
       copper_pieces: character.copper || 0,
