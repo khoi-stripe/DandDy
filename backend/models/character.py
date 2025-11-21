@@ -73,6 +73,13 @@ class Character(Base):
     appearance = Column(String, nullable=True)
     backstory = Column(String, nullable=True)
     
+    # Portrait Data
+    ascii_portrait = Column(String, nullable=True)  # ASCII art portrait (text)
+    original_portrait_url = Column(String, nullable=True)  # URL to generated image
+    custom_portrait_ascii = Column(String, nullable=True)  # Custom AI-generated ASCII
+    custom_portrait_count = Column(Integer, default=0, nullable=False)  # Number of custom portraits generated
+    portrait_metadata = Column(JSON, default=dict, nullable=False)  # Additional portrait info (key, source, etc)
+    
     # Inventory (JSON array of items)
     inventory = Column(JSON, default=list, nullable=False)
     

@@ -54,6 +54,13 @@ class CharacterBase(BaseModel):
     appearance: Optional[str] = None
     backstory: Optional[str] = None
     
+    # Portrait Data
+    ascii_portrait: Optional[str] = None
+    original_portrait_url: Optional[str] = None
+    custom_portrait_ascii: Optional[str] = None
+    custom_portrait_count: int = 0
+    portrait_metadata: Dict = {}
+    
     # Inventory
     inventory: List[Dict] = []
     
@@ -98,6 +105,12 @@ class CharacterUpdate(BaseModel):
     gold_pieces: Optional[int] = None
     platinum_pieces: Optional[int] = None
     campaign_id: Optional[int] = None
+    # Portrait fields
+    ascii_portrait: Optional[str] = None
+    original_portrait_url: Optional[str] = None
+    custom_portrait_ascii: Optional[str] = None
+    custom_portrait_count: Optional[int] = None
+    portrait_metadata: Optional[Dict] = None
 
 class CharacterResponse(CharacterBase):
     id: int

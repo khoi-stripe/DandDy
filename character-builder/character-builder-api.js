@@ -121,6 +121,13 @@ const CharacterAPI = (window.CharacterAPI = {
       appearance: character.appearance || null,
       backstory: character.backstory || null,
       
+      // Portrait Data
+      ascii_portrait: character.asciiPortrait || null,
+      original_portrait_url: character.originalPortraitUrl || null,
+      custom_portrait_ascii: character.customPortraitAscii || null,
+      custom_portrait_count: character.customPortraitCount || 0,
+      portrait_metadata: character.portraitMetadata || {},
+      
       // Inventory (convert strings to dict format)
       inventory: this.arrayToDict(character.equipment),
       
@@ -192,6 +199,13 @@ const CharacterAPI = (window.CharacterAPI = {
       
       appearance: backendChar.appearance,
       backstory: backendChar.backstory,
+      
+      // Portrait Data
+      asciiPortrait: backendChar.ascii_portrait,
+      originalPortraitUrl: backendChar.original_portrait_url,
+      customPortraitAscii: backendChar.custom_portrait_ascii,
+      customPortraitCount: backendChar.custom_portrait_count,
+      portraitMetadata: backendChar.portrait_metadata,
       
       equipment: backendChar.inventory,
       
