@@ -135,6 +135,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title">⚠ Duplicate Character Detected</h2>
+                <button class="modal-close" onclick="closeDuplicateModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <p class="terminal-text">A character named "<span id="duplicateCharName"></span>" already exists in your collection.</p>
@@ -229,6 +230,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title">[ MIGRATE TO CLOUD ]</h2>
+                <button class="modal-close" onclick="closeMigrationModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <p class="terminal-text">You have <strong id="migrationCount">0</strong> character(s) stored locally.</p>

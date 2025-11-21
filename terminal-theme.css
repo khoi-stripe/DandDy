@@ -44,9 +44,39 @@
   --sheet-box-bg: rgba(0, 206, 209, 0.08);
   --sheet-ability-box-bg: rgba(0, 206, 209, 0.08);
   
+  /* Generic UI theme tokens (used by buttons, inputs, etc.) */
+  /* Default = green terminal theme */
+  --ui-border-color: var(--terminal-border);
+  --ui-fg-color: var(--terminal-fg);
+  --ui-dim-color: var(--terminal-dim);
+  --ui-primary-bg-color: var(--terminal-border);
+  --ui-on-primary-color: var(--terminal-bg);
+
+  /* Scrollbars (base = green terminal theme) */
+  --scrollbar-track-color: #050505;
+  --scrollbar-thumb-color: rgba(0, 136, 0, 0.45);        /* dim green, semi-transparent */
+  --scrollbar-thumb-hover-color: rgba(0, 255, 0, 0.85);  /* brighter on hover */
+  
   /* Animation */
   --transition-speed: 0.3s;
   --typewriter-speed: 30ms;
+}
+
+/* Theme helpers: add to any container to switch UI accent colors */
+.ui-theme-green {
+  --ui-border-color: var(--terminal-border);
+  --ui-fg-color: var(--terminal-fg);
+  --ui-dim-color: var(--terminal-dim);
+  --ui-primary-bg-color: var(--terminal-border);
+  --ui-on-primary-color: var(--terminal-bg);
+}
+
+.ui-theme-teal {
+  --ui-border-color: var(--sheet-accent);
+  --ui-fg-color: var(--sheet-accent);
+  --ui-dim-color: var(--sheet-accent-dim);
+  --ui-primary-bg-color: var(--sheet-accent);
+  --ui-on-primary-color: var(--terminal-bg);
 }
 
 /* ===== BASE STYLES ===== */
@@ -54,15 +84,41 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  
-  /* Hide scrollbars for all elements */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+
+  /* Custom scrollbars (Firefox) */
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
 }
 
-/* Hide scrollbars for Chrome, Safari, and Opera */
+/* Custom scrollbars (WebKit browsers) */
 *::-webkit-scrollbar {
-  display: none;
+  /* 4px thumb + 8px margin on either side = 20px reserved area */
+  width: 20px;
+  height: 20px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track-color);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-color);
+  border-radius: 0;
+  /* Vertical: 4px thumb with 8px side margins */
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:horizontal {
+  /* Horizontal: 4px thumb with 8px top/bottom margins */
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover-color);
 }
 
 body {
@@ -192,6 +248,18 @@ body {
 .character-sheet {
   border: 1px solid var(--sheet-border-color);
   padding: var(--spacing-md);
+  
+  /* Use teal UI theme tokens inside the sheet */
+  --ui-border-color: var(--sheet-accent);
+  --ui-fg-color: var(--sheet-accent);
+  --ui-dim-color: var(--sheet-accent-dim);
+  --ui-primary-bg-color: var(--sheet-accent);
+  --ui-on-primary-color: var(--terminal-bg);
+
+  /* Teal scrollbars inside character sheets */
+  --scrollbar-track-color: #041f20;
+  --scrollbar-thumb-color: rgba(32, 178, 170, 0.5);      /* teal dim, semi-transparent */
+  --scrollbar-thumb-hover-color: rgba(0, 206, 209, 0.9); /* brighter on hover */
 }
 
 .sheet-title-header {
@@ -215,10 +283,20 @@ body {
 
 .sheet-title-buttons {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-sm);
   align-items: center;
   flex-shrink: 0;
   white-space: nowrap;
+}
+
+/* Ensure sheet header buttons (Rename / Change Level / Print, etc.)
+   all share the exact same height and vertical alignment */
+.character-sheet .sheet-title-buttons .terminal-btn-small,
+.character-sheet .sheet-title-buttons .button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .sheet-section {
@@ -260,6 +338,7 @@ body {
 .character-sheet .prompt-modal-btn:hover:not(:disabled) {
   background: rgba(0, 206, 209, 0.15);
   border-color: var(--sheet-accent);
+  color: var(--sheet-accent);
   box-shadow: 0 0 10px rgba(0, 206, 209, 0.3);
 }
 
@@ -364,6 +443,21 @@ body {
   color: var(--sheet-accent);
 }
 
+/* Character sheet inputs/selects use teal borders and focus states */
+.character-sheet .terminal-input,
+.character-sheet .terminal-select,
+.character-sheet .terminal-textarea {
+  border-color: var(--sheet-accent-dim);
+  color: var(--sheet-value-color);
+}
+
+.character-sheet .terminal-input:focus,
+.character-sheet .terminal-select:focus,
+.character-sheet .terminal-textarea:focus {
+  border-color: var(--sheet-accent);
+  box-shadow: 0 0 5px rgba(0, 206, 209, 0.5);
+}
+
 /* ===== INPUT ELEMENTS ===== */
 .terminal-input,
 .terminal-select,
@@ -402,14 +496,14 @@ body {
 .terminal-btn,
 .button-primary {
   background: transparent;
-  border: 1px solid var(--terminal-border);
-  color: var(--terminal-fg);
+  border: 1px solid var(--ui-border-color);
+  color: var(--ui-fg-color);
   padding: var(--spacing-xs) var(--spacing-sm);
   font-family: var(--font-mono);
   font-size: var(--font-size-small);
   cursor: pointer;
   transition: all var(--transition-speed);
-  text-align: left;
+  text-align: center;
 }
 
 .terminal-btn:hover:not(:disabled),
@@ -432,8 +526,8 @@ body {
 .terminal-btn-small,
 .button-secondary {
   background: transparent;
-  border: 1px solid var(--terminal-dim);
-  color: var(--terminal-dim);
+  border: 1px solid var(--ui-dim-color);
+  color: var(--ui-dim-color);
   padding: var(--spacing-xs) var(--spacing-sm);
   font-family: var(--font-mono);
   font-size: var(--font-size-small);
@@ -449,9 +543,9 @@ body {
 
 /* Filled primary button (character manager style) */
 .terminal-btn-primary {
-  background-color: var(--terminal-border);
-  color: var(--terminal-bg);
-  border: 1px solid var(--terminal-border);
+  background-color: var(--ui-primary-bg-color);
+  color: var(--ui-on-primary-color);
+  border: 1px solid var(--ui-primary-bg-color);
   text-transform: uppercase;
   font-weight: bold;
 }
@@ -463,10 +557,11 @@ body {
 }
 
 .terminal-btn-primary:disabled {
-  background-color: var(--terminal-dim);
-  border-color: var(--terminal-dim);
-  color: rgba(0, 0, 0, 0.5);
-  opacity: 0.5;
+  /* Theme-agnostic disabled state: neutral, slightly dimmed */
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.35);
+  opacity: 0.7;
   cursor: not-allowed;
 }
 
@@ -555,6 +650,18 @@ body {
   text-shadow: 0 0 5px var(--terminal-fg);
 }
 
+/* Links inside modals follow the modal's yellow text theme */
+.modal .terminal-link,
+.modal .link-button {
+  color: var(--terminal-warning);
+}
+
+.modal .terminal-link:hover,
+.modal .link-button:hover {
+  color: var(--terminal-warning);
+  text-shadow: 0 0 5px var(--terminal-warning);
+}
+
 /* Button group layout utilities */
 .button-group,
 .prompt-modal-buttons {
@@ -577,6 +684,10 @@ body {
   background: rgba(0, 255, 0, 0.25);
   outline: 2px solid var(--terminal-accent);
   outline-offset: -2px;
+}
+
+.button-primary.is-focused {
+  margin-bottom: 0 !important;
 }
 
 .button-primary.is-focused.is-selected {
@@ -616,6 +727,16 @@ body {
   background-color: rgba(0, 0, 0, 0.8);
   z-index: 1000;
   backdrop-filter: blur(5px);
+  /* Modal-specific UI tokens (yellow theme) */
+  --ui-border-color: var(--terminal-warning);
+  --ui-fg-color: var(--terminal-warning);
+  --ui-dim-color: rgba(255, 215, 0, 0.75);
+  --ui-primary-bg-color: var(--terminal-warning);
+  --ui-on-primary-color: var(--terminal-bg);
+  /* Yellow-themed scrollbars inside modals */
+  --scrollbar-track-color: #181200;
+  --scrollbar-thumb-color: rgba(255, 215, 0, 0.6);
+  --scrollbar-thumb-hover-color: rgba(255, 215, 0, 0.9);
 }
 
 .modal.show {
@@ -626,37 +747,40 @@ body {
 
 .modal-content {
   background-color: var(--terminal-bg);
-  border: 1px solid var(--terminal-border);
-  border-radius: 8px;
-  max-width: 800px;
+  border: 2px solid var(--terminal-warning);
+  border-radius: 4px;
+  max-width: 700px;
   width: 90%;
   max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 20px 60px rgba(255, 215, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-header {
-  padding: var(--spacing-md);
-  border-bottom: 1px solid var(--terminal-border);
+  padding: var(--spacing-lg);
+  border-bottom: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .modal-title {
-  font-size: var(--font-size-base);
-  color: var(--terminal-accent);
+  font-size: var(--font-size-large);
+  color: var(--terminal-warning);
+  font-weight: normal;
 }
 
 .modal-close {
   background: none;
   border: none;
-  color: var(--terminal-fg);
-  font-size: 2rem;
+  color: var(--terminal-warning);
+  font-size: 20px;
   cursor: pointer;
   padding: 0;
-  width: 40px;
-  height: 40px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -664,20 +788,61 @@ body {
 }
 
 .modal-close:hover {
-  color: var(--terminal-accent);
+  color: var(--terminal-warning);
   transform: rotate(90deg);
 }
 
 .modal-body {
-  padding: var(--spacing-md);
+  padding: var(--spacing-lg);
+  flex: 1 1 auto;
+  overflow-y: auto;
 }
 
 .modal-footer {
-  padding: var(--spacing-md);
-  border-top: 1px solid var(--terminal-border);
+  padding: var(--spacing-lg);
+  border-top: none;
   display: flex;
   gap: var(--spacing-sm);
   justify-content: flex-end;
+}
+
+/* Modal-specific text theming (yellow) */
+.modal .terminal-text,
+.modal .terminal-text-accent {
+  color: var(--terminal-warning);
+  margin-bottom: var(--spacing-sm);
+}
+
+.modal .terminal-text-small,
+.modal .terminal-text-dim {
+  color: rgba(255, 215, 0, 0.75);
+}
+
+/* Modal-specific input theming (yellow) */
+.modal .terminal-input,
+.modal .terminal-textarea,
+.modal .terminal-select {
+  border-color: rgba(255, 215, 0, 0.6);
+  color: var(--terminal-warning);
+}
+
+.modal .terminal-input::placeholder,
+.modal .terminal-textarea::placeholder {
+  color: rgba(255, 215, 0, 0.75);
+}
+
+.modal .terminal-input:focus,
+.modal .terminal-textarea:focus,
+.modal .terminal-select:focus {
+  border-color: var(--terminal-warning);
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+}
+
+/* Modal primary buttons: keep geometry, add subtle yellow glow on hover */
+.modal .terminal-btn-primary:hover:not(:disabled) {
+  background-color: var(--ui-primary-bg-color);
+  border-color: var(--ui-primary-bg-color);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
 }
 
 /* ===== TYPOGRAPHY ===== */

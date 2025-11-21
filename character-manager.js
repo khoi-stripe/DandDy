@@ -31,7 +31,13 @@ const KeyboardNav = {
         );
     },
 
-    updateFocus() {
+    /**
+     * Update visual keyboard focus on the grid.
+     * @param {boolean} skipSheetUpdate - when true, do NOT update the character sheet.
+     *                                    Used when focus is being synced from a sheet change
+     *                                    (e.g. mouse click) to avoid recursion.
+     */
+    updateFocus(skipSheetUpdate = false) {
         const cards = this.getCharacterCards();
         if (cards.length === 0) return;
 
@@ -44,6 +50,16 @@ const KeyboardNav = {
         if (cards[this.currentFocusIndex]) {
             const focusedCard = cards[this.currentFocusIndex];
             focusedCard.classList.add('is-keyboard-focused');
+
+            // When keyboard focus moves, treat that as "viewing" the character.
+            // This keeps the right-hand character sheet in sync with the focused card.
+            if (!skipSheetUpdate) {
+                const id = focusedCard.getAttribute('data-id');
+                if (id) {
+                    // Avoid re-triggering keyboard focus sync inside viewCharacter
+                    viewCharacter(id, { fromKeyboard: true, skipKeyboardSync: true });
+                }
+            }
 
             // Scroll into view
             focusedCard.scrollIntoView({
@@ -692,8 +708,23 @@ function createNewCharacter() {
     alert('This will link to your character builder!\n\nFor now, use Import to add characters.');
 }
 
-async function viewCharacter(id) {
-    const character = await CharacterStorage.getById(id);
+async function viewCharacter(id, options = {}) {
+    const { fromKeyboard = false, skipKeyboardSync = false } = options;
+
+    // Prefer the already-loaded characters from AppState to avoid extra storage/API calls
+    let character = null;
+    if (typeof AppState !== 'undefined' && AppState && Array.isArray(AppState.filteredCharacters)) {
+        character =
+            AppState.filteredCharacters.find(c => c.id === id) ||
+            AppState.characters.find(c => c.id === id) ||
+            null;
+    }
+
+    if (!character) {
+        // Fallback to storage lookup (cloud/local)
+        character = await CharacterStorage.getById(id);
+    }
+
     if (character) {
         UI.showCharacterSheet(character);
         
@@ -704,13 +735,16 @@ async function viewCharacter(id) {
         const selectedCard = document.querySelector(`[data-id="${id}"]`);
         if (selectedCard) {
             selectedCard.classList.add('is-selected');
-            
-            // Move keyboard focus to the selected card
-            const allCards = KeyboardNav.getCharacterCards();
-            const cardIndex = allCards.indexOf(selectedCard);
-            if (cardIndex !== -1) {
-                KeyboardNav.currentFocusIndex = cardIndex;
-                KeyboardNav.updateFocus();
+
+            // When selection changes via mouse or programmatic calls, keep the
+            // keyboard focus index in sync without re-triggering a sheet update.
+            if (!skipKeyboardSync && typeof KeyboardNav !== 'undefined' && KeyboardNav.getCharacterCards) {
+                const allCards = KeyboardNav.getCharacterCards();
+                const cardIndex = allCards.indexOf(selectedCard);
+                if (cardIndex !== -1) {
+                    KeyboardNav.currentFocusIndex = cardIndex;
+                    KeyboardNav.updateFocus(true); // true => don't update sheet again
+                }
             }
         }
     }
@@ -1656,50 +1690,80 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
     
-    // Clear keyboard focus when hovering over any card (mouse takes over)
+    // Hover behavior for character cards:
+    // - Adds/removes a visual `is-hovered` class
+    // - Does NOT change focus or update the character sheet
+    // - Clears keyboard focus when mouse takes over
     const characterGrid = document.getElementById('characterGrid');
-    characterGrid.addEventListener('mouseenter', (e) => {
-        const card = e.target.closest('.character-card');
-        if (card) {
-            // Clear keyboard focus from all cards when mouse is active
-            KeyboardNav.clearAll();
-        }
-    }, true); // Use capture phase
+    if (characterGrid) {
+        characterGrid.addEventListener('mouseover', (e) => {
+            const card = e.target.closest('.character-card');
+
+            // Clear previous hover states
+            document.querySelectorAll('.character-card.is-hovered').forEach(el => {
+                if (el !== card) {
+                    el.classList.remove('is-hovered');
+                }
+            });
+
+            if (card) {
+                card.classList.add('is-hovered');
+                // Clear keyboard focus from all cards when mouse is active
+                if (typeof KeyboardNav !== 'undefined' && KeyboardNav.clearAll) {
+                    KeyboardNav.clearAll();
+                }
+            }
+        });
+
+        characterGrid.addEventListener('mouseleave', () => {
+            document.querySelectorAll('.character-card.is-hovered').forEach(el => {
+                el.classList.remove('is-hovered');
+            });
+        });
+    }
     
     // Keyboard navigation (only after splash is dismissed)
     window.addEventListener('keydown', (e) => {
         if (splashActive) return; // Don't interfere with splash screen
-        
-        // Don't interfere if import modal is open
-        const importModal = document.getElementById('importModal');
-        if (importModal && importModal.classList.contains('show')) {
-            // ESC to close modal
+
+        // If any modal is open, handle ESC and Cmd+Enter inside that modal only
+        const openModal = document.querySelector('.modal.show');
+        if (openModal) {
+            const modalId = openModal.id;
+
+            // ESC closes whichever modal is active
             if (e.key === 'Escape') {
-                closeImportModal();
+                e.preventDefault();
+                if (modalId === 'importModal') {
+                    closeImportModal();
+                } else if (modalId === 'duplicateModal') {
+                    closeDuplicateModal();
+                } else if (modalId === 'editDetailsModal') {
+                    closeEditDetailsModal();
+                } else if (modalId === 'authModal') {
+                    closeAuthModal();
+                } else if (modalId === 'migrationModal') {
+                    closeMigrationModal();
+                } else if (modalId === 'portraitPromptModal') {
+                    closePortraitPromptModal();
+                }
+                return;
             }
+
+            // Cmd+Enter (mac-style) triggers the primary CTA in the active modal
+            if (e.key === 'Enter' && e.metaKey) {
+                const primaryBtn = openModal.querySelector('.modal-footer .terminal-btn-primary');
+                if (primaryBtn && !primaryBtn.disabled) {
+                    e.preventDefault();
+                    primaryBtn.click();
+                }
+                return;
+            }
+
+            // When a modal is open, don't process global shortcuts
             return;
         }
-        
-        // Don't interfere if duplicate modal is open
-        const duplicateModal = document.getElementById('duplicateModal');
-        if (duplicateModal && duplicateModal.classList.contains('show')) {
-            // ESC to close modal
-            if (e.key === 'Escape') {
-                closeDuplicateModal();
-            }
-            return;
-        }
-        
-        // Don't interfere if portrait prompt modal is open
-        const portraitPromptModal = document.getElementById('portraitPromptModal');
-        if (portraitPromptModal && portraitPromptModal.classList.contains('show')) {
-            // ESC to close modal
-            if (e.key === 'Escape') {
-                closePortraitPromptModal();
-            }
-            return;
-        }
-        
+
         // Handle keyboard shortcuts when in form elements
         const inFormElement = document.activeElement && (
             document.activeElement.tagName === 'INPUT' ||

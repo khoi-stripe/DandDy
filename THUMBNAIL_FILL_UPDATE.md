@@ -99,3 +99,4 @@ The ASCII art now fills the thumbnail much better while maintaining centering an
 
 
 
+

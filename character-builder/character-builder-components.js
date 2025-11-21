@@ -70,32 +70,36 @@ const Components = (window.Components = {
     };
 
     return `
-      <div class="prompt-modal-overlay settings-overlay" onclick="App.closeSettings()"></div>
-      <div class="prompt-modal settings-panel" onclick="event.stopPropagation();">
-        <div class="prompt-modal-header">
-          <span>⚙ SETTINGS</span>
-          <button class="prompt-modal-close" onclick="App.closeSettings()">×</button>
-        </div>
-        
-        <div class="settings-row">
-          <div class="settings-label">Narrator Voice</div>
-          <select id="narrator-select" class="settings-select">
-            ${narratorsList.map(narrator => {
-              const optionText = `${narrator.emoji} ${narrator.name} - ${narrator.description}`;
-              const truncatedText = truncate(optionText, 60);
-              return `
-                <option value="${narrator.id}" ${narrator.id === currentNarratorId ? 'selected' : ''}>
-                  ${truncatedText}
-                </option>
-              `;
-            }).join('')}
-          </select>
-          <div class="settings-help">Choose your narrator's personality. This affects all commentary during character creation.</div>
-        </div>
-        
-        <div class="prompt-modal-buttons">
-          <button class="button-secondary" onclick="App.closeSettings()">CANCEL</button>
-          <button class="button-primary" onclick="App.saveSettings()">SAVE</button>
+      <div id="settingsModal" class="modal show" onclick="App.closeSettings()">
+        <div class="modal-content" onclick="event.stopPropagation();">
+          <div class="modal-header">
+            <h2 class="modal-title">⚙ Settings</h2>
+            <button class="modal-close" onclick="App.closeSettings()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="settings-row">
+              <div class="settings-label">Narrator Voice</div>
+              <select id="narrator-select" class="terminal-select settings-select">
+                ${narratorsList.map(narrator => {
+                  const optionText = `${narrator.emoji} ${narrator.name} - ${narrator.description}`;
+                  const truncatedText = truncate(optionText, 60);
+                  return `
+                    <option value="${narrator.id}" ${narrator.id === currentNarratorId ? 'selected' : ''}>
+                      ${truncatedText}
+                    </option>
+                  `;
+                }).join('')}
+              </select>
+              <div class="settings-help">
+                Choose your narrator's personality. This affects all commentary during character creation.
+              </div>
+            </div>
+            <div id="backend-status" class="terminal-text-small terminal-text-dim mt-md"></div>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" onclick="App.closeSettings()">CANCEL</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="App.saveSettings()">SAVE</button>
+          </div>
         </div>
       </div>
     `;

@@ -223,93 +223,6 @@
   margin-left: 0;
 }
 
-/* Prompt Modal */
-.prompt-modal-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  padding: 20px;
-  pointer-events: all;
-  cursor: default;
-}
-
-.prompt-modal {
-  background: var(--terminal-bg);
-  border: 2px solid var(--terminal-accent);
-  border-radius: 8px;
-  padding: var(--spacing-xl);
-  max-width: 700px;
-  width: 100%;
-  box-shadow: 0 20px 60px rgba(0, 255, 255, 0.3);
-}
-
-.prompt-modal-header {
-  color: var(--terminal-accent);
-  font-size: var(--font-size-base);
-  margin-bottom: var(--spacing-md);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.prompt-modal-close {
-  background: transparent;
-  border: none;
-  color: var(--terminal-fg);
-  font-size: 24px;
-  cursor: pointer;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.prompt-modal-close:hover {
-  color: var(--terminal-accent);
-  transform: scale(1.2);
-}
-
-.prompt-modal-instructions {
-  color: var(--terminal-dim);
-  font-size: 14px;
-  margin-bottom: var(--spacing-md);
-  line-height: 1.5;
-}
-
-.prompt-modal-textarea {
-  width: 100%;
-  min-height: 200px;
-  background: #0a0a0a;
-  border: 1px solid var(--terminal-fg);
-  color: var(--terminal-fg);
-  font-family: var(--font-mono);
-  font-size: 14px;
-  padding: var(--spacing-md);
-  border-radius: 4px;
-  resize: vertical;
-  margin-bottom: var(--spacing-md);
-}
-
-.prompt-modal-textarea:focus {
-  outline: none;
-  border-color: var(--terminal-accent);
-  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
-}
-
-/* Modal buttons layout - now in terminal-theme.css */
-
-/* Modal buttons - now in terminal-theme.css */
-
 /* ASCII Art */
 .portrait-container {
   position: relative;
@@ -355,38 +268,8 @@
 }
 
 .prompt-modal-error {
-  color: var(--terminal-warning);
+  color: #ffd700;
   font-size: var(--font-size-small);
-}
-
-/* Settings Panel */
-.settings-panel {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: var(--terminal-bg);
-  border: 2px solid var(--terminal-border);
-  padding: var(--spacing-xl);
-  z-index: 1000;
-  max-width: 500px;
-  width: 90%;
-}
-
-.settings-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  z-index: 999;
-}
-
-.settings-header {
-  color: var(--terminal-accent);
-  font-size: var(--font-size-base);
-  margin-bottom: var(--spacing-md);
 }
 
 /* Print styles */
@@ -400,9 +283,7 @@
 
   .terminal-header,
   .terminal-footer,
-  #narrator-panel,
-  .prompt-modal-overlay,
-  .settings-overlay {
+  #narrator-panel {
     display: none !important;
   }
 
@@ -498,26 +379,35 @@
 
 .settings-label {
   display: block;
-  color: var(--terminal-fg);
   margin-bottom: var(--spacing-xs);
 }
 
 .settings-help {
   font-size: var(--font-size-small);
-  color: var(--terminal-dim);
   margin-top: var(--spacing-xs);
+}
+
+/* (All shared modal theming is handled by terminal-theme.css so it can be reused across apps.) */
+
+.modal-footer {
+  padding: var(--spacing-lg);
+  border-top: none;
+  gap: var(--spacing-md);
 }
 
 /* Settings modal: narrator select */
 .settings-select {
   width: 100%;
-  padding: 8px;
-  background: #000;
-  color: #0f0;
-  border: 1px solid #0f0;
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
   margin-top: 8px;
+}
+
+/* Inside modals, settings copy adopts the modal's yellow theme */
+.modal .settings-label {
+  color: var(--terminal-warning);
+}
+
+.modal .settings-help {
+  color: rgba(255, 215, 0, 0.75);
 }
 
 /* Header settings button */

@@ -146,3 +146,4 @@ CharacterSheet.populatePortrait(character, 'manager');
 
 
 
+

@@ -1116,7 +1116,7 @@ const App = (window.App = {
   },
 
   async openSettings() {
-    if (document.getElementById('settings-panel')) return; // Already open
+    if (document.getElementById('settingsModal')) return; // Already open
 
     const settingsHTML = Components.renderSettings();
     const terminalContainer = document.querySelector('.terminal-container');
@@ -1159,10 +1159,8 @@ const App = (window.App = {
   },
 
   closeSettings() {
-    const overlay = document.querySelector('.settings-overlay');
-    const panel = document.querySelector('.settings-panel');
-    if (overlay) overlay.remove();
-    if (panel) panel.remove();
+    const modal = document.getElementById('settingsModal');
+    if (modal) modal.remove();
     
     // Remove ESC key listener
     if (this._settingsEscHandler) {
@@ -1235,23 +1233,28 @@ const App = (window.App = {
       ? AIService.buildCharacterDescription(character)
       : ''; // backwards compat if renamed
     const modalHTML = `
-      <div class="prompt-modal-overlay" id="prompt-modal-overlay">
-        <div class="prompt-modal" onclick="event.stopPropagation();">
-          <div class="prompt-modal-header">
-            <span>★ Customize AI Portrait</span>
-            <button class="prompt-modal-close" onclick="App.closePromptModal(false)">×</button>
+      <div id="promptModal" class="modal show" onclick="App.closePromptModal(false)">
+        <div class="modal-content" onclick="event.stopPropagation();">
+          <div class="modal-header">
+            <h2 class="modal-title">★ Customize AI Portrait</h2>
+            <button class="modal-close" onclick="App.closePromptModal(false)">&times;</button>
           </div>
-          
-          <div class="prompt-modal-instructions">
-            Describe your character's appearance. AI will generate a portrait optimized for ASCII art.
-            Be descriptive! (e.g., "a stoic dwarf fighter with a braided beard, holding a glowing axe")
+          <div class="modal-body">
+            <p class="terminal-text">
+              Describe your character's appearance. AI will generate a portrait optimized for ASCII art.
+            </p>
+            <p class="terminal-text-small terminal-text-dim">
+              Be descriptive! (e.g., "a stoic dwarf fighter with a braided beard, holding a glowing axe")
+            </p>
+            <textarea
+              class="terminal-textarea terminal-input"
+              id="custom-prompt"
+              rows="6"
+            >${defaultPrompt}</textarea>
           </div>
-          
-          <textarea class="prompt-modal-textarea" id="custom-prompt">${defaultPrompt}</textarea>
-          
-          <div class="prompt-modal-buttons">
-            <button class="prompt-modal-btn" onclick="App.closePromptModal(false)">Cancel</button>
-            <button class="prompt-modal-btn primary" onclick="App.confirmPromptModal()">Generate Portrait</button>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" onclick="App.closePromptModal(false)">CANCEL</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmPromptModal()">GENERATE PORTRAIT</button>
           </div>
         </div>
       </div>
@@ -1264,26 +1267,11 @@ const App = (window.App = {
       if (e.key === 'Escape') this.closePromptModal(false);
     };
     document.addEventListener('keydown', this._promptModalEscHandler);
-
-    // Cmd+Enter (Mac) or Ctrl+Enter (Windows) to insert newline in textarea
-    const textarea = document.getElementById('custom-prompt');
-    if (textarea) {
-      textarea.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-          e.preventDefault();
-          const start = textarea.selectionStart;
-          const end = textarea.selectionEnd;
-          const value = textarea.value;
-          textarea.value = value.substring(0, start) + '\n' + value.substring(end);
-          textarea.selectionStart = textarea.selectionEnd = start + 1;
-        }
-      });
-    }
   },
 
   closePromptModal(regenerate = false) {
-    const overlay = document.getElementById('prompt-modal-overlay');
-    if (overlay) overlay.remove();
+    const modal = document.getElementById('promptModal');
+    if (modal) modal.remove();
 
     // Remove ESC key listener
     if (this._promptModalEscHandler) {
@@ -1686,37 +1674,36 @@ const App = (window.App = {
     const currentLevel = character.level || 1;
 
     const modalHTML = `
-      <div class="prompt-modal-overlay" id="level-modal-overlay">
-        <div class="prompt-modal" onclick="event.stopPropagation();">
-          <div class="prompt-modal-header">
-            <span>Change Character Level</span>
-            <button class="prompt-modal-close" onclick="App.closeLevelModal()">×</button>
+      <div id="levelModal" class="modal show" onclick="App.closeLevelModal()">
+        <div class="modal-content" onclick="event.stopPropagation();">
+          <div class="modal-header">
+            <h2 class="modal-title">Change Character Level</h2>
+            <button class="modal-close" onclick="App.closeLevelModal()">&times;</button>
           </div>
-
-          <div class="prompt-modal-instructions">
-            Changing level will <strong>adjust your ability scores and hit points</strong>
-            as if your character had gained Ability Score Increases at higher levels.
-            This cannot be undone. Choose a new level between 1 and 99.
+          <div class="modal-body">
+            <p class="terminal-text">
+              Changing level will <span class="terminal-text-strong">adjust your ability scores and hit points</span>
+              as if your character had gained Ability Score Increases at higher levels.
+            </p>
+            <p class="terminal-text-small terminal-text-dim">
+              This cannot be undone. Choose a new level between 1 and 99.
+            </p>
+            <div class="level-modal-row">
+              <label for="level-input" class="terminal-text-small modal-section-label">New Level:</label>
+              <input
+                type="number"
+                id="level-input"
+                class="terminal-input"
+                min="1"
+                max="99"
+                value="${currentLevel}"
+              >
+            </div>
+            <div id="level-modal-error" class="terminal-text-error level-modal-error is-hidden"></div>
           </div>
-
-          <div class="level-modal-row">
-            <label for="level-input" class="settings-label">New Level:</label>
-            <input
-              type="number"
-              id="level-input"
-              class="input-field"
-              min="1"
-              max="99"
-              value="${currentLevel}"
-            >
-          </div>
-
-          <div id="level-modal-error" class="prompt-modal-error level-modal-error is-hidden">
-          </div>
-
-          <div class="prompt-modal-buttons">
-            <button class="prompt-modal-btn" onclick="App.closeLevelModal()">Cancel</button>
-            <button class="prompt-modal-btn primary" onclick="App.confirmLevelModal()">Apply Level</button>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" onclick="App.closeLevelModal()">CANCEL</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmLevelModal()">APPLY LEVEL</button>
           </div>
         </div>
       </div>
@@ -1732,8 +1719,8 @@ const App = (window.App = {
   },
 
   closeLevelModal() {
-    const overlay = document.getElementById('level-modal-overlay');
-    if (overlay) overlay.remove();
+    const modal = document.getElementById('levelModal');
+    if (modal) modal.remove();
     
     // Remove ESC key listener
     if (this._levelModalEscHandler) {
@@ -1853,34 +1840,31 @@ const App = (window.App = {
     const currentName = character.name || '';
 
     const modalHTML = `
-      <div class="prompt-modal-overlay" id="name-modal-overlay">
-        <div class="prompt-modal" onclick="event.stopPropagation();">
-          <div class="prompt-modal-header">
-            <span>Change Character Name</span>
-            <button class="prompt-modal-close" onclick="App.closeNameModal()">×</button>
+      <div id="nameModal" class="modal show" onclick="App.closeNameModal()">
+        <div class="modal-content" onclick="event.stopPropagation();">
+          <div class="modal-header">
+            <h2 class="modal-title">Change Character Name</h2>
+            <button class="modal-close" onclick="App.closeNameModal()">&times;</button>
           </div>
-
-          <div class="prompt-modal-instructions">
-            Enter a new name for your character.
+          <div class="modal-body">
+            <p class="terminal-text">
+              Enter a new name for your character.
+            </p>
+            <div class="name-modal-row">
+              <label for="name-input" class="terminal-text-small modal-section-label">New Name:</label>
+              <input
+                type="text"
+                id="name-input"
+                class="terminal-input name-modal-input"
+                value="${currentName}"
+                placeholder="Enter character name"
+              >
+            </div>
+            <div id="name-modal-error" class="terminal-text-error name-modal-error is-hidden"></div>
           </div>
-
-          <div class="name-modal-row">
-            <label for="name-input" class="settings-label">New Name:</label>
-            <input
-              type="text"
-              id="name-input"
-              class="input-field name-modal-input"
-              value="${currentName}"
-              placeholder="Enter character name"
-            >
-          </div>
-
-          <div id="name-modal-error" class="prompt-modal-error name-modal-error is-hidden">
-          </div>
-
-          <div class="prompt-modal-buttons">
-            <button class="prompt-modal-btn" onclick="App.closeNameModal()">Cancel</button>
-            <button class="prompt-modal-btn primary" onclick="App.confirmNameModal()">Apply Name</button>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" onclick="App.closeNameModal()">CANCEL</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmNameModal()">APPLY NAME</button>
           </div>
         </div>
       </div>
@@ -1905,8 +1889,8 @@ const App = (window.App = {
   },
 
   closeNameModal() {
-    const overlay = document.getElementById('name-modal-overlay');
-    if (overlay) overlay.remove();
+    const modal = document.getElementById('nameModal');
+    if (modal) modal.remove();
     
     // Remove ESC key listener
     if (this._nameModalEscHandler) {
@@ -2164,24 +2148,26 @@ const App = (window.App = {
     KeyboardNav.deactivate();
 
     const overlayHTML = `
-      <div class="prompt-modal-overlay confirmation-overlay" id="confirmation-overlay">
-        <div class="prompt-modal" onclick="event.stopPropagation();">
-          <div class="prompt-modal-header">
-            <span>Confirm</span>
+      <div id="confirmationModal" class="modal show confirmation-overlay">
+        <div class="modal-content" onclick="event.stopPropagation();">
+          <div class="modal-header">
+            <h2 class="modal-title">Confirm</h2>
           </div>
-          <div class="prompt-modal-instructions">
-            ${message}
+          <div class="modal-body">
+            <p class="terminal-text">
+              ${message}
+            </p>
           </div>
-          <div class="prompt-modal-buttons">
-            <button class="prompt-modal-btn" id="confirm-no">Cancel</button>
-            <button class="prompt-modal-btn primary" id="confirm-yes">Yes</button>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" id="confirm-no">CANCEL</button>
+            <button class="terminal-btn terminal-btn-primary" id="confirm-yes">YES</button>
           </div>
         </div>
       </div>`;
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', overlayHTML);
 
-    const overlay = document.getElementById('confirmation-overlay');
+    const overlay = document.getElementById('confirmationModal');
     const primaryBtn = document.getElementById('confirm-yes');
     const cancelBtn = document.getElementById('confirm-no');
 
@@ -2578,8 +2564,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('keydown', (e) => {
     if (splashActive) return; // Don't interfere with splash screen
 
-    // Don't interfere if there's any modal/overlay open
-    if (document.querySelector('.prompt-modal-overlay')) return;
+    // Don't interfere if there's any modal open
+    if (document.querySelector('.modal.show')) return;
 
     if (e.key === 'ArrowUp') {
       e.preventDefault();
@@ -2599,18 +2585,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // When a modal is open, pressing Enter should trigger its primary action.
+  // When a modal is open, pressing Cmd/Ctrl+Enter should trigger its primary action.
   window.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') return;
-    const overlay = document.querySelector('.prompt-modal-overlay');
-    if (!overlay || overlay.classList.contains('just-opened')) return;
+    if (!(e.key === 'Enter' && (e.metaKey || e.ctrlKey))) return;
+    const modal = document.querySelector('.modal.show');
+    if (!modal || modal.classList.contains('just-opened')) return;
 
     // Only trigger the modal's primary action if focus is currently inside
-    // the overlay.
+    // the modal.
     const activeElement = document.activeElement;
-    if (!activeElement || !overlay.contains(activeElement)) return;
+    if (!activeElement || !modal.contains(activeElement)) return;
 
-    const primaryBtn = overlay.querySelector('.prompt-modal-btn.primary');
+    const primaryBtn = modal.querySelector('.modal-footer .terminal-btn-primary');
     if (primaryBtn) {
       e.preventDefault();
       primaryBtn.click();

@@ -158,3 +158,4 @@ Character card thumbnails now display with a **professional 3:4 portrait aspect 
 
 
 
+

@@ -266,86 +266,6 @@
     transition: opacity 0.3s ease-in;
 }
 
-/* ===== MODAL OVERRIDES (Builder Style) ===== */
-/* Override terminal-theme.css modal with builder's enhanced styling */
-.modal {
-    position: fixed;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(8px);
-}
-
-.modal-content {
-    background: var(--terminal-bg);
-    border: 2px solid var(--terminal-accent);
-    border-radius: 8px;
-    box-shadow: 0 20px 60px rgba(0, 255, 255, 0.3);
-    max-width: 700px;
-}
-
-.modal-header {
-    padding: var(--spacing-lg);
-    border-bottom: 1px solid var(--terminal-dim);
-}
-
-.modal-title {
-    color: var(--terminal-accent);
-    font-size: var(--font-size-base);
-    font-weight: normal;
-}
-
-.modal-close {
-    color: var(--terminal-fg);
-    font-size: 24px;
-    width: 30px;
-    height: 30px;
-    transition: all 0.2s;
-}
-
-.modal-close:hover {
-    color: var(--terminal-accent);
-    transform: scale(1.2);
-}
-
-.modal-body {
-    padding: var(--spacing-lg);
-}
-
-.modal-body .terminal-text {
-    margin-bottom: var(--spacing-sm);
-    color: var(--terminal-fg);
-}
-
-.modal-body .terminal-text-small {
-    margin-top: var(--spacing-md);
-    margin-bottom: var(--spacing-sm);
-    color: var(--terminal-dim);
-}
-
-.modal-body .terminal-input,
-.modal-body .terminal-textarea {
-    margin-bottom: var(--spacing-md);
-}
-
-.modal-body .terminal-textarea {
-    min-height: 200px;
-    resize: vertical;
-    font-size: 14px;
-}
-
-.modal-footer {
-    padding: var(--spacing-lg);
-    border-top: 1px solid var(--terminal-dim);
-    gap: var(--spacing-md);
-}
-
-.modal-footer .terminal-btn {
-    min-width: 120px;
-}
-
-.modal-footer .terminal-btn-primary {
-    padding: var(--spacing-sm) var(--spacing-lg);
-}
-
 /* Inline-style replacements from HTML */
 .file-name-label {
     margin-left: var(--spacing-sm);
@@ -376,7 +296,6 @@
 }
 
 .terminal-link {
-    color: var(--color-accent);
     text-decoration: none;
     cursor: pointer;
 }
@@ -397,8 +316,8 @@
     margin-top: var(--spacing-lg);
 }
 
-/* ===== TEAL THEME OVERRIDES ===== */
-/* Teal color variables */
+/* ===== TEAL THEME OVERRIDES (cards, panels) ===== */
+/* Teal color variables (used for cards/panels; modals use yellow theme below) */
 :root {
     --panel-teal: #00CED1;  /* Bright Dark Turquoise - for highlighted elements */
     --panel-teal-dim: #20B2AA;  /* Muted Light Sea Green - for secondary text */
@@ -439,40 +358,7 @@
     box-shadow: 0 0 18px rgba(32, 178, 170, 0.7) !important;
 }
 
-/* Modals in manager - teal theme */
-.modal-content {
-    border-color: var(--panel-teal) !important;
-    box-shadow: 0 20px 60px rgba(32, 178, 170, 0.3) !important;
-}
-
-.modal-title {
-    color: var(--panel-teal) !important;
-}
-
-.modal-close:hover {
-    color: var(--panel-teal) !important;
-}
-
-.modal .terminal-btn-primary {
-    background-color: var(--panel-teal) !important;
-    border-color: var(--panel-teal) !important;
-}
-
-.modal .terminal-btn-primary:hover:not(:disabled) {
-    background-color: var(--panel-teal) !important;
-    box-shadow: 0 0 15px rgba(32, 178, 170, 0.5) !important;
-}
-
-.modal .terminal-btn:hover:not(:disabled) {
-    border-color: var(--panel-teal) !important;
-}
-
-.modal .terminal-input:focus,
-.modal .terminal-textarea:focus,
-.modal .terminal-select:focus {
-    border-color: var(--panel-teal) !important;
-    box-shadow: 0 0 5px rgba(32, 178, 170, 0.5) !important;
-}
+/* (All modal theming is now handled by terminal-theme.css so it can be shared across apps.) */
 
 /* ===== ANIMATIONS ===== */
 @keyframes spin {
