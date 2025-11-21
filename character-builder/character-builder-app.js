@@ -652,15 +652,8 @@ const App = (window.App = {
     await Utils.typewriter(messageEl, completionText);
     Utils.scrollToBottom(true);
 
-    // Save character once it's complete, and store the saved version (with ID)
-    const state = CharacterState.get();
-    try {
-      const saved = await StorageService.saveCharacter(state.character);
-      // Persist saved character (including assigned ID / backend fields) back into state
-      CharacterState.updateCharacter(saved);
-    } catch (error) {
-      console.error('Error saving completed character:', error);
-    }
+    // NOTE: We don't save here anymore - we wait for portrait to load first
+    // This prevents creating duplicate characters in cloud storage
 
     // Show completion options
     narratorPanel.insertAdjacentHTML(

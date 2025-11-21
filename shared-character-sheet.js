@@ -49,6 +49,7 @@ const CharacterSheet = (window.CharacterSheet = {
         onExport,
         onDelete,
         onLevelChange,
+        onEdit,
       })}
       
       ${showPortrait && parsed.hasRace
@@ -95,39 +96,46 @@ const CharacterSheet = (window.CharacterSheet = {
   // ========================================
 
   _renderHeader(character, context, callbacks) {
-    const { onPrint, onRename, onDuplicate, onExport, onDelete, onLevelChange } = callbacks;
-    
+    const { onPrint, onRename, onDuplicate, onExport, onDelete, onLevelChange, onEdit } = callbacks;
     // Function names differ by context
     const renameFn = context === 'builder' ? 'App.openNameModal()' : `renameCharacter('${character.id}')`;
+    const editFn = context === 'manager' ? `editCharacter('${character.id}')` : null;
 
     return `
       <div class="sheet-title-header">
         <div class="sheet-title">${character.name || '[ CHARACTER SHEET ]'}</div>
         <div class="sheet-title-buttons">
-          ${character.name && onRename
+          ${character.name && onRename && context === 'builder'
             ? `
-            <button class="button-secondary" onclick="${renameFn}" title="Rename character">
+            <button class="terminal-btn terminal-btn-small" onclick="${renameFn}" title="Rename character">
               ✎ RENAME
             </button>
           `
             : ''}
           ${context === 'builder' && onLevelChange
             ? `
-            <button class="button-secondary" onclick="App.openLevelModal()" title="Change level and re-roll stats">
+            <button class="terminal-btn terminal-btn-small" onclick="App.openLevelModal()" title="Change level and re-roll stats">
               ↕ CHANGE LEVEL
             </button>
           `
             : ''}
           ${context === 'builder' && onPrint
             ? `
-            <button class="button-secondary sheet-print-btn" onclick="App.printCharacterSheet()" title="Print this character">
+            <button class="terminal-btn terminal-btn-small sheet-print-btn" onclick="App.printCharacterSheet()" title="Print this character">
               ⎙ PRINT
+            </button>
+          `
+            : ''}
+          ${context === 'manager' && onEdit
+            ? `
+            <button class="terminal-btn terminal-btn-small" onclick="${editFn}" title="Edit skills, equipment, tools, languages, and backstory">
+              ✎ EDIT DETAILS
             </button>
           `
             : ''}
           ${context === 'manager' && onDelete
             ? `
-            <button class="button-secondary" onclick="deleteCharacter('${character.id}')" title="Delete character">
+            <button class="terminal-btn terminal-btn-small" onclick="deleteCharacter('${character.id}')" title="Delete character">
               × DELETE
             </button>
           `
@@ -149,36 +157,32 @@ const CharacterSheet = (window.CharacterSheet = {
     
     // Use different IDs for builder vs manager
     const portraitId = context === 'builder' ? 'character-portrait' : `character-portrait-${character.id || 'current'}`;
+    const originalPortraitId = context === 'builder' ? 'original-portrait' : `original-portrait-${character.id || 'current'}`;
+    const toggleBtnId = context === 'builder' ? 'toggle-portrait-btn' : `toggle-portrait-btn-${character.id || 'current'}`;
     
     // Function names differ by context
     const generateFn = context === 'builder' ? 'App.generateCustomAIPortrait()' : `generatePortraitForCharacter('${character.id}')`;
+    const toggleFn = context === 'builder' ? 'App.togglePortraitView()' : `togglePortraitView('${character.id}')`;
 
     return `
       <div class="portrait-container">
         <div class="ascii-portrait" id="${portraitId}"></div>
-        ${context === 'builder'
-          ? `<img id="original-portrait" class="original-portrait" style="display: none;" alt="Character portrait">`
+        ${originalPortraitUrl
+          ? `<img id="${originalPortraitId}" class="original-portrait is-hidden" src="${originalPortraitUrl}" alt="Character portrait">`
           : ''}
         <div class="portrait-actions">
           ${parsed.hasRace && parsed.hasClass && onGeneratePortrait
             ? `
-            <button class="button-secondary" onclick="${generateFn}" title="Generate a unique AI portrait (${3 - (character.customPortraitCount || 0)} remaining)">
+            <button class="terminal-btn terminal-btn-small" onclick="${generateFn}" title="Generate a unique AI portrait (${3 - (character.customPortraitCount || 0)} remaining)">
               ★ Custom AI Portrait ${character.customPortraitCount ? `(${3 - character.customPortraitCount})` : '(3)'}
             </button>
           `
             : ''}
-          ${context === 'builder' && originalPortraitUrl && onTogglePortrait
+          ${originalPortraitUrl && (onTogglePortrait || context === 'manager')
             ? `
-            <button class="button-secondary" onclick="App.togglePortraitView()" id="toggle-portrait-btn" title="Toggle between ASCII and original art">
-              ◉ Toggle View
-            </button>
-          `
-            : ''}
-          ${context === 'manager' && originalPortraitUrl
-            ? `
-            <a href="${originalPortraitUrl}" target="_blank" class="button-secondary" title="View original portrait art">
+            <button class="terminal-btn terminal-btn-small" onclick="${toggleFn}" id="${toggleBtnId}" title="Toggle between ASCII and original art">
               👁 View Original
-            </a>
+            </button>
           `
             : ''}
         </div>
@@ -378,30 +382,28 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderLanguages(parsed) {
-    if (parsed.languageChoices > 0) {
-      return `
-        <div class="sheet-section">
-          <div class="sheet-header">
-            <div class="sheet-header-title">[ LANGUAGES ]</div>
-          </div>
-          <div class="sheet-content text-dim">
-            Choose ${parsed.languageChoices} additional language${parsed.languageChoices > 1 ? 's' : ''}
-          </div>
-        </div>
-      `;
-    } else if (parsed.languages.length > 0) {
-      return `
-        <div class="sheet-section">
-          <div class="sheet-header">
-            <div class="sheet-header-title">[ LANGUAGES ]</div>
-          </div>
-          <div class="sheet-content">
-            ${parsed.languages.map((lang) => `<div class="text-dim">• ${lang}</div>`).join('')}
-          </div>
-        </div>
-      `;
+    const hasLanguages = parsed.languages.length > 0;
+    const hasChoices = parsed.languageChoices > 0;
+    
+    if (!hasLanguages && !hasChoices) {
+      return '';
     }
-    return '';
+    
+    return `
+      <div class="sheet-section">
+        <div class="sheet-header">
+          <div class="sheet-header-title">[ LANGUAGES ]</div>
+        </div>
+        <div class="sheet-content">
+          ${hasLanguages 
+            ? parsed.languages.map((lang) => `<div class="text-dim">• ${lang}</div>`).join('') 
+            : ''}
+          ${hasChoices 
+            ? `<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${parsed.languageChoices} additional language${parsed.languageChoices > 1 ? 's' : ''}</div>` 
+            : ''}
+        </div>
+      </div>
+    `;
   },
 
   _renderBackgroundFeature(parsed) {
@@ -412,7 +414,7 @@ const CharacterSheet = (window.CharacterSheet = {
         </div>
         <div class="sheet-content">
           <div class="stat-line"><span class="stat-label">${parsed.backgroundFeatureName}:</span></div>
-          <div class="text-dim" style="margin-top: 8px;">${parsed.backgroundFeatureDescription}</div>
+          <div class="text-dim mt-sm">${parsed.backgroundFeatureDescription}</div>
         </div>
       </div>
     `;
@@ -484,9 +486,14 @@ const CharacterSheet = (window.CharacterSheet = {
       character.backgroundData?.name || character.background || null;
 
     // Handle equipment
-    const equipment = character.equipment || [];
     const classEquipment = character.classData?.equipment || [];
-    const allEquipment = [...new Set([...equipment, ...classEquipment])];
+    const explicitEquipment = character.equipment || [];
+    // If player has explicitly edited equipment, treat that as the source of truth.
+    // Otherwise, fall back to class equipment + any existing equipment array.
+    const allEquipment =
+      explicitEquipment && explicitEquipment.length > 0
+        ? explicitEquipment
+        : [...new Set([...(character.equipment || []), ...classEquipment])];
 
     // Handle racial traits
     const race = window.DND_DATA?.races?.find((r) => r.id === character.race);
@@ -494,10 +501,15 @@ const CharacterSheet = (window.CharacterSheet = {
       character.raceData?.traits || race?.traits || [];
 
     // Handle languages
-    const languages = [
-      ...(character.languages || []),
-      ...(character.raceData?.languages || []),
-    ];
+    // If character.languages has been explicitly edited, use it as-is.
+    // Otherwise, merge race languages for convenience.
+    let languages = [...(character.languages || [])];
+    if (languages.length === 0) {
+      languages = [
+        ...languages,
+        ...(character.raceData?.languages || []),
+      ];
+    }
 
     // Handle background feature
     const backgroundFeature =
@@ -565,7 +577,9 @@ const CharacterSheet = (window.CharacterSheet = {
         skillProficiencies.length > 0,
       hasRacialTraits: racialTraits.length > 0,
       hasEquipment: allEquipment.length > 0,
-      hasClassEquipment: classEquipment.length > 0,
+      hasClassEquipment:
+        (!explicitEquipment || explicitEquipment.length === 0) &&
+        classEquipment.length > 0,
       hasToolProficiencies:
         character.toolProficiencies && character.toolProficiencies.length > 0,
       hasLanguages: languages.length > 0 || character.languageChoices > 0,
@@ -646,6 +660,214 @@ const CharacterSheet = (window.CharacterSheet = {
 
     if (portraitEl && asciiPortrait) {
       portraitEl.textContent = asciiPortrait;
+      this._centerPortraitScrollSafely(portraitEl);
+    }
+
+    // Attempt a transparent upgrade to the best available pre-generated
+    // portrait (race+class combo) when possible. This fixes older characters
+    // that only have race-level art stored.
+    this._maybeUpgradePortraitFromFiles(character, context, portraitEl);
+  },
+
+  /**
+   * Safely center the horizontal scroll position of a portrait element.
+   * Extracted so we can reuse it after async portrait upgrades.
+   * @param {HTMLElement} portraitEl
+   * @private
+   */
+  _centerPortraitScrollSafely(portraitEl) {
+    if (!portraitEl) return;
+    try {
+      // When the sheet is narrower than the portrait, center the visible
+      // viewport horizontally so the "image" doesn't appear pinned left.
+      const scrollableWidth = portraitEl.scrollWidth - portraitEl.clientWidth;
+      if (scrollableWidth > 0) {
+        portraitEl.scrollLeft = scrollableWidth / 2;
+      }
+    } catch (e) {
+      // Non-fatal: if anything goes wrong, leave default scroll position
+      console.warn(
+        'CharacterSheet._centerPortraitScrollSafely: scroll centering failed',
+        e,
+      );
+    }
+  },
+
+  /**
+   * If the character doesn't already have a race+class-tagged ASCII portrait,
+   * try to upgrade it using the pre-generated files under generated_portraits/.
+   *
+   * This runs transparently in the background and, if successful, will:
+   * - update the in-memory character object
+   * - persist the new portrait (CharacterStorage / CharacterState)
+   * - refresh the visible portrait element
+   *
+   * @param {Object} character
+   * @param {string} context
+   * @param {HTMLElement|null} portraitEl
+   * @private
+   */
+  _maybeUpgradePortraitFromFiles(character, context, portraitEl) {
+    try {
+      if (!character) return;
+
+      // Never override an explicit custom AI portrait
+      if (character.customPortraitAscii) return;
+
+      const race = character.race;
+      const classType = character.class;
+      if (!race || !classType) return;
+
+      const key = `${race || ''}|${classType || ''}`;
+
+      // If we already have a portrait that is explicitly tagged for this
+      // exact race/class combo, there's nothing to upgrade.
+      if (character.asciiPortrait && character.asciiPortraitKey === key) {
+        return;
+      }
+
+      // Lightweight in-memory cache so we only fetch each combo once per page load
+      if (!this._portraitFileCache) {
+        this._portraitFileCache = {};
+      }
+      const cacheKey = `${String(race).toLowerCase()}|${String(
+        classType,
+      ).toLowerCase()}`;
+
+      if (this._portraitFileCache[cacheKey]) {
+        this._applyUpgradedPortrait(
+          character,
+          context,
+          portraitEl,
+          this._portraitFileCache[cacheKey],
+          key,
+        );
+        return;
+      }
+
+      // Async fetch so we don't block rendering
+      (async () => {
+        try {
+          const raceSlug = String(race)
+            .toLowerCase()
+            .replace(/\s+/g, '-');
+          const classSlug = String(classType)
+            .toLowerCase()
+            .replace(/\s+/g, '-');
+          const basePath = 'generated_portraits/ascii';
+
+          let best = null;
+
+          // Try race-class combo first
+          if (raceSlug && classSlug) {
+            try {
+              const resp = await fetch(
+                `${basePath}/${raceSlug}-${classSlug}.txt`,
+              );
+              if (resp.ok) {
+                best = await resp.text();
+              }
+            } catch (e) {
+              // Network or fetch issue – we'll try race-only next
+              console.warn(
+                'CharacterSheet._maybeUpgradePortraitFromFiles: race-class fetch failed',
+                e,
+              );
+            }
+          }
+
+          // Fallback to race-only portrait
+          if (!best && raceSlug) {
+            try {
+              const resp = await fetch(`${basePath}/${raceSlug}.txt`);
+              if (resp.ok) {
+                best = await resp.text();
+              }
+            } catch (e) {
+              console.warn(
+                'CharacterSheet._maybeUpgradePortraitFromFiles: race-only fetch failed',
+                e,
+              );
+            }
+          }
+
+          if (!best) {
+            return;
+          }
+
+          this._portraitFileCache[cacheKey] = best;
+          await this._applyUpgradedPortrait(character, context, portraitEl, best, key);
+        } catch (e) {
+          console.warn(
+            'CharacterSheet._maybeUpgradePortraitFromFiles: unexpected error',
+            e,
+          );
+        }
+      })();
+    } catch (e) {
+      console.warn(
+        'CharacterSheet._maybeUpgradePortraitFromFiles: setup error',
+        e,
+      );
+    }
+  },
+
+  /**
+   * Apply an upgraded ASCII portrait to the character, persist it, and
+   * refresh the DOM element if provided.
+   *
+   * @param {Object} character
+   * @param {string} context
+   * @param {HTMLElement|null} portraitEl
+   * @param {string} ascii
+   * @param {string} key
+   * @private
+   */
+  async _applyUpgradedPortrait(character, context, portraitEl, ascii, key) {
+    if (!character || !ascii) return;
+
+    character.asciiPortrait = ascii;
+    character.asciiPortraitKey = key;
+
+    // Persist the upgraded portrait so future loads are instant
+    try {
+      if (context === 'manager' && window.CharacterStorage && character.id) {
+        window.CharacterStorage.update(character.id, {
+          asciiPortrait: ascii,
+          asciiPortraitKey: key,
+        });
+      } else if (context === 'builder' && window.CharacterState) {
+        // Update state first
+        window.CharacterState.updateCharacter({
+          asciiPortrait: ascii,
+          asciiPortraitKey: key,
+        });
+        
+        // Save to cloud (this is the ONLY save for new characters)
+        if (window.StorageService) {
+          const state = window.CharacterState.get();
+          try {
+            console.log('☁️ Saving character with portrait to cloud...');
+            const saved = await window.StorageService.saveCharacter(state.character);
+            // Update state with backend ID and fields
+            window.CharacterState.updateCharacter(saved);
+            console.log('☁️ Character saved successfully with portrait!');
+          } catch (error) {
+            console.error('Failed to save character with portrait:', error);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(
+        'CharacterSheet._applyUpgradedPortrait: failed to persist upgraded portrait',
+        e,
+      );
+    }
+
+    // Refresh the visible portrait
+    if (portraitEl) {
+      portraitEl.textContent = ascii;
+      this._centerPortraitScrollSafely(portraitEl);
     }
   },
 });
