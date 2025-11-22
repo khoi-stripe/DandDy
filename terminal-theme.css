@@ -721,6 +721,112 @@ body {
   cursor: pointer !important;
 }
 
+/* ===== PRINT STYLES ===== */
+
+@media print {
+  /* Compact, sheet-focused layout */
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #000;
+    font-size: 12px;
+  }
+
+  /* Don't force a full viewport-height page before content */
+  body {
+    min-height: 0 !important;
+  }
+
+  /* Hide global chrome: headers, footers, sidebars, modals */
+  .terminal-header,
+  .terminal-footer,
+  .left-panel,
+  .welcome-modal,
+  .modal,
+  .terminal-status {
+    display: none !important;
+  }
+
+  /* Layout containers expand naturally and don't clip content */
+  .terminal-frame,
+  .terminal-container,
+  .manager-screen,
+  .split-layout,
+  .left-panel,
+  .right-panel {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .character-sheet {
+    background: #fff;
+    color: #000;
+    box-shadow: none;
+    border: none;
+    width: 100%;
+    margin: 0 !important;
+  }
+
+  /* Force all text inside the sheet to print as black for maximum legibility */
+  .character-sheet,
+  .character-sheet * {
+    color: #000 !important;
+  }
+  
+  /* For print, prefer the original DALL-E image instead of ASCII:
+     - Hide ASCII block
+     - Show original image even if it was hidden on screen */
+  .character-sheet .ascii-portrait {
+    display: none !important;
+  }
+
+  .character-sheet .original-portrait {
+    display: block !important;
+    visibility: visible !important;
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Denser grids for combat stats and abilities in print */
+  .character-sheet .stat-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .character-sheet .ability-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  /* Keep whole sections together on a page and tighten spacing */
+  .character-sheet .sheet-section {
+    page-break-inside: avoid;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+  }
+
+  .character-sheet .sheet-header {
+    padding-bottom: 2px;
+    margin-bottom: 2px;
+  }
+
+  .character-sheet .sheet-header-title {
+    font-size: 0.9em;
+  }
+
+  /* Hide sheet header buttons (PRINT/RENAME/etc.) in printout */
+  .sheet-title-buttons,
+  .sheet-title-buttons * {
+    display: none !important;
+  }
+}
+
 /* ===== MODAL BASE ===== */
 .modal {
   display: none;

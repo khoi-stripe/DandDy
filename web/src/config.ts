@@ -6,6 +6,10 @@ export const API_ENDPOINTS = {
   LOGIN: '/auth/login',
   ME: '/auth/me',
   
+  // Users (admin/DM only)
+  USERS: '/users',
+  USER: (id: number) => `/users/${id}`,
+  
   // Characters
   CHARACTERS: '/characters',
   CHARACTER: (id: number) => `/characters/${id}`,

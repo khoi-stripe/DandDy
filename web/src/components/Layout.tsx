@@ -8,11 +8,19 @@ export default function Layout() {
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  const navigation = [
+  const baseNavigation = [
     { name: 'Dashboard', href: '/', icon: Shield },
     { name: 'Characters', href: '/characters', icon: Users },
     { name: 'Campaigns', href: '/campaigns', icon: Map },
     { name: 'Profile', href: '/profile', icon: User },
+  ]
+
+  const navigation = [
+    ...baseNavigation,
+    // Show Users section only for DMs
+    ...(user?.role === 'dm'
+      ? [{ name: 'Users', href: '/users', icon: Users }]
+      : []),
   ]
 
   const isActive = (path: string) => {

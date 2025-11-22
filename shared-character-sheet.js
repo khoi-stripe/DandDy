@@ -102,6 +102,12 @@ const CharacterSheet = (window.CharacterSheet = {
     // Function names differ by context
     const renameFn = context === 'builder' ? 'App.openNameModal()' : `renameCharacter('${character.id}')`;
     const editFn = context === 'manager' ? `editCharacter('${character.id}')` : null;
+    const printFn =
+      onPrint && context === 'builder'
+        ? 'App.printCharacterSheet()'
+        : onPrint && context === 'manager'
+          ? 'printCharacterSheet()'
+          : null;
 
     return `
       <div class="sheet-title-header">
@@ -121,9 +127,9 @@ const CharacterSheet = (window.CharacterSheet = {
             </button>
           `
             : ''}
-          ${context === 'builder' && onPrint
+          ${printFn
             ? `
-            <button class="terminal-btn terminal-btn-small sheet-print-btn" onclick="App.printCharacterSheet()" title="Print this character">
+            <button class="terminal-btn terminal-btn-small sheet-print-btn" onclick="${printFn}" title="Print this character">
               ⎙ PRINT
             </button>
           `

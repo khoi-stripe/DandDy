@@ -9,6 +9,7 @@ import CampaignList from './pages/CampaignList'
 import CampaignDetail from './pages/CampaignDetail'
 import Profile from './pages/Profile'
 import Layout from './components/Layout'
+import UsersPage from './pages/UsersPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -35,6 +36,7 @@ function App() {
           <Route path="campaigns" element={<CampaignList />} />
           <Route path="campaigns/:id" element={<CampaignDetail />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="users" element={<UsersPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

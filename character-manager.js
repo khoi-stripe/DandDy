@@ -746,12 +746,23 @@ const UI = {
             onEdit: true,
             onDelete: true,
             onGeneratePortrait: true,
+            onPrint: true,
         });
         
         // Populate ASCII portrait after rendering
         CharacterSheet.populatePortrait(character);
     }
 };
+
+// Simple print helper for manager context – relies on print-specific CSS
+// to hide the left panel and UI chrome, focusing on the sheet content.
+function printCharacterSheet() {
+    if (!document.querySelector('.character-sheet')) {
+        alert('No character sheet to print yet.');
+        return;
+    }
+    window.print();
+}
 
 // ========================================
 // EVENT HANDLERS
@@ -2238,6 +2249,151 @@ async function handleRegister() {
     }
 }
 
+// ========================================
+// PASSWORD RESET UI HANDLERS
+// ========================================
+
+function openPasswordResetFromLogin() {
+    // Close the auth modal to reduce clutter and then open the reset flow.
+    closeAuthModal();
+    showPasswordResetModal();
+}
+
+function showPasswordResetModal() {
+    const modal = document.getElementById('passwordResetModal');
+    if (!modal) return;
+
+    // Reset sections and fields to initial state
+    const requestSection = document.getElementById('passwordResetRequestSection');
+    const confirmSection = document.getElementById('passwordResetConfirmSection');
+    const requestBtn = document.getElementById('passwordResetRequestBtn');
+    const confirmBtn = document.getElementById('passwordResetConfirmBtn');
+    const messageEl = document.getElementById('passwordResetMessage');
+    const emailInput = document.getElementById('passwordResetEmail');
+    const tokenInput = document.getElementById('passwordResetToken');
+    const newPasswordInput = document.getElementById('passwordResetNewPassword');
+
+    if (requestSection) requestSection.classList.remove('is-hidden');
+    if (confirmSection) confirmSection.classList.add('is-hidden');
+    if (requestBtn) requestBtn.classList.remove('is-hidden');
+    if (confirmBtn) confirmBtn.classList.add('is-hidden');
+    if (messageEl) {
+        messageEl.textContent = '';
+        messageEl.classList.remove('terminal-text-error');
+        messageEl.classList.add('terminal-text-dim');
+    }
+    if (emailInput) emailInput.value = '';
+    if (tokenInput) tokenInput.value = '';
+    if (newPasswordInput) newPasswordInput.value = '';
+
+    modal.classList.add('show');
+    if (typeof focusFirstFieldInModal === 'function') {
+        focusFirstFieldInModal(modal);
+    }
+}
+
+function closePasswordResetModal() {
+    const modal = document.getElementById('passwordResetModal');
+    if (!modal) return;
+    modal.classList.remove('show');
+}
+
+async function handlePasswordResetRequest() {
+    const emailInput = document.getElementById('passwordResetEmail');
+    const messageEl = document.getElementById('passwordResetMessage');
+    if (!emailInput || !messageEl) return;
+
+    const email = emailInput.value.trim();
+    if (!email) {
+        messageEl.textContent = 'Please enter your email address.';
+        messageEl.classList.remove('terminal-text-dim');
+        messageEl.classList.add('terminal-text-error');
+        return;
+    }
+
+    messageEl.textContent = 'Requesting password reset...';
+    messageEl.classList.remove('terminal-text-error');
+    messageEl.classList.add('terminal-text-dim');
+
+    const result = await window.AuthService.forgotPassword(email);
+
+    if (!result.success) {
+        messageEl.textContent = result.error || 'Password reset request failed. Please try again.';
+        messageEl.classList.remove('terminal-text-dim');
+        messageEl.classList.add('terminal-text-error');
+        return;
+    }
+
+    // Move to the confirm step
+    const requestSection = document.getElementById('passwordResetRequestSection');
+    const confirmSection = document.getElementById('passwordResetConfirmSection');
+    const requestBtn = document.getElementById('passwordResetRequestBtn');
+    const confirmBtn = document.getElementById('passwordResetConfirmBtn');
+    const tokenInput = document.getElementById('passwordResetToken');
+
+    if (requestSection) requestSection.classList.add('is-hidden');
+    if (confirmSection) confirmSection.classList.remove('is-hidden');
+    if (requestBtn) requestBtn.classList.add('is-hidden');
+    if (confirmBtn) confirmBtn.classList.remove('is-hidden');
+
+    let message = result.message;
+
+    // In development the backend may return a debug token - surface it to
+    // simplify local testing and optionally auto-fill the token field.
+    if (result.debugToken && tokenInput) {
+        tokenInput.value = result.debugToken;
+        message += `\n\nDebug reset token (dev only): ${result.debugToken}`;
+    }
+
+    messageEl.textContent = message;
+    messageEl.classList.remove('terminal-text-error');
+    messageEl.classList.add('terminal-text-dim');
+}
+
+async function handlePasswordResetConfirm() {
+    const tokenInput = document.getElementById('passwordResetToken');
+    const newPasswordInput = document.getElementById('passwordResetNewPassword');
+    const messageEl = document.getElementById('passwordResetMessage');
+    if (!tokenInput || !newPasswordInput || !messageEl) return;
+
+    const token = tokenInput.value.trim();
+    const newPassword = newPasswordInput.value;
+
+    if (!token || !newPassword) {
+        messageEl.textContent = 'Please enter both the reset token and a new password.';
+        messageEl.classList.remove('terminal-text-dim');
+        messageEl.classList.add('terminal-text-error');
+        return;
+    }
+
+    messageEl.textContent = 'Resetting password...';
+    messageEl.classList.remove('terminal-text-error');
+    messageEl.classList.add('terminal-text-dim');
+
+    const result = await window.AuthService.resetPassword(token, newPassword);
+
+    if (!result.success) {
+        messageEl.textContent = result.error || 'Password reset failed. Please check your token and try again.';
+        messageEl.classList.remove('terminal-text-dim');
+        messageEl.classList.add('terminal-text-error');
+        return;
+    }
+
+    // User now has a fresh token and profile; update UI and close the modal.
+    if (typeof updateAuthUI === 'function') {
+        updateAuthUI();
+    }
+
+    showNotification('✓ Password updated. You are now logged in.');
+    closePasswordResetModal();
+
+    // Reload characters from cloud if authenticated
+    if (window.AuthService && window.AuthService.isAuthenticated && window.AuthService.isAuthenticated()) {
+        await AppState.loadCharacters();
+        UI.render();
+    }
+}
+
 function handleLogout() {
     showConfirmDialog('Log out? Your characters will remain in the cloud and can be accessed after logging back in.', async () => {
         window.AuthService.logout();
@@ -2601,6 +2757,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
     
+    // Close password reset modal on outside click
+    document.getElementById('passwordResetModal').addEventListener('click', (e) => {
+        if (e.target.id === 'passwordResetModal') {
+            closePasswordResetModal();
+        }
+    });
+    
     // Hover behavior for character cards:
     // - Adds/removes a visual `is-hovered` class
     // - Does NOT change focus or update the character sheet
@@ -2655,6 +2818,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     closeAuthModal();
                 } else if (modalId === 'migrationModal') {
                     closeMigrationModal();
+                } else if (modalId === 'passwordResetModal') {
+                    closePasswordResetModal();
                 } else if (modalId === 'portraitPromptModal') {
                     closePortraitPromptModal();
                 }

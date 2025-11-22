@@ -86,6 +86,78 @@ Object.assign(window.AuthService, {
     }
   },
 
+  /**
+   * Request a password reset for the given email.
+   * Always returns a generic success message to avoid leaking which emails exist.
+   * In development, the backend may include a debug_reset_token that we surface
+   * so the UI can auto-fill the token field.
+   */
+  async forgotPassword(email) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/password/forgot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      // The endpoint always returns 200 with a generic message, even if the
+      // email does not exist, so we only treat network/HTTP failures as errors.
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || 'Password reset request failed');
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        message:
+          data.message ||
+          'If an account with that email exists, a password reset link has been sent.',
+        debugToken: data.debug_reset_token || null,
+      };
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Complete a password reset using a reset token and new password.
+   * On success, stores the new access token and refreshes the current user
+   * profile so the app treats the user as logged in.
+   */
+  async resetPassword(token, newPassword) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/password/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, new_password: newPassword }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail || 'Password reset failed');
+      }
+
+      const data = await response.json();
+      if (!data.access_token) {
+        throw new Error('Password reset succeeded but no token was returned.');
+      }
+
+      // Store fresh token and refresh user profile so cloud features are ready.
+      this.setToken(data.access_token);
+      const userProfile = await this.fetchUserProfile();
+      if (userProfile) {
+        this.setCurrentUser(userProfile);
+      }
+
+      return { success: true, user: userProfile };
+    } catch (error) {
+      console.error('Reset password error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
   // Fetch user profile
   async fetchUserProfile() {
     try {

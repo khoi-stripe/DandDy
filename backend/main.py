@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database.database import engine, Base
-from routes import auth, characters, campaigns, ai
+from routes import auth, characters, campaigns, ai, users
 import os
 from dotenv import load_dotenv
 
@@ -42,6 +42,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api")
 app.include_router(characters.router, prefix="/api")
 app.include_router(campaigns.router, prefix="/api")
+app.include_router(users.router, prefix="/api")
 app.include_router(ai.router, prefix="/api/ai")
 
 @app.get("/")
