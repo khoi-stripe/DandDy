@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Shield } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { UserRole } from '../types'
+import { Button } from '../components/Button'
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
@@ -58,26 +59,20 @@ export default function AuthPage() {
         {/* Form */}
         <div className="card">
           <div className="flex justify-center space-x-4 mb-6">
-            <button
+            <Button
+              type="button"
+              variant={isLogin ? 'primary' : 'secondary'}
               onClick={() => setIsLogin(true)}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                isLogin
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
             >
               Login
-            </button>
-            <button
+            </Button>
+            <Button
+              type="button"
+              variant={!isLogin ? 'primary' : 'secondary'}
               onClick={() => setIsLogin(false)}
-              className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                !isLogin
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
             >
               Register
-            </button>
+            </Button>
           </div>
 
           {error && (
@@ -159,13 +154,13 @@ export default function AuthPage() {
               </>
             )}
 
-            <button
+            <Button
               type="submit"
-              disabled={isLoading}
-              className="w-full btn btn-primary"
+              fullWidth
+              loading={isLoading}
             >
-              {isLoading ? 'Loading...' : isLogin ? 'Login' : 'Register'}
-            </button>
+              {isLogin ? 'Login' : 'Register'}
+            </Button>
           </form>
         </div>
 

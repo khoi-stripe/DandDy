@@ -10,8 +10,12 @@
 <body>
     <div class="terminal-frame">
     
-    <!-- Splash Screen (uses the builder's splash art/layout) -->
-    <div class="splash-content" id="splash-content">
+    <!-- Welcome Modal (uses the builder's splash art/layout) -->
+    <div id="welcomeModal" class="modal">
+        <div class="modal-content welcome-modal">
+            <div class="modal-body">
+                <div class="welcome-body">
+                    <div class="splash-content">
         <div class="splash-art">
                                                                                                          
 
@@ -146,15 +150,20 @@
                                                               445                                                               
 
         </div>
-        <div class="splash-text">
-            <div class="splash-title">DandDy CHARACTER BUILDER</div>
-            <div class="splash-subtitle">A D&D 5e Character Creation Experience</div>
-            <div class="splash-prompt">[ Press any key to begin ]</div>
+                    </div>
+                    <div class="welcome-actions">
+                        <button class="terminal-btn" id="welcomeLoginBtn">LOG IN</button>
+                        <button class="terminal-btn" id="welcomeRegisterBtn">CREATE ACCOUNT</button>
+                        <button class="terminal-btn terminal-btn-secondary" id="welcomeDemoBtn">DEMO MODE</button>
+                        <div class="welcome-version">DandDy v2.0</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
-    <!-- Main Content (hidden until splash dismissed) -->
-    <div class="main-content is-hidden" id="main-content">
+    <!-- Main Content -->
+    <div class="main-content" id="main-content">
 
     <!-- Header -->
     <header class="terminal-header">
@@ -185,6 +194,24 @@
                     <div class="search-input-wrapper">
                         <input type="text" id="searchInput" class="terminal-input" placeholder="⌕ Search characters...">
                         <button id="clearSearchBtn" class="search-clear-btn" type="button" aria-label="Clear search">✕</button>
+                    </div>
+                    <div class="search-actions">
+                        <button
+                            id="sortToggleBtn"
+                            class="search-sort-btn"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            aria-controls="sortDropdown"
+                        >SORT</button>
+                        <div id="sortDropdown" class="sort-dropdown" role="listbox" aria-label="Sort characters">
+                            <button class="sort-option" data-sort-value="alphabetical" role="option">
+                                Alphabetical
+                            </button>
+                            <button class="sort-option" data-sort-value="dateModified" role="option">
+                                Date modified
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -369,6 +396,7 @@
         </div>
     </div>
     
+    <script src="version.js"></script>
     <script src="character-builder/character-builder-config.js"></script>
     <script src="character-builder/character-builder-utils.js"></script>
     <script src="character-builder/character-builder-services.js"></script>

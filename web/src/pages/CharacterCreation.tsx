@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useCharacterStore } from '../stores/characterStore'
 import { CharacterCreate } from '../types'
 import { loadAsciiArt, getPlaceholderAscii } from '../lib/asciiArt'
+import { Button } from '../components/Button'
 
 const RACES = ['Dwarf', 'Elf', 'Halfling', 'Human', 'Dragonborn', 'Gnome', 'Half-Elf', 'Half-Orc', 'Tiefling']
 const CLASSES = ['Barbarian', 'Bard', 'Cleric', 'Druid', 'Fighter', 'Monk', 'Paladin', 'Ranger', 'Rogue', 'Sorcerer', 'Warlock', 'Wizard']
@@ -186,13 +187,13 @@ export default function CharacterCreation() {
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Ability Scores</h2>
-            <button
-              type="button"
-              onClick={rollStats}
-              className="btn btn-secondary"
-            >
-              Roll 4d6 (drop lowest)
-            </button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={rollStats}
+          >
+            Roll 4d6 (drop lowest)
+          </Button>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -223,20 +224,19 @@ export default function CharacterCreation() {
 
         {/* Submit */}
         <div className="flex items-center justify-end space-x-4">
-          <button
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => navigate('/characters')}
-            className="btn btn-secondary"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            disabled={isLoading}
-            className="btn btn-primary"
+            loading={isLoading}
           >
             {isLoading ? 'Creating...' : 'Create Character'}
-          </button>
+          </Button>
         </div>
       </form>
         </div>

@@ -242,6 +242,9 @@ const App = (window.App = {
       case 'complete':
         await this.showComplete(question);
         break;
+      case 'spell-selection':
+        await this.showSpellSelection(question);
+        break;
     }
   },
 
@@ -635,6 +638,116 @@ const App = (window.App = {
     await this.showQuestion(question.next);
   },
 
+  async showSpellSelection(question) {
+    const narratorPanel = document.getElementById('narrator-panel');
+    const state = CharacterState.get();
+    const classId = state.character.class;
+
+    // Show narrator message
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    Utils.scrollToBottom(true);
+
+    const messageEl =
+      narratorPanel.lastElementChild.querySelector('.narrator-text');
+
+    let spells = null;
+
+    if (question.mode === 'quick') {
+      // Quick mode: auto-select spells
+      await Utils.typewriter(messageEl, question.text);
+      Utils.scrollToBottom(true);
+
+      await Utils.sleep(500);
+
+      // Get auto-selected spells
+      spells = SPELL_DATA.getQuickModeSpells(classId);
+
+      if (spells) {
+        const config = SPELL_DATA.getSpellcastingConfig(classId);
+        
+        // Show what was selected
+        narratorPanel.insertAdjacentHTML(
+          'beforeend',
+          Components.renderNarratorMessage(''),
+        );
+        Utils.scrollToBottom(true);
+        
+        const confirmEl =
+          narratorPanel.lastElementChild.querySelector('.narrator-text');
+        
+        const spellSummary = `> Selected ${spells.cantrips.length} cantrip${spells.cantrips.length !== 1 ? 's' : ''} and ${spells.firstLevel.length} 1st level spell${spells.firstLevel.length !== 1 ? 's' : ''}.
+> 
+> Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}
+> 1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
+        
+        await Utils.typewriter(confirmEl, spellSummary);
+        Utils.scrollToBottom(true);
+      }
+    } else {
+      // Guided mode: suggest based on preferences
+      await Utils.typewriter(messageEl, question.text);
+      Utils.scrollToBottom(true);
+
+      await Utils.sleep(500);
+
+      const preferences = {
+        style: state.answers.spellStyle || 'offense',
+        element: state.answers.spellElement || 'versatile',
+      };
+
+      spells = SPELL_DATA.getGuidedSpells(classId, preferences);
+
+      if (spells) {
+        // Show personalized recommendations
+        narratorPanel.insertAdjacentHTML(
+          'beforeend',
+          Components.renderNarratorMessage(''),
+        );
+        Utils.scrollToBottom(true);
+        
+        const confirmEl =
+          narratorPanel.lastElementChild.querySelector('.narrator-text');
+        
+        let flavorText = '';
+        if (preferences.style === 'offense') {
+          flavorText = "> Ah, a blaster. How... predictable. Here's your destruction kit:";
+        } else if (preferences.style === 'defense') {
+          flavorText = "> The cautious type, I see. Here are your survival tools:";
+        } else if (preferences.style === 'control') {
+          flavorText = "> A tactician. Interesting. Here's your battlefield control suite:";
+        } else {
+          flavorText = "> Utility over flash. Practical. Here's your toolkit:";
+        }
+        
+        const spellSummary = `${flavorText}
+> 
+> Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}
+> 1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
+        
+        await Utils.typewriter(confirmEl, spellSummary);
+        Utils.scrollToBottom(true);
+      }
+    }
+
+    // Save spells to character
+    if (spells) {
+      const config = SPELL_DATA.getSpellcastingConfig(classId);
+      CharacterState.updateCharacter({
+        spellcastingAbility: config.ability,
+        cantrips: spells.cantrips,
+        spellsKnown: spells.firstLevel,
+        spellsPrepared: config.preparedSpells ? spells.firstLevel : [],
+        spellSlots: config.spellSlots,
+      });
+    }
+
+    await Utils.sleep(1500);
+    await this.showQuestion(question.next);
+  },
+
   async showComplete(question) {
     const narratorPanel = document.getElementById('narrator-panel');
     narratorPanel.insertAdjacentHTML(
@@ -1005,7 +1118,26 @@ const App = (window.App = {
     Utils.scrollToBottom(true);
 
     await Utils.sleep(2000);
-    await this.showQuestion(this.currentQuestion.next);
+    // Decide next question dynamically:
+    // - If class is a spellcaster, branch into spell selection
+    //   (guided vs quick based on entry mode).
+    // - Otherwise, continue to background selection.
+    const latestState = CharacterState.get();
+    const classId = latestState.character.class;
+    let nextQuestionId = this.currentQuestion.next || 'background-choice';
+
+    if (typeof SPELL_DATA !== 'undefined' && SPELL_DATA.isSpellcaster(classId)) {
+      const entryMode = latestState.answers['entry-mode'];
+      if (entryMode === 'guided') {
+        nextQuestionId = 'spell-style-intro';
+      } else {
+        nextQuestionId = 'spell-quick-mode';
+      }
+    } else {
+      nextQuestionId = 'background-choice';
+    }
+
+    await this.showQuestion(nextQuestionId);
   },
 
   async handleAbilityFromSelect() {

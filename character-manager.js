@@ -162,6 +162,45 @@ const KeyboardNav = {
 // ========================================
 // HYBRID STORAGE SERVICE (Cloud + Local)
 // ========================================
+// Local sort metadata helper – tracks last-modified timestamps per character
+// so "Date modified" sorting works even when the backend doesn't provide
+// created/updated fields (or when running against older data).
+const SortMeta = (window.SortMeta = {
+    KEY: 'dnd_character_sort_meta',
+    _cache: null,
+
+    _load() {
+        if (!this._cache) {
+            try {
+                const raw = localStorage.getItem(this.KEY);
+                this._cache = raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                console.warn('SortMeta: failed to parse cache', e);
+                this._cache = {};
+            }
+        }
+        return this._cache;
+    },
+
+    touch(id) {
+        if (!id) return;
+        const map = this._load();
+        const now = new Date().toISOString();
+        map[id] = { updatedAt: now };
+        try {
+            localStorage.setItem(this.KEY, JSON.stringify(map));
+        } catch (e) {
+            console.warn('SortMeta: failed to persist cache', e);
+        }
+        return now;
+    },
+
+    getUpdatedAt(id) {
+        if (!id) return null;
+        const map = this._load();
+        return map[id]?.updatedAt || null;
+    },
+});
 const CharacterStorage = {
     STORAGE_KEY: 'dnd_characters',
     
@@ -201,21 +240,29 @@ const CharacterStorage = {
     async add(character) {
         if (this.useCloud()) {
             try {
-                return await window.CharacterCloudStorage.add(character);
+                const created = await window.CharacterCloudStorage.add(character);
+                if (created && created.id) {
+                    SortMeta.touch(String(created.id));
+                }
+                return created;
             } catch (error) {
                 console.error('☁️ Cloud add failed:', error);
                 showNotification('❌ Failed to save to cloud. Please try again.');
                 throw error;
             }
         }
-        return this._localAdd(character);
+        const created = this._localAdd(character);
+        if (created && created.id) {
+            SortMeta.touch(String(created.id));
+        }
+        return created;
     },
 
     // Update existing character
     async update(id, updates) {
+        const idStr = String(id);
         if (this.useCloud()) {
             // Guard against invalid cloud IDs (e.g. "null", "undefined", or local-only IDs)
-            const idStr = String(id);
             const isInvalidCloudId =
                 !idStr ||
                 idStr === 'null' ||
@@ -227,18 +274,34 @@ const CharacterStorage = {
                     '⚠️ Skipping cloud update for character with invalid id; falling back to local update:',
                     id,
                 );
-                return this._localUpdate(id, updates);
+                const updatedLocal = this._localUpdate(id, updates);
+                if (updatedLocal && updatedLocal.id) {
+                    SortMeta.touch(String(updatedLocal.id));
+                }
+                return updatedLocal;
             }
 
             try {
-                return await window.CharacterCloudStorage.update(id, updates);
+                const updated = await window.CharacterCloudStorage.update(id, updates);
+                if (updated && updated.id) {
+                    SortMeta.touch(String(updated.id));
+                } else {
+                    SortMeta.touch(idStr);
+                }
+                return updated;
             } catch (error) {
                 console.error('☁️ Cloud update failed:', error);
                 showNotification('❌ Failed to update in cloud. Please try again.');
                 throw error;
             }
         }
-        return this._localUpdate(id, updates);
+        const updatedLocal = this._localUpdate(id, updates);
+        if (updatedLocal && updatedLocal.id) {
+            SortMeta.touch(String(updatedLocal.id));
+        } else {
+            SortMeta.touch(idStr);
+        }
+        return updatedLocal;
     },
 
     // Delete character
@@ -459,6 +522,7 @@ const AppState = {
     characters: [],
     filteredCharacters: [],
     searchTerm: '',
+    sortMode: 'dateModified', // 'alphabetical' | 'dateModified'
     loading: false,
 
     async init() {
@@ -507,9 +571,29 @@ const AppState = {
             );
         }
 
-        // Preserve original order from storage.
-        // Local and cloud storage both append new characters to the end,
-        // so the grid naturally shows newest characters at the bottom.
+        // Sort according to current mode
+        if (this.sortMode === 'alphabetical') {
+            filtered.sort((a, b) => {
+                const nameA = (a.name || '').toLowerCase();
+                const nameB = (b.name || '').toLowerCase();
+                if (nameA === nameB) {
+                    return (a.id || '').toString().localeCompare((b.id || '').toString());
+                }
+                return nameA.localeCompare(nameB);
+            });
+        } else if (this.sortMode === 'dateModified') {
+            // Sort by most recently modified, using local SortMeta when available
+            filtered.sort((a, b) => {
+                const aMeta = SortMeta.getUpdatedAt(a.id);
+                const bMeta = SortMeta.getUpdatedAt(b.id);
+                const aTime = new Date(aMeta || a.updatedAt || a.createdAt || 0).getTime();
+                const bTime = new Date(bMeta || b.updatedAt || b.createdAt || 0).getTime();
+                if (aTime === bTime) {
+                    return (a.name || '').localeCompare(b.name || '');
+                }
+                return bTime - aTime; // newest first
+            });
+        }
 
         this.filteredCharacters = filtered;
     }
@@ -2263,6 +2347,21 @@ async function startMigration() {
 // ========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Apply app version to header and welcome modal from global version config.
+    try {
+        const version = window.DANDDY_VERSION || '2.0.0';
+        const headerTitle = document.querySelector('.terminal-title');
+        const welcomeVersion = document.querySelector('.welcome-version');
+        if (headerTitle) {
+            headerTitle.textContent = `[ DandDy v${version} ]`;
+        }
+        if (welcomeVersion) {
+            welcomeVersion.textContent = `DandDy v${version}`;
+        }
+    } catch (e) {
+        console.warn('Version banner update failed:', e);
+    }
+
     // Determine auth state up front (and validate token) so the UI and
     // storage mode (cloud vs local) start in a consistent state.
     let isAuthenticated = false;
@@ -2371,6 +2470,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Setup event listeners
     const searchInput = document.getElementById('searchInput');
     const clearSearchBtn = document.getElementById('clearSearchBtn');
+    const sortToggleBtn = document.getElementById('sortToggleBtn');
+    const sortDropdown = document.getElementById('sortDropdown');
 
     const updateClearSearchVisibility = () => {
         if (!clearSearchBtn || !searchInput) return;
@@ -2399,6 +2500,61 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateClearSearchVisibility();
         });
         updateClearSearchVisibility();
+    }
+
+    // Sort dropdown behavior
+    if (sortToggleBtn && sortDropdown) {
+        const updateSortUI = () => {
+            sortToggleBtn.classList.toggle('is-active', sortDropdown.classList.contains('is-open'));
+            sortToggleBtn.setAttribute(
+                'aria-expanded',
+                sortDropdown.classList.contains('is-open') ? 'true' : 'false',
+            );
+
+            const options = sortDropdown.querySelectorAll('.sort-option');
+            options.forEach((opt) => {
+                const value = opt.getAttribute('data-sort-value');
+                opt.classList.toggle('is-selected', value === AppState.sortMode);
+            });
+        };
+
+        sortToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sortDropdown.classList.toggle('is-open');
+            updateSortUI();
+        });
+
+        sortDropdown.querySelectorAll('.sort-option').forEach((opt) => {
+            opt.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const value = opt.getAttribute('data-sort-value');
+                if (value === 'alphabetical' || value === 'dateModified') {
+                    AppState.sortMode = value;
+                    AppState.applyFilters();
+                    UI.render();
+                }
+                sortDropdown.classList.remove('is-open');
+                updateSortUI();
+            });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!sortDropdown.classList.contains('is-open')) return;
+            if (
+                e.target === sortDropdown ||
+                sortDropdown.contains(e.target) ||
+                e.target === sortToggleBtn ||
+                sortToggleBtn.contains(e.target)
+            ) {
+                return;
+            }
+            sortDropdown.classList.remove('is-open');
+            updateSortUI();
+        });
+
+        // Initialize selection state
+        updateSortUI();
     }
 
     document.getElementById('newCharacterBtn').addEventListener('click', createNewCharacter);

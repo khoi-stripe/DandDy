@@ -112,3 +112,5 @@ Standardized all button classes across the Character Manager and Shared Characte
 - All button classes are fully responsive and work on mobile
 
 
+
+

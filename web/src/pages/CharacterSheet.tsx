@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Heart, Shield as ShieldIcon, Zap, Wind } from 'lucide-react'
 import { useCharacterStore } from '../stores/characterStore'
+import { Button } from '../components/Button'
 
 export default function CharacterSheet() {
   const { id } = useParams<{ id: string }>()
@@ -116,9 +117,9 @@ export default function CharacterSheet() {
               value={damageAmount}
               onChange={(e) => setDamageAmount(e.target.value)}
             />
-            <button onClick={handleDamage} className="btn btn-danger">
+            <Button variant="danger" onClick={handleDamage}>
               Take Damage
-            </button>
+            </Button>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -129,9 +130,12 @@ export default function CharacterSheet() {
               value={healAmount}
               onChange={(e) => setHealAmount(e.target.value)}
             />
-            <button onClick={handleHeal} className="btn" style={{ backgroundColor: '#10b981', color: 'white' }}>
+            <Button
+              onClick={handleHeal}
+              style={{ backgroundColor: '#10b981', color: 'white' }}
+            >
               Heal
-            </button>
+            </Button>
           </div>
         </div>
       </div>

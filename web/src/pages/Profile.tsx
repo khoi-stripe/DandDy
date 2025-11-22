@@ -1,5 +1,6 @@
 import { User, Mail, Shield } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
+import { Button } from '../components/Button'
 
 export default function Profile() {
   const { user, logout } = useAuthStore()
@@ -44,12 +45,13 @@ export default function Profile() {
         </div>
 
         <div className="mt-6 pt-6 border-t border-gray-200">
-          <button
+          <Button
             onClick={logout}
-            className="w-full btn btn-danger"
+            variant="danger"
+            fullWidth
           >
             Sign Out
-          </button>
+          </Button>
         </div>
       </div>
     </div>

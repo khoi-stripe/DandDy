@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Users, Map, Plus, TrendingUp } from 'lucide-react'
 import { useCharacterStore } from '../stores/characterStore'
 import { useAuthStore } from '../stores/authStore'
+import { Button } from '../components/Button'
 
 export default function Dashboard() {
   const { user } = useAuthStore()
@@ -36,9 +37,16 @@ export default function Dashboard() {
             </div>
             <Users className="h-12 w-12 text-blue-600" />
           </div>
-          <Link to="/characters/new" className="mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium">
-            Create New Character →
-          </Link>
+          <Button
+            asChild
+            variant="primary"
+            size="sm"
+            className="mt-4"
+          >
+            <Link to="/characters/new">
+              Create New Character →
+            </Link>
+          </Button>
         </div>
 
         <div className="card">

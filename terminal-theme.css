@@ -549,7 +549,7 @@ body {
   font-size: var(--font-size-small);
   cursor: pointer;
   transition: all var(--transition-speed);
-  text-align: center;
+  text-align: left;
 }
 
 .terminal-btn:hover:not(:disabled),
@@ -729,7 +729,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.6);
   z-index: 1000;
   backdrop-filter: blur(5px);
   /* Modal-specific UI tokens (yellow theme) */
@@ -798,7 +798,7 @@ body {
 }
 
 .modal-body {
-  padding: var(--spacing-lg);
+  padding: 24px;
   flex: 1 1 auto;
   overflow-y: auto;
 }

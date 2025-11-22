@@ -80,6 +80,12 @@ const CharacterState = (window.CharacterState = {
       languages: [],
       equipment: [],
       backgroundFeature: null,
+      // Spellcasting
+      spellcastingAbility: null,
+      cantrips: [],
+      spellsKnown: [],
+      spellsPrepared: [],
+      spellSlots: {},
     },
   },
 
@@ -140,6 +146,12 @@ const CharacterState = (window.CharacterState = {
         languages: [],
         equipment: [],
         backgroundFeature: null,
+        // Spellcasting
+        spellcastingAbility: null,
+        cantrips: [],
+        spellsKnown: [],
+        spellsPrepared: [],
+        spellSlots: {},
       },
     };
     this.notify();

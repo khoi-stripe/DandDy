@@ -69,6 +69,8 @@ const CharacterSheet = (window.CharacterSheet = {
       
       ${parsed.hasSkills ? this._renderSkills(parsed) : ''}
       
+      ${parsed.hasSpells ? this._renderSpells(parsed) : ''}
+      
       ${parsed.hasRacialTraits ? this._renderRacialTraits(parsed) : ''}
       
       ${parsed.hasEquipment ? this._renderEquipment(parsed) : ''}
@@ -341,35 +343,211 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderSkills(parsed) {
-    const hasSkillModifiers = parsed.skillModifiers && Object.keys(parsed.skillModifiers).length > 0;
-    const hasSkillProfs = parsed.skillProficiencies && parsed.skillProficiencies.length > 0;
+    const hasSkillModifiers =
+      parsed.skillModifiers && Object.keys(parsed.skillModifiers).length > 0;
+    const hasSkillProfs =
+      parsed.skillProficiencies && parsed.skillProficiencies.length > 0;
 
     if (!hasSkillModifiers && !hasSkillProfs) return '';
+
+    // When we have both full skill modifiers and an explicit list of
+    // proficiencies (e.g. edited in manager), show the numeric skills first
+    // and then any *extra* proficiencies as a simple bullet list.
+    const modifierKeys = hasSkillModifiers
+      ? Object.keys(parsed.skillModifiers)
+      : [];
+
+    const extraProfs =
+      hasSkillProfs && modifierKeys.length
+        ? parsed.skillProficiencies.filter(
+            (skill) => !modifierKeys.includes(skill),
+          )
+        : parsed.skillProficiencies || [];
+
+    const skillsMarkup = hasSkillModifiers
+      ? Object.entries(parsed.skillModifiers)
+          .map(
+            ([skill, value]) => `
+          <div class="stat-line">
+            <span class="stat-label">${this.formatSkillName(skill)}:</span>
+            <span class="stat-value">${this.formatModifier(value)} ★</span>
+          </div>
+        `,
+          )
+          .join('')
+      : '';
+
+    const extraProfsMarkup =
+      extraProfs && extraProfs.length
+        ? extraProfs
+            .map(
+              (skill) => `
+          <div class="text-dim">• ${this.formatSkillName(skill)}</div>
+        `,
+            )
+            .join('')
+        : '';
+
+    const headerTitle = hasSkillModifiers
+      ? 'SKILLS'
+      : 'SKILL PROFICIENCIES';
+
+    let contentMarkup;
+    if (skillsMarkup && extraProfsMarkup) {
+      contentMarkup = `
+        ${skillsMarkup}
+        <div class="sheet-divider"></div>
+        ${extraProfsMarkup}
+      `;
+    } else {
+      contentMarkup = skillsMarkup || extraProfsMarkup;
+    }
 
     return `
       <div class="sheet-section">
         <div class="sheet-header">
-          <div class="sheet-header-title">[ ${hasSkillModifiers ? 'SKILLS' : 'SKILL PROFICIENCIES'} ]</div>
+          <div class="sheet-header-title">[ ${headerTitle} ]</div>
         </div>
         <div class="sheet-content">
-          ${hasSkillModifiers
-            ? Object.entries(parsed.skillModifiers)
-                .map(
-                  ([skill, value]) => `
-                <div class="stat-line">
-                  <span class="stat-label">${this.formatSkillName(skill)}:</span>
-                  <span class="stat-value">${this.formatModifier(value)} ★</span>
-                </div>
-              `,
-                )
-                .join('')
-            : parsed.skillProficiencies
-                .map(
-                  (skill) => `
-                <div class="text-dim">• ${this.formatSkillName(skill)}</div>
-              `,
-                )
-                .join('')}
+          ${contentMarkup}
+        </div>
+      </div>
+    `;
+  },
+
+  _renderSpells(parsed) {
+    const cantrips = parsed.cantrips || [];
+    const spellsKnown = parsed.spellsKnown || [];
+    const spellsPrepared = parsed.spellsPrepared || [];
+    const spellSlots = parsed.spellSlots || {};
+
+    // Helper to render spell list
+    const renderSpellList = (spells) => {
+      return spells.map(spell => {
+        const name = spell.name || spell;
+        const school = spell.school ? ` <span class="text-dim">(${spell.school})</span>` : '';
+        const desc = spell.description ? `<div class="text-dim terminal-text-small" style="margin-left: 1rem;">${spell.description}</div>` : '';
+        return `<div class="text-dim" style="margin-bottom: 0.25rem;">• ${name}${school}</div>${desc}`;
+      }).join('');
+    };
+
+    let spellsContent = '';
+
+    // Cantrips
+    if (cantrips.length > 0) {
+      spellsContent += `
+        <div class="sheet-subsection">
+          <div class="sheet-subsection-title">CANTRIPS (At-Will)</div>
+          ${renderSpellList(cantrips)}
+        </div>
+      `;
+    }
+
+    // 1st Level Spells
+    if (spellsKnown.length > 0 || spellsPrepared.length > 0) {
+      const spellList = spellsKnown.length > 0 ? spellsKnown : spellsPrepared;
+      const slotsText = spellSlots['1'] ? ` • Slots: ${spellSlots['1']}` : '';
+      const preparedText = spellsPrepared.length > 0 && spellsKnown.length === 0 ? ' (Prepared)' : '';
+      
+      spellsContent += `
+        <div class="sheet-subsection">
+          <div class="sheet-subsection-title">1ST LEVEL${preparedText}${slotsText}</div>
+          ${renderSpellList(spellList)}
+        </div>
+      `;
+    }
+
+    // Spellcasting ability note
+    if (parsed.spellcastingAbility) {
+      const abilityName = {
+        'int': 'Intelligence',
+        'wis': 'Wisdom',
+        'cha': 'Charisma'
+      }[parsed.spellcastingAbility] || parsed.spellcastingAbility;
+      
+      spellsContent += `
+        <div class="text-dim terminal-text-small" style="margin-top: 0.5rem;">
+          Spellcasting Ability: ${abilityName}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="sheet-section">
+        <div class="sheet-header">
+          <div class="sheet-header-title">[ SPELLS ]</div>
+        </div>
+        <div class="sheet-content">
+          ${spellsContent}
+        </div>
+      </div>
+    `;
+  },
+
+  _renderSpells(parsed) {
+    const cantrips = parsed.cantrips || [];
+    const spellsKnown = parsed.spellsKnown || [];
+    const spellsPrepared = parsed.spellsPrepared || [];
+    const spellSlots = parsed.spellSlots || {};
+
+    // Helper to render spell list
+    const renderSpellList = (spells) => {
+      return spells.map(spell => {
+        const name = spell.name || spell;
+        const school = spell.school ? ` <span class="text-dim">(${spell.school})</span>` : '';
+        const desc = spell.description ? `<div class="text-dim terminal-text-small" style="margin-left: 1rem;">${spell.description}</div>` : '';
+        return `<div class="text-dim" style="margin-bottom: 0.25rem;">• ${name}${school}</div>${desc}`;
+      }).join('');
+    };
+
+    let spellsContent = '';
+
+    // Cantrips
+    if (cantrips.length > 0) {
+      spellsContent += `
+        <div class="sheet-subsection">
+          <div class="sheet-subsection-title">CANTRIPS (At-Will)</div>
+          ${renderSpellList(cantrips)}
+        </div>
+      `;
+    }
+
+    // 1st Level Spells
+    if (spellsKnown.length > 0 || spellsPrepared.length > 0) {
+      const spellList = spellsKnown.length > 0 ? spellsKnown : spellsPrepared;
+      const slotsText = spellSlots['1'] ? ` • Slots: ${spellSlots['1']}` : '';
+      const preparedText = spellsPrepared.length > 0 && spellsKnown.length === 0 ? ' (Prepared)' : '';
+      
+      spellsContent += `
+        <div class="sheet-subsection">
+          <div class="sheet-subsection-title">1ST LEVEL${preparedText}${slotsText}</div>
+          ${renderSpellList(spellList)}
+        </div>
+      `;
+    }
+
+    // Spellcasting ability note
+    if (parsed.spellcastingAbility) {
+      const abilityName = {
+        'int': 'Intelligence',
+        'wis': 'Wisdom',
+        'cha': 'Charisma'
+      }[parsed.spellcastingAbility] || parsed.spellcastingAbility;
+      
+      spellsContent += `
+        <div class="text-dim terminal-text-small" style="margin-top: 0.5rem;">
+          Spellcasting Ability: ${abilityName}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="sheet-section">
+        <div class="sheet-header">
+          <div class="sheet-header-title">[ SPELLS ]</div>
+        </div>
+        <div class="sheet-content">
+          ${spellsContent}
         </div>
       </div>
     `;
@@ -602,6 +780,13 @@ const CharacterSheet = (window.CharacterSheet = {
         backgroundFeature?.description || '',
       backstory: character.backstory || null,
 
+      // Spells
+      spellcastingAbility: character.spellcastingAbility || null,
+      cantrips: character.cantrips || [],
+      spellsKnown: character.spellsKnown || [],
+      spellsPrepared: character.spellsPrepared || [],
+      spellSlots: character.spellSlots || {},
+
       // Flags for conditional rendering
       hasRace: !!raceName,
       hasClass: !!className,
@@ -613,6 +798,10 @@ const CharacterSheet = (window.CharacterSheet = {
       hasSkills:
         Object.keys(skillModifiers).length > 0 ||
         skillProficiencies.length > 0,
+      hasSpells:
+        (character.cantrips && character.cantrips.length > 0) ||
+        (character.spellsKnown && character.spellsKnown.length > 0) ||
+        (character.spellsPrepared && character.spellsPrepared.length > 0),
       hasRacialTraits: racialTraits.length > 0,
       hasEquipment: allEquipment.length > 0,
       hasClassEquipment:

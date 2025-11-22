@@ -1,5 +1,23 @@
 # Testing Guide - Shared Character Sheet Component
 
+## Local servers for testing (no Node / Vite)
+
+To run both the backend API and the static apps using only Python (compatible with corporate restrictions), use the helper script:
+
+- **Script**: `scripts/run_servers.sh`
+- **Usage**:
+  1. `cd "/Users/khoi/Desktop/TEMP/_Personal/_Cursor/_DandDy"`
+  2. `chmod +x scripts/run_servers.sh` (first time only)
+  3. `scripts/run_servers.sh`
+- **What it does**:
+  - Starts the backend API: `uvicorn main:app --reload --host 127.0.0.1 --port 8000`
+  - Serves the repo statically: `python3 -m http.server 8001` from the project root
+- **Key URLs**:
+  - Character Builder: `http://localhost:8001/character-builder/index.html`
+  - Character Manager: `http://localhost:8001/character-manager.html`
+
+Leave this script running while you test; press **Ctrl+C** in that terminal to stop both servers.
+
 ## Testing URLs
 
 The following URLs are available for testing (HTTP server running on port 8080):
@@ -193,6 +211,8 @@ Test on different screen sizes:
 - [ ] Laptop (1366x768)
 - [ ] Tablet (768x1024)
 - [ ] Mobile (375x667)
+
+
 
 
 

@@ -99,6 +99,12 @@ class CharacterUpdate(BaseModel):
     inventory: Optional[List[Dict]] = None
     spell_slots_used: Optional[Dict[str, int]] = None
     spells_prepared: Optional[List[str]] = None
+    # Proficiencies and languages (editable from manager)
+    skill_proficiencies: Optional[List[str]] = None
+    tool_proficiencies: Optional[List[str]] = None
+    languages: Optional[List[str]] = None
+    # Narrative fields
+    backstory: Optional[str] = None
     copper_pieces: Optional[int] = None
     silver_pieces: Optional[int] = None
     electrum_pieces: Optional[int] = None

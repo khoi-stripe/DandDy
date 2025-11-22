@@ -88,12 +88,16 @@
 
 .search-bar {
     margin-bottom: var(--spacing-sm);
+    display: flex;
+    align-items: stretch;
+    gap: var(--spacing-sm);
 }
 
 .search-input-wrapper {
     position: relative;
     display: flex;
     align-items: center;
+    flex: 1;
 }
 
 .search-input-wrapper .terminal-input {
@@ -122,6 +126,68 @@
 
 .search-clear-btn.is-hidden {
     display: none;
+}
+
+.search-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    position: relative;
+}
+
+.search-sort-btn {
+    border: 1px solid var(--terminal-border);
+    background: transparent;
+    color: var(--terminal-dim);
+    font-family: var(--font-family);
+    font-size: var(--font-size-small);
+    padding: var(--spacing-sm) var(--spacing-md);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.search-sort-btn:hover,
+.search-sort-btn.is-active {
+    border-color: var(--terminal-accent);
+    color: var(--terminal-accent);
+}
+
+.sort-dropdown {
+    position: absolute;
+    margin-top: 4px;
+    right: 0;
+    background: var(--terminal-bg);
+    border: 1px solid var(--terminal-border);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+    z-index: 20;
+    display: none;
+    min-width: 140px;
+}
+
+.sort-dropdown.is-open {
+    display: block;
+}
+
+.sort-option {
+    display: block;
+    width: 100%;
+    padding: 4px 10px;
+    background: transparent;
+    border: none;
+    color: var(--terminal-fg);
+    text-align: left;
+    font-family: var(--font-family);
+    font-size: var(--font-size-small);
+    cursor: pointer;
+}
+
+.sort-option:hover,
+.sort-option.is-selected {
+    background-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.16);
+    color: var(--terminal-accent);
 }
 
 /* ===== CHARACTER COUNT ===== */
@@ -185,7 +251,7 @@
 .card-name {
     color: var(--terminal-fg);
     font-size: var(--font-size-small);
-    line-height: 1;
+    line-height: 1.2;
     margin-bottom: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -195,7 +261,7 @@
 .card-info {
     color: var(--terminal-dim);
     font-size: var(--font-size-small);
-    line-height: 1;
+    line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -424,6 +490,60 @@
 }
 
 /* Removed - using .text-dim from builder instead */
+
+/* ===== WELCOME MODAL (BUILDER-STYLE SPLASH) ===== */
+.welcome-modal {
+    max-width: 960px;
+}
+
+.welcome-modal .modal-body {
+    padding: 24px;
+}
+
+.welcome-body {
+    display: flex;
+    gap: var(--spacing-lg);
+    align-items: center;
+    justify-content: center;
+}
+
+.welcome-modal .splash-content {
+    flex: 0 0 auto;
+    max-height: 60vh;
+    overflow: auto;
+}
+
+.welcome-modal .splash-art {
+    color: var(--modal-accent);
+}
+
+.welcome-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    min-width: 220px;
+}
+
+.welcome-actions .terminal-btn {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    border-color: var(--modal-accent);
+    color: var(--modal-accent);
+}
+
+.welcome-actions .terminal-btn:hover {
+    border-color: var(--modal-accent);
+    background: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.18);
+    box-shadow: 0 0 10px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.7);
+}
+
+.welcome-version {
+    margin-top: var(--spacing-md);
+    font-size: var(--font-size-small);
+    color: var(--modal-accent-dim);
+    text-align: center;
+}
 
 /* ===== UTILITY CLASSES ===== */
 .is-hidden {

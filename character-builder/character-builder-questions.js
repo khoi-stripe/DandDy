@@ -228,6 +228,85 @@ const QUESTIONS = (window.QUESTIONS = [
       },
       { text: 'Roll 4d6 (drop lowest)', value: 'roll' },
     ],
+    // Next question is chosen dynamically in handleAbilityMethod
+    // based on class (spellcaster or not) and entry mode (guided vs quick).
+    next: 'background-choice',
+  },
+
+  // === SPELL SELECTION (Guided Mode) ===
+  {
+    id: 'spell-style-intro',
+    type: 'message',
+    text: `> Ah, right. You're a spellcaster.
+> 
+> *sighs*
+> 
+> I suppose we should talk about your magical abilities. Because what's an adventure without someone hurling fireballs or dramatically shouting healing incantations?
+> 
+> Let's figure out your spell preferences...`,
+    next: 'spell-style',
+  },
+
+  {
+    id: 'spell-style',
+    type: 'choice',
+    text: 'What draws you to magic?',
+    options: [
+      {
+        text: 'Blasting things into oblivion',
+        value: 'offense',
+        trait: 'aggressive',
+      },
+      {
+        text: 'Protecting myself and allies',
+        value: 'defense',
+        trait: 'protective',
+      },
+      {
+        text: 'Controlling the battlefield',
+        value: 'control',
+        trait: 'tactical',
+      },
+      {
+        text: 'Practical utility and tricks',
+        value: 'utility',
+        trait: 'clever',
+      },
+    ],
+    saveTo: 'spellStyle',
+    next: 'spell-element',
+  },
+
+  {
+    id: 'spell-element',
+    type: 'choice',
+    text: 'And if you had to pick a magical specialty...',
+    options: [
+      { text: 'Fire and flames', value: 'fire' },
+      { text: 'Ice and cold', value: 'cold' },
+      { text: 'Lightning and storms', value: 'lightning' },
+      { text: 'Shadows and darkness', value: 'necrotic' },
+      { text: 'Light and radiance', value: 'radiant' },
+      { text: "Whatever's most effective", value: 'versatile' },
+    ],
+    saveTo: 'spellElement',
+    next: 'spell-selection-guided',
+  },
+
+  {
+    id: 'spell-selection-guided',
+    type: 'spell-selection',
+    mode: 'guided',
+    text: 'Based on your preferences, here are your recommended spells...',
+    next: 'background-choice',
+  },
+
+  // === SPELL SELECTION (Quick Mode) ===
+  {
+    id: 'spell-quick-mode',
+    type: 'spell-selection',
+    mode: 'quick',
+    text: 'Auto-selecting balanced starter spells...',
     next: 'background-choice',
   },
 
