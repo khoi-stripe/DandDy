@@ -22,14 +22,19 @@ app = FastAPI(
 if os.getenv("PRODUCTION"):
     # Production: Allow configured origins + localhost:8080 for testing
     allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
-    allowed_origins = allowed_origins_str.split(",") if allowed_origins_str else []
+    # Strip whitespace from each origin
+    allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()] if allowed_origins_str else []
     
-    # Also allow localhost:8080 (standard frontend port)
-    allowed_origins.extend([
-        "http://localhost:8080",
-        "http://127.0.0.1:8080"
-    ])
+    # Also allow localhost:8080 (standard frontend port) if not already included
+    localhost_origins = ["http://localhost:8080", "http://127.0.0.1:8080"]
+    for origin in localhost_origins:
+        if origin not in allowed_origins:
+            allowed_origins.append(origin)
+    
     allow_origin_regex = None
+    
+    # Debug logging for production CORS
+    print(f"🌐 PRODUCTION MODE - Allowed CORS origins: {allowed_origins}")
 else:
     # Local development: ONLY allow frontend on port 8080
     # This is more secure than allowing all origins (["*"])
@@ -38,6 +43,7 @@ else:
         "http://127.0.0.1:8080"
     ]
     allow_origin_regex = None
+    print(f"🔧 DEVELOPMENT MODE - Allowed CORS origins: {allowed_origins}")
 
 # CORS middleware
 app.add_middleware(
