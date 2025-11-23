@@ -20,8 +20,9 @@ window.CONFIG = {
   ENABLE_AI: true,
   
   // SECURE: Use backend proxy instead of direct OpenAI calls
-  // Local dev → http://localhost:8000, otherwise Render
-  BACKEND_URL: isLocalDevelopment ? 'http://localhost:8000' : PRODUCTION_BACKEND_URL,
+  // Use production backend
+  BACKEND_URL: PRODUCTION_BACKEND_URL,
+  // BACKEND_URL: isLocalDevelopment ? 'http://localhost:8000' : PRODUCTION_BACKEND_URL,
   
   // DEPRECATED: Direct OpenAI calls (insecure, use backend proxy instead)
   OPENAI_API_URL: 'https://api.openai.com/v1/chat/completions',
@@ -37,6 +38,15 @@ window.CONFIG = {
     password: 'dev123',
     role: 'player', // lowercase - will be converted by backend
   },
+
+  // Optional: public base URL for pre-generated portrait images stored in R2.
+  // When set, pre-generated portraits will expose a usable original image URL
+  // (used for "View Original Art" toggles in the builder/manager).
+  //
+  // Example:
+  //   PREGENERATED_PORTRAIT_BASE_URL:
+  //     'https://your-account-id.r2.dev/danddy-portraits/portraits/pregen'
+  //
+  // Leave as null to disable original image URLs for pre-generated portraits.
+  PREGENERATED_PORTRAIT_BASE_URL: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/pregen',
 };
-
-
