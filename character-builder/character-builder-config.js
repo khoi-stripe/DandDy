@@ -2,13 +2,17 @@
 // Exposes CONFIG as a global on window for the terminal character builder.
 //
 // Detect if running locally (localhost/127.0.0.1) or from file:// (static testing)
+// Prefer the shared DanddyConfig when available so all frontends agree.
 const isLocalDevelopment =
+  (window.DanddyConfig && window.DanddyConfig.isLocalEnvironment) ||
   window.location.hostname === 'localhost' ||
   window.location.hostname === '127.0.0.1' ||
   window.location.protocol === 'file:';
 //
-// Production backend URL (deployed on Render)
-const PRODUCTION_BACKEND_URL = 'https://danddy-api.onrender.com';
+// Backend origin (deployed on Render or local dev) – single source of truth
+const PRODUCTION_BACKEND_URL =
+  (window.DanddyConfig && window.DanddyConfig.BACKEND_ORIGIN) ||
+  'https://danddy-api.onrender.com';
 //
 window.CONFIG = {
   TYPEWRITER_SPEED: 30, // milliseconds per character
@@ -20,9 +24,8 @@ window.CONFIG = {
   ENABLE_AI: true,
   
   // SECURE: Use backend proxy instead of direct OpenAI calls
-  // Use production backend
+  // Use shared backend origin for all parts of the app
   BACKEND_URL: PRODUCTION_BACKEND_URL,
-  // BACKEND_URL: isLocalDevelopment ? 'http://localhost:8000' : PRODUCTION_BACKEND_URL,
   
   // DEPRECATED: Direct OpenAI calls (insecure, use backend proxy instead)
   OPENAI_API_URL: 'https://api.openai.com/v1/chat/completions',

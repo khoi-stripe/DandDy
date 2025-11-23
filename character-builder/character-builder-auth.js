@@ -84,10 +84,17 @@ const AuthUI = (window.AuthUI = {
       errorDiv.classList.add('is-hidden');
 
       try {
-        const user = await AuthService.login(email, password);
+        const result = await AuthService.login(email, password);
         this.showLoading(loadingDiv, false);
-        this.removeAuthScreen();
-        if (onSuccess) onSuccess(user);
+        if (result && result.success) {
+          this.removeAuthScreen();
+          if (onSuccess) onSuccess(result.user);
+        } else {
+          this.showError(
+            errorDiv,
+            (result && result.error) || 'Login failed. Please try again.',
+          );
+        }
       } catch (error) {
         this.showLoading(loadingDiv, false);
         this.showError(errorDiv, error.message || 'Login failed. Please try again.');
@@ -223,13 +230,25 @@ const AuthUI = (window.AuthUI = {
       errorDiv.classList.add('is-hidden');
 
       try {
-        const user = await AuthService.register(email, username, password, role);
+        // Unified AuthService expects (username, email, password)
+        const result = await AuthService.register(username, email, password, role);
         this.showLoading(loadingDiv, false);
-        this.removeAuthScreen();
-        if (onSuccess) onSuccess(user);
+        if (result && result.success) {
+          this.removeAuthScreen();
+          if (onSuccess) onSuccess(result.user);
+        } else {
+          this.showError(
+            errorDiv,
+            (result && result.error) ||
+              'Registration failed. Please try again.',
+          );
+        }
       } catch (error) {
         this.showLoading(loadingDiv, false);
-        this.showError(errorDiv, error.message || 'Registration failed. Please try again.');
+        this.showError(
+          errorDiv,
+          error.message || 'Registration failed. Please try again.',
+        );
       }
     };
 

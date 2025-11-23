@@ -1332,33 +1332,47 @@ const App = (window.App = {
 
     const listHtml = hasVersions
       ? versions
-          .map((v) => {
+          .map((v, index) => {
             const isActive = metadata.activeVersionId === v.id;
             const createdLabel = v.createdAt
               ? new Date(v.createdAt).toLocaleString()
               : '';
-            const safeId = String(v.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+            // Use only the generation date/time as the label for each version
+            const title = createdLabel || 'Unknown time';
+            const infoText = '';
+
+            const hasImage = !!v.url;
+            const thumbHtml = `
+            <div class="card-thumbnail">
+              <div class="ascii-portrait portrait-history-preview" data-version-id="${v.id}"></div>
+              ${
+                hasImage
+                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image is-hidden" data-version-id="${v.id}">`
+                  : ''
+              }
+            </div>`;
+
             return `
-              <div class="portrait-history-item${
-                isActive ? ' is-active' : ''
-              }" data-version-id="${v.id}">
-                <div class="portrait-history-meta">
-                  <div class="portrait-history-title">${
-                    v.label || 'Saved Portrait'
-                  }</div>
-                  <div class="portrait-history-subtext">${createdLabel}</div>
-                </div>
-                <div class="ascii-portrait portrait-history-preview" id="portrait-version-ascii-${safeId}"></div>
-                <div class="portrait-history-actions">
-                  <button class="terminal-btn terminal-btn-small" onclick="App.usePortraitVersion('${v.id}')">
-                    USE THIS
-                  </button>
-                  <button class="terminal-btn terminal-btn-small" onclick="App.deletePortraitVersion('${v.id}')">
-                    DELETE
-                  </button>
-                </div>
+            <div class="character-card portrait-history-card${isActive ? ' is-selected' : ''}" data-version-id="${v.id}" onclick="App.selectPortraitHistoryCard('${v.id}')">
+              ${thumbHtml}
+              <div class="card-details">
+                <div class="card-name">${title}</div>
+                <div class="card-info">${infoText || '&nbsp;'}</div>
               </div>
-            `;
+              <div class="portrait-history-actions">
+                ${
+                  hasImage
+                    ? `<button class="terminal-btn terminal-btn-small" data-toggle-version-id="${v.id}" onclick="App.togglePortraitHistoryView('${v.id}')">
+                  View Original
+                </button>`
+                    : ''
+                }
+                <button class="terminal-btn terminal-btn-small portrait-history-delete-btn" onclick="App.deletePortraitVersion('${v.id}')" title="Delete this portrait version" aria-label="Delete portrait version">
+                  Del
+                </button>
+              </div>
+            </div>
+          `;
           })
           .join('')
       : `<p class="terminal-text-small terminal-text-dim">No saved portraits yet. Generate a custom AI portrait to start a history.</p>`;
@@ -1374,12 +1388,13 @@ const App = (window.App = {
             <p class="terminal-text-small terminal-text-dim">
               View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
             </p>
-            <div class="portrait-history-list">
+            <div class="portrait-history-card-row${versions.length === 1 ? ' is-single' : ''}">
               ${listHtml}
             </div>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" onclick="App.closePortraitHistory()">CLOSE</button>
+            <button class="terminal-btn" onclick="App.closePortraitHistory()">CANCEL</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmPortraitHistorySelection()">USE SELECTED</button>
           </div>
         </div>
       </div>
@@ -1388,25 +1403,52 @@ const App = (window.App = {
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Populate ASCII previews as plain text to avoid HTML parsing issues
+    // Populate ASCII previews (for versions without an image URL) as plain text,
+    // cropped to the same thumbnail framing as the main character cards
     versions.forEach((v) => {
-      const safeId = String(v.id).replace(/[^a-zA-Z0-9_-]/g, '_');
-      const el = document.getElementById(`portrait-version-ascii-${safeId}`);
+      const el = document.querySelector(
+        `.portrait-history-preview.ascii-portrait[data-version-id="${v.id}"]`,
+      );
       if (el && v.ascii) {
-        el.textContent = v.ascii;
+        el.textContent = this.cropAsciiForThumbnail(v.ascii);
       }
     });
 
-    const modal = document.getElementById('portraitHistoryModal');
-    if (modal && Utils.focusFirstFieldInModal) {
-      Utils.focusFirstFieldInModal(modal);
+    // Initialize keyboard-style focus on the first card
+    const cards = this.getPortraitHistoryCards();
+    if (cards.length > 0) {
+      this._portraitHistoryFocusIndex = 0;
+      this.updatePortraitHistoryFocus();
     }
 
-    // ESC key to close
+    // ESC / arrow keys / Enter inside the history modal
     this._portraitHistoryEscHandler = (e) => {
       if (e.key === 'Escape') this.closePortraitHistory();
     };
+    this._portraitHistoryKeyHandler = (e) => {
+      const modal = document.getElementById('portraitHistoryModal');
+      if (!modal) return;
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        this.movePortraitHistoryFocus(-1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        this.movePortraitHistoryFocus(1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        this.movePortraitHistoryFocus(-1);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        this.movePortraitHistoryFocus(1);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        this.confirmPortraitHistorySelection();
+      }
+    };
+
     document.addEventListener('keydown', this._portraitHistoryEscHandler);
+    document.addEventListener('keydown', this._portraitHistoryKeyHandler);
   },
 
   closePortraitHistory() {
@@ -1417,6 +1459,134 @@ const App = (window.App = {
       document.removeEventListener('keydown', this._portraitHistoryEscHandler);
       this._portraitHistoryEscHandler = null;
     }
+    if (this._portraitHistoryKeyHandler) {
+      document.removeEventListener('keydown', this._portraitHistoryKeyHandler);
+      this._portraitHistoryKeyHandler = null;
+    }
+    this._portraitHistoryFocusIndex = 0;
+  },
+
+  getPortraitHistoryCards() {
+    return Array.from(
+      document.querySelectorAll('#portraitHistoryModal .character-card'),
+    );
+  },
+
+  updatePortraitHistoryFocus() {
+    const cards = this.getPortraitHistoryCards();
+    if (cards.length === 0) return;
+
+    const index =
+      typeof this._portraitHistoryFocusIndex === 'number'
+        ? this._portraitHistoryFocusIndex
+        : 0;
+
+    cards.forEach((card, i) => {
+      const isFocused = i === index;
+      card.classList.toggle('is-keyboard-focused', isFocused);
+      card.classList.toggle('is-selected', isFocused);
+    });
+  },
+
+  movePortraitHistoryFocus(delta) {
+    const cards = this.getPortraitHistoryCards();
+    if (cards.length === 0) return;
+
+    const current =
+      typeof this._portraitHistoryFocusIndex === 'number'
+        ? this._portraitHistoryFocusIndex
+        : 0;
+    const next = Math.max(0, Math.min(cards.length - 1, current + delta));
+    this._portraitHistoryFocusIndex = next;
+    this.updatePortraitHistoryFocus();
+  },
+
+  selectPortraitHistoryCard(versionId) {
+    const cards = this.getPortraitHistoryCards();
+    if (cards.length === 0) return;
+
+    let targetIndex = 0;
+    cards.forEach((card, i) => {
+      const matches = card.getAttribute('data-version-id') === versionId;
+      if (matches) {
+        targetIndex = i;
+      }
+    });
+
+    this._portraitHistoryFocusIndex = targetIndex;
+    this.updatePortraitHistoryFocus();
+  },
+
+  togglePortraitHistoryView(versionId) {
+    const asciiEl = document.querySelector(
+      `.portrait-history-preview.ascii-portrait[data-version-id="${versionId}"]`,
+    );
+    const imgEl = document.querySelector(
+      `.portrait-history-image[data-version-id="${versionId}"]`,
+    );
+    const btn = document.querySelector(
+      `.portrait-history-actions button[data-toggle-version-id="${versionId}"]`,
+    );
+
+    if (!imgEl || !asciiEl || !btn) return;
+
+    const showingAscii = imgEl.classList.contains('is-hidden');
+
+    if (showingAscii) {
+      // Switch to original image
+      asciiEl.classList.add('is-hidden');
+      imgEl.classList.remove('is-hidden');
+      btn.textContent = 'View ASCII';
+    } else {
+      // Switch back to ASCII art
+      imgEl.classList.add('is-hidden');
+      asciiEl.classList.remove('is-hidden');
+      btn.textContent = 'View Original';
+    }
+  },
+
+  cropAsciiForThumbnail(asciiArt, heightLines = 80, widthChars = 160) {
+    // Split into lines
+    const lines = asciiArt.split('\n');
+
+    // CROP FROM BOTTOM: Keep the top portion, discard bottom
+    // This ensures faces/heads are visible in the thumbnail
+    const totalLines = lines.length;
+    const startLine = 0; // Always start from the top (keep heads/faces)
+    const endLine = Math.min(totalLines, heightLines); // Crop bottom if needed
+
+    // Get lines from top
+    const topLines = lines
+      .slice(startLine, endLine)
+      .map((line) => line.slice(0, widthChars));
+
+    return topLines.join('\n');
+  },
+
+  async confirmPortraitHistorySelection() {
+    const cards = this.getPortraitHistoryCards();
+    if (cards.length === 0) {
+      this.closePortraitHistory();
+      return;
+    }
+
+    const index =
+      typeof this._portraitHistoryFocusIndex === 'number'
+        ? this._portraitHistoryFocusIndex
+        : 0;
+    const card = cards[index];
+    if (!card) {
+      this.closePortraitHistory();
+      return;
+    }
+
+    const versionId = card.getAttribute('data-version-id');
+    if (!versionId) {
+      this.closePortraitHistory();
+      return;
+    }
+
+    await this.usePortraitVersion(versionId);
   },
 
   async usePortraitVersion(versionId) {
@@ -1657,6 +1827,9 @@ const App = (window.App = {
     };
     
     if (portraitEl) {
+      // While generating, enlarge the font so status messages are readable,
+      // matching the Character Manager's loading treatment.
+      portraitEl.style.fontSize = 'var(--font-size-small)';
       updatePortraitLoading();
       portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
     }
@@ -1702,6 +1875,11 @@ const App = (window.App = {
       if (portraitLoadingInterval) {
         clearInterval(portraitLoadingInterval);
       }
+      if (portraitEl) {
+        // Restore portrait font size back to ASCII default; the sheet will
+        // re-render the portrait element for the newly generated art.
+        portraitEl.style.fontSize = '';
+      }
 
       // Update the last portrait art to trigger animation
       this._lastPortraitArt = null;
@@ -1731,6 +1909,8 @@ const App = (window.App = {
       // Fallback to template
       const state = CharacterState.get();
       if (portraitEl) {
+        // Restore font size and show fallback portrait
+        portraitEl.style.fontSize = '';
         portraitEl.textContent = AsciiArtService.getFullPortrait(
           state.character,
         );
@@ -2435,6 +2615,37 @@ const App = (window.App = {
     backstoryThinkingEl.classList.add('is-waiting');
     await Utils.sleep(1500);
     backstoryThinkingEl.classList.remove('is-waiting');
+
+    // Auto-select spells if character is a spellcaster
+    if (typeof SPELL_DATA !== 'undefined' && SPELL_DATA.isSpellcaster(cls.id)) {
+      const spells = SPELL_DATA.getQuickModeSpells(cls.id);
+      if (spells) {
+        const config = SPELL_DATA.getSpellcastingConfig(cls.id);
+        CharacterState.updateCharacter({
+          spellcastingAbility: config.ability,
+          cantrips: spells.cantrips,
+          spellsKnown: spells.firstLevel,
+          spellsPrepared: config.preparedSpells ? spells.firstLevel : [],
+          spellSlots: config.spellSlots,
+        });
+        
+        // Show a brief message about spell selection
+        narratorPanel.insertAdjacentHTML(
+          'beforeend',
+          Components.renderNarratorMessage(''),
+        );
+        Utils.scrollToBottom(true);
+        const spellsEl =
+          narratorPanel.lastElementChild.querySelector('.narrator-text');
+        await Utils.typewriter(
+          spellsEl,
+          `> Auto-selected ${spells.cantrips.length} cantrip${spells.cantrips.length !== 1 ? 's' : ''} and ${spells.firstLevel.length} 1st level spell${spells.firstLevel.length !== 1 ? 's' : ''} for your ${cls.name}.`,
+        );
+        Utils.scrollToBottom(true);
+        
+        await Utils.sleep(1000);
+      }
+    }
 
     // Jump straight to the completion screen
     const completeQuestion = QUESTIONS.find((q) => q.id === 'complete');

@@ -291,7 +291,10 @@
             <div class="modal-body">
                 <p class="terminal-text">Adjust campaign-specific details. These edits affect this saved copy only.</p>
 
-                <p class="terminal-text-small">Skill Proficiencies <span class="terminal-text-dim">(one per line)</span></p>
+                <p class="terminal-text-small">Character Name</p>
+                <input type="text" id="editName" class="terminal-input" placeholder="Enter character name">
+
+                <p class="terminal-text-small modal-section-label">Skill Proficiencies <span class="terminal-text-dim">(one per line)</span></p>
                 <textarea id="editSkills" class="terminal-textarea terminal-input" placeholder="e.g. Perception&#10;Stealth&#10;Investigation"></textarea>
 
                 <p class="terminal-text-small modal-section-label">Class Equipment / Gear <span class="terminal-text-dim">(one item per line)</span></p>
@@ -353,9 +356,13 @@
                 <div id="authError" class="terminal-text-error is-hidden"></div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="closeAuthModal()">CANCEL</button>
+                <button id="authCancelBtn" class="terminal-btn" onclick="closeAuthModal()">CANCEL</button>
                 <button id="loginBtn" class="terminal-btn terminal-btn-primary" onclick="handleLogin()">LOGIN</button>
                 <button id="registerBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handleRegister()">REGISTER</button>
+            </div>
+            <div id="authLoading" class="loading-indicator is-hidden">
+                <span class="spinner">↻</span>
+                <span class="loading-text">CONTACTING SERVER...</span>
             </div>
         </div>
     </div>
@@ -433,6 +440,10 @@
         </div>
     </div>
     
+    <script src="danddy-config.js"></script>
+    <script src="danddy-auth.js"></script>
+    <script src="danddy-character-mapper.js"></script>
+    <script src="danddy-storage.js"></script>
     <script src="version.js"></script>
     <script src="character-builder/character-builder-config.js"></script>
     <script src="character-builder/character-builder-utils.js"></script>

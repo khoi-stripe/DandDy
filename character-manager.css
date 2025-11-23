@@ -487,6 +487,7 @@
     object-fit: contain;
     text-align: center;
     margin: 0 auto;
+    border: none;
 }
 
 /* Removed - using .text-dim from builder instead */

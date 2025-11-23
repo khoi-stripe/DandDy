@@ -165,6 +165,8 @@ const KeyboardNav = {
 // Local sort metadata helper – tracks last-modified timestamps per character
 // so "Date modified" sorting works even when the backend doesn't provide
 // created/updated fields (or when running against older data).
+const DEBUG_MANAGER = !!(window.DanddyConfig && window.DanddyConfig.DEBUG);
+
 const SortMeta = (window.SortMeta = {
     KEY: 'dnd_character_sort_meta',
     _cache: null,
@@ -217,7 +219,7 @@ const SortMeta = (window.SortMeta = {
     },
 });
 const CharacterStorage = {
-    STORAGE_KEY: 'dnd_characters',
+    STORAGE_KEY: (window.DanddyStorage && window.DanddyStorage.STORAGE_KEY) || 'dnd_characters',
     
     // Check if user is authenticated and should use cloud
     useCloud() {
@@ -396,9 +398,19 @@ const CharacterStorage = {
     // ========================================
 
     _getLocalAll() {
-        const data = localStorage.getItem(this.STORAGE_KEY);
-        const characters = data ? JSON.parse(data) : [];
-        console.log('💾 LOCAL.GETALL: Retrieved', characters.length, 'characters from localStorage');
+        const characters =
+            (window.DanddyStorage && window.DanddyStorage.readAll()) ||
+            (function () {
+                const data = localStorage.getItem(CharacterStorage.STORAGE_KEY);
+                return data ? JSON.parse(data) : [];
+            })();
+        if (DEBUG_MANAGER) {
+            console.log(
+                '💾 LOCAL.GETALL: Retrieved',
+                characters.length,
+                'characters from local storage',
+            );
+        }
 
         // Normalize timestamps so we can reliably sort by recency.
         // Older builder-saved characters may not have createdAt/updatedAt.
@@ -445,19 +457,29 @@ const CharacterStorage = {
     },
 
     _localSaveAll(characters) {
-        console.log('💾 LOCAL.SAVEALL: Saving', characters.length, 'characters to localStorage');
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(characters));
+        if (DEBUG_MANAGER) {
+            console.log('💾 LOCAL.SAVEALL: Saving', characters.length, 'characters to local storage');
+        }
+        if (window.DanddyStorage) {
+            window.DanddyStorage.writeAll(characters);
+        } else {
+            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(characters));
+        }
     },
 
     _localAdd(character) {
-        console.log('💾 LOCAL.ADD: Adding character:', character.name);
+        if (DEBUG_MANAGER) {
+            console.log('💾 LOCAL.ADD: Adding character:', character.name);
+        }
         const characters = this._getLocalAll();
         character.id = this.generateId();
         character.createdAt = new Date().toISOString();
         character.updatedAt = new Date().toISOString();
         characters.push(character);
         this._localSaveAll(characters);
-        console.log('💾 LOCAL.ADD: Character added with ID:', character.id);
+        if (DEBUG_MANAGER) {
+            console.log('💾 LOCAL.ADD: Character added with ID:', character.id);
+        }
         return character;
     },
 
@@ -479,7 +501,9 @@ const CharacterStorage = {
     },
 
     _localDelete(id) {
-        console.log('🗑️ LOCAL.DELETE: Deleting character with ID:', id);
+        if (DEBUG_MANAGER) {
+            console.log('🗑️ LOCAL.DELETE: Deleting character with ID:', id);
+        }
         const characters = this._getLocalAll();
         const filtered = characters.filter(char => char.id !== id);
         this._localSaveAll(filtered);
@@ -560,11 +584,13 @@ const AppState = {
         try {
             this.loading = true;
             this.characters = await CharacterStorage.getAll();
-            console.log('📚 LOAD: Loaded', this.characters.length, 'characters from storage');
-            console.log('📚 LOAD: Full character list with IDs:');
-            this.characters.forEach((c, i) => {
-                console.log(`  ${i+1}. ${c.name} (ID: ${c.id})`);
-            });
+            if (DEBUG_MANAGER) {
+                console.log('📚 LOAD: Loaded', this.characters.length, 'characters from storage');
+                console.log('📚 LOAD: Full character list with IDs:');
+                this.characters.forEach((c, i) => {
+                    console.log(`  ${i+1}. ${c.name} (ID: ${c.id})`);
+                });
+            }
             
             // Initialize SortMeta for characters that don't have entries yet
             // This ensures characters created in the builder get proper sort order
@@ -664,8 +690,10 @@ const UI = {
     },
 
     renderCharacterGrid() {
-        console.log('🎨 RENDER: Starting grid render with', AppState.filteredCharacters.length, 'characters');
-        console.log('🎨 RENDER: Character names:', AppState.filteredCharacters.map(c => c.name).join(', '));
+        if (DEBUG_MANAGER) {
+            console.log('🎨 RENDER: Starting grid render with', AppState.filteredCharacters.length, 'characters');
+            console.log('🎨 RENDER: Character names:', AppState.filteredCharacters.map(c => c.name).join(', '));
+        }
         const grid = document.getElementById('characterGrid');
         const emptyState = document.getElementById('emptyState');
         const characters = AppState.filteredCharacters;
@@ -2268,6 +2296,36 @@ function showRegisterForm() {
     }
 }
 
+function setAuthLoading(isLoading, message) {
+    const loginBtn = document.getElementById('loginBtn');
+    const registerBtn = document.getElementById('registerBtn');
+    const cancelBtn = document.getElementById('authCancelBtn');
+    const loadingEl = document.getElementById('authLoading');
+    const loadingTextEl = loadingEl ? loadingEl.querySelector('.loading-text') : null;
+
+    if (loadingEl && loadingTextEl) {
+        if (isLoading) {
+            loadingEl.classList.remove('is-hidden');
+            loadingTextEl.textContent = message || 'CONTACTING SERVER...';
+        } else {
+            loadingEl.classList.add('is-hidden');
+        }
+    }
+
+    [loginBtn, registerBtn, cancelBtn].forEach((btn) => {
+        if (btn) {
+            btn.disabled = isLoading;
+        }
+    });
+
+    if (loginBtn) {
+        loginBtn.textContent = isLoading ? 'LOGGING IN...' : 'LOGIN';
+    }
+    if (registerBtn) {
+        registerBtn.textContent = isLoading ? 'REGISTERING...' : 'REGISTER';
+    }
+}
+
 async function handleLogin() {
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
@@ -2279,9 +2337,12 @@ async function handleLogin() {
         return;
     }
 
+    errorEl.classList.add('is-hidden');
+    setAuthLoading(true, 'LOGGING IN...');
+
     try {
         const result = await window.AuthService.login(username, password);
-        if (result.success) {
+        if (result && result.success) {
             closeAuthModal();
             updateAuthUI();
             showNotification(`✓ Logged in as ${username}`);
@@ -2295,20 +2356,33 @@ async function handleLogin() {
                 UI.render();
             }
         } else {
-            errorEl.textContent = result.error || 'Login failed';
+            errorEl.textContent = (result && result.error) || 'Login failed';
             errorEl.classList.remove('is-hidden');
         }
     } catch (error) {
         errorEl.textContent = 'Login failed. Please try again.';
         errorEl.classList.remove('is-hidden');
+    } finally {
+        setAuthLoading(false);
     }
 }
 
 async function handleRegister() {
-    const username = document.getElementById('registerUsername').value.trim();
-    const email = document.getElementById('registerEmail').value.trim();
-    const password = document.getElementById('registerPassword').value;
     const errorEl = document.getElementById('authError');
+
+    // Some password managers (and browser autofill) populate fields slightly
+    // after the click event that triggers registration. To avoid spurious
+    // "Please fill in all fields" errors when the UI *looks* filled in, give
+    // the DOM a short moment to settle before reading values.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const usernameInput = document.getElementById('registerUsername');
+    const emailInput = document.getElementById('registerEmail');
+    const passwordInput = document.getElementById('registerPassword');
+
+    const username = usernameInput ? usernameInput.value.trim() : '';
+    const email = emailInput ? emailInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
 
     if (!username || !email || !password) {
         errorEl.textContent = 'Please fill in all fields';
@@ -2322,6 +2396,9 @@ async function handleRegister() {
         errorEl.classList.remove('is-hidden');
         return;
     }
+
+    errorEl.classList.add('is-hidden');
+    setAuthLoading(true, 'CREATING ACCOUNT...');
 
     try {
         const result = await window.AuthService.register(username, email, password);
@@ -2341,6 +2418,8 @@ async function handleRegister() {
     } catch (error) {
         errorEl.textContent = 'Registration failed. Please try again.';
         errorEl.classList.remove('is-hidden');
+    } finally {
+        setAuthLoading(false);
     }
 }
 

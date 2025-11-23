@@ -4,6 +4,7 @@ import api from '../lib/api'
 import { API_ENDPOINTS } from '../config'
 import { User, UserRole } from '../types'
 import { useAuthStore } from '../stores/authStore'
+import { Button } from '../components/Button'
 
 interface UserFormState {
   id?: number
@@ -141,13 +142,15 @@ export default function UsersPage() {
             Manage player and DM accounts. Passwords are only set or reset here and are never shown.
           </p>
         </div>
-        <button
+        <Button
+          type="button"
+          variant="primary"
+          size="md"
           onClick={openCreateModal}
-          className="btn btn-primary btn-md"
+          leadingIcon={<Plus className="h-5 w-5" />}
         >
-          <Plus className="h-5 w-5" />
-          <span>New User</span>
-        </button>
+          New User
+        </Button>
       </div>
 
       {error && (
@@ -283,21 +286,23 @@ export default function UsersPage() {
               </div>
 
               <div className="flex justify-end space-x-3 pt-2">
-                <button
+                <Button
                   type="button"
-                  className="btn btn-secondary btn-md"
+                  variant="secondary"
+                  size="md"
                   onClick={() => setIsModalOpen(false)}
                   disabled={isSaving}
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="btn btn-primary btn-md"
-                  disabled={isSaving}
+                  variant="primary"
+                  size="md"
+                  loading={isSaving}
                 >
                   {isSaving ? 'Saving...' : 'Save'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
