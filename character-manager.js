@@ -195,6 +195,21 @@ const SortMeta = (window.SortMeta = {
         return now;
     },
 
+    // Initialize from an existing timestamp (for characters created outside manager)
+    initializeFrom(id, timestamp) {
+        if (!id || !timestamp) return;
+        const map = this._load();
+        // Only initialize if no entry exists yet
+        if (!map[id]) {
+            map[id] = { updatedAt: timestamp };
+            try {
+                localStorage.setItem(this.KEY, JSON.stringify(map));
+            } catch (e) {
+                console.warn('SortMeta: failed to persist cache', e);
+            }
+        }
+    },
+
     getUpdatedAt(id) {
         if (!id) return null;
         const map = this._load();
@@ -259,8 +274,14 @@ const CharacterStorage = {
     },
 
     // Update existing character
-    async update(id, updates) {
+    // @param {string} id - Character ID
+    // @param {Object} updates - Fields to update
+    // @param {Object} options - Optional settings { silent: boolean }
+    //   - silent: If true, don't update modified timestamp (for automatic background updates)
+    async update(id, updates, options = {}) {
+        const { silent = false } = options;
         const idStr = String(id);
+        
         if (this.useCloud()) {
             // Guard against invalid cloud IDs (e.g. "null", "undefined", or local-only IDs)
             const isInvalidCloudId =
@@ -274,8 +295,8 @@ const CharacterStorage = {
                     '⚠️ Skipping cloud update for character with invalid id; falling back to local update:',
                     id,
                 );
-                const updatedLocal = this._localUpdate(id, updates);
-                if (updatedLocal && updatedLocal.id) {
+                const updatedLocal = this._localUpdate(id, updates, { silent });
+                if (!silent && updatedLocal && updatedLocal.id) {
                     SortMeta.touch(String(updatedLocal.id));
                 }
                 return updatedLocal;
@@ -283,10 +304,12 @@ const CharacterStorage = {
 
             try {
                 const updated = await window.CharacterCloudStorage.update(id, updates);
-                if (updated && updated.id) {
-                    SortMeta.touch(String(updated.id));
-                } else {
-                    SortMeta.touch(idStr);
+                if (!silent) {
+                    if (updated && updated.id) {
+                        SortMeta.touch(String(updated.id));
+                    } else {
+                        SortMeta.touch(idStr);
+                    }
                 }
                 return updated;
             } catch (error) {
@@ -295,11 +318,13 @@ const CharacterStorage = {
                 throw error;
             }
         }
-        const updatedLocal = this._localUpdate(id, updates);
-        if (updatedLocal && updatedLocal.id) {
-            SortMeta.touch(String(updatedLocal.id));
-        } else {
-            SortMeta.touch(idStr);
+        const updatedLocal = this._localUpdate(id, updates, { silent });
+        if (!silent) {
+            if (updatedLocal && updatedLocal.id) {
+                SortMeta.touch(String(updatedLocal.id));
+            } else {
+                SortMeta.touch(idStr);
+            }
         }
         return updatedLocal;
     },
@@ -436,14 +461,16 @@ const CharacterStorage = {
         return character;
     },
 
-    _localUpdate(id, updates) {
+    _localUpdate(id, updates, options = {}) {
+        const { silent = false } = options;
         const characters = this._getLocalAll();
         const index = characters.findIndex(char => char.id === id);
         if (index !== -1) {
             characters[index] = {
                 ...characters[index],
                 ...updates,
-                updatedAt: new Date().toISOString()
+                // Only update timestamp if this isn't a silent update
+                ...(!silent && { updatedAt: new Date().toISOString() })
             };
             this._localSaveAll(characters);
             return characters[index];
@@ -538,6 +565,19 @@ const AppState = {
             this.characters.forEach((c, i) => {
                 console.log(`  ${i+1}. ${c.name} (ID: ${c.id})`);
             });
+            
+            // Initialize SortMeta for characters that don't have entries yet
+            // This ensures characters created in the builder get proper sort order
+            this.characters.forEach(char => {
+                if (char.id && !SortMeta.getUpdatedAt(char.id)) {
+                    // Use the character's existing timestamp, don't create a new one
+                    const timestamp = char.updatedAt || char.createdAt;
+                    if (timestamp) {
+                        SortMeta.initializeFrom(char.id, timestamp);
+                    }
+                }
+            });
+            
             const names = this.characters.map(c => c.name);
             const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
             if (duplicates.length > 0) {
@@ -833,6 +873,9 @@ async function editCharacter(id) {
         if (el) el.value = value || '';
     };
 
+    // CHARACTER NAME
+    setValue('editName', character.name || '');
+
     // SKILL PROFICIENCIES (text-only list, one per line)
     const skillList = (parsed.skillProficiencies || []).map(s => CharacterSheet.formatSkillName(s)).join('\n');
     setValue('editSkills', skillList);
@@ -896,8 +939,12 @@ async function saveEditDetails() {
     const backstoryEl = document.getElementById('editBackstory');
     const backstoryText = backstoryEl ? backstoryEl.value.trim() : '';
 
+    const nameEl = document.getElementById('editName');
+    const nameText = nameEl ? nameEl.value.trim() : '';
+
     const updates = {
         // Store raw IDs/names; CharacterSheet will format as needed
+        name: nameText,
         skillProficiencies: skillLines.map(s => s.toLowerCase().replace(/\s+/g, '-')),
         equipment: equipmentLines,
         toolProficiencies: toolLines.map(t => t.toLowerCase().replace(/\s+/g, '-')),
@@ -1124,6 +1171,10 @@ async function confirmGeneratePortrait() {
         // Update character in storage and append a new portrait version
         const currentCount = character.customPortraitCount || 0;
 
+        console.log('%c🎨 PORTRAIT HISTORY CHECK', 'color: #0ff; font-weight: bold');
+        console.log('  window.PortraitHistory exists:', !!window.PortraitHistory);
+        console.log('  addVersion is function:', typeof window.PortraitHistory?.addVersion === 'function');
+
         let updatedMetadata;
         if (window.PortraitHistory && typeof window.PortraitHistory.addVersion === 'function') {
             const existingMetadata = character.portraitMetadata || {};
@@ -1173,7 +1224,12 @@ async function confirmGeneratePortrait() {
                     prompt: customPrompt,
                 },
             );
+            console.log('%c🎨 PORTRAIT HISTORY UPDATED', 'color: #0f0; font-weight: bold');
+            console.log('  Versions count:', updatedMetadata.versions?.length || 0);
+            console.log('  Active version:', updatedMetadata.activeVersionId);
         } else {
+            console.log('%c⚠️ PORTRAIT HISTORY NOT AVAILABLE!', 'color: #f00; font-weight: bold');
+            console.log('  Using fallback - no versions will be saved');
             updatedMetadata = character.portraitMetadata || {};
         }
 
@@ -1251,17 +1307,35 @@ async function confirmGeneratePortrait() {
 
 // ===== PORTRAIT HISTORY (MANAGER) =====
 async function openPortraitHistory(characterId) {
+    console.log('%c🎨 OPENING PORTRAIT HISTORY', 'color: #0ff; font-weight: bold');
+    console.log('  Character ID:', characterId);
+    
     const character = await CharacterStorage.getById(characterId);
-    if (!character) return;
+    if (!character) {
+        console.log('%c⚠️ Character not found!', 'color: #f00; font-weight: bold');
+        return;
+    }
 
     const metadata = character.portraitMetadata || {};
     const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
 
+    console.log('  Portrait metadata:', metadata);
+    console.log('  Versions count:', versions.length);
+    console.log('  Versions:', versions);
+
     if (document.getElementById('portraitHistoryModal')) {
+        console.log('  Modal already open');
         return;
     }
 
     const hasVersions = versions.length > 0;
+
+    // Check if character has a custom portrait but no version history yet
+    const hasCustomPortraitWithoutHistory = !hasVersions && (
+        character.customPortraitAscii ||
+        character.originalPortraitUrl ||
+        character.portrait?.url
+    );
 
     const listHtml = hasVersions
         ? versions
@@ -1308,7 +1382,21 @@ async function openPortraitHistory(characterId) {
           `;
               })
               .join('')
-        : `<p class="terminal-text-small terminal-text-dim">No saved portraits yet. Generate a custom AI portrait to start a history.</p>`;
+        : hasCustomPortraitWithoutHistory
+          ? `<div class="terminal-text-small terminal-text-dim" style="padding: 20px; text-align: center;">
+              <p><strong>No portrait history yet.</strong></p>
+              <p style="margin-top: 10px;">This character's portrait was created before the history feature was added.</p>
+              <p style="margin-top: 10px;">Generate a new custom AI portrait to:</p>
+              <ul style="text-align: left; margin: 10px auto; display: inline-block;">
+                <li>• Save your current portrait as Version 1</li>
+                <li>• Add the new portrait as Version 2</li>
+                <li>• Enable portrait version switching</li>
+              </ul>
+            </div>`
+          : `<p class="terminal-text-small terminal-text-dim" style="padding: 20px; text-align: center;">
+              No saved portraits yet.<br><br>
+              Generate a custom AI portrait to start building a history.
+            </p>`;
 
     const modalHTML = `
       <div id="portraitHistoryModal" class="modal show" onclick="closePortraitHistory()">
@@ -2228,6 +2316,13 @@ async function handleRegister() {
         return;
     }
 
+    // Validate password length (bcrypt limit is 72 bytes)
+    if (new Blob([password]).size > 72) {
+        errorEl.textContent = 'Password is too long (max 72 bytes)';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
     try {
         const result = await window.AuthService.register(username, email, password);
         if (result.success) {
@@ -2619,6 +2714,62 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
+    // Add Enter key support for login/register forms
+    const loginUsernameInput = document.getElementById('loginUsername');
+    const loginPasswordInput = document.getElementById('loginPassword');
+    const registerUsernameInput = document.getElementById('registerUsername');
+    const registerEmailInput = document.getElementById('registerEmail');
+    const registerPasswordInput = document.getElementById('registerPassword');
+
+    // Add Enter key support for login form
+    if (loginUsernameInput) {
+        loginUsernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleLogin();
+            }
+        });
+    }
+
+    if (loginPasswordInput) {
+        loginPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleLogin();
+            }
+        });
+    }
+
+    // Add Enter key support for register form
+    if (registerUsernameInput) {
+        registerUsernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleRegister();
+            }
+        });
+    }
+
+    if (registerEmailInput) {
+        registerEmailInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleRegister();
+            }
+        });
+    }
+
+    if (registerPasswordInput) {
+        registerPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleRegister();
+            }
+        });
+    }
+
+    // Note: Debug listeners removed - they were interfering with button clicks
 
     // Initialize app state (async) - will render when done
     await AppState.init();
