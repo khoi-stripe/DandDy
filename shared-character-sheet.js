@@ -187,16 +187,33 @@ const CharacterSheet = (window.CharacterSheet = {
         ? 'App.togglePortraitView()'
         : `togglePortraitView('${safeIdForDom}')`;
 
-    const hasHistory =
-      character.portraitMetadata &&
-      Array.isArray(character.portraitMetadata.versions) &&
-      character.portraitMetadata.versions.length > 0;
+    // Show portrait history button if character has ANY custom portrait
+    // (even if no version history exists yet - will show helpful empty state)
+    const hasCustomPortrait = !!(
+      character.customPortraitAscii ||
+      character.originalPortraitUrl ||
+      character.portrait?.url ||
+      (character.portraitMetadata &&
+       Array.isArray(character.portraitMetadata.versions) &&
+       character.portraitMetadata.versions.length > 0)
+    );
     const historyFn =
       context === 'builder'
         ? 'App.openPortraitHistory()'
         : hasValidManagerId
           ? `openPortraitHistory('${character.id}')`
           : null;
+
+    // Debug logging for portrait history button
+    if (context === 'manager' && character.id) {
+      console.log(`%c🎨 PORTRAIT HISTORY BUTTON [${character.name || character.id}]`, 'color: #0ff');
+      console.log('  hasCustomPortrait:', hasCustomPortrait);
+      console.log('  historyFn:', historyFn);
+      console.log('  Will show button:', hasCustomPortrait && historyFn);
+      if (character.portraitMetadata) {
+        console.log('  Versions:', character.portraitMetadata.versions?.length || 0);
+      }
+    }
 
     return `
       <div class="portrait-container">
@@ -219,7 +236,7 @@ const CharacterSheet = (window.CharacterSheet = {
             </button>
           `
             : ''}
-          ${hasHistory && historyFn
+          ${hasCustomPortrait && historyFn
             ? `
             <button class="terminal-btn terminal-btn-small" onclick="${historyFn}" title="View saved portrait history">
               ⧖ Portrait History
@@ -416,75 +433,6 @@ const CharacterSheet = (window.CharacterSheet = {
         </div>
         <div class="sheet-content">
           ${contentMarkup}
-        </div>
-      </div>
-    `;
-  },
-
-  _renderSpells(parsed) {
-    const cantrips = parsed.cantrips || [];
-    const spellsKnown = parsed.spellsKnown || [];
-    const spellsPrepared = parsed.spellsPrepared || [];
-    const spellSlots = parsed.spellSlots || {};
-
-    // Helper to render spell list
-    const renderSpellList = (spells) => {
-      return spells.map(spell => {
-        const name = spell.name || spell;
-        const school = spell.school ? ` <span class="text-dim">(${spell.school})</span>` : '';
-        const desc = spell.description ? `<div class="text-dim terminal-text-small" style="margin-left: 1rem;">${spell.description}</div>` : '';
-        return `<div class="text-dim" style="margin-bottom: 0.25rem;">• ${name}${school}</div>${desc}`;
-      }).join('');
-    };
-
-    let spellsContent = '';
-
-    // Cantrips
-    if (cantrips.length > 0) {
-      spellsContent += `
-        <div class="sheet-subsection">
-          <div class="sheet-subsection-title">CANTRIPS (At-Will)</div>
-          ${renderSpellList(cantrips)}
-        </div>
-      `;
-    }
-
-    // 1st Level Spells
-    if (spellsKnown.length > 0 || spellsPrepared.length > 0) {
-      const spellList = spellsKnown.length > 0 ? spellsKnown : spellsPrepared;
-      const slotsText = spellSlots['1'] ? ` • Slots: ${spellSlots['1']}` : '';
-      const preparedText = spellsPrepared.length > 0 && spellsKnown.length === 0 ? ' (Prepared)' : '';
-      
-      spellsContent += `
-        <div class="sheet-subsection">
-          <div class="sheet-subsection-title">1ST LEVEL${preparedText}${slotsText}</div>
-          ${renderSpellList(spellList)}
-        </div>
-      `;
-    }
-
-    // Spellcasting ability note
-    if (parsed.spellcastingAbility) {
-      const abilityName = {
-        'int': 'Intelligence',
-        'wis': 'Wisdom',
-        'cha': 'Charisma'
-      }[parsed.spellcastingAbility] || parsed.spellcastingAbility;
-      
-      spellsContent += `
-        <div class="text-dim terminal-text-small" style="margin-top: 0.5rem;">
-          Spellcasting Ability: ${abilityName}
-        </div>
-      `;
-    }
-
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ SPELLS ]</div>
-        </div>
-        <div class="sheet-content">
-          ${spellsContent}
         </div>
       </div>
     `;
@@ -1063,12 +1011,13 @@ const CharacterSheet = (window.CharacterSheet = {
     character.asciiPortraitKey = key;
 
     // Persist the upgraded portrait so future loads are instant
+    // Use silent mode so automatic portrait upgrades don't mark character as "modified"
     try {
       if (context === 'manager' && window.CharacterStorage && character.id) {
         window.CharacterStorage.update(character.id, {
           asciiPortrait: ascii,
           asciiPortraitKey: key,
-        });
+        }, { silent: true });  // Silent mode: don't update modified timestamp
       } else if (context === 'builder' && window.CharacterState) {
         // In builder context, update local state only. We no longer auto-save
         // new characters here; the player explicitly saves from the builder UI.

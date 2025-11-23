@@ -3,185 +3,22 @@
 // ========================================
 // Handles authentication and cloud storage operations for character-manager
 
-// Auto-detect environment (local file / localhost vs deployed on GitHub Pages)
-const isLocalEnvironment =
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1' ||
-  window.location.protocol === 'file:';
+// Shared environment / URL config (single source of truth for the whole app)
+const {
+  isLocalEnvironment = false,
+  API_BASE_URL,
+  TOKEN_STORAGE_KEY,
+  USER_STORAGE_KEY,
+} = window.DanddyConfig || {};
 
-// TESTING: Point to production from localhost (CORS is now fixed)
-const API_BASE_URL = 'https://danddy-api.onrender.com/api';
-// const API_BASE_URL = isLocalEnvironment
-//   ? 'http://localhost:8000/api'
-//   : 'https://danddy-api.onrender.com/api';
-
-const TOKEN_STORAGE_KEY = 'dnd_auth_token';
-const USER_STORAGE_KEY = 'dnd_user_info';
+const DEBUG_CLOUD = !!(window.DanddyConfig && window.DanddyConfig.DEBUG);
 
 // ========================================
-// AUTH SERVICE (Extend existing if present)
+// AUTH SERVICE
 // ========================================
-// Extend the existing AuthService from character-builder-services.js
-if (!window.AuthService) {
-  window.AuthService = {};
-}
-
-// Override/add methods for character manager
-Object.assign(window.AuthService, {
-  // Register new user (override existing)
-  async register(username, email, password) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Registration failed');
-      }
-
-      const data = await response.json();
-      this.setToken(data.access_token);
-      this.setCurrentUser({ username, email });
-      
-      return { success: true, user: { username, email } };
-    } catch (error) {
-      console.error('Registration error:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Login user (override existing)
-  async login(username, password) {
-    try {
-      // OAuth2 password flow expects form data
-      const formData = new FormData();
-      formData.append('username', username);
-      formData.append('password', password);
-
-      const response = await fetch(`${API_BASE_URL}/auth/token`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Login failed');
-      }
-
-      const data = await response.json();
-      this.setToken(data.access_token);
-      
-      // Fetch user profile
-      const userProfile = await this.fetchUserProfile();
-      if (userProfile) {
-        this.setCurrentUser(userProfile);
-      }
-
-      return { success: true, user: userProfile };
-    } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  /**
-   * Request a password reset for the given email.
-   * Always returns a generic success message to avoid leaking which emails exist.
-   * In development, the backend may include a debug_reset_token that we surface
-   * so the UI can auto-fill the token field.
-   */
-  async forgotPassword(email) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/password/forgot`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-
-      // The endpoint always returns 200 with a generic message, even if the
-      // email does not exist, so we only treat network/HTTP failures as errors.
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.detail || 'Password reset request failed');
-      }
-
-      const data = await response.json();
-      return {
-        success: true,
-        message:
-          data.message ||
-          'If an account with that email exists, a password reset link has been sent.',
-        debugToken: data.debug_reset_token || null,
-      };
-    } catch (error) {
-      console.error('Forgot password error:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  /**
-   * Complete a password reset using a reset token and new password.
-   * On success, stores the new access token and refreshes the current user
-   * profile so the app treats the user as logged in.
-   */
-  async resetPassword(token, newPassword) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/password/reset`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, new_password: newPassword }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.detail || 'Password reset failed');
-      }
-
-      const data = await response.json();
-      if (!data.access_token) {
-        throw new Error('Password reset succeeded but no token was returned.');
-      }
-
-      // Store fresh token and refresh user profile so cloud features are ready.
-      this.setToken(data.access_token);
-      const userProfile = await this.fetchUserProfile();
-      if (userProfile) {
-        this.setCurrentUser(userProfile);
-      }
-
-      return { success: true, user: userProfile };
-    } catch (error) {
-      console.error('Reset password error:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
-  // Fetch user profile
-  async fetchUserProfile() {
-    try {
-      const token = this.getToken();
-      if (!token) return null;
-
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch user profile');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Fetch profile error:', error);
-      return null;
-    }
-  },
-});
+// The unified AuthService is now defined in `danddy-auth.js` and exposed as
+// `window.AuthService`. This file only *uses* that shared service (for example,
+// via AuthService.getToken() inside API helpers below).
 
 // ========================================
 // CHARACTER CLOUD STORAGE SERVICE
@@ -205,193 +42,14 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
     });
   },
   
-  // Convert localStorage character format to API format
+  // Convert localStorage character format to API format (shared mapper)
   _toAPIFormat(character) {
-    // Map frontend character structure to backend API schema
-    return {
-      name: character.name || 'Unnamed Character',
-      race: character.race || character.raceData?.name || 'Human',
-      character_class: character.class || character.classData?.name || 'Fighter',
-      level: character.level || 1,
-      background: character.background || character.backgroundData?.name || null,
-      alignment: this._mapAlignment(character.alignment),
-      experience_points: character.experiencePoints || 0,
-      
-      // Ability Scores
-      strength: character.abilities?.str || character.abilityScores?.str || 10,
-      dexterity: character.abilities?.dex || character.abilityScores?.dex || 10,
-      constitution: character.abilities?.con || character.abilityScores?.con || 10,
-      intelligence: character.abilities?.int || character.abilityScores?.int || 10,
-      wisdom: character.abilities?.wis || character.abilityScores?.wis || 10,
-      charisma: character.abilities?.cha || character.abilityScores?.cha || 10,
-      
-      // Combat Stats
-      hit_points_max: character.hitPoints?.max || character.hitPoints || 10,
-      hit_points_current: character.hitPoints?.current || character.hitPoints?.max || character.hitPoints || 10,
-      hit_points_temp: character.hitPoints?.temp || 0,
-      armor_class: character.armorClass || 10,
-      initiative: character.initiative || 0,
-      speed: character.speed || 30,
-      
-      // Death Saves
-      death_save_successes: character.deathSaves?.successes || 0,
-      death_save_failures: character.deathSaves?.failures || 0,
-      
-      // Proficiencies (arrays)
-      saving_throw_proficiencies: character.savingThrows || [],
-      skill_proficiencies: character.skillProficiencies || [],
-      skill_expertises: character.skillExpertises || [],
-      tool_proficiencies: character.toolProficiencies || [],
-      languages: character.languages || [],
-      
-      // Features and Traits
-      racial_traits: character.racialTraits || character.raceData?.traits || [],
-      class_features: character.classFeatures || character.classData?.features || [],
-      feats: character.feats || [],
-      background_feature: character.backgroundFeature || character.backgroundData?.feature || {},
-      
-      // Personality
-      personality_traits: character.personalityTraits || character.personalityTrait || null,
-      ideals: character.ideals || null,
-      bonds: character.bonds || null,
-      flaws: character.flaws || null,
-      
-      // Appearance & Backstory
-      appearance: character.appearance || null,
-      backstory: character.backstory || null,
-      
-      // Portrait Data
-      ascii_portrait: character.asciiPortrait || null,
-      original_portrait_url: character.originalPortraitUrl || null,
-      custom_portrait_ascii: character.customPortraitAscii || null,
-      custom_portrait_count: character.customPortraitCount || 0,
-      portrait_metadata: character.portraitMetadata || {},
-      
-      // Inventory
-      inventory: (character.equipment || []).map(item => 
-        typeof item === 'string' ? { name: item } : item
-      ),
-      
-      // Spellcasting
-      spellcasting_ability: character.spellcastingAbility || null,
-      spell_save_dc: character.spellSaveDC || null,
-      spell_attack_bonus: character.spellAttackBonus || null,
-      spell_slots: character.spellSlots || {},
-      spell_slots_used: character.spellSlotsUsed || {},
-      cantrips: this._spellsToStringArray(character.cantrips),
-      spells_known: this._spellsToStringArray(character.spellsKnown),
-      spells_prepared: this._spellsToStringArray(character.spellsPrepared),
-      
-      // Combat
-      conditions: character.conditions || [],
-      attacks: character.attacks || [],
-      
-      // Currency
-      copper_pieces: character.currency?.cp || 0,
-      silver_pieces: character.currency?.sp || 0,
-      electrum_pieces: character.currency?.ep || 0,
-      gold_pieces: character.currency?.gp || 0,
-      platinum_pieces: character.currency?.pp || 0,
-      
-      // Campaign
-      campaign_id: character.campaignId || null,
-    };
+    return window.DanddyCharacterMapper.fromManagerToBackend(character);
   },
-
-  // Convert API format to frontend character format
+  
+  // Convert API format to frontend character format (shared mapper)
   _fromAPIFormat(apiChar) {
-    return {
-      id: apiChar.id.toString(),
-      name: apiChar.name,
-      race: apiChar.race,
-      class: apiChar.character_class,
-      level: apiChar.level,
-      background: apiChar.background,
-      alignment: apiChar.alignment,
-      experiencePoints: apiChar.experience_points,
-      
-      // Ability Scores
-      abilities: {
-        str: apiChar.strength,
-        dex: apiChar.dexterity,
-        con: apiChar.constitution,
-        int: apiChar.intelligence,
-        wis: apiChar.wisdom,
-        cha: apiChar.charisma,
-      },
-      
-      // Combat Stats
-      hitPoints: {
-        max: apiChar.hit_points_max,
-        current: apiChar.hit_points_current,
-        temp: apiChar.hit_points_temp,
-      },
-      armorClass: apiChar.armor_class,
-      initiative: apiChar.initiative,
-      speed: apiChar.speed,
-      
-      // Proficiencies
-      savingThrows: apiChar.saving_throw_proficiencies,
-      skillProficiencies: apiChar.skill_proficiencies,
-      skillExpertises: apiChar.skill_expertises,
-      toolProficiencies: apiChar.tool_proficiencies,
-      languages: apiChar.languages,
-      
-      // Features
-      racialTraits: apiChar.racial_traits,
-      classFeatures: apiChar.class_features,
-      feats: apiChar.feats,
-      backgroundFeature: apiChar.background_feature,
-      
-      // Personality & Backstory
-      personalityTraits: apiChar.personality_traits,
-      ideals: apiChar.ideals,
-      bonds: apiChar.bonds,
-      flaws: apiChar.flaws,
-      appearance: apiChar.appearance,
-      backstory: apiChar.backstory,
-      
-      // Equipment
-      equipment: apiChar.inventory.map(item => 
-        typeof item === 'object' && item.name ? item.name : item
-      ),
-      
-      // Spellcasting
-      spellcastingAbility: apiChar.spellcasting_ability,
-      spellSaveDC: apiChar.spell_save_dc,
-      spellAttackBonus: apiChar.spell_attack_bonus,
-      spellSlots: apiChar.spell_slots,
-      spellSlotsUsed: apiChar.spell_slots_used,
-      cantrips: apiChar.cantrips || [],
-      spellsKnown: apiChar.spells_known || [],
-      spellsPrepared: apiChar.spells_prepared || [],
-      
-      // Combat
-      conditions: apiChar.conditions,
-      attacks: apiChar.attacks,
-      
-      // Currency
-      currency: {
-        cp: apiChar.copper_pieces,
-        sp: apiChar.silver_pieces,
-        ep: apiChar.electrum_pieces,
-        gp: apiChar.gold_pieces,
-        pp: apiChar.platinum_pieces,
-      },
-      
-      // Metadata
-      campaignId: apiChar.campaign_id,
-      ownerId: apiChar.owner_id,
-      createdAt: apiChar.created_at,
-      updatedAt: apiChar.updated_at,
-      
-      // Portrait data (from API snake_case fields)
-      asciiPortrait: apiChar.ascii_portrait,
-      originalPortraitUrl: apiChar.original_portrait_url,
-      customPortraitAscii: apiChar.custom_portrait_ascii,
-      customPortraitCount: apiChar.custom_portrait_count || 0,
-      portraitMetadata: apiChar.portrait_metadata || {},
-    };
+    return window.DanddyCharacterMapper.fromBackendToManager(apiChar);
   },
 
   // Map alignment to API enum format
@@ -460,10 +118,14 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
   // Get all characters for current user
   async getAll() {
     try {
-      console.log('☁️ CLOUD: Fetching all characters from API...');
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Fetching all characters from API...');
+      }
       const apiChars = await this._apiRequest('/characters/');
       const characters = apiChars.map(c => this._fromAPIFormat(c));
-      console.log('☁️ CLOUD: Retrieved', characters.length, 'characters');
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Retrieved', characters.length, 'characters');
+      }
       return characters;
     } catch (error) {
       console.error('☁️ CLOUD ERROR: Failed to fetch characters:', error);
@@ -474,7 +136,9 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
   // Get single character by ID
   async getById(id) {
     try {
-      console.log('☁️ CLOUD: Fetching character', id);
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Fetching character', id);
+      }
       const apiChar = await this._apiRequest(`/characters/${id}`);
       return this._fromAPIFormat(apiChar);
     } catch (error) {
@@ -486,7 +150,9 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
   // Add new character
   async add(character) {
     try {
-      console.log('☁️ CLOUD: Creating character:', character.name);
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Creating character:', character.name);
+      }
       const apiData = this._toAPIFormat(character);
       const apiChar = await this._apiRequest('/characters/', {
         method: 'POST',
@@ -494,7 +160,9 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       });
       
       const newChar = this._fromAPIFormat(apiChar);
-      console.log('☁️ CLOUD: Character created with ID:', newChar.id);
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Character created with ID:', newChar.id);
+      }
       return newChar;
     } catch (error) {
       console.error('☁️ CLOUD ERROR: Failed to create character:', error);
@@ -505,7 +173,9 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
   // Update existing character
   async update(id, updates) {
     try {
-      console.log('☁️ CLOUD: Updating character', id);
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Updating character', id);
+      }
       
       // For partial updates, we need to map the frontend fields
       const apiUpdates = {};
@@ -556,9 +226,13 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
   // Delete character
   async delete(id) {
     try {
-      console.log('☁️ CLOUD: Deleting character', id);
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Deleting character', id);
+      }
       await this._apiRequest(`/characters/${id}`, { method: 'DELETE' });
-      console.log('☁️ CLOUD: Character deleted successfully');
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Character deleted successfully');
+      }
       return true;
     } catch (error) {
       console.error('☁️ CLOUD ERROR: Failed to delete character:', error);
@@ -569,12 +243,16 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
   // Duplicate character
   async duplicate(id) {
     try {
-      console.log('☁️ CLOUD: Duplicating character', id);
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Duplicating character', id);
+      }
       const apiChar = await this._apiRequest(`/characters/${id}/duplicate`, {
         method: 'POST',
       });
       const duplicated = this._fromAPIFormat(apiChar);
-      console.log('☁️ CLOUD: Character duplicated with ID:', duplicated.id);
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Character duplicated with ID:', duplicated.id);
+      }
       return duplicated;
     } catch (error) {
       console.error('☁️ CLOUD ERROR: Failed to duplicate character:', error);
@@ -596,7 +274,9 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
   // Import character from JSON
   async import(jsonString) {
     try {
-      console.log('☁️ CLOUD: Importing character from JSON');
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Importing character from JSON');
+      }
       const character = JSON.parse(jsonString);
       
       // Remove ID if it exists (create new character)
@@ -604,7 +284,9 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       delete character.ownerId;
       
       const result = await this.add(character);
-      console.log('☁️ CLOUD: Character imported with ID:', result.id);
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Character imported with ID:', result.id);
+      }
       return result;
     } catch (error) {
       console.error('☁️ CLOUD ERROR: Failed to import character:', error);
@@ -622,19 +304,27 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
 // MIGRATION UTILITY
 // ========================================
 const MigrationService = (window.MigrationService = {
-  LOCAL_STORAGE_KEY: 'dnd_characters',
+  LOCAL_STORAGE_KEY: (window.DanddyStorage && window.DanddyStorage.STORAGE_KEY) || 'dnd_characters',
   
   // Check if there are characters in localStorage
   hasLocalCharacters() {
-    const data = localStorage.getItem(this.LOCAL_STORAGE_KEY);
-    const characters = data ? JSON.parse(data) : [];
+    const characters =
+      (window.DanddyStorage && window.DanddyStorage.readAll()) ||
+      (function (key) {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : [];
+      })(this.LOCAL_STORAGE_KEY);
     return characters.length > 0;
   },
 
   // Get count of local characters
   getLocalCharacterCount() {
-    const data = localStorage.getItem(this.LOCAL_STORAGE_KEY);
-    const characters = data ? JSON.parse(data) : [];
+    const characters =
+      (window.DanddyStorage && window.DanddyStorage.readAll()) ||
+      (function (key) {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : [];
+      })(this.LOCAL_STORAGE_KEY);
     return characters.length;
   },
 
@@ -647,8 +337,12 @@ const MigrationService = (window.MigrationService = {
 
       console.log('📦 MIGRATION: Starting migration of localStorage characters to cloud...');
       
-      const data = localStorage.getItem(this.LOCAL_STORAGE_KEY);
-      const localCharacters = data ? JSON.parse(data) : [];
+    const localCharacters =
+      (window.DanddyStorage && window.DanddyStorage.readAll()) ||
+      (function (key) {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : [];
+      })(this.LOCAL_STORAGE_KEY);
       
       console.log('📦 MIGRATION: Found', localCharacters.length, 'characters to migrate');
       
@@ -682,11 +376,16 @@ const MigrationService = (window.MigrationService = {
 
   // Backup localStorage data before clearing
   backupLocalStorage() {
-    const data = localStorage.getItem(this.LOCAL_STORAGE_KEY);
-    if (data) {
+    const chars =
+      (window.DanddyStorage && window.DanddyStorage.readAll()) ||
+      (function (key) {
+        const data = localStorage.getItem(key);
+        return data ? JSON.parse(data) : [];
+      })(this.LOCAL_STORAGE_KEY);
+    if (chars && chars.length) {
       const backup = {
         timestamp: new Date().toISOString(),
-        characters: JSON.parse(data),
+        characters: chars,
       };
       
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -705,10 +404,25 @@ const MigrationService = (window.MigrationService = {
 
   // Clear localStorage characters (after successful migration)
   clearLocalStorage() {
-    localStorage.removeItem(this.LOCAL_STORAGE_KEY);
-    console.log('📦 CLEAR: Cleared localStorage characters');
+    if (window.DanddyStorage) {
+      window.DanddyStorage.clearAll();
+    } else {
+      // Remove primary character storage
+      localStorage.removeItem(this.LOCAL_STORAGE_KEY);
+      // Also remove any legacy/cache copies of characters to avoid duplicates
+      try {
+        localStorage.removeItem(this.LOCAL_STORAGE_KEY + '_cache');
+      } catch (e) {
+        console.warn('📦 CLEAR: Failed to clear local cache key', e);
+      }
+    }
+    if (DEBUG_CLOUD) {
+      console.log('📦 CLEAR: Cleared local character storage (including cache, if present)');
+    }
   },
 });
 
-console.log('☁️ Character Manager Cloud API Service loaded');
+if (DEBUG_CLOUD) {
+  console.log('☁️ Character Manager Cloud API Service loaded');
+}
 

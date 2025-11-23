@@ -138,14 +138,14 @@ def forgot_password(request: PasswordResetRequest, db: Session = Depends(get_db)
         return {"message": message}
 
     reset_token = create_password_reset_token(user.id)
-    response = {"message": message}
-
-    # In development, surface the token directly to simplify testing.
-    if not os.getenv("PRODUCTION"):
-        response["debug_reset_token"] = reset_token
-
-    # In production, integrate your email provider here to send the token.
-    return response
+    # Always include a debug_reset_token in the response. In a typical
+    # production deployment you would *also* send this via email, but for
+    # this app we surface it directly so the frontend can complete the reset
+    # flow without an email provider.
+    return {
+        "message": message,
+        "debug_reset_token": reset_token,
+    }
 
 
 @router.post("/password/reset", response_model=Token)

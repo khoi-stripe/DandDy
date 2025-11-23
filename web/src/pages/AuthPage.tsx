@@ -159,7 +159,13 @@ export default function AuthPage() {
               fullWidth
               loading={isLoading}
             >
-              {isLogin ? 'Login' : 'Register'}
+              {isLoading
+                ? isLogin
+                  ? 'Logging in...'
+                  : 'Registering...'
+                : isLogin
+                ? 'Login'
+                : 'Register'}
             </Button>
           </form>
         </div>

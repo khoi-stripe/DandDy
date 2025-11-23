@@ -247,7 +247,7 @@
 }
 
 .ascii-portrait {
-  font-size: 6px;
+  font-size: 7px;
   line-height: 1.2;
   color: var(--terminal-accent);
   text-align: center;
@@ -262,7 +262,7 @@
 .original-portrait {
   max-width: 100%;
   height: auto;
-  border: 2px solid var(--terminal-border);
+  border: none;
   display: none;
 }
 
@@ -529,8 +529,10 @@
 
 .spinner {
   display: inline-block;
-  font-size: 16px;
   animation: spin 1s linear infinite;
+  font-size: 18px;
+  color: var(--panel-teal);
+  text-shadow: none;
 }
 
 @keyframes splash-glow {
@@ -679,7 +681,8 @@
   padding: var(--spacing-xl);
 }
 
-.spinner {
+.auth-screen .spinner,
+.manager-screen .spinner {
   font-size: 16px;
   color: var(--terminal-fg);
   text-shadow: none;

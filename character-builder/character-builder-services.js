@@ -2,6 +2,7 @@
 // Exposes services as globals on window for use by inline handlers and other modules.
 
 const CONFIG = window.CONFIG;
+const DEBUG_BUILDER = !!(window.DanddyConfig && window.DanddyConfig.DEBUG);
 const DND_DATA = window.DND_DATA;
 // Utils is defined globally in character-builder-utils.js as window.Utils.
 
@@ -155,154 +156,8 @@ const ImageToAsciiService = (window.ImageToAsciiService = {
   },
 });
 
-// Authentication service
-const AuthService = (window.AuthService = {
-  TOKEN_KEY: 'dnd_auth_token',
-  USER_KEY: 'dnd_current_user',
-
-  // Get stored token
-  getToken() {
-    return localStorage.getItem(this.TOKEN_KEY);
-  },
-
-  // Set token
-  setToken(token) {
-    localStorage.setItem(this.TOKEN_KEY, token);
-  },
-
-  // Remove token
-  clearToken() {
-    localStorage.removeItem(this.TOKEN_KEY);
-    localStorage.removeItem(this.USER_KEY);
-  },
-
-  // Get current user info
-  getCurrentUser() {
-    const data = localStorage.getItem(this.USER_KEY);
-    return data ? JSON.parse(data) : null;
-  },
-
-  // Set current user info
-  setCurrentUser(user) {
-    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-  },
-
-  // Check if user is authenticated
-  isAuthenticated() {
-    return !!this.getToken();
-  },
-
-  // Register new user
-  async register(email, username, password, role = 'player') {
-    try {
-      const response = await fetch(`${CONFIG.BACKEND_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          username,
-          password,
-          role,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Registration failed');
-      }
-
-      const userData = await response.json();
-      
-      // After registration, log in
-      return await this.login(email, password);
-    } catch (error) {
-      console.error('Registration error:', error);
-      throw error;
-    }
-  },
-
-  // Login user
-  async login(email, password) {
-    try {
-      const response = await fetch(`${CONFIG.BACKEND_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || 'Login failed');
-      }
-
-      const data = await response.json();
-      this.setToken(data.access_token);
-
-      // Fetch user info
-      const userInfo = await this.fetchUserInfo();
-      this.setCurrentUser(userInfo);
-
-      return userInfo;
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
-  },
-
-  // Fetch current user info from backend
-  async fetchUserInfo() {
-    const token = this.getToken();
-    if (!token) {
-      throw new Error('No authentication token');
-    }
-
-    try {
-      const response = await fetch(`${CONFIG.BACKEND_URL}/api/auth/me`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Token expired or invalid
-          this.clearToken();
-          throw new Error('Session expired. Please log in again.');
-        }
-        throw new Error('Failed to fetch user info');
-      }
-
-      const userInfo = await response.json();
-      return userInfo;
-    } catch (error) {
-      console.error('Fetch user info error:', error);
-      throw error;
-    }
-  },
-
-  // Logout user
-  logout() {
-    this.clearToken();
-  },
-
-  // Verify token is still valid
-  async verifyToken() {
-    try {
-      await this.fetchUserInfo();
-      return true;
-    } catch (error) {
-      return false;
-    }
-  },
-});
+// Authentication service is now defined centrally in `danddy-auth.js` as
+// `window.AuthService`. This file now only *uses* that shared service.
 
 // Storage service - uses API when authenticated, localStorage for guest mode
 const StorageService = (window.StorageService = {
@@ -341,11 +196,15 @@ const StorageService = (window.StorageService = {
         let savedCharacter;
         if (character.id) {
           // Update existing character (ID is enough to identify it)
-          console.log('☁️ Updating character in cloud:', character.id);
+          if (DEBUG_BUILDER) {
+            console.log('☁️ Updating character in cloud:', character.id);
+          }
           savedCharacter = await CharacterAPI.updateCharacter(character.id, character);
         } else {
           // Create new character
-          console.log('☁️ Creating new character in cloud');
+          if (DEBUG_BUILDER) {
+            console.log('☁️ Creating new character in cloud');
+          }
           savedCharacter = await CharacterAPI.createCharacter(character);
         }
         
@@ -381,8 +240,8 @@ const StorageService = (window.StorageService = {
   // ==== LOCALSTORAGE HELPERS (private) ====
   
   _getCharactersFromLocalStorage() {
-    const data = localStorage.getItem(CONFIG.STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    return (window.DanddyStorage && window.DanddyStorage.readAll())
+      || [];
   },
 
   _saveCharacterToLocalStorage(character) {
@@ -401,17 +260,29 @@ const StorageService = (window.StorageService = {
       characters.push(character);
     }
 
-    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(characters));
+    if (window.DanddyStorage) {
+      window.DanddyStorage.writeAll(characters);
+    } else {
+      localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(characters));
+    }
     return character;
   },
 
   _deleteCharacterFromLocalStorage(id) {
-    const characters = this._getCharactersFromLocalStorage().filter((c) => c.id !== id);
-    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(characters));
+    if (window.DanddyStorage) {
+      window.DanddyStorage.deleteById(id);
+    } else {
+      const characters = this._getCharactersFromLocalStorage().filter((c) => c.id !== id);
+      localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(characters));
+    }
   },
   
   _cacheCharactersLocally(characters) {
-    localStorage.setItem(CONFIG.STORAGE_KEY + '_cache', JSON.stringify(characters));
+    if (window.DanddyStorage) {
+      window.DanddyStorage.writeCache(characters);
+    } else {
+      localStorage.setItem(CONFIG.STORAGE_KEY + '_cache', JSON.stringify(characters));
+    }
   },
   
   _cacheCharacterLocally(character) {
@@ -457,7 +328,25 @@ const StorageService = (window.StorageService = {
         failed.push({ character, error: error.message });
       }
     }
-    
+
+    // After a fully successful migration, clear localStorage copies so we
+    // don't keep stale/duplicated characters around.
+    // This mirrors the manager's MigrationService behavior.
+    if (failed.length === 0 && localCharacters.length > 0) {
+      try {
+        localStorage.removeItem(CONFIG.STORAGE_KEY);
+        localStorage.removeItem(CONFIG.STORAGE_KEY + '_cache');
+        console.log(
+          '📦 MIGRATION: Cleared localStorage characters after successful migrateToBackend()',
+        );
+      } catch (e) {
+        console.warn(
+          '📦 MIGRATION: Failed to clear localStorage after migrateToBackend()',
+          e,
+        );
+      }
+    }
+
     return { migrated, failed };
   },
 });
@@ -493,36 +382,36 @@ const AsciiArtService = (window.AsciiArtService = {
     // Try race-class combo first
     if (classLower) {
       const path = `generated_portraits/ascii/${raceLower}-${classLower}.txt`;
-      console.log(`📂 Trying to load: ${path}`);
+      if (DEBUG_BUILDER) console.log(`📂 Trying to load: ${path}`);
       try {
         const response = await fetch(path);
-        console.log(`📡 Response status: ${response.status}`);
+        if (DEBUG_BUILDER) console.log(`📡 Response status: ${response.status}`);
         if (response.ok) {
           const text = await response.text();
-          console.log(`✅ Loaded ${raceLower}-${classLower}, length: ${text.length}`);
+          if (DEBUG_BUILDER) console.log(`✅ Loaded ${raceLower}-${classLower}, length: ${text.length}`);
           return text;
         }
       } catch (e) {
-        console.log(`❌ Error loading ${raceLower}-${classLower}:`, e);
+        if (DEBUG_BUILDER) console.log(`❌ Error loading ${raceLower}-${classLower}:`, e);
       }
     }
 
     // Fallback to race-only
     const path = `generated_portraits/ascii/${raceLower}.txt`;
-    console.log(`📂 Trying fallback: ${path}`);
+    if (DEBUG_BUILDER) console.log(`📂 Trying fallback: ${path}`);
     try {
       const response = await fetch(path);
-      console.log(`📡 Response status: ${response.status}`);
+      if (DEBUG_BUILDER) console.log(`📡 Response status: ${response.status}`);
       if (response.ok) {
         const text = await response.text();
-        console.log(`✅ Loaded ${raceLower}, length: ${text.length}`);
+        if (DEBUG_BUILDER) console.log(`✅ Loaded ${raceLower}, length: ${text.length}`);
         return text;
       }
     } catch (e) {
-      console.log(`❌ Error loading ${raceLower}:`, e);
+      if (DEBUG_BUILDER) console.log(`❌ Error loading ${raceLower}:`, e);
     }
 
-    console.log(`❌ No portrait found for ${raceLower}`);
+    if (DEBUG_BUILDER) console.log(`❌ No portrait found for ${raceLower}`);
     return null;
   },
 
@@ -531,17 +420,21 @@ const AsciiArtService = (window.AsciiArtService = {
     const raceLower = race?.toLowerCase().replace(/\s+/g, '-') || '';
     const classLower = classType?.toLowerCase().replace(/\s+/g, '-') || '';
     
-    // Try race-class combo first
-    if (raceLower && classLower) {
-      return `../web/generated_portraits/images/${raceLower}-${classLower}.png`;
+    if (!raceLower) return null;
+
+    const fileName = classLower
+      ? `${raceLower}-${classLower}.png`
+      : `${raceLower}.png`;
+
+    // If a public R2 (or other CDN) base URL is configured, use that.
+    if (CONFIG && CONFIG.PREGENERATED_PORTRAIT_BASE_URL) {
+      const base = CONFIG.PREGENERATED_PORTRAIT_BASE_URL.replace(/\/+$/, '');
+      return `${base}/${fileName}`;
     }
-    
-    // Fallback to race-only
-    if (raceLower) {
-      return `../web/generated_portraits/images/${raceLower}.png`;
-    }
-    
-    return null;
+
+    // Fallback: relative path for environments where PNGs are served locally.
+    // This keeps older static setups working if images are present on disk.
+    return `../web/generated_portraits/images/${fileName}`;
   },
 
   // Load portrait (pre-generated or fallback to template)
@@ -582,18 +475,26 @@ const AsciiArtService = (window.AsciiArtService = {
         );
         this._portraitCache[key] = preGenerated;
 
-        // Store ASCII art in character for export
+        // Store ASCII art (and original image URL, when configured) in character for export
         if (window.CharacterState) {
-          window.CharacterState.updateCharacter({
+          const updates = {
             asciiPortrait: preGenerated,
             asciiPortraitKey: key,
-          });
+          };
+
+          // If we have a known location for the original pre-generated PNG,
+          // expose it as originalPortraitUrl so apps can show "View Original Art".
+          const pregenImageUrl = this.getPreGeneratedImageUrl(
+            character.race,
+            character.class,
+          );
+          if (pregenImageUrl) {
+            updates.originalPortraitUrl = pregenImageUrl;
+          }
+
+          window.CharacterState.updateCharacter(updates);
         }
-        
-        // Note: We don't set originalPortraitUrl for pre-generated portraits
-        // to avoid showing "View Original" button when images aren't available
-        // (e.g., on GitHub Pages where PNGs aren't committed)
-        
+
         return this._portraitCache[key];
       }
 
