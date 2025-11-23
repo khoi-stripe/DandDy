@@ -9,10 +9,11 @@ const isLocalEnvironment =
   window.location.hostname === '127.0.0.1' ||
   window.location.protocol === 'file:';
 
-// Use localhost in dev, Render in production (avoid global name collision)
-const API_BASE_URL = isLocalEnvironment
-  ? 'http://localhost:8000/api'
-  : 'https://danddy-api.onrender.com/api';
+// TESTING: Point to production from localhost (CORS is now fixed)
+const API_BASE_URL = 'https://danddy-api.onrender.com/api';
+// const API_BASE_URL = isLocalEnvironment
+//   ? 'http://localhost:8000/api'
+//   : 'https://danddy-api.onrender.com/api';
 
 const TOKEN_STORAGE_KEY = 'dnd_auth_token';
 const USER_STORAGE_KEY = 'dnd_user_info';
@@ -186,6 +187,24 @@ Object.assign(window.AuthService, {
 // CHARACTER CLOUD STORAGE SERVICE
 // ========================================
 const CharacterCloudStorage = (window.CharacterCloudStorage = {
+  // Helper to convert spell arrays (objects or strings) to string arrays for backend
+  _spellsToStringArray(arr) {
+    if (!arr || !Array.isArray(arr)) return [];
+    
+    return arr.map(item => {
+      // If it's an object with a name property, extract the name
+      if (typeof item === 'object' && item !== null && item.name) {
+        return item.name;
+      }
+      // If it's already a string, return as-is
+      if (typeof item === 'string') {
+        return item;
+      }
+      // Fallback - convert to string
+      return String(item);
+    });
+  },
+  
   // Convert localStorage character format to API format
   _toAPIFormat(character) {
     // Map frontend character structure to backend API schema
@@ -259,8 +278,9 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       spell_attack_bonus: character.spellAttackBonus || null,
       spell_slots: character.spellSlots || {},
       spell_slots_used: character.spellSlotsUsed || {},
-      spells_known: character.spellsKnown || [],
-      spells_prepared: character.spellsPrepared || [],
+      cantrips: this._spellsToStringArray(character.cantrips),
+      spells_known: this._spellsToStringArray(character.spellsKnown),
+      spells_prepared: this._spellsToStringArray(character.spellsPrepared),
       
       // Combat
       conditions: character.conditions || [],
@@ -342,8 +362,9 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       spellAttackBonus: apiChar.spell_attack_bonus,
       spellSlots: apiChar.spell_slots,
       spellSlotsUsed: apiChar.spell_slots_used,
-      spellsKnown: apiChar.spells_known,
-      spellsPrepared: apiChar.spells_prepared,
+      cantrips: apiChar.cantrips || [],
+      spellsKnown: apiChar.spells_known || [],
+      spellsPrepared: apiChar.spells_prepared || [],
       
       // Combat
       conditions: apiChar.conditions,

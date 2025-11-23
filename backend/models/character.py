@@ -89,7 +89,8 @@ class Character(Base):
     spell_attack_bonus = Column(Integer, nullable=True)
     spell_slots = Column(JSON, default=dict, nullable=False)  # {"1": 4, "2": 3, "3": 2}
     spell_slots_used = Column(JSON, default=dict, nullable=False)  # {"1": 2, "2": 1, "3": 0}
-    spells_known = Column(JSON, default=list, nullable=False)  # [{"name": "Fireball", "level": 3, ...}]
+    cantrips = Column(JSON, default=list, nullable=False)  # ["Fire Bolt", "Mage Hand", ...]
+    spells_known = Column(JSON, default=list, nullable=False)  # ["Fireball", "Shield", ...]
     spells_prepared = Column(JSON, default=list, nullable=False)  # ["Fireball", "Shield", ...]
     
     # Combat Conditions

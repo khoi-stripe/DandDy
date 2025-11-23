@@ -70,7 +70,8 @@ class CharacterBase(BaseModel):
     spell_attack_bonus: Optional[int] = None
     spell_slots: Dict[str, int] = {}
     spell_slots_used: Dict[str, int] = {}
-    spells_known: List[Dict] = []
+    cantrips: List[str] = []
+    spells_known: List[str] = []
     spells_prepared: List[str] = []
     
     # Combat
@@ -98,6 +99,8 @@ class CharacterUpdate(BaseModel):
     conditions: Optional[List[str]] = None
     inventory: Optional[List[Dict]] = None
     spell_slots_used: Optional[Dict[str, int]] = None
+    cantrips: Optional[List[str]] = None
+    spells_known: Optional[List[str]] = None
     spells_prepared: Optional[List[str]] = None
     # Proficiencies and languages (editable from manager)
     skill_proficiencies: Optional[List[str]] = None

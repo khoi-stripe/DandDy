@@ -18,15 +18,25 @@ app = FastAPI(
 )
 
 # Get allowed origins from environment or use defaults
-# For development, allow localhost. In production, specify exact origins.
+# HARDENED: Only allow specific ports for security
 if os.getenv("PRODUCTION"):
+    # Production: Allow configured origins + localhost:8080 for testing
     allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "")
     allowed_origins = allowed_origins_str.split(",") if allowed_origins_str else []
+    
+    # Also allow localhost:8080 (standard frontend port)
+    allowed_origins.extend([
+        "http://localhost:8080",
+        "http://127.0.0.1:8080"
+    ])
     allow_origin_regex = None
 else:
-    # Development mode - allow all origins for local testing
-    # This includes file://, localhost, and 127.0.0.1 with any port
-    allowed_origins = ["*"]
+    # Local development: ONLY allow frontend on port 8080
+    # This is more secure than allowing all origins (["*"])
+    allowed_origins = [
+        "http://localhost:8080",
+        "http://127.0.0.1:8080"
+    ]
     allow_origin_regex = None
 
 # CORS middleware

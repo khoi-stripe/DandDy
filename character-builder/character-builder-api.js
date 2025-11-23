@@ -20,6 +20,24 @@ const CharacterAPI = (window.CharacterAPI = {
     });
   },
   
+  // Helper to convert spell arrays (objects or strings) to string arrays for backend
+  spellsToStringArray(arr) {
+    if (!arr || !Array.isArray(arr)) return [];
+    
+    return arr.map(item => {
+      // If it's an object with a name property, extract the name
+      if (typeof item === 'object' && item !== null && item.name) {
+        return item.name;
+      }
+      // If it's already a string, return as-is
+      if (typeof item === 'string') {
+        return item;
+      }
+      // Fallback - convert to string
+      return String(item);
+    });
+  },
+  
   // Helper to make authenticated API requests
   async request(method, endpoint, body = null) {
     const token = AuthService.getToken();
@@ -137,8 +155,9 @@ const CharacterAPI = (window.CharacterAPI = {
       spell_attack_bonus: character.spellAttackBonus || null,
       spell_slots: character.spellSlots || {},
       spell_slots_used: {},
-      spells_known: this.arrayToDict(character.spells),
-      spells_prepared: character.preparedSpells || [],
+      cantrips: this.spellsToStringArray(character.cantrips),
+      spells_known: this.spellsToStringArray(character.spellsKnown),
+      spells_prepared: this.spellsToStringArray(character.spellsPrepared),
       
       // Combat
       conditions: [],
@@ -213,8 +232,9 @@ const CharacterAPI = (window.CharacterAPI = {
       spellSaveDC: backendChar.spell_save_dc,
       spellAttackBonus: backendChar.spell_attack_bonus,
       spellSlots: backendChar.spell_slots,
-      spells: backendChar.spells_known,
-      preparedSpells: backendChar.spells_prepared,
+      cantrips: backendChar.cantrips || [],
+      spellsKnown: backendChar.spells_known || [],
+      spellsPrepared: backendChar.spells_prepared || [],
       
       attacks: backendChar.attacks,
       
