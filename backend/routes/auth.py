@@ -30,8 +30,14 @@ settings = get_settings()
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    # Debug: Log password info (not the actual password!)
+    password_bytes = len(user_data.password.encode('utf-8'))
+    password_chars = len(user_data.password)
+    print(f"🔐 Registration attempt - Password length: {password_chars} chars, {password_bytes} bytes")
+    
     # Validate password length (bcrypt has 72 byte limit)
-    if len(user_data.password.encode('utf-8')) > 72:
+    if password_bytes > 72:
+        print(f"❌ Password too long: {password_bytes} bytes")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Password cannot exceed 72 bytes",
