@@ -251,6 +251,15 @@ const StorageService = (window.StorageService = {
     if (!character.id) {
       character.id = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     }
+
+    // Ensure characters have stable timestamps so "Date modified" sorting in
+    // the manager can rely on the character data itself instead of separate
+    // client-side caches.
+    const nowIso = new Date().toISOString();
+    if (!character.createdAt) {
+      character.createdAt = nowIso;
+    }
+    character.updatedAt = nowIso;
     
     const index = characters.findIndex((c) => c.id === character.id);
 

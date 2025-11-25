@@ -1334,6 +1334,15 @@ const App = (window.App = {
 
     const hasVersions = versions.length > 0;
 
+    // Match Character Manager behavior: if the character already has a custom
+    // portrait but no history yet, show a helpful empty state explaining how
+    // to enable history instead of the generic "no saved portraits" message.
+    const hasCustomPortraitWithoutHistory =
+      !hasVersions &&
+      (character.customPortraitAscii ||
+        character.originalPortraitUrl ||
+        character.portrait?.url);
+
     const listHtml = hasVersions
       ? versions
           .map((v, index) => {
@@ -1374,7 +1383,7 @@ const App = (window.App = {
                 }
                 ${
                   hasPrompt
-                    ? `<button class="terminal-btn terminal-btn-small" onclick="App.copyPortraitHistoryPrompt('${v.id}')" title="Copy this portrait's prompt to your clipboard">
+                  ? `<button class="terminal-btn terminal-btn-small" onclick="App.copyPortraitHistoryPrompt('${v.id}')" title="Copy this portrait's prompt to your clipboard">
                   Prompt
                 </button>`
                     : ''
@@ -1387,7 +1396,21 @@ const App = (window.App = {
           `;
           })
           .join('')
-      : `<p class="terminal-text-small terminal-text-dim">No saved portraits yet. Generate a custom AI portrait to start a history.</p>`;
+      : hasCustomPortraitWithoutHistory
+        ? `<div class="terminal-text-small terminal-text-dim" style="padding: 20px; text-align: center;">
+              <p><strong>No portrait history yet.</strong></p>
+              <p style="margin-top: 10px;">This character's portrait was created before the history feature was added.</p>
+              <p style="margin-top: 10px;">Generate a new custom AI portrait to:</p>
+              <ul style="text-align: left; margin: 10px auto; display: inline-block;">
+                <li>• Save your current portrait as Version 1</li>
+                <li>• Add the new portrait as Version 2</li>
+                <li>• Enable portrait version switching</li>
+              </ul>
+            </div>`
+        : `<p class="terminal-text-small terminal-text-dim" style="padding: 20px; text-align: center;">
+              No saved portraits yet.<br><br>
+              Generate a custom AI portrait to start building a history.
+            </p>`;
 
     const modalHTML = `
       <div id="portraitHistoryModal" class="modal show" onclick="App.closePortraitHistory()">
@@ -3075,12 +3098,21 @@ const App = (window.App = {
 
         this._lastPortraitArt = portraitArt || null;
 
+        // Only show the "★ Custom AI Portrait" button in quick-create once
+        // the initial custom portrait has been generated and is ready to
+        // display. Until then, we keep the portrait frame but hide the button
+        // to avoid suggesting an action that is already in progress.
+        const hasCustomPortrait = !!portraitArt;
+
         // Always show the portrait container in quick mode so the waiting
         // message from quickCreateCharacter() has a place to render.
         panel.innerHTML = Components.renderCharacterSheet(
           character,
           null,
           true,
+          {
+            showGeneratePortraitButton: hasCustomPortrait,
+          },
         );
 
         const portraitEl = document.getElementById('character-portrait');

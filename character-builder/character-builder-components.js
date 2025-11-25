@@ -43,14 +43,23 @@ const Components = (window.Components = {
     `;
   },
 
-  renderCharacterSheet(character, portrait = null, showPortrait = true) {
+  renderCharacterSheet(
+    character,
+    portrait = null,
+    showPortrait = true,
+    extraOptions = {},
+  ) {
+    const { showGeneratePortraitButton = true } = extraOptions || {};
+
     // Use the shared CharacterSheet component
     return `
       <div class="character-sheet">
         ${CharacterSheet.render(character, {
           context: 'builder',
           showPortrait: showPortrait,
-          onGeneratePortrait: true,
+          // In quick-create mode we may want to suppress the custom AI portrait
+          // button until the first custom image has actually been generated.
+          onGeneratePortrait: showGeneratePortraitButton,
           onRename: true,
           onTogglePortrait: true,
           onLevelChange: true,

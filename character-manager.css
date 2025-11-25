@@ -746,8 +746,26 @@
 }
 
 .loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: var(--spacing-xl);
+}
+
+.split-layout {
+  position: relative;
+}
+
+.panel-loading-row {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  transform: translateY(-50%);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  pointer-events: none; /* let clicks fall through to underlying UI */
 }
 
 .loading-text {

@@ -162,62 +162,11 @@ const KeyboardNav = {
 // ========================================
 // HYBRID STORAGE SERVICE (Cloud + Local)
 // ========================================
-// Local sort metadata helper – tracks last-modified timestamps per character
-// so "Date modified" sorting works even when the backend doesn't provide
-// created/updated fields (or when running against older data).
+// Sorting now relies directly on canonical character timestamps
+// (updatedAt/createdAt or builder export metadata) rather than a
+// separate SortMeta cache. This keeps behavior consistent across
+// local + cloud and avoids drift when characters are merged/imported.
 const DEBUG_MANAGER = !!(window.DanddyConfig && window.DanddyConfig.DEBUG);
-
-const SortMeta = (window.SortMeta = {
-    KEY: 'dnd_character_sort_meta',
-    _cache: null,
-
-    _load() {
-        if (!this._cache) {
-            try {
-                const raw = localStorage.getItem(this.KEY);
-                this._cache = raw ? JSON.parse(raw) : {};
-            } catch (e) {
-                console.warn('SortMeta: failed to parse cache', e);
-                this._cache = {};
-            }
-        }
-        return this._cache;
-    },
-
-    touch(id) {
-        if (!id) return;
-        const map = this._load();
-        const now = new Date().toISOString();
-        map[id] = { updatedAt: now };
-        try {
-            localStorage.setItem(this.KEY, JSON.stringify(map));
-        } catch (e) {
-            console.warn('SortMeta: failed to persist cache', e);
-        }
-        return now;
-    },
-
-    // Initialize from an existing timestamp (for characters created outside manager)
-    initializeFrom(id, timestamp) {
-        if (!id || !timestamp) return;
-        const map = this._load();
-        // Only initialize if no entry exists yet
-        if (!map[id]) {
-            map[id] = { updatedAt: timestamp };
-            try {
-                localStorage.setItem(this.KEY, JSON.stringify(map));
-            } catch (e) {
-                console.warn('SortMeta: failed to persist cache', e);
-            }
-        }
-    },
-
-    getUpdatedAt(id) {
-        if (!id) return null;
-        const map = this._load();
-        return map[id]?.updatedAt || null;
-    },
-});
 const CharacterStorage = {
     STORAGE_KEY: (window.DanddyStorage && window.DanddyStorage.STORAGE_KEY) || 'dnd_characters',
     
@@ -258,9 +207,6 @@ const CharacterStorage = {
         if (this.useCloud()) {
             try {
                 const created = await window.CharacterCloudStorage.add(character);
-                if (created && created.id) {
-                    SortMeta.touch(String(created.id));
-                }
                 return created;
             } catch (error) {
                 console.error('☁️ Cloud add failed:', error);
@@ -269,9 +215,6 @@ const CharacterStorage = {
             }
         }
         const created = this._localAdd(character);
-        if (created && created.id) {
-            SortMeta.touch(String(created.id));
-        }
         return created;
     },
 
@@ -298,21 +241,11 @@ const CharacterStorage = {
                     id,
                 );
                 const updatedLocal = this._localUpdate(id, updates, { silent });
-                if (!silent && updatedLocal && updatedLocal.id) {
-                    SortMeta.touch(String(updatedLocal.id));
-                }
                 return updatedLocal;
             }
 
             try {
                 const updated = await window.CharacterCloudStorage.update(id, updates);
-                if (!silent) {
-                    if (updated && updated.id) {
-                        SortMeta.touch(String(updated.id));
-                    } else {
-                        SortMeta.touch(idStr);
-                    }
-                }
                 return updated;
             } catch (error) {
                 console.error('☁️ Cloud update failed:', error);
@@ -321,13 +254,6 @@ const CharacterStorage = {
             }
         }
         const updatedLocal = this._localUpdate(id, updates, { silent });
-        if (!silent) {
-            if (updatedLocal && updatedLocal.id) {
-                SortMeta.touch(String(updatedLocal.id));
-            } else {
-                SortMeta.touch(idStr);
-            }
-        }
         return updatedLocal;
     },
 
@@ -583,6 +509,9 @@ const AppState = {
     async loadCharacters() {
         try {
             this.loading = true;
+            if (typeof UI !== 'undefined' && UI && typeof UI.setLoadingState === 'function') {
+                UI.setLoadingState(true);
+            }
             this.characters = await CharacterStorage.getAll();
             if (DEBUG_MANAGER) {
                 console.log('📚 LOAD: Loaded', this.characters.length, 'characters from storage');
@@ -591,21 +520,6 @@ const AppState = {
                     console.log(`  ${i+1}. ${c.name} (ID: ${c.id})`);
                 });
             }
-            
-            // Initialize SortMeta for characters that don't have entries yet
-            // This ensures characters created in the builder (or imported) get proper sort order
-            this.characters.forEach(char => {
-                if (char.id && !SortMeta.getUpdatedAt(char.id)) {
-                    // Use the character's existing timestamp, don't create a new one.
-                    // Fallback to builder export date when createdAt/updatedAt are missing.
-                    const metadataExportDate =
-                        char.metadata && (char.metadata.exportDate || char.metadata.exportedAt);
-                    const timestamp = char.updatedAt || char.createdAt || metadataExportDate;
-                    if (timestamp) {
-                        SortMeta.initializeFrom(char.id, timestamp);
-                    }
-                }
-            });
             
             const names = this.characters.map(c => c.name);
             const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
@@ -618,11 +532,17 @@ const AppState = {
             }
             this.applyFilters();
             this.loading = false;
+            if (typeof UI !== 'undefined' && UI && typeof UI.setLoadingState === 'function') {
+                UI.setLoadingState(false);
+            }
             UI.render(); // Re-render after characters load
         } catch (error) {
             console.error('Failed to load characters:', error);
             this.loading = false;
             showNotification('❌ Failed to load characters');
+            if (typeof UI !== 'undefined' && UI && typeof UI.setLoadingState === 'function') {
+                UI.setLoadingState(false);
+            }
             UI.render(); // Render empty state on error
         }
     },
@@ -640,6 +560,20 @@ const AppState = {
             );
         }
 
+        // Helper: compute effective "date modified" timestamp for sorting.
+        const getSortTime = (char) => {
+            if (!char) return 0;
+            const metadataExportDate =
+                char.metadata && (char.metadata.exportDate || char.metadata.exportedAt);
+            const raw =
+                char.updatedAt ||
+                char.createdAt ||
+                metadataExportDate ||
+                0;
+            const t = new Date(raw).getTime();
+            return Number.isFinite(t) ? t : 0;
+        };
+
         // Sort according to current mode
         if (this.sortMode === 'alphabetical') {
             filtered.sort((a, b) => {
@@ -651,21 +585,10 @@ const AppState = {
                 return nameA.localeCompare(nameB);
             });
         } else if (this.sortMode === 'dateModified') {
-            // Sort by most recently modified, using local SortMeta when available
+            // Sort by most recently modified using canonical timestamps
             filtered.sort((a, b) => {
-                const aMeta = SortMeta.getUpdatedAt(a.id);
-                const bMeta = SortMeta.getUpdatedAt(b.id);
-                const aMetadataExportDate =
-                    a.metadata && (a.metadata.exportDate || a.metadata.exportedAt);
-                const bMetadataExportDate =
-                    b.metadata && (b.metadata.exportDate || b.metadata.exportedAt);
-
-                const aTime = new Date(
-                    aMeta || a.updatedAt || a.createdAt || aMetadataExportDate || 0,
-                ).getTime();
-                const bTime = new Date(
-                    bMeta || b.updatedAt || b.createdAt || bMetadataExportDate || 0,
-                ).getTime();
+                const aTime = getSortTime(a);
+                const bTime = getSortTime(b);
                 if (aTime === bTime) {
                     return (a.name || '').localeCompare(b.name || '');
                 }
@@ -681,6 +604,29 @@ const AppState = {
 // UI RENDERING
 // ========================================
 const UI = {
+    setLoadingState(isLoading) {
+        const leftLoading = document.getElementById('leftPanelLoading');
+        const rightLoading = document.getElementById('rightPanelLoading');
+        const grid = document.getElementById('characterGrid');
+        const emptyState = document.getElementById('emptyState');
+        const sheetPlaceholder = document.querySelector('.sheet-placeholder');
+        const characterSheet = document.getElementById('characterSheet');
+
+        if (isLoading) {
+            if (leftLoading) leftLoading.classList.remove('is-hidden');
+            if (rightLoading) rightLoading.classList.remove('is-hidden');
+            if (grid) grid.classList.add('is-hidden');
+            if (emptyState) emptyState.classList.add('is-hidden');
+            if (sheetPlaceholder) sheetPlaceholder.classList.add('is-hidden');
+            if (characterSheet) characterSheet.classList.add('is-hidden');
+        } else {
+            if (leftLoading) leftLoading.classList.add('is-hidden');
+            if (rightLoading) rightLoading.classList.add('is-hidden');
+            if (grid) grid.classList.remove('is-hidden');
+            // empty state and sheet visibility will be controlled by UI.render()
+        }
+    },
+
     render() {
         this.renderCharacterGrid();
         this.updateCount();
@@ -2817,6 +2763,12 @@ async function startMigration() {
 // ========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Show panel loading spinners as early as possible so the shell never feels empty
+    // while we verify auth state and fetch characters.
+    if (typeof UI !== 'undefined' && UI && typeof UI.setLoadingState === 'function') {
+        UI.setLoadingState(true);
+    }
+
     // Apply app version to header and welcome modal from global version config.
     try {
         const version = window.DANDDY_VERSION || '2.0.0';

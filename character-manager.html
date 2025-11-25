@@ -233,11 +233,28 @@
 
         <!-- Right Panel: Character Sheet -->
         <div class="right-panel" id="character-sheet-panel">
-            <div class="sheet-placeholder">
-                <div class="placeholder-icon">⚔</div>
-            </div>
+            <div class="sheet-placeholder"></div>
             <div id="characterSheet" class="character-sheet is-hidden">
                 <!-- Character sheet will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Centered Loading Row spanning both panels -->
+        <div class="panel-loading-row">
+            <!-- Left Panel Loading Indicator (shown while characters load) -->
+            <div id="leftPanelLoading" class="loading-indicator" aria-live="polite">
+                <div class="loading-text">
+                    <span class="spinner" aria-hidden="true">↻</span>
+                    Loading characters...
+                </div>
+            </div>
+
+            <!-- Right Panel Loading Indicator (shown while characters load) -->
+            <div id="rightPanelLoading" class="loading-indicator" aria-live="polite">
+                <div class="loading-text">
+                    <span class="spinner" aria-hidden="true">↻</span>
+                    Preparing character sheet...
+                </div>
             </div>
         </div>
     </div>
