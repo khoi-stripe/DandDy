@@ -3049,22 +3049,25 @@ const App = (window.App = {
     if (character.race) {
       // In quick-create mode, NEVER call the pre-generated portrait loader.
       // We either show the final custom AI portrait (when available) or
-      // nothing. We also explicitly ignore any asciiPortrait that may have
-      // been set by older exports or background upgrades so templates never
-      // appear in quick-create.
+      // an empty frame + status text while generation is in progress. We also
+      // explicitly ignore any asciiPortrait that may have been set by older
+      // exports or background upgrades so templates never appear in
+      // quick-create.
       if (isQuickMode) {
         // Before AI generation starts, quick-create characters will not yet
-        // have a custom portrait. In that case render the sheet with no art.
-        const portraitArt =
-          character.customPortraitAscii ||
-          null;
+        // have a custom portrait. In that case render the sheet with an empty
+        // portrait frame so we can show a "Generating..." status message while
+        // the AI image is being created.
+        const portraitArt = character.customPortraitAscii || null;
 
         this._lastPortraitArt = portraitArt || null;
 
+        // Always show the portrait container in quick mode so the waiting
+        // message from quickCreateCharacter() has a place to render.
         panel.innerHTML = Components.renderCharacterSheet(
           character,
-          portraitArt,
-          !!portraitArt,
+          null,
+          true,
         );
 
         const portraitEl = document.getElementById('character-portrait');
@@ -3077,7 +3080,10 @@ const App = (window.App = {
         if (portraitEl && portraitArt) {
           portraitEl.textContent = portraitArt;
           // Match manager behavior: center the ASCII portrait horizontally
-          if (window.CharacterSheet && typeof CharacterSheet._centerPortraitScrollSafely === 'function') {
+          if (
+            window.CharacterSheet &&
+            typeof CharacterSheet._centerPortraitScrollSafely === 'function'
+          ) {
             CharacterSheet._centerPortraitScrollSafely(portraitEl);
           }
         }
