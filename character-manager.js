@@ -1406,14 +1406,6 @@ async function openPortraitHistory(characterId) {
               <div class="card-details">
                 <div class="card-name">${title}</div>
                 <div class="card-info">${infoText || '&nbsp;'}</div>
-                ${
-                  hasPrompt
-                    ? `<div class="portrait-history-prompt-row">
-                  <span class="portrait-history-prompt-label">Prompt:</span>
-                  <span class="portrait-history-prompt" data-version-id="${v.id}"></span>
-                </div>`
-                    : ''
-                }
               </div>
               <div class="portrait-history-actions">
                 ${
@@ -1426,7 +1418,7 @@ async function openPortraitHistory(characterId) {
                 ${
                   hasPrompt
                     ? `<button class="terminal-btn terminal-btn-small" onclick="copyPortraitHistoryPrompt('${characterId}', '${v.id}')" title="Copy this portrait's prompt to your clipboard">
-                  Copy Prompt
+                  Prompt
                 </button>`
                     : ''
                 }
