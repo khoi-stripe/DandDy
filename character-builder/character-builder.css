@@ -543,6 +543,12 @@
   margin-right: 8px;
 }
 
+/* When the spinner appears inside narrator text (e.g., "rolling the dice..."),
+   remove the extra right margin so the bracket hugs the spinner. */
+.narrator-text .spinner {
+  margin-right: 0;
+}
+
 @keyframes splash-glow {
   0% {
     text-shadow:
