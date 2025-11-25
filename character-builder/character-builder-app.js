@@ -2726,8 +2726,10 @@ const App = (window.App = {
         const portraitEl = document.getElementById('character-portrait');
 
         // Show a simple loading state in the portrait panel while the AI image
-        // is being generated and converted to ASCII.
+        // is being generated and converted to ASCII. Match Character Manager
+        // by enlarging the font so the status message is readable.
         if (portraitEl) {
+          portraitEl.style.fontSize = 'var(--font-size-small)';
           portraitEl.textContent =
             '[↻] Generating AI portrait...\n\nThis can take 20–30 seconds.';
         }
@@ -2766,6 +2768,13 @@ const App = (window.App = {
       console.error('Quick-create AI portrait generation error:', error);
       // Fall back silently to whatever portrait is already displayed
       // (pre-generated ASCII or template). Guided mode behavior is unchanged.
+    } finally {
+      // Whatever happens above (success or failure), restore portrait font
+      // size so the final ASCII art uses the default sizing from CSS.
+      const portraitEl = document.getElementById('character-portrait');
+      if (portraitEl) {
+        portraitEl.style.fontSize = '';
+      }
     }
 
     // Jump straight to the completion screen
