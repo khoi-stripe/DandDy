@@ -4,18 +4,25 @@ from models.user import UserRole
 
 
 class UserBase(BaseModel):
+    """Shared user fields returned to clients.
+
+    We now identify accounts by email only. Usernames are deprecated.
+    """
+
     email: EmailStr
-    username: str
     role: UserRole = UserRole.PLAYER
 
 
 class UserCreate(UserBase):
+    """Payload for creating a new user (registration or via admin)."""
+
     password: str
 
 
 class UserUpdate(BaseModel):
+    """Partial update payload for admin user management."""
+
     email: EmailStr | None = None
-    username: str | None = None
     role: UserRole | None = None
     password: str | None = None
 

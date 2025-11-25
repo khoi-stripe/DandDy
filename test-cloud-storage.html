@@ -136,7 +136,7 @@
         };
 
         let testCharacterId = null;
-        const testUsername = `test_${Date.now()}`;
+        const testEmail = `test_${Date.now()}@test.com`;
         const testPassword = 'TestPass123!';
 
         // Logging helpers
@@ -219,11 +219,10 @@ Pass Rate: ${counts.total > 0 ? Math.round((counts.passed / counts.total) * 100)
             // Test registration
             try {
                 updateStatus('registerStatus', 'running', 'Testing...');
-                log('auth', `Registering user: ${testUsername}`, 'info');
+                log('auth', `Registering user: ${testEmail}`, 'info');
                 
                 const result = await window.AuthService.register(
-                    testUsername,
-                    `${testUsername}@test.com`,
+                    testEmail,
                     testPassword
                 );
                 
@@ -264,11 +263,11 @@ Pass Rate: ${counts.total > 0 ? Math.round((counts.passed / counts.total) * 100)
             // Test profile fetch
             try {
                 updateStatus('profileStatus', 'running', 'Testing...');
-                const profile = await window.AuthService.fetchUserProfile();
-                if (profile && profile.username === testUsername) {
+                const profile = await window.AuthService.fetchProfile();
+                if (profile && profile.email === testEmail) {
                     updateStatus('profileStatus', 'success', '✓ Passed');
                     testResults.auth.profile = 'success';
-                    log('auth', `Profile fetched: ${profile.username}`, 'success');
+                    log('auth', `Profile fetched: ${profile.email}`, 'success');
                 } else {
                     throw new Error('Profile mismatch');
                 }

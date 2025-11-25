@@ -18,7 +18,6 @@ function closeAuthModal() {
     // Clear form fields
     document.getElementById('loginUsername').value = '';
     document.getElementById('loginPassword').value = '';
-    document.getElementById('registerUsername').value = '';
     document.getElementById('registerEmail').value = '';
     document.getElementById('registerPassword').value = '';
 }
@@ -42,26 +41,26 @@ function showRegisterForm() {
 }
 
 async function handleLogin() {
-    const username = document.getElementById('loginUsername').value.trim();
+    const email = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
     const errorEl = document.getElementById('authError');
 
-    if (!username || !password) {
-        errorEl.textContent = 'Please enter both username and password';
+    if (!email || !password) {
+        errorEl.textContent = 'Please enter both email and password';
         errorEl.classList.remove('is-hidden');
         return;
     }
 
     try {
-        const result = await window.AuthService.login(username, password);
+        const result = await window.AuthService.login(email, password);
         if (result.success) {
             closeAuthModal();
             updateAuthUI();
-            console.log(`✓ Logged in as ${username}`);
+            console.log(`✓ Logged in as ${email}`);
             
             // Show notification in Builder's terminal
             if (window.App && window.App.showNotification) {
-                window.App.showNotification(`✓ Logged in as ${username}`, 'success');
+                window.App.showNotification(`✓ Logged in as ${email}`, 'success');
             }
         } else {
             errorEl.textContent = result.error || 'Login failed';
@@ -74,27 +73,26 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
-    const username = document.getElementById('registerUsername').value.trim();
     const email = document.getElementById('registerEmail').value.trim();
     const password = document.getElementById('registerPassword').value;
     const errorEl = document.getElementById('authError');
 
-    if (!username || !email || !password) {
+    if (!email || !password) {
         errorEl.textContent = 'Please fill in all fields';
         errorEl.classList.remove('is-hidden');
         return;
     }
 
     try {
-        const result = await window.AuthService.register(username, email, password);
+        const result = await window.AuthService.register(email, password);
         if (result.success) {
             closeAuthModal();
             updateAuthUI();
-            console.log(`✓ Registered as ${username}`);
+            console.log(`✓ Registered as ${email}`);
             
             // Show notification in Builder's terminal
             if (window.App && window.App.showNotification) {
-                window.App.showNotification(`✓ Registered as ${username}`, 'success');
+                window.App.showNotification(`✓ Registered as ${email}`, 'success');
             }
         } else {
             errorEl.textContent = result.error || 'Registration failed';
@@ -145,7 +143,7 @@ function updateAuthUI() {
 
     if (window.AuthService && window.AuthService.isAuthenticated()) {
         const user = window.AuthService.getCurrentUser();
-        userInfoDisplay.textContent = user ? `☁ ${user.username}` : '☁ Logged In';
+        userInfoDisplay.textContent = user ? `☁ ${user.email}` : '☁ Logged In';
         authBtn.textContent = 'LOGOUT';
         authBtn.onclick = handleLogout;
     } else {

@@ -49,23 +49,19 @@ def create_user(
     Create a new user as an admin/DM.
 
     This mirrors registration but does not log the user in or return a token.
+    Accounts are identified by email only.
     """
-    existing_user = (
-        db.query(User)
-        .filter((User.email == user_data.email) | (User.username == user_data.username))
-        .first()
-    )
+    existing_user = db.query(User).filter(User.email == user_data.email).first()
 
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email or username already exists",
+            detail="User with this email already exists",
         )
 
     hashed_password = get_password_hash(user_data.password)
     new_user = User(
         email=user_data.email,
-        username=user_data.username,
         hashed_password=hashed_password,
         role=user_data.role,
     )
@@ -102,10 +98,9 @@ def update_user(
     db: Session = Depends(get_db),
     _: User = Depends(require_dm),
 ) -> User:
-    """
-    Update a user's basic information.
+    """Update a user's basic information.
 
-    - Email and username can be changed (with uniqueness checks).
+    - Email can be changed (with uniqueness checks).
     - Role can be changed between player and DM.
     - Password can be reset by providing a new password.
     """
@@ -116,7 +111,7 @@ def update_user(
             detail="User not found",
         )
 
-    # Email / username uniqueness checks (if changed)
+    # Email uniqueness checks (if changed)
     if update_data.email and update_data.email != user.email:
         existing_email = db.query(User).filter(User.email == update_data.email).first()
         if existing_email and existing_email.id != user.id:
@@ -125,17 +120,6 @@ def update_user(
                 detail="Another user already uses this email",
             )
         user.email = update_data.email
-
-    if update_data.username and update_data.username != user.username:
-        existing_username = (
-            db.query(User).filter(User.username == update_data.username).first()
-        )
-        if existing_username and existing_username.id != user.id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Another user already uses this username",
-            )
-        user.username = update_data.username
 
     if update_data.role is not None:
         user.role = update_data.role

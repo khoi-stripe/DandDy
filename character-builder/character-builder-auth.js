@@ -149,11 +149,6 @@ const AuthUI = (window.AuthUI = {
           </div>
           
           <div class="form-group">
-            <label class="form-label">[ USERNAME ]</label>
-            <input type="text" id="register-username" class="terminal-input" placeholder="ChooseYourName" autocomplete="username" />
-          </div>
-          
-          <div class="form-group">
             <label class="form-label">[ PASSWORD ]</label>
             <input type="password" id="register-password" class="terminal-input" placeholder="••••••••" autocomplete="new-password" />
           </div>
@@ -194,7 +189,6 @@ const AuthUI = (window.AuthUI = {
 
     // Add event listeners
     const emailInput = document.getElementById('register-email');
-    const usernameInput = document.getElementById('register-username');
     const passwordInput = document.getElementById('register-password');
     const confirmInput = document.getElementById('register-password-confirm');
     const roleSelect = document.getElementById('register-role');
@@ -206,12 +200,11 @@ const AuthUI = (window.AuthUI = {
     // Handle submit
     const handleSubmit = async () => {
       const email = emailInput.value.trim();
-      const username = usernameInput.value.trim();
       const password = passwordInput.value;
       const confirmPassword = confirmInput.value;
       const role = roleSelect.value;
 
-      if (!email || !username || !password || !confirmPassword) {
+      if (!email || !password || !confirmPassword) {
         this.showError(errorDiv, 'Please fill in all fields');
         return;
       }
@@ -230,8 +223,7 @@ const AuthUI = (window.AuthUI = {
       errorDiv.classList.add('is-hidden');
 
       try {
-        // Unified AuthService expects (username, email, password)
-        const result = await AuthService.register(username, email, password, role);
+        const result = await AuthService.register(email, password, role);
         this.showLoading(loadingDiv, false);
         if (result && result.success) {
           this.removeAuthScreen();
@@ -309,7 +301,8 @@ const AuthUI = (window.AuthUI = {
     const statusText = document.getElementById('status-text');
     if (statusText && user) {
       const roleIcon = user.role === 'dm' ? '🎲' : '⚔️';
-      statusText.innerHTML = `${roleIcon} ${user.username.toUpperCase()} | <button class="link-button" id="header-characters">MY CHARACTERS</button> | <button class="link-button" id="header-logout">LOGOUT</button>`;
+      const label = (user.email || '').toUpperCase();
+      statusText.innerHTML = `${roleIcon} ${label} | <button class="link-button" id="header-characters">MY CHARACTERS</button> | <button class="link-button" id="header-logout">LOGOUT</button>`;
       
       // Add characters button handler
       document.getElementById('header-characters')?.addEventListener('click', () => {

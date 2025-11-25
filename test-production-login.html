@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Check Production Account</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #000;
+      color: #0f0;
+      padding: 20px;
+    }
+    input, button {
+      font-family: monospace;
+      padding: 10px;
+      margin: 5px;
+      background: #111;
+      color: #0f0;
+      border: 1px solid #0f0;
+    }
+    button:hover {
+      background: #0f0;
+      color: #000;
+    }
+    #result {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #0f0;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Check Production Server for Account</h1>
+  <p>This will check if your email account exists on the Render production backend.</p>
+  
+  <div>
+    <input type="email" id="email" placeholder="Email" value="">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="checkAccount()">Check Account</button>
+  </div>
+  
+  <div id="result"></div>
+
+  <script>
+    async function checkAccount() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const resultDiv = document.getElementById('result');
+      
+      if (!email || !password) {
+        resultDiv.textContent = '❌ Please enter email and password';
+        return;
+      }
+      
+      resultDiv.textContent = '🔍 Checking production server...';
+      
+      const prodAPI = 'https://danddy-api.onrender.com/api';
+      
+      try {
+        // Try to login
+        const formData = new FormData();
+        // OAuth2PasswordRequestForm still uses the `username` field name,
+        // but this value is now always treated as an email address.
+        formData.append('username', email);
+        formData.append('password', password);
+        
+        const response = await fetch(`${prodAPI}/auth/token`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          resultDiv.textContent = '✅ ACCOUNT FOUND ON PRODUCTION!\n\n';
+          resultDiv.textContent += 'Fetching characters...\n\n';
+          
+          // Fetch characters
+          try {
+            const charsResponse = await fetch(`${prodAPI}/characters/`, {
+              headers: { 'Authorization': `Bearer ${data.access_token}` }
+            });
+            
+            if (charsResponse.ok) {
+              const characters = await charsResponse.json();
+              resultDiv.textContent += `📚 Found ${characters.length} character(s):\n\n`;
+              
+              if (characters.length > 0) {
+                characters.forEach(c => {
+                  resultDiv.textContent += `  • ${c.name}\n`;
+                  resultDiv.textContent += `    Class: ${c.character_class}\n`;
+                  resultDiv.textContent += `    Race: ${c.race}\n`;
+                  resultDiv.textContent += `    Level: ${c.level}\n\n`;
+                });
+                
+                resultDiv.textContent += '\n✅ YOUR DATA IS SAFE ON PRODUCTION!\n';
+                resultDiv.textContent += 'You can access it by using the production backend.';
+              } else {
+                resultDiv.textContent += 'No characters found on this account.';
+              }
+            } else {
+              resultDiv.textContent += '⚠️ Could not fetch characters';
+            }
+          } catch (error) {
+            resultDiv.textContent += '⚠️ Error fetching characters: ' + error.message;
+          }
+          
+        } else if (response.status === 401) {
+          resultDiv.textContent = '❌ Account not found or incorrect password\n\n';
+          resultDiv.textContent += 'This could mean:\n';
+          resultDiv.textContent += '  1. The account only existed on localhost (now deleted)\n';
+          resultDiv.textContent += '  2. The password is incorrect\n';
+          resultDiv.textContent += '  3. The username is different\n';
+        } else {
+          const error = await response.json().catch(() => ({}));
+          resultDiv.textContent = '❌ Error: ' + (error.detail || response.statusText);
+        }
+        
+      } catch (error) {
+        resultDiv.textContent = '❌ Connection error: ' + error.message;
+      }
+    }
+  </script>
+</body>
+</html>
+

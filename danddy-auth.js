@@ -65,7 +65,23 @@
           let detail = `Request failed (${response.status})`;
           try {
             const errJson = await response.json();
-            if (errJson && errJson.detail) detail = errJson.detail;
+            if (errJson && errJson.detail) {
+              if (typeof errJson.detail === 'string') {
+                // Simple error string from backend
+                detail = errJson.detail;
+              } else if (Array.isArray(errJson.detail) && errJson.detail.length) {
+                // FastAPI validation error format: [{ loc, msg, type }, ...]
+                const first = errJson.detail[0];
+                if (first && first.msg) {
+                  detail = first.msg;
+                } else {
+                  detail = JSON.stringify(errJson.detail);
+                }
+              } else {
+                // Fallback to JSON string so we don't show [object Object]
+                detail = JSON.stringify(errJson.detail);
+              }
+            }
           } catch (_) {
             // ignore JSON parse errors
           }
@@ -84,14 +100,26 @@
     // ===== Auth flows =====
 
     /**
-     * Register a new user.
-     * Returns { success, user, error }
+     * Register a new user using email + password.
+     * Returns { success, user, error }.
+     *
+     * For backward-compatibility with older backend deployments that still
+     * expect a `username` field, we derive a simple username from the email
+     * (typically the part before "@"). Newer backends that ignore usernames
+     * will simply drop this extra field.
      */
-    async register(username, email, password, role = 'player') {
+    async register(email, password, role = 'player') {
       try {
+        const derivedUsername =
+          typeof email === 'string' && email.includes('@')
+            ? email.split('@')[0]
+            : email;
+
         const data = await this._request('/auth/register', {
           method: 'POST',
-          body: { username, email, password, role },
+          // Backend identifies accounts by email only; username is legacy.
+          // Sending both keeps us compatible with older API versions.
+          body: { username: derivedUsername, email, password, role },
         });
 
         if (!data || !data.access_token) {
@@ -100,12 +128,12 @@
 
         this.setToken(data.access_token);
 
-        // Try to fetch full user profile; fall back to username/email only.
+        // Try to fetch full user profile; fall back to a minimal email-only object.
         const profile = await this.fetchProfile();
         const user =
           profile && Object.keys(profile).length
             ? profile
-            : { username, email };
+            : { email, role };
 
         this.setCurrentUser(user);
 
@@ -116,14 +144,18 @@
     },
 
     /**
-     * Login with username or email + password.
-     * Uses OAuth2 password flow (/auth/token) so identifier can be either.
+     * Login with email + password.
+     *
+     * Note: the OAuth2 password flow still uses the `username` form field name,
+     * but this value is always interpreted as an email address by the backend.
      * Returns { success, user, error }.
      */
-    async login(identifier, password) {
+    async login(email, password) {
       try {
         const formData = new FormData();
-        formData.append('username', identifier);
+        // Field name must remain "username" for OAuth2PasswordRequestForm,
+        // but the value is the user's email address.
+        formData.append('username', email);
         formData.append('password', password);
 
         const response = await fetch(`${API_BASE_URL}/auth/token`, {
@@ -249,5 +281,6 @@
     },
   });
 })(window);
+
 
 

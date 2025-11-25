@@ -593,11 +593,14 @@ const AppState = {
             }
             
             // Initialize SortMeta for characters that don't have entries yet
-            // This ensures characters created in the builder get proper sort order
+            // This ensures characters created in the builder (or imported) get proper sort order
             this.characters.forEach(char => {
                 if (char.id && !SortMeta.getUpdatedAt(char.id)) {
-                    // Use the character's existing timestamp, don't create a new one
-                    const timestamp = char.updatedAt || char.createdAt;
+                    // Use the character's existing timestamp, don't create a new one.
+                    // Fallback to builder export date when createdAt/updatedAt are missing.
+                    const metadataExportDate =
+                        char.metadata && (char.metadata.exportDate || char.metadata.exportedAt);
+                    const timestamp = char.updatedAt || char.createdAt || metadataExportDate;
                     if (timestamp) {
                         SortMeta.initializeFrom(char.id, timestamp);
                     }
@@ -652,8 +655,17 @@ const AppState = {
             filtered.sort((a, b) => {
                 const aMeta = SortMeta.getUpdatedAt(a.id);
                 const bMeta = SortMeta.getUpdatedAt(b.id);
-                const aTime = new Date(aMeta || a.updatedAt || a.createdAt || 0).getTime();
-                const bTime = new Date(bMeta || b.updatedAt || b.createdAt || 0).getTime();
+                const aMetadataExportDate =
+                    a.metadata && (a.metadata.exportDate || a.metadata.exportedAt);
+                const bMetadataExportDate =
+                    b.metadata && (b.metadata.exportDate || b.metadata.exportedAt);
+
+                const aTime = new Date(
+                    aMeta || a.updatedAt || a.createdAt || aMetadataExportDate || 0,
+                ).getTime();
+                const bTime = new Date(
+                    bMeta || b.updatedAt || b.createdAt || bMetadataExportDate || 0,
+                ).getTime();
                 if (aTime === bTime) {
                     return (a.name || '').localeCompare(b.name || '');
                 }
@@ -1377,6 +1389,7 @@ async function openPortraitHistory(characterId) {
                   const infoText = '';
 
                   const hasImage = !!v.url;
+                  const hasPrompt = !!v.prompt;
                   const thumbHtml = `
             <div class="card-thumbnail">
               <div class="ascii-portrait portrait-history-preview" data-version-id="${v.id}"></div>
@@ -1393,12 +1406,27 @@ async function openPortraitHistory(characterId) {
               <div class="card-details">
                 <div class="card-name">${title}</div>
                 <div class="card-info">${infoText || '&nbsp;'}</div>
+                ${
+                  hasPrompt
+                    ? `<div class="portrait-history-prompt-row">
+                  <span class="portrait-history-prompt-label">Prompt:</span>
+                  <span class="portrait-history-prompt" data-version-id="${v.id}"></span>
+                </div>`
+                    : ''
+                }
               </div>
               <div class="portrait-history-actions">
                 ${
                   hasImage
                     ? `<button class="terminal-btn terminal-btn-small" data-toggle-version-id="${v.id}" onclick="togglePortraitHistoryView('${v.id}')">
                   View Original
+                </button>`
+                    : ''
+                }
+                ${
+                  hasPrompt
+                    ? `<button class="terminal-btn terminal-btn-small" onclick="copyPortraitHistoryPrompt('${characterId}', '${v.id}')" title="Copy this portrait's prompt to your clipboard">
+                  Copy Prompt
                 </button>`
                     : ''
                 }
@@ -1463,6 +1491,16 @@ async function openPortraitHistory(characterId) {
             } else {
                 el.textContent = v.ascii;
             }
+        }
+
+        // Populate prompt text (stored in portrait history metadata) without exposing
+        // any hidden rendering instructions. We only display the exact text that was
+        // shown in the portrait prompt dialog.
+        const promptEl = document.querySelector(
+            `.portrait-history-prompt[data-version-id="${v.id}"]`,
+        );
+        if (promptEl && v.prompt) {
+            promptEl.textContent = v.prompt;
         }
     });
 
@@ -1621,6 +1659,46 @@ async function confirmPortraitHistorySelection(characterId) {
     }
 
     await usePortraitVersion(characterId, versionId);
+}
+
+async function copyPortraitHistoryPrompt(characterId, versionId) {
+    const character = await CharacterStorage.getById(characterId);
+    if (!character) return;
+
+    const metadata = character.portraitMetadata || {};
+    const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+    const version = versions.find((v) => v.id === versionId);
+
+    if (!version || !version.prompt) {
+        showNotification('No saved prompt for this portrait.');
+        return;
+    }
+
+    const promptText = version.prompt;
+
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(promptText);
+        } else {
+            // Fallback for older browsers: use a temporary textarea
+            const textarea = document.createElement('textarea');
+            textarea.value = promptText;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+            } finally {
+                document.body.removeChild(textarea);
+            }
+        }
+        showNotification('Portrait prompt copied to clipboard.');
+    } catch (error) {
+        console.error('Failed to copy portrait prompt:', error);
+        showNotification('Could not copy prompt. Please copy it manually from the card.');
+    }
 }
 
 async function usePortraitVersion(characterId, versionId) {
@@ -2261,9 +2339,8 @@ function closeAuthModal() {
     document.getElementById('authModal').classList.remove('show');
     document.getElementById('authError').classList.add('is-hidden');
     // Clear form fields
-    document.getElementById('loginUsername').value = '';
+    document.getElementById('loginEmail').value = '';
     document.getElementById('loginPassword').value = '';
-    document.getElementById('registerUsername').value = '';
     document.getElementById('registerEmail').value = '';
     document.getElementById('registerPassword').value = '';
 }
@@ -2327,12 +2404,12 @@ function setAuthLoading(isLoading, message) {
 }
 
 async function handleLogin() {
-    const username = document.getElementById('loginUsername').value.trim();
+    const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     const errorEl = document.getElementById('authError');
 
-    if (!username || !password) {
-        errorEl.textContent = 'Please enter both username and password';
+    if (!email || !password) {
+        errorEl.textContent = 'Please enter both email and password';
         errorEl.classList.remove('is-hidden');
         return;
     }
@@ -2341,11 +2418,11 @@ async function handleLogin() {
     setAuthLoading(true, 'LOGGING IN...');
 
     try {
-        const result = await window.AuthService.login(username, password);
+        const result = await window.AuthService.login(email, password);
         if (result && result.success) {
             closeAuthModal();
             updateAuthUI();
-            showNotification(`✓ Logged in as ${username}`);
+            showNotification(`✓ Logged in as ${email}`);
             
             // Check if should migrate
             if (window.MigrationService.hasLocalCharacters()) {
@@ -2376,15 +2453,13 @@ async function handleRegister() {
     // the DOM a short moment to settle before reading values.
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const usernameInput = document.getElementById('registerUsername');
     const emailInput = document.getElementById('registerEmail');
     const passwordInput = document.getElementById('registerPassword');
 
-    const username = usernameInput ? usernameInput.value.trim() : '';
     const email = emailInput ? emailInput.value.trim() : '';
     const password = passwordInput ? passwordInput.value : '';
 
-    if (!username || !email || !password) {
+    if (!email || !password) {
         errorEl.textContent = 'Please fill in all fields';
         errorEl.classList.remove('is-hidden');
         return;
@@ -2401,11 +2476,11 @@ async function handleRegister() {
     setAuthLoading(true, 'CREATING ACCOUNT...');
 
     try {
-        const result = await window.AuthService.register(username, email, password);
+        const result = await window.AuthService.register(email, password);
         if (result.success) {
             closeAuthModal();
             updateAuthUI();
-            showNotification(`✓ Registered as ${username}`);
+            showNotification(`✓ Registered as ${email}`);
             
             // Check if should migrate
             if (window.MigrationService.hasLocalCharacters()) {
@@ -2587,7 +2662,7 @@ function updateAuthUI() {
     
     if (window.AuthService && window.AuthService.isAuthenticated()) {
         const user = window.AuthService.getCurrentUser();
-        userInfoDisplay.textContent = user ? `☁ ${user.username}` : '☁ Logged In';
+        userInfoDisplay.textContent = user ? `☁ ${user.email}` : '☁ Logged In';
         authBtn.textContent = 'LOGOUT';
         authBtn.onclick = handleLogout;
 
@@ -2694,17 +2769,47 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Determine auth state up front (and validate token) so the UI and
     // storage mode (cloud vs local) start in a consistent state.
+    //
+    // However, we don't want a slow or unreachable backend to block the entire
+    // UI. Wrap the async token verification in a soft timeout so the manager
+    // can still become interactive even if /auth/me is slow.
     let isAuthenticated = false;
     if (window.AuthService) {
-        if (typeof window.AuthService.verifyToken === 'function') {
-            try {
-                isAuthenticated = await window.AuthService.verifyToken();
-            } catch (e) {
-                isAuthenticated = false;
+        const verify = async () => {
+            if (typeof window.AuthService.verifyToken === 'function') {
+                try {
+                    const result = await window.AuthService.verifyToken();
+                    return !!result;
+                } catch (e) {
+                    console.warn('Auth token verification failed:', e);
+                    return false;
+                }
+            } else if (typeof window.AuthService.isAuthenticated === 'function') {
+                try {
+                    return !!window.AuthService.isAuthenticated();
+                } catch (e) {
+                    console.warn('Auth isAuthenticated check failed:', e);
+                    return false;
+                }
             }
-        } else if (typeof window.AuthService.isAuthenticated === 'function') {
-            isAuthenticated = window.AuthService.isAuthenticated();
-        }
+            return false;
+        };
+
+        const withTimeout = (promise, ms, label) => {
+            let timeoutId;
+            const timeoutPromise = new Promise((resolve) => {
+                timeoutId = setTimeout(() => {
+                    console.warn(`[Boot] ${label} timed out after ${ms}ms; continuing in guest mode.`);
+                    resolve(false);
+                }, ms);
+            });
+
+            return Promise.race([promise, timeoutPromise]).finally(() => {
+                clearTimeout(timeoutId);
+            });
+        };
+
+        isAuthenticated = await withTimeout(verify(), 5000, 'AuthService.verifyToken');
     }
 
     // Sync header / guest notice with actual auth state
@@ -2797,7 +2902,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Add Enter key support for login/register forms
     const loginUsernameInput = document.getElementById('loginUsername');
     const loginPasswordInput = document.getElementById('loginPassword');
-    const registerUsernameInput = document.getElementById('registerUsername');
     const registerEmailInput = document.getElementById('registerEmail');
     const registerPasswordInput = document.getElementById('registerPassword');
 
@@ -2821,14 +2925,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Add Enter key support for register form
-    if (registerUsernameInput) {
-        registerUsernameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                handleRegister();
-            }
-        });
-    }
+    // Email and password fields already trigger registration on Enter.
 
     if (registerEmailInput) {
         registerEmailInput.addEventListener('keypress', (e) => {
@@ -2850,8 +2947,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Note: Debug listeners removed - they were interfering with button clicks
 
-    // Initialize app state (async) - will render when done
-    await AppState.init();
+    // Initialize app state (async) - will render when done.
+    // Do NOT await this so slow character loading can't block the entire UI.
+    AppState.init().catch((e) => {
+        console.error('AppState.init failed:', e);
+    });
 
     // Setup event listeners
     const searchInput = document.getElementById('searchInput');
