@@ -253,7 +253,11 @@
   text-align: center;
   white-space: pre;
   font-family: monospace;
-  overflow-x: auto;
+  /* Match Character Manager behavior:
+     - Treat the portrait area as a fixed frame
+     - Center the ASCII horizontally
+     - Crop anything that overflows instead of adding scrollbars */
+  overflow-x: hidden;
   overflow-y: hidden;
   width: 100%;
   max-width: 100%;
@@ -531,7 +535,9 @@
   display: inline-block;
   animation: spin 1s linear infinite;
   font-size: 18px;
-  color: var(--panel-teal);
+  /* Builder spinners should use the classic terminal green theme so they
+     match narrator text and other loading states in the left panel. */
+  color: var(--terminal-fg);
   text-shadow: none;
   vertical-align: middle;
   margin-right: 8px;
