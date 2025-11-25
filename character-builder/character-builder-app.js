@@ -2528,6 +2528,21 @@ const App = (window.App = {
     // Reset portrait tracking to ensure animation happens
     this._lastPortraitArt = null;
 
+    // In quick-create, we never want to show pre-generated portrait templates.
+    // Start by clearing any existing portrait fields on the in-progress
+    // character so the sheet renders with *no* art until custom AI kicks in.
+    if (window.CharacterState && typeof CharacterState.updateCharacter === 'function') {
+      CharacterState.updateCharacter({
+        asciiPortrait: null,
+        asciiPortraitKey: null,
+        customPortraitAscii: null,
+        originalPortraitUrl: null,
+        portrait: null,
+        portraitMetadata: null,
+        customPortraitCount: 0,
+      });
+    }
+
     // Intro message for quick create (narrator-specific)
     const narratorId = StorageService.getNarratorId();
     const narrator = getNarrator(narratorId);
@@ -3029,13 +3044,15 @@ const App = (window.App = {
     // (race+class combo or race-only) and fall back to the simple template.
     if (character.race) {
       // In quick-create mode, NEVER call the pre-generated portrait loader.
-      // We either show the final AI portrait (when available) or nothing.
+      // We either show the final custom AI portrait (when available) or
+      // nothing. We also explicitly ignore any asciiPortrait that may have
+      // been set by older exports or background upgrades so templates never
+      // appear in quick-create.
       if (isQuickMode) {
         // Before AI generation starts, quick-create characters will not yet
         // have a custom portrait. In that case render the sheet with no art.
         const portraitArt =
           character.customPortraitAscii ||
-          character.asciiPortrait ||
           null;
 
         this._lastPortraitArt = portraitArt || null;
