@@ -30,6 +30,15 @@ settings = get_settings()
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    # If a confirm_password was provided by the client, enforce that it matches.
+    # Older clients that only send `password` will have confirm_password = None
+    # and will skip this check, preserving backwards compatibility.
+    if user_data.confirm_password is not None and user_data.password != user_data.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Passwords do not match",
+        )
+
     # Debug: Log password info (not the actual password!)
     password_bytes = len(user_data.password.encode('utf-8'))
     password_chars = len(user_data.password)

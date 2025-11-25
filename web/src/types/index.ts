@@ -75,6 +75,13 @@ export interface Character {
   appearance?: string
   backstory?: string
   
+  // Portrait
+  ascii_portrait?: string
+  original_portrait_url?: string
+  custom_portrait_ascii?: string
+  custom_portrait_count?: number
+  portrait_metadata?: Record<string, any>
+  
   // Inventory
   inventory: Record<string, any>[]
   
@@ -84,6 +91,7 @@ export interface Character {
   spell_attack_bonus?: number
   spell_slots: Record<string, number>
   spell_slots_used: Record<string, number>
+  cantrips?: string[]
   spells_known: Record<string, any>[]
   spells_prepared: string[]
   

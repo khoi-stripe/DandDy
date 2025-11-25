@@ -72,6 +72,12 @@ const AuthUI = (window.AuthUI = {
 
     // Handle submit
     const handleSubmit = async () => {
+      // Give password managers / autofill a brief moment to finish
+      // populating fields before we read them. This avoids bogus
+      // "Please enter both email and password" errors when the UI
+      // *appears* filled in.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       const email = emailInput.value.trim();
       const password = passwordInput.value;
 

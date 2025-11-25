@@ -1342,6 +1342,7 @@ const App = (window.App = {
             const infoText = '';
 
             const hasImage = !!v.url;
+            const hasPrompt = !!v.prompt;
             const thumbHtml = `
             <div class="card-thumbnail">
               <div class="ascii-portrait portrait-history-preview" data-version-id="${v.id}"></div>
@@ -1358,12 +1359,27 @@ const App = (window.App = {
               <div class="card-details">
                 <div class="card-name">${title}</div>
                 <div class="card-info">${infoText || '&nbsp;'}</div>
+                ${
+                  hasPrompt
+                    ? `<div class="portrait-history-prompt-row">
+                  <span class="portrait-history-prompt-label">Prompt:</span>
+                  <span class="portrait-history-prompt" data-version-id="${v.id}"></span>
+                </div>`
+                    : ''
+                }
               </div>
               <div class="portrait-history-actions">
                 ${
                   hasImage
                     ? `<button class="terminal-btn terminal-btn-small" data-toggle-version-id="${v.id}" onclick="App.togglePortraitHistoryView('${v.id}')">
                   View Original
+                </button>`
+                    : ''
+                }
+                ${
+                  hasPrompt
+                    ? `<button class="terminal-btn terminal-btn-small" onclick="App.copyPortraitHistoryPrompt('${v.id}')" title="Copy this portrait's prompt to your clipboard">
+                  Copy Prompt
                 </button>`
                     : ''
                 }
@@ -1411,6 +1427,16 @@ const App = (window.App = {
       );
       if (el && v.ascii) {
         el.textContent = this.cropAsciiForThumbnail(v.ascii);
+      }
+
+      // Populate prompt text from portrait history metadata. This only uses the
+      // user-visible prompt (the text shown in the portrait dialog), and does
+      // not expose any hidden rendering instructions.
+      const promptEl = document.querySelector(
+        `.portrait-history-prompt[data-version-id="${v.id}"]`,
+      );
+      if (promptEl && v.prompt) {
+        promptEl.textContent = v.prompt;
       }
     });
 
@@ -1670,6 +1696,47 @@ const App = (window.App = {
       'Delete this saved portrait version? This cannot be undone.',
       onConfirm,
     );
+  },
+
+  async copyPortraitHistoryPrompt(versionId) {
+    const state = CharacterState.get();
+    const character = state.character || {};
+    const metadata = character.portraitMetadata || {};
+    const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+    const version = versions.find((v) => v.id === versionId);
+
+    if (!version || !version.prompt) {
+      this.showSystemMessage('No saved prompt for this portrait.');
+      return;
+    }
+
+    const promptText = version.prompt;
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(promptText);
+      } else {
+        // Fallback for older browsers: use a temporary textarea
+        const textarea = document.createElement('textarea');
+        textarea.value = promptText;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+        } finally {
+          document.body.removeChild(textarea);
+        }
+      }
+      this.showSystemMessage('Portrait prompt copied to clipboard.');
+    } catch (error) {
+      console.error('Failed to copy portrait prompt:', error);
+      this.showSystemMessage(
+        'Could not copy prompt automatically. Please copy it manually from the card.',
+      );
+    }
   },
 
   async generateCustomAIPortrait() {
@@ -2647,6 +2714,60 @@ const App = (window.App = {
       }
     }
 
+    // For quick-create, always generate a custom AI portrait so the final
+    // character uses true AI art instead of pre-generated templates. Guided
+    // (co-create) mode continues to rely on pre-generated portraits to avoid
+    // blocking the flow on image generation.
+    try {
+      const stateAfter = CharacterState.get();
+      const currentChar = stateAfter.character || {};
+
+      if (CONFIG.ENABLE_AI && currentChar.race && currentChar.class && window.AsciiArtService) {
+        const portraitEl = document.getElementById('character-portrait');
+
+        // Show a simple loading state in the portrait panel while the AI image
+        // is being generated and converted to ASCII.
+        if (portraitEl) {
+          portraitEl.textContent =
+            '[↻] Generating AI portrait...\n\nThis can take 20–30 seconds.';
+        }
+
+        const result = await AsciiArtService.generateCustomAIPortrait(currentChar);
+
+        if (result && result.asciiArt) {
+          const currentCount = currentChar.customPortraitCount || 0;
+          const updatedMetadata = window.PortraitHistory
+            ? window.PortraitHistory.addVersion(
+                currentChar,
+                result.asciiArt,
+                result.imageUrl || null,
+                {
+                  source: 'quick-ai',
+                  prompt:
+                    (AIService.buildCharacterDescription &&
+                      AIService.buildCharacterDescription(currentChar)) ||
+                    null,
+                },
+              )
+            : currentChar.portraitMetadata || {};
+
+          CharacterState.updateCharacter({
+            originalPortraitUrl: result.imageUrl || null,
+            customPortraitAscii: result.asciiArt,
+            customPortraitCount: currentCount + 1,
+            portraitMetadata: updatedMetadata,
+          });
+
+          // Reset last portrait so the new AI art re-animates in the panel.
+          this._lastPortraitArt = null;
+        }
+      }
+    } catch (error) {
+      console.error('Quick-create AI portrait generation error:', error);
+      // Fall back silently to whatever portrait is already displayed
+      // (pre-generated ASCII or template). Guided mode behavior is unchanged.
+    }
+
     // Jump straight to the completion screen
     const completeQuestion = QUESTIONS.find((q) => q.id === 'complete');
     if (completeQuestion) {
@@ -2861,6 +2982,21 @@ const App = (window.App = {
   async updateCharacterPanel(character) {
     const panel = document.getElementById('character-panel');
 
+    // Determine entry mode (guided vs quick) from shared state so we can
+    // adjust portrait behavior. In quick-create we suppress pre-generated
+    // portraits until an AI portrait generation has actually started.
+    let entryMode = null;
+    try {
+      if (window.CharacterState && typeof CharacterState.get === 'function') {
+        const state = CharacterState.get();
+        entryMode = state?.answers?.['entry-mode'] || null;
+      }
+    } catch (e) {
+      // If state lookup fails for any reason, fall back to default behavior.
+      entryMode = null;
+    }
+    const isQuickMode = entryMode === 'quick';
+
     // If a portrait animation is in progress, queue this update for after animation completes
     if (this._portraitAnimating) {
       this._pendingCharacterUpdate = character;
@@ -2880,9 +3016,45 @@ const App = (window.App = {
       // If serialization fails for any reason, fall back to always rendering.
     }
     
-    // If we have a race, always try to load a pre-generated portrait
-    // (race+class combo or race-only). Fall back to the simple template.
+    // If we have a race, normally we load a pre-generated portrait
+    // (race+class combo or race-only) and fall back to the simple template.
     if (character.race) {
+      // In quick-create mode, NEVER call the pre-generated portrait loader.
+      // We either show the final AI portrait (when available) or nothing.
+      if (isQuickMode) {
+        // Before AI generation starts, quick-create characters will not yet
+        // have a custom portrait. In that case render the sheet with no art.
+        const portraitArt =
+          character.customPortraitAscii ||
+          character.asciiPortrait ||
+          null;
+
+        this._lastPortraitArt = portraitArt || null;
+
+        panel.innerHTML = Components.renderCharacterSheet(
+          character,
+          portraitArt,
+          !!portraitArt,
+        );
+
+        const portraitEl = document.getElementById('character-portrait');
+        const originalPortraitEl = document.getElementById('original-portrait');
+
+        if (originalPortraitEl && character.originalPortraitUrl) {
+          originalPortraitEl.src = character.originalPortraitUrl;
+        }
+
+        if (portraitEl && portraitArt) {
+          portraitEl.textContent = portraitArt;
+          // Match manager behavior: center the ASCII portrait horizontally
+          if (window.CharacterSheet && typeof CharacterSheet._centerPortraitScrollSafely === 'function') {
+            CharacterSheet._centerPortraitScrollSafely(portraitEl);
+          }
+        }
+
+        return;
+      }
+
       try {
         // Load pre-generated or fallback portrait text
         const portraitArt = await AsciiArtService.generateAIPortrait(character);
@@ -2931,6 +3103,9 @@ const App = (window.App = {
           } else {
             // Just set it immediately if it hasn't changed
             portraitEl.textContent = portraitArt;
+            if (window.CharacterSheet && typeof CharacterSheet._centerPortraitScrollSafely === 'function') {
+              CharacterSheet._centerPortraitScrollSafely(portraitEl);
+            }
           }
         }
       } catch (error) {
@@ -2981,6 +3156,9 @@ const App = (window.App = {
           } else {
             // Just set it immediately if it hasn't changed
             portraitEl.textContent = fallbackArt;
+            if (window.CharacterSheet && typeof CharacterSheet._centerPortraitScrollSafely === 'function') {
+              CharacterSheet._centerPortraitScrollSafely(portraitEl);
+            }
           }
         }
       }
@@ -3028,6 +3206,12 @@ const App = (window.App = {
     
     // Final update to ensure all text is shown
     element.textContent = currentText;
+
+    // After animation completes, center the portrait horizontally to match
+    // the Character Manager viewer behavior.
+    if (window.CharacterSheet && typeof CharacterSheet._centerPortraitScrollSafely === 'function') {
+      CharacterSheet._centerPortraitScrollSafely(element);
+    }
   },
 
 });

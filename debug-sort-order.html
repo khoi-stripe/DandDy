@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sort Order Debug Tool</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+        h1 {
+            color: #0ff;
+        }
+        h2 {
+            color: #ff0;
+            margin-top: 30px;
+        }
+        .character {
+            background: #2a2a2a;
+            border: 1px solid #0f0;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .character-name {
+            font-weight: bold;
+            color: #0ff;
+            font-size: 1.2em;
+        }
+        .timestamp {
+            color: #f0f;
+        }
+        .id {
+            color: #888;
+        }
+        button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-family: monospace;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0ff;
+        }
+        .warning {
+            color: #f00;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 Sort Order Debug Tool</h1>
+    
+    <button onclick="refreshData()">🔄 Refresh Data</button>
+    <button onclick="clearSortMeta()">🗑️ Clear Sort Meta Cache</button>
+    
+    <h2>SortMeta Cache</h2>
+    <div id="sortMetaOutput"></div>
+    
+    <h2>Characters (Current Order)</h2>
+    <div id="charactersOutput"></div>
+    
+    <h2>Characters (Sorted by Date Modified Logic)</h2>
+    <div id="sortedOutput"></div>
+
+    <script>
+        function refreshData() {
+            // Get SortMeta cache
+            const sortMetaRaw = localStorage.getItem('dnd_character_sort_meta');
+            const sortMeta = sortMetaRaw ? JSON.parse(sortMetaRaw) : {};
+            
+            // Get characters
+            const charactersRaw = localStorage.getItem('dnd_characters');
+            const characters = charactersRaw ? JSON.parse(charactersRaw) : [];
+            
+            // Display SortMeta
+            let sortMetaHtml = '<pre>' + JSON.stringify(sortMeta, null, 2) + '</pre>';
+            document.getElementById('sortMetaOutput').innerHTML = sortMetaHtml;
+            
+            // Display characters
+            let charactersHtml = '';
+            characters.forEach((char, index) => {
+                const sortMetaTime = sortMeta[char.id]?.updatedAt || null;
+                charactersHtml += `
+                    <div class="character">
+                        <div class="character-name">${index + 1}. ${char.name}</div>
+                        <div class="id">ID: ${char.id}</div>
+                        <div class="timestamp">createdAt: ${char.createdAt || '<span class="warning">MISSING</span>'}</div>
+                        <div class="timestamp">updatedAt: ${char.updatedAt || '<span class="warning">MISSING</span>'}</div>
+                        <div class="timestamp">SortMeta: ${sortMetaTime || '<span class="warning">NONE</span>'}</div>
+                        <div class="timestamp"><strong>Effective Sort Time: ${sortMetaTime || char.updatedAt || char.createdAt || '0'}</strong></div>
+                    </div>
+                `;
+            });
+            document.getElementById('charactersOutput').innerHTML = charactersHtml;
+            
+            // Sort and display
+            const sorted = [...characters].sort((a, b) => {
+                const aMeta = sortMeta[a.id]?.updatedAt || null;
+                const bMeta = sortMeta[b.id]?.updatedAt || null;
+                const aTime = new Date(aMeta || a.updatedAt || a.createdAt || 0).getTime();
+                const bTime = new Date(bMeta || b.updatedAt || b.createdAt || 0).getTime();
+                if (aTime === bTime) {
+                    return (a.name || '').localeCompare(b.name || '');
+                }
+                return bTime - aTime; // newest first
+            });
+            
+            let sortedHtml = '';
+            sorted.forEach((char, index) => {
+                const sortMetaTime = sortMeta[char.id]?.updatedAt || null;
+                const effectiveTime = sortMetaTime || char.updatedAt || char.createdAt || '0';
+                const timeMs = new Date(effectiveTime).getTime();
+                sortedHtml += `
+                    <div class="character">
+                        <div class="character-name">${index + 1}. ${char.name}</div>
+                        <div class="id">ID: ${char.id}</div>
+                        <div class="timestamp"><strong>Sort Time: ${effectiveTime}</strong> (${timeMs})</div>
+                    </div>
+                `;
+            });
+            document.getElementById('sortedOutput').innerHTML = sortedHtml;
+        }
+        
+        function clearSortMeta() {
+            if (confirm('Clear SortMeta cache? This will reset the date modified tracking.')) {
+                localStorage.removeItem('dnd_character_sort_meta');
+                alert('SortMeta cache cleared!');
+                refreshData();
+            }
+        }
+        
+        // Auto-load on page load
+        refreshData();
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Debug Spell Storage</title>
+  <style>
+    body { 
+      font-family: monospace; 
+      padding: 20px; 
+      background: #1a1a1a; 
+      color: #0f0; 
+    }
+    .good { color: #0f0; }
+    .bad { color: #f00; }
+    .warning { color: #ff0; }
+    pre { 
+      background: #000; 
+      padding: 10px; 
+      border: 1px solid #0f0; 
+      overflow: auto;
+      max-height: 500px;
+    }
+    button {
+      background: #0f0;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      font-family: monospace;
+      font-weight: bold;
+    }
+    button:hover { background: #0ff; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Spell Data Debugger</h1>
+  <button onclick="checkStorage()">Check Storage</button>
+  <button onclick="clearStorage()">Clear Storage</button>
+  <div id="output"></div>
+
+  <script>
+    function checkStorage() {
+      const output = document.getElementById('output');
+      let html = '<h2>Storage Analysis</h2>';
+
+      // Get raw data
+      const rawData = localStorage.getItem('dnd_characters');
+      
+      if (!rawData) {
+        html += '<p class="warning">⚠️ No characters found in localStorage</p>';
+        html += '<p>Create a character first, then come back and run this check.</p>';
+        output.innerHTML = html;
+        return;
+      }
+
+      try {
+        const characters = JSON.parse(rawData);
+        html += `<p class="good">✓ Found ${characters.length} character(s)</p>`;
+
+        characters.forEach((char, i) => {
+          html += `<hr><h3>Character ${i + 1}: ${char.name}</h3>`;
+          html += `<p><strong>Class:</strong> ${char.class}</p>`;
+          html += `<p><strong>Race:</strong> ${char.race}</p>`;
+          html += `<p><strong>Level:</strong> ${char.level}</p>`;
+
+          // Check spell fields
+          html += '<h4>Spell Data Check:</h4>';
+          
+          const hasSpellcastingAbility = char.spellcastingAbility !== undefined && char.spellcastingAbility !== null;
+          const hasCantrips = Array.isArray(char.cantrips) && char.cantrips.length > 0;
+          const hasSpellsKnown = Array.isArray(char.spellsKnown) && char.spellsKnown.length > 0;
+          const hasSpellsPrepared = Array.isArray(char.spellsPrepared) && char.spellsPrepared.length > 0;
+          const hasSpellSlots = char.spellSlots && Object.keys(char.spellSlots).length > 0;
+
+          html += `<p class="${hasSpellcastingAbility ? 'good' : 'bad'}">
+            ${hasSpellcastingAbility ? '✓' : '✗'} spellcastingAbility: ${char.spellcastingAbility || 'MISSING'}
+          </p>`;
+
+          html += `<p class="${hasCantrips ? 'good' : 'bad'}">
+            ${hasCantrips ? '✓' : '✗'} cantrips: ${hasCantrips ? char.cantrips.length + ' cantrips' : 'MISSING OR EMPTY'}
+          </p>`;
+
+          html += `<p class="${hasSpellsKnown ? 'good' : 'bad'}">
+            ${hasSpellsKnown ? '✓' : '✗'} spellsKnown: ${hasSpellsKnown ? char.spellsKnown.length + ' spells' : 'MISSING OR EMPTY'}
+          </p>`;
+
+          html += `<p class="${hasSpellsPrepared ? 'good' : 'bad'}">
+            ${hasSpellsPrepared ? '✓' : '✗'} spellsPrepared: ${hasSpellsPrepared ? char.spellsPrepared.length + ' spells' : 'MISSING OR EMPTY'}
+          </p>`;
+
+          html += `<p class="${hasSpellSlots ? 'good' : 'bad'}">
+            ${hasSpellSlots ? '✓' : '✗'} spellSlots: ${hasSpellSlots ? JSON.stringify(char.spellSlots) : 'MISSING OR EMPTY'}
+          </p>`;
+
+          // Show actual spell data if present
+          if (hasCantrips) {
+            html += '<h4>Cantrips:</h4><pre>';
+            char.cantrips.forEach(spell => {
+              html += `${spell.name || spell} (${spell.school || 'unknown'})\n`;
+            });
+            html += '</pre>';
+          }
+
+          if (hasSpellsKnown) {
+            html += '<h4>Spells Known:</h4><pre>';
+            char.spellsKnown.forEach(spell => {
+              html += `${spell.name || spell} (${spell.school || 'unknown'})\n`;
+            });
+            html += '</pre>';
+          }
+
+          if (hasSpellsPrepared) {
+            html += '<h4>Spells Prepared:</h4><pre>';
+            char.spellsPrepared.forEach(spell => {
+              html += `${spell.name || spell} (${spell.school || 'unknown'})\n`;
+            });
+            html += '</pre>';
+          }
+
+          // Overall verdict
+          const hasAnySpells = hasCantrips || hasSpellsKnown || hasSpellsPrepared;
+          if (hasAnySpells) {
+            html += '<p class="good">✅ CHARACTER HAS SPELL DATA</p>';
+          } else {
+            html += '<p class="bad">❌ CHARACTER IS MISSING ALL SPELL DATA</p>';
+            html += '<p class="warning">⚠️ This character was likely saved with the bug. Create a new one.</p>';
+          }
+
+          // Show raw JSON for this character
+          html += '<h4>Raw Character Data:</h4>';
+          html += '<pre>' + JSON.stringify(char, null, 2) + '</pre>';
+        });
+
+      } catch (e) {
+        html += `<p class="bad">❌ Error parsing localStorage data: ${e.message}</p>`;
+      }
+
+      output.innerHTML = html;
+    }
+
+    function clearStorage() {
+      if (confirm('This will delete ALL characters. Are you sure?')) {
+        localStorage.clear();
+        alert('Storage cleared! Refresh the page and create a new character.');
+        location.reload();
+      }
+    }
+
+    // Auto-run on load
+    window.addEventListener('load', checkStorage);
+  </script>
+</body>
+</html>
+

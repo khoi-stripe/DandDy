@@ -20,6 +20,10 @@ function closeAuthModal() {
     document.getElementById('loginPassword').value = '';
     document.getElementById('registerEmail').value = '';
     document.getElementById('registerPassword').value = '';
+    const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
+    if (registerPasswordConfirm) {
+        registerPasswordConfirm.value = '';
+    }
 }
 
 function showLoginForm() {
@@ -41,9 +45,26 @@ function showRegisterForm() {
 }
 
 async function handleLogin() {
-    const email = document.getElementById('loginUsername').value.trim();
-    const password = document.getElementById('loginPassword').value;
     const errorEl = document.getElementById('authError');
+
+    // If the login form is hidden (user is on the REGISTER tab), do nothing.
+    // This avoids showing "Please enter both email and password" errors on
+    // the register screen if some stray event fires the login handler.
+    const loginFormEl = document.getElementById('loginForm');
+    if (loginFormEl && loginFormEl.classList.contains('is-hidden')) {
+        return;
+    }
+
+    // See note in character-manager.js: password managers / autofill can race
+    // with our click handler. Wait briefly before reading values to avoid
+    // false "Please enter both email and password" errors.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const emailInput = document.getElementById('loginUsername');
+    const passwordInput = document.getElementById('loginPassword');
+
+    const email = emailInput ? emailInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
 
     if (!email || !password) {
         errorEl.textContent = 'Please enter both email and password';
@@ -75,10 +96,18 @@ async function handleLogin() {
 async function handleRegister() {
     const email = document.getElementById('registerEmail').value.trim();
     const password = document.getElementById('registerPassword').value;
+    const passwordConfirmEl = document.getElementById('registerPasswordConfirm');
+    const passwordConfirm = passwordConfirmEl ? passwordConfirmEl.value : '';
     const errorEl = document.getElementById('authError');
 
-    if (!email || !password) {
+    if (!email || !password || (passwordConfirmEl && !passwordConfirm)) {
         errorEl.textContent = 'Please fill in all fields';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
+    if (passwordConfirmEl && password !== passwordConfirm) {
+        errorEl.textContent = 'Passwords do not match';
         errorEl.classList.remove('is-hidden');
         return;
     }

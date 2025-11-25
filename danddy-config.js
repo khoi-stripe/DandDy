@@ -10,13 +10,12 @@
     location.protocol === 'file:';
 
   // Single source of truth for backend origin & API base URL.
-  // For now we always talk to the production API so accounts are consistent
-  // regardless of where the frontend is hosted.
-  const BACKEND_ORIGIN = 'https://danddy-api.onrender.com';
-  // For true local backend development, temporarily change to:
-  // const BACKEND_ORIGIN = isLocalEnvironment
-  //   ? 'http://localhost:8000'
-  //   : 'https://danddy-api.onrender.com';
+  // Local frontends (localhost / file://) talk to the local backend so you can
+  // develop against your own API + Supabase DB. Everything else uses the
+  // production Render backend.
+  const BACKEND_ORIGIN = isLocalEnvironment
+    ? 'http://localhost:8000'
+    : 'https://danddy-api.onrender.com';
 
   // Many callers use either "<origin>/api" or "<origin>/api/..." directly.
   const API_BASE_URL = `${BACKEND_ORIGIN}/api`;

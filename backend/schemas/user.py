@@ -17,6 +17,9 @@ class UserCreate(UserBase):
     """Payload for creating a new user (registration or via admin)."""
 
     password: str
+    # Optional second password entry for flows that collect "confirm password".
+    # Older clients that only send `password` remain compatible.
+    confirm_password: str | None = None
 
 
 class UserUpdate(BaseModel):

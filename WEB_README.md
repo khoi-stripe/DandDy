@@ -1,4 +1,28 @@
-# DandDy Web App - Complete Guide
+## ⚠️ Status: React Web App Archived (Do Not Use Right Now)
+
+The `web/` directory contains a full React/Vite frontend that is **currently archived/disabled** on this machine.
+Your laptop’s security setup is blocking key pieces of the React toolchain (Node/npm), so this path is **on ice for now**.
+
+**All React/Vite work is officially tabled for now.** Please do not add new React features or spend time on the `web/` app until we explicitly revive this path.
+
+**Use these instead for day-to-day work:**
+
+- **Backend API**: `./start-backend.sh`
+- **Classic frontends (no React required)**: `./start-frontend.sh`
+  - Serves `character-manager.html`, `character-builder/index.html`, etc. on `http://localhost:8080`
+- **Simple static viewer**: `web-simple/index.html` (pure HTML/JS)
+
+**React launcher behavior:**
+
+- `./start-react-app.sh` no longer starts any React or Node processes.
+- It just prints a message pointing you to the non-React flows above.
+
+If/when security is cleared and you want to revive the React app, you can restore the old
+`start-react-app.sh` from git history and follow the archived docs below.
+
+---
+
+## DandDy Web App (React) - Archived Guide
 
 A modern, responsive web application for managing D&D 5e characters. Works on any device with a browser!
 
