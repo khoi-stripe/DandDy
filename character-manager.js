@@ -2131,8 +2131,26 @@ function showNotification(message) {
     // Console notification with visual styling
     console.log('%c✓ ' + message, 'color: #0f0; font-weight: bold');
     
-    // TODO: Could add a toast notification UI element here in the future
-    // For now, console is sufficient for debugging
+    // Bottom-center toast notification shared across the app
+    let toast = document.getElementById('toastNotification');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toastNotification';
+        toast.className = 'toast-notification';
+        toast.setAttribute('role', 'status');
+        toast.setAttribute('aria-live', 'polite');
+        document.body.appendChild(toast);
+    }
+
+    toast.textContent = message;
+    toast.classList.add('show');
+
+    if (window._toastTimeout) {
+        clearTimeout(window._toastTimeout);
+    }
+    window._toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+    }, 2200);
 }
 
 // Focus the first meaningful field inside a modal (inputs/textareas/selects first, then primary button).

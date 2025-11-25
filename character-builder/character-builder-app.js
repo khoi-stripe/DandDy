@@ -1702,7 +1702,7 @@ const App = (window.App = {
     const version = versions.find((v) => v.id === versionId);
 
     if (!version || !version.prompt) {
-      this.showSystemMessage('No saved prompt for this portrait.');
+      this.showToast('No saved prompt for this portrait.');
       return;
     }
 
@@ -1726,12 +1726,10 @@ const App = (window.App = {
           document.body.removeChild(textarea);
         }
       }
-      this.showSystemMessage('Portrait prompt copied to clipboard.');
+      this.showToast('Prompt copied.');
     } catch (error) {
       console.error('Failed to copy portrait prompt:', error);
-      this.showSystemMessage(
-        'Could not copy prompt automatically. Please copy it manually from the card.',
-      );
+      this.showToast('Could not copy prompt. Copy it manually from the card.');
     }
   },
 
@@ -2222,6 +2220,29 @@ const App = (window.App = {
       Components.renderNarratorMessage(`<span class="text-warning">[ SYSTEM ] ${text}</span>`),
     );
     Utils.scrollToBottom(true);
+  },
+
+  // Bottom-center toast used for quick, non-blocking feedback (e.g. "Prompt copied").
+  showToast(message) {
+    let toast = document.getElementById('toastNotification');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'toastNotification';
+      toast.className = 'toast-notification';
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      document.body.appendChild(toast);
+    }
+
+    toast.textContent = message;
+    toast.classList.add('show');
+
+    if (this._toastTimeout) {
+      clearTimeout(this._toastTimeout);
+    }
+    this._toastTimeout = setTimeout(() => {
+      toast.classList.remove('show');
+    }, 2200);
   },
 
   // ===== LEVEL CHANGE =====
