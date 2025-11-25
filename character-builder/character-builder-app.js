@@ -938,6 +938,10 @@ const App = (window.App = {
     // Special handling for entry mode selection
     if (questionId === 'entry-mode') {
       if (option.value === 'quick') {
+        // Record the selected entry mode in state so downstream logic
+        // (like updateCharacterPanel) can detect that we're in quick mode
+        // before any character renders happen.
+        state.answers[questionId] = option.value;
         await this.quickCreateCharacter();
         return;
       }
