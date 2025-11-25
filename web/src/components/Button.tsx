@@ -47,6 +47,11 @@ export function Button({
 
   const isDisabled = disabled || loading
 
+  const spinnerClass =
+    variant === 'primary'
+      ? 'border-yellow-400 border-t-transparent'
+      : 'border-white/60 border-t-transparent'
+
   return (
     <button
       className={`${base} ${variantClass} ${sizeClass} ${widthClass} ${className}`.trim()}
@@ -55,7 +60,7 @@ export function Button({
       {...props}
     >
       {loading && (
-        <span className="inline-block h-4 w-4 rounded-full border-2 border-white/60 border-t-transparent animate-spin" />
+        <span className={`inline-block h-4 w-4 rounded-full border-2 ${spinnerClass} animate-spin`} />
       )}
       {leadingIcon}
       <span>{children}</span>

@@ -2340,12 +2340,21 @@ function closeAuthModal() {
     document.getElementById('authError').classList.add('is-hidden');
     // Clear form fields
     document.getElementById('loginEmail').value = '';
-    document.getElementById('loginPassword').value = '';
+    const loginPassword = document.getElementById('loginPassword');
+    if (loginPassword) {
+        loginPassword.value = '';
+        loginPassword.type = 'password';
+    }
     document.getElementById('registerEmail').value = '';
-    document.getElementById('registerPassword').value = '';
+    const registerPassword = document.getElementById('registerPassword');
+    if (registerPassword) {
+        registerPassword.value = '';
+        registerPassword.type = 'password';
+    }
     const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
     if (registerPasswordConfirm) {
         registerPasswordConfirm.value = '';
+        registerPasswordConfirm.type = 'password';
     }
 }
 
@@ -2381,17 +2390,7 @@ function setAuthLoading(isLoading, message) {
     const loginBtn = document.getElementById('loginBtn');
     const registerBtn = document.getElementById('registerBtn');
     const cancelBtn = document.getElementById('authCancelBtn');
-    const loadingEl = document.getElementById('authLoading');
-    const loadingTextEl = loadingEl ? loadingEl.querySelector('.loading-text') : null;
-
-    if (loadingEl && loadingTextEl) {
-        if (isLoading) {
-            loadingEl.classList.remove('is-hidden');
-            loadingTextEl.textContent = message || 'CONTACTING SERVER...';
-        } else {
-            loadingEl.classList.add('is-hidden');
-        }
-    }
+    const loadingLabel = message || 'CONTACTING SERVER...';
 
     [loginBtn, registerBtn, cancelBtn].forEach((btn) => {
         if (btn) {
@@ -2400,10 +2399,34 @@ function setAuthLoading(isLoading, message) {
     });
 
     if (loginBtn) {
-        loginBtn.textContent = isLoading ? 'LOGGING IN...' : 'LOGIN';
+        if (isLoading) {
+            if (!loginBtn.dataset.originalLabel) {
+                loginBtn.dataset.originalLabel = loginBtn.innerHTML;
+            }
+            loginBtn.innerHTML = `<span class="spinner" aria-hidden="true">↻</span> ${loadingLabel}`;
+        } else {
+            if (loginBtn.dataset.originalLabel) {
+                loginBtn.innerHTML = loginBtn.dataset.originalLabel;
+                delete loginBtn.dataset.originalLabel;
+            } else {
+                loginBtn.textContent = 'LOGIN';
+            }
+        }
     }
     if (registerBtn) {
-        registerBtn.textContent = isLoading ? 'REGISTERING...' : 'REGISTER';
+        if (isLoading) {
+            if (!registerBtn.dataset.originalLabel) {
+                registerBtn.dataset.originalLabel = registerBtn.innerHTML;
+            }
+            registerBtn.innerHTML = `<span class="spinner" aria-hidden="true">↻</span> ${loadingLabel}`;
+        } else {
+            if (registerBtn.dataset.originalLabel) {
+                registerBtn.innerHTML = registerBtn.dataset.originalLabel;
+                delete registerBtn.dataset.originalLabel;
+            } else {
+                registerBtn.textContent = 'REGISTER';
+            }
+        }
     }
 }
 
@@ -2976,6 +2999,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
+    // Wire up password visibility toggles in auth + reset modals
+    const passwordToggleButtons = document.querySelectorAll('.password-toggle-btn');
+    passwordToggleButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            if (!targetId) return;
+            const input = document.getElementById(targetId);
+            if (!input) return;
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            btn.textContent = isPassword ? 'HIDE' : 'SHOW';
+            btn.setAttribute('aria-pressed', String(isPassword));
+            btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+        });
+    });
 
     // Note: Debug listeners removed - they were interfering with button clicks
 

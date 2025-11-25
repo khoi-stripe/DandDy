@@ -333,7 +333,10 @@
                     <p class="terminal-text-small">Email:</p>
                     <input type="email" id="loginEmail" class="terminal-input" placeholder="you@example.com">
                     <p class="terminal-text-small modal-section-label">Password:</p>
-                    <input type="password" id="loginPassword" class="terminal-input" placeholder="Enter password">
+                    <div class="password-input-wrapper">
+                        <input type="password" id="loginPassword" class="terminal-input" placeholder="Enter password">                                          
+                        <button type="button" class="password-toggle-btn" data-target="loginPassword" aria-label="Show password">SHOW</button>                  
+                    </div>
                     <p class="terminal-text-small modal-section-label terminal-text-dim">
                         <button class="link-button" type="button" onclick="openPasswordResetFromLogin()">Forgot your password?</button>
                     </p>
@@ -346,9 +349,15 @@
                     <p class="terminal-text-small">Email:</p>
                     <input type="email" id="registerEmail" class="terminal-input" placeholder="you@example.com">
                     <p class="terminal-text-small modal-section-label">Password:</p>
-                    <input type="password" id="registerPassword" class="terminal-input" placeholder="Choose password">
+                    <div class="password-input-wrapper">
+                        <input type="password" id="registerPassword" class="terminal-input" placeholder="Choose password">                                      
+                        <button type="button" class="password-toggle-btn" data-target="registerPassword" aria-label="Show password">SHOW</button>                
+                    </div>
                     <p class="terminal-text-small modal-section-label">Confirm password:</p>
-                    <input type="password" id="registerPasswordConfirm" class="terminal-input" placeholder="Re-enter password">
+                    <div class="password-input-wrapper">
+                        <input type="password" id="registerPasswordConfirm" class="terminal-input" placeholder="Re-enter password">                             
+                        <button type="button" class="password-toggle-btn" data-target="registerPasswordConfirm" aria-label="Show password">SHOW</button>         
+                    </div>
                     <p class="terminal-text-small modal-section-label terminal-text-dim">
                         Already have an account? <a href="#" onclick="showLoginForm(); return false;" class="terminal-link">Login here</a>
                     </p>
@@ -359,10 +368,6 @@
                 <button id="authCancelBtn" class="terminal-btn" onclick="closeAuthModal()">CANCEL</button>
                 <button id="loginBtn" class="terminal-btn terminal-btn-primary" onclick="handleLogin()">LOGIN</button>
                 <button id="registerBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handleRegister()">REGISTER</button>
-            </div>
-            <div id="authLoading" class="loading-indicator is-hidden">
-                <span class="spinner">↻</span>
-                <span class="loading-text">CONTACTING SERVER...</span>
             </div>
         </div>
     </div>
@@ -389,7 +394,10 @@
                     <p class="terminal-text-small modal-section-label">Reset token:</p>
                     <input type="text" id="passwordResetToken" class="terminal-input" placeholder="Paste reset token">
                     <p class="terminal-text-small modal-section-label">New password:</p>
-                    <input type="password" id="passwordResetNewPassword" class="terminal-input" placeholder="Enter new password">
+                    <div class="password-input-wrapper">
+                        <input type="password" id="passwordResetNewPassword" class="terminal-input" placeholder="Enter new password">
+                        <button type="button" class="password-toggle-btn" data-target="passwordResetNewPassword" aria-label="Show password">SHOW</button>
+                    </div>
                 </div>
                 <div id="passwordResetMessage" class="terminal-text-small terminal-text-dim" style="margin-top: 8px;"></div>
             </div>

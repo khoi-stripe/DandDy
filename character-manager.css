@@ -104,6 +104,41 @@
     padding-right: 28px; /* make room for clear button */
 }
 
+.password-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-wrapper .terminal-input {
+    padding-right: 64px; /* make room for toggle button */
+}
+
+.password-toggle-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--modal-accent);
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-size: var(--font-size-small);
+    padding: 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.password-toggle-btn:hover {
+    color: var(--terminal-accent);
+}
+
+.password-toggle-btn:focus {
+    outline: 1px dashed var(--terminal-accent);
+    outline-offset: 2px;
+}
+
 .search-clear-btn {
     position: absolute;
     right: 8px;
@@ -675,6 +710,8 @@
   font-size: 18px;
   color: var(--panel-teal); /* Teal spinner arrow to match selected card theme */
   text-shadow: none;
+  vertical-align: middle;
+  margin-right: 8px;
 }
 
 .loading-indicator {

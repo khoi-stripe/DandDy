@@ -533,6 +533,8 @@
   font-size: 18px;
   color: var(--panel-teal);
   text-shadow: none;
+  vertical-align: middle;
+  margin-right: 8px;
 }
 
 @keyframes splash-glow {
@@ -634,6 +636,41 @@
 
 .terminal-input::placeholder {
   color: var(--terminal-dim);
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper .terminal-input {
+  padding-right: calc(var(--spacing-lg) * 3);
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: var(--spacing-sm);
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: var(--modal-accent);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  padding: 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.password-toggle-btn:hover {
+  color: var(--terminal-accent);
+}
+
+.password-toggle-btn:focus {
+  outline: 1px dashed var(--terminal-accent);
+  outline-offset: 2px;
 }
 
 .terminal-select {

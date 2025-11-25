@@ -31,7 +31,10 @@ const AuthUI = (window.AuthUI = {
           
           <div class="form-group">
             <label class="form-label">[ PASSWORD ]</label>
-            <input type="password" id="login-password" class="terminal-input" placeholder="••••••••" autocomplete="current-password" />
+            <div class="password-input-wrapper">
+              <input type="password" id="login-password" class="terminal-input" placeholder="••••••••" autocomplete="current-password" />
+              <button type="button" class="password-toggle-btn" data-target="login-password" aria-label="Show password">SHOW</button>
+            </div>
           </div>
           
           <div id="login-error" class="error-message is-hidden"></div>
@@ -51,11 +54,6 @@ const AuthUI = (window.AuthUI = {
             </span>
           </div>
         </div>
-        
-        <div id="login-loading" class="loading-indicator is-hidden">
-          <div class="spinner">⣾⣽⣻⢿⡿⣟⣯⣷</div>
-          <div class="loading-text">Authenticating...</div>
-        </div>
       </div>
     `;
 
@@ -64,11 +62,13 @@ const AuthUI = (window.AuthUI = {
     // Add event listeners
     const emailInput = document.getElementById('login-email');
     const passwordInput = document.getElementById('login-password');
+    const passwordToggle = authScreen.querySelector(
+      '.password-toggle-btn[data-target="login-password"]',
+    );
     const submitButton = document.getElementById('login-submit');
     const guestButton = document.getElementById('login-guest');
     const switchButton = document.getElementById('switch-to-register');
     const errorDiv = document.getElementById('login-error');
-    const loadingDiv = document.getElementById('login-loading');
 
     // Handle submit
     const handleSubmit = async () => {
@@ -86,12 +86,12 @@ const AuthUI = (window.AuthUI = {
         return;
       }
 
-      this.showLoading(loadingDiv, true);
+      this.showLoading(submitButton, true, 'AUTHENTICATING...');
       errorDiv.classList.add('is-hidden');
 
       try {
         const result = await AuthService.login(email, password);
-        this.showLoading(loadingDiv, false);
+        this.showLoading(submitButton, false);
         if (result && result.success) {
           this.removeAuthScreen();
           if (onSuccess) onSuccess(result.user);
@@ -102,12 +102,24 @@ const AuthUI = (window.AuthUI = {
           );
         }
       } catch (error) {
-        this.showLoading(loadingDiv, false);
+        this.showLoading(submitButton, false);
         this.showError(errorDiv, error.message || 'Login failed. Please try again.');
       }
     };
 
     submitButton.addEventListener('click', handleSubmit);
+    if (passwordToggle && passwordInput) {
+      passwordToggle.addEventListener('click', () => {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        passwordToggle.textContent = isPassword ? 'HIDE' : 'SHOW';
+        passwordToggle.setAttribute('aria-pressed', String(isPassword));
+        passwordToggle.setAttribute(
+          'aria-label',
+          isPassword ? 'Hide password' : 'Show password',
+        );
+      });
+    }
     
     passwordInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') handleSubmit();
@@ -156,12 +168,18 @@ const AuthUI = (window.AuthUI = {
           
           <div class="form-group">
             <label class="form-label">[ PASSWORD ]</label>
-            <input type="password" id="register-password" class="terminal-input" placeholder="••••••••" autocomplete="new-password" />
+            <div class="password-input-wrapper">
+              <input type="password" id="register-password" class="terminal-input" placeholder="••••••••" autocomplete="new-password" />
+              <button type="button" class="password-toggle-btn" data-target="register-password" aria-label="Show password">SHOW</button>
+            </div>
           </div>
           
           <div class="form-group">
             <label class="form-label">[ CONFIRM PASSWORD ]</label>
-            <input type="password" id="register-password-confirm" class="terminal-input" placeholder="••••••••" autocomplete="new-password" />
+            <div class="password-input-wrapper">
+              <input type="password" id="register-password-confirm" class="terminal-input" placeholder="••••••••" autocomplete="new-password" />
+              <button type="button" class="password-toggle-btn" data-target="register-password-confirm" aria-label="Show password">SHOW</button>
+            </div>
           </div>
           
           <div class="form-group">
@@ -183,11 +201,6 @@ const AuthUI = (window.AuthUI = {
             </button>
           </div>
         </div>
-        
-        <div id="register-loading" class="loading-indicator is-hidden">
-          <div class="spinner">⣾⣽⣻⢿⡿⣟⣯⣷</div>
-          <div class="loading-text">Creating account...</div>
-        </div>
       </div>
     `;
 
@@ -197,11 +210,16 @@ const AuthUI = (window.AuthUI = {
     const emailInput = document.getElementById('register-email');
     const passwordInput = document.getElementById('register-password');
     const confirmInput = document.getElementById('register-password-confirm');
+    const passwordToggle = authScreen.querySelector(
+      '.password-toggle-btn[data-target="register-password"]',
+    );
+    const confirmToggle = authScreen.querySelector(
+      '.password-toggle-btn[data-target="register-password-confirm"]',
+    );
     const roleSelect = document.getElementById('register-role');
     const submitButton = document.getElementById('register-submit');
     const cancelButton = document.getElementById('register-cancel');
     const errorDiv = document.getElementById('register-error');
-    const loadingDiv = document.getElementById('register-loading');
 
     // Handle submit
     const handleSubmit = async () => {
@@ -225,12 +243,12 @@ const AuthUI = (window.AuthUI = {
         return;
       }
 
-      this.showLoading(loadingDiv, true);
+      this.showLoading(submitButton, true, 'CREATING ACCOUNT...');
       errorDiv.classList.add('is-hidden');
 
       try {
         const result = await AuthService.register(email, password, role);
-        this.showLoading(loadingDiv, false);
+        this.showLoading(submitButton, false);
         if (result && result.success) {
           this.removeAuthScreen();
           if (onSuccess) onSuccess(result.user);
@@ -242,7 +260,7 @@ const AuthUI = (window.AuthUI = {
           );
         }
       } catch (error) {
-        this.showLoading(loadingDiv, false);
+        this.showLoading(submitButton, false);
         this.showError(
           errorDiv,
           error.message || 'Registration failed. Please try again.',
@@ -251,6 +269,31 @@ const AuthUI = (window.AuthUI = {
     };
 
     submitButton.addEventListener('click', handleSubmit);
+    if (passwordToggle && passwordInput) {
+      passwordToggle.addEventListener('click', () => {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        passwordToggle.textContent = isPassword ? 'HIDE' : 'SHOW';
+        passwordToggle.setAttribute('aria-pressed', String(isPassword));
+        passwordToggle.setAttribute(
+          'aria-label',
+          isPassword ? 'Hide password' : 'Show password',
+        );
+      });
+    }
+
+    if (confirmToggle && confirmInput) {
+      confirmToggle.addEventListener('click', () => {
+        const isPassword = confirmInput.type === 'password';
+        confirmInput.type = isPassword ? 'text' : 'password';
+        confirmToggle.textContent = isPassword ? 'HIDE' : 'SHOW';
+        confirmToggle.setAttribute('aria-pressed', String(isPassword));
+        confirmToggle.setAttribute(
+          'aria-label',
+          isPassword ? 'Hide password' : 'Show password',
+        );
+      });
+    }
     
     confirmInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') handleSubmit();
@@ -271,25 +314,22 @@ const AuthUI = (window.AuthUI = {
     errorDiv.classList.remove('is-hidden');
   },
 
-  // Helper: Show/hide loading
-  showLoading(loadingDiv, show) {
+  // Helper: Show/hide loading on a primary button
+  showLoading(button, show, label) {
+    if (!button) return;
+
     if (show) {
-      loadingDiv.classList.remove('is-hidden');
-      // Animate spinner
-      const spinner = loadingDiv.querySelector('.spinner');
-      if (spinner) {
-        let frame = 0;
-        const frames = spinner.textContent;
-        spinner.dataset.interval = setInterval(() => {
-          spinner.textContent = frames[frame % frames.length];
-          frame++;
-        }, 100);
+      if (!button.dataset.originalLabel) {
+        button.dataset.originalLabel = button.innerHTML;
       }
+      button.disabled = true;
+      const loadingLabel = label || 'WORKING...';
+      button.innerHTML = `<span class="spinner" aria-hidden="true">↻</span> ${loadingLabel}`;
     } else {
-      loadingDiv.classList.add('is-hidden');
-      const spinner = loadingDiv.querySelector('.spinner');
-      if (spinner && spinner.dataset.interval) {
-        clearInterval(spinner.dataset.interval);
+      button.disabled = false;
+      if (button.dataset.originalLabel) {
+        button.innerHTML = button.dataset.originalLabel;
+        delete button.dataset.originalLabel;
       }
     }
   },
