@@ -65,10 +65,11 @@ class PortraitGenerator:
         
         # Base style - OPTIMIZED FOR ASCII CONVERSION
         parts.append("Fantasy D&D character portrait")
-        parts.append("Create a high-contrast, grayscale illustration on a pure black background")
+        parts.append("The background must be completely solid black (hex #000000) with no gradients, textures, scenery, or lighting details")
+        parts.append("Render the character in pure black-and-white, high-contrast grayscale only (no color anywhere in the image)")
         parts.append("Use bold, graphic shapes with thick outlines and minimal fine detail")
-        parts.append("The image should have bright highlights and deep shadows to maximize tonal separation")
-        parts.append("Center the subject in the frame and avoid background texture")
+        parts.append("Push bright whites and deep blacks to maximize tonal separation, with very few midtones")
+        parts.append("Center the full-body subject in the frame and avoid background elements, props, or environment details")
         parts.append("Style should be simple, iconic, and optimized for ASCII art conversion")
         
         # Race descriptions

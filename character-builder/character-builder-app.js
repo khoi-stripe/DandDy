@@ -1493,29 +1493,9 @@ const App = (window.App = {
   },
 
   async checkBackendStatus() {
-    const statusElement = document.getElementById('backend-status');
-    if (!statusElement) return;
-
-    try {
-      const response = await fetch(`${CONFIG.BACKEND_URL}/api/ai/status`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.available) {
-          statusElement.textContent = '● Connected & Ready';
-          statusElement.style.color = '#0f0';
-        } else {
-          statusElement.textContent = '▲ Connected (No API Key)';
-          statusElement.style.color = '#ff0';
-        }
-      } else {
-        statusElement.textContent = '× Offline';
-        statusElement.style.color = '#f00';
-      }
-    } catch (error) {
-      statusElement.textContent = '× Cannot Connect';
-      statusElement.style.color = '#f00';
-      console.error('Backend status check failed:', error);
-    }
+    // Backend status indicator has been removed from the settings modal UI.
+    // This method is kept as a no-op for backwards compatibility.
+    return;
   },
 
   closeSettings() {
@@ -1534,6 +1514,12 @@ const App = (window.App = {
     const narratorSelect = document.getElementById('narrator-select');
     if (narratorSelect) {
       StorageService.setNarratorId(narratorSelect.value);
+    }
+
+    // Save text speed selection
+    const textSpeedSelect = document.getElementById('text-speed-select');
+    if (textSpeedSelect && StorageService.setTextSpeedMultiplier) {
+      StorageService.setTextSpeedMultiplier(textSpeedSelect.value);
     }
 
     this.showSystemMessage('Settings saved!');
@@ -2148,12 +2134,14 @@ const App = (window.App = {
 
     try {
       // Add rendering instructions to the user's character description
+      // (hidden system-level guidance for the image model)
       const renderingInstructions = [
         'Fantasy D&D character portrait',
-        'Create a high-contrast, grayscale illustration on a pure black background',
+        'The background must be completely solid black (hex #000000) with no gradients, textures, scenery, or lighting details',
+        'Render the character in pure black-and-white, high-contrast grayscale only (no color anywhere in the image)',
         'Use bold, graphic shapes with thick outlines and minimal fine detail',
-        'The image should have bright highlights and deep shadows to maximize tonal separation',
-        'Center the subject in the frame and avoid background texture',
+        'Push bright whites and deep blacks to maximize tonal separation, with very few midtones',
+        'Center the full-body subject in the frame and avoid background elements, props, or environment details',
         'Style should be simple, iconic, and optimized for ASCII art conversion',
       ];
       
@@ -2289,9 +2277,8 @@ const App = (window.App = {
       CharacterState.updateCharacter(saved);
 
       if (showMessage) {
-        this.showSystemMessage(
-          'Character saved. You can now find it in the Character Manager.',
-        );
+        // Use a short, non-intrusive toast instead of an inline narrator system line.
+        this.showToast('Character saved');
       }
     } catch (error) {
       console.error('Error saving character:', error);

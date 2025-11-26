@@ -171,6 +171,32 @@ const StorageService = (window.StorageService = {
     localStorage.setItem('dnd_narrator_id', narratorId);
   },
 
+  // Text speed multiplier for the builder typewriter effect.
+  // 1 = normal (CONFIG.TYPEWRITER_SPEED), 1.5 = 1.5x faster, 2 = 2x faster.
+  getTextSpeedMultiplier() {
+    const value = localStorage.getItem('dnd_text_speed_multiplier');
+    if (!value) return 1;
+
+    const num = parseFloat(value);
+    if (!Number.isFinite(num) || num <= 0) {
+      return 1;
+    }
+
+    // Clamp to the supported range in case older values exist.
+    if (num < 1) return 1;
+    if (num > 2) return 2;
+    return num;
+  },
+
+  setTextSpeedMultiplier(multiplier) {
+    const num = parseFloat(multiplier);
+    if (!Number.isFinite(num) || num <= 0) {
+      localStorage.removeItem('dnd_text_speed_multiplier');
+      return;
+    }
+    localStorage.setItem('dnd_text_speed_multiplier', String(num));
+  },
+
   // ==== CHARACTER STORAGE (via shared CharacterStorage facade) ====
 
   /**
@@ -591,6 +617,11 @@ const AIService = (window.AIService = {
   // Track whether we've already allowed an "Ah, the classic..."-style line
   // for the current character generation run.
   _usedClassicThisRun: false,
+  // Track used names across this browser session to avoid repeats
+  // and increase diversity of generated suggestions.
+  _usedFirstNames: new Set(),
+  _usedLastNames: new Set(),
+  _usedFullNames: new Set(),
   
   // Backend availability tracking (for Render cold starts)
   _backendAvailable: null, // null = unknown, true = available, false = waking up
@@ -802,53 +833,117 @@ const AIService = (window.AIService = {
   },
 
   async generateNames(race, classType, count = 3) {
-    if (!CONFIG.ENABLE_AI) {
-      console.log('%c📛 NAMES (Fallback - AI Disabled)', 'color: #ff0; font-weight: bold');
-      return this.generateFallbackNames(race, count);
+    const desiredCount = Math.max(1, count || 3);
+    const candidates = [];
+
+    // Helper: attempt AI generation when enabled
+    const tryAiNames = async () => {
+      if (!CONFIG.ENABLE_AI) {
+        console.log(
+          '%c📛 NAMES (Fallback - AI Disabled)',
+          'color: #ff0; font-weight: bold',
+        );
+        return;
+      }
+
+      try {
+        console.log(
+          '%c📛 NAMES: Calling backend AI...',
+          'color: #0ff; font-weight: bold',
+        );
+        console.log('  Request:', { race, classType, count: desiredCount });
+        console.log(
+          '  Note: Will fallback after 10s if server is cold, but keep warming up in background...',
+        );
+
+        const response = await this.fetchWithTimeout(
+          `${CONFIG.BACKEND_URL}/api/ai/characters/names`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              race: race,
+              class_type: classType,
+              // Ask for extra so we have room to filter out repeats
+              count: desiredCount * 2,
+            }),
+          },
+        ); // Uses CONFIG.AI_TIMEOUT (10s)
+
+        if (!response.ok) {
+          console.log(
+            '%c📛 NAMES (Fallback - API Error)',
+            'color: #f80; font-weight: bold',
+          );
+          return;
+        }
+
+        const data = await response.json();
+        if (data.success && Array.isArray(data.names) && data.names.length > 0) {
+          console.log(
+            '%c📛 NAMES (AI Generated) ✨',
+            'color: #0f0; font-weight: bold',
+          );
+          console.log('  Response:', data.names);
+          candidates.push(...data.names);
+        }
+      } catch (error) {
+        if (error.message && error.message.includes('timed out')) {
+          console.log(
+            '%c📛 NAMES (Fallback - Backend Waking Up)',
+            'color: #f80; font-weight: bold',
+          );
+          console.log(
+            '  ⏰ 10s timeout reached. Using fallback now, but backend warmup continues...',
+          );
+          console.log(
+            '  ✅ Once awake, subsequent requests will use AI!',
+          );
+        } else {
+          console.log(
+            '%c📛 NAMES (Fallback - Connection Error)',
+            'color: #f00; font-weight: bold',
+          );
+          console.error('  Error:', error);
+        }
+      }
+    };
+
+    // Helper: always-available fallback candidates
+    const addFallbackCandidates = (multiplier = 3) => {
+      console.log(
+        '%c📛 NAMES (Fallback)',
+        'color: #f80; font-weight: bold',
+      );
+      const extra = this.generateFallbackNames(race, desiredCount * multiplier);
+      candidates.push(...extra);
+    };
+
+    // 1) Try AI first (if enabled)
+    await tryAiNames();
+
+    // 2) If AI unavailable or produced too few unique-looking options, pad with fallback
+    if (!candidates.length) {
+      addFallbackCandidates(3);
     }
 
-    try {
-      console.log('%c📛 NAMES: Calling backend AI...', 'color: #0ff; font-weight: bold');
-      console.log('  Request:', { race, classType, count });
-      console.log('  Note: Will fallback after 10s if server is cold, but keep warming up in background...');
+    // 3) Filter for uniqueness and register globally
+    let unique = this._filterAndRegisterUniqueNames(candidates, desiredCount);
 
-      const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/names`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          race: race,
-          class_type: classType,
-          count: count,
-        }),
-      }); // Uses CONFIG.AI_TIMEOUT (10s)
-
-      if (!response.ok) {
-        console.log('%c📛 NAMES (Fallback - API Error)', 'color: #f80; font-weight: bold');
-        return this.generateFallbackNames(race, count);
-      }
-
-      const data = await response.json();
-      if (data.success && data.names && data.names.length > 0) {
-        console.log('%c📛 NAMES (AI Generated) ✨', 'color: #0f0; font-weight: bold');
-        console.log('  Response:', data.names);
-        return data.names;
-      }
-    } catch (error) {
-      if (error.message.includes('timed out')) {
-        console.log('%c📛 NAMES (Fallback - Backend Waking Up)', 'color: #f80; font-weight: bold');
-        console.log('  ⏰ 10s timeout reached. Using fallback now, but backend warmup continues...');
-        console.log('  ✅ Once awake, subsequent requests will use AI!');
-      } else {
-        console.log('%c📛 NAMES (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
-        console.error('  Error:', error);
-      }
+    // 4) If we still don't have enough, top up with more fallback variations
+    if (unique.length < desiredCount) {
+      addFallbackCandidates(5);
+      const more = this._filterAndRegisterUniqueNames(
+        candidates,
+        desiredCount - unique.length,
+      );
+      unique = unique.concat(more);
     }
 
-    // Fallback: simple name generation
-    console.log('%c📛 NAMES (Fallback)', 'color: #f80; font-weight: bold');
-    return this.generateFallbackNames(race, count);
+    // Return whatever we could gather (may be fewer than requested if pools are exhausted)
+    return unique.slice(0, desiredCount);
   },
 
   generateFallbackNames(race, count) {
@@ -1219,20 +1314,82 @@ const AIService = (window.AIService = {
 
     const pattern = namePatterns[race] || namePatterns.human;
     const result = [];
-    const used = new Set();
+    const usedLocalCombos = new Set();
 
-    // Generate unique name combinations
+    // Generate name combinations with local (per-call) uniqueness.
+    // Global uniqueness (across the entire session) is handled by
+    // _filterAndRegisterUniqueNames so we only worry about producing
+    // a rich pool of candidates here.
     let attempts = 0;
-    while (result.length < count && attempts < count * 10) {
+    const maxAttempts = count * 20;
+
+    while (result.length < count && attempts < maxAttempts) {
       const firstName = Utils.randomChoice(pattern.first);
       const lastName = Utils.randomChoice(pattern.last);
       const fullName = `${firstName} ${lastName}`;
-      
-      if (!used.has(fullName)) {
-        used.add(fullName);
+
+      if (!usedLocalCombos.has(fullName)) {
+        usedLocalCombos.add(fullName);
         result.push(fullName);
       }
       attempts++;
+    }
+
+    return result;
+  },
+
+  /**
+   * Internal helper: normalize and register names so we:
+   * - avoid duplicate first names (case-insensitive)
+   * - avoid duplicate last names
+   * - avoid duplicate full names
+   * across the entire browser session.
+   *
+   * Accepts an array of full-name strings and returns a filtered array.
+   */
+  _filterAndRegisterUniqueNames(candidates, maxCount) {
+    const result = [];
+    const target = typeof maxCount === 'number' && maxCount > 0
+      ? maxCount
+      : Number.POSITIVE_INFINITY;
+
+    for (const raw of candidates) {
+      if (result.length >= target) break;
+      if (!raw) continue;
+
+      const trimmed = String(raw).trim();
+      if (!trimmed) continue;
+
+      // Split on whitespace, first token = first name, rest = last name
+      const parts = trimmed.split(/\s+/);
+      if (parts.length === 0) continue;
+
+      const first = parts[0];
+      const last = parts.slice(1).join(' ') || '';
+
+      // Require at least a first name; allow missing last name but treat it as part of full key
+      if (!first) continue;
+
+      const firstKey = first.toLowerCase();
+      const lastKey = last.toLowerCase();
+      const fullKey = last ? `${firstKey} ${lastKey}` : firstKey;
+
+      // Enforce uniqueness across this browser session
+      if (
+        this._usedFullNames.has(fullKey) ||
+        this._usedFirstNames.has(firstKey) ||
+        (last && this._usedLastNames.has(lastKey))
+      ) {
+        continue;
+      }
+
+      this._usedFullNames.add(fullKey);
+      this._usedFirstNames.add(firstKey);
+      if (last) {
+        this._usedLastNames.add(lastKey);
+      }
+
+      result.push(trimmed);
     }
 
     return result;
@@ -1455,6 +1612,57 @@ Format your response as JSON array of strings, one for each option in order. Exa
       }
     }
 
+    // Background + feature (when available)
+    if (character.background) {
+      try {
+        let backgroundLabel = character.background;
+        let backgroundFeature = character.backgroundFeature || null;
+
+        if (typeof DND_DATA !== 'undefined' && Array.isArray(DND_DATA.backgrounds)) {
+          const bgObj = DND_DATA.backgrounds.find(
+            (b) => b.id === character.background,
+          );
+          if (bgObj) {
+            backgroundLabel = bgObj.name || backgroundLabel;
+            // bgObj.feature is an object { name, description } – extract a readable label
+            if (!backgroundFeature && bgObj.feature) {
+              if (typeof bgObj.feature === 'string') {
+                backgroundFeature = bgObj.feature;
+              } else if (typeof bgObj.feature.name === 'string') {
+                backgroundFeature = bgObj.feature.name;
+              } else if (typeof bgObj.feature.description === 'string') {
+                backgroundFeature = bgObj.feature.description;
+              }
+            }
+          }
+        }
+
+        let backgroundText = `${String(backgroundLabel).toLowerCase()} background`;
+        if (backgroundFeature) {
+          const featureText = String(backgroundFeature);
+          // Avoid noisy [object Object] style strings
+          if (!featureText.includes('[object Object]')) {
+            backgroundText += ` with background feature "${featureText}"`;
+          }
+        }
+
+        parts.push(backgroundText);
+      } catch (e) {
+        // Fallback to a simple tag if anything goes wrong with lookups
+        parts.push(`background: ${character.background}`);
+      }
+    }
+
+    // Backstory (shortened so prompts stay concise)
+    if (character.backstory) {
+      const raw = String(character.backstory).replace(/\s+/g, ' ').trim();
+      if (raw) {
+        const maxLen = 240;
+        const snippet = raw.length > maxLen ? `${raw.slice(0, maxLen)}...` : raw;
+        parts.push(`backstory: ${snippet}`);
+      }
+    }
+
     parts.push('full body portrait, fantasy art style, detailed');
 
     return parts.join(', ');
@@ -1464,10 +1672,11 @@ Format your response as JSON array of strings, one for each option in order. Exa
   buildPortraitPrompt(character) {
     const renderingInstructions = [
       'Fantasy D&D character portrait',
-      'Create a high-contrast, grayscale illustration on a pure black background',
+      'The background must be completely solid black (hex #000000) with no gradients, textures, scenery, or lighting details',
+      'Render the character in pure black-and-white, high-contrast grayscale only (no color anywhere in the image)',
       'Use bold, graphic shapes with thick outlines and minimal fine detail',
-      'The image should have bright highlights and deep shadows to maximize tonal separation',
-      'Center the subject in the frame and avoid background texture',
+      'Push bright whites and deep blacks to maximize tonal separation, with very few midtones',
+      'Center the full-body subject in the frame and avoid background elements, props, or environment details',
       'Style should be simple, iconic, and optimized for ASCII art conversion',
     ];
 

@@ -228,10 +228,11 @@ const SecureAIService = (window.SecureAIService = {
   buildPortraitPrompt(character) {
     const renderingInstructions = [
       'Fantasy D&D character portrait',
-      'Create a high-contrast, grayscale illustration on a pure black background',
+      'The background must be completely solid black (hex #000000) with no gradients, textures, scenery, or lighting details',
+      'Render the character in pure black-and-white, high-contrast grayscale only (no color anywhere in the image)',
       'Use bold, graphic shapes with thick outlines and minimal fine detail',
-      'The image should have bright highlights and deep shadows to maximize tonal separation',
-      'Center the subject in the frame and avoid background texture',
+      'Push bright whites and deep blacks to maximize tonal separation, with very few midtones',
+      'Center the full-body subject in the frame and avoid background elements, props, or environment details',
       'Style should be simple, iconic, and optimized for ASCII art conversion',
     ];
 
