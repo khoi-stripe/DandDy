@@ -1224,6 +1224,11 @@ body {
   color: var(--modal-accent-dim);
 }
 
+/* Extra breathing room for portrait prompt subhead above textarea */
+.modal .portrait-modal-subhead {
+  margin-bottom: var(--spacing-md);
+}
+
 /* Modal-specific input theming (yellow) */
 .modal .terminal-input,
 .modal .terminal-textarea,

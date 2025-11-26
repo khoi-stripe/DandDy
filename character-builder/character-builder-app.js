@@ -2028,7 +2028,7 @@ const App = (window.App = {
             <p class="terminal-text">
               Describe your character's appearance. AI will generate a portrait optimized for ASCII art.
             </p>
-            <p class="terminal-text-small terminal-text-dim">
+            <p class="terminal-text-small terminal-text-dim portrait-modal-subhead">
               Be descriptive! (e.g., "a stoic dwarf fighter with a braided beard, holding a glowing axe")
             </p>
             <textarea
