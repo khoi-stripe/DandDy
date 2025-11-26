@@ -1482,6 +1482,12 @@ function dismissGuestNotice() {
 // screen, so keep this false to ensure global keyboard shortcuts always work.
 let splashActive = false;
 
+// Track whether the auth modal was opened from the welcome splash CTA
+// (LOG IN / CREATE ACCOUNT). When true, pressing Escape or CANCEL in the
+// auth modal should return the user to the splash screen instead of
+// leaving them on the main dashboard.
+let authOpenedFromWelcome = false;
+
 function dismissSplash(instant = false) {
     const splash = document.getElementById('splash-content');
     const mainContent = document.getElementById('main-content');
@@ -1508,6 +1514,28 @@ function dismissSplash(instant = false) {
                 }, 50);
             }, 300);
         }
+    }
+}
+
+// When the user explicitly cancels out of the auth flow (Escape, "X",
+// or CANCEL button), close the auth modal and, if it was launched from
+// the welcome splash, return to that splash screen instead of leaving
+// them on the main dashboard.
+function cancelAuthFlow() {
+    closeAuthModal();
+
+    if (authOpenedFromWelcome) {
+        const welcomeModal = document.getElementById('welcomeModal');
+        if (welcomeModal) {
+            welcomeModal.classList.add('show');
+
+            // Try to focus the first CTA button again for keyboard users.
+            const firstBtn = welcomeModal.querySelector('.welcome-actions .terminal-btn');
+            if (firstBtn) {
+                firstBtn.focus();
+            }
+        }
+        authOpenedFromWelcome = false;
     }
 }
 
@@ -1916,7 +1944,10 @@ function updateAuthUI() {
     } else {
         userInfoDisplay.textContent = '▣ Local Storage';
         authBtn.textContent = 'LOGIN';
-        authBtn.onclick = showAuthModal;
+        authBtn.onclick = () => {
+            authOpenedFromWelcome = false;
+            showAuthModal();
+        };
 
         // Show guest notice when not authenticated
         if (guestNotice) {
@@ -2070,6 +2101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const welcomeLoginBtn = document.getElementById('welcomeLoginBtn');
     if (welcomeLoginBtn) {
         welcomeLoginBtn.addEventListener('click', () => {
+            authOpenedFromWelcome = true;
             if (welcomeModal) welcomeModal.classList.remove('show');
             showAuthModal();
         });
@@ -2078,6 +2110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const welcomeRegisterBtn = document.getElementById('welcomeRegisterBtn');
     if (welcomeRegisterBtn) {
         welcomeRegisterBtn.addEventListener('click', () => {
+            authOpenedFromWelcome = true;
             if (welcomeModal) welcomeModal.classList.remove('show');
             showAuthModal();
             showRegisterForm();
@@ -2418,7 +2451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else if (modalId === 'editDetailsModal') {
                     closeEditDetailsModal();
                 } else if (modalId === 'authModal') {
-                    closeAuthModal();
+                    cancelAuthFlow();
                 } else if (modalId === 'migrationModal') {
                     closeMigrationModal();
                 } else if (modalId === 'passwordResetModal') {

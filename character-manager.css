@@ -102,12 +102,20 @@
 
 .search-input-wrapper .terminal-input {
     padding-right: 28px; /* make room for clear button */
+    /* Search field text should use dim terminal green so it feels subtle
+       even when focused, while still using shared focus borders/shadows. */
+    color: var(--terminal-dim);
+}
+
+/* Placeholder copy (e.g., "Search all 15 characters") should also use
+   the dim terminal green token so it matches the input text color. */
+.search-input-wrapper .terminal-input::placeholder {
+    color: var(--terminal-dim);
 }
 
 /* Dim the search box when not focused so it feels secondary until active */
 .search-input-wrapper .terminal-input:not(:focus) {
     border-color: var(--terminal-dim);
-    color: var(--terminal-dim);
 }
 
 .password-input-wrapper {
@@ -493,6 +501,9 @@
 #userInfoDisplay {
     font-size: var(--font-size-small);
     white-space: nowrap;
+    /* Dim user/email or \"Local Storage\" status so it doesn't compete
+       with primary header actions. */
+    color: var(--terminal-dim);
 }
 
 .terminal-text-error {

@@ -343,7 +343,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title" id="authModalTitle">[ LOGIN ]</h2>
-                <button class="modal-close" onclick="closeAuthModal()">&times;</button>
+                <button class="modal-close" onclick="cancelAuthFlow()">&times;</button>
             </div>
             <div class="modal-body">
                 <div id="loginForm">
@@ -383,7 +383,7 @@
                 <div id="authError" class="terminal-text-error is-hidden"></div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button id="authCancelBtn" class="terminal-btn" onclick="closeAuthModal()">CANCEL</button>
+                <button id="authCancelBtn" class="terminal-btn" onclick="cancelAuthFlow()">CANCEL</button>
                 <button id="loginBtn" class="terminal-btn terminal-btn-primary" onclick="handleLogin()">LOGIN</button>
                 <button id="registerBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handleRegister()">REGISTER</button>
             </div>

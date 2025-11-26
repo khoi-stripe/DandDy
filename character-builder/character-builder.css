@@ -979,6 +979,26 @@
   border-top: 2px solid var(--terminal-border);
 }
 
+/* ===== BUILDER LEFT PANEL GREEN THEME ===== */
+/* Ensure the builder narrator/questions area (left panel) uses the classic green
+   terminal theming for key text accents, not teal/cyan overrides. Buttons keep
+   using their shared theming from terminal-theme.css. */
+.left-panel .narrator-text {
+  color: var(--terminal-fg);
+}
+
+.left-panel .narrator-prompt,
+.left-panel .question-text,
+.left-panel .recommendations-header,
+.left-panel .text-accent,
+.left-panel .text-strong {
+  color: var(--terminal-fg);
+}
+
+.left-panel .recommendations-divider {
+  border-top-color: var(--terminal-fg);
+}
+
 /* ===== RIGHT PANEL TEAL THEME ===== */
 /* Teal color variables */
 :root {
