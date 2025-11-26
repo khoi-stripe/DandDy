@@ -1290,17 +1290,34 @@ function togglePortraitView(characterId) {
 
     const isShowingAscii = !asciiPortrait.classList.contains('is-hidden');
 
+    const iconSpan = toggleBtn.querySelector('.selector-option-icon');
+    const labelSpan = toggleBtn.querySelector('.selector-option-label');
+
     if (isShowingAscii) {
         // Switch to original
         asciiPortrait.classList.add('is-hidden');
         originalPortrait.classList.remove('is-hidden');
-        toggleBtn.textContent = '≡ View ASCII Art';
+
+        if (iconSpan && labelSpan) {
+            iconSpan.textContent = '≡';
+            labelSpan.textContent = 'View ASCII Art';
+        } else {
+            toggleBtn.textContent = '≡ View ASCII Art';
+        }
+
         toggleBtn.title = 'Toggle between ASCII and original art';
     } else {
         // Switch to ASCII
         asciiPortrait.classList.remove('is-hidden');
         originalPortrait.classList.add('is-hidden');
-        toggleBtn.textContent = '◉ View Original';
+
+        if (iconSpan && labelSpan) {
+            iconSpan.textContent = '◉';
+            labelSpan.textContent = 'View Original Art';
+        } else {
+            toggleBtn.textContent = '◉ View Original Art';
+        }
+
         toggleBtn.title = 'Toggle between ASCII and original art';
     }
 }
@@ -2332,12 +2349,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             sizeSortTrigger();
         };
 
-        sortToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            sortDropdown.classList.toggle('is-open');
-            updateSortUI();
-        });
-
         const sortOptions = Array.from(sortDropdown.querySelectorAll('.sort-option'));
 
         sortOptions.forEach((opt) => {
@@ -2439,6 +2450,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         };
+
+        sortToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = sortDropdown.classList.contains('is-open');
+            if (!isOpen) {
+                // Open and focus first option for immediate keyboard nav
+                const options = Array.from(sortDropdown.querySelectorAll('.sort-option'));
+                sortDropdown.classList.add('is-open');
+                updateSortUI();
+                if (options.length) {
+                    options[0].focus();
+                }
+            } else {
+                sortDropdown.classList.remove('is-open');
+                updateSortUI();
+            }
+        });
 
         sortToggleBtn.addEventListener('keydown', handleSortKeydown);
         sortDropdown.addEventListener('keydown', handleSortKeydown);

@@ -730,8 +730,8 @@ body {
 }
 
 .selector-trigger.is-open {
-  border-color: var(--terminal-dim);
-  color: var(--terminal-dim);
+  border-color: var(--ui-dim-color);
+  color: var(--ui-dim-color);
   background-color: rgba(0, 0, 0, 0.6);
 }
 
@@ -739,7 +739,7 @@ body {
   position: absolute;
   min-width: 200px;
   background: var(--terminal-bg);
-  border: 1px solid var(--terminal-border);
+  border: 1px solid var(--ui-border-color);
   border-radius: 4px;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.7);
   z-index: 20;
@@ -762,6 +762,18 @@ body {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.9);
 }
 
+/* Sheet-level selector menus (header + portrait) should be perfectly
+   centered on the trigger without the global vertical offset. */
+.sheet-actions-menu.selector-menu,
+.portrait-actions-menu.selector-menu {
+  transform: scaleY(0.15);
+}
+
+.sheet-actions-menu.selector-menu.is-open,
+.portrait-actions-menu.selector-menu.is-open {
+  transform: scaleY(1);
+}
+
 .selector-option {
   display: flex;
   align-items: center;
@@ -769,7 +781,7 @@ body {
   padding: 6px 12px;
   background: transparent;
   border: none;
-  color: var(--terminal-fg);
+  color: var(--ui-fg-color);
   text-align: left;
   font-family: var(--font-mono);
   font-size: 12px;
@@ -780,13 +792,9 @@ body {
 .selector-option:hover,
 .selector-option.is-selected,
 .selector-option:focus {
-  background-color: hsla(
-    var(--theme-terminal-h),
-    var(--theme-terminal-s),
-    var(--theme-terminal-l-bright),
-    0.16
-  );
-  color: var(--terminal-accent);
+  /* Neutral themed highlight that respects current UI tokens */
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--ui-fg-color);
 }
 
 .selector-option-icon {

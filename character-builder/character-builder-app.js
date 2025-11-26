@@ -589,16 +589,22 @@ const App = (window.App = {
         });
       };
 
-      const toggleOpen = () => {
-        const isOpen = listbox.classList.contains('is-open');
-        listbox.classList.toggle('is-open', !isOpen);
-        trigger.classList.toggle('is-open', !isOpen);
-        trigger.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
-      };
-
       trigger.addEventListener('click', (e) => {
         e.stopPropagation();
-        toggleOpen();
+        const isOpen = listbox.classList.contains('is-open');
+        if (!isOpen) {
+          // Open and focus first option for immediate keyboard nav
+          listbox.classList.add('is-open');
+          trigger.classList.add('is-open');
+          trigger.setAttribute('aria-expanded', 'true');
+          if (optionsEls.length) {
+            optionsEls[0].focus();
+          }
+        } else {
+          listbox.classList.remove('is-open');
+          trigger.classList.remove('is-open');
+          trigger.setAttribute('aria-expanded', 'false');
+        }
       });
 
       optionsEls.forEach((opt) => {
@@ -2233,17 +2239,34 @@ const App = (window.App = {
 
     const isShowingAscii = asciiPortrait.style.display !== 'none';
 
+    const iconSpan = toggleBtn.querySelector('.selector-option-icon');
+    const labelSpan = toggleBtn.querySelector('.selector-option-label');
+
     if (isShowingAscii) {
       // Switch to original
       asciiPortrait.style.display = 'none';
       originalPortrait.style.display = 'block';
-      toggleBtn.textContent = '≡ View ASCII Art';
+
+      if (iconSpan && labelSpan) {
+        iconSpan.textContent = '≡';
+        labelSpan.textContent = 'View ASCII Art';
+      } else {
+        toggleBtn.textContent = '≡ View ASCII Art';
+      }
+
       toggleBtn.title = 'Toggle between ASCII and original art';
     } else {
       // Switch to ASCII
       asciiPortrait.style.display = 'block';
       originalPortrait.style.display = 'none';
-      toggleBtn.textContent = '◉ View Original Art';
+
+      if (iconSpan && labelSpan) {
+        iconSpan.textContent = '◉';
+        labelSpan.textContent = 'View Original Art';
+      } else {
+        toggleBtn.textContent = '◉ View Original Art';
+      }
+
       toggleBtn.title = 'Toggle between ASCII and original art';
     }
   },

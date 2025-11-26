@@ -42,7 +42,7 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Build HTML
     return `
-      ${this._renderHeader(character, context, {
+      ${this._renderHeader(character, parsed, context, {
         onPrint,
         onRename,
         onDuplicate,
@@ -50,6 +50,8 @@ const CharacterSheet = (window.CharacterSheet = {
         onDelete,
         onLevelChange,
         onEdit,
+        onGeneratePortrait,
+        onTogglePortrait,
       })}
       
       ${showPortrait && parsed.hasRace
@@ -97,8 +99,18 @@ const CharacterSheet = (window.CharacterSheet = {
   // SECTION RENDERERS
   // ========================================
 
-  _renderHeader(character, context, callbacks) {
-    const { onPrint, onRename, onDuplicate, onExport, onDelete, onLevelChange, onEdit } = callbacks;
+  _renderHeader(character, parsed, context, callbacks) {
+    const {
+      onPrint,
+      onRename,
+      onDuplicate,
+      onExport,
+      onDelete,
+      onLevelChange,
+      onEdit,
+      onGeneratePortrait,
+      onTogglePortrait,
+    } = callbacks;
     // Function names differ by context
     const renameFn = context === 'builder' ? 'App.openNameModal()' : `renameCharacter('${character.id}')`;
     const editFn = context === 'manager' ? `editCharacter('${character.id}')` : null;
@@ -127,14 +139,6 @@ const CharacterSheet = (window.CharacterSheet = {
       });
     }
 
-    if (printFn) {
-      headerActions.push({
-        icon: '⎙',
-        label: 'Print sheet',
-        onclick: printFn,
-      });
-    }
-
     if (context === 'manager' && onEdit) {
       headerActions.push({
         icon: '✎',
@@ -148,6 +152,81 @@ const CharacterSheet = (window.CharacterSheet = {
         icon: '×',
         label: 'Delete character',
         onclick: `deleteCharacter('${character.id}')`,
+      });
+    }
+
+    // Portrait-related actions (moved from below-ascii overflow)
+    const safeIdForDom = character.id || 'current';
+    const hasValidManagerId = !!character.id;
+    const toggleBtnId =
+      context === 'builder'
+        ? 'toggle-portrait-btn'
+        : `toggle-portrait-btn-${safeIdForDom}`;
+    const generateFn =
+      context === 'builder'
+        ? 'App.generateCustomAIPortrait()'
+        : hasValidManagerId
+          ? `generatePortraitForCharacter('${character.id}')`
+          : null;
+    const toggleFn =
+      context === 'builder'
+        ? 'App.togglePortraitView()'
+        : `togglePortraitView('${safeIdForDom}')`;
+    const hasCustomPortrait = !!(
+      character.customPortraitAscii ||
+      character.originalPortraitUrl ||
+      character.portrait?.url ||
+      (character.portraitMetadata &&
+        Array.isArray(character.portraitMetadata.versions) &&
+        character.portraitMetadata.versions.length > 0)
+    );
+    const historyFn =
+      context === 'builder'
+        ? 'App.openPortraitHistory()'
+        : hasValidManagerId
+          ? `openPortraitHistory('${character.id}')`
+          : null;
+
+    const originalPortraitUrl =
+      character.portrait?.url || character.originalPortraitUrl || null;
+
+    if (
+      parsed.hasRace &&
+      parsed.hasClass &&
+      onGeneratePortrait &&
+      (context === 'builder' || hasValidManagerId) &&
+      generateFn
+    ) {
+      headerActions.push({
+        icon: '★',
+        label: 'Custom AI Portrait',
+        onclick: generateFn,
+      });
+    }
+
+    if (originalPortraitUrl && (onTogglePortrait || context === 'manager')) {
+      headerActions.push({
+        icon: '◉',
+        label: 'View original art',
+        onclick: toggleFn,
+        id: toggleBtnId,
+      });
+    }
+
+    if (hasCustomPortrait && historyFn) {
+      headerActions.push({
+        icon: '⧖',
+        label: 'Portrait history',
+        onclick: historyFn,
+      });
+    }
+
+    // Ensure "Print sheet" always appears at the bottom of the list
+    if (printFn) {
+      headerActions.push({
+        icon: '⎙',
+        label: 'Print sheet',
+        onclick: printFn,
       });
     }
 
@@ -172,7 +251,9 @@ const CharacterSheet = (window.CharacterSheet = {
                 class="selector-option"
                 type="button"
                 role="menuitem"
-                onclick="${action.onclick}"
+                onclick="${action.onclick}"${
+                  action.id ? ` id="${action.id}"` : ''
+                }
               >
                 <span class="selector-option-icon">${action.icon}</span>
                 <span class="selector-option-label">${action.label}</span>
@@ -208,120 +289,12 @@ const CharacterSheet = (window.CharacterSheet = {
     const portraitId = context === 'builder' ? 'character-portrait' : `character-portrait-${safeIdForDom}`;
     const originalPortraitId =
       context === 'builder' ? 'original-portrait' : `original-portrait-${safeIdForDom}`;
-    const toggleBtnId =
-      context === 'builder' ? 'toggle-portrait-btn' : `toggle-portrait-btn-${safeIdForDom}`;
-    
-    // Function names differ by context
-    // In manager context we only enable portrait generation when there is a valid character.id,
-    // so we never call generatePortraitForCharacter('null') / 'undefined' and hit the API with
-    // an invalid /characters/null path.
-    const hasValidManagerId = !!character.id;
-    const generateFn =
-      context === 'builder'
-        ? 'App.generateCustomAIPortrait()'
-        : hasValidManagerId
-          ? `generatePortraitForCharacter('${character.id}')`
-          : null;
-    const toggleFn =
-      context === 'builder'
-        ? 'App.togglePortraitView()'
-        : `togglePortraitView('${safeIdForDom}')`;
-
-    // Show portrait history button if character has ANY custom portrait
-    // (even if no version history exists yet - will show helpful empty state)
-    const hasCustomPortrait = !!(
-      character.customPortraitAscii ||
-      character.originalPortraitUrl ||
-      character.portrait?.url ||
-      (character.portraitMetadata &&
-       Array.isArray(character.portraitMetadata.versions) &&
-       character.portraitMetadata.versions.length > 0)
-    );
-    const historyFn =
-      context === 'builder'
-        ? 'App.openPortraitHistory()'
-        : hasValidManagerId
-          ? `openPortraitHistory('${character.id}')`
-          : null;
-
-    // Debug logging for portrait history button
-    if (context === 'manager' && character.id) {
-      console.log(`%c🎨 PORTRAIT HISTORY BUTTON [${character.name || character.id}]`, 'color: #0ff');
-      console.log('  hasCustomPortrait:', hasCustomPortrait);
-      console.log('  historyFn:', historyFn);
-      console.log('  Will show button:', hasCustomPortrait && historyFn);
-      if (character.portraitMetadata) {
-        console.log('  Versions:', character.portraitMetadata.versions?.length || 0);
-      }
-    }
-
-    const portraitActions = [];
-
-    if (parsed.hasRace && parsed.hasClass && onGeneratePortrait && (context === 'builder' || hasValidManagerId)) {
-      portraitActions.push({
-        icon: '★',
-        label: 'Custom AI Portrait',
-        onclick: generateFn,
-      });
-    }
-
-    if (originalPortraitUrl && (onTogglePortrait || context === 'manager')) {
-      portraitActions.push({
-        icon: '◉',
-        label: 'View original art',
-        onclick: toggleFn,
-      });
-    }
-
-    if (hasCustomPortrait && historyFn) {
-      portraitActions.push({
-        icon: '⧖',
-        label: 'Portrait history',
-        onclick: historyFn,
-      });
-    }
-
-    const portraitMenu =
-      portraitActions.length > 0
-        ? `
-        <div class="portrait-actions selector-shell">
-          <button
-            class="terminal-btn-small selector-trigger portrait-actions-trigger"
-            type="button"
-            aria-haspopup="menu"
-            aria-expanded="false"
-            onclick="CharacterSheet.toggleSelectorMenu(this)"
-          >
-            ⋮
-          </button>
-          <div class="selector-menu portrait-actions-menu" role="menu" aria-hidden="true">
-            ${portraitActions
-              .map(
-                (action) => `
-              <button
-                class="selector-option"
-                type="button"
-                role="menuitem"
-                onclick="${action.onclick}"
-              >
-                <span class="selector-option-icon">${action.icon}</span>
-                <span class="selector-option-label">${action.label}</span>
-              </button>
-            `,
-              )
-              .join('')}
-          </div>
-        </div>
-      `
-        : '';
-
     return `
       <div class="portrait-container">
         <div class="ascii-portrait" id="${portraitId}"></div>
         ${originalPortraitUrl
           ? `<img id="${originalPortraitId}" class="original-portrait is-hidden" src="${originalPortraitUrl}" alt="Character portrait">`
           : ''}
-        ${portraitMenu}
       </div>
     `;
   },
@@ -435,37 +408,58 @@ const CharacterSheet = (window.CharacterSheet = {
 
     const setOpen = (open) => {
       if (open) {
-        // Decide which horizontal side has more space
+        // Decide which horizontal side has more space, based on the trigger
         const shellRect = shell.getBoundingClientRect();
+        const triggerRect = triggerEl.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
-        const spaceLeft = shellRect.left;
-        const spaceRight = viewportWidth - shellRect.right;
+        const spaceLeft = triggerRect.left;
+        const spaceRight = viewportWidth - triggerRect.right;
         const side = spaceRight >= spaceLeft ? 'right' : 'left';
 
-        // Measure menu height to vertically center relative to trigger/shell
-        const prevTransition = menu.style.transition;
-        const prevTransform = menu.style.transform;
+        // Measure menu height without affecting transform/animation
+        const prevDisplay = menu.style.display;
+        const prevVisibility = menu.style.visibility;
 
-        menu.style.transition = 'none';
-        menu.classList.add('is-open');
-        menu.style.transform = 'scaleY(1)';
+        menu.style.visibility = 'hidden';
+        menu.style.display = 'block';
 
         const menuRect = menu.getBoundingClientRect();
         const menuHeight = menuRect.height || 0;
 
-        menu.style.transition = prevTransition;
-        menu.style.transform = prevTransform;
+        menu.style.display = prevDisplay;
+        menu.style.visibility = prevVisibility;
 
-        const offsetTop = (shellRect.height - menuHeight) / 2;
+        // Vertically center menu relative to the trigger position
+        const triggerCenterY = triggerRect.top + triggerRect.height / 2;
+        const offsetTop =
+          triggerCenterY - shellRect.top - menuHeight / 2;
         menu.style.top = `${offsetTop}px`;
-        menu.style.left = side === 'right' ? `${shellRect.width}px` : '';
-        menu.style.right = side === 'left' ? `${shellRect.width}px` : '';
+
+        // Horizontal offset: sit just outside the trigger with a small gap
+        const gap = 4;
+        if (side === 'right') {
+          const offsetLeft =
+            triggerRect.right - shellRect.left + gap;
+          menu.style.left = `${offsetLeft}px`;
+          menu.style.right = '';
+        } else {
+          const offsetRight =
+            shellRect.right - triggerRect.left + gap;
+          menu.style.right = `${offsetRight}px`;
+          menu.style.left = '';
+        }
 
         shell.classList.add('is-open');
         triggerEl.classList.add('is-open');
         menu.classList.add('is-open');
         menu.setAttribute('aria-hidden', 'false');
         triggerEl.setAttribute('aria-expanded', 'true');
+
+        // Focus first option for immediate keyboard navigation
+        const firstOption = menu.querySelector('.selector-option');
+        if (firstOption) {
+          firstOption.focus();
+        }
       } else {
         shell.classList.remove('is-open');
         triggerEl.classList.remove('is-open');
@@ -494,6 +488,26 @@ const CharacterSheet = (window.CharacterSheet = {
         });
       };
       document.addEventListener('click', this._selectorOutsideHandler);
+    }
+
+    if (!this._selectorKeyHandler) {
+      this._selectorKeyHandler = (event) => {
+        if (event.key !== 'Escape') return;
+        const openShells = document.querySelectorAll('.selector-shell.is-open');
+        if (!openShells.length) return;
+        openShells.forEach((openShell) => {
+          const btn = openShell.querySelector('.selector-trigger');
+          const m = openShell.querySelector('.selector-menu');
+          if (!btn || !m) return;
+          btn.classList.remove('is-open');
+          m.classList.remove('is-open');
+          m.setAttribute('aria-hidden', 'true');
+          btn.setAttribute('aria-expanded', 'false');
+          openShell.classList.remove('is-open');
+          btn.focus();
+        });
+      };
+      document.addEventListener('keydown', this._selectorKeyHandler);
     }
   },
 

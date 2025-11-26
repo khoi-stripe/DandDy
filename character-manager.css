@@ -507,6 +507,15 @@
     color: var(--sheet-accent-dim);
 }
 
+/* Username + auth/log links in header should all be dim teal by default */
+#userInfoDisplay .terminal-link {
+    color: var(--sheet-accent-dim);
+}
+
+#userInfoDisplay .terminal-link:hover {
+    color: var(--sheet-accent);
+}
+
 .terminal-text-error {
     color: var(--terminal-error);
     font-weight: bold;
