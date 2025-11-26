@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 from models.character import Alignment
+from datetime import datetime
 
 class CharacterBase(BaseModel):
     name: str
@@ -125,6 +126,8 @@ class CharacterResponse(CharacterBase):
     id: int
     owner_id: int
     campaign_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
     
     class Config:
         from_attributes = True

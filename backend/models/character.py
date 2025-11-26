@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, JSON, Enum
+from sqlalchemy import Column, Integer, String, ForeignKey, JSON, Enum, DateTime
 from sqlalchemy.orm import relationship
 import enum
+from datetime import datetime
 from database.database import Base
 
 class Alignment(enum.Enum):
@@ -105,6 +106,10 @@ class Character(Base):
     electrum_pieces = Column(Integer, default=0, nullable=False)
     gold_pieces = Column(Integer, default=0, nullable=False)
     platinum_pieces = Column(Integer, default=0, nullable=False)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
     # Relationships
     owner = relationship("User", back_populates="characters")

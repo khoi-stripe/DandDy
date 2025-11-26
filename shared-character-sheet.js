@@ -294,9 +294,14 @@ const CharacterSheet = (window.CharacterSheet = {
       `
         : '';
 
+    const safeTitle =
+      character.name && typeof character.name === 'string'
+        ? this.escapeHtml(character.name)
+        : '[ CHARACTER SHEET ]';
+
     return `
       <div class="sheet-title-header">
-        <div class="sheet-title">${character.name || '[ CHARACTER SHEET ]'}</div>
+        <div class="sheet-title">${safeTitle}</div>
         ${actionsBlock}
       </div>
     `;
@@ -328,21 +333,30 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderBasicInfo(parsed, context, callbacks) {
+    const race = parsed.raceName ? this.escapeHtml(parsed.raceName) : '';
+    const cls = parsed.className ? this.escapeHtml(parsed.className) : '';
+    const background = parsed.backgroundName
+      ? this.escapeHtml(parsed.backgroundName)
+      : '';
+    const alignment = parsed.alignment
+      ? this.escapeHtml(parsed.alignment)
+      : '';
+
     return `
       <div class="sheet-section">
         <div class="sheet-header"></div>
         <div class="sheet-content">
-          ${parsed.raceName
-            ? `<div class="stat-line"><span class="stat-label">Race:</span> <span class="stat-value">${parsed.raceName}</span></div>`
+          ${race
+            ? `<div class="stat-line"><span class="stat-label">Race:</span> <span class="stat-value">${race}</span></div>`
             : ''}
-          ${parsed.className
-            ? `<div class="stat-line"><span class="stat-label">Class:</span> <span class="stat-value">${parsed.className}</span></div>`
+          ${cls
+            ? `<div class="stat-line"><span class="stat-label">Class:</span> <span class="stat-value">${cls}</span></div>`
             : ''}
-          ${parsed.backgroundName
-            ? `<div class="stat-line"><span class="stat-label">Background:</span> <span class="stat-value">${parsed.backgroundName}</span></div>`
+          ${background
+            ? `<div class="stat-line"><span class="stat-label">Background:</span> <span class="stat-value">${background}</span></div>`
             : ''}
-          ${parsed.alignment
-            ? `<div class="stat-line"><span class="stat-label">Alignment:</span> <span class="stat-value">${parsed.alignment}</span></div>`
+          ${alignment
+            ? `<div class="stat-line"><span class="stat-label">Alignment:</span> <span class="stat-value">${alignment}</span></div>`
             : ''}
           <div class="stat-line">
             <span class="stat-label">Level:</span>
@@ -591,7 +605,9 @@ const CharacterSheet = (window.CharacterSheet = {
           .map(
             ([skill, value]) => `
           <div class="stat-line">
-            <span class="stat-label">${this.formatSkillName(skill)}:</span>
+            <span class="stat-label">${this.escapeHtml(
+              this.formatSkillName(skill),
+            )}:</span>
             <span class="stat-value">${this.formatModifier(value)} ★</span>
           </div>
         `,
@@ -602,11 +618,10 @@ const CharacterSheet = (window.CharacterSheet = {
     const extraProfsMarkup =
       extraProfs && extraProfs.length
         ? extraProfs
-            .map(
-              (skill) => `
-          <div class="text-dim">• ${this.formatSkillName(skill)}</div>
-        `,
-            )
+            .map((skill) => {
+              const label = this.escapeHtml(this.formatSkillName(skill));
+              return `<div class="text-dim">• ${label}</div>`;
+            })
             .join('')
         : '';
 
@@ -645,12 +660,25 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Helper to render spell list
     const renderSpellList = (spells) => {
-      return spells.map(spell => {
-        const name = spell.name || spell;
-        const school = spell.school ? ` <span class="text-dim">(${spell.school})</span>` : '';
-        const desc = spell.description ? `<div class="text-dim terminal-text-small" style="margin-left: 1rem;">${spell.description}</div>` : '';
-        return `<div class="text-dim" style="margin-bottom: 0.25rem;">• ${name}${school}</div>${desc}`;
-      }).join('');
+      return spells
+        .map((spell) => {
+          const rawName = spell && typeof spell === 'object' ? spell.name : spell;
+          const name = this.escapeHtml(rawName || '');
+          const school =
+            spell && spell.school
+              ? ` <span class="text-dim">(${this.escapeHtml(
+                  spell.school,
+                )})</span>`
+              : '';
+          const desc =
+            spell && spell.description
+              ? `<div class="text-dim terminal-text-small" style="margin-left: 1rem;">${this.escapeHtml(
+                  spell.description,
+                )}</div>`
+              : '';
+          return `<div class="text-dim" style="margin-bottom: 0.25rem;">• ${name}${school}</div>${desc}`;
+        })
+        .join('');
     };
 
     let spellsContent = '';
@@ -682,14 +710,14 @@ const CharacterSheet = (window.CharacterSheet = {
     // Spellcasting ability note
     if (parsed.spellcastingAbility) {
       const abilityName = {
-        'int': 'Intelligence',
-        'wis': 'Wisdom',
-        'cha': 'Charisma'
+        int: 'Intelligence',
+        wis: 'Wisdom',
+        cha: 'Charisma',
       }[parsed.spellcastingAbility] || parsed.spellcastingAbility;
       
       spellsContent += `
         <div class="text-dim terminal-text-small" style="margin-top: 0.5rem;">
-          Spellcasting Ability: ${abilityName}
+          Spellcasting Ability: ${this.escapeHtml(abilityName)}
         </div>
       `;
     }
@@ -707,39 +735,59 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderRacialTraits(parsed) {
+    const traitsMarkup = parsed.racialTraits
+      .map((trait) => `<div class="text-dim">• ${this.escapeHtml(trait)}</div>`)
+      .join('');
+
     return `
       <div class="sheet-section">
         <div class="sheet-header">
           <div class="sheet-header-title">[ RACIAL TRAITS ]</div>
         </div>
         <div class="sheet-content">
-          ${parsed.racialTraits.map((trait) => `<div class="text-dim">• ${trait}</div>`).join('')}
+          ${traitsMarkup}
         </div>
       </div>
     `;
   },
 
   _renderEquipment(parsed) {
+    const equipmentMarkup = parsed.equipment
+      .map(
+        (item) =>
+          `<div class="text-dim">• ${this.escapeHtml(
+            item,
+          )}</div>`,
+      )
+      .join('');
+
     return `
       <div class="sheet-section">
         <div class="sheet-header">
           <div class="sheet-header-title">[ ${parsed.hasClassEquipment ? 'EQUIPMENT' : 'CLASS EQUIPMENT'} ]</div>
         </div>
         <div class="sheet-content">
-          ${parsed.equipment.map((item) => `<div class="text-dim">• ${item}</div>`).join('')}
+          ${equipmentMarkup}
         </div>
       </div>
     `;
   },
 
   _renderToolProficiencies(parsed) {
+    const toolsMarkup = parsed.toolProficiencies
+      .map((tool) => {
+        const label = this.escapeHtml(this.formatSkillName(tool));
+        return `<div class="text-dim">• ${label}</div>`;
+      })
+      .join('');
+
     return `
       <div class="sheet-section">
         <div class="sheet-header">
           <div class="sheet-header-title">[ TOOL PROFICIENCIES ]</div>
         </div>
         <div class="sheet-content">
-          ${parsed.toolProficiencies.map((tool) => `<div class="text-dim">• ${this.formatSkillName(tool)}</div>`).join('')}
+          ${toolsMarkup}
         </div>
       </div>
     `;
@@ -759,9 +807,18 @@ const CharacterSheet = (window.CharacterSheet = {
           <div class="sheet-header-title">[ LANGUAGES ]</div>
         </div>
         <div class="sheet-content">
-          ${hasLanguages 
-            ? parsed.languages.map((lang) => `<div class="text-dim">• ${lang}</div>`).join('') 
-            : ''}
+          ${
+            hasLanguages
+              ? parsed.languages
+                  .map(
+                    (lang) =>
+                      `<div class="text-dim">• ${this.escapeHtml(
+                        lang,
+                      )}</div>`,
+                  )
+                  .join('')
+              : ''
+          }
           ${hasChoices 
             ? `<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${parsed.languageChoices} additional language${parsed.languageChoices > 1 ? 's' : ''}</div>` 
             : ''}
@@ -771,33 +828,45 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderBackgroundFeature(parsed) {
+    const name = this.escapeHtml(parsed.backgroundFeatureName || 'Feature');
+    const description = this.escapeHtml(
+      parsed.backgroundFeatureDescription || '',
+    );
+
     return `
       <div class="sheet-section">
         <div class="sheet-header">
           <div class="sheet-header-title">[ BACKGROUND FEATURE ]</div>
         </div>
         <div class="sheet-content">
-          <div class="stat-line"><span class="stat-label">${parsed.backgroundFeatureName}:</span></div>
-          <div class="text-dim mt-sm">${parsed.backgroundFeatureDescription}</div>
+          <div class="stat-line"><span class="stat-label">${name}:</span></div>
+          <div class="text-dim mt-sm">${description}</div>
         </div>
       </div>
     `;
   },
 
   _renderBackstory(parsed) {
+    const backstory = this.escapeHtml(parsed.backstory || '');
+
     return `
       <div class="sheet-section">
         <div class="sheet-header">
           <div class="sheet-header-title">[ BACKSTORY ]</div>
         </div>
         <div class="sheet-content text-dim">
-          ${parsed.backstory}
+          ${backstory}
         </div>
       </div>
     `;
   },
 
   _renderExportInfo(character) {
+    const exportedBy = character.exportedBy
+      ? this.escapeHtml(character.exportedBy)
+      : null;
+    const version = this.escapeHtml(character.exportVersion || '1.0');
+
     return `
       <div class="sheet-section">
         <div class="sheet-header">
@@ -806,19 +875,23 @@ const CharacterSheet = (window.CharacterSheet = {
         <div class="sheet-content">
           <div class="stat-line">
             <span class="stat-label">Exported:</span>
-            <span class="stat-value">${new Date(character.exportDate).toLocaleDateString()}</span>
+            <span class="stat-value">${new Date(
+              character.exportDate,
+            ).toLocaleDateString()}</span>
           </div>
-          ${character.exportedBy
-            ? `
+          ${
+            exportedBy
+              ? `
             <div class="stat-line">
               <span class="stat-label">Source:</span>
-              <span class="stat-value">${character.exportedBy}</span>
+              <span class="stat-value">${exportedBy}</span>
             </div>
           `
-            : ''}
+              : ''
+          }
           <div class="stat-line">
             <span class="stat-label">Version:</span>
-            <span class="stat-value">${character.exportVersion || '1.0'}</span>
+            <span class="stat-value">${version}</span>
           </div>
         </div>
       </div>
@@ -972,6 +1045,20 @@ const CharacterSheet = (window.CharacterSheet = {
   // ========================================
   // UTILITIES
   // ========================================
+
+  /**
+   * Basic HTML-escape helper for safely interpolating text into template
+   * strings. Converts &, <, >, ", and ' to their corresponding entities.
+   */
+  escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
 
   /**
    * Determine the best ASCII portrait to use for a character.
