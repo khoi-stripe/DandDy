@@ -497,13 +497,19 @@
     justify-content: flex-end;
 }
 
-/* ===== AUTH UI ===== */
+/* ===== AUTH UI / HEADER THEMING ===== */
+/* Make the manager header content use the teal sheet theme:
+   - Title: bright teal
+   - User/local-storage label: dim teal
+   - Buttons: use ui-theme-teal via HTML classes */
+.terminal-header .terminal-title {
+    color: var(--sheet-accent);
+}
+
 #userInfoDisplay {
     font-size: var(--font-size-small);
     white-space: nowrap;
-    /* Dim user/email or \"Local Storage\" status so it doesn't compete
-       with primary header actions. */
-    color: var(--terminal-dim);
+    color: var(--sheet-accent-dim);
 }
 
 .terminal-text-error {
