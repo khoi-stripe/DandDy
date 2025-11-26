@@ -1,7 +1,7 @@
 from datetime import timedelta
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -23,6 +23,7 @@ from utils.auth import (
     create_password_reset_token,
     verify_password_reset_token,
 )
+from utils.email import send_password_reset_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -37,6 +38,13 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Passwords do not match",
+        )
+
+    # Basic password strength check – enforce a minimum length for all new accounts.
+    if len(user_data.password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long",
         )
 
     # Debug: Log password info (not the actual password!)
@@ -131,13 +139,19 @@ def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
 
 
 @router.post("/password/forgot")
-def forgot_password(request: PasswordResetRequest, db: Session = Depends(get_db)):
+def forgot_password(
+    request: PasswordResetRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     """
     Request a password reset.
 
     Always returns a generic success message to avoid leaking which emails exist.
-    In development (when PRODUCTION env var is not set), the reset token is included
-    in the response for convenience. In production, you should email the token instead.
+    In development (when PRODUCTION env var is not set), the reset token may be
+    included in the response for convenience. In production, the token must be
+    delivered via an out‑of‑band channel (e.g., email) and is never returned to
+    the client.
     """
     user = db.query(User).filter(User.email == request.email).first()
 
@@ -148,13 +162,21 @@ def forgot_password(request: PasswordResetRequest, db: Session = Depends(get_db)
         return {"message": message}
 
     reset_token = create_password_reset_token(user.id)
-    # Always include a debug_reset_token in the response. In a typical
-    # production deployment you would *also* send this via email, but for
-    # this app we surface it directly so the frontend can complete the reset
-    # flow without an email provider.
+    base = settings.frontend_reset_base
+    reset_url = f"{base}#reset-token={reset_token}"
+
+    # In production, never return the reset token in the HTTP response.
+    # Instead, send an email containing a reset link.
+    if os.getenv("PRODUCTION"):
+        background_tasks.add_task(send_password_reset_email, user.email, reset_url)
+        return {"message": message}
+
+    # In non‑production environments, expose a debug token and URL to simplify
+    # local testing of the reset flow. This should never be enabled in prod.
     return {
         "message": message,
         "debug_reset_token": reset_token,
+        "reset_url": reset_url,
     }
 
 

@@ -1,6 +1,15 @@
 // ========================================
 // KEYBOARD NAVIGATION
 // ========================================
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
 const KeyboardNav = {
     currentFocusIndex: 0,
     isActive: true,
@@ -389,8 +398,11 @@ const UI = {
 
     renderCharacterCard(character) {
         // Handle race/class names (enhanced export has nested data)
-        const raceName = character.raceData?.name || character.race || '?';
-        const className = character.classData?.name || character.class || '?';
+        const raceNameRaw = character.raceData?.name || character.race || '?';
+        const classNameRaw = character.classData?.name || character.class || '?';
+        const raceName = escapeHtml(raceNameRaw);
+        const className = escapeHtml(classNameRaw);
+        const name = escapeHtml(character.name || 'Unnamed Character');
         
         // Get ASCII portrait for thumbnail
         const asciiPortrait = character.portrait?.ascii || character.customPortraitAscii || character.asciiPortrait || null;
@@ -402,7 +414,7 @@ const UI = {
                     <div class="card-thumbnail" id="card-thumb-${character.id}"></div>
                 ` : ''}
                 <div class="card-details">
-                    <div class="card-name">${character.name || 'Unnamed Character'}</div>
+                    <div class="card-name">${name}</div>
                     <div class="card-info">
                         ${raceName} ${className}${character.level ? ` • Lvl ${character.level}` : ''}
                     </div>
@@ -628,6 +640,7 @@ async function renameCharacter(id) {
     const existing = document.getElementById('renameModal');
     if (existing) existing.remove();
 
+    const safeCurrentName = escapeHtml(character.name || '');
     const modalHtml = `
       <div id="renameModal" class="modal show">
         <div class="modal-content">
@@ -637,7 +650,7 @@ async function renameCharacter(id) {
           </div>
           <div class="modal-body">
             <p class="terminal-text-small modal-section-label">New name:</p>
-            <input type="text" id="renameInput" class="terminal-input" value="${character.name || ''}">
+            <input type="text" id="renameInput" class="terminal-input" value="${safeCurrentName}">
           </div>
           <div class="modal-footer modal-footer-end">
             <button class="terminal-btn" id="renameCancel">CANCEL</button>
@@ -1406,6 +1419,7 @@ function showConfirmDialog(message, onConfirm) {
     const existing = document.getElementById('genericConfirmModal');
     if (existing) existing.remove();
 
+    const escapedMessage = escapeHtml(message).replace(/\n/g, '<br>');
     const modalHtml = `
       <div id="genericConfirmModal" class="modal show">
         <div class="modal-content">
@@ -1414,7 +1428,7 @@ function showConfirmDialog(message, onConfirm) {
             <button class="modal-close" onclick="document.getElementById('genericConfirmModal').remove()">&times;</button>
           </div>
           <div class="modal-body">
-            <p class="terminal-text">${message}</p>
+            <p class="terminal-text">${escapedMessage}</p>
           </div>
           <div class="modal-footer modal-footer-end">
             <button class="terminal-btn" id="genericConfirmCancel">CANCEL</button>
@@ -1451,6 +1465,7 @@ function showAlertDialog(message) {
     const existing = document.getElementById('genericAlertModal');
     if (existing) existing.remove();
 
+    const escapedMessage = escapeHtml(message).replace(/\n/g, '<br>');
     const modalHtml = `
       <div id="genericAlertModal" class="modal show">
         <div class="modal-content">
@@ -1459,7 +1474,7 @@ function showAlertDialog(message) {
             <button class="modal-close" onclick="document.getElementById('genericAlertModal').remove()">&times;</button>
           </div>
           <div class="modal-body">
-            <p class="terminal-text">${message}</p>
+            <p class="terminal-text">${escapedMessage}</p>
           </div>
           <div class="modal-footer modal-footer-end">
             <button class="terminal-btn terminal-btn-primary" id="genericAlertOk">OK</button>
@@ -2544,6 +2559,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             closePasswordResetModal();
         }
     });
+
+    // Handle password reset token from URL fragment (e.g. when coming from email link)
+    try {
+        const hash = window.location.hash || '';
+        const tokenMatch = hash.match(/reset-token=([^&]+)/);
+        if (tokenMatch && tokenMatch[1]) {
+            const token = decodeURIComponent(tokenMatch[1]);
+            showPasswordResetModal();
+            const tokenInput = document.getElementById('passwordResetToken');
+            if (tokenInput) {
+                tokenInput.value = token;
+            }
+            // Remove token from URL bar for a bit of shoulder-surfing protection
+            history.replaceState(
+                null,
+                document.title,
+                window.location.pathname + window.location.search,
+            );
+        }
+    } catch (e) {
+        console.warn('Failed to process reset-token from URL hash', e);
+    }
     
     // Hover behavior for character cards:
     // - Adds/removes a visual `is-hovered` class

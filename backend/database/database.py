@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from pydantic_settings import BaseSettings
@@ -9,14 +9,23 @@ class Settings(BaseSettings):
     secret_key: str = "your-secret-key-here"
     algorithm: str = "HS256"
     # Default token lifetime (in minutes). Override with ACCESS_TOKEN_EXPIRE_MINUTES in env for flexibility.
-    # 43200 minutes = 30 days, which effectively keeps users logged in unless they explicitly log out.
-    access_token_expire_minutes: int = 43200
+    # Use a short, safer default (60 minutes) and lengthen only via explicit env configuration.
+    access_token_expire_minutes: int = 60
     
     # AI API settings (optional, used by AI routes)
     openai_api_key: str = ""
     max_requests_per_user_per_minute: int = 10
     max_requests_per_user_per_day: int = 100
     allowed_origins: str = "http://localhost:5173,http://localhost:3000"
+
+    # Email / Postmark + frontend reset URL
+    postmark_server_token: str = ""
+    email_from: str = "no-reply@example.com"
+    email_reply_to: str | None = None
+    # Base URL used to build password reset links sent via email.
+    # For local dev this can point at the dev server; in production it should
+    # be overridden to the deployed character manager URL.
+    frontend_reset_base: str = "http://localhost:8080/character-manager.html"
 
     # Cloudflare R2 (optional, used for storing generated images)
     # These map from env vars like R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, etc.
@@ -59,6 +68,46 @@ engine = _build_engine(settings.database_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+
+def ensure_timestamp_columns():
+    """
+    Lightweight migration helper:
+    - Ensures the `characters` table has created_at / updated_at columns.
+    - Backfills missing values so existing rows get sane timestamps.
+    This is intentionally simple so it works for both SQLite and Postgres
+    without introducing a full migration framework.
+    """
+    inspector = inspect(engine)
+    if not inspector.has_table("characters"):
+        return
+
+    existing_cols = {col["name"] for col in inspector.get_columns("characters")}
+
+    with engine.connect() as conn:
+        altered = False
+
+        if "created_at" not in existing_cols:
+            conn.execute(text("ALTER TABLE characters ADD COLUMN created_at TIMESTAMP"))
+            altered = True
+
+        if "updated_at" not in existing_cols:
+            conn.execute(text("ALTER TABLE characters ADD COLUMN updated_at TIMESTAMP"))
+            altered = True
+
+        # If we added columns or they existed but were null, backfill them.
+        if altered or "created_at" in existing_cols or "updated_at" in existing_cols:
+            conn.execute(
+                text(
+                    """
+                    UPDATE characters
+                    SET created_at = COALESCE(created_at, CURRENT_TIMESTAMP),
+                        updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP)
+                    """
+                )
+            )
+
+        conn.commit()
 
 def get_db():
     db = SessionLocal()
