@@ -159,7 +159,8 @@ const ImageToAsciiService = (window.ImageToAsciiService = {
 // Authentication service is now defined centrally in `danddy-auth.js` as
 // `window.AuthService`. This file now only *uses* that shared service.
 
-// Storage service - uses API when authenticated, localStorage for guest mode
+// Storage service - wraps shared CharacterStorage facade for character CRUD,
+// plus a few builder-only settings (narrator, demo/AI flags, etc.).
 const StorageService = (window.StorageService = {
   getNarratorId() {
     const value = localStorage.getItem('dnd_narrator_id');
@@ -170,68 +171,94 @@ const StorageService = (window.StorageService = {
     localStorage.setItem('dnd_narrator_id', narratorId);
   },
 
-  // ==== CHARACTER STORAGE (API + localStorage hybrid) ====
-  
-  // Get all characters (API if authenticated, localStorage if guest)
+  // ==== CHARACTER STORAGE (via shared CharacterStorage facade) ====
+
+  /**
+   * Get all characters using the shared CharacterStorage facade.
+   * This keeps builder + manager on the same storage rail.
+   */
   async getCharacters() {
-    if (AuthService.isAuthenticated()) {
-      try {
-        const characters = await CharacterAPI.getCharacters();
-        // Cache in localStorage for offline access
-        this._cacheCharactersLocally(characters);
-        return characters;
-      } catch (error) {
-        console.error('Failed to fetch characters from API, using cache:', error);
-        return this._getCharactersFromLocalStorage();
-      }
-    } else {
+    if (!window.CharacterStorage || typeof window.CharacterStorage.getAll !== 'function') {
+      console.warn(
+        'StorageService.getCharacters: CharacterStorage facade not available. Falling back to local-only storage.',
+      );
+      return this._getCharactersFromLocalStorage();
+    }
+
+    try {
+      const characters = await window.CharacterStorage.getAll();
+      // Cache in localStorage for offline access (builder may still rely on this)
+      this._cacheCharactersLocally(characters);
+      return characters;
+    } catch (error) {
+      console.error(
+        'StorageService.getCharacters: CharacterStorage.getAll failed, using local fallback:',
+        error,
+      );
       return this._getCharactersFromLocalStorage();
     }
   },
   
-  // Save character (API if authenticated, localStorage if guest)
+  /**
+   * Save character through CharacterStorage facade.
+   * Preserves existing builder expectations (returns saved character).
+   */
   async saveCharacter(character) {
-    if (AuthService.isAuthenticated()) {
-      try {
-        let savedCharacter;
-        if (character.id) {
-          // Update existing character (ID is enough to identify it)
-          if (DEBUG_BUILDER) {
-            console.log('☁️ Updating character in cloud:', character.id);
-          }
-          savedCharacter = await CharacterAPI.updateCharacter(character.id, character);
-        } else {
-          // Create new character
-          if (DEBUG_BUILDER) {
-            console.log('☁️ Creating new character in cloud');
-          }
-          savedCharacter = await CharacterAPI.createCharacter(character);
+    if (!window.CharacterStorage) {
+      console.warn(
+        'StorageService.saveCharacter: CharacterStorage facade not available. Using legacy local-only save.',
+      );
+      return this._saveCharacterToLocalStorage(character);
+    }
+
+    try {
+      let savedCharacter;
+
+      if (character.id) {
+        if (DEBUG_BUILDER) {
+          console.log('💾 BUILDER: Updating character via CharacterStorage:', character.id);
         }
-        
-        // Cache in localStorage
-        this._cacheCharacterLocally(savedCharacter);
-        return savedCharacter;
-      } catch (error) {
-        console.error('Failed to save character to API, saving locally:', error);
-        return this._saveCharacterToLocalStorage(character);
+        savedCharacter = await window.CharacterStorage.update(character.id, character);
+      } else {
+        if (DEBUG_BUILDER) {
+          console.log('💾 BUILDER: Creating character via CharacterStorage');
+        }
+        savedCharacter = await window.CharacterStorage.add(character);
       }
-    } else {
+
+      // Keep local cache in sync for any builder flows that still read from it
+      this._cacheCharacterLocally(savedCharacter);
+      return savedCharacter;
+    } catch (error) {
+      console.error(
+        'StorageService.saveCharacter: CharacterStorage operation failed, using legacy local-only save:',
+        error,
+      );
       return this._saveCharacterToLocalStorage(character);
     }
   },
   
-  // Delete character (API if authenticated, localStorage if guest)
+  /**
+   * Delete character via CharacterStorage facade.
+   */
   async deleteCharacter(id) {
-    if (AuthService.isAuthenticated()) {
-      try {
-        await CharacterAPI.deleteCharacter(id);
-        this._deleteCharacterFromLocalStorage(id);
-        return true;
-      } catch (error) {
-        console.error('Failed to delete character from API:', error);
-        throw error;
-      }
-    } else {
+    if (!window.CharacterStorage) {
+      console.warn(
+        'StorageService.deleteCharacter: CharacterStorage facade not available. Using legacy local-only delete.',
+      );
+      this._deleteCharacterFromLocalStorage(id);
+      return true;
+    }
+
+    try {
+      await window.CharacterStorage.delete(id);
+      this._deleteCharacterFromLocalStorage(id);
+      return true;
+    } catch (error) {
+      console.error(
+        'StorageService.deleteCharacter: CharacterStorage.delete failed, falling back to local-only delete:',
+        error,
+      );
       this._deleteCharacterFromLocalStorage(id);
       return true;
     }
@@ -305,58 +332,6 @@ const StorageService = (window.StorageService = {
     }
     
     this._cacheCharactersLocally(cached);
-  },
-  
-  // ==== MIGRATION HELPER ====
-  
-  // Migrate localStorage characters to backend (one-time operation)
-  async migrateToBackend() {
-    if (!AuthService.isAuthenticated()) {
-      throw new Error('Must be authenticated to migrate characters');
-    }
-    
-    const localCharacters = this._getCharactersFromLocalStorage();
-    const migrated = [];
-    const failed = [];
-    
-    for (const character of localCharacters) {
-      // Skip if already has a backend ID (not a local temp ID)
-      if (character.id && !String(character.id).startsWith('local_')) {
-        continue;
-      }
-      
-      try {
-        // Remove temporary local ID before creating
-        const charToMigrate = { ...character };
-        delete charToMigrate.id;
-        
-        const saved = await CharacterAPI.createCharacter(charToMigrate);
-        migrated.push(saved);
-      } catch (error) {
-        console.error('Failed to migrate character:', character.name, error);
-        failed.push({ character, error: error.message });
-      }
-    }
-
-    // After a fully successful migration, clear localStorage copies so we
-    // don't keep stale/duplicated characters around.
-    // This mirrors the manager's MigrationService behavior.
-    if (failed.length === 0 && localCharacters.length > 0) {
-      try {
-        localStorage.removeItem(CONFIG.STORAGE_KEY);
-        localStorage.removeItem(CONFIG.STORAGE_KEY + '_cache');
-        console.log(
-          '📦 MIGRATION: Cleared localStorage characters after successful migrateToBackend()',
-        );
-      } catch (e) {
-        console.warn(
-          '📦 MIGRATION: Failed to clear localStorage after migrateToBackend()',
-          e,
-        );
-      }
-    }
-
-    return { migrated, failed };
   },
 });
 

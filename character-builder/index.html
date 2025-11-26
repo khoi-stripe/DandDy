@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>D&D Character Builder - Terminal Edition</title>
   <link rel="stylesheet" href="../terminal-theme.css">
+  <link rel="stylesheet" href="../portraits.css">
   <link rel="stylesheet" href="./character-builder.css">
 </head>
 <body>
@@ -191,8 +192,10 @@
   <script src="../danddy-auth.js"></script>
   <script src="../danddy-character-mapper.js"></script>
   <script src="../danddy-storage.js"></script>
-  <script src="./character-builder-config.js"></script>
   <script src="../character-manager-api.js"></script>
+  <!-- Shared hybrid storage facade (cloud + local) used by manager + builder -->
+  <script src="../character-storage.js"></script>
+  <script src="./character-builder-config.js"></script>
   <script src="./character-builder-dnd-data.js"></script>
   <script src="./character-builder-spells.js"></script>
   <script src="./character-builder-narrators.js"></script>

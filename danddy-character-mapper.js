@@ -257,9 +257,10 @@
         spell_attack_bonus: character.spellAttackBonus || null,
         spell_slots: character.spellSlots || {},
         spell_slots_used: character.spellSlotsUsed || {},
-        cantrips: character.cantrips || [],
-        spells_known: character.spellsKnown || [],
-        spells_prepared: character.spellsPrepared || [],
+        // Backend expects arrays of spell *names* (strings), not full objects.
+        cantrips: this._spellsToStringArray(character.cantrips || []),
+        spells_known: this._spellsToStringArray(character.spellsKnown || []),
+        spells_prepared: this._spellsToStringArray(character.spellsPrepared || []),
 
         // Combat
         conditions: character.conditions || [],

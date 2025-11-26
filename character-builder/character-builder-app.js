@@ -2782,11 +2782,12 @@ const App = (window.App = {
 
         // Show a simple loading state in the portrait panel while the AI image
         // is being generated and converted to ASCII. Match Character Manager
-        // by enlarging the font so the status message is readable.
+        // by enlarging the font so the status message is readable and using
+        // the animated spinner glyph.
         if (portraitEl) {
           portraitEl.style.fontSize = 'var(--font-size-small)';
-          portraitEl.textContent =
-            '[↻] Generating AI portrait...\n\nThis can take 20–30 seconds.';
+          portraitEl.innerHTML =
+            '[<span class="spinner">↻</span>] Generating AI portrait...<br><br>This can take 20–30 seconds.';
         }
 
         const result = await AsciiArtService.generateCustomAIPortrait(currentChar);
