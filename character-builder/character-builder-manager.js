@@ -163,20 +163,24 @@ function handleLogout() {
 function updateAuthUI() {
     const authBtn = document.getElementById('authBtn');
     const userInfoDisplay = document.getElementById('userInfoDisplay');
+    const userStatusIcon = document.getElementById('userStatusIcon');
+    const userStatusText = document.getElementById('userStatusText');
 
     // In the integrated app, the builder surface no longer exposes login/logout
     // UI. If these elements are missing, simply skip any header updates.
-    if (!authBtn || !userInfoDisplay) {
+    if (!authBtn || !userInfoDisplay || !userStatusIcon || !userStatusText) {
         return;
     }
 
     if (window.AuthService && window.AuthService.isAuthenticated()) {
         const user = window.AuthService.getCurrentUser();
-        userInfoDisplay.textContent = user ? `☁ ${user.email}` : '☁ Logged In';
+        userStatusIcon.textContent = '☁';
+        userStatusText.textContent = user ? user.email : 'Logged In';
         authBtn.textContent = 'LOGOUT';
         authBtn.onclick = handleLogout;
     } else {
-        userInfoDisplay.textContent = '▣ Local Only';
+        userStatusIcon.textContent = '▣';
+        userStatusText.textContent = 'Local Only';
         authBtn.textContent = 'LOGIN';
         authBtn.onclick = showAuthModal;
     }

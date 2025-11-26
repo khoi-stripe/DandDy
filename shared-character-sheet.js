@@ -122,6 +122,7 @@ const CharacterSheet = (window.CharacterSheet = {
           : null;
 
     const headerActions = [];
+    let deleteAction = null;
 
     if (character.name && onRename && context === 'builder') {
       headerActions.push({
@@ -139,20 +140,12 @@ const CharacterSheet = (window.CharacterSheet = {
       });
     }
 
-    if (context === 'manager' && onEdit) {
-      headerActions.push({
-        icon: '✎',
-        label: 'Edit details',
-        onclick: editFn,
-      });
-    }
-
     if (context === 'manager' && onDelete) {
-      headerActions.push({
+      deleteAction = {
         icon: '×',
         label: 'Delete character',
         onclick: `deleteCharacter('${character.id}')`,
-      });
+      };
     }
 
     // Portrait-related actions (moved from below-ascii overflow)
@@ -221,7 +214,8 @@ const CharacterSheet = (window.CharacterSheet = {
       });
     }
 
-    // Ensure "Print sheet" always appears at the bottom of the list
+    // Keep "Print sheet" near the bottom of the list, but always leave
+    // room for destructive actions (like Delete) to appear last.
     if (printFn) {
       headerActions.push({
         icon: '⎙',
@@ -229,6 +223,25 @@ const CharacterSheet = (window.CharacterSheet = {
         onclick: printFn,
       });
     }
+
+    // Append Delete last so it always appears at the bottom of the listbox
+    if (deleteAction) {
+      headerActions.push(deleteAction);
+    }
+
+    // Manager-only inline Edit button (to the left of the overflow menu)
+    const editButtonHtml =
+      context === 'manager' && onEdit && editFn
+        ? `
+        <button
+          class="terminal-btn-small sheet-edit-btn"
+          type="button"
+          onclick="${editFn}"
+        >
+          ✎ Edit
+        </button>
+      `
+        : '';
 
     const headerMenu =
       headerActions.length > 0
@@ -239,9 +252,14 @@ const CharacterSheet = (window.CharacterSheet = {
             type="button"
             aria-haspopup="menu"
             aria-expanded="false"
+            aria-label="More actions"
             onclick="CharacterSheet.toggleSelectorMenu(this)"
           >
-            ⋮
+            <span class="sheet-actions-icon" aria-hidden="true">
+              <span class="sheet-actions-dot dot-1"></span>
+              <span class="sheet-actions-dot dot-2"></span>
+              <span class="sheet-actions-dot dot-3"></span>
+            </span>
           </button>
           <div class="selector-menu sheet-actions-menu" role="menu" aria-hidden="true">
             ${headerActions
@@ -266,10 +284,20 @@ const CharacterSheet = (window.CharacterSheet = {
       `
         : '';
 
+    const actionsBlock =
+      editButtonHtml || headerMenu
+        ? `
+        <div class="sheet-title-actions">
+          ${editButtonHtml}
+          ${headerMenu}
+        </div>
+      `
+        : '';
+
     return `
       <div class="sheet-title-header">
         <div class="sheet-title">${character.name || '[ CHARACTER SHEET ]'}</div>
-        ${headerMenu}
+        ${actionsBlock}
       </div>
     `;
   },

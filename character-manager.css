@@ -102,20 +102,33 @@
 
 .search-input-wrapper .terminal-input {
     padding-right: 28px; /* make room for clear button */
+    padding-left: 32px;  /* make room for leading search icon */
     /* Search field text should use dim terminal green so it feels subtle
        even when focused, while still using shared focus borders/shadows. */
     color: var(--terminal-dim);
+    /* Match search input text size to small button text */
+    font-size: var(--font-size-small);
 }
 
 /* Placeholder copy (e.g., "Search all 15 characters") should also use
    the dim terminal green token so it matches the input text color. */
 .search-input-wrapper .terminal-input::placeholder {
     color: var(--terminal-dim);
+    /* Keep placeholder the same size as the input/button text */
+    font-size: var(--font-size-small);
 }
 
 /* Dim the search box when not focused so it feels secondary until active */
 .search-input-wrapper .terminal-input:not(:focus) {
     border-color: var(--terminal-dim);
+}
+
+/* When focused, make the search field feel like a primary green input */
+.search-input-wrapper .terminal-input:focus {
+    /* Use bright terminal green (not teal accent) */
+    border-color: var(--terminal-border);
+    box-shadow: 0 0 8px var(--terminal-border);
+    color: var(--terminal-fg);
 }
 
 .password-input-wrapper {
@@ -162,10 +175,21 @@
     border: none;
     color: var(--terminal-dim);
     cursor: pointer;
-    font-size: 14px;
+  font-size: 18px;
     line-height: 1;
     padding: 0;
     transition: color var(--transition-speed), transform var(--transition-speed);
+}
+
+.search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    line-height: 1;
+    color: var(--terminal-dim);
+    pointer-events: none;
 }
 
 .search-clear-btn:hover {
@@ -505,6 +529,34 @@
     font-size: var(--font-size-small);
     white-space: nowrap;
     color: var(--sheet-accent-dim);
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    /* Visually dim the account label so it doesn't compete with CTAs */
+    opacity: 0.7;
+}
+
+.user-status-icon {
+    display: none; /* hide cloud/local glyph; we only show the text label */
+}
+
+.user-status-text {
+    line-height: 1.2;
+}
+
+/* Dim the header auth button (LOGIN / LOGOUT) so it reads as secondary */
+.header-actions #authBtn {
+    /* Use the dim teal tokens rather than the bright accent */
+    border-color: var(--sheet-accent-dim);
+    color: var(--sheet-accent-dim);
+    opacity: 0.7;
+}
+
+.header-actions #authBtn:hover:not(:disabled) {
+    /* On hover, brighten slightly but keep it softer than primary CTAs */
+    border-color: var(--sheet-accent);
+    color: var(--sheet-accent);
+    opacity: 1;
 }
 
 /* Username + auth/log links in header should all be dim teal by default */

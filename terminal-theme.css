@@ -343,6 +343,17 @@ body {
   padding-bottom: var(--spacing-sm);
 }
 
+/* Wrapper for inline header actions (e.g., Edit + overflow menu) */
+.sheet-title-actions {
+  display: flex;
+  /* Top-align inline header buttons (Edit + overflow) so their borders
+     and glows line up visually along the top edge. */
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .sheet-title {
   color: var(--sheet-accent);
   font-size: var(--font-size-base);
@@ -362,6 +373,75 @@ body {
   position: relative;
 }
 
+/* Three-dot overflow button in the sheet header that morphs into an "X"
+   while the actions listbox is open. */
+.sheet-actions-trigger {
+  position: relative;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.sheet-actions-icon {
+  position: relative;
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+}
+
+.sheet-actions-dot {
+  position: absolute;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  margin-left: -1.5px;
+  border-radius: 999px;
+  background-color: currentColor;
+  transition:
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1.05),
+    width 180ms cubic-bezier(0.2, 0.8, 0.2, 1.05),
+    height 180ms cubic-bezier(0.2, 0.8, 0.2, 1.05),
+    border-radius 160ms ease-out,
+    opacity 120ms ease-out;
+}
+
+.sheet-actions-dot.dot-1 {
+  top: 1px;
+  transform: translateX(-50%);
+}
+
+.sheet-actions-dot.dot-2 {
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.sheet-actions-dot.dot-3 {
+  bottom: 1px;
+  transform: translateX(-50%);
+}
+
+.sheet-actions-trigger.is-open .sheet-actions-dot {
+  left: 0;
+  margin-left: 0;
+  width: 100%;
+  height: 2px;
+  border-radius: 1px;
+}
+
+.sheet-actions-trigger.is-open .sheet-actions-dot.dot-1 {
+  top: 50%;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.sheet-actions-trigger.is-open .sheet-actions-dot.dot-3 {
+  bottom: auto;
+  top: 50%;
+  transform: translateY(-50%) rotate(-45deg);
+}
+
+.sheet-actions-trigger.is-open .sheet-actions-dot.dot-2 {
+  opacity: 0;
+}
+
 /* Ensure sheet header buttons (Rename / Change Level / Print, etc.)
    all share the exact same height and vertical alignment */
 .character-sheet .sheet-title-buttons .terminal-btn-small,
@@ -372,13 +452,29 @@ body {
   line-height: 1;
 }
 
-/* Make leading icon glyphs (e.g., ✎, ⎙, ◉) slightly larger so they visually
-   match the button label line height without changing label text size. */
+/* Make leading icon glyphs (e.g., ✎, ⎙, ◉) a consistent visual size so they
+  read as icons next to 14px button labels. */
 .character-sheet .sheet-title-buttons .terminal-btn-small::first-letter,
 .character-sheet .sheet-title-buttons .button-secondary::first-letter,
 .character-sheet .sheet-header-action .terminal-btn-small::first-letter,
 .character-sheet .sheet-header-action .button-secondary::first-letter {
-  font-size: 1.3em;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Manager-specific inline Edit button in the sheet header */
+.character-sheet .sheet-edit-btn {
+  /* Reuse small button geometry but keep it slightly more prominent than
+     the overflow trigger so it's the primary affordance. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* Inline Edit button icon (✎) should match other button icon sizing. */
+.character-sheet .sheet-edit-btn::first-letter {
+  font-size: 18px;
   line-height: 1;
 }
 
@@ -790,17 +886,44 @@ body {
 }
 
 .selector-option:hover,
-.selector-option.is-selected,
 .selector-option:focus {
-  /* Neutral themed highlight that respects current UI tokens */
-  background-color: rgba(255, 255, 255, 0.08);
+  /* Themed tint based on active context */
+  background-color: hsla(
+    var(--theme-terminal-h),
+    var(--theme-terminal-s),
+    var(--theme-terminal-l-bright),
+    0.16
+  );
   color: var(--ui-fg-color);
 }
 
+/* Teal-tinted listbox rows inside character sheets */
+.character-sheet .selector-option:hover,
+.character-sheet .selector-option:focus {
+  background-color: hsla(
+    var(--theme-teal-h),
+    var(--theme-teal-s),
+    var(--theme-teal-l-bright),
+    0.18
+  );
+}
+
+/* Yellow-tinted listbox rows inside modals */
+.modal .selector-option:hover,
+.modal .selector-option:focus {
+  background-color: hsla(
+    var(--theme-yellow-h),
+    var(--theme-yellow-s),
+    var(--theme-yellow-l-bright),
+    0.18
+  );
+}
+
 .selector-option-icon {
-  width: 16px;
+  width: 18px;
   text-align: center;
   flex-shrink: 0;
+  font-size: 18px;
 }
 
 .selector-option-label {
@@ -989,7 +1112,9 @@ body {
     font-size: 0.9em;
   }
 
-  /* Hide sheet header buttons (PRINT/RENAME/etc.) in printout */
+  /* Hide sheet header buttons (PRINT/RENAME/EDIT/etc.) in printout */
+  .sheet-title-actions,
+  .sheet-title-actions *,
   .sheet-title-buttons,
   .sheet-title-buttons * {
     display: none !important;

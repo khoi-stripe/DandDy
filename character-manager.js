@@ -426,9 +426,9 @@ const UI = {
         }
 
         if (total === filtered) {
-            searchInput.placeholder = `⌕ Search ${total} character${total !== 1 ? 's' : ''}`;
+            searchInput.placeholder = `Search ${total} character${total !== 1 ? 's' : ''}`;
         } else {
-            searchInput.placeholder = `⌕ Search ${filtered} of ${total} character${total !== 1 ? 's' : ''}`;
+            searchInput.placeholder = `Search ${filtered} of ${total} character${total !== 1 ? 's' : ''}`;
         }
     },
 
@@ -1946,11 +1946,20 @@ function handleLogout() {
 function updateAuthUI() {
     const authBtn = document.getElementById('authBtn');
     const userInfoDisplay = document.getElementById('userInfoDisplay');
+    const userStatusIcon = document.getElementById('userStatusIcon');
+    const userStatusText = document.getElementById('userStatusText');
     const guestNotice = document.getElementById('guestNotice');
+    
+    // If the header shell isn't present (e.g., in some embedded contexts),
+    // safely bail out.
+    if (!authBtn || !userInfoDisplay || !userStatusIcon || !userStatusText) {
+        return;
+    }
     
     if (window.AuthService && window.AuthService.isAuthenticated()) {
         const user = window.AuthService.getCurrentUser();
-        userInfoDisplay.textContent = user ? `☁ ${user.email}` : '☁ Logged In';
+        userStatusIcon.textContent = '☁';
+        userStatusText.textContent = user ? user.email : 'Logged In';
         authBtn.textContent = 'LOGOUT';
         authBtn.onclick = handleLogout;
 
@@ -1959,7 +1968,8 @@ function updateAuthUI() {
             guestNotice.classList.add('is-hidden');
         }
     } else {
-        userInfoDisplay.textContent = '▣ Local Storage';
+        userStatusIcon.textContent = '▣';
+        userStatusText.textContent = 'Local Storage';
         authBtn.textContent = 'LOGIN';
         authBtn.onclick = () => {
             authOpenedFromWelcome = false;

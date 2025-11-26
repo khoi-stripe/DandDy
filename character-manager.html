@@ -172,7 +172,10 @@
         <div class="header-content">
             <div class="terminal-title">[ DandDy v2.0 ]</div>
             <div class="header-actions">
-                <span id="userInfoDisplay"></span>
+                <span id="userInfoDisplay">
+                    <span id="userStatusIcon" class="user-status-icon" aria-hidden="true"></span>
+                    <span id="userStatusText" class="user-status-text"></span>
+                </span>
                 <button id="authBtn" class="terminal-btn terminal-btn-small ui-theme-teal">LOGIN</button>
                     <button id="newCharacterBtn" class="terminal-btn terminal-btn-primary ui-theme-teal">+ NEW CHARACTER</button>
             </div>
@@ -193,7 +196,13 @@
                 </div>
                 <div class="search-bar">
                     <div class="search-input-wrapper">
-                        <input type="text" id="searchInput" class="terminal-input" placeholder="⌕ Search characters...">
+                        <span class="search-icon" aria-hidden="true">⌕</span>
+                        <input
+                            type="text"
+                            id="searchInput"
+                            class="terminal-input"
+                            placeholder="Search characters..."
+                        >
                         <button id="clearSearchBtn" class="search-clear-btn" type="button" aria-label="Clear search">✕</button>
                     </div>
                     <div class="search-actions">
