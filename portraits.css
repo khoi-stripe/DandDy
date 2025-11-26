@@ -27,7 +27,7 @@
   color: var(--terminal-accent);
   text-align: center;
   white-space: pre;
-  font-family: monospace;
+  font-family: var(--font-mono);
   /* Treat the portrait area as a fixed frame:
      - center the ASCII horizontally
      - crop anything that overflows instead of adding scrollbars */
@@ -35,6 +35,15 @@
   overflow-y: hidden;
   width: 100%;
   max-width: 100%;
+}
+
+/* When we show loading states like:
+ *   [<span class="spinner">↻</span>] GENERATING PORTRAIT...
+ * inside the portrait frame, use the sheet's teal accent and remove the
+ * extra right margin so the bracket hugs the spinner glyph. */
+.ascii-portrait .spinner {
+  color: var(--panel-teal);
+  margin-right: 0;
 }
 
 /* ===== PORTRAIT HISTORY MODAL ===== */

@@ -267,7 +267,7 @@
     font-size: 2.2px;
     line-height: 1.1;
     color: var(--terminal-fg); /* Green for unselected cards */
-    font-family: monospace;
+    font-family: var(--font-mono);
     white-space: pre;
     overflow: hidden;
     display: flex;
