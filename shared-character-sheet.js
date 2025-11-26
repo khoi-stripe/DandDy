@@ -676,7 +676,7 @@ const CharacterSheet = (window.CharacterSheet = {
                   spell.description,
                 )}</div>`
               : '';
-          return `<div class="text-dim" style="margin-bottom: 0.25rem;">• ${name}${school}</div>${desc}`;
+        return `<div class="text-dim" style="margin-bottom: 0.25rem;">• ${name}${school}</div>${desc}`;
         })
         .join('');
     };
@@ -881,7 +881,7 @@ const CharacterSheet = (window.CharacterSheet = {
           </div>
           ${
             exportedBy
-              ? `
+            ? `
             <div class="stat-line">
               <span class="stat-label">Source:</span>
               <span class="stat-value">${exportedBy}</span>
