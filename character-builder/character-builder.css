@@ -27,6 +27,17 @@
   margin-right: auto;
 }
 
+/* Builder header: title + Settings link grouped together */
+.terminal-header .terminal-title {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.builder-settings-link {
+  margin-left: auto;
+}
+
 /* ===== COMPONENTS ===== */
 
 /* Hide legacy splash screen in integrated app */
@@ -174,14 +185,10 @@
 }
 
 .generate-ai-btn {
-  background: transparent;
-  border: 1px solid var(--terminal-accent);
+  /* Visual accent tweaks on top of shared terminal button styles */
+  border-color: var(--terminal-accent);
   color: var(--terminal-accent);
   padding: 4px 12px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
   border-radius: 2px;
 }
 

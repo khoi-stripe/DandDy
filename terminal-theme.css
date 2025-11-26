@@ -371,6 +371,16 @@ body {
   line-height: 1;
 }
 
+/* Make leading icon glyphs (e.g., ✎, ⎙, ◉) slightly larger so they visually
+   match the button label line height without changing label text size. */
+.character-sheet .sheet-title-buttons .terminal-btn-small::first-letter,
+.character-sheet .sheet-title-buttons .button-secondary::first-letter,
+.character-sheet .sheet-header-action .terminal-btn-small::first-letter,
+.character-sheet .sheet-header-action .button-secondary::first-letter {
+  font-size: 1.3em;
+  line-height: 1;
+}
+
 .sheet-section {
   margin-bottom: var(--spacing-lg);
 }
@@ -400,8 +410,10 @@ body {
 .character-sheet .terminal-btn,
 .character-sheet .terminal-btn-small,
 .character-sheet .prompt-modal-btn {
-  border-color: var(--sheet-accent);
-  color: var(--sheet-accent);
+  /* Use a semi-transparent teal so sheet header actions read clearly
+     dimmer than bright accents and values. */
+  border-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.6);
+  color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.8);
 }
 
 .character-sheet .button-secondary:hover:not(:disabled),
@@ -409,8 +421,8 @@ body {
 .character-sheet .terminal-btn-small:hover:not(:disabled),
 .character-sheet .prompt-modal-btn:hover:not(:disabled) {
   background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
-  border-color: var(--sheet-accent);
-  color: var(--sheet-accent);
+  border-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.9);
+  color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 1);
   box-shadow: 0 0 10px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.3);
 }
 
@@ -609,8 +621,18 @@ body {
 
 .terminal-btn-small:hover:not(:disabled),
 .button-secondary:hover:not(:disabled) {
-  border-color: var(--terminal-fg);
-  color: var(--terminal-fg);
+  /* Use themed foreground token so hover color matches the active UI theme
+     (green by default, teal in sheets, yellow in modals, etc.). */
+  border-color: var(--ui-fg-color);
+  color: var(--ui-fg-color);
+}
+
+/* Teal-themed small buttons (e.g., builder EXIT) should also get a subtle
+   teal background glow on hover instead of the default green tint. */
+.ui-theme-teal.terminal-btn-small:hover:not(:disabled) {
+  background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
+  border-color: var(--sheet-accent);
+  color: var(--sheet-accent);
 }
 
 /* Filled primary button (character manager style) */
@@ -623,9 +645,11 @@ body {
 }
 
 .terminal-btn-primary:hover:not(:disabled) {
-  background-color: var(--terminal-accent);
-  color: var(--terminal-bg);
-  border-color: var(--terminal-accent);
+  /* Use themed primary colors so hover stays in the active theme
+     (green by default, teal in sheets, yellow in modals, etc.). */
+  background-color: var(--ui-primary-bg-color);
+  color: var(--ui-on-primary-color);
+  border-color: var(--ui-primary-bg-color);
 }
 
 .terminal-btn-primary:disabled {
@@ -673,18 +697,23 @@ body {
 .link-button {
   background: none;
   border: none;
-  color: var(--terminal-accent);
+  /* Use themed foreground token so links respect the active UI theme.
+     - Default terminal: terminal accent green
+     - Character sheet: teal accent via sheet overrides
+     - Modals: yellow accent via modal overrides */
+  color: var(--ui-fg-color);
   font-family: var(--font-mono);
   font-size: inherit;
   cursor: pointer;
   text-decoration: underline;
   padding: 0;
-  transition: color var(--transition-speed);
+  transition: color var(--transition-speed), text-shadow var(--transition-speed);
 }
 
 .link-button:hover {
-  color: var(--terminal-fg);
-  text-shadow: 0 0 5px var(--terminal-fg);
+  /* On hover, keep the same themed color but add a subtle glow. */
+  color: var(--ui-fg-color);
+  text-shadow: 0 0 5px var(--ui-fg-color);
 }
 
 /* Links inside modals follow the modal's yellow text theme */

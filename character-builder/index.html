@@ -13,15 +13,17 @@
   <!-- Print-only logo (positioned via CSS for print layout) -->
   <img src="./danddy-logo-print.png" alt="DandDy logo" class="print-logo">
 
-  <div class="terminal-container">
+    <div class="terminal-container">
       <div class="terminal-header">
-      <div class="terminal-title">[ CHARACTER BUILDER ]</div>
-      <div class="terminal-status">
-        <span id="status-text"></span>
-        <button class="terminal-btn terminal-btn-small terminal-status-settings-btn" onclick="App.openSettings()">⚙ SETTINGS</button>
-        <button id="exitBuilderBtn" class="terminal-btn terminal-btn-small terminal-status-settings-btn" onclick="exitToManager()">EXIT</button>
+        <div class="terminal-title">
+          <span>[ CHARACTER BUILDER ]</span>
+          <button class="link-button builder-settings-link" type="button" onclick="App.openSettings()">⚙ SETTINGS</button>
+        </div>
+        <div class="terminal-status">
+          <span id="status-text"></span>
+          <button id="exitBuilderBtn" class="terminal-btn terminal-btn-primary ui-theme-teal terminal-status-settings-btn" type="button" onclick="exitToManager()">EXIT</button>
+        </div>
       </div>
-    </div>
     
     <!-- Splash content (full width) -->
     <div class="splash-content" id="splash-content">

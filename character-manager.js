@@ -2262,6 +2262,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 sortDropdown.classList.contains('is-open') ? 'true' : 'false',
             );
 
+            // Update the button label to spell out the current sort mode
+            const sortLabels = {
+                alphabetical: 'Alphabetical',
+                dateModified: 'Date modified',
+            };
+            const currentLabel = sortLabels[AppState.sortMode] || 'Date modified';
+            sortToggleBtn.textContent = `Sort: ${currentLabel}`;
+
             const options = sortDropdown.querySelectorAll('.sort-option');
             options.forEach((opt) => {
                 const value = opt.getAttribute('data-sort-value');

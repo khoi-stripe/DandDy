@@ -104,6 +104,12 @@
     padding-right: 28px; /* make room for clear button */
 }
 
+/* Dim the search box when not focused so it feels secondary until active */
+.search-input-wrapper .terminal-input:not(:focus) {
+    border-color: var(--terminal-dim);
+    color: var(--terminal-dim);
+}
+
 .password-input-wrapper {
     position: relative;
     display: flex;
@@ -148,7 +154,7 @@
     border: none;
     color: var(--terminal-dim);
     cursor: pointer;
-    font-size: 12px;
+    font-size: 14px;
     line-height: 1;
     padding: 0;
     transition: color var(--transition-speed), transform var(--transition-speed);
@@ -171,16 +177,13 @@
 }
 
 .search-sort-btn {
-    border: 1px solid var(--terminal-border);
-    background: transparent;
-    color: var(--terminal-dim);
-    font-family: var(--font-family);
-    font-size: var(--font-size-small);
-    padding: var(--spacing-sm) var(--spacing-md);
-    cursor: pointer;
+    /* Inherit core visuals (border, colors, font, states) from .terminal-btn-small.
+       This class now only handles layout tweaks specific to the sort control. */
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    min-width: 140px; /* Keep width consistent with dropdown and prevent layout shift */
+    justify-content: space-between;
     white-space: nowrap;
 }
 
