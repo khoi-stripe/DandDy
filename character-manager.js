@@ -2349,8 +2349,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateSortUI();
     }
 
-    document.getElementById('newCharacterBtn').addEventListener('click', createNewCharacter);
-    document.getElementById('importBtn').addEventListener('click', showImportModal);
+    // Wire header buttons (guard against missing elements so init doesn't crash)
+    const newCharacterBtn = document.getElementById('newCharacterBtn');
+    if (newCharacterBtn) {
+        newCharacterBtn.addEventListener('click', createNewCharacter);
+    }
+
+    const importBtn = document.getElementById('importBtn');
+    if (importBtn) {
+        importBtn.addEventListener('click', showImportModal);
+    }
     
     // Update filename display when file is selected
     document.getElementById('importFile').addEventListener('change', (e) => {
