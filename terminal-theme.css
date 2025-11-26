@@ -359,6 +359,7 @@ body {
   align-items: center;
   flex-shrink: 0;
   white-space: nowrap;
+  position: relative;
 }
 
 /* Ensure sheet header buttons (Rename / Change Level / Print, etc.)
@@ -645,10 +646,11 @@ body {
 }
 
 .terminal-btn-primary:hover:not(:disabled) {
-  /* Use themed primary colors so hover stays in the active theme
-     (green by default, teal in sheets, yellow in modals, etc.). */
-  background-color: var(--ui-primary-bg-color);
-  color: var(--ui-on-primary-color);
+  /* Invert style on hover:
+     - Solid fill becomes transparent
+     - Text + border use the primary color */
+  background-color: transparent;
+  color: var(--ui-primary-bg-color);
   border-color: var(--ui-primary-bg-color);
 }
 
@@ -691,6 +693,110 @@ body {
 
 .terminal-btn-danger:hover:not(:disabled) {
   background-color: hsla(var(--theme-error-h), var(--theme-error-s), var(--theme-error-l), 0.1);
+}
+
+/* ===== SELECTOR LISTBOX (shared trigger + menu pattern) ===== */
+
+.selector-shell {
+  position: relative;
+  display: inline-block;
+}
+
+.selector-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+  gap: var(--spacing-xs);
+}
+
+.selector-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selector-caret {
+  margin-left: var(--spacing-xs);
+  font-size: 12px;
+  opacity: 0.8;
+  transition: transform 180ms ease-out, opacity 160ms ease-out;
+}
+
+.selector-trigger.is-open .selector-caret {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+.selector-trigger.is-open {
+  border-color: var(--terminal-dim);
+  color: var(--terminal-dim);
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.selector-menu {
+  position: absolute;
+  min-width: 200px;
+  background: var(--terminal-bg);
+  border: 1px solid var(--terminal-border);
+  border-radius: 4px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.7);
+  z-index: 20;
+
+  transform-origin: center center;
+  transform: translateY(-4px) scaleY(0.15);
+  opacity: 0;
+  pointer-events: none;
+
+  transition:
+    transform 190ms cubic-bezier(0.2, 0.8, 0.2, 1.05),
+    opacity 140ms ease-out,
+    box-shadow 200ms ease-out;
+}
+
+.selector-menu.is-open {
+  transform: translateY(0) scaleY(1);
+  opacity: 1;
+  pointer-events: auto;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.9);
+}
+
+.selector-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: var(--terminal-fg);
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+  gap: 8px;
+}
+
+.selector-option:hover,
+.selector-option.is-selected,
+.selector-option:focus {
+  background-color: hsla(
+    var(--theme-terminal-h),
+    var(--theme-terminal-s),
+    var(--theme-terminal-l-bright),
+    0.16
+  );
+  color: var(--terminal-accent);
+}
+
+.selector-option-icon {
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.selector-option-label {
+  flex: 1;
 }
 
 /* Link-style button */

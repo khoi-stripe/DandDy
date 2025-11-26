@@ -109,46 +109,86 @@ const CharacterSheet = (window.CharacterSheet = {
           ? 'printCharacterSheet()'
           : null;
 
+    const headerActions = [];
+
+    if (character.name && onRename && context === 'builder') {
+      headerActions.push({
+        icon: '✎',
+        label: 'Rename',
+        onclick: renameFn,
+      });
+    }
+
+    if (context === 'builder' && onLevelChange) {
+      headerActions.push({
+        icon: '↕',
+        label: 'Change level',
+        onclick: 'App.openLevelModal()',
+      });
+    }
+
+    if (printFn) {
+      headerActions.push({
+        icon: '⎙',
+        label: 'Print sheet',
+        onclick: printFn,
+      });
+    }
+
+    if (context === 'manager' && onEdit) {
+      headerActions.push({
+        icon: '✎',
+        label: 'Edit details',
+        onclick: editFn,
+      });
+    }
+
+    if (context === 'manager' && onDelete) {
+      headerActions.push({
+        icon: '×',
+        label: 'Delete character',
+        onclick: `deleteCharacter('${character.id}')`,
+      });
+    }
+
+    const headerMenu =
+      headerActions.length > 0
+        ? `
+        <div class="sheet-title-buttons selector-shell">
+          <button
+            class="terminal-btn-small selector-trigger sheet-actions-trigger"
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            onclick="CharacterSheet.toggleSelectorMenu(this)"
+          >
+            ⋮
+          </button>
+          <div class="selector-menu sheet-actions-menu" role="menu" aria-hidden="true">
+            ${headerActions
+              .map(
+                (action) => `
+              <button
+                class="selector-option"
+                type="button"
+                role="menuitem"
+                onclick="${action.onclick}"
+              >
+                <span class="selector-option-icon">${action.icon}</span>
+                <span class="selector-option-label">${action.label}</span>
+              </button>
+            `,
+              )
+              .join('')}
+          </div>
+        </div>
+      `
+        : '';
+
     return `
       <div class="sheet-title-header">
         <div class="sheet-title">${character.name || '[ CHARACTER SHEET ]'}</div>
-        <div class="sheet-title-buttons">
-          ${character.name && onRename && context === 'builder'
-            ? `
-            <button class="terminal-btn terminal-btn-small" onclick="${renameFn}" title="Rename character">
-              ✎ RENAME
-            </button>
-          `
-            : ''}
-          ${context === 'builder' && onLevelChange
-            ? `
-            <button class="terminal-btn terminal-btn-small" onclick="App.openLevelModal()" title="Change level and re-roll stats">
-              ↕ CHANGE LEVEL
-            </button>
-          `
-            : ''}
-          ${printFn
-            ? `
-            <button class="terminal-btn terminal-btn-small sheet-print-btn" onclick="${printFn}" title="Print this character">
-              ⎙ PRINT
-            </button>
-          `
-            : ''}
-          ${context === 'manager' && onEdit
-            ? `
-            <button class="terminal-btn terminal-btn-small" onclick="${editFn}" title="Edit skills, equipment, tools, languages, and backstory">
-              ✎ EDIT DETAILS
-            </button>
-          `
-            : ''}
-          ${context === 'manager' && onDelete
-            ? `
-            <button class="terminal-btn terminal-btn-small" onclick="deleteCharacter('${character.id}')" title="Delete character">
-              × DELETE
-            </button>
-          `
-            : ''}
-        </div>
+        ${headerMenu}
       </div>
     `;
   },
@@ -215,35 +255,73 @@ const CharacterSheet = (window.CharacterSheet = {
       }
     }
 
+    const portraitActions = [];
+
+    if (parsed.hasRace && parsed.hasClass && onGeneratePortrait && (context === 'builder' || hasValidManagerId)) {
+      portraitActions.push({
+        icon: '★',
+        label: 'Custom AI Portrait',
+        onclick: generateFn,
+      });
+    }
+
+    if (originalPortraitUrl && (onTogglePortrait || context === 'manager')) {
+      portraitActions.push({
+        icon: '◉',
+        label: 'View original art',
+        onclick: toggleFn,
+      });
+    }
+
+    if (hasCustomPortrait && historyFn) {
+      portraitActions.push({
+        icon: '⧖',
+        label: 'Portrait history',
+        onclick: historyFn,
+      });
+    }
+
+    const portraitMenu =
+      portraitActions.length > 0
+        ? `
+        <div class="portrait-actions selector-shell">
+          <button
+            class="terminal-btn-small selector-trigger portrait-actions-trigger"
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            onclick="CharacterSheet.toggleSelectorMenu(this)"
+          >
+            ⋮
+          </button>
+          <div class="selector-menu portrait-actions-menu" role="menu" aria-hidden="true">
+            ${portraitActions
+              .map(
+                (action) => `
+              <button
+                class="selector-option"
+                type="button"
+                role="menuitem"
+                onclick="${action.onclick}"
+              >
+                <span class="selector-option-icon">${action.icon}</span>
+                <span class="selector-option-label">${action.label}</span>
+              </button>
+            `,
+              )
+              .join('')}
+          </div>
+        </div>
+      `
+        : '';
+
     return `
       <div class="portrait-container">
         <div class="ascii-portrait" id="${portraitId}"></div>
         ${originalPortraitUrl
           ? `<img id="${originalPortraitId}" class="original-portrait is-hidden" src="${originalPortraitUrl}" alt="Character portrait">`
           : ''}
-        <div class="portrait-actions">
-          ${parsed.hasRace && parsed.hasClass && onGeneratePortrait && (context === 'builder' || hasValidManagerId)
-            ? `
-            <button class="terminal-btn terminal-btn-small" onclick="${generateFn}" title="Generate a unique custom AI portrait">
-              ★ Custom AI Portrait
-            </button>
-          `
-            : ''}
-          ${originalPortraitUrl && (onTogglePortrait || context === 'manager')
-            ? `
-            <button class="terminal-btn terminal-btn-small" onclick="${toggleFn}" id="${toggleBtnId}" title="Toggle between ASCII and original art">
-              ◉ View Original
-            </button>
-          `
-            : ''}
-          ${hasCustomPortrait && historyFn
-            ? `
-            <button class="terminal-btn terminal-btn-small" onclick="${historyFn}" title="View saved portrait history">
-              ⧖ Portrait History
-            </button>
-          `
-            : ''}
-        </div>
+        ${portraitMenu}
       </div>
     `;
   },
@@ -338,6 +416,85 @@ const CharacterSheet = (window.CharacterSheet = {
         </div>
       </div>
     `;
+  },
+
+  /**
+   * Generic toggle for selector-style overflow menus used in the sheet header
+   * and portrait actions. Attaches to the nearest `.selector-shell` and
+   * uses shared `.selector-menu` styles/animation.
+   * @param {HTMLElement} triggerEl
+   */
+  toggleSelectorMenu(triggerEl) {
+    if (!triggerEl) return;
+    const shell = triggerEl.closest('.selector-shell');
+    if (!shell) return;
+    const menu = shell.querySelector('.selector-menu');
+    if (!menu) return;
+
+    const isOpen = shell.classList.contains('is-open');
+
+    const setOpen = (open) => {
+      if (open) {
+        // Decide which horizontal side has more space
+        const shellRect = shell.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const spaceLeft = shellRect.left;
+        const spaceRight = viewportWidth - shellRect.right;
+        const side = spaceRight >= spaceLeft ? 'right' : 'left';
+
+        // Measure menu height to vertically center relative to trigger/shell
+        const prevTransition = menu.style.transition;
+        const prevTransform = menu.style.transform;
+
+        menu.style.transition = 'none';
+        menu.classList.add('is-open');
+        menu.style.transform = 'scaleY(1)';
+
+        const menuRect = menu.getBoundingClientRect();
+        const menuHeight = menuRect.height || 0;
+
+        menu.style.transition = prevTransition;
+        menu.style.transform = prevTransform;
+
+        const offsetTop = (shellRect.height - menuHeight) / 2;
+        menu.style.top = `${offsetTop}px`;
+        menu.style.left = side === 'right' ? `${shellRect.width}px` : '';
+        menu.style.right = side === 'left' ? `${shellRect.width}px` : '';
+
+        shell.classList.add('is-open');
+        triggerEl.classList.add('is-open');
+        menu.classList.add('is-open');
+        menu.setAttribute('aria-hidden', 'false');
+        triggerEl.setAttribute('aria-expanded', 'true');
+      } else {
+        shell.classList.remove('is-open');
+        triggerEl.classList.remove('is-open');
+        menu.classList.remove('is-open');
+        menu.setAttribute('aria-hidden', 'true');
+        triggerEl.setAttribute('aria-expanded', 'false');
+      }
+    };
+
+    setOpen(!isOpen);
+
+    if (!this._selectorOutsideHandler) {
+      this._selectorOutsideHandler = (event) => {
+        const openShells = document.querySelectorAll('.selector-shell.is-open');
+        if (!openShells.length) return;
+        if (event.target.closest('.selector-shell')) return;
+        openShells.forEach((openShell) => {
+          const btn = openShell.querySelector('.selector-trigger');
+          const m = openShell.querySelector('.selector-menu');
+          if (!btn || !m) return;
+          btn.classList.remove('is-open');
+          m.classList.remove('is-open');
+          m.setAttribute('aria-hidden', 'true');
+          btn.setAttribute('aria-expanded', 'false');
+          openShell.classList.remove('is-open');
+        });
+      };
+      document.addEventListener('click', this._selectorOutsideHandler);
+    }
   },
 
   _renderSavingThrows(parsed) {

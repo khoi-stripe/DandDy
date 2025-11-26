@@ -485,10 +485,13 @@ const App = (window.App = {
 
     // Helper to truncate option text
     const truncate = (text, maxLength) => {
-      return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+      return text.length > maxLength
+        ? text.substring(0, maxLength - 3) + '...'
+        : text;
     };
 
-    const optionsHTML = question.options
+    const options = question.options || [];
+    const selectOptionsHTML = options
       .map(
         (opt, index) => `
           <option value="${opt.value}" ${
@@ -498,6 +501,31 @@ const App = (window.App = {
       )
       .join('');
 
+    const listboxOptionsHTML = options
+      .map(
+        (opt, index) => `
+          <button
+            class="ability-method-option selector-option${
+              index === 0 ? ' is-selected' : ''
+            }"
+            data-method="${opt.value}"
+            role="option"
+            aria-selected="${index === 0 ? 'true' : 'false'}"
+          >
+            <span class="selector-option-label">
+              ${truncate(opt.text, 45)}
+            </span>
+          </button>
+        `,
+      )
+      .join('');
+
+    const initialMethod = options[0]?.value || 'standard';
+    const initialLabel = truncate(
+      options[0]?.text || 'Standard Array',
+      45,
+    );
+
     narratorPanel.insertAdjacentHTML(
       'beforeend',
       `
@@ -505,9 +533,30 @@ const App = (window.App = {
         <div class="options-container ability-method-container">
           <label class="settings-label ability-method-label">Ability generation method:</label>
           <div class="ability-method-controls">
-            <select id="ability-method-select" class="input-field ability-method-select">
-              ${optionsHTML}
-            </select>
+            <div class="ability-method-trigger-wrap selector-shell">
+              <button
+                class="button-primary ability-method-trigger selector-trigger"
+                id="ability-method-trigger"
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-controls="ability-method-listbox"
+                data-selected-method="${initialMethod}"
+              >
+                <span class="ability-method-trigger-label">
+                  ${initialLabel}
+                </span>
+                <span class="ability-method-caret">⌄</span>
+              </button>
+              <div
+                id="ability-method-listbox"
+                class="ability-method-listbox selector-menu"
+                role="listbox"
+                aria-label="Ability generation method"
+              >
+                ${listboxOptionsHTML}
+              </div>
+            </div>
             <button class="button-primary ability-method-roll" onclick="App.handleAbilityFromSelect()">
               > ROLL
             </button>
@@ -515,6 +564,149 @@ const App = (window.App = {
         </div>
       </div>`,
     );
+
+    // Wire up animated listbox behavior for ability method selector
+    const trigger = document.getElementById('ability-method-trigger');
+    const listbox = document.getElementById('ability-method-listbox');
+    if (trigger && listbox) {
+      const optionsEls = Array.from(
+        listbox.querySelectorAll('.ability-method-option'),
+      );
+
+      const setMethod = (method, label) => {
+        trigger.setAttribute('data-selected-method', method);
+        const labelEl = trigger.querySelector(
+          '.ability-method-trigger-label',
+        );
+        if (labelEl) {
+          labelEl.textContent = label;
+        }
+
+        optionsEls.forEach((opt) => {
+          const isSelected = opt.getAttribute('data-method') === method;
+          opt.classList.toggle('is-selected', isSelected);
+          opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        });
+      };
+
+      const toggleOpen = () => {
+        const isOpen = listbox.classList.contains('is-open');
+        listbox.classList.toggle('is-open', !isOpen);
+        trigger.classList.toggle('is-open', !isOpen);
+        trigger.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
+      };
+
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleOpen();
+      });
+
+      optionsEls.forEach((opt) => {
+        opt.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const method = opt.getAttribute('data-method') || 'standard';
+          const label = (opt.textContent || '').trim();
+          setMethod(method, label);
+          listbox.classList.remove('is-open');
+          trigger.classList.remove('is-open');
+          trigger.setAttribute('aria-expanded', 'false');
+        });
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!listbox.classList.contains('is-open')) return;
+        if (trigger.contains(e.target) || listbox.contains(e.target)) return;
+        listbox.classList.remove('is-open');
+        trigger.classList.remove('is-open');
+        trigger.setAttribute('aria-expanded', 'false');
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && listbox.classList.contains('is-open')) {
+          listbox.classList.remove('is-open');
+          trigger.classList.remove('is-open');
+          trigger.setAttribute('aria-expanded', 'false');
+          trigger.focus();
+        }
+      });
+
+      // Keyboard navigation for ability method listbox
+      const handleAbilityListboxKeydown = (e) => {
+        const isOpen = listbox.classList.contains('is-open');
+
+        const openAndFocus = (index) => {
+          listbox.classList.add('is-open');
+          trigger.classList.add('is-open');
+          trigger.setAttribute('aria-expanded', 'true');
+          if (optionsEls.length) {
+            const clamped = Math.max(
+              0,
+              Math.min(optionsEls.length - 1, index),
+            );
+            optionsEls[clamped].focus();
+          }
+        };
+
+        if (e.target === trigger) {
+          if ((e.key === 'Enter' || e.key === ' ') && !isOpen) {
+            e.preventDefault();
+            openAndFocus(0);
+            return;
+          }
+          if (e.key === 'ArrowDown' && !isOpen) {
+            e.preventDefault();
+            openAndFocus(0);
+            return;
+          }
+          if (e.key === 'ArrowUp' && !isOpen) {
+            e.preventDefault();
+            openAndFocus(optionsEls.length - 1);
+            return;
+          }
+        }
+
+        if (!isOpen) return;
+
+        if (e.key === 'Escape') {
+          // Global ESC handler above will close and refocus trigger
+          return;
+        }
+
+        if (!optionsEls.length) return;
+
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          const currentIndex = optionsEls.indexOf(document.activeElement);
+          let nextIndex = currentIndex;
+          if (currentIndex === -1) {
+            nextIndex = e.key === 'ArrowDown' ? 0 : optionsEls.length - 1;
+          } else {
+            nextIndex =
+              e.key === 'ArrowDown'
+                ? (currentIndex + 1) % optionsEls.length
+                : (currentIndex - 1 + optionsEls.length) % optionsEls.length;
+          }
+          optionsEls[nextIndex].focus();
+          return;
+        }
+
+        if (e.key === 'Enter' || e.key === ' ') {
+          const activeOption = optionsEls.find(
+            (opt) => opt === document.activeElement,
+          );
+          if (activeOption) {
+            e.preventDefault();
+            activeOption.click();
+          }
+        }
+      };
+
+      trigger.addEventListener('keydown', handleAbilityListboxKeydown);
+      listbox.addEventListener('keydown', handleAbilityListboxKeydown);
+
+      // Initialize selected state from initial method
+      setMethod(initialMethod, initialLabel);
+    }
 
     // Activate keyboard navigation first
     KeyboardNav.activate();
@@ -578,7 +770,6 @@ const App = (window.App = {
             class="input-field" 
             id="custom-name-input" 
             placeholder="Or enter your own name..."
-            onkeypress="if(event.key === 'Enter') App.handleCustomName()"
           >
           <button class="button-primary" onclick="App.handleCustomName()">
             SUBMIT
@@ -589,6 +780,26 @@ const App = (window.App = {
 
     // Store generated names for later reference
     this._generatedNames = names;
+
+    // Wire up custom name behavior:
+    // - When the input is focused, clear button keyboard focus so the
+    //   user's attention is on their custom entry.
+    // - Pressing Enter in the input submits the custom name.
+    const customInput = document.getElementById('custom-name-input');
+    if (customInput) {
+      customInput.addEventListener('focus', () => {
+        if (typeof KeyboardNav !== 'undefined' && KeyboardNav.clearFocus) {
+          KeyboardNav.clearFocus();
+        }
+      });
+
+      customInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          this.handleCustomName();
+        }
+      });
+    }
 
     // Activate keyboard navigation
     KeyboardNav.activate();
@@ -1145,8 +1356,9 @@ const App = (window.App = {
   },
 
   async handleAbilityFromSelect() {
-    const select = document.getElementById('ability-method-select');
-    const method = select?.value || 'standard';
+    const trigger = document.getElementById('ability-method-trigger');
+    const method =
+      trigger?.getAttribute('data-selected-method') || 'standard';
     await this.handleAbilityMethod(method);
   },
 
@@ -1911,8 +2123,18 @@ const App = (window.App = {
     };
     
     if (portraitEl) {
-      // While generating, enlarge the font so status messages are readable,
-      // matching the Character Manager's loading treatment.
+      // While generating, scroll the character sheet back to the top so the
+      // user immediately sees the portrait frame and loading status message.
+      const characterPanel = document.getElementById('character-panel');
+      if (characterPanel) {
+        characterPanel.scrollTo({
+          top: 0,
+          behavior: 'smooth',
+        });
+      }
+
+      // Enlarge the font so status messages are readable, matching the
+      // Character Manager's loading treatment.
       portraitEl.style.fontSize = 'var(--font-size-small)';
       updatePortraitLoading();
       portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);

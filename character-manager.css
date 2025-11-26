@@ -181,7 +181,11 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
+}
+
+.sort-trigger-wrap {
     position: relative;
+    display: inline-block;
 }
 
 .search-sort-btn {
@@ -190,50 +194,41 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    min-width: 140px; /* Keep width consistent with dropdown and prevent layout shift */
     justify-content: space-between;
     white-space: nowrap;
 }
 
-.search-sort-btn:hover,
-.search-sort-btn.is-active {
+.search-sort-btn:hover {
     border-color: var(--terminal-accent);
     color: var(--terminal-accent);
 }
 
-.sort-dropdown {
-    position: absolute;
-    margin-top: 4px;
-    right: 0;
-    background: var(--terminal-bg);
-    border: 1px solid var(--terminal-border);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
-    z-index: 20;
-    display: none;
-    min-width: 140px;
+.search-sort-btn.is-active {
+    /* Dimmed look while listbox is open */
+    border-color: var(--terminal-dim);
+    color: var(--terminal-dim);
+    background-color: rgba(0, 0, 0, 0.6);
 }
 
-.sort-dropdown.is-open {
-    display: block;
+.sort-dropdown {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    /* Match or exceed the trigger width so options align with the button */
+    min-width: 100%;
+
+    /* Center the menu on the trigger vertically, using the shared
+       selector-menu animation for scale/offset. */
+    transform-origin: center center;
+    transform: translateY(-50%) translateY(-4px) scaleY(0.15);
+}
+
+.sort-dropdown.selector-menu.is-open {
+    transform: translateY(-50%) translateY(0) scaleY(1);
 }
 
 .sort-option {
-    display: block;
-    width: 100%;
-    padding: 4px 10px;
-    background: transparent;
-    border: none;
-    color: var(--terminal-fg);
-    text-align: left;
-    font-family: var(--font-family);
-    font-size: var(--font-size-small);
-    cursor: pointer;
-}
-
-.sort-option:hover,
-.sort-option.is-selected {
-    background-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.16);
-    color: var(--terminal-accent);
+    /* No additional styling; inherits from .selector-option */
 }
 
 /* ===== CHARACTER COUNT ===== */

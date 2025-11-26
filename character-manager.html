@@ -197,21 +197,23 @@
                         <button id="clearSearchBtn" class="search-clear-btn" type="button" aria-label="Clear search">✕</button>
                     </div>
                     <div class="search-actions">
-                        <button
-                            id="sortToggleBtn"
-                            class="terminal-btn-small search-sort-btn"
-                            type="button"
-                            aria-haspopup="listbox"
-                            aria-expanded="false"
-                            aria-controls="sortDropdown"
-                        >Sort: Date modified</button>
-                        <div id="sortDropdown" class="sort-dropdown" role="listbox" aria-label="Sort characters">
-                            <button class="sort-option" data-sort-value="alphabetical" role="option">
-                                Alphabetical
-                            </button>
-                            <button class="sort-option" data-sort-value="dateModified" role="option">
-                                Date modified
-                            </button>
+                        <div class="sort-trigger-wrap selector-shell">
+                            <button
+                                id="sortToggleBtn"
+                                class="terminal-btn-small search-sort-btn selector-trigger"
+                                type="button"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                aria-controls="sortDropdown"
+                            >Sort: Date modified</button>
+                            <div id="sortDropdown" class="sort-dropdown selector-menu" role="listbox" aria-label="Sort characters">
+                                <button class="sort-option selector-option" data-sort-value="alphabetical" role="option">
+                                    Alphabetical
+                                </button>
+                                <button class="sort-option selector-option" data-sort-value="dateModified" role="option">
+                                    Date modified
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

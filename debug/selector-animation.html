@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DandDy Selector Animation Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Match character manager styles -->
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource/google-sans-code@5.2.1/index.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../terminal-theme.css" />
+  <link rel="stylesheet" href="../character-manager.css" />
+
+  <style>
+    /* Local tweaks for the selector demo; everything else comes from terminal-theme.css */
+
+    .selector-lab-frame {
+      height: 420px;
+      max-width: 620px;
+    }
+
+    .selector-lab-body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-xl);
+    }
+
+    .selector-lab-panel {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .selector-label {
+      font-size: var(--font-size-small);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--terminal-dim);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .selector-trigger {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: var(--spacing-sm) var(--spacing-md);
+      border-radius: 4px;
+      border: 1px solid var(--terminal-border);
+      background-color: var(--terminal-bg);
+      color: var(--terminal-fg);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: var(--font-size-small);
+      transition:
+        border-color var(--transition-speed),
+        box-shadow var(--transition-speed),
+        background-color var(--transition-speed),
+        transform 80ms ease-out;
+    }
+
+    .selector-trigger:hover {
+      border-color: var(--terminal-accent);
+      box-shadow: 0 0 15px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.25);
+      background-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.12);
+    }
+
+    .selector-trigger:active {
+      transform: translateY(1px);
+      box-shadow: 0 0 10px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.4);
+    }
+
+    .selector-trigger-label {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      text-align: left;
+    }
+
+    .selector-trigger-primary {
+      font-size: var(--font-size-small);
+    }
+
+    .selector-trigger-secondary {
+      font-size: 11px;
+      color: var(--terminal-dim);
+    }
+
+    .selector-caret {
+      margin-left: var(--spacing-sm);
+      color: var(--terminal-dim);
+      font-size: var(--font-size-small);
+      transition: transform 180ms ease-out, color 160ms ease-out;
+    }
+
+    .selector-trigger.is-open {
+      border-color: var(--terminal-dim);
+      color: var(--terminal-dim);
+      background-color: rgba(0, 0, 0, 0.6);
+    }
+
+    .selector-trigger.is-open .selector-caret {
+      transform: rotate(180deg);
+      color: var(--terminal-accent);
+    }
+
+    .selector-trigger-wrap {
+      position: relative;
+      display: block;
+    }
+
+    .selector-listbox-shell {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      overflow: visible;
+      z-index: 10;
+      /* Let clicks pass through unless they're on the listbox itself */
+      pointer-events: none;
+    }
+
+    .selector-listbox {
+      position: relative;
+      width: 100%;
+      padding: 6px 0;
+      border-radius: 4px;
+      border: 1px solid var(--terminal-border);
+      background-color: var(--terminal-bg);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.55);
+      z-index: 10;
+
+      /* Animation base state */
+      transform-origin: center center;
+      /* Slight upward offset + collapsed scale */
+      transform: translateY(-4px) scaleY(0.15);
+      opacity: 0;
+      pointer-events: none; /* re-enabled only when open */
+
+      transition:
+        /* Custom easing: snappy open with a subtle ease-out tail */
+        transform 190ms cubic-bezier(0.2, 0.8, 0.2, 1.05),
+        opacity 140ms ease-out,
+        box-shadow 200ms ease-out;
+    }
+
+    .selector-listbox.is-open {
+      /* Slides into place and fully expands */
+      transform: translateY(0) scaleY(1);
+      opacity: 1;
+      pointer-events: auto;
+      /* Slightly stronger glow when open */
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.85);
+    }
+
+    .selector-listbox-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: var(--font-size-small);
+      color: var(--terminal-fg);
+      transition: background-color 120ms ease-out, color 120ms ease-out;
+    }
+
+    .selector-listbox-row + .selector-listbox-row {
+      margin-top: 2px;
+    }
+
+    .selector-listbox-row:hover {
+      background-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.16);
+      color: var(--terminal-accent);
+    }
+
+    .selector-popover-badge {
+      padding: 0 6px;
+      border-radius: 999px;
+      border: 1px solid var(--terminal-dim);
+      font-size: 10px;
+      color: var(--terminal-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .selector-debug-line {
+      margin-top: var(--spacing-md);
+      font-size: var(--font-size-small);
+      color: var(--terminal-dim);
+    }
+  </style>
+</head>
+<body>
+  <div class="terminal-frame selector-lab-frame">
+    <header class="terminal-header">
+      <div class="header-content">
+        <div class="terminal-title">[ Selector Animation Lab ]</div>
+        <div class="header-actions">
+          <span class="terminal-text-dim">Debug-only page</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="selector-lab-body">
+      <div class="selector-lab-panel">
+        <div class="selector-label">Demo Selector</div>
+
+        <div class="selector-trigger-wrap">
+          <button
+            class="selector-trigger"
+            type="button"
+            id="selectorTrigger"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+          >
+            <span class="selector-trigger-label">
+              <span class="selector-trigger-primary">Choose a variant</span>
+              <span class="selector-trigger-secondary">Click to open animated listbox</span>
+            </span>
+            <span class="selector-caret">⌄</span>
+          </button>
+
+          <div class="selector-listbox-shell">
+            <div
+              class="selector-listbox"
+              id="selectorListbox"
+              role="listbox"
+              aria-hidden="true"
+            >
+              <div class="selector-listbox-row" data-value="center-grow">
+                <span>Center grow (scaleY)</span>
+                <span class="selector-popover-badge">Current</span>
+              </div>
+              <div class="selector-listbox-row" data-value="future-variant">
+                <span>Future variant slot</span>
+                <span class="selector-popover-badge">TODO</span>
+              </div>
+              <div class="selector-listbox-row" data-value="wild-magic">
+                <span>Wild magic test</span>
+                <span class="selector-popover-badge">Chaos</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="selector-debug-line" id="selectorDebug">
+          State: closed
+        </div>
+      </div>
+    </div>
+
+    <footer class="terminal-footer">
+      <span class="terminal-text-small terminal-text-dim">
+        Popover opens via <code>scaleY</code> from center; tweak timings here before integrating.
+      </span>
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      const trigger = document.getElementById('selectorTrigger');
+      const listbox = document.getElementById('selectorListbox');
+      const debugLine = document.getElementById('selectorDebug');
+
+      if (!trigger || !listbox) return;
+
+      function setOpen(isOpen) {
+        if (isOpen) {
+          trigger.classList.add('is-open');
+          listbox.classList.add('is-open');
+          trigger.setAttribute('aria-expanded', 'true');
+          listbox.setAttribute('aria-hidden', 'false');
+          debugLine.textContent = 'State: open (listbox animates from center via scaleY)';
+        } else {
+          trigger.classList.remove('is-open');
+          listbox.classList.remove('is-open');
+          trigger.setAttribute('aria-expanded', 'false');
+          listbox.setAttribute('aria-hidden', 'true');
+          debugLine.textContent = 'State: closed';
+        }
+      }
+
+      function toggleOpen() {
+        const isOpen = listbox.classList.contains('is-open');
+        setOpen(!isOpen);
+      }
+
+      trigger.addEventListener('click', toggleOpen);
+
+      // Close when clicking outside
+      document.addEventListener('click', (event) => {
+        if (!listbox.classList.contains('is-open')) return;
+        if (trigger.contains(event.target)) return;
+        if (listbox.contains(event.target)) return;
+        setOpen(false);
+      });
+
+      // Basic keyboard support: Escape to close
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && listbox.classList.contains('is-open')) {
+          setOpen(false);
+        }
+      });
+
+      // Clicking a row selects an option and closes the listbox
+      listbox.addEventListener('click', (event) => {
+        const row = event.target.closest('.selector-listbox-row');
+        if (!row) return;
+        const value = row.getAttribute('data-value');
+        debugLine.textContent = 'Selected: ' + value + ' | listbox closed after selection';
+        setOpen(false);
+      });
+    })();
+  </script>
+</body>
+</html>
+
+

@@ -36,6 +36,20 @@
 
 .builder-settings-link {
   margin-left: auto;
+  /* Icon-only settings button: teal theme, no underline */
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--sheet-accent-dim);
+  font-size: 1.15rem; /* Slightly larger than body text */
+  line-height: 1;
+}
+
+.builder-settings-link:hover {
+  color: var(--sheet-accent);
+  text-shadow: 0 0 5px var(--sheet-accent);
+  text-decoration: none;
 }
 
 /* ===== COMPONENTS ===== */
@@ -172,16 +186,45 @@
   width: 100%;
 }
 
-.ability-method-select {
-  flex: 1;
-  margin-top: 0;
-  padding-right: calc(var(--spacing-lg) * 2);
-}
-
 .ability-method-roll {
   margin-top: 0;
   white-space: nowrap;
   align-self: stretch;
+}
+
+.ability-method-trigger-wrap {
+  position: relative;
+  flex: 1;
+}
+
+.ability-method-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ability-method-caret {
+  margin-left: var(--spacing-xs);
+  font-size: 12px;
+  opacity: 0.8;
+  transition: transform 180ms ease-out, opacity 160ms ease-out;
+}
+
+.ability-method-trigger.is-open .ability-method-caret {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+.ability-method-trigger.is-open {
+  border-color: var(--terminal-dim);
+  color: var(--terminal-dim);
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.ability-method-listbox {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
 }
 
 .generate-ai-btn {

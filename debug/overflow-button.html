@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DandDy Overflow Button Lab</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="stylesheet" href="../terminal-theme.css" />
+
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #111;
+    }
+
+    .terminal-frame {
+      max-width: 520px;
+      height: 360px;
+    }
+
+    .overflow-lab-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-xl);
+    }
+
+    .overflow-lab-panel {
+      position: relative;
+      width: 100%;
+      max-width: 320px;
+      text-align: center;
+    }
+
+    .overflow-label {
+      margin-bottom: var(--spacing-md);
+      font-size: var(--font-size-small);
+      color: var(--terminal-dim);
+    }
+
+    .overflow-debug {
+      margin-top: var(--spacing-md);
+      font-size: var(--font-size-small);
+      color: var(--terminal-dim);
+    }
+
+    .overflow-shell {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .overflow-trigger {
+      width: 32px;
+      height: 32px;
+      border-radius: 4px; /* square button */
+      border: 1px solid var(--terminal-border);
+      background-color: var(--terminal-bg);
+      color: var(--terminal-fg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition:
+        background-color 140ms ease-out,
+        border-color 140ms ease-out,
+        color 140ms ease-out,
+        transform 80ms ease-out;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .overflow-trigger:hover {
+      border-color: var(--terminal-accent);
+      color: var(--terminal-accent);
+    }
+
+    .overflow-trigger:active {
+      transform: translateY(1px);
+    }
+
+    .overflow-trigger.is-open {
+      background-color: var(--terminal-accent);
+      border-color: var(--terminal-accent);
+      color: var(--terminal-bg);
+    }
+
+    .overflow-trigger-icon {
+      display: inline-block;
+      transition: transform 160ms ease-out;
+    }
+
+    /* Listbox-style overflow menu (shared pattern) */
+    .overflow-menu {
+      position: absolute;
+      min-width: 200px;
+      /* top/left will be set dynamically based on trigger position */
+      background: var(--terminal-bg);
+      border: 1px solid var(--terminal-border);
+      border-radius: 4px;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.7);
+      z-index: 20;
+
+      transform-origin: center center;
+      /* Slight upward offset + collapsed scale for nicer entry */
+      transform: translateY(-4px) scaleY(0.15);
+      opacity: 0;
+      pointer-events: none;
+
+      transition:
+        /* Same easing as other listbox/selectors */
+        transform 190ms cubic-bezier(0.2, 0.8, 0.2, 1.05),
+        opacity 140ms ease-out,
+        box-shadow 200ms ease-out;
+    }
+
+    .overflow-menu.is-open {
+      /* Slides into place and fully expands */
+      transform: translateY(0) scaleY(1);
+      opacity: 1;
+      pointer-events: auto;
+      /* Slightly stronger glow when open */
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.9);
+    }
+
+    .overflow-menu-option {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding: 4px 10px;
+      background: transparent;
+      border: none;
+      color: var(--terminal-fg);
+      text-align: left;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      cursor: pointer;
+      gap: 8px;
+    }
+
+    .overflow-menu-option:hover {
+      background-color: hsla(
+        var(--theme-terminal-h),
+        var(--theme-terminal-s),
+        var(--theme-terminal-l-bright),
+        0.16
+      );
+      color: var(--terminal-accent);
+    }
+
+    .overflow-menu-icon {
+      width: 16px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .overflow-menu-label {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="terminal-frame">
+    <header class="terminal-header">
+      <div class="header-content">
+        <div class="terminal-title">[ Overflow Button Lab ]</div>
+      </div>
+    </header>
+
+    <div class="overflow-lab-body">
+      <div class="overflow-lab-panel">
+        <div class="overflow-label">
+          Overflow actions fly out from the three-dot button in the direction
+          with the most space.
+        </div>
+
+        <div class="overflow-shell selector-shell" id="overflowShell" data-direction="down">
+          <button
+            class="overflow-trigger selector-trigger"
+            id="overflowTrigger"
+            type="button"
+            aria-haspopup="true"
+            aria-expanded="false"
+          >
+            <span class="overflow-trigger-icon" id="overflowIcon">⋮</span>
+          </button>
+          <div
+            class="overflow-menu selector-menu"
+            id="overflowMenu"
+            role="menu"
+            aria-hidden="true"
+          >
+            <button class="overflow-menu-option selector-option" type="button" data-action="edit" role="menuitem">
+              <span class="overflow-menu-icon selector-option-icon">✎</span>
+              <span class="overflow-menu-label selector-option-label">Edit details</span>
+            </button>
+            <button class="overflow-menu-option selector-option" type="button" data-action="level" role="menuitem">
+              <span class="overflow-menu-icon selector-option-icon">⬆</span>
+              <span class="overflow-menu-label selector-option-label">Change level</span>
+            </button>
+            <button class="overflow-menu-option selector-option" type="button" data-action="print" role="menuitem">
+              <span class="overflow-menu-icon selector-option-icon">⎙</span>
+              <span class="overflow-menu-label selector-option-label">Print sheet</span>
+            </button>
+            <button class="overflow-menu-option selector-option" type="button" data-action="portrait" role="menuitem">
+              <span class="overflow-menu-icon selector-option-icon">★</span>
+              <span class="overflow-menu-label selector-option-label">Custom AI portrait</span>
+            </button>
+            <button class="overflow-menu-option selector-option" type="button" data-action="delete" role="menuitem">
+              <span class="overflow-menu-icon selector-option-icon">×</span>
+              <span class="overflow-menu-label selector-option-label">Delete character</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-debug" id="overflowDebug">
+          Direction: up
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const shell = document.getElementById('overflowShell');
+      const trigger = document.getElementById('overflowTrigger');
+      const icon = document.getElementById('overflowIcon');
+      const menu = document.getElementById('overflowMenu');
+      const debugLine = document.getElementById('overflowDebug');
+
+      if (!shell || !trigger || !icon || !menu) return;
+
+      function computeDirection() {
+        const rect = trigger.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+
+        const spaceUp = rect.top;
+        const spaceDown = viewportHeight - rect.bottom;
+
+        // Only choose between up/down for listbox-style menu
+        return spaceDown >= spaceUp ? 'down' : 'up';
+      }
+
+      function setOpen(isOpen) {
+        if (isOpen) {
+          // Measure menu size by temporarily showing it without animation.
+          // We restore the original transform so the real open uses CSS
+          // transitions from the collapsed state.
+          const originalTransition = menu.style.transition;
+          const originalTransform = menu.style.transform;
+
+          menu.style.transition = 'none';
+          menu.classList.add('is-open');
+          menu.style.transform = 'scaleY(1)';
+
+          const menuRect = menu.getBoundingClientRect();
+          const menuHeight = menuRect.height || 0;
+
+          const triggerRect = trigger.getBoundingClientRect();
+          const shellRect = shell.getBoundingClientRect();
+          const viewportHeight = window.innerHeight;
+
+          const triggerCenterY = triggerRect.top + triggerRect.height / 2;
+
+          // Ideal center-aligned position (menu centered on trigger)
+          let topPx =
+            triggerCenterY - menuHeight / 2 - shellRect.top;
+
+          // Check if centered menu would overflow viewport
+          const menuTopViewport = triggerCenterY - menuHeight / 2;
+          const menuBottomViewport = menuTopViewport + menuHeight;
+
+          const hasRoomCentered =
+            menuTopViewport >= 0 && menuBottomViewport <= viewportHeight;
+
+          let direction;
+          if (hasRoomCentered) {
+            direction = 'center';
+          } else {
+            // Pin to edge of trigger and expand toward side with more room
+            const spaceUp = triggerRect.top;
+            const spaceDown = viewportHeight - triggerRect.bottom;
+            if (spaceDown >= spaceUp) {
+              direction = 'down';
+              topPx = triggerRect.bottom - shellRect.top;
+            } else {
+              direction = 'up';
+              topPx =
+                triggerRect.top - shellRect.top - menuHeight;
+            }
+          }
+
+          shell.dataset.direction = direction;
+
+          // Position menu horizontally centered on trigger
+          const triggerCenterX =
+            triggerRect.left + triggerRect.width / 2;
+          const menuWidth = menuRect.width || 0;
+          const leftPx =
+            triggerCenterX - menuWidth / 2 - shellRect.left;
+
+          menu.style.top = `${Math.round(topPx)}px`;
+          menu.style.left = `${Math.round(leftPx)}px`;
+
+          // Restore original transition + transform before triggering
+          // the real animated open state.
+          menu.style.transition = originalTransition;
+          menu.style.transform = originalTransform;
+          menu.style.transformOrigin =
+            direction === 'up'
+              ? 'bottom center'
+              : direction === 'down'
+              ? 'top center'
+              : 'center center';
+
+          // Now actually open with animation
+          shell.classList.add('is-open');
+          trigger.classList.add('is-open');
+          menu.classList.add('is-open');
+          menu.setAttribute('aria-hidden', 'false');
+          trigger.setAttribute('aria-expanded', 'true');
+          icon.textContent = '✕';
+          debugLine.textContent = 'Direction: ' + direction + ' (open)';
+        } else {
+          shell.classList.remove('is-open');
+          trigger.classList.remove('is-open');
+          menu.classList.remove('is-open');
+          menu.setAttribute('aria-hidden', 'true');
+          trigger.setAttribute('aria-expanded', 'false');
+          icon.textContent = '⋮';
+
+          const direction = shell.dataset.direction || 'up';
+          debugLine.textContent =
+            'Direction: ' + direction + ' (closed)';
+        }
+      }
+
+      function toggleOpen() {
+        const isOpen = shell.classList.contains('is-open');
+        setOpen(!isOpen);
+      }
+
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleOpen();
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!shell.classList.contains('is-open')) return;
+        if (shell.contains(e.target)) return;
+        setOpen(false);
+      });
+
+      // Clicking a menu option just logs the action for now and closes the menu
+      menu.addEventListener('click', (e) => {
+        const btn = e.target.closest('.overflow-menu-option');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        console.log('[Overflow action]', action);
+        setOpen(false);
+      });
+
+      window.addEventListener('resize', () => {
+        if (!shell.classList.contains('is-open')) return;
+        // Recompute direction (up/down) on resize while open
+        const direction = computeDirection();
+        shell.dataset.direction = direction;
+        debugLine.textContent = 'Direction: ' + direction + ' (open, resized)';
+      });
+    })();
+  </script>
+</body>
+</html>
+
+

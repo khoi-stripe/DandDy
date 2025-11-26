@@ -2288,6 +2288,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Sort dropdown behavior
     if (sortToggleBtn && sortDropdown) {
+        // Size the sort trigger based on the longest option label so the
+        // button width is driven by content but stays fixed as labels change.
+        const sizeSortTrigger = () => {
+            const options = sortDropdown.querySelectorAll('.sort-option');
+            if (!options.length) return;
+
+            let maxLabelChars = 0;
+            options.forEach((opt) => {
+                const label = (opt.textContent || '').trim();
+                if (label.length > maxLabelChars) {
+                    maxLabelChars = label.length;
+                }
+            });
+
+            // Account for "Sort: " prefix plus a little breathing room.
+            const totalChars = 'Sort: '.length + maxLabelChars + 2;
+            sortToggleBtn.style.minWidth = `${totalChars}ch`;
+        };
+
         const updateSortUI = () => {
             sortToggleBtn.classList.toggle('is-active', sortDropdown.classList.contains('is-open'));
             sortToggleBtn.setAttribute(
@@ -2308,6 +2327,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const value = opt.getAttribute('data-sort-value');
                 opt.classList.toggle('is-selected', value === AppState.sortMode);
             });
+
+            // Ensure width stays sized for the longest label
+            sizeSortTrigger();
         };
 
         sortToggleBtn.addEventListener('click', (e) => {
@@ -2316,7 +2338,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateSortUI();
         });
 
-        sortDropdown.querySelectorAll('.sort-option').forEach((opt) => {
+        const sortOptions = Array.from(sortDropdown.querySelectorAll('.sort-option'));
+
+        sortOptions.forEach((opt) => {
             opt.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const value = opt.getAttribute('data-sort-value');
@@ -2345,7 +2369,82 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateSortUI();
         });
 
-        // Initialize selection state
+        // Keyboard navigation for sort listbox
+        const handleSortKeydown = (e) => {
+            const isOpen = sortDropdown.classList.contains('is-open');
+            const options = Array.from(sortDropdown.querySelectorAll('.sort-option'));
+
+            // Helper: open dropdown and focus first/last option
+            const openAndFocus = (index) => {
+                sortDropdown.classList.add('is-open');
+                updateSortUI();
+                if (options.length) {
+                    const clamped = Math.max(0, Math.min(options.length - 1, index));
+                    options[clamped].focus();
+                }
+            };
+
+            // When focus is on the toggle button
+            if (e.target === sortToggleBtn) {
+                if ((e.key === 'Enter' || e.key === ' ') && !isOpen) {
+                    e.preventDefault();
+                    openAndFocus(0);
+                    return;
+                }
+                if (e.key === 'ArrowDown' && !isOpen) {
+                    e.preventDefault();
+                    openAndFocus(0);
+                    return;
+                }
+                if (e.key === 'ArrowUp' && !isOpen) {
+                    e.preventDefault();
+                    openAndFocus(options.length - 1);
+                    return;
+                }
+            }
+
+            if (!isOpen) return;
+
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                sortDropdown.classList.remove('is-open');
+                updateSortUI();
+                sortToggleBtn.focus();
+                return;
+            }
+
+            if (!options.length) return;
+
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                const currentIndex = options.indexOf(document.activeElement);
+                let nextIndex = currentIndex;
+                if (currentIndex === -1) {
+                    nextIndex = e.key === 'ArrowDown' ? 0 : options.length - 1;
+                } else {
+                    nextIndex =
+                        e.key === 'ArrowDown'
+                            ? (currentIndex + 1) % options.length
+                            : (currentIndex - 1 + options.length) % options.length;
+                }
+                options[nextIndex].focus();
+                return;
+            }
+
+            if (e.key === 'Enter' || e.key === ' ') {
+                const activeOption = options.find((opt) => opt === document.activeElement);
+                if (activeOption) {
+                    e.preventDefault();
+                    activeOption.click();
+                }
+            }
+        };
+
+        sortToggleBtn.addEventListener('keydown', handleSortKeydown);
+        sortDropdown.addEventListener('keydown', handleSortKeydown);
+
+        // Initialize selection state and trigger sizing
+        sizeSortTrigger();
         updateSortUI();
     }
 
