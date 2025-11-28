@@ -107,6 +107,15 @@
   /* Animation */
   --transition-speed: 0.3s;
   --typewriter-speed: 30ms;
+  
+  /* Overflow Button Configuration */
+  --overflow-icon-size: 14px;
+  --overflow-dot-size: 3px;
+  --overflow-dot-offset: 1px; /* distance from top/bottom edges */
+  --overflow-animation-duration: 180ms;
+  --overflow-animation-easing: cubic-bezier(0.2, 0.8, 0.2, 1.05);
+  --overflow-opacity-duration: 120ms;
+  --overflow-border-radius-duration: 160ms;
 }
 
 /* Theme helpers: add to any container to switch UI accent colors */
@@ -402,31 +411,31 @@ body {
 .sheet-actions-icon {
   position: relative;
   display: inline-block;
-  width: 14px;
-  height: 14px;
+  width: var(--overflow-icon-size);
+  height: var(--overflow-icon-size);
 }
 
-/* Center the three dots perfectly within the 14px icon box by anchoring
+/* Center the three dots perfectly within the icon box by anchoring
    at 50% and using translateX(-50%). This avoids the slight horizontal
    offset that happened when mixing margin-left with transforms. */
 .sheet-actions-dot {
   position: absolute;
   left: 50%;
-  width: 3px;
-  height: 3px;
+  width: var(--overflow-dot-size);
+  height: var(--overflow-dot-size);
   border-radius: 999px;
   background-color: currentColor;
   transform: translateX(-50%);
   transition:
-    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1.05),
-    width 180ms cubic-bezier(0.2, 0.8, 0.2, 1.05),
-    height 180ms cubic-bezier(0.2, 0.8, 0.2, 1.05),
-    border-radius 160ms ease-out,
-    opacity 120ms ease-out;
+    transform var(--overflow-animation-duration) var(--overflow-animation-easing),
+    width var(--overflow-animation-duration) var(--overflow-animation-easing),
+    height var(--overflow-animation-duration) var(--overflow-animation-easing),
+    border-radius var(--overflow-border-radius-duration) ease-out,
+    opacity var(--overflow-opacity-duration) ease-out;
 }
 
 .sheet-actions-dot.dot-1 {
-  top: 1px;
+  top: var(--overflow-dot-offset);
 }
 
 .sheet-actions-dot.dot-2 {
@@ -435,7 +444,7 @@ body {
 }
 
 .sheet-actions-dot.dot-3 {
-  bottom: 1px;
+  bottom: var(--overflow-dot-offset);
 }
 
 /* Morph animation: dots → X when trigger is open */

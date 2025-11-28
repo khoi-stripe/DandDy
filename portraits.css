@@ -61,6 +61,7 @@
   display: flex;
   gap: var(--spacing-md);
   overflow-x: auto;
+  overflow-y: visible;
   padding-bottom: var(--spacing-sm);
 }
 
@@ -85,6 +86,9 @@
   cursor: pointer;
   display: flex;
   flex-direction: column;
+  /* Match the 3:4 geometry of manager grid cards and clip internal overflow.
+     Portrait history menus are positioned in viewport space, so they are not
+     affected by this clipping. */
   overflow: hidden;
   aspect-ratio: 3 / 4;
 }
@@ -288,14 +292,121 @@
     );
 }
 
+/* Layout for date + overflow inside a single footer band */
+.portrait-history-details {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.portrait-history-meta {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 /* Add breathing room around history card actions */
 .portrait-history-actions {
-  margin: var(--spacing-sm);
+  margin-left: auto;
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 /* Extra spacing between helper text and history cards in the modal */
 .portrait-history-modal .modal-body > .terminal-text-small.terminal-text-dim {
   margin-bottom: var(--spacing-md);
+}
+
+/* Let portrait history menus escape the scrollable modal-body without
+   getting clipped, while the overall modal still scrolls if needed. */
+.portrait-history-modal .modal-body {
+  overflow-y: visible;
+}
+
+/* Allow portrait history menus to render outside the card stack while keeping
+   other modals using the default clipping behavior. */
+.portrait-history-modal {
+  overflow: visible;
+}
+
+ .portrait-history-modal .modal-content {
+  overflow: visible;
+}
+
+/* Ensure portrait history listbox appears above other modal content */
+.portrait-history-modal .selector-menu {
+  z-index: 999;
+}
+
+/* Overflow trigger button in portrait history cards */
+.portrait-history-overflow-btn {
+  border-color: var(--modal-accent);
+  color: var(--modal-accent);
+  background: transparent;
+  /* Match the 24px height of .terminal-btn-small sheet header actions */
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portrait-history-overflow-btn:hover {
+  background-color: hsla(
+    var(--theme-yellow-h),
+    var(--theme-yellow-s),
+    var(--theme-yellow-l-bright),
+    0.15
+  );
+  box-shadow: 0 0 10px
+    hsla(
+      var(--theme-yellow-h),
+      var(--theme-yellow-s),
+      var(--theme-yellow-l-bright),
+      0.6
+    );
+}
+
+/* Selected/keyboard-focused cards use teal theme for overflow button */
+.portrait-history-modal
+  .character-card.is-selected
+  .portrait-history-overflow-btn,
+.portrait-history-modal
+  .character-card.is-keyboard-focused
+  .portrait-history-overflow-btn {
+  border-color: var(--panel-teal);
+  color: var(--panel-teal);
+}
+
+.portrait-history-modal
+  .character-card.is-selected
+  .portrait-history-overflow-btn:hover,
+.portrait-history-modal
+  .character-card.is-keyboard-focused
+  .portrait-history-overflow-btn:hover {
+  background-color: hsla(
+    var(--theme-teal-h),
+    var(--theme-teal-s),
+    var(--theme-teal-l-bright),
+    0.18
+  );
+  box-shadow: 0 0 10px
+    hsla(
+      var(--theme-teal-h),
+      calc(var(--theme-teal-s) * 0.67),
+      var(--theme-teal-l-dim),
+      0.6
+    );
+}
+
+/* Portrait history menus that are moved to document.body need explicit theme tokens */
+.portrait-history-menu-detached {
+  /* Apply modal yellow theme when menu is detached from modal DOM */
+  --ui-border-color: hsl(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright));
+  --ui-fg-color: hsl(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright));
+  --ui-dim-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.7);
 }
 
 

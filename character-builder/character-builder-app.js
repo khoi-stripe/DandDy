@@ -1530,13 +1530,28 @@ const App = (window.App = {
     const state = CharacterState.get();
     const character = state.character || {};
     const metadata = character.portraitMetadata || {};
-    const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+    const rawVersions = Array.isArray(metadata.versions)
+      ? metadata.versions
+      : [];
 
     if (document.getElementById('portraitHistoryModal')) {
       return;
     }
 
-    const hasVersions = versions.length > 0;
+    const hasVersions = rawVersions.length > 0;
+
+    // Ensure the current active portrait appears first so the existing art is
+    // both visually first and keyboard-focused when the modal opens.
+    let versions = rawVersions;
+    if (hasVersions && metadata.activeVersionId) {
+      const active = rawVersions.find(
+        (v) => v.id === metadata.activeVersionId,
+      );
+      if (active) {
+        const others = rawVersions.filter((v) => v.id !== active.id);
+        versions = [active, ...others];
+      }
+    }
 
     // Match Character Manager behavior: if the character already has a custom
     // portrait but no history yet, show a helpful empty state explaining how
@@ -1627,7 +1642,9 @@ const App = (window.App = {
             <p class="terminal-text-small terminal-text-dim">
               View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
             </p>
-            <div class="portrait-history-card-row${versions.length === 1 ? ' is-single' : ''}">
+            <div class="portrait-history-card-row${
+              versions.length === 1 ? ' is-single' : ''
+            }">
               ${listHtml}
             </div>
           </div>
@@ -1663,10 +1680,22 @@ const App = (window.App = {
       }
     });
 
-    // Initialize keyboard-style focus on the first card
+    // Initialize keyboard-style focus on the currently active portrait card,
+    // falling back to the first card if no active version is set.
     const cards = this.getPortraitHistoryCards();
     if (cards.length > 0) {
-      this._portraitHistoryFocusIndex = 0;
+      let initialIndex = 0;
+      if (metadata.activeVersionId) {
+        const matchIndex = cards.findIndex(
+          (card) =>
+            card.getAttribute('data-version-id') === metadata.activeVersionId,
+        );
+        if (matchIndex >= 0) {
+          initialIndex = matchIndex;
+        }
+      }
+
+      this._portraitHistoryFocusIndex = initialIndex;
       this.updatePortraitHistoryFocus();
     }
 

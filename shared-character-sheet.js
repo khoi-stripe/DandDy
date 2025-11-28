@@ -443,13 +443,58 @@ const CharacterSheet = (window.CharacterSheet = {
     if (!triggerEl) return;
     const shell = triggerEl.closest('.selector-shell');
     if (!shell) return;
-    const menu = shell.querySelector('.selector-menu');
+    // Use detached menu if present (portrait history), otherwise fall back
+    // to the inline selector-menu element so toggling works in both cases.
+    const menu = shell._detachedMenu || shell.querySelector('.selector-menu');
     if (!menu) return;
 
     const isOpen = shell.classList.contains('is-open');
 
+    // Helper to close a given selector shell and restore any detached menu
+    const closeShell = (openShell) => {
+      if (!openShell) return;
+      const btn = openShell.querySelector('.selector-trigger');
+      const m = openShell._detachedMenu || openShell.querySelector('.selector-menu');
+      if (!btn || !m) return;
+
+      // Restore menu to original parent if it was moved (portrait history)
+      if (m._originalParent) {
+        m.classList.remove('portrait-history-menu-detached');
+        m._originalParent.appendChild(m);
+        delete m._originalParent;
+        delete openShell._detachedMenu;
+      }
+
+      btn.classList.remove('is-open');
+      m.classList.remove('is-open');
+      m.setAttribute('aria-hidden', 'true');
+      btn.setAttribute('aria-expanded', 'false');
+      openShell.classList.remove('is-open');
+    };
+
+    // Close all other open menus first (only one menu open at a time)
+    if (!isOpen) {
+      const openShells = document.querySelectorAll('.selector-shell.is-open');
+      openShells.forEach((openShell) => {
+        if (openShell === shell) return; // skip the one we're about to open
+        closeShell(openShell);
+      });
+    }
+
     const setOpen = (open) => {
       if (open) {
+        const inPortraitModal = !!triggerEl.closest('.portrait-history-modal');
+        
+        // Move menu outside clipping ancestors to prevent overflow:hidden clipping
+        if (inPortraitModal) {
+          menu._originalParent = menu.parentElement;
+          // Store reference in shell so handlers can find the menu later
+          shell._detachedMenu = menu;
+          // Add class to preserve modal theme when moved to body
+          menu.classList.add('portrait-history-menu-detached');
+          document.body.appendChild(menu);
+        }
+
         // Decide which horizontal side has more space, based on the trigger
         const shellRect = shell.getBoundingClientRect();
         const triggerRect = triggerEl.getBoundingClientRect();
@@ -471,24 +516,60 @@ const CharacterSheet = (window.CharacterSheet = {
         menu.style.display = prevDisplay;
         menu.style.visibility = prevVisibility;
 
-        // Vertically center menu relative to the trigger position
+        // Vertically position menu so it stays fully visible within viewport.
+        // Start centered on the trigger, then clamp to top/bottom padding.
+        const viewportHeight = window.innerHeight;
         const triggerCenterY = triggerRect.top + triggerRect.height / 2;
-        const offsetTop =
-          triggerCenterY - shellRect.top - menuHeight / 2;
-        menu.style.top = `${offsetTop}px`;
+        const padding = 8; // breathing room from viewport edges
+
+        let topInViewport = triggerCenterY - menuHeight / 2;
+        if (topInViewport < padding) {
+          topInViewport = padding;
+        }
+        if (topInViewport + menuHeight > viewportHeight - padding) {
+          topInViewport = Math.max(
+            padding,
+            viewportHeight - padding - menuHeight,
+          );
+        }
 
         // Horizontal offset: sit just outside the trigger with a small gap
         const gap = 4;
-        if (side === 'right') {
-          const offsetLeft =
-            triggerRect.right - shellRect.left + gap;
-          menu.style.left = `${offsetLeft}px`;
-          menu.style.right = '';
+
+        if (inPortraitModal) {
+          // In the portrait history modal, position menus in viewport space so
+          // they are never clipped by the card or modal containers.
+          menu.style.position = 'fixed';
+          menu.style.top = `${topInViewport}px`;
+          // Set z-index higher than modal (1000) so menu appears above it
+          menu.style.zIndex = '1100';
+
+          if (side === 'right') {
+            const left = triggerRect.right + gap;
+            menu.style.left = `${left}px`;
+            menu.style.right = 'auto';
+          } else {
+            const right = viewportWidth - triggerRect.left + gap;
+            menu.style.right = `${right}px`;
+            menu.style.left = 'auto';
+          }
         } else {
-          const offsetRight =
-            shellRect.right - triggerRect.left + gap;
-          menu.style.right = `${offsetRight}px`;
-          menu.style.left = '';
+          // Default behavior: position relative to the selector shell so menus
+          // stay visually attached to their triggers (sheet header, etc.).
+          const offsetTop = topInViewport - shellRect.top;
+          menu.style.top = `${offsetTop}px`;
+
+          if (side === 'right') {
+            const offsetLeft =
+              triggerRect.right - shellRect.left + gap;
+            menu.style.left = `${offsetLeft}px`;
+            menu.style.right = '';
+          } else {
+            const offsetRight =
+              shellRect.right - triggerRect.left + gap;
+            menu.style.right = `${offsetRight}px`;
+            menu.style.left = '';
+          }
         }
 
         shell.classList.add('is-open');
@@ -503,11 +584,7 @@ const CharacterSheet = (window.CharacterSheet = {
           firstOption.focus();
         }
       } else {
-        shell.classList.remove('is-open');
-        triggerEl.classList.remove('is-open');
-        menu.classList.remove('is-open');
-        menu.setAttribute('aria-hidden', 'true');
-        triggerEl.setAttribute('aria-expanded', 'false');
+        closeShell(shell);
       }
     };
 
@@ -515,21 +592,24 @@ const CharacterSheet = (window.CharacterSheet = {
 
     if (!this._selectorOutsideHandler) {
       this._selectorOutsideHandler = (event) => {
-        const openShells = document.querySelectorAll('.selector-shell.is-open');
-        if (!openShells.length) return;
-        if (event.target.closest('.selector-shell')) return;
-        openShells.forEach((openShell) => {
-          const btn = openShell.querySelector('.selector-trigger');
-          const m = openShell.querySelector('.selector-menu');
-          if (!btn || !m) return;
-          btn.classList.remove('is-open');
-          m.classList.remove('is-open');
-          m.setAttribute('aria-hidden', 'true');
-          btn.setAttribute('aria-expanded', 'false');
-          openShell.classList.remove('is-open');
-        });
+        // Small delay to let the toggle complete first
+        setTimeout(() => {
+          const openShells = document.querySelectorAll('.selector-shell.is-open');
+          if (!openShells.length) return;
+          // Don't close if clicking trigger (let toggle handle it), inside menu, or inside another shell
+          const clickedTrigger = event.target.closest('.selector-trigger');
+          const clickedMenu = event.target.closest('.selector-menu');
+          const clickedShell = event.target.closest('.selector-shell');
+          
+          if (clickedTrigger || clickedMenu || clickedShell) return;
+          
+          openShells.forEach((openShell) => {
+            closeShell(openShell);
+          });
+        }, 0);
       };
-      document.addEventListener('click', this._selectorOutsideHandler);
+      // Use capture phase to catch clicks before stopPropagation in modals
+      document.addEventListener('click', this._selectorOutsideHandler, true);
     }
 
     if (!this._selectorKeyHandler) {
@@ -539,17 +619,38 @@ const CharacterSheet = (window.CharacterSheet = {
         if (!openShells.length) return;
         openShells.forEach((openShell) => {
           const btn = openShell.querySelector('.selector-trigger');
-          const m = openShell.querySelector('.selector-menu');
+          // Check for detached menu first, fall back to querySelector
+          const m = openShell._detachedMenu || openShell.querySelector('.selector-menu');
           if (!btn || !m) return;
-          btn.classList.remove('is-open');
-          m.classList.remove('is-open');
-          m.setAttribute('aria-hidden', 'true');
-          btn.setAttribute('aria-expanded', 'false');
-          openShell.classList.remove('is-open');
+          closeShell(openShell);
           btn.focus();
         });
       };
       document.addEventListener('keydown', this._selectorKeyHandler);
+    }
+
+    // Close selector menus when an option is activated (click inside the menu)
+    if (!this._selectorOptionHandler) {
+      this._selectorOptionHandler = (event) => {
+        const option = event.target.closest('.selector-option');
+        if (!option) return;
+        // First, try to find the shell in the normal DOM tree
+        let shell = option.closest('.selector-shell');
+
+        // If the menu has been detached to <body> (portrait history modal),
+        // walk up to the selector-menu and use its original parent as shell.
+        if (!shell) {
+          const menuEl = option.closest('.selector-menu');
+          if (menuEl && menuEl._originalParent) {
+            shell = menuEl._originalParent;
+          }
+        }
+
+        if (!shell || !shell.classList.contains('is-open')) return;
+        closeShell(shell);
+      };
+      // Use capture so this still fires even if option handlers stopPropagation
+      document.addEventListener('click', this._selectorOptionHandler, true);
     }
   },
 

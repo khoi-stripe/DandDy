@@ -46,8 +46,23 @@
       }
 
       const metadata = character.portraitMetadata || {};
-      const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
-      const hasVersions = versions.length > 0;
+      const rawVersions = Array.isArray(metadata.versions)
+        ? metadata.versions
+        : [];
+      const hasVersions = rawVersions.length > 0;
+
+      // Ensure the current active portrait appears first in the list so that
+      // keyboard focus and visual ordering both start on the "current art".
+      let versions = rawVersions;
+      if (hasVersions && metadata.activeVersionId) {
+        const active = rawVersions.find(
+          (v) => v.id === metadata.activeVersionId,
+        );
+        if (active) {
+          const others = rawVersions.filter((v) => v.id !== active.id);
+          versions = [active, ...others];
+        }
+      }
 
       // If the character already has a custom portrait but no version history yet,
       // show a helpful empty state rather than the generic "no saved portraits" copy.
@@ -61,6 +76,8 @@
         type: 'manager',
         characterId,
         metadata,
+        // Store the display-ordered versions so focus/index updates match
+        // the DOM order.
         versions,
         hasCustomPortraitWithoutHistory,
       };
@@ -73,7 +90,12 @@
         hasCustomPortraitWithoutHistory,
       );
 
-      const modalHtml = this._wrapInModal('manager', characterId, versions, listHtml);
+      const modalHtml = this._wrapInModal(
+        'manager',
+        characterId,
+        versions,
+        listHtml,
+      );
 
       document.body.insertAdjacentHTML('beforeend', modalHtml);
 
@@ -115,6 +137,30 @@
     // ========================================
 
     closeHistory() {
+      // Close any open overflow menus in the modal first
+      const openShells = document.querySelectorAll('.portrait-history-modal .selector-shell.is-open');
+      openShells.forEach((shell) => {
+        const menu = shell._detachedMenu || shell.querySelector('.selector-menu');
+        const trigger = shell.querySelector('.selector-trigger');
+        
+        if (menu && menu._originalParent) {
+          // Restore detached menus before removing modal
+          menu.classList.remove('portrait-history-menu-detached');
+          menu._originalParent.appendChild(menu);
+          delete menu._originalParent;
+          delete shell._detachedMenu;
+        }
+        
+        if (trigger) {
+          trigger.classList.remove('is-open');
+        }
+        if (menu) {
+          menu.classList.remove('is-open');
+          menu.setAttribute('aria-hidden', 'true');
+        }
+        shell.classList.remove('is-open');
+      });
+      
       const modal = document.getElementById('portraitHistoryModal');
       if (modal) modal.remove();
 
@@ -157,11 +203,13 @@
       const imgEl = document.querySelector(
         `.portrait-history-image[data-version-id="${versionId}"]`,
       );
+      // The overflow menu may be detached from the card, so look for the
+      // button globally instead of limiting to .portrait-history-actions.
       const btn = document.querySelector(
-        `.portrait-history-actions button[data-toggle-version-id="${versionId}"]`,
+        `button[data-toggle-version-id="${versionId}"]`,
       );
 
-      if (!imgEl || !asciiEl || !btn) return;
+      if (!imgEl || !asciiEl) return;
 
       const showingAscii = imgEl.classList.contains('is-hidden');
 
@@ -169,12 +217,26 @@
         // Switch to original image
         asciiEl.classList.add('is-hidden');
         imgEl.classList.remove('is-hidden');
-        btn.textContent = 'View ASCII';
+        if (btn) {
+          const label = btn.querySelector('.selector-option-label');
+          if (label) {
+            label.textContent = 'View ASCII';
+          } else {
+            btn.textContent = 'View ASCII';
+          }
+        }
       } else {
         // Switch back to ASCII art
         imgEl.classList.add('is-hidden');
         asciiEl.classList.remove('is-hidden');
-        btn.textContent = 'View Original';
+        if (btn) {
+          const label = btn.querySelector('.selector-option-label');
+          if (label) {
+            label.textContent = 'View original';
+          } else {
+            btn.textContent = 'View original';
+          }
+        }
       }
     },
 
@@ -389,11 +451,15 @@
       return versions
         .map((v) => {
           const isActive = metadata.activeVersionId === v.id;
-          const createdLabel = v.createdAt
-            ? new Date(v.createdAt).toLocaleString()
+          const createdDate = v.createdAt ? new Date(v.createdAt) : null;
+          const dateLabel = createdDate
+            ? createdDate.toLocaleDateString()
             : '';
-          const title = createdLabel || 'Unknown time';
-          const infoText = '';
+          const timeLabel = createdDate
+            ? createdDate.toLocaleTimeString()
+            : '';
+          const title = dateLabel || 'Unknown date';
+          const infoText = timeLabel || '';
 
           const hasImage = !!v.url;
           const hasPrompt = !!v.prompt;
@@ -408,35 +474,89 @@
               }
             </div>`;
 
-          const toggleButton = hasImage
-            ? `<button class="terminal-btn terminal-btn-small" data-toggle-version-id="${v.id}" onclick="PortraitUI.toggleView('${v.id}')">
-                  View Original
-                </button>`
-            : '';
+          // Overflow menu for per-version actions (View, Prompt, Delete)
+          const actionItems = [];
 
-          const promptButton = hasPrompt
-            ? `<button class="terminal-btn terminal-btn-small" onclick="PortraitUI.copyPrompt('${characterId}', '${v.id}')" title="Copy this portrait's prompt to your clipboard">
-                  Prompt
-                </button>`
-            : '';
+          if (hasImage) {
+            actionItems.push(`
+              <button
+                class="selector-option"
+                type="button"
+                role="menuitem"
+                onclick="event.stopPropagation(); PortraitUI.toggleView('${v.id}')"
+                data-toggle-version-id="${v.id}"
+              >
+                <span class="selector-option-icon">◉</span>
+                <span class="selector-option-label">View original</span>
+              </button>
+            `);
+          }
 
-          const deleteButton = `<button class="terminal-btn terminal-btn-small portrait-history-delete-btn" onclick="PortraitUI.deleteVersion('${characterId}', '${v.id}')" title="Delete this portrait version" aria-label="Delete portrait version">
-                  Del
-                </button>`;
+          if (hasPrompt) {
+            actionItems.push(`
+              <button
+                class="selector-option"
+                type="button"
+                role="menuitem"
+                onclick="event.stopPropagation(); PortraitUI.copyPrompt('${characterId}', '${v.id}')"
+                title="Copy this portrait's prompt to your clipboard"
+              >
+                <span class="selector-option-icon">✎</span>
+                <span class="selector-option-label">Copy prompt</span>
+              </button>
+            `);
+          }
+
+          actionItems.push(`
+            <button
+              class="selector-option portrait-history-delete-option"
+              type="button"
+              role="menuitem"
+              onclick="event.stopPropagation(); PortraitUI.deleteVersion('${characterId}', '${v.id}')"
+              title="Delete this portrait version"
+              aria-label="Delete portrait version"
+            >
+              <span class="selector-option-icon">×</span>
+              <span class="selector-option-label">Delete version</span>
+            </button>
+          `);
+
+          const actionsMenu =
+            actionItems.length > 0
+              ? `
+              <div class="portrait-history-actions selector-shell">
+                <button
+                  class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-label="More portrait actions"
+                  onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"
+                >
+                  <span class="sheet-actions-icon" aria-hidden="true">
+                    <span class="sheet-actions-dot dot-1"></span>
+                    <span class="sheet-actions-dot dot-2"></span>
+                    <span class="sheet-actions-dot dot-3"></span>
+                  </span>
+                </button>
+                <div class="selector-menu portrait-history-menu" role="menu" aria-hidden="true">
+                  ${actionItems.join('')}
+                </div>
+              </div>
+            `
+              : '';
 
           return `
             <div class="character-card portrait-history-card${
               isActive ? ' is-selected' : ''
             }" data-version-id="${v.id}" onclick="PortraitUI.selectCard('${v.id}')">
               ${thumbHtml}
-              <div class="card-details">
-                <div class="card-name">${title}</div>
-                <div class="card-info">${infoText || '&nbsp;'}</div>
-              </div>
-              <div class="portrait-history-actions">
-                ${toggleButton}
-                ${promptButton}
-                ${deleteButton}
+              <div class="card-details portrait-history-details">
+                <div class="portrait-history-meta">
+                  <div class="card-name">${title}</div>
+                  <div class="card-info">${infoText || '&nbsp;'}</div>
+                </div>
+                ${actionsMenu}
               </div>
             </div>
           `;
@@ -513,10 +633,28 @@
 
     _initKeyboardFocus() {
       const cards = this._getCards();
-      if (cards.length > 0) {
-        state.focusIndex = 0;
-        this._updateFocus();
+      if (!cards.length) return;
+
+      // Prefer focusing the card that represents the current active portrait,
+      // falling back to the first card if no active version is set.
+      let initialIndex = 0;
+      try {
+        const ctx = state.context;
+        const activeId = ctx && ctx.metadata && ctx.metadata.activeVersionId;
+        if (activeId) {
+          const matchIndex = cards.findIndex(
+            (card) => card.getAttribute('data-version-id') === activeId,
+          );
+          if (matchIndex >= 0) {
+            initialIndex = matchIndex;
+          }
+        }
+      } catch (e) {
+        // Non-fatal: just fall back to index 0
       }
+
+      state.focusIndex = initialIndex;
+      this._updateFocus();
     },
 
     _attachKeyboardHandlers() {
