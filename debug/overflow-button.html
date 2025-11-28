@@ -6,6 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <link rel="stylesheet" href="../terminal-theme.css" />
+  <script src="../overflow-button-helpers.js"></script>
+  <script src="../shared-character-sheet.js"></script>
 
   <style>
     body {
@@ -55,168 +57,31 @@
       justify-content: center;
     }
 
+    /* Override trigger button sizing for demo (normally 24px tall) */
     .overflow-trigger {
       width: 32px;
       height: 32px;
-      border-radius: 4px; /* square button */
-      border: 1px solid var(--terminal-border);
-      background-color: var(--terminal-bg);
-      color: var(--terminal-fg);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition:
-        background-color 140ms ease-out,
-        border-color 140ms ease-out,
-        color 140ms ease-out,
-        transform 80ms ease-out;
-      font-size: 16px;
-      line-height: 1;
+      padding-left: 10px;
+      padding-right: 10px;
     }
 
-    .overflow-trigger:hover {
-      border-color: var(--terminal-accent);
-      color: var(--terminal-accent);
-    }
-
-    .overflow-trigger:active {
-      transform: translateY(1px);
-    }
-
+    /* Demo-specific: show active state with filled background */
     .overflow-trigger.is-open {
       background-color: var(--terminal-accent);
       border-color: var(--terminal-accent);
       color: var(--terminal-bg);
     }
 
-    .overflow-trigger-icon {
-      position: relative;
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-    }
+    /* All other styles inherited from terminal-theme.css:
+       - .overflow-trigger base styles (lines 391-400)
+       - .sheet-actions-icon (lines 402-407)
+       - .sheet-actions-dot positioning & animation (lines 412-473)
+    */
 
-    .overflow-dot {
-      position: absolute;
-      left: 50%;
-      width: 3px;
-      height: 3px;
-      border-radius: 999px;
-      background-color: currentColor;
-      /* Center dots horizontally inside the 14px icon box */
-      transform: translateX(-50%);
-      transition:
-        transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1.05),
-        width 180ms cubic-bezier(0.2, 0.8, 0.2, 1.05),
-        height 180ms cubic-bezier(0.2, 0.8, 0.2, 1.05),
-        border-radius 160ms ease-out,
-        opacity 120ms ease-out;
-    }
-
-    .overflow-dot.dot-1 {
-      top: 1px;
-    }
-
-    .overflow-dot.dot-2 {
-      top: 50%;
-      transform: translate(-50%, -50%);
-    }
-
-    .overflow-dot.dot-3 {
-      bottom: 1px;
-    }
-
-    .overflow-trigger.is-open .overflow-dot {
-      left: 0;
-      margin-left: 0;
-      width: 100%;
-      height: 2px;
-      border-radius: 1px;
-    }
-
-    .overflow-trigger.is-open .overflow-dot.dot-1 {
-      top: 50%;
-      transform: translateY(-50%) rotate(45deg);
-    }
-
-    .overflow-trigger.is-open .overflow-dot.dot-3 {
-      bottom: auto;
-      top: 50%;
-      transform: translateY(-50%) rotate(-45deg);
-    }
-
-    .overflow-trigger.is-open .overflow-dot.dot-2 {
-      opacity: 0;
-    }
-
-    /* Listbox-style overflow menu (shared pattern) */
-    .overflow-menu {
-      position: absolute;
-      min-width: 200px;
-      /* top/left will be set dynamically based on trigger position */
-      background: var(--terminal-bg);
-      border: 1px solid var(--terminal-border);
-      border-radius: 4px;
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.7);
-      z-index: 20;
-
-      transform-origin: center center;
-      /* Slight upward offset + collapsed scale for nicer entry */
-      transform: translateY(-4px) scaleY(0.15);
-      opacity: 0;
-      pointer-events: none;
-
-      transition:
-        /* Same easing as other listbox/selectors */
-        transform 190ms cubic-bezier(0.2, 0.8, 0.2, 1.05),
-        opacity 140ms ease-out,
-        box-shadow 200ms ease-out;
-    }
-
-    .overflow-menu.is-open {
-      /* Slides into place and fully expands */
-      transform: translateY(0) scaleY(1);
-      opacity: 1;
-      pointer-events: auto;
-      /* Slightly stronger glow when open */
-      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.9);
-    }
-
-    .overflow-menu-option {
-      display: flex;
-      align-items: center;
-      width: 100%;
-      padding: 4px 10px;
-      background: transparent;
-      border: none;
-      color: var(--terminal-fg);
-      text-align: left;
-      font-family: var(--font-mono);
-      font-size: 12px;
-      cursor: pointer;
-      gap: 8px;
-    }
-
-    .overflow-menu-option:hover {
-      background-color: hsla(
-        var(--theme-terminal-h),
-        var(--theme-terminal-s),
-        var(--theme-terminal-l-bright),
-        0.16
-      );
-      color: var(--terminal-accent);
-    }
-
-    .overflow-menu-icon {
-      width: 16px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-
-    .overflow-menu-label {
-      flex: 1;
-    }
+    /* Menu styles inherited from terminal-theme.css:
+       - .selector-menu base styles & animation (lines 864-889)
+       - .selector-option hover & focus (lines 903-927)
+    */
   </style>
 </head>
 <body>
@@ -236,43 +101,44 @@
 
         <div class="overflow-shell selector-shell" id="overflowShell" data-direction="down">
           <button
-            class="overflow-trigger selector-trigger"
+            class="terminal-btn-small selector-trigger overflow-trigger"
             id="overflowTrigger"
             type="button"
-            aria-haspopup="true"
+            aria-haspopup="menu"
             aria-expanded="false"
+            aria-label="Character actions"
           >
-            <span class="overflow-trigger-icon" id="overflowIcon" aria-hidden="true">
-              <span class="overflow-dot dot-1"></span>
-              <span class="overflow-dot dot-2"></span>
-              <span class="overflow-dot dot-3"></span>
+            <span class="sheet-actions-icon" id="overflowIcon" aria-hidden="true">
+              <span class="sheet-actions-dot dot-1"></span>
+              <span class="sheet-actions-dot dot-2"></span>
+              <span class="sheet-actions-dot dot-3"></span>
             </span>
           </button>
           <div
-            class="overflow-menu selector-menu"
+            class="selector-menu"
             id="overflowMenu"
             role="menu"
             aria-hidden="true"
           >
-            <button class="overflow-menu-option selector-option" type="button" data-action="edit" role="menuitem">
-              <span class="overflow-menu-icon selector-option-icon">✎</span>
-              <span class="overflow-menu-label selector-option-label">Edit details</span>
+            <button class="selector-option" type="button" data-action="edit" role="menuitem">
+              <span class="selector-option-icon">✎</span>
+              <span class="selector-option-label">Edit details</span>
             </button>
-            <button class="overflow-menu-option selector-option" type="button" data-action="level" role="menuitem">
-              <span class="overflow-menu-icon selector-option-icon">⬆</span>
-              <span class="overflow-menu-label selector-option-label">Change level</span>
+            <button class="selector-option" type="button" data-action="level" role="menuitem">
+              <span class="selector-option-icon">⬆</span>
+              <span class="selector-option-label">Change level</span>
             </button>
-            <button class="overflow-menu-option selector-option" type="button" data-action="print" role="menuitem">
-              <span class="overflow-menu-icon selector-option-icon">⎙</span>
-              <span class="overflow-menu-label selector-option-label">Print sheet</span>
+            <button class="selector-option" type="button" data-action="print" role="menuitem">
+              <span class="selector-option-icon">⎙</span>
+              <span class="selector-option-label">Print sheet</span>
             </button>
-            <button class="overflow-menu-option selector-option" type="button" data-action="portrait" role="menuitem">
-              <span class="overflow-menu-icon selector-option-icon">★</span>
-              <span class="overflow-menu-label selector-option-label">Custom AI portrait</span>
+            <button class="selector-option" type="button" data-action="portrait" role="menuitem">
+              <span class="selector-option-icon">★</span>
+              <span class="selector-option-label">Custom AI portrait</span>
             </button>
-            <button class="overflow-menu-option selector-option" type="button" data-action="delete" role="menuitem">
-              <span class="overflow-menu-icon selector-option-icon">×</span>
-              <span class="overflow-menu-label selector-option-label">Delete character</span>
+            <button class="selector-option" type="button" data-action="delete" role="menuitem">
+              <span class="selector-option-icon">×</span>
+              <span class="selector-option-label">Delete character</span>
             </button>
           </div>
         </div>
