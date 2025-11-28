@@ -1864,7 +1864,32 @@ const App = (window.App = {
       return;
     }
 
-    await this.usePortraitVersion(versionId);
+    // Show a lightweight loading state on the primary button while we apply
+    // the selected portrait. The modal will close once the operation finishes.
+    const modal = document.getElementById('portraitHistoryModal');
+    const useBtn =
+      modal && modal.querySelector('.modal-footer .terminal-btn-primary');
+    const originalLabel = useBtn ? useBtn.textContent : null;
+    if (useBtn) {
+      useBtn.disabled = true;
+      useBtn.textContent = 'Applying...';
+    }
+
+    try {
+      await this.usePortraitVersion(versionId);
+    } catch (error) {
+      console.error(
+        'App.confirmPortraitHistorySelection: failed to apply portrait version',
+        error,
+      );
+      if (useBtn) {
+        useBtn.disabled = false;
+        useBtn.textContent = originalLabel || 'USE SELECTED';
+      }
+      this.showSystemMessage(
+        'Failed to switch portrait. Please try again in a moment.',
+      );
+    }
   },
 
   async usePortraitVersion(versionId) {
@@ -1885,12 +1910,33 @@ const App = (window.App = {
     };
 
     CharacterState.updateCharacter({
-      originalPortraitUrl: version.url || character.originalPortraitUrl || null,
+      originalPortraitUrl:
+        version.url || character.originalPortraitUrl || null,
       customPortraitAscii: version.ascii || character.customPortraitAscii || '',
       portraitMetadata: updatedMetadata,
     });
 
+    // Persist in the background if the character is already saved to shared storage.
     await this.persistIfAlreadySaved();
+
+    // Force an immediate refresh of the in-builder character sheet so the new
+    // portrait is visible even if any listeners were missed.
+    try {
+      const latestState = CharacterState.get();
+      if (
+        latestState &&
+        latestState.character &&
+        typeof this.updateCharacterPanel === 'function'
+      ) {
+        await this.updateCharacterPanel(latestState.character);
+      }
+    } catch (e) {
+      console.error(
+        'App.usePortraitVersion: failed to refresh character panel after version switch',
+        e,
+      );
+    }
+
     this.closePortraitHistory();
   },
 

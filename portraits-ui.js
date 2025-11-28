@@ -51,6 +51,16 @@
         : [];
       const hasVersions = rawVersions.length > 0;
 
+      // Debug hook to verify manager history is opening with the expected data.
+      try {
+        console.log('%c🎨 MANAGER PORTRAIT HISTORY OPEN', 'color:#0ff;font-weight:bold;');
+        console.log('  Character ID:', characterId);
+        console.log('  Versions count:', rawVersions.length);
+        console.log('  Active version ID:', metadata.activeVersionId || '(none)');
+      } catch (e) {
+        // Non-fatal logging failure
+      }
+
       // Ensure the current active portrait appears first in the list so that
       // keyboard focus and visual ordering both start on the "current art".
       let versions = rawVersions;
@@ -267,7 +277,43 @@
         return;
       }
 
-      await this._usePortraitVersionManager(ctx.characterId, versionId);
+      // Debug: log which version is being applied.
+      try {
+        console.log('%c🎨 MANAGER PORTRAIT USE SELECTED', 'color:#0ff;font-weight:bold;');
+        console.log('  Character ID:', ctx.characterId);
+        console.log('  Selected version ID:', versionId);
+      } catch (e) {
+        // Non-fatal
+      }
+
+      // Show a lightweight inline loading state while we apply the new portrait.
+      const modal = document.getElementById('portraitHistoryModal');
+      const useBtn =
+        modal && modal.querySelector('.modal-footer .terminal-btn-primary');
+      const originalLabel = useBtn ? useBtn.textContent : null;
+      if (useBtn) {
+        useBtn.disabled = true;
+        useBtn.textContent = 'Applying...';
+      }
+
+      try {
+        await this._usePortraitVersionManager(ctx.characterId, versionId);
+      } catch (error) {
+        console.error(
+          'PortraitUI.confirmSelection: failed to apply portrait version',
+          error,
+        );
+        if (typeof window.showNotification === 'function') {
+          window.showNotification(
+            'Failed to switch portrait. Please try again.',
+          );
+        }
+        // If something went wrong, restore button state so the user can retry.
+        if (useBtn) {
+          useBtn.disabled = false;
+          useBtn.textContent = originalLabel || 'USE SELECTED';
+        }
+      }
     },
 
     async copyPrompt(characterId, versionId) {
@@ -719,6 +765,79 @@
         return;
       }
 
+       // Debug: log current vs target portrait details.
+      try {
+        console.log('%c🎨 MANAGER PORTRAIT APPLY VERSION', 'color:#0ff;font-weight:bold;');
+        console.log('  Character ID:', characterId);
+        console.log('  Applying version ID:', versionId);
+        console.log('  Version has ascii:', !!version.ascii, 'len:', (version.ascii || '').length);
+        console.log('  Version has url:', !!version.url, 'url:', version.url || '(none)');
+        console.log(
+          '  Current customPortraitAscii len:',
+          (character.customPortraitAscii || '').length,
+        );
+        console.log(
+          '  Current portrait.ascii len:',
+          (character.portrait && character.portrait.ascii
+            ? character.portrait.ascii.length
+            : 0),
+        );
+      } catch (e) {
+        // Non-fatal
+      }
+
+      // Immediately patch the visible manager UI so the user sees the new art
+      // without needing to wait for storage reload timing or a full refresh.
+      try {
+        const portraitId = `character-portrait-${characterId}`;
+        const originalPortraitId = `original-portrait-${characterId}`;
+        const asciiEl = document.getElementById(portraitId);
+        const imgEl = document.getElementById(originalPortraitId);
+
+        // Update ASCII art if we have a visible container and ASCII content.
+        if (asciiEl && version.ascii) {
+          asciiEl.textContent = version.ascii;
+          if (
+            window.CharacterSheet &&
+            typeof CharacterSheet._centerPortraitScrollSafely === 'function'
+          ) {
+            CharacterSheet._centerPortraitScrollSafely(asciiEl);
+          }
+        }
+
+        // Update original image src so "View original art" immediately shows
+        // the selected version's image.
+        if (imgEl && version.url) {
+          imgEl.src = version.url;
+        }
+
+        // Also update the grid card thumbnail (if it exists) so the list view
+        // immediately reflects the selected portrait version.
+        const thumbEl = document.getElementById(`card-thumb-${characterId}`);
+        if (thumbEl && version.ascii) {
+          try {
+            if (window.UI && typeof UI.cropAsciiForThumbnail === 'function') {
+              thumbEl.textContent = UI.cropAsciiForThumbnail(version.ascii);
+            } else {
+              // Fallback: simple top-crop similar to CharacterSheet behavior
+              const lines = version.ascii.split('\n');
+              const topLines = lines.slice(0, 80).map((line) => line.slice(0, 160));
+              thumbEl.textContent = topLines.join('\n');
+            }
+          } catch (thumbError) {
+            console.error(
+              'PortraitUI._usePortraitVersionManager: thumbnail update failed',
+              thumbError,
+            );
+          }
+        }
+      } catch (e) {
+        console.error(
+          'PortraitUI._usePortraitVersionManager: direct DOM patch failed',
+          e,
+        );
+      }
+
       const updatedMetadata = {
         ...metadata,
         activeVersionId: version.id,
@@ -743,15 +862,50 @@
         },
       };
 
-      await CharacterStorage.update(characterId, updates);
-      if (window.AppState && typeof AppState.loadCharacters === 'function') {
-        await AppState.loadCharacters();
+      // Persist the change to storage using the shared CharacterStorage
+      // facade. This will update either cloud or local data depending on
+      // the current auth state. We deliberately do NOT immediately re-render
+      // from storage results here to avoid snapping the UI back to any stale
+      // data that a just-in-time refetch might return.
+      try {
+        await CharacterStorage.update(characterId, updates);
+      } catch (e) {
+        console.error(
+          'PortraitUI._usePortraitVersionManager: storage update failed',
+          e,
+        );
       }
-      if (window.UI && typeof UI.render === 'function') {
-        UI.render();
-      }
-      if (typeof window.viewCharacter === 'function') {
-        window.viewCharacter(characterId);
+
+      // Keep AppState in sync for future renders/navigation so that whenever
+      // the grid or sheet *does* re-render from state, it uses this new
+      // portrait version. We rely on our direct DOM patch above to keep the
+      // currently visible sheet/card in sync right away.
+      try {
+        const nextCharacter = { ...character, ...updates };
+
+        if (window.AppState) {
+          if (Array.isArray(AppState.characters)) {
+            const idx = AppState.characters.findIndex(
+              (c) => c && c.id === characterId,
+            );
+            if (idx !== -1) {
+              AppState.characters[idx] = nextCharacter;
+            }
+          }
+          if (Array.isArray(AppState.filteredCharacters)) {
+            const fIdx = AppState.filteredCharacters.findIndex(
+              (c) => c && c.id === characterId,
+            );
+            if (fIdx !== -1) {
+              AppState.filteredCharacters[fIdx] = nextCharacter;
+            }
+          }
+        }
+      } catch (e) {
+        console.error(
+          'PortraitUI._usePortraitVersionManager: AppState sync failed',
+          e,
+        );
       }
       this.closeHistory();
     },
