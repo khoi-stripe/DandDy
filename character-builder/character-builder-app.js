@@ -1529,38 +1529,38 @@ const App = (window.App = {
   openPortraitHistory() {
     const state = CharacterState.get();
     const character = state.character || {};
-    const metadata = character.portraitMetadata || {};
-    const rawVersions = Array.isArray(metadata.versions)
-      ? metadata.versions
-      : [];
+    // Normalize portrait metadata + versions using the shared helper so the
+    // builder and manager stay in sync.
+    const normalized =
+      window.PortraitHistory &&
+      typeof PortraitHistory.normalizeForDisplay === 'function'
+        ? PortraitHistory.normalizeForDisplay(character)
+        : (() => {
+            const fallbackMetadata = character.portraitMetadata || {};
+            const fallbackRaw = Array.isArray(fallbackMetadata.versions)
+              ? fallbackMetadata.versions
+              : [];
+            return {
+              metadata: fallbackMetadata,
+              versions: fallbackRaw,
+              hasVersions: fallbackRaw.length > 0,
+              hasCustomPortraitWithoutHistory: !fallbackRaw.length,
+            };
+          })();
+
+    const metadata = normalized.metadata;
+    const versions = normalized.versions;
+    const hasVersions = normalized.hasVersions;
 
     if (document.getElementById('portraitHistoryModal')) {
       return;
-    }
-
-    const hasVersions = rawVersions.length > 0;
-
-    // Ensure the current active portrait appears first so the existing art is
-    // both visually first and keyboard-focused when the modal opens.
-    let versions = rawVersions;
-    if (hasVersions && metadata.activeVersionId) {
-      const active = rawVersions.find(
-        (v) => v.id === metadata.activeVersionId,
-      );
-      if (active) {
-        const others = rawVersions.filter((v) => v.id !== active.id);
-        versions = [active, ...others];
-      }
     }
 
     // Match Character Manager behavior: if the character already has a custom
     // portrait but no history yet, show a helpful empty state explaining how
     // to enable history instead of the generic "no saved portraits" message.
     const hasCustomPortraitWithoutHistory =
-      !hasVersions &&
-      (character.customPortraitAscii ||
-        character.originalPortraitUrl ||
-        character.portrait?.url);
+      normalized.hasCustomPortraitWithoutHistory;
 
     const listHtml = hasVersions
       ? versions
@@ -1659,26 +1659,19 @@ const App = (window.App = {
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Populate ASCII previews (for versions without an image URL) as plain text,
-    // cropped to the same thumbnail framing as the main character cards
-    versions.forEach((v) => {
-      const el = document.querySelector(
-        `.portrait-history-preview.ascii-portrait[data-version-id="${v.id}"]`,
+    // Populate ASCII previews (for versions without an image URL) as plain
+    // text, cropped to the same thumbnail framing as the main character cards.
+    // Shared helper batches this work across animation frames.
+    if (
+      Array.isArray(versions) &&
+      versions.length > 0 &&
+      window.PortraitHistory &&
+      typeof PortraitHistory.batchPopulateAsciiPreviews === 'function'
+    ) {
+      PortraitHistory.batchPopulateAsciiPreviews(versions, (ascii) =>
+        this.cropAsciiForThumbnail(ascii),
       );
-      if (el && v.ascii) {
-        el.textContent = this.cropAsciiForThumbnail(v.ascii);
-      }
-
-      // Populate prompt text from portrait history metadata. This only uses the
-      // user-visible prompt (the text shown in the portrait dialog), and does
-      // not expose any hidden rendering instructions.
-      const promptEl = document.querySelector(
-        `.portrait-history-prompt[data-version-id="${v.id}"]`,
-      );
-      if (promptEl && v.prompt) {
-        promptEl.textContent = v.prompt;
-      }
-    });
+    }
 
     // Initialize keyboard-style focus on the currently active portrait card,
     // falling back to the first card if no active version is set.

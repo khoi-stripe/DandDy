@@ -28,59 +28,101 @@
         return;
       }
 
-      const CharacterStorage = window.CharacterStorage;
-      if (!CharacterStorage || typeof CharacterStorage.getById !== 'function') {
-        console.warn(
-          'PortraitUI.openManagerHistory: CharacterStorage.getById is not available',
-        );
-        return;
+      // Build a lightweight modal shell immediately so the user sees that work
+      // is happening while we resolve character data (from cache or storage).
+      const modalHtml = this._wrapInModalSkeleton();
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+      // Prefer the in-memory manager cache first so we avoid extra localStorage
+      // scans or cloud round-trips whenever the character grid has already
+      // loaded this character.
+      let character = null;
+      try {
+        if (window.AppState && Array.isArray(AppState.characters)) {
+          character =
+            AppState.characters.find(
+              (c) =>
+                c &&
+                (c.id === characterId ||
+                  String(c.id) === String(characterId)),
+            ) || null;
+        }
+      } catch (e) {
+        // Non-fatal – fall back to storage facade below.
       }
 
-      const character = await CharacterStorage.getById(characterId);
+      // Fallback to hybrid storage facade when the character is not present
+      // in the current AppState cache (for example, when opening history
+      // from a context that hasn't loaded the grid).
+      if (!character) {
+        const CharacterStorage = window.CharacterStorage;
+        if (!CharacterStorage || typeof CharacterStorage.getById !== 'function') {
+          console.warn(
+            'PortraitUI.openManagerHistory: CharacterStorage.getById is not available',
+          );
+          this.closeHistory();
+          return;
+        }
+
+        try {
+          character = await CharacterStorage.getById(characterId);
+        } catch (e) {
+          console.error(
+            'PortraitUI.openManagerHistory: CharacterStorage.getById failed',
+            e,
+          );
+          this.closeHistory();
+          return;
+        }
+      }
+
       if (!character) {
         console.warn(
           'PortraitUI.openManagerHistory: character not found for id',
           characterId,
         );
+        this.closeHistory();
         return;
       }
 
-      const metadata = character.portraitMetadata || {};
-      const rawVersions = Array.isArray(metadata.versions)
-        ? metadata.versions
-        : [];
-      const hasVersions = rawVersions.length > 0;
+      // Normalize metadata + versions using shared helper so builder and
+      // manager stay in sync. Fall back to a simple inline version if the
+      // helper is unavailable for any reason.
+      const normalized =
+        window.PortraitHistory &&
+        typeof PortraitHistory.normalizeForDisplay === 'function'
+          ? PortraitHistory.normalizeForDisplay(character)
+          : (() => {
+              const fallbackMetadata = character.portraitMetadata || {};
+              const fallbackRaw = Array.isArray(fallbackMetadata.versions)
+                ? fallbackMetadata.versions
+                : [];
+              return {
+                metadata: fallbackMetadata,
+                versions: fallbackRaw,
+                hasVersions: fallbackRaw.length > 0,
+                hasCustomPortraitWithoutHistory: !fallbackRaw.length,
+              };
+            })();
+
+      const metadata = normalized.metadata;
+      const versions = normalized.versions;
+      const hasVersions = normalized.hasVersions;
 
       // Debug hook to verify manager history is opening with the expected data.
       try {
         console.log('%c🎨 MANAGER PORTRAIT HISTORY OPEN', 'color:#0ff;font-weight:bold;');
         console.log('  Character ID:', characterId);
-        console.log('  Versions count:', rawVersions.length);
+        console.log('  Versions count:', versions.length);
         console.log('  Active version ID:', metadata.activeVersionId || '(none)');
       } catch (e) {
         // Non-fatal logging failure
       }
 
-      // Ensure the current active portrait appears first in the list so that
-      // keyboard focus and visual ordering both start on the "current art".
-      let versions = rawVersions;
-      if (hasVersions && metadata.activeVersionId) {
-        const active = rawVersions.find(
-          (v) => v.id === metadata.activeVersionId,
-        );
-        if (active) {
-          const others = rawVersions.filter((v) => v.id !== active.id);
-          versions = [active, ...others];
-        }
-      }
-
       // If the character already has a custom portrait but no version history yet,
       // show a helpful empty state rather than the generic "no saved portraits" copy.
       const hasCustomPortraitWithoutHistory =
-        !hasVersions &&
-        (character.customPortraitAscii ||
-          character.originalPortraitUrl ||
-          (character.portrait && character.portrait.url));
+        normalized.hasCustomPortraitWithoutHistory;
 
       state.context = {
         type: 'manager',
@@ -91,12 +133,6 @@
         versions,
         hasCustomPortraitWithoutHistory,
       };
-
-      // Build the modal shell with a lightweight loading state so the user
-      // immediately sees that work is happening, even if we have a lot of
-      // portrait versions to render.
-      const modalHtml = this._wrapInModalSkeleton();
-      document.body.insertAdjacentHTML('beforeend', modalHtml);
 
       // Defer heavy DOM string building and ASCII cropping until after the
       // modal is visible, so the perception is "instant open + loading" rather
@@ -651,7 +687,21 @@
     },
 
     _populateAsciiPreviews(versions) {
+      if (!Array.isArray(versions) || versions.length === 0) return;
+
+      if (
+        window.PortraitHistory &&
+        typeof PortraitHistory.batchPopulateAsciiPreviews === 'function'
+      ) {
+        PortraitHistory.batchPopulateAsciiPreviews(versions, (ascii) =>
+          this.cropAsciiForThumbnail(ascii),
+        );
+        return;
+      }
+
+      // Fallback: simple synchronous population if shared helper is unavailable.
       versions.forEach((v) => {
+        if (!v) return;
         const el = document.querySelector(
           `.portrait-history-preview.ascii-portrait[data-version-id="${v.id}"]`,
         );

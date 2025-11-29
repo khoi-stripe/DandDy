@@ -1505,5 +1505,117 @@ const PortraitHistory = (window.PortraitHistory = {
       activeVersionId: id,
     };
   },
+
+  /**
+   * Normalize a character's portrait metadata for display in history modals.
+   * Ensures:
+   * - versions is always an array
+   * - the active version (if any) appears first
+   * - hasCustomPortraitWithoutHistory matches both builder + manager semantics
+   *
+   * @param {Object} character
+   * @returns {{ metadata: Object, versions: Array, hasVersions: boolean, hasCustomPortraitWithoutHistory: boolean }}
+   */
+  normalizeForDisplay(character) {
+    const safeCharacter = character || {};
+    const metadata = safeCharacter.portraitMetadata || {};
+    const rawVersions = Array.isArray(metadata.versions)
+      ? metadata.versions
+      : [];
+
+    const hasVersions = rawVersions.length > 0;
+
+    // Ensure the current active portrait appears first so the existing art is
+    // both visually first and keyboard-focused when the modal opens.
+    let versions = rawVersions;
+    if (hasVersions && metadata.activeVersionId) {
+      const active = rawVersions.find((v) => v.id === metadata.activeVersionId);
+      if (active) {
+        const others = rawVersions.filter((v) => v.id !== active.id);
+        versions = [active, ...others];
+      }
+    }
+
+    // Match both Character Builder and Manager semantics: if the character
+    // already has a custom portrait but no history yet, show a helpful empty
+    // state instead of the generic "no saved portraits" message.
+    const hasCustomPortraitWithoutHistory =
+      !hasVersions &&
+      (safeCharacter.customPortraitAscii ||
+        safeCharacter.originalPortraitUrl ||
+        (safeCharacter.portrait && safeCharacter.portrait.url));
+
+    return {
+      metadata,
+      versions,
+      hasVersions,
+      hasCustomPortraitWithoutHistory,
+    };
+  },
+
+  /**
+   * Populate ASCII thumbnails + prompt text for portrait history cards in
+   * small batches on animation frames so we don't block the main thread when
+   * versions contain large ASCII payloads.
+   *
+   * This helper is shared by both Character Builder and Character Manager.
+   *
+   * @param {Array} versions
+   * @param {Function} cropFn - function(ascii: string) => string
+   */
+  batchPopulateAsciiPreviews(versions, cropFn) {
+    if (!Array.isArray(versions) || versions.length === 0) return;
+
+    const batchSize = 2;
+    let index = 0;
+
+    const processBatch = () => {
+      const end = Math.min(versions.length, index + batchSize);
+      for (let i = index; i < end; i++) {
+        const v = versions[i];
+        if (!v) continue;
+
+        const el = document.querySelector(
+          `.portrait-history-preview.ascii-portrait[data-version-id="${v.id}"]`,
+        );
+        if (el && v.ascii) {
+          try {
+            const cropped =
+              typeof cropFn === 'function' ? cropFn(v.ascii) : v.ascii;
+            el.textContent = cropped;
+          } catch (e) {
+            // Non-fatal: fall back to raw ASCII if cropping fails.
+            el.textContent = v.ascii;
+          }
+        }
+
+        const promptEl = document.querySelector(
+          `.portrait-history-prompt[data-version-id="${v.id}"]`,
+        );
+        if (promptEl && v.prompt) {
+          promptEl.textContent = v.prompt;
+        }
+      }
+
+      index = end;
+      if (
+        index < versions.length &&
+        typeof window !== 'undefined' &&
+        typeof window.requestAnimationFrame === 'function'
+      ) {
+        window.requestAnimationFrame(processBatch);
+      }
+    };
+
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.requestAnimationFrame === 'function'
+    ) {
+      window.requestAnimationFrame(processBatch);
+    } else {
+      // Fallback: process synchronously if rAF is not available
+      processBatch();
+    }
+  },
 });
 
