@@ -92,6 +92,15 @@
         hasCustomPortraitWithoutHistory,
       };
 
+      // Build the modal shell with a lightweight loading state so the user
+      // immediately sees that work is happening, even if we have a lot of
+      // portrait versions to render.
+      const modalHtml = this._wrapInModalSkeleton();
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+      // Defer heavy DOM string building and ASCII cropping until after the
+      // modal is visible, so the perception is "instant open + loading" rather
+      // than a blank pause.
       const listHtml = this._buildHistoryCardsHtml(
         'manager',
         characterId,
@@ -100,14 +109,21 @@
         hasCustomPortraitWithoutHistory,
       );
 
-      const modalHtml = this._wrapInModal(
-        'manager',
-        characterId,
-        versions,
-        listHtml,
+      const modalBody = document.querySelector(
+        '#portraitHistoryModal .modal-body',
       );
-
-      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      if (modalBody) {
+        modalBody.innerHTML = `
+          <p class="terminal-text-small terminal-text-dim">
+            View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
+          </p>
+          <div class="portrait-history-card-row${
+            versions.length === 1 ? ' is-single' : ''
+          }">
+            ${listHtml}
+          </div>
+        `;
+      }
 
       this._populateAsciiPreviews(versions);
       this._initKeyboardFocus();
@@ -611,33 +627,27 @@
         .join('');
     },
 
-    _wrapInModal(context, characterId, versions, listHtml) {
-      const isSingle = versions.length === 1;
-
+    _wrapInModalSkeleton() {
       return `
-      <div id="portraitHistoryModal" class="modal show" onclick="PortraitUI.closeHistory()">
-        <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
-          <div class="modal-header">
-            <h2 class="modal-title">Portrait History</h2>
-            <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
-          </div>
-          <div class="modal-body">
-            <p class="terminal-text-small terminal-text-dim">
-              View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
-            </p>
-            <div class="portrait-history-card-row${
-              isSingle ? ' is-single' : ''
-            }">
-              ${listHtml}
+        <div id="portraitHistoryModal" class="modal show" onclick="PortraitUI.closeHistory()">
+          <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
+            <div class="modal-header">
+              <h2 class="modal-title">Portrait History</h2>
+              <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div class="terminal-text-small terminal-text-dim" style="padding: 20px; text-align: center;">
+                <div class="spinner spinner-small" aria-hidden="true"></div>
+                <p style="margin-top: 10px;">Loading portrait history\u2026</p>
+              </div>
+            </div>
+            <div class="modal-footer modal-footer-end">
+              <button class="terminal-btn" onclick="PortraitUI.closeHistory()">CANCEL</button>
+              <button class="terminal-btn terminal-btn-primary" onclick="PortraitUI.confirmSelection()">USE SELECTED</button>
             </div>
           </div>
-          <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" onclick="PortraitUI.closeHistory()">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" onclick="PortraitUI.confirmSelection()">USE SELECTED</button>
-          </div>
         </div>
-      </div>
-    `;
+      `;
     },
 
     _populateAsciiPreviews(versions) {

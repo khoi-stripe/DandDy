@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from jose.exceptions import ExpiredSignatureError
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
@@ -85,7 +86,28 @@ def verify_password_reset_token(token: str) -> int:
         )
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
+async def _get_token_with_logging(request: Request) -> str:
+    """
+    Wrapper around OAuth2PasswordBearer that logs why authentication failed
+    before raising the usual HTTPException.
+    """
+    try:
+        return await oauth2_scheme(request)
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_401_UNAUTHORIZED:
+            # Missing or malformed Authorization header.
+            client_host = request.client.host if request.client else "unknown"
+            print(
+                f"🔒 Auth: 401 from oauth2_scheme "
+                f"(path={request.url.path}, client={client_host}, detail={exc.detail})"
+            )
+        raise
+
+
+async def get_current_user(
+    token: str = Depends(_get_token_with_logging),
+    db: Session = Depends(get_db),
+) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -95,13 +117,21 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         user_id: int = payload.get("sub")
         if user_id is None:
+            print("🔒 Auth: JWT missing 'sub' claim when validating token.")
             raise credentials_exception
         token_data = TokenData(user_id=user_id)
-    except JWTError:
+    except ExpiredSignatureError:
+        # Access token is well‑formed but has expired.
+        print("🔒 Auth: Access token has expired during get_current_user.")
+        raise credentials_exception
+    except JWTError as e:
+        # Any other JWT parsing/validation error.
+        print(f"🔒 Auth: Invalid access token during get_current_user: {e}")
         raise credentials_exception
 
     user = db.query(User).filter(User.id == token_data.user_id).first()
     if user is None:
+        print(f"🔒 Auth: User not found for token subject id={token_data.user_id}.")
         raise credentials_exception
     return user
 

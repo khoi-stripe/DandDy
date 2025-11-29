@@ -258,6 +258,23 @@
         if (!response.ok) {
           // 401: token invalid/expired
           if (response.status === 401) {
+            let backendDetail = null;
+            try {
+              const errJson = await response.json();
+              if (errJson && errJson.detail) {
+                backendDetail = errJson.detail;
+              }
+            } catch (_) {
+              // ignore JSON parse errors
+            }
+
+            console.warn(
+              '[AuthService] Token rejected by /auth/me; clearing local session.',
+              {
+                status: response.status,
+                detail: backendDetail,
+              }
+            );
             this.clearToken();
             return null;
           }

@@ -450,7 +450,9 @@ const CharacterSheet = (window.CharacterSheet = {
 
     const isOpen = shell.classList.contains('is-open');
 
-    // Helper to close a given selector shell and restore any detached menu
+    // Helper to close a given selector shell and restore any detached menu.
+    // Also ensures focus is never left inside a menu that has aria-hidden="true"
+    // to avoid accessibility violations in modern browsers.
     const closeShell = (openShell) => {
       if (!openShell) return;
       const btn = openShell.querySelector('.selector-trigger');
@@ -464,6 +466,19 @@ const CharacterSheet = (window.CharacterSheet = {
         m._originalParent.appendChild(m);
         delete m._originalParent;
         delete openShell._detachedMenu;
+      }
+
+      // If focus is currently inside the menu we're about to hide, move it
+      // back to the trigger first so that no focused element is inside an
+      // aria-hidden subtree. This prevents warnings like:
+      // "Blocked aria-hidden on an element because its descendant retained focus."
+      try {
+        const activeEl = document.activeElement;
+        if (activeEl && m.contains(activeEl)) {
+          btn.focus();
+        }
+      } catch (e) {
+        // Non-fatal; if anything goes wrong, continue closing the shell.
       }
 
       btn.classList.remove('is-open');
