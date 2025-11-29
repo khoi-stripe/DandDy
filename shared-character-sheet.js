@@ -460,6 +460,7 @@ const CharacterSheet = (window.CharacterSheet = {
       // Restore menu to original parent if it was moved (portrait history)
       if (m._originalParent) {
         m.classList.remove('portrait-history-menu-detached');
+        m.classList.remove('portrait-history-menu-detached--teal');
         m._originalParent.appendChild(m);
         delete m._originalParent;
         delete openShell._detachedMenu;
@@ -484,14 +485,28 @@ const CharacterSheet = (window.CharacterSheet = {
     const setOpen = (open) => {
       if (open) {
         const inPortraitModal = !!triggerEl.closest('.portrait-history-modal');
-        
+
         // Move menu outside clipping ancestors to prevent overflow:hidden clipping
         if (inPortraitModal) {
           menu._originalParent = menu.parentElement;
           // Store reference in shell so handlers can find the menu later
           shell._detachedMenu = menu;
-          // Add class to preserve modal theme when moved to body
+          // Base class to preserve modal-style theming when moved to body
           menu.classList.add('portrait-history-menu-detached');
+
+          // If the trigger lives inside a focused/selected history card, also
+          // opt the detached menu into the teal theme so it matches the card.
+          const card = triggerEl.closest('.character-card');
+          const isTealCard =
+            card &&
+            (card.classList.contains('is-selected') ||
+              card.classList.contains('is-keyboard-focused'));
+          if (isTealCard) {
+            menu.classList.add('portrait-history-menu-detached--teal');
+          } else {
+            menu.classList.remove('portrait-history-menu-detached--teal');
+          }
+
           document.body.appendChild(menu);
         }
 

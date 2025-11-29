@@ -156,6 +156,7 @@
         if (menu && menu._originalParent) {
           // Restore detached menus before removing modal
           menu.classList.remove('portrait-history-menu-detached');
+          menu.classList.remove('portrait-history-menu-detached--teal');
           menu._originalParent.appendChild(menu);
           delete menu._originalParent;
           delete shell._detachedMenu;

@@ -403,10 +403,31 @@
 
 /* Portrait history menus that are moved to document.body need explicit theme tokens */
 .portrait-history-menu-detached {
-  /* Apply modal yellow theme when menu is detached from modal DOM */
-  --ui-border-color: hsl(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright));
-  --ui-fg-color: hsl(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright));
-  --ui-dim-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.7);
+  /* Default to the modal's yellow theme when detached so they match the
+     non-teal portrait history UI. */
+  --ui-border-color: hsl(
+    var(--theme-yellow-h),
+    var(--theme-yellow-s),
+    var(--theme-yellow-l-bright)
+  );
+  --ui-fg-color: hsl(
+    var(--theme-yellow-h),
+    var(--theme-yellow-s),
+    var(--theme-yellow-l-bright)
+  );
+  --ui-dim-color: hsla(
+    var(--theme-yellow-h),
+    var(--theme-yellow-s),
+    var(--theme-yellow-l-bright),
+    0.7
+  );
 }
 
+/* When the detached menu belongs to the focused/selected card, we switch its
+   tokens to the teal theme so the listbox matches the teal card chrome. */
+.portrait-history-menu-detached--teal {
+  --ui-border-color: var(--panel-teal);
+  --ui-fg-color: var(--panel-teal);
+  --ui-dim-color: var(--panel-teal-dim);
+}
 
