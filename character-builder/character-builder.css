@@ -70,6 +70,14 @@
   word-wrap: break-word;
 }
 
+/* Wrapper used ONLY for narrator spinners so we can reset whitespace behavior
+   without affecting the rest of the narrator text. */
+.narrator-spinner-shell {
+  white-space: normal;
+  display: inline-flex;
+  align-items: center;
+}
+
 .narrator-prompt {
   color: var(--terminal-accent);
   margin-top: var(--spacing-sm);
@@ -580,6 +588,8 @@
 }
 
 /* ===== ANIMATIONS ===== */
+/* DEPRECATED: Old text-based spinner (↻ glyph). Replaced by .spinner-cube-* in terminal-theme.css.
+   Keeping these rules for backward compatibility with any legacy code that hasn't been migrated yet. */
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -590,17 +600,12 @@
   display: inline-block;
   animation: spin 1s linear infinite;
   font-size: 18px;
-  /* Spinners inherit the current text color so they automatically match
-     the active theme (terminal green in the left panel, teal in sheets,
-     yellow in modals, etc.). */
   color: currentColor;
   text-shadow: none;
   vertical-align: middle;
   margin-right: 8px;
 }
 
-/* When the spinner appears inside narrator text (e.g., "rolling the dice..."),
-   remove the extra right margin so the bracket hugs the spinner. */
 .narrator-text .spinner {
   margin-right: 0;
 }

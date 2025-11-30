@@ -10,12 +10,12 @@
     location.protocol === 'file:';
 
   // Single source of truth for backend origin & API base URL.
-  // Local frontends (localhost / file://) talk to the local backend so you can
-  // develop against your own API + Supabase DB. Everything else uses the
-  // production Render backend.
-  const BACKEND_ORIGIN = isLocalEnvironment
-    ? 'http://localhost:8000'
-    : 'https://danddy-api.onrender.com';
+  //
+  // IMPORTANT: Even when running the UI locally (localhost / file://), we now
+  // ALWAYS talk to the production Render backend so that auth + cloud data are
+  // consistent with the live site. If you ever need to point at a local
+  // backend again, temporarily change BACKEND_ORIGIN below.
+  const BACKEND_ORIGIN = 'https://danddy-api.onrender.com';
 
   // Many callers use either "<origin>/api" or "<origin>/api/..." directly.
   const API_BASE_URL = `${BACKEND_ORIGIN}/api`;
@@ -24,7 +24,7 @@
   const TOKEN_STORAGE_KEY = 'dnd_auth_token';
   const USER_STORAGE_KEY = 'dnd_user_info';
   const CHARACTER_STORAGE_KEY = 'dnd_characters';
-  const DEBUG = false; // flip to true locally for verbose logging
+  const DEBUG = true; // verbose logging enabled for local debugging
 
   global.DanddyConfig = {
     isLocalEnvironment,

@@ -360,17 +360,55 @@ body::before {
   text-align: left;
   z-index: 9999;
   opacity: 0;
-  pointer-events: none;
+  /* Allow interaction so the close button is clickable */
+  pointer-events: auto;
+  max-width: min(480px, 100% - 32px);
+  /* Reserve space on the right for the dismiss button so text never sits under it */
+  padding-right: 40px;
 
   /* Slide in horizontally from the left edge with a soft easing curve */
   transition:
-    opacity 0.22s cubic-bezier(0.2, 0.8, 0.2, 1.05),
-    transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1.05);
+    opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1.05),
+    transform 0.65s cubic-bezier(0.2, 0.8, 0.2, 1.05);
 }
 
 .toast-notification.show {
   opacity: 1;
   transform: translateX(0) translateY(0);
+}
+
+/* Message text inside toast */
+.toast-message {
+  display: block;
+  /* Ensure long messages wrap instead of overflowing */
+  word-break: break-word;
+}
+
+/* Wrapper for the dismiss button, pinned to the right and vertically centered */
+.toast-dismiss-wrapper {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+}
+
+/* Close button pinned to the right */
+.toast-dismiss {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.toast-dismiss:hover,
+.toast-dismiss:focus-visible {
+  opacity: 1;
+  text-shadow: 0 0 8px currentColor;
+  outline: none;
 }
 
 /* ===== SHARED CHARACTER SHEET LAYOUT ===== */
@@ -1510,4 +1548,177 @@ body::before {
     text-align: center;
   }
 }
+
+/* ===== SPINNER CUBE (shared snippet) =====
+   Usage:
+   <div class="spinner-cube-scene">
+     <div class="spinner-cube-tilt">
+       <div class="spinner-cube">
+         <div class="spinner-cube-face spinner-cube-face-front"></div>
+         <div class="spinner-cube-face spinner-cube-face-back"></div>
+         <div class="spinner-cube-face spinner-cube-face-right"></div>
+         <div class="spinner-cube-face spinner-cube-face-left"></div>
+         <div class="spinner-cube-face spinner-cube-face-top"></div>
+         <div class="spinner-cube-face spinner-cube-face-bottom"></div>
+       </div>
+     </div>
+   </div>
+
+   Per-instance overrides (optional):
+   <div
+     class="spinner-cube-scene"
+     style="
+       --spinner-cube-size: 16px;
+       --spinner-cube-perspective: 40px;
+       --spinner-cube-border-width: 1px;
+       --spinner-cube-speed: 1.2s;
+       --spinner-cube-tilt-x: 0deg;
+       --spinner-cube-tilt-y: 0deg;
+       --spinner-cube-fill-opacity: 0.08;
+     "
+   >
+   */
+
+:root {
+  /* Cube size scales with font-size using em units so it looks consistent
+     across different text sizes (narrator vs portrait sections) */
+  --spinner-cube-size: 0.75em;
+  --spinner-cube-depth: calc(var(--spinner-cube-size) / 2);
+  --spinner-cube-border-width: 0.5px;
+  /* Default perspective for spinner cubes (matches comparison row #6) */
+  --spinner-cube-perspective: 20px;
+  --spinner-cube-speed: 1s;
+  --spinner-cube-tilt-x: 0deg;
+  --spinner-cube-tilt-y: 0deg;
+  --spinner-cube-fill-opacity: 0.05;
+}
+
+.spinner-cube-scene {
+  width: calc(var(--spinner-cube-size) * 3);
+  height: calc(var(--spinner-cube-size) * 3);
+  perspective: var(--spinner-cube-perspective);
+  perspective-origin: center center;
+  display: inline-block;
+  vertical-align: middle;
+  /* Unified inline spacing between cube and following text */
+  margin-right: 0.25em;
+  /* Force GPU acceleration and own compositing layer */
+  will-change: transform;
+  transform-style: preserve-3d;
+  position: relative;
+  /* Keep cube vertically centered relative to surrounding text */
+  transform: translateY(0);
+}
+
+.spinner-cube-scene > * {
+  transform-style: preserve-3d;
+}
+
+.spinner-cube-tilt {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  position: relative;
+}
+
+.spinner-cube {
+  width: var(--spinner-cube-size);
+  height: var(--spinner-cube-size);
+  position: relative;
+  transform-style: preserve-3d;
+  /* Rotate around the center of the cube (50% 50% 0) which is already
+     centered in the tilt container by flexbox */
+  transform-origin: 50% 50% 0;
+  animation: spinner-cube-spin var(--spinner-cube-speed) linear infinite;
+}
+
+.spinner-cube-face {
+  position: absolute;
+  width: var(--spinner-cube-size);
+  height: var(--spinner-cube-size);
+  /* Use the current UI foreground color when available (sheet teal, modal yellow, etc.),
+     falling back to terminal accent green. */
+  border: var(--spinner-cube-border-width) solid var(--ui-fg-color, var(--terminal-accent));
+  box-sizing: border-box;
+  background: color-mix(
+    in srgb,
+    var(--ui-fg-color, var(--terminal-accent)) calc(var(--spinner-cube-fill-opacity) * 100%),
+    transparent
+  );
+  box-shadow:
+    inset 0 0 12px color-mix(in srgb, var(--ui-fg-color, var(--terminal-accent)) 35%, transparent),
+    0 0 8px color-mix(in srgb, var(--ui-fg-color, var(--terminal-accent)) 30%, transparent);
+}
+
+.spinner-cube-face-front {
+  transform: translateZ(var(--spinner-cube-depth));
+}
+
+.spinner-cube-face-back {
+  transform: rotateY(180deg) translateZ(var(--spinner-cube-depth));
+}
+
+.spinner-cube-face-right {
+  transform: rotateY(90deg) translateZ(var(--spinner-cube-depth));
+}
+
+.spinner-cube-face-left {
+  transform: rotateY(-90deg) translateZ(var(--spinner-cube-depth));
+}
+
+.spinner-cube-face-top {
+  transform: rotateX(90deg) translateZ(var(--spinner-cube-depth));
+}
+
+.spinner-cube-face-bottom {
+  transform: rotateX(-90deg) translateZ(var(--spinner-cube-depth));
+}
+
+@keyframes spinner-cube-spin {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+/* Cube spinner maintains consistent 8px right margin in all contexts */
+
+/* Global overrides for cube defaults – ensure all loaders share a stable,
+   centered 3D geometry even when earlier variables are missing or invalid. */
+:root {
+  --spinner-cube-size: 0.75em;
+  --spinner-cube-depth: calc(var(--spinner-cube-size) / 2);
+  --spinner-cube-border-width: 0.5px;
+  --spinner-cube-perspective: 32px;
+  --spinner-cube-speed: 1s;
+  --spinner-cube-tilt-x: 0deg;
+  --spinner-cube-tilt-y: 0deg;
+  --spinner-cube-fill-opacity: 0.05;
+}
+
+/* Keep the cube vertically centered relative to the text baseline. This
+   only adjusts the offset; width/height and other properties come from
+   the main .spinner-cube-scene rule above. */
+.spinner-cube-scene {
+  transform: translateY(0);
+}
+
+/* Final fallback for cube variables using a valid :root selector so that
+   all loaders (builder, manager, and demos) share the same geometry. */
+:root {
+  --spinner-cube-size: 0.75em;
+  --spinner-cube-depth: calc(var(--spinner-cube-size) / 2);
+  --spinner-cube-border-width: 0.5px;
+  --spinner-cube-perspective: 32px;
+  --spinner-cube-speed: 1s;
+  --spinner-cube-tilt-x: 0deg;
+  --spinner-cube-tilt-y: 0deg;
+  --spinner-cube-fill-opacity: 0.05;
+}
+
 

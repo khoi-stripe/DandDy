@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Cube Spinner</title>
+    <link rel="stylesheet" href="../terminal-theme.css">
+    <style>
+        body {
+            padding: 40px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .test-row {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid var(--terminal-border);
+        }
+        .test-label {
+            color: var(--terminal-accent);
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="color: var(--terminal-accent);">Cube Spinner Tests</h1>
+
+    <div class="test-row">
+        <div class="test-label">1. Inline with text (like button loading):</div>
+        <div>
+            <span class="spinner-cube-scene">
+                <span class="spinner-cube-tilt">
+                    <span class="spinner-cube">
+                        <span class="spinner-cube-face spinner-cube-face-front"></span>
+                        <span class="spinner-cube-face spinner-cube-face-back"></span>
+                        <span class="spinner-cube-face spinner-cube-face-right"></span>
+                        <span class="spinner-cube-face spinner-cube-face-left"></span>
+                        <span class="spinner-cube-face spinner-cube-face-top"></span>
+                        <span class="spinner-cube-face spinner-cube-face-bottom"></span>
+                    </span>
+                </span>
+            </span>
+            Loading...
+        </div>
+    </div>
+
+    <div class="test-row">
+        <div class="test-label">2. Inside brackets (narrator style):</div>
+        <div class="narrator-text">
+            [<span class="spinner-cube-scene">
+                <span class="spinner-cube-tilt">
+                    <span class="spinner-cube">
+                        <span class="spinner-cube-face spinner-cube-face-front"></span>
+                        <span class="spinner-cube-face spinner-cube-face-back"></span>
+                        <span class="spinner-cube-face spinner-cube-face-right"></span>
+                        <span class="spinner-cube-face spinner-cube-face-left"></span>
+                        <span class="spinner-cube-face spinner-cube-face-top"></span>
+                        <span class="spinner-cube-face spinner-cube-face-bottom"></span>
+                    </span>
+                </span>
+            </span>] rolling the dice...
+        </div>
+    </div>
+
+    <div class="test-row">
+        <div class="test-label">3. Larger size (16px):</div>
+        <div>
+            <span class="spinner-cube-scene" style="--spinner-cube-size: 16px; --spinner-cube-depth: 8px; --spinner-cube-perspective: 40px;">
+                <span class="spinner-cube-tilt">
+                    <span class="spinner-cube">
+                        <span class="spinner-cube-face spinner-cube-face-front"></span>
+                        <span class="spinner-cube-face spinner-cube-face-back"></span>
+                        <span class="spinner-cube-face spinner-cube-face-right"></span>
+                        <span class="spinner-cube-face spinner-cube-face-left"></span>
+                        <span class="spinner-cube-face spinner-cube-face-top"></span>
+                        <span class="spinner-cube-face spinner-cube-face-bottom"></span>
+                    </span>
+                </span>
+            </span>
+            Loading with bigger cube...
+        </div>
+    </div>
+
+    <div class="test-row">
+        <div class="test-label">4. Old spinner for comparison:</div>
+        <div>
+            <span class="spinner">↻</span> Loading...
+        </div>
+    </div>
+
+    <div class="test-row">
+        <div class="test-label">5. Debug: Raw cube (no scene wrapper):</div>
+        <div style="perspective: 24px; display: inline-block; width: 36px; height: 36px;">
+            <div style="width: 12px; height: 12px; position: relative; transform-style: preserve-3d; animation: spinner-cube-spin 1s linear infinite;">
+                <div style="position: absolute; width: 12px; height: 12px; border: 0.5px solid var(--terminal-accent); background: rgba(0,255,255,0.05); transform: translateZ(6px);"></div>
+                <div style="position: absolute; width: 12px; height: 12px; border: 0.5px solid var(--terminal-accent); background: rgba(0,255,255,0.05); transform: rotateY(180deg) translateZ(6px);"></div>
+                <div style="position: absolute; width: 12px; height: 12px; border: 0.5px solid var(--terminal-accent); background: rgba(0,255,255,0.05); transform: rotateY(90deg) translateZ(6px);"></div>
+                <div style="position: absolute; width: 12px; height: 12px; border: 0.5px solid var(--terminal-accent); background: rgba(0,255,255,0.05); transform: rotateY(-90deg) translateZ(6px);"></div>
+                <div style="position: absolute; width: 12px; height: 12px; border: 0.5px solid var(--terminal-accent); background: rgba(0,255,255,0.05); transform: rotateX(90deg) translateZ(6px);"></div>
+                <div style="position: absolute; width: 12px; height: 12px; border: 0.5px solid var(--terminal-accent); background: rgba(0,255,255,0.05); transform: rotateX(-90deg) translateZ(6px);"></div>
+            </div>
+        </div>
+        Test text
+    </div>
+
+</body>
+</html>
+

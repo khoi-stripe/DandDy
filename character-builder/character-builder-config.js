@@ -38,7 +38,7 @@ window.CONFIG = {
   DEV_AUTO_LOGIN: isLocalDevelopment,
   DEV_CREDENTIALS: {
     email: 'dev@test.com',
-    password: 'dev123',
+    password: 'dev12345',
     role: 'player', // lowercase - will be converted by backend
   },
 

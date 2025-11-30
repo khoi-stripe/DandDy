@@ -14,10 +14,6 @@ services:
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 30
-      - key: MAX_REQUESTS_PER_USER_PER_MINUTE
-        value: 10
-      - key: MAX_REQUESTS_PER_USER_PER_DAY
-        value: 100
       - key: PRODUCTION
         value: true
       - key: ALLOWED_ORIGINS

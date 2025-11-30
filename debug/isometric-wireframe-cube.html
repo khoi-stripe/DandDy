@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Spinning Cube Demo - Bryan Braun Style</title>
+    <link rel="stylesheet" href="../terminal-theme.css" />
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 60px;
+        padding: 40px;
+      }
+
+      .cube-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 80px;
+      }
+
+      .cube-container {
+        perspective: 200px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .box {
+        width: 100px;
+        height: 100px;
+        position: relative;
+        transform-style: preserve-3d;
+        animation: spin 4s infinite linear;
+      }
+
+      .box i {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        display: block;
+        border: 2px solid var(--terminal-accent);
+        background: rgba(0, 255, 255, 0.05);
+        box-shadow: 
+          inset 0 0 30px rgba(0, 255, 255, 0.2),
+          0 0 20px rgba(0, 255, 255, 0.3);
+      }
+
+      /* Front face */
+      .box i:nth-child(1) {
+        transform: translateZ(50px);
+      }
+
+      /* Back face */
+      .box i:nth-child(2) {
+        transform: rotateY(180deg) translateZ(50px);
+      }
+
+      /* Right face */
+      .box i:nth-child(3) {
+        transform: rotateY(90deg) translateZ(50px);
+      }
+
+      /* Left face */
+      .box i:nth-child(4) {
+        transform: rotateY(-90deg) translateZ(50px);
+      }
+
+      /* Top face */
+      .box i:nth-child(5) {
+        transform: rotateX(90deg) translateZ(50px);
+      }
+
+      /* Bottom face */
+      .box i:nth-child(6) {
+        transform: rotateX(-90deg) translateZ(50px);
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotateX(0deg) rotateY(0deg);
+        }
+        to {
+          transform: rotateX(0deg) rotateY(360deg);
+        }
+      }
+
+      /* Solid cube variant */
+      .box-solid i {
+        background: #000000;
+        box-shadow: 
+          0 0 20px rgba(0, 255, 255, 0.3);
+      }
+
+      /* Size variants */
+      .box-80 {
+        width: 80px;
+        height: 80px;
+      }
+      .box-80 i {
+        border-width: 1.8px;
+      }
+      .box-80 i:nth-child(1) { transform: translateZ(40px); }
+      .box-80 i:nth-child(2) { transform: rotateY(180deg) translateZ(40px); }
+      .box-80 i:nth-child(3) { transform: rotateY(90deg) translateZ(40px); }
+      .box-80 i:nth-child(4) { transform: rotateY(-90deg) translateZ(40px); }
+      .box-80 i:nth-child(5) { transform: rotateX(90deg) translateZ(40px); }
+      .box-80 i:nth-child(6) { transform: rotateX(-90deg) translateZ(40px); }
+
+      .box-60 {
+        width: 60px;
+        height: 60px;
+      }
+      .box-60 i {
+        border-width: 1.5px;
+      }
+      .box-60 i:nth-child(1) { transform: translateZ(30px); }
+      .box-60 i:nth-child(2) { transform: rotateY(180deg) translateZ(30px); }
+      .box-60 i:nth-child(3) { transform: rotateY(90deg) translateZ(30px); }
+      .box-60 i:nth-child(4) { transform: rotateY(-90deg) translateZ(30px); }
+      .box-60 i:nth-child(5) { transform: rotateX(90deg) translateZ(30px); }
+      .box-60 i:nth-child(6) { transform: rotateX(-90deg) translateZ(30px); }
+
+      .box-40 {
+        width: 40px;
+        height: 40px;
+      }
+      .box-40 i {
+        border-width: 1.2px;
+      }
+      .box-40 i:nth-child(1) { transform: translateZ(20px); }
+      .box-40 i:nth-child(2) { transform: rotateY(180deg) translateZ(20px); }
+      .box-40 i:nth-child(3) { transform: rotateY(90deg) translateZ(20px); }
+      .box-40 i:nth-child(4) { transform: rotateY(-90deg) translateZ(20px); }
+      .box-40 i:nth-child(5) { transform: rotateX(90deg) translateZ(20px); }
+      .box-40 i:nth-child(6) { transform: rotateX(-90deg) translateZ(20px); }
+
+      .box-20 {
+        width: 20px;
+        height: 20px;
+      }
+      .box-20 i {
+        border-width: 1px;
+      }
+      .box-20 i:nth-child(1) { transform: translateZ(10px); }
+      .box-20 i:nth-child(2) { transform: rotateY(180deg) translateZ(10px); }
+      .box-20 i:nth-child(3) { transform: rotateY(90deg) translateZ(10px); }
+      .box-20 i:nth-child(4) { transform: rotateY(-90deg) translateZ(10px); }
+      .box-20 i:nth-child(5) { transform: rotateX(90deg) translateZ(10px); }
+      .box-20 i:nth-child(6) { transform: rotateX(-90deg) translateZ(10px); }
+
+      .box-16 {
+        width: 16px;
+        height: 16px;
+      }
+      .box-16 i {
+        border-width: 0.8px;
+      }
+      .box-16 i:nth-child(1) { transform: translateZ(8px); }
+      .box-16 i:nth-child(2) { transform: rotateY(180deg) translateZ(8px); }
+      .box-16 i:nth-child(3) { transform: rotateY(90deg) translateZ(8px); }
+      .box-16 i:nth-child(4) { transform: rotateY(-90deg) translateZ(8px); }
+      .box-16 i:nth-child(5) { transform: rotateX(90deg) translateZ(8px); }
+      .box-16 i:nth-child(6) { transform: rotateX(-90deg) translateZ(8px); }
+
+      .cube-container-50 {
+        perspective: 50px;
+      }
+
+      .cube-container-80 {
+        perspective: 80px;
+      }
+
+      .cube-container-20 {
+        perspective: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Row 1: 100px -->
+    <div class="cube-row">
+      <div class="cube-container">
+        <div class="box">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+      </div>
+      <div class="cube-container">
+        <div class="box box-solid">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: 80px -->
+    <div class="cube-row">
+      <div class="cube-container">
+        <div class="box box-80">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+      </div>
+      <div class="cube-container">
+        <div class="box box-80 box-solid">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: 60px -->
+    <div class="cube-row">
+      <div class="cube-container">
+        <div class="box box-60">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+      </div>
+      <div class="cube-container">
+        <div class="box box-60 box-solid">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 4: 40px -->
+    <div class="cube-row">
+      <div class="cube-container">
+        <div class="box box-40">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+      </div>
+      <div class="cube-container">
+        <div class="box box-40 box-solid">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 5: 20px with 50px perspective -->
+    <div class="cube-row">
+      <div class="cube-container cube-container-50">
+        <div class="box box-20">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+      </div>
+      <div class="cube-container cube-container-50">
+        <div class="box box-20 box-solid">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 6: 16px with 50px perspective -->
+    <div class="cube-row">
+      <div class="cube-container cube-container-50">
+        <div class="box box-16">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+      </div>
+      <div class="cube-container cube-container-50">
+        <div class="box box-16 box-solid">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
