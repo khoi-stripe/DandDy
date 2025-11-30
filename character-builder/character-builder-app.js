@@ -597,6 +597,95 @@ const App = (window.App = {
           listbox.classList.add('is-open');
           trigger.classList.add('is-open');
           trigger.setAttribute('aria-expanded', 'true');
+
+          // Position the listbox relative to the trigger so it behaves like
+          // other selector menus: always above or below (preferring below),
+          // at least as wide as the trigger, and constrained to the viewport.
+          const shell = trigger.closest('.selector-shell') || trigger.parentElement;
+          if (shell) {
+            const shellRect = shell.getBoundingClientRect();
+            const triggerRect = trigger.getBoundingClientRect();
+
+            // Measure menu size without affecting final animation. Temporarily
+            // neutralize transforms so we get the full height instead of the
+            // scaled (collapsed) height from CSS.
+            const prevDisplay = listbox.style.display;
+            const prevVisibility = listbox.style.visibility;
+            const prevTransform = listbox.style.transform;
+
+            listbox.style.visibility = 'hidden';
+            listbox.style.display = 'block';
+            listbox.style.transform = 'none';
+
+            const menuRect = listbox.getBoundingClientRect();
+            let menuHeight = menuRect.height || 0;
+            let menuWidth = menuRect.width || 0;
+
+            // Ensure the listbox is at least as wide as the trigger. For small
+            // triggers (like icons), we still respect the global min-width.
+            const triggerWidth = triggerRect.width || 0;
+            if (triggerWidth > 0 && menuWidth < triggerWidth) {
+              listbox.style.minWidth = `${triggerWidth}px`;
+              const remeasureRect = listbox.getBoundingClientRect();
+              menuWidth = remeasureRect.width || menuWidth;
+              menuHeight = remeasureRect.height || menuHeight;
+            }
+
+            listbox.style.display = prevDisplay;
+            listbox.style.visibility = prevVisibility;
+            listbox.style.transform = prevTransform;
+
+            const viewportHeight = window.innerHeight;
+            const viewportWidth = window.innerWidth;
+            const padding = 8; // breathing room from viewport edges
+            const gapY = 4; // small gap between trigger and menu when opening below
+
+            // Decide if the menu can fit fully below the trigger within the
+            // viewport padding. If not, we flip it above.
+            const fitsBelow =
+              triggerRect.bottom + gapY + menuHeight <=
+              viewportHeight - padding;
+
+            let topInViewport;
+            // Prefer below the trigger when there's enough room; otherwise open above.
+            if (fitsBelow) {
+              // Below: align the top of the listbox just under the trigger.
+              topInViewport = triggerRect.bottom + gapY;
+            } else {
+              // Above: align the *bottom* of the listbox with the top of the trigger.
+              topInViewport = triggerRect.top - menuHeight;
+              if (topInViewport < padding) {
+                topInViewport = padding;
+              }
+            }
+
+            // Horizontal alignment: start left-aligned, then if that would
+            // overflow to the right, right-align to the trigger instead.
+            const minLeft = padding;
+            const maxLeft = Math.max(
+              minLeft,
+              viewportWidth - padding - menuWidth,
+            );
+
+            let targetLeft = triggerRect.left;
+            const naturalRight = targetLeft + menuWidth;
+            const viewportRightLimit = viewportWidth - padding;
+            if (naturalRight > viewportRightLimit) {
+              targetLeft = triggerRect.right - menuWidth;
+            }
+
+            if (targetLeft < minLeft) targetLeft = minLeft;
+            if (targetLeft > maxLeft) targetLeft = maxLeft;
+
+            // Use fixed positioning in viewport space so the listbox is
+            // independent of scroll containers and always anchors to the
+            // trigger's visual position.
+            listbox.style.position = 'fixed';
+            listbox.style.top = `${topInViewport}px`;
+            listbox.style.left = `${targetLeft}px`;
+            listbox.style.right = 'auto';
+          }
+
           if (optionsEls.length) {
             optionsEls[0].focus();
           }
@@ -1482,6 +1571,11 @@ const App = (window.App = {
       Utils.focusFirstFieldInModal(modal);
     }
 
+    // Wire up selector-style controls for narrator + text speed
+    if (modal && typeof this.initSettingsSelectors === 'function') {
+      this.initSettingsSelectors(modal);
+    }
+
     // Check backend status
     this.checkBackendStatus();
 
@@ -1490,6 +1584,56 @@ const App = (window.App = {
       if (e.key === 'Escape') this.closeSettings();
     };
     document.addEventListener('keydown', this._settingsEscHandler);
+  },
+
+  /**
+   * Initialize settings selectors: wire up option clicks to update the
+   * hidden <select> elements and trigger labels.
+   * The toggle behavior is handled by onclick="CharacterSheet.toggleSelectorMenu(this)" in the HTML.
+   * @param {HTMLElement} modal
+   */
+  initSettingsSelectors(modal) {
+    if (!modal) return;
+
+    // Narrator selector
+    const narratorTrigger = modal.querySelector('#narrator-select-trigger');
+    const narratorLabel = modal.querySelector('#narrator-select-label');
+    const narratorSelect = modal.querySelector('#narrator-select');
+    const narratorOptions = modal.querySelectorAll('.selector-menu[aria-label="Narrator voice"] .selector-option');
+
+    if (narratorTrigger && narratorLabel && narratorSelect && narratorOptions.length) {
+      narratorOptions.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = option.getAttribute('data-value');
+          const label = option.querySelector('.selector-option-label');
+          if (value && label) {
+            narratorLabel.textContent = label.textContent.trim();
+            narratorSelect.value = value;
+          }
+        });
+      });
+    }
+
+    // Text speed selector
+    const speedTrigger = modal.querySelector('#text-speed-select-trigger');
+    const speedLabel = modal.querySelector('#text-speed-select-label');
+    const speedSelect = modal.querySelector('#text-speed-select');
+    const speedOptions = modal.querySelectorAll('.selector-menu[aria-label="Narrator text speed"] .selector-option');
+
+    if (speedTrigger && speedLabel && speedSelect && speedOptions.length) {
+      speedOptions.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = option.getAttribute('data-value');
+          const label = option.querySelector('.selector-option-label');
+          if (value && label) {
+            speedLabel.textContent = label.textContent.trim();
+            speedSelect.value = value;
+          }
+        });
+      });
+    }
   },
 
   async checkBackendStatus() {
@@ -1526,45 +1670,20 @@ const App = (window.App = {
     this.closeSettings();
   },
 
-  openPortraitHistory() {
-    const state = CharacterState.get();
-    const character = state.character || {};
-    // Normalize portrait metadata + versions using the shared helper so the
-    // builder and manager stay in sync.
-    const normalized =
-      window.PortraitHistory &&
-      typeof PortraitHistory.normalizeForDisplay === 'function'
-        ? PortraitHistory.normalizeForDisplay(character)
-        : (() => {
-            const fallbackMetadata = character.portraitMetadata || {};
-            const fallbackRaw = Array.isArray(fallbackMetadata.versions)
-              ? fallbackMetadata.versions
-              : [];
-            return {
-              metadata: fallbackMetadata,
-              versions: fallbackRaw,
-              hasVersions: fallbackRaw.length > 0,
-              hasCustomPortraitWithoutHistory: !fallbackRaw.length,
-            };
-          })();
-
-    const metadata = normalized.metadata;
-    const versions = normalized.versions;
-    const hasVersions = normalized.hasVersions;
-
-    if (document.getElementById('portraitHistoryModal')) {
-      return;
-    }
-
-    // Match Character Manager behavior: if the character already has a custom
-    // portrait but no history yet, show a helpful empty state explaining how
-    // to enable history instead of the generic "no saved portraits" message.
+  // Build the inner HTML for the portrait history modal body. This is shared
+  // between the initial open and any in-place "reload" after a delete.
+  _buildPortraitHistoryBody(normalized) {
+    const metadata = normalized.metadata || {};
+    const versions = Array.isArray(normalized.versions)
+      ? normalized.versions
+      : [];
+    const hasVersions = !!normalized.hasVersions;
     const hasCustomPortraitWithoutHistory =
-      normalized.hasCustomPortraitWithoutHistory;
+      !!normalized.hasCustomPortraitWithoutHistory;
 
     const listHtml = hasVersions
       ? versions
-          .map((v, index) => {
+          .map((v) => {
             const isActive = metadata.activeVersionId === v.id;
             const createdLabel = v.createdAt
               ? new Date(v.createdAt).toLocaleString()
@@ -1586,7 +1705,11 @@ const App = (window.App = {
             </div>`;
 
             return `
-            <div class="character-card portrait-history-card${isActive ? ' is-selected' : ''}" data-version-id="${v.id}" onclick="App.selectPortraitHistoryCard('${v.id}')">
+            <div class="character-card portrait-history-card${
+              isActive ? ' is-selected' : ''
+            }" data-version-id="${v.id}" onclick="App.selectPortraitHistoryCard('${
+              v.id
+            }')">
               ${thumbHtml}
               <div class="card-details">
                 <div class="card-name">${title}</div>
@@ -1602,7 +1725,7 @@ const App = (window.App = {
                 }
                 ${
                   hasPrompt
-                  ? `<button class="terminal-btn terminal-btn-small" onclick="App.copyPortraitHistoryPrompt('${v.id}')" title="Copy this portrait's prompt to your clipboard">
+                    ? `<button class="terminal-btn terminal-btn-small" onclick="App.copyPortraitHistoryPrompt('${v.id}')" title="Copy this portrait's prompt to your clipboard">
                   Prompt
                 </button>`
                     : ''
@@ -1631,6 +1754,99 @@ const App = (window.App = {
               Generate a custom AI portrait to start building a history.
             </p>`;
 
+    return `
+      <p class="terminal-text-small terminal-text-dim">
+        View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
+      </p>
+      <div class="portrait-history-card-row${
+        versions.length === 1 ? ' is-single' : ''
+      }">
+        ${listHtml}
+      </div>
+    `;
+  },
+
+  // Smoothly animate a modal's content height when its body is "reloaded"
+  // (e.g., after deleting a portrait history entry). This uses a simple FLIP
+  // pattern: measure -> update -> animate height from old to new.
+  _animateModalContentResize(modalId, updateFn) {
+    const modal = document.getElementById(modalId);
+    if (!modal || typeof updateFn !== 'function') {
+      if (typeof updateFn === 'function') {
+        updateFn();
+      }
+      return;
+    }
+
+    const content = modal.querySelector('.modal-content');
+    if (!content) {
+      updateFn();
+      return;
+    }
+
+    const startHeight = content.offsetHeight;
+
+    // Apply DOM updates synchronously so we can measure the new height.
+    updateFn();
+
+    const endHeight = content.offsetHeight;
+
+    if (!startHeight || !endHeight || startHeight === endHeight) {
+      return;
+    }
+
+    // Lock the current height, then animate to the new height.
+    content.style.height = `${startHeight}px`;
+    // Force reflow so the browser registers the starting height.
+    // eslint-disable-next-line no-unused-expressions
+    content.offsetHeight;
+
+    content.style.transition =
+      'height 220ms cubic-bezier(0.2, 0.8, 0.2, 1.05)';
+    content.style.height = `${endHeight}px`;
+
+    const cleanup = () => {
+      content.style.height = '';
+      content.style.transition = '';
+      content.removeEventListener('transitionend', cleanup);
+    };
+
+    content.addEventListener('transitionend', cleanup);
+  },
+
+  openPortraitHistory() {
+    const state = CharacterState.get();
+    const character = state.character || {};
+    // Normalize portrait metadata + versions using the shared helper so the
+    // builder and manager stay in sync.
+    const normalized =
+      window.PortraitHistory &&
+      typeof PortraitHistory.normalizeForDisplay === 'function'
+        ? PortraitHistory.normalizeForDisplay(character)
+        : (() => {
+            const fallbackMetadata = character.portraitMetadata || {};
+            const fallbackRaw = Array.isArray(fallbackMetadata.versions)
+              ? fallbackMetadata.versions
+              : [];
+            return {
+              metadata: fallbackMetadata,
+              versions: fallbackRaw,
+              hasVersions: fallbackRaw.length > 0,
+              hasCustomPortraitWithoutHistory: !fallbackRaw.length,
+            };
+          })();
+
+    const metadata = normalized.metadata || {};
+    const versions = Array.isArray(normalized.versions)
+      ? normalized.versions
+      : [];
+
+    if (document.getElementById('portraitHistoryModal')) {
+      return;
+    }
+
+    const bodyInnerHtml = this._buildPortraitHistoryBody(normalized);
+
     const modalHTML = `
       <div id="portraitHistoryModal" class="modal show" onclick="App.closePortraitHistory()">
         <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
@@ -1639,14 +1855,7 @@ const App = (window.App = {
             <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>
           </div>
           <div class="modal-body">
-            <p class="terminal-text-small terminal-text-dim">
-              View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
-            </p>
-            <div class="portrait-history-card-row${
-              versions.length === 1 ? ' is-single' : ''
-            }">
-              ${listHtml}
-            </div>
+            ${bodyInnerHtml}
           </div>
           <div class="modal-footer modal-footer-end">
             <button class="terminal-btn" onclick="App.closePortraitHistory()">CANCEL</button>
@@ -1976,10 +2185,61 @@ const App = (window.App = {
       CharacterState.updateCharacter(updates);
       await this.persistIfAlreadySaved();
 
-      // Re-open modal to reflect updated list (or close if empty)
-      this.closePortraitHistory();
-      if (remaining.length) {
-        this.openPortraitHistory();
+      const modal = document.getElementById('portraitHistoryModal');
+
+      // If the modal was closed manually or there are no remaining versions,
+      // fall back to the original behavior and close completely.
+      if (!remaining.length || !modal) {
+        this.closePortraitHistory();
+        return;
+      }
+
+      // Rebuild normalized metadata from the latest state so the builder
+      // stays in sync with any shared helpers.
+      const latestState = CharacterState.get();
+      const latestCharacter = latestState.character || {};
+      const latestNormalized =
+        window.PortraitHistory &&
+        typeof PortraitHistory.normalizeForDisplay === 'function'
+          ? PortraitHistory.normalizeForDisplay(latestCharacter)
+          : (() => {
+              const fallbackMetadata = latestCharacter.portraitMetadata || {};
+              const fallbackRaw = Array.isArray(fallbackMetadata.versions)
+                ? fallbackMetadata.versions
+                : [];
+              return {
+                metadata: fallbackMetadata,
+                versions: fallbackRaw,
+                hasVersions: fallbackRaw.length > 0,
+                hasCustomPortraitWithoutHistory: !fallbackRaw.length,
+              };
+            })();
+
+      this._animateModalContentResize('portraitHistoryModal', () => {
+        const modalBody = modal.querySelector('.modal-body');
+        if (!modalBody) return;
+        modalBody.innerHTML = this._buildPortraitHistoryBody(latestNormalized);
+      });
+
+      // Re-run ASCII thumbnail population & focus wiring for the updated list
+      const nextVersions = Array.isArray(latestNormalized.versions)
+        ? latestNormalized.versions
+        : [];
+      if (
+        Array.isArray(nextVersions) &&
+        nextVersions.length > 0 &&
+        window.PortraitHistory &&
+        typeof PortraitHistory.batchPopulateAsciiPreviews === 'function'
+      ) {
+        PortraitHistory.batchPopulateAsciiPreviews(nextVersions, (ascii) =>
+          this.cropAsciiForThumbnail(ascii),
+        );
+      }
+
+      const cards = this.getPortraitHistoryCards();
+      if (cards.length > 0) {
+        this._portraitHistoryFocusIndex = 0;
+        this.updatePortraitHistoryFocus();
       }
     };
 

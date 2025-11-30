@@ -12,41 +12,46 @@
   <style>
     body {
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       background-color: #111;
+      margin: 0;
+      font-family: var(--font-mono, system-ui, sans-serif);
     }
 
-    .terminal-frame {
-      max-width: 520px;
-      height: 360px;
+    /* Full-viewport playground for multiple selector scenarios at once */
+    .overflow-scenarios {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      box-sizing: border-box;
+      padding: 16px;
     }
 
-    .overflow-lab-body {
-      flex: 1;
+    .scenario-card {
+      position: absolute;
+      padding: 8px 12px;
+      background-color: rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+      color: var(--terminal-dim);
+      font-size: var(--font-size-small);
+      max-width: 260px;
+    }
+
+    .scenario-title {
+      font-weight: bold;
+      margin-bottom: 6px;
+      color: var(--terminal-fg, #d0ffd0);
+    }
+
+    .scenario-body {
       display: flex;
       align-items: center;
-      justify-content: center;
-      padding: var(--spacing-xl);
+      gap: 10px;
     }
 
-    .overflow-lab-panel {
-      position: relative;
-      width: 100%;
-      max-width: 320px;
-      text-align: center;
-    }
-
-    .overflow-label {
-      margin-bottom: var(--spacing-md);
-      font-size: var(--font-size-small);
-      color: var(--terminal-dim);
-    }
-
-    .overflow-debug {
-      margin-top: var(--spacing-md);
-      font-size: var(--font-size-small);
+    .scenario-debug {
+      margin-top: 6px;
+      font-size: 10px;
       color: var(--terminal-dim);
     }
 
@@ -55,6 +60,33 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+    }
+
+    /* Position each scenario so the trigger sits in different viewport contexts */
+    .scenario-center {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .scenario-top-left {
+      top: 8px;
+      left: 8px;
+    }
+
+    .scenario-top-right {
+      top: 8px;
+      right: 8px;
+    }
+
+    .scenario-bottom-left {
+      bottom: 8px;
+      left: 8px;
+    }
+
+    .scenario-bottom-right {
+      bottom: 8px;
+      right: 8px;
     }
 
     /* Override trigger button sizing for demo (normally 24px tall) */
@@ -85,215 +117,122 @@
   </style>
 </head>
 <body>
-  <div class="terminal-frame">
-    <header class="terminal-header">
-      <div class="header-content">
-        <div class="terminal-title">[ Overflow Button Lab ]</div>
-      </div>
-    </header>
-
-    <div class="overflow-lab-body">
-      <div class="overflow-lab-panel">
-        <div class="overflow-label">
-          Overflow actions fly out from the three-dot button in the direction
-          with the most space.
-        </div>
-
-        <div class="overflow-shell selector-shell" id="overflowShell" data-direction="down">
-          <button
-            class="terminal-btn-small selector-trigger overflow-trigger"
-            id="overflowTrigger"
-            type="button"
-            aria-haspopup="menu"
-            aria-expanded="false"
-            aria-label="Character actions"
-          >
-            <span class="sheet-actions-icon" id="overflowIcon" aria-hidden="true">
-              <span class="sheet-actions-dot dot-1"></span>
-              <span class="sheet-actions-dot dot-2"></span>
-              <span class="sheet-actions-dot dot-3"></span>
-            </span>
-          </button>
-          <div
-            class="selector-menu"
-            id="overflowMenu"
-            role="menu"
-            aria-hidden="true"
-          >
-            <button class="selector-option" type="button" data-action="edit" role="menuitem">
-              <span class="selector-option-icon">✎</span>
-              <span class="selector-option-label">Edit details</span>
-            </button>
-            <button class="selector-option" type="button" data-action="level" role="menuitem">
-              <span class="selector-option-icon">⬆</span>
-              <span class="selector-option-label">Change level</span>
-            </button>
-            <button class="selector-option" type="button" data-action="print" role="menuitem">
-              <span class="selector-option-icon">⎙</span>
-              <span class="selector-option-label">Print sheet</span>
-            </button>
-            <button class="selector-option" type="button" data-action="portrait" role="menuitem">
-              <span class="selector-option-icon">★</span>
-              <span class="selector-option-label">Custom AI portrait</span>
-            </button>
-            <button class="selector-option" type="button" data-action="delete" role="menuitem">
-              <span class="selector-option-icon">×</span>
-              <span class="selector-option-label">Delete character</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="overflow-debug" id="overflowDebug">
-          Direction: up
+  <div class="overflow-scenarios">
+    <div class="scenario-card scenario-center">
+      <div class="scenario-title">Center (space all around)</div>
+      <div class="scenario-body">
+        <div class="overflow-shell" id="overflow-center"></div>
+        <div class="scenario-copy">
+          Trigger is centered in the viewport with plenty of space.
         </div>
       </div>
+      <div class="scenario-debug" id="debug-center">No action yet.</div>
+    </div>
+
+    <div class="scenario-card scenario-top-left">
+      <div class="scenario-title">Top + Left constrained</div>
+      <div class="scenario-body">
+        <div class="overflow-shell" id="overflow-top-left"></div>
+        <div class="scenario-copy">
+          Trigger is tight to the top-left edge.
+        </div>
+      </div>
+      <div class="scenario-debug" id="debug-top-left">No action yet.</div>
+    </div>
+
+    <div class="scenario-card scenario-top-right">
+      <div class="scenario-title">Top + Right constrained</div>
+      <div class="scenario-body">
+        <div class="overflow-shell" id="overflow-top-right"></div>
+        <div class="scenario-copy">
+          Trigger is tight to the top-right edge.
+        </div>
+      </div>
+      <div class="scenario-debug" id="debug-top-right">No action yet.</div>
+    </div>
+
+    <div class="scenario-card scenario-bottom-left">
+      <div class="scenario-title">Bottom + Left constrained</div>
+      <div class="scenario-body">
+        <div class="overflow-shell" id="overflow-bottom-left"></div>
+        <div class="scenario-copy">
+          Trigger is tight to the bottom-left edge.
+        </div>
+      </div>
+      <div class="scenario-debug" id="debug-bottom-left">No action yet.</div>
+    </div>
+
+    <div class="scenario-card scenario-bottom-right">
+      <div class="scenario-title">Bottom + Right constrained</div>
+      <div class="scenario-body">
+        <div class="overflow-shell" id="overflow-bottom-right"></div>
+        <div class="scenario-copy">
+          Trigger is tight to the bottom-right edge.
+        </div>
+      </div>
+      <div class="scenario-debug" id="debug-bottom-right">No action yet.</div>
     </div>
   </div>
 
   <script>
     (function () {
-      const shell = document.getElementById('overflowShell');
-      const trigger = document.getElementById('overflowTrigger');
-      const icon = document.getElementById('overflowIcon');
-      const menu = document.getElementById('overflowMenu');
-      const debugLine = document.getElementById('overflowDebug');
-
-      if (!shell || !trigger || !icon || !menu) return;
-
-      function computeDirection() {
-        const rect = trigger.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-
-        const spaceUp = rect.top;
-        const spaceDown = viewportHeight - rect.bottom;
-
-        // Only choose between up/down for listbox-style menu
-        return spaceDown >= spaceUp ? 'down' : 'up';
-      }
-
-      function setOpen(isOpen) {
-        if (isOpen) {
-          // Measure menu size by temporarily showing it without animation.
-          // We restore the original transform so the real open uses CSS
-          // transitions from the collapsed state.
-          const originalTransition = menu.style.transition;
-          const originalTransform = menu.style.transform;
-
-          menu.style.transition = 'none';
-          menu.classList.add('is-open');
-          menu.style.transform = 'scaleY(1)';
-
-          const menuRect = menu.getBoundingClientRect();
-          const menuHeight = menuRect.height || 0;
-
-          const triggerRect = trigger.getBoundingClientRect();
-          const shellRect = shell.getBoundingClientRect();
-          const viewportHeight = window.innerHeight;
-
-          const triggerCenterY = triggerRect.top + triggerRect.height / 2;
-
-          // Ideal center-aligned position (menu centered on trigger)
-          let topPx =
-            triggerCenterY - menuHeight / 2 - shellRect.top;
-
-          // Check if centered menu would overflow viewport
-          const menuTopViewport = triggerCenterY - menuHeight / 2;
-          const menuBottomViewport = menuTopViewport + menuHeight;
-
-          const hasRoomCentered =
-            menuTopViewport >= 0 && menuBottomViewport <= viewportHeight;
-
-          let direction;
-          if (hasRoomCentered) {
-            direction = 'center';
-          } else {
-            // Pin to edge of trigger and expand toward side with more room
-            const spaceUp = triggerRect.top;
-            const spaceDown = viewportHeight - triggerRect.bottom;
-            if (spaceDown >= spaceUp) {
-              direction = 'down';
-              topPx = triggerRect.bottom - shellRect.top;
-            } else {
-              direction = 'up';
-              topPx =
-                triggerRect.top - shellRect.top - menuHeight;
-            }
+      window.OverflowLab = {
+        handleAction(scenarioId, action) {
+          const debugEl = document.getElementById('debug-' + scenarioId);
+          if (debugEl) {
+            debugEl.textContent = '[' + scenarioId + '] Last action: ' + action;
           }
+          try {
+            console.log('[OverflowLab]', scenarioId, action);
+          } catch (e) {
+            // console may not exist in some embedded contexts; ignore.
+          }
+        },
+      };
 
-          shell.dataset.direction = direction;
-
-          // Position menu horizontally centered on trigger
-          const triggerCenterX =
-            triggerRect.left + triggerRect.width / 2;
-          const menuWidth = menuRect.width || 0;
-          const leftPx =
-            triggerCenterX - menuWidth / 2 - shellRect.left;
-
-          menu.style.top = `${Math.round(topPx)}px`;
-          menu.style.left = `${Math.round(leftPx)}px`;
-
-          // Restore original transition + transform before triggering
-          // the real animated open state.
-          menu.style.transition = originalTransition;
-          menu.style.transform = originalTransform;
-          menu.style.transformOrigin =
-            direction === 'up'
-              ? 'bottom center'
-              : direction === 'down'
-              ? 'top center'
-              : 'center center';
-
-          // Now actually open with animation
-          shell.classList.add('is-open');
-          trigger.classList.add('is-open');
-          menu.classList.add('is-open');
-          menu.setAttribute('aria-hidden', 'false');
-          trigger.setAttribute('aria-expanded', 'true');
-          debugLine.textContent = 'Direction: ' + direction + ' (open)';
-        } else {
-          shell.classList.remove('is-open');
-          trigger.classList.remove('is-open');
-          menu.classList.remove('is-open');
-          menu.setAttribute('aria-hidden', 'true');
-          trigger.setAttribute('aria-expanded', 'false');
-
-          const direction = shell.dataset.direction || 'up';
-          debugLine.textContent =
-            'Direction: ' + direction + ' (closed)';
-        }
+      if (!window.OverflowButton) {
+        console.warn('Overflow lab: OverflowButton helper not found');
+        return;
       }
 
-      function toggleOpen() {
-        const isOpen = shell.classList.contains('is-open');
-        setOpen(!isOpen);
-      }
+      const scenarios = ['center', 'top-left', 'top-right', 'bottom-left', 'bottom-right'];
 
-      trigger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleOpen();
-      });
+      scenarios.forEach((id) => {
+        const mount = document.getElementById('overflow-' + id);
+        if (!mount) return;
 
-      document.addEventListener('click', (e) => {
-        if (!shell.classList.contains('is-open')) return;
-        if (shell.contains(e.target)) return;
-        setOpen(false);
-      });
+        const html = OverflowButton.render({
+          actions: [
+            {
+              icon: '✎',
+              label: 'Edit details',
+              onclick: "OverflowLab.handleAction('" + id + "', 'edit')",
+            },
+            {
+              icon: '⬆',
+              label: 'Change level',
+              onclick: "OverflowLab.handleAction('" + id + "', 'level')",
+            },
+            {
+              icon: '⎙',
+              label: 'Print sheet',
+              onclick: "OverflowLab.handleAction('" + id + "', 'print')",
+            },
+            {
+              icon: '★',
+              label: 'Custom AI portrait',
+              onclick: "OverflowLab.handleAction('" + id + "', 'portrait')",
+            },
+            {
+              icon: '×',
+              label: 'Delete character',
+              onclick: "OverflowLab.handleAction('" + id + "', 'delete')",
+            },
+          ],
+          ariaLabel: 'Character actions (' + id + ')',
+        });
 
-      // Clicking a menu option just logs the action for now and closes the menu
-      menu.addEventListener('click', (e) => {
-        const btn = e.target.closest('.overflow-menu-option');
-        if (!btn) return;
-        const action = btn.getAttribute('data-action');
-        console.log('[Overflow action]', action);
-        setOpen(false);
-      });
-
-      window.addEventListener('resize', () => {
-        if (!shell.classList.contains('is-open')) return;
-        // Recompute direction (up/down) on resize while open
-        const direction = computeDirection();
-        shell.dataset.direction = direction;
-        debugLine.textContent = 'Direction: ' + direction + ' (open, resized)';
+        mount.innerHTML = html;
       });
     })();
   </script>

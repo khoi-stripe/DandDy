@@ -411,6 +411,19 @@
   margin-top: var(--spacing-xs);
 }
 
+/* Builder settings modal: allow selector menus to escape without clipping */
+.builder-settings-modal {
+  overflow: visible;
+}
+
+.builder-settings-modal .modal-body {
+  overflow-y: visible;
+}
+
+.builder-settings-modal .selector-menu {
+  z-index: 999;
+}
+
 /* (All shared modal theming is handled by terminal-theme.css so it can be reused across apps.) */
 
 .modal-footer {

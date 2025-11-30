@@ -2328,7 +2328,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateClearSearchVisibility();
     }
 
-    // Sort dropdown behavior
+    // Sort dropdown behavior - now uses standard CharacterSheet.toggleSelectorMenu()
     if (sortToggleBtn && sortDropdown) {
         // Size the sort trigger based on the longest option label so the
         // button width is driven by content but stays fixed as labels change.
@@ -2350,12 +2350,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         const updateSortUI = () => {
-            sortToggleBtn.classList.toggle('is-active', sortDropdown.classList.contains('is-open'));
-            sortToggleBtn.setAttribute(
-                'aria-expanded',
-                sortDropdown.classList.contains('is-open') ? 'true' : 'false',
-            );
-
             // Update the button label to spell out the current sort mode
             const sortLabels = {
                 alphabetical: 'Alphabetical',
@@ -2385,116 +2379,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     AppState.applyFilters();
                     UI.render();
                 }
-                sortDropdown.classList.remove('is-open');
+                // Note: CharacterSheet.toggleSelectorMenu handles closing the menu
                 updateSortUI();
             });
         });
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!sortDropdown.classList.contains('is-open')) return;
-            if (
-                e.target === sortDropdown ||
-                sortDropdown.contains(e.target) ||
-                e.target === sortToggleBtn ||
-                sortToggleBtn.contains(e.target)
-            ) {
-                return;
-            }
-            sortDropdown.classList.remove('is-open');
-            updateSortUI();
-        });
-
-        // Keyboard navigation for sort listbox
-        const handleSortKeydown = (e) => {
-            const isOpen = sortDropdown.classList.contains('is-open');
-            const options = Array.from(sortDropdown.querySelectorAll('.sort-option'));
-
-            // Helper: open dropdown and focus first/last option
-            const openAndFocus = (index) => {
-                sortDropdown.classList.add('is-open');
-                updateSortUI();
-                if (options.length) {
-                    const clamped = Math.max(0, Math.min(options.length - 1, index));
-                    options[clamped].focus();
-                }
-            };
-
-            // When focus is on the toggle button
-            if (e.target === sortToggleBtn) {
-                if ((e.key === 'Enter' || e.key === ' ') && !isOpen) {
-                    e.preventDefault();
-                    openAndFocus(0);
-                    return;
-                }
-                if (e.key === 'ArrowDown' && !isOpen) {
-                    e.preventDefault();
-                    openAndFocus(0);
-                    return;
-                }
-                if (e.key === 'ArrowUp' && !isOpen) {
-                    e.preventDefault();
-                    openAndFocus(options.length - 1);
-                    return;
-                }
-            }
-
-            if (!isOpen) return;
-
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                sortDropdown.classList.remove('is-open');
-                updateSortUI();
-                sortToggleBtn.focus();
-                return;
-            }
-
-            if (!options.length) return;
-
-            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                e.preventDefault();
-                const currentIndex = options.indexOf(document.activeElement);
-                let nextIndex = currentIndex;
-                if (currentIndex === -1) {
-                    nextIndex = e.key === 'ArrowDown' ? 0 : options.length - 1;
-                } else {
-                    nextIndex =
-                        e.key === 'ArrowDown'
-                            ? (currentIndex + 1) % options.length
-                            : (currentIndex - 1 + options.length) % options.length;
-                }
-                options[nextIndex].focus();
-                return;
-            }
-
-            if (e.key === 'Enter' || e.key === ' ') {
-                const activeOption = options.find((opt) => opt === document.activeElement);
-                if (activeOption) {
-                    e.preventDefault();
-                    activeOption.click();
-                }
-            }
-        };
-
-        sortToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const isOpen = sortDropdown.classList.contains('is-open');
-            if (!isOpen) {
-                // Open and focus first option for immediate keyboard nav
-                const options = Array.from(sortDropdown.querySelectorAll('.sort-option'));
-                sortDropdown.classList.add('is-open');
-                updateSortUI();
-                if (options.length) {
-                    options[0].focus();
-                }
-            } else {
-                sortDropdown.classList.remove('is-open');
-                updateSortUI();
-            }
-        });
-
-        sortToggleBtn.addEventListener('keydown', handleSortKeydown);
-        sortDropdown.addEventListener('keydown', handleSortKeydown);
 
         // Initialize selection state and trigger sizing
         sizeSortTrigger();

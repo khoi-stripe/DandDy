@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>DandDy Overflow Corner Lab</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="stylesheet" href="../terminal-theme.css" />
+  <script src="../shared-character-sheet.js"></script>
+
+  <style>
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #111;
+    }
+
+    .terminal-frame {
+      max-width: 720px;
+      height: 440px;
+    }
+
+    .corner-lab-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: var(--spacing-lg);
+      gap: var(--spacing-lg);
+    }
+
+    .corner-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-sm);
+      justify-content: center;
+    }
+
+    .corner-stage {
+      position: relative;
+      flex: 1;
+      border-radius: 4px;
+      border: 1px dashed var(--terminal-border-subtle);
+      background-color: #050505;
+      overflow: hidden;
+    }
+
+    .corner-label {
+      text-align: center;
+      font-size: var(--font-size-small);
+      color: var(--terminal-dim);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    /* The single selector trigger we move between corners */
+    .position-shell {
+      position: fixed;
+      z-index: 100; /* below menus (1000/1100), above background */
+    }
+
+    .position-shell .selector-trigger {
+      /* Slightly larger for easy clicking in the lab */
+      width: 32px;
+      height: 32px;
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="terminal-frame">
+    <header class="terminal-header">
+      <div class="header-content">
+        <div class="terminal-title">[ Overflow Corner Lab ]</div>
+      </div>
+    </header>
+
+    <div class="corner-lab-body">
+      <div>
+        <div class="corner-label">
+          Move the single overflow trigger to each corner to test menu positioning.
+        </div>
+        <div class="corner-controls">
+          <button
+            type="button"
+            class="terminal-btn-small"
+            onclick="OverflowCornerLab.setCorner('top-left')"
+          >
+            TOP LEFT
+          </button>
+          <button
+            type="button"
+            class="terminal-btn-small"
+            onclick="OverflowCornerLab.setCorner('top-right')"
+          >
+            TOP RIGHT
+          </button>
+          <button
+            type="button"
+            class="terminal-btn-small"
+            onclick="OverflowCornerLab.setCorner('bottom-right')"
+          >
+            BOTTOM RIGHT
+          </button>
+          <button
+            type="button"
+            class="terminal-btn-small"
+            onclick="OverflowCornerLab.setCorner('bottom-left')"
+          >
+            BOTTOM LEFT
+          </button>
+        </div>
+      </div>
+
+      <div class="corner-stage" id="cornerStage">
+        <!-- Single selector trigger used for all tests -->
+        <div
+          class="selector-shell position-shell"
+          id="cornerShell"
+          aria-label="Corner test shell"
+        >
+          <button
+            class="terminal-btn-small selector-trigger sheet-actions-trigger"
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded="false"
+            aria-label="More actions"
+            onclick="CharacterSheet.toggleSelectorMenu(this)"
+          >
+            <span class="sheet-actions-icon" aria-hidden="true">
+              <span class="sheet-actions-dot dot-1"></span>
+              <span class="sheet-actions-dot dot-2"></span>
+              <span class="sheet-actions-dot dot-3"></span>
+            </span>
+          </button>
+          <div class="selector-menu sheet-actions-menu" role="menu" aria-hidden="true">
+            <button class="selector-option" type="button" role="menuitem">
+              <span class="selector-option-icon">✎</span>
+              <span class="selector-option-label">Edit details</span>
+            </button>
+            <button class="selector-option" type="button" role="menuitem">
+              <span class="selector-option-icon">⎙</span>
+              <span class="selector-option-label">Print sheet</span>
+            </button>
+            <button class="selector-option" type="button" role="menuitem">
+              <span class="selector-option-icon">★</span>
+              <span class="selector-option-label">Custom AI portrait</span>
+            </button>
+            <button class="selector-option" type="button" role="menuitem">
+              <span class="selector-option-icon">×</span>
+              <span class="selector-option-label">Delete character</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Simple lab namespace exposed on window for the inline onclick handlers.
+    (function () {
+      const PADDING = 24;
+
+      function moveShellToCorner(corner) {
+        const shell = document.getElementById('cornerShell');
+        if (!shell) return;
+
+        // Because the selector menus themselves are positioned with
+        // position:fixed in shared-character-sheet.js, we also keep this shell
+        // fixed so its trigger's bounding rect matches viewport coordinates.
+        shell.style.position = 'fixed';
+
+        // Reset all anchors
+        shell.style.top = '';
+        shell.style.right = '';
+        shell.style.bottom = '';
+        shell.style.left = '';
+
+        if (corner === 'top-left') {
+          shell.style.top = PADDING + 'px';
+          shell.style.left = PADDING + 'px';
+        } else if (corner === 'top-right') {
+          shell.style.top = PADDING + 'px';
+          shell.style.right = PADDING + 'px';
+        } else if (corner === 'bottom-right') {
+          shell.style.bottom = PADDING + 'px';
+          shell.style.right = PADDING + 'px';
+        } else if (corner === 'bottom-left') {
+          shell.style.bottom = PADDING + 'px';
+          shell.style.left = PADDING + 'px';
+        }
+      }
+
+      window.OverflowCornerLab = {
+        setCorner: moveShellToCorner,
+      };
+
+      // Initialize default position
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+          moveShellToCorner('top-left');
+        });
+      } else {
+        moveShellToCorner('top-left');
+      }
+    })();
+  </script>
+</body>
+</html>
+
+

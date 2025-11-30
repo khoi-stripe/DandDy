@@ -235,20 +235,13 @@
 }
 
 .sort-dropdown {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    /* Match or exceed the trigger width so options align with the button */
-    min-width: 100%;
-
-    /* Center the menu on the trigger vertically, using the shared
-       selector-menu animation for scale/offset. */
-    transform-origin: center center;
-    transform: translateY(-50%) translateY(-4px) scaleY(0.15);
+    /* Use shared .selector-menu positioning and animation so the sort
+       listbox behaves like all other selector menus. No extra width or
+       transforms here; the JS sizing logic keeps the trigger and listbox
+       aligned. */
 }
 
 .sort-dropdown.selector-menu.is-open {
-    transform: translateY(-50%) translateY(0) scaleY(1);
 }
 
 .sort-option {

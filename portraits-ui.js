@@ -28,11 +28,6 @@
         return;
       }
 
-      // Build a lightweight modal shell immediately so the user sees that work
-      // is happening while we resolve character data (from cache or storage).
-      const modalHtml = this._wrapInModalSkeleton();
-      document.body.insertAdjacentHTML('beforeend', modalHtml);
-
       // Prefer the in-memory manager cache first so we avoid extra localStorage
       // scans or cloud round-trips whenever the character grid has already
       // loaded this character.
@@ -134,9 +129,6 @@
         hasCustomPortraitWithoutHistory,
       };
 
-      // Defer heavy DOM string building and ASCII cropping until after the
-      // modal is visible, so the perception is "instant open + loading" rather
-      // than a blank pause.
       const listHtml = this._buildHistoryCardsHtml(
         'manager',
         characterId,
@@ -145,21 +137,33 @@
         hasCustomPortraitWithoutHistory,
       );
 
-      const modalBody = document.querySelector(
-        '#portraitHistoryModal .modal-body',
-      );
-      if (modalBody) {
-        modalBody.innerHTML = `
-          <p class="terminal-text-small terminal-text-dim">
-            View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
-          </p>
-          <div class="portrait-history-card-row${
-            versions.length === 1 ? ' is-single' : ''
-          }">
-            ${listHtml}
+      // Build and insert the full modal once data is ready so there is no
+      // intermediate loading skeleton state.
+      const modalHtml = `
+        <div id="portraitHistoryModal" class="modal show" onclick="PortraitUI.closeHistory()">
+          <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
+            <div class="modal-header">
+              <h2 class="modal-title">Portrait History</h2>
+              <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
+            </div>
+            <div class="modal-body">
+              <p class="terminal-text-small terminal-text-dim">
+                View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
+              </p>
+              <div class="portrait-history-card-row${
+                versions.length === 1 ? ' is-single' : ''
+              }">
+                ${listHtml}
+              </div>
+            </div>
+            <div class="modal-footer modal-footer-end">
+              <button class="terminal-btn" onclick="PortraitUI.closeHistory()">CANCEL</button>
+              <button class="terminal-btn terminal-btn-primary" onclick="PortraitUI.confirmSelection()">USE SELECTED</button>
+            </div>
           </div>
-        `;
-      }
+        </div>
+      `;
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
 
       this._populateAsciiPreviews(versions);
       this._initKeyboardFocus();
@@ -661,29 +665,6 @@
           `;
         })
         .join('');
-    },
-
-    _wrapInModalSkeleton() {
-      return `
-        <div id="portraitHistoryModal" class="modal show" onclick="PortraitUI.closeHistory()">
-          <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
-            <div class="modal-header">
-              <h2 class="modal-title">Portrait History</h2>
-              <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
-            </div>
-            <div class="modal-body">
-              <div class="terminal-text-small terminal-text-dim" style="padding: 20px; text-align: center;">
-                <div class="spinner spinner-small" aria-hidden="true"></div>
-                <p style="margin-top: 10px;">Loading portrait history\u2026</p>
-              </div>
-            </div>
-            <div class="modal-footer modal-footer-end">
-              <button class="terminal-btn" onclick="PortraitUI.closeHistory()">CANCEL</button>
-              <button class="terminal-btn terminal-btn-primary" onclick="PortraitUI.confirmSelection()">USE SELECTED</button>
-            </div>
-          </div>
-        </div>
-      `;
     },
 
     _populateAsciiPreviews(versions) {

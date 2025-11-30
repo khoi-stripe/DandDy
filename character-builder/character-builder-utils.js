@@ -9,6 +9,32 @@ const Utils = window.Utils = {
 
     let skipTyping = false;
 
+    // Read the current text speed multiplier from storage (if available).
+    // Higher multipliers mean faster typing (shorter delay per character).
+    let multiplier = 1;
+    try {
+      if (
+        window.StorageService &&
+        typeof window.StorageService.getTextSpeedMultiplier === 'function'
+      ) {
+        const stored = window.StorageService.getTextSpeedMultiplier();
+        if (Number.isFinite(stored) && stored > 0) {
+          multiplier = stored;
+        }
+      }
+    } catch (e) {
+      console.warn('Utils.typewriter: failed to read text speed multiplier', e);
+    }
+
+    const effectiveDelay = multiplier > 0 ? speed / multiplier : speed;
+
+    // Normalize text and strip emojis so narrator lines stay text-only.
+    const sourceText = text == null ? '' : String(text);
+    const safeText =
+      typeof this.stripEmojis === 'function'
+        ? this.stripEmojis(sourceText)
+        : sourceText;
+
     // Allow skipping by pressing any key
     const skipHandler = (e) => {
       // Only skip if not typing in an input field
@@ -20,14 +46,14 @@ const Utils = window.Utils = {
     window.addEventListener('keydown', skipHandler, { once: true });
 
     // Type out character by character, or skip if interrupted
-    for (let i = 0; i < text.length; i++) {
+    for (let i = 0; i < safeText.length; i++) {
       if (skipTyping) {
-        // Show all remaining text immediately
-        element.textContent = text;
+        // Show all remaining text immediately (emoji-stripped)
+        element.textContent = safeText;
         break;
       }
-      element.textContent += text[i];
-      await this.sleep(speed);
+      element.textContent += safeText[i];
+      await this.sleep(effectiveDelay);
     }
 
     // Clean up
@@ -38,6 +64,18 @@ const Utils = window.Utils = {
   // Sleep utility
   sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  },
+
+  /**
+   * Remove emoji characters from a string so narrator text stays text-only.
+   * This targets common emoji ranges (pictographs, symbols, flags, etc.).
+   */
+  stripEmojis(value) {
+    if (value == null) return '';
+    const str = String(value);
+    const emojiRegex =
+      /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}]/gu;
+    return str.replace(emojiRegex, '');
   },
 
   // Random number between min and max (inclusive)
