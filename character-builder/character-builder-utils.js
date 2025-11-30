@@ -178,16 +178,11 @@ const Utils = window.Utils = {
     }
 
     if (target && typeof target.focus === 'function') {
-      // Defer slightly to ensure any CSS animations / layout are ready
+      // Defer slightly to ensure any CSS animations / layout are ready.
+      // We intentionally do NOT auto-select the text; we only move focus.
       setTimeout(() => {
         try {
           target.focus();
-          if (
-            typeof target.select === 'function' &&
-            (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')
-          ) {
-            target.select();
-          }
         } catch (e) {
           // Non-fatal: if focus fails, we just leave things as-is.
         }

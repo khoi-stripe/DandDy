@@ -152,6 +152,9 @@ const App = (window.App = {
   currentQuestion: null,
   _lastRenderedCharacter: null,
   _PORTRAIT_HISTORY_MAX_VERSIONS: 5,
+  // When true, the next character-panel update will render portraits without
+  // re-running the ASCII "type-in" animation (used for non-visual updates like save).
+  _suppressNextPortraitAnimation: false,
 
   async init() {
     console.log('Initializing Character Builder...');
@@ -2706,6 +2709,9 @@ const App = (window.App = {
 
     try {
       console.log('💾 Saving character to shared storage (explicit save)...');
+      // Saving should be a non-disruptive action – we don't want to re-animate
+      // the ASCII portrait when the only change is an assigned ID/timestamps.
+      this._suppressNextPortraitAnimation = true;
       const saved = await window.StorageService.saveCharacter(character);
       CharacterState.updateCharacter(saved);
 
@@ -3882,12 +3888,16 @@ const App = (window.App = {
         const portraitArt = character.customPortraitAscii || null;
 
         // Decide whether to animate: only when we have new portrait art that
-        // differs from what was last rendered.
+        // differs from what was last rendered, and we're not explicitly
+        // suppressing animation (such as after a save).
         const shouldAnimate =
           !!portraitArt &&
+          !this._suppressNextPortraitAnimation &&
           (!this._lastPortraitArt || this._lastPortraitArt !== portraitArt);
 
         this._lastPortraitArt = portraitArt || null;
+        // Consume any pending suppression flag after we've decided.
+        this._suppressNextPortraitAnimation = false;
 
         // Only show the "★ Custom AI Portrait" button in quick-create once
         // the initial custom portrait has been generated and is ready to
@@ -3953,7 +3963,9 @@ const App = (window.App = {
         }
         
         // Check if portrait has changed (only animate if it's different or first time)
-        const shouldAnimate = !this._lastPortraitArt || this._lastPortraitArt !== portraitArt;
+        const shouldAnimate =
+          !this._suppressNextPortraitAnimation &&
+          (!this._lastPortraitArt || this._lastPortraitArt !== portraitArt);
         
         // If we're about to animate, set the flag BEFORE rendering to prevent race conditions
         if (shouldAnimate) {
@@ -3961,6 +3973,8 @@ const App = (window.App = {
         }
         
         this._lastPortraitArt = portraitArt;
+        // Consume any pending suppression flag after we've decided.
+        this._suppressNextPortraitAnimation = false;
 
         // Render sheet skeleton, then inject ASCII as text to avoid HTML parsing
         panel.innerHTML = Components.renderCharacterSheet(
@@ -4007,7 +4021,9 @@ const App = (window.App = {
         const fallbackArt = AsciiArtService.getFullPortrait(character);
         
         // Check if portrait has changed (only animate if it's different or first time)
-        const shouldAnimate = !this._lastPortraitArt || this._lastPortraitArt !== fallbackArt;
+        const shouldAnimate =
+          !this._suppressNextPortraitAnimation &&
+          (!this._lastPortraitArt || this._lastPortraitArt !== fallbackArt);
         
         // If we're about to animate, set the flag BEFORE rendering
         if (shouldAnimate) {
@@ -4015,6 +4031,8 @@ const App = (window.App = {
         }
         
         this._lastPortraitArt = fallbackArt;
+        // Consume any pending suppression flag after we've decided.
+        this._suppressNextPortraitAnimation = false;
         
         panel.innerHTML = Components.renderCharacterSheet(
           character,

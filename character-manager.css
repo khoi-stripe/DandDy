@@ -665,10 +665,12 @@
 
 .panel-loading-row {
   position: absolute;
-  top: 50%;
+  /* Fill the split layout and let CSS Grid handle centering so that
+     parent transforms don't interfere with the cube's 3D axis. */
+  top: 0;
   left: 0;
-  width: 100%;
-  transform: translateY(-50%);
+  right: 0;
+  bottom: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
   pointer-events: none; /* let clicks fall through to underlying UI */

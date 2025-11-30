@@ -965,15 +965,81 @@ async function confirmGeneratePortrait() {
             },
         };
 
+        // Persist to storage (cloud or local depending on auth state)
         await CharacterStorage.update(portraitCharacterId, updates);
-        
-        // Reload characters and UI
-        await AppState.loadCharacters();
-        UI.render();
-        viewCharacter(portraitCharacterId);
-        
+
+        // Apply the new portrait directly into the currently visible manager UI
+        // so we avoid a full grid/sheet re-render and instead "draw in" the art.
+        try {
+            const portraitArt = result.asciiArt;
+            const portraitDomId = `character-portrait-${portraitCharacterId}`;
+            const originalPortraitDomId = `original-portrait-${portraitCharacterId}`;
+            const asciiEl = document.getElementById(portraitDomId);
+            const imgEl = document.getElementById(originalPortraitDomId);
+
+            // Update original image src so the "View original art" toggle shows
+            // the freshly generated image without requiring a re-render.
+            if (imgEl && result.imageUrl) {
+                imgEl.src = result.imageUrl;
+            }
+
+            // Animate the ASCII portrait into place, mirroring the builder's
+            // typewriter-style reveal so it feels consistent with build mode.
+            if (asciiEl && portraitArt) {
+                await typeManagerPortrait(asciiEl, portraitArt);
+            }
+
+            // Also update the character card thumbnail (if it exists) so the
+            // grid immediately reflects the newly generated portrait.
+            const thumbEl = document.getElementById(`card-thumb-${portraitCharacterId}`);
+            if (thumbEl && portraitArt) {
+                try {
+                    if (window.UI && typeof UI.cropAsciiForThumbnail === 'function') {
+                        thumbEl.textContent = UI.cropAsciiForThumbnail(portraitArt);
+                    } else {
+                        const lines = portraitArt.split('\n');
+                        const topLines = lines
+                            .slice(0, 80)
+                            .map(line => line.slice(0, 160));
+                        thumbEl.textContent = topLines.join('\n');
+                    }
+                } catch (thumbError) {
+                    console.error('Portrait thumbnail update failed', thumbError);
+                }
+            }
+        } catch (applyError) {
+            console.error('Error applying new custom portrait to manager UI', applyError);
+        }
+
+        // Keep AppState in sync for any future renders/navigations so that if
+        // the grid or sheet re-renders later, it uses this new portrait.
+        try {
+            const nextCharacter = { ...character, ...updates };
+
+            if (window.AppState) {
+                if (Array.isArray(AppState.characters)) {
+                    const idx = AppState.characters.findIndex(
+                        c => c && c.id === portraitCharacterId,
+                    );
+                    if (idx !== -1) {
+                        AppState.characters[idx] = nextCharacter;
+                    }
+                }
+                if (Array.isArray(AppState.filteredCharacters)) {
+                    const fIdx = AppState.filteredCharacters.findIndex(
+                        c => c && c.id === portraitCharacterId,
+                    );
+                    if (fIdx !== -1) {
+                        AppState.filteredCharacters[fIdx] = nextCharacter;
+                    }
+                }
+            }
+        } catch (stateError) {
+            console.error('Error syncing AppState after portrait generation', stateError);
+        }
+
         showNotification(`Custom AI portrait generated! (${3 - (currentCount + 1)} remaining)`);
-        
+
         // Clear the global pointer once we're done
         currentPortraitCharacterId = null;
     } catch (error) {
@@ -1024,6 +1090,93 @@ async function confirmGeneratePortrait() {
         }
     }
 }
+
+// Animate ASCII portrait character-by-character, line-by-line in the manager
+// sheet, mirroring the builder's quick-create behavior but scoped to the
+// manager DOM. This keeps the "new art fades in" feel without reloading.
+async function typeManagerPortrait(element, portraitText) {
+    if (!element || !portraitText) return;
+
+    const lines = portraitText.split('\n');
+    element.textContent = '';
+
+    let currentText = '';
+    const charsPerFrame = 15; // Batch multiple characters per frame for speed
+    let charCount = 0;
+
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const line = lines[lineIndex];
+
+        for (let charIndex = 0; charIndex < line.length; charIndex++) {
+            currentText += line[charIndex];
+            charCount++;
+
+            if (charCount >= charsPerFrame) {
+                element.textContent = currentText;
+                charCount = 0;
+                await new Promise(resolve => requestAnimationFrame(resolve));
+            }
+        }
+
+        if (lineIndex < lines.length - 1) {
+            currentText += '\n';
+        }
+    }
+
+    // Final flush to ensure all text is visible
+    element.textContent = currentText;
+
+    // Match builder + manager behavior: center the portrait horizontally.
+    if (
+        window.CharacterSheet &&
+        typeof CharacterSheet._centerPortraitScrollSafely === 'function'
+    ) {
+        CharacterSheet._centerPortraitScrollSafely(element);
+    }
+}
+
+// ========================================
+// SHARED CUBE LOADER MARKUP
+// Reuse the exact same cube + narrator shell used by portrait generation
+// so all loaders (portrait, grid, sheet) share an identical axis and layout.
+// ========================================
+function buildNarratorCubeLine(text) {
+    const cubeMarkup =
+        '<span class="spinner-cube-scene">' +
+        '<span class="spinner-cube-tilt">' +
+        '<span class="spinner-cube">' +
+        '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
+        '</span></span></span>';
+
+    return '<span class="narrator-spinner-shell">' + cubeMarkup + ' ' + text + '</span>';
+}
+
+// Initialize the manager's grid + sheet loading rows to use the shared
+// narrator-style cube loader so they visually match the portrait generator.
+(function initPanelCubeLoaders() {
+    const leftTextEl =
+        document.getElementById('leftPanelLoadingText') ||
+        (document.getElementById('leftPanelLoading') &&
+            document.querySelector('#leftPanelLoading .loading-text'));
+
+    const rightTextEl =
+        document.getElementById('rightPanelLoadingText') ||
+        (document.getElementById('rightPanelLoading') &&
+            document.querySelector('#rightPanelLoading .loading-text'));
+
+    if (leftTextEl) {
+        leftTextEl.innerHTML = buildNarratorCubeLine('Loading characters...');
+    }
+
+    if (rightTextEl) {
+        rightTextEl.innerHTML = buildNarratorCubeLine('Preparing character sheet...');
+    }
+})();
 
 // ===== PORTRAIT HISTORY (MANAGER) =====
 // The full portrait history UI is now handled by the shared PortraitUI
@@ -1521,15 +1674,11 @@ function focusFirstFieldInModal(modal) {
     }
 
     if (target && typeof target.focus === 'function') {
+        // Defer slightly to ensure any CSS animations / layout are ready.
+        // We intentionally do NOT auto-select the text; we only move focus.
         setTimeout(() => {
             try {
                 target.focus();
-                if (
-                    typeof target.select === 'function' &&
-                    (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')
-                ) {
-                    target.select();
-                }
             } catch (e) {
                 // Non-fatal
             }
