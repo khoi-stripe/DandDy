@@ -68,6 +68,12 @@
 
 /* ===== PORTRAIT HISTORY MODAL ===== */
 
+/* Wrapper around the horizontal card row so we can layer navigation arrows
+   over the scrollable area without changing the card math. */
+.portrait-history-carousel {
+  position: relative;
+}
+
 /* Smaller portrait preview inside history modal to keep it readable
    without overwhelming the layout. */
 .portrait-history-preview.ascii-portrait {
@@ -82,7 +88,12 @@
   gap: var(--spacing-md);
   overflow-x: auto;
   overflow-y: visible;
-  padding-bottom: var(--spacing-sm);
+  /* Give the scrollbar some breathing room below the cards and create
+     dedicated side gutters for the carousel arrows so they don't sit
+     directly on top of card content. */
+  padding-block: var(--spacing-sm) var(--spacing-md);
+  padding-inline: 48px;
+  scroll-behavior: smooth;
 }
 
 .portrait-history-card-row.is-single {
@@ -90,7 +101,7 @@
 }
 
 /* Match card sizing used in manager grid: effectively 3 columns with the
-   same gap. This locks card width to the same fraction there. */
+   same gap. This keeps the card proportions consistent between views. */
 .portrait-history-modal .portrait-history-card {
   flex: 0 0 calc((100% - 2 * var(--spacing-md)) / 3);
   max-width: calc((100% - 2 * var(--spacing-md)) / 3);
@@ -356,6 +367,63 @@
 /* Ensure portrait history listbox appears above other modal content */
 .portrait-history-modal .selector-menu {
   z-index: 999;
+}
+
+/* Carousel arrow buttons for portrait history
+   - Absolutely positioned over the scrollable row
+   - Keyboard-focusable buttons for accessibility
+*/
+.portrait-history-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--modal-accent);
+  /* Default: subtle translucent black panel so arrows stand out without
+     competing with the yellow card chrome. */
+  background-color: rgba(0, 0, 0, 0.4);
+  color: var(--modal-accent);
+  cursor: pointer;
+  padding: 0;
+}
+
+.portrait-history-nav span {
+  line-height: 1;
+}
+
+.portrait-history-nav-left {
+  left: 4px;
+}
+
+.portrait-history-nav-right {
+  right: 4px;
+}
+
+.portrait-history-nav:hover {
+  background-color: hsla(
+    var(--theme-yellow-h),
+    var(--theme-yellow-s),
+    var(--theme-yellow-l-bright),
+    0.18
+  );
+  box-shadow: 0 0 10px
+    hsla(
+      var(--theme-yellow-h),
+      var(--theme-yellow-s),
+      var(--theme-yellow-l-bright),
+      0.6
+    );
+}
+
+.portrait-history-nav:disabled,
+.portrait-history-nav[aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: default;
+  box-shadow: none;
 }
 
 /* Portrait history listbox hover/focus background:

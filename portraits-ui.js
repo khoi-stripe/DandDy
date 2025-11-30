@@ -150,10 +150,41 @@
               <p class="terminal-text-small terminal-text-dim">
                 View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
               </p>
-              <div class="portrait-history-card-row${
-                versions.length === 1 ? ' is-single' : ''
-              }">
-                ${listHtml}
+              <div class="portrait-history-carousel">
+                ${
+                  versions.length > 1
+                    ? `<button
+                        type="button"
+                        class="portrait-history-nav portrait-history-nav-left"
+                        aria-label="Previous portrait"
+                        aria-controls="portraitHistoryList"
+                        onclick="event.stopPropagation(); PortraitUI.moveFocus(-1);"
+                      >
+                        <span aria-hidden="true">‹</span>
+                      </button>`
+                    : ''
+                }
+                <div
+                  id="portraitHistoryList"
+                  class="portrait-history-card-row${
+                    versions.length === 1 ? ' is-single' : ''
+                  }"
+                >
+                  ${listHtml}
+                </div>
+                ${
+                  versions.length > 1
+                    ? `<button
+                        type="button"
+                        class="portrait-history-nav portrait-history-nav-right"
+                        aria-label="Next portrait"
+                        aria-controls="portraitHistoryList"
+                        onclick="event.stopPropagation(); PortraitUI.moveFocus(1);"
+                      >
+                        <span aria-hidden="true">›</span>
+                      </button>`
+                    : ''
+                }
               </div>
             </div>
             <div class="modal-footer modal-footer-end">
@@ -713,6 +744,31 @@
       );
     },
 
+    _updateNavButtons(currentIndex) {
+      const cards = this._getCards();
+      const total = cards.length;
+      const prevBtn = document.querySelector(
+        '#portraitHistoryModal .portrait-history-nav-left',
+      );
+      const nextBtn = document.querySelector(
+        '#portraitHistoryModal .portrait-history-nav-right',
+      );
+
+      const hasMultiple = total > 1;
+
+      if (prevBtn) {
+        const disabled = !hasMultiple || currentIndex <= 0;
+        prevBtn.disabled = disabled;
+        prevBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      }
+
+      if (nextBtn) {
+        const disabled = !hasMultiple || currentIndex >= total - 1;
+        nextBtn.disabled = disabled;
+        nextBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      }
+    },
+
     _updateFocus() {
       const cards = this._getCards();
       if (!cards.length) return;
@@ -725,6 +781,24 @@
         card.classList.toggle('is-keyboard-focused', isFocused);
         card.classList.toggle('is-selected', isFocused);
       });
+
+      // Ensure the focused card is scrolled into view within the horizontal
+      // list so keyboard and button navigation always reveal the selection.
+      const activeCard = cards[index];
+      if (activeCard && typeof activeCard.scrollIntoView === 'function') {
+        try {
+          activeCard.scrollIntoView({
+            block: 'nearest',
+            inline: 'nearest', // keep the focused card fully visible but do not center it
+            behavior: 'smooth',
+          });
+        } catch (e) {
+          // Non-fatal; older browsers may not support options object
+          activeCard.scrollIntoView();
+        }
+      }
+
+      this._updateNavButtons(index);
     },
 
     _initKeyboardFocus() {
