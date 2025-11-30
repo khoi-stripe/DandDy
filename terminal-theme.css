@@ -634,7 +634,7 @@ body::before {
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
   margin-top: var(--spacing-sm);
 }
 

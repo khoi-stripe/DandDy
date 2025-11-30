@@ -590,9 +590,10 @@
   display: inline-block;
   animation: spin 1s linear infinite;
   font-size: 18px;
-  /* Builder spinners should use the classic terminal green theme so they
-     match narrator text and other loading states in the left panel. */
-  color: var(--terminal-fg);
+  /* Spinners inherit the current text color so they automatically match
+     the active theme (terminal green in the left panel, teal in sheets,
+     yellow in modals, etc.). */
+  color: currentColor;
   text-shadow: none;
   vertical-align: middle;
   margin-right: 8px;

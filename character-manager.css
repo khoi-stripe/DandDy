@@ -643,7 +643,9 @@
   display: inline-block;
   animation: spin 1s linear infinite;
   font-size: 18px;
-  color: var(--panel-teal); /* Teal spinner arrow to match selected card theme */
+  /* Spinners inherit the current text color so they automatically match
+     the active theme (green overlays, teal sheets/cards, yellow modals, etc.). */
+  color: currentColor;
   text-shadow: none;
   vertical-align: middle;
   margin-right: 8px;
