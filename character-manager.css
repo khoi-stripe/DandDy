@@ -194,7 +194,8 @@
 
 .search-clear-btn:hover {
     color: var(--terminal-accent);
-    transform: translateY(-50%) rotate(180deg);
+    /* Match modal close spin: quarter turn on hover */
+    transform: translateY(-50%) rotate(90deg);
 }
 
 .search-clear-btn.is-hidden {

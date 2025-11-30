@@ -666,8 +666,8 @@ Select a race and class above to enable portrait generation.
           console.log('📝 Generated default prompt:', defaultPrompt);
           
           const modalHTML = `
-            <div class="prompt-modal-overlay" id="prompt-modal">
-              <div class="prompt-modal">
+            <div class="prompt-modal-overlay" id="prompt-modal" onclick="TestApp.closePromptModal(false)">
+              <div class="prompt-modal" onclick="event.stopPropagation();">
                 <div class="prompt-modal-header">
                   <span>✨ Customize AI Portrait Prompt</span>
                   <button class="prompt-modal-close" onclick="TestApp.closePromptModal(false)">×</button>

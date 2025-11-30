@@ -1576,7 +1576,9 @@ function showNotification(message) {
         toast.innerHTML = `
             <span class="toast-message"></span>
             <div class="toast-dismiss-wrapper">
-                <button type="button" class="toast-dismiss" aria-label="Dismiss notification">&times;</button>
+                <button type="button" class="toast-dismiss" aria-label="Dismiss notification">
+                    <span class="toast-dismiss-icon">&times;</span>
+                </button>
             </div>
         `;
 
@@ -1629,11 +1631,11 @@ function showNotification(message) {
         toast.classList.add('show');
         window._toastShowTimeout = null;
 
-        // Keep toast visible for 5 seconds before auto-dismissing
+        // Keep toast visible for 10 seconds before auto-dismissing
         window._toastTimeout = setTimeout(() => {
             toast.classList.remove('show');
             window._toastTimeout = null;
-        }, 5000);
+        }, 10000);
     }, 80);
 }
 

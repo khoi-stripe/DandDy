@@ -345,7 +345,8 @@ body::before {
   /* Start fully off-screen to the left so the entrance animation is obvious */
   transform: translateX(-140%) translateY(0);
 
-  padding: 8px 16px;
+  /* Extra padding so the toast reads as a more prominent, self-contained panel */
+  padding: 12px 20px;
   /* Use a solid black background so the toast reads clearly against the UI. */
   background: #000000;
   color: var(--terminal-warning);
@@ -364,17 +365,19 @@ body::before {
   pointer-events: auto;
   max-width: min(480px, 100% - 32px);
   /* Reserve space on the right for the dismiss button so text never sits under it */
-  padding-right: 40px;
+  padding-right: 48px;
 
-  /* Slide in horizontally from the left edge with a soft easing curve */
+  /* Slide in horizontally from the left edge with a soft, very subtle bouncy easing curve */
   transition:
-    opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1.05),
-    transform 0.65s cubic-bezier(0.2, 0.8, 0.2, 1.05);
+    opacity 0.5s cubic-bezier(0.22, 0.7, 0.3, 1.02),
+    transform 0.8s cubic-bezier(0.22, 0.7, 0.3, 1.02);
 }
 
 .toast-notification.show {
   opacity: 1;
   transform: translateX(0) translateY(0);
+  /* Continuous, subtle breathing glow while the toast is visible */
+  animation: toast-glow 2.1s ease-in-out 0.15s infinite;
 }
 
 /* Message text inside toast */
@@ -402,13 +405,40 @@ body::before {
   cursor: pointer;
   line-height: 1;
   opacity: 0.9;
+  transition:
+    transform 0.15s ease-out,
+    opacity 0.15s ease-out,
+    text-shadow 0.15s ease-out;
 }
 
 .toast-dismiss:hover,
 .toast-dismiss:focus-visible {
   opacity: 1;
   text-shadow: 0 0 8px currentColor;
+  /* Match modal close button behavior: a simple quarter-turn spin on hover/focus */
+  transform: rotate(90deg);
   outline: none;
+}
+
+@keyframes toast-glow {
+  0% {
+    box-shadow:
+      0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.5),
+      0 0 14px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45),
+      0 0 28px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.8),
+      0 0 20px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.7),
+      0 0 40px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.5),
+      0 0 14px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45),
+      0 0 28px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.3);
+  }
 }
 
 /* ===== SHARED CHARACTER SHEET LAYOUT ===== */

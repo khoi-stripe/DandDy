@@ -2927,10 +2927,13 @@ const App = (window.App = {
       toast.setAttribute('aria-live', 'polite');
 
       // Inner structure: message + dismiss "X" pinned to the right in its own wrapper
+      // The inner span gets the shared spin treatment used elsewhere in the app.
       toast.innerHTML = `
         <span class="toast-message"></span>
         <div class="toast-dismiss-wrapper">
-          <button type="button" class="toast-dismiss" aria-label="Dismiss notification">&times;</button>
+          <button type="button" class="toast-dismiss" aria-label="Dismiss notification">
+            <span class="toast-dismiss-icon">&times;</span>
+          </button>
         </div>
       `;
 
@@ -2983,11 +2986,11 @@ const App = (window.App = {
       toast.classList.add('show');
       App._toastShowTimeout = null;
 
-      // Keep toast visible for 5 seconds before auto-dismissing
+      // Keep toast visible for 10 seconds before auto-dismissing
       App._toastTimeout = setTimeout(() => {
         toast.classList.remove('show');
         App._toastTimeout = null;
-      }, 5000);
+      }, 10000);
     }, 80);
   },
 
