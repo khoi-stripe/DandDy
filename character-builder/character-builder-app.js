@@ -1709,7 +1709,8 @@ const App = (window.App = {
       StorageService.setTextSpeedMultiplier(textSpeedSelect.value);
     }
 
-    this.showSystemMessage('Settings saved!');
+    // Use a non-intrusive toast for settings changes instead of a narrator line
+    this.showToast('Settings saved!');
     this.closeSettings();
   },
 
