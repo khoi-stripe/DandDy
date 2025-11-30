@@ -1644,12 +1644,35 @@ const App = (window.App = {
 
   closeSettings() {
     const modal = document.getElementById('settingsModal');
-    if (modal) modal.remove();
-    
-    // Remove ESC key listener
-    if (this._settingsEscHandler) {
-      document.removeEventListener('keydown', this._settingsEscHandler);
-      this._settingsEscHandler = null;
+    if (!modal) {
+      if (this._settingsEscHandler) {
+        document.removeEventListener('keydown', this._settingsEscHandler);
+        this._settingsEscHandler = null;
+      }
+      return;
+    }
+
+    const content = modal.querySelector('.modal-content') || modal;
+
+    const handleClose = () => {
+      if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
+
+      if (this._settingsEscHandler) {
+        document.removeEventListener('keydown', this._settingsEscHandler);
+        this._settingsEscHandler = null;
+      }
+    };
+
+    if (!modal.classList.contains('closing')) {
+      modal.classList.add('closing');
+    }
+
+    if (content && content.addEventListener) {
+      content.addEventListener('animationend', handleClose, { once: true });
+    } else {
+      handleClose();
     }
   },
 
@@ -1933,7 +1956,46 @@ const App = (window.App = {
 
   closePortraitHistory() {
     const modal = document.getElementById('portraitHistoryModal');
-    if (modal) modal.remove();
+    if (!modal) {
+      if (this._portraitHistoryEscHandler) {
+        document.removeEventListener('keydown', this._portraitHistoryEscHandler);
+        this._portraitHistoryEscHandler = null;
+      }
+      if (this._portraitHistoryKeyHandler) {
+        document.removeEventListener('keydown', this._portraitHistoryKeyHandler);
+        this._portraitHistoryKeyHandler = null;
+      }
+      this._portraitHistoryFocusIndex = 0;
+      return;
+    }
+
+    const content = modal.querySelector('.modal-content') || modal;
+
+    const handleClose = () => {
+      if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
+
+      if (this._portraitHistoryEscHandler) {
+        document.removeEventListener('keydown', this._portraitHistoryEscHandler);
+        this._portraitHistoryEscHandler = null;
+      }
+      if (this._portraitHistoryKeyHandler) {
+        document.removeEventListener('keydown', this._portraitHistoryKeyHandler);
+        this._portraitHistoryKeyHandler = null;
+      }
+      this._portraitHistoryFocusIndex = 0;
+    };
+
+    if (!modal.classList.contains('closing')) {
+      modal.classList.add('closing');
+    }
+
+    if (content && content.addEventListener) {
+      content.addEventListener('animationend', handleClose, { once: true });
+    } else {
+      handleClose();
+    }
 
     if (this._portraitHistoryEscHandler) {
       document.removeEventListener('keydown', this._portraitHistoryEscHandler);
@@ -2375,18 +2437,40 @@ const App = (window.App = {
 
   closePromptModal(regenerate = false) {
     const modal = document.getElementById('promptModal');
-    if (modal) modal.remove();
+    if (!modal) return;
 
-    // Remove ESC key listener
-    if (this._promptModalEscHandler) {
-      document.removeEventListener('keydown', this._promptModalEscHandler);
-      this._promptModalEscHandler = null;
-    }
+    // If the modal is already in the process of closing, don't re-run animation.
+    if (modal.classList.contains('closing')) return;
 
-    if (regenerate) {
-      // Trigger portrait regeneration if confirmed
-      const state = CharacterState.get();
-      this.updateCharacterPanel(state.character);
+    modal.classList.add('closing');
+
+    const content = modal.querySelector('.modal-content') || modal;
+
+    const handleClose = () => {
+      // Remove the modal from the DOM after the close animation completes.
+      if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
+
+      // Remove ESC key listener
+      if (this._promptModalEscHandler) {
+        document.removeEventListener('keydown', this._promptModalEscHandler);
+        this._promptModalEscHandler = null;
+      }
+
+      if (regenerate) {
+        // Trigger portrait regeneration if confirmed
+        const state = CharacterState.get();
+        this.updateCharacterPanel(state.character);
+      }
+    };
+
+    // If we have a modal-content element, wait for the close animation to finish.
+    if (content && content.addEventListener) {
+      content.addEventListener('animationend', handleClose, { once: true });
+    } else {
+      // Fallback: no animation support, just close immediately.
+      handleClose();
     }
   },
 
@@ -2894,12 +2978,35 @@ const App = (window.App = {
 
   closeLevelModal() {
     const modal = document.getElementById('levelModal');
-    if (modal) modal.remove();
-    
-    // Remove ESC key listener
-    if (this._levelModalEscHandler) {
-      document.removeEventListener('keydown', this._levelModalEscHandler);
-      this._levelModalEscHandler = null;
+    if (!modal) {
+      if (this._levelModalEscHandler) {
+        document.removeEventListener('keydown', this._levelModalEscHandler);
+        this._levelModalEscHandler = null;
+      }
+      return;
+    }
+
+    const content = modal.querySelector('.modal-content') || modal;
+
+    const handleClose = () => {
+      if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
+
+      if (this._levelModalEscHandler) {
+        document.removeEventListener('keydown', this._levelModalEscHandler);
+        this._levelModalEscHandler = null;
+      }
+    };
+
+    if (!modal.classList.contains('closing')) {
+      modal.classList.add('closing');
+    }
+
+    if (content && content.addEventListener) {
+      content.addEventListener('animationend', handleClose, { once: true });
+    } else {
+      handleClose();
     }
   },
 
@@ -3060,12 +3167,35 @@ const App = (window.App = {
 
   closeNameModal() {
     const modal = document.getElementById('nameModal');
-    if (modal) modal.remove();
-    
-    // Remove ESC key listener
-    if (this._nameModalEscHandler) {
-      document.removeEventListener('keydown', this._nameModalEscHandler);
-      this._nameModalEscHandler = null;
+    if (!modal) {
+      if (this._nameModalEscHandler) {
+        document.removeEventListener('keydown', this._nameModalEscHandler);
+        this._nameModalEscHandler = null;
+      }
+      return;
+    }
+
+    const content = modal.querySelector('.modal-content') || modal;
+
+    const handleClose = () => {
+      if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
+
+      if (this._nameModalEscHandler) {
+        document.removeEventListener('keydown', this._nameModalEscHandler);
+        this._nameModalEscHandler = null;
+      }
+    };
+
+    if (!modal.classList.contains('closing')) {
+      modal.classList.add('closing');
+    }
+
+    if (content && content.addEventListener) {
+      content.addEventListener('animationend', handleClose, { once: true });
+    } else {
+      handleClose();
     }
   },
 
@@ -3480,9 +3610,6 @@ const App = (window.App = {
     const primaryBtn = document.getElementById('confirm-yes');
     const cancelBtn = document.getElementById('confirm-no');
 
-    // Remove fade-out class to trigger fade-in
-    overlay.classList.remove('fade-out');
-
     // Mark this overlay as "just opened" so the same Enter key event that
     // triggered it does NOT immediately auto-confirm. The flag is cleared
     // on the next tick.
@@ -3498,31 +3625,41 @@ const App = (window.App = {
       primaryBtn.focus();
     }
 
+    const runCloseAnimation = (onClosed) => {
+      if (!overlay || overlay.classList.contains('closing')) {
+        return;
+      }
+
+      overlay.classList.add('closing');
+
+      const content = overlay.querySelector('.modal-content') || overlay;
+
+      const handleClose = () => {
+        if (overlay && overlay.parentNode) {
+          overlay.parentNode.removeChild(overlay);
+        }
+
+        // Reactivate keyboard navigation now that the modal is gone.
+        KeyboardNav.activate();
+
+        if (typeof onClosed === 'function') {
+          onClosed();
+        }
+      };
+
+      if (content && content.addEventListener) {
+        content.addEventListener('animationend', handleClose, { once: true });
+      } else {
+        handleClose();
+      }
+    };
+
     primaryBtn.addEventListener('click', () => {
-      overlay.classList.add('fade-out');
-      overlay.addEventListener(
-        'animationend',
-        () => {
-          overlay.remove();
-          onConfirm();
-          // Reactivate keyboard navigation now that the modal is gone.
-          KeyboardNav.activate();
-        },
-        { once: true },
-      );
+      runCloseAnimation(onConfirm);
     });
 
     cancelBtn.addEventListener('click', () => {
-      overlay.classList.add('fade-out');
-      overlay.addEventListener(
-        'animationend',
-        () => {
-          overlay.remove();
-          // Resume keyboard navigation when the user cancels.
-          KeyboardNav.activate();
-        },
-        { once: true },
-      );
+      runCloseAnimation();
     });
   },
 
