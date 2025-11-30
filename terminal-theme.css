@@ -227,8 +227,10 @@ body::before {
   background-color: var(--terminal-bg);
   border: 1px solid var(--terminal-border);
   border-radius: 8px;
-  /* Let the "light source" be rendered by the body radial-gradient instead of a uniform box shadow */
-  box-shadow: none;
+  /* Soft, diffuse shadow to ground the terminal on top of the animated glow */
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.7),
+    0 0 1px rgba(0, 0, 0, 0.9);
   overflow: hidden;
   max-width: var(--max-width);
   margin: 0 auto;
