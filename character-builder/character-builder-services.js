@@ -1653,13 +1653,11 @@ Format your response as JSON array of strings, one for each option in order. Exa
       }
     }
 
-    // Backstory (shortened so prompts stay concise)
+    // Backstory (include full text so prompts match what the user sees)
     if (character.backstory) {
       const raw = String(character.backstory).replace(/\s+/g, ' ').trim();
       if (raw) {
-        const maxLen = 240;
-        const snippet = raw.length > maxLen ? `${raw.slice(0, maxLen)}...` : raw;
-        parts.push(`backstory: ${snippet}`);
+        parts.push(`backstory: ${raw}`);
       }
     }
 

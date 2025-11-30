@@ -1397,7 +1397,7 @@ function showNotification(message) {
     // Console notification with visual styling
     console.log('%c✓ ' + message, 'color: #0f0; font-weight: bold');
     
-    // Bottom-center toast notification shared across the app
+    // Toast notification shared across the app (anchored to the terminal frame)
     let toast = document.getElementById('toastNotification');
     if (!toast) {
         toast = document.createElement('div');
@@ -1405,7 +1405,8 @@ function showNotification(message) {
         toast.className = 'toast-notification';
         toast.setAttribute('role', 'status');
         toast.setAttribute('aria-live', 'polite');
-        document.body.appendChild(toast);
+        const container = document.querySelector('.terminal-frame') || document.body;
+        container.appendChild(toast);
     }
 
     toast.textContent = message;

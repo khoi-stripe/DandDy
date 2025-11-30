@@ -2889,7 +2889,7 @@ const App = (window.App = {
     Utils.scrollToBottom(true);
   },
 
-  // Bottom-center toast used for quick, non-blocking feedback (e.g. "Prompt copied").
+  // Toast used for quick, non-blocking feedback (e.g. "Prompt copied"), anchored to the terminal container.
   showToast(message) {
     let toast = document.getElementById('toastNotification');
     if (!toast) {
@@ -2898,7 +2898,8 @@ const App = (window.App = {
       toast.className = 'toast-notification';
       toast.setAttribute('role', 'status');
       toast.setAttribute('aria-live', 'polite');
-      document.body.appendChild(toast);
+      const container = document.querySelector('.terminal-container') || document.body;
+      container.appendChild(toast);
     }
 
     toast.textContent = message;
