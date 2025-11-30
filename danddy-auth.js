@@ -7,6 +7,7 @@
   const API_BASE_URL = cfg.API_BASE_URL || 'https://danddy-api.onrender.com/api';
   const TOKEN_KEY = cfg.TOKEN_STORAGE_KEY || 'dnd_auth_token';
   const USER_KEY = cfg.USER_STORAGE_KEY || 'dnd_user_info';
+  const DEBUG = !!cfg.DEBUG;
 
   const AuthService = (global.AuthService = global.AuthService || {});
 
@@ -52,6 +53,28 @@
       const url = `${API_BASE_URL}${path}`;
       const baseHeaders = headers || {};
 
+      // Shallow-clone & scrub sensitive fields for debug logging
+      const scrubBodyForLog = (payload) => {
+        if (!payload || typeof payload !== 'object') return payload;
+        const clone = { ...payload };
+        const sensitiveKeys = ['password', 'confirm_password', 'new_password', 'token'];
+        sensitiveKeys.forEach((key) => {
+          if (key in clone) {
+            const value = String(clone[key] ?? '');
+            clone[key] = value ? `*** (${value.length} chars)` : '***';
+          }
+        });
+        return clone;
+      };
+
+      if (DEBUG) {
+        console.log('[AuthService] HTTP request', {
+          url,
+          method,
+          body: scrubBodyForLog(body),
+        });
+      }
+
       try {
         const response = await fetch(url, {
           method,
@@ -63,8 +86,16 @@
 
         if (!response.ok) {
           let detail = `Request failed (${response.status})`;
+          let backendDetail = null;
           try {
             const errJson = await response.json();
+            if (DEBUG) {
+              console.warn('[AuthService] HTTP error response', {
+                url,
+                status: response.status,
+                payload: errJson,
+              });
+            }
             if (errJson && errJson.detail) {
               if (typeof errJson.detail === 'string') {
                 // Simple error string from backend
@@ -81,16 +112,33 @@
                 // Fallback to JSON string so we don't show [object Object]
                 detail = JSON.stringify(errJson.detail);
               }
+              backendDetail = errJson.detail;
             }
           } catch (_) {
             // ignore JSON parse errors
+          }
+          if (DEBUG) {
+            console.warn('[AuthService] HTTP request failed', {
+              url,
+              status: response.status,
+              detail,
+              backendDetail,
+            });
           }
           throw new Error(detail);
         }
 
         // 204 no content
         if (response.status === 204) return null;
-        return await response.json();
+        const json = await response.json();
+        if (DEBUG) {
+          console.log('[AuthService] HTTP response OK', {
+            url,
+            method,
+            status: response.status,
+          });
+        }
+        return json;
       } catch (error) {
         console.error('[AuthService] Request error:', error);
         throw error;
@@ -151,6 +199,14 @@
      * Returns { success, user, error }.
      */
     async login(email, password) {
+      const url = `${API_BASE_URL}/auth/token`;
+      if (DEBUG) {
+        console.log('[AuthService] Login attempt', {
+          url,
+          email,
+        });
+      }
+
       try {
         const formData = new FormData();
         // Field name must remain "username" for OAuth2PasswordRequestForm,
@@ -158,18 +214,36 @@
         formData.append('username', email);
         formData.append('password', password);
 
-        const response = await fetch(`${API_BASE_URL}/auth/token`, {
+        const response = await fetch(url, {
           method: 'POST',
           body: formData,
         });
 
+        if (DEBUG) {
+          console.log('[AuthService] Login response received', {
+            url,
+            status: response.status,
+            ok: response.ok,
+          });
+        }
+
         if (!response.ok) {
           let detail = 'Login failed';
+          let backendPayload = null;
           try {
             const errJson = await response.json();
+            backendPayload = errJson;
             if (errJson && errJson.detail) detail = errJson.detail;
           } catch (_) {
             // ignore
+          }
+          if (DEBUG) {
+            console.warn('[AuthService] Login HTTP error', {
+              url,
+              status: response.status,
+              detail,
+              backendPayload,
+            });
           }
           throw new Error(detail);
         }
@@ -177,6 +251,12 @@
         const data = await response.json();
         if (!data || !data.access_token) {
           throw new Error('Login succeeded but no token was returned.');
+        }
+
+        if (DEBUG) {
+          console.log('[AuthService] Login succeeded, token received', {
+            url,
+          });
         }
 
         this.setToken(data.access_token);
@@ -278,10 +358,19 @@
             this.clearToken();
             return null;
           }
+          if (DEBUG) {
+            console.warn('[AuthService] /auth/me non-401 error', {
+              status: response.status,
+            });
+          }
           throw new Error('Failed to fetch user profile');
         }
 
-        return await response.json();
+        const profile = await response.json();
+        if (DEBUG) {
+          console.log('[AuthService] /auth/me profile loaded', profile);
+        }
+        return profile;
       } catch (error) {
         console.error('[AuthService] Fetch profile error:', error);
         return null;

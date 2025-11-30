@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Portrait Loader (Cube Spinner)</title>
+  <link rel="stylesheet" href="../terminal-theme.css">
+  <style>
+    body {
+      background: #000;
+      color: var(--terminal-fg);
+      font-family: var(--font-mono);
+      padding: 32px;
+    }
+    .loader-frame {
+      border: 1px solid var(--terminal-border);
+      padding: 24px;
+      max-width: 640px;
+      background: var(--terminal-bg);
+    }
+    .loader-title {
+      color: var(--terminal-accent);
+      margin-bottom: 12px;
+      font-size: var(--font-size-base);
+      font-weight: bold;
+    }
+    .loader-note {
+      color: var(--terminal-dim);
+      font-size: var(--font-size-small);
+      margin-bottom: 16px;
+    }
+    #portraitLoaderDemo {
+      min-height: 8rem;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="loader-frame">
+    <div class="loader-title">[ PORTRAIT GENERATION LOADER DEMO ]</div>
+    <div class="loader-note">
+      This page renders the cube spinner + staged \"Generating AI portrait\" messages
+      without calling any backend or AI APIs.
+    </div>
+    <div id="portraitLoaderDemo"></div>
+  </div>
+
+  <script>
+    (function () {
+      const portraitEl = document.getElementById('portraitLoaderDemo');
+      if (!portraitEl) return;
+
+      let portraitElapsed = 0;
+
+      const cubeSpinner =
+        '<span class="spinner-cube-scene">' +
+        '<span class="spinner-cube-tilt">' +
+        '<span class="spinner-cube">' +
+        '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
+        '</span></span></span>';
+
+      const updatePortraitLoading = () => {
+        if (!portraitEl) return;
+
+        const phaseOne =
+          cubeSpinner +
+          ' GENERATING AI PORTRAIT...' +
+          '<br><br>  Contacting image service...';
+        const phaseTwo =
+          cubeSpinner +
+          ' GENERATING AI PORTRAIT...' +
+          '<br><br>  Image is being generated...' +
+          '<br>  (this takes 20-30 seconds)';
+        const phaseThree =
+          cubeSpinner +
+          ' GENERATING AI PORTRAIT...' +
+          '<br><br>  Converting to ASCII art...';
+        const phaseFour =
+          cubeSpinner +
+          ' ALMOST DONE...' +
+          '<br><br>  . . . ( ._.)';
+
+        if (portraitElapsed < 5) {
+          portraitEl.innerHTML = phaseOne;
+        } else if (portraitElapsed < 15) {
+          portraitEl.innerHTML = phaseTwo;
+        } else if (portraitElapsed < 25) {
+          portraitEl.innerHTML = phaseThree;
+        } else {
+          portraitEl.innerHTML = phaseFour;
+        }
+        portraitElapsed++;
+      };
+
+      // Match the manager behavior: bump font size while loading.
+      portraitEl.style.fontSize = 'var(--font-size-small)';
+      updatePortraitLoading();
+      setInterval(updatePortraitLoading, 1000);
+    })();
+  </script>
+</body>
+</html>
+
+

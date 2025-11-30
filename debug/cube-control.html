@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Spinning Cube Control Panel</title>
+    <link rel="stylesheet" href="../terminal-theme.css" />
+    <style>
+      :root {
+        /* Core cube variables */
+        --cube-size: 100px;
+        --cube-depth: calc(var(--cube-size) / 2);
+        --cube-border-width: 2px;
+        --cube-perspective: 200px;
+        --cube-speed: 4s;
+        --cube-tilt-x: 0deg;
+        --cube-tilt-y: 0deg;
+        --cube-bg-alpha: 0.05;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: stretch;
+        justify-content: center;
+        gap: 40px;
+        padding: 40px;
+      }
+
+      .panel {
+        background: rgba(0, 0, 0, 0.8);
+        border: 1px solid var(--terminal-border);
+        box-shadow:
+          0 24px 80px rgba(0, 0, 0, 0.7),
+          0 0 1px rgba(0, 0, 0, 0.9);
+        padding: 24px;
+      }
+
+      .controls-panel {
+        width: 320px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .controls-panel h1 {
+        font-size: 16px;
+        margin: 0 0 8px;
+        color: var(--terminal-accent);
+      }
+
+      .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .control-label {
+        font-size: 12px;
+        color: var(--terminal-dim);
+      }
+
+      .control-label span {
+        color: var(--terminal-accent);
+      }
+
+      .control-input {
+        width: 100%;
+      }
+
+      .cube-panel {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .cube-scene {
+        width: 260px;
+        height: 260px;
+        perspective: var(--cube-perspective);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .cube-tilt {
+        transform-style: preserve-3d;
+        transform: rotateX(var(--cube-tilt-x)) rotateY(var(--cube-tilt-y));
+      }
+
+      .cube {
+        width: var(--cube-size);
+        height: var(--cube-size);
+        position: relative;
+        transform-style: preserve-3d;
+        animation: spin var(--cube-speed) infinite linear;
+      }
+
+      .cube-face {
+        position: absolute;
+        width: var(--cube-size);
+        height: var(--cube-size);
+        border: var(--cube-border-width) solid var(--terminal-accent);
+        box-sizing: border-box;
+        background: rgba(0, 255, 255, var(--cube-bg-alpha));
+        box-shadow:
+          inset 0 0 30px rgba(0, 255, 255, 0.2),
+          0 0 20px rgba(0, 255, 255, 0.3);
+      }
+
+      .face-front {
+        transform: translateZ(var(--cube-depth));
+      }
+
+      .face-back {
+        transform: rotateY(180deg) translateZ(var(--cube-depth));
+      }
+
+      .face-right {
+        transform: rotateY(90deg) translateZ(var(--cube-depth));
+      }
+
+      .face-left {
+        transform: rotateY(-90deg) translateZ(var(--cube-depth));
+      }
+
+      .face-top {
+        transform: rotateX(90deg) translateZ(var(--cube-depth));
+      }
+
+      .face-bottom {
+        transform: rotateX(-90deg) translateZ(var(--cube-depth));
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotateY(0deg);
+        }
+        to {
+          transform: rotateY(360deg);
+        }
+      }
+
+      @media (max-width: 900px) {
+        body {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .cube-panel {
+          order: -1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="panel controls-panel">
+      <h1>Cube Controls</h1>
+
+      <div class="control-group">
+        <label class="control-label" for="size">
+          Size: <span id="size-value">100px</span>
+        </label>
+        <input
+          id="size"
+          class="control-input"
+          type="range"
+          min="10"
+          max="200"
+          value="100"
+        />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="perspective">
+          Perspective: <span id="perspective-value">200px</span>
+        </label>
+        <input
+          id="perspective"
+          class="control-input"
+          type="range"
+          min="20"
+          max="400"
+          value="200"
+        />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="border">
+          Border width: <span id="border-value">2px</span>
+        </label>
+        <input
+          id="border"
+          class="control-input"
+          type="range"
+          min="0.5"
+          max="4"
+          step="0.1"
+          value="2"
+        />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="speed">
+          Spin speed: <span id="speed-value">4s</span>
+        </label>
+        <input
+          id="speed"
+          class="control-input"
+          type="range"
+          min="1"
+          max="12"
+          step="0.5"
+          value="4"
+        />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="tilt-x">
+          Tilt X: <span id="tilt-x-value">0°</span>
+        </label>
+        <input
+          id="tilt-x"
+          class="control-input"
+          type="range"
+          min="-60"
+          max="60"
+          value="0"
+        />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="tilt-y">
+          Tilt Y: <span id="tilt-y-value">0°</span>
+        </label>
+        <input
+          id="tilt-y"
+          class="control-input"
+          type="range"
+          min="-60"
+          max="60"
+          value="0"
+        />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="bg-alpha">
+          Fill opacity: <span id="bg-alpha-value">0.05</span>
+        </label>
+        <input
+          id="bg-alpha"
+          class="control-input"
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          value="0.05"
+        />
+      </div>
+
+      <button id="reset-btn" class="terminal-btn-small">
+        Reset to defaults
+      </button>
+    </section>
+
+    <section class="panel cube-panel">
+      <div class="cube-scene">
+        <div class="cube-tilt">
+          <div class="cube">
+            <div class="cube-face face-front"></div>
+            <div class="cube-face face-back"></div>
+            <div class="cube-face face-right"></div>
+            <div class="cube-face face-left"></div>
+            <div class="cube-face face-top"></div>
+            <div class="cube-face face-bottom"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <script>
+      (function () {
+        const root = document.documentElement;
+
+        const controls = {
+          size: document.getElementById("size"),
+          perspective: document.getElementById("perspective"),
+          border: document.getElementById("border"),
+          speed: document.getElementById("speed"),
+          tiltX: document.getElementById("tilt-x"),
+          tiltY: document.getElementById("tilt-y"),
+          bgAlpha: document.getElementById("bg-alpha"),
+        };
+
+        const labels = {
+          size: document.getElementById("size-value"),
+          perspective: document.getElementById("perspective-value"),
+          border: document.getElementById("border-value"),
+          speed: document.getElementById("speed-value"),
+          tiltX: document.getElementById("tilt-x-value"),
+          tiltY: document.getElementById("tilt-y-value"),
+          bgAlpha: document.getElementById("bg-alpha-value"),
+        };
+
+        const defaults = {
+          size: 100,
+          perspective: 200,
+          border: 2,
+          speed: 4,
+          tiltX: 0,
+          tiltY: 0,
+          bgAlpha: 0.05,
+        };
+
+        function applySize(value) {
+          labels.size.textContent = value + "px";
+          root.style.setProperty("--cube-size", value + "px");
+          root.style.setProperty("--cube-depth", value / 2 + "px");
+        }
+
+        function applyPerspective(value) {
+          labels.perspective.textContent = value + "px";
+          root.style.setProperty("--cube-perspective", value + "px");
+        }
+
+        function applyBorder(value) {
+          labels.border.textContent = value + "px";
+          root.style.setProperty("--cube-border-width", value + "px");
+        }
+
+        function applySpeed(value) {
+          labels.speed.textContent = value + "s";
+          root.style.setProperty("--cube-speed", value + "s");
+        }
+
+        function applyTiltX(value) {
+          labels.tiltX.textContent = value + "°";
+          root.style.setProperty("--cube-tilt-x", value + "deg");
+        }
+
+        function applyTiltY(value) {
+          labels.tiltY.textContent = value + "°";
+          root.style.setProperty("--cube-tilt-y", value + "deg");
+        }
+
+        function applyBgAlpha(value) {
+          labels.bgAlpha.textContent = value;
+          root.style.setProperty("--cube-bg-alpha", value);
+        }
+
+        function bindControl(id, applyFn) {
+          const input = controls[id];
+          input.addEventListener("input", () => {
+            const value = parseFloat(input.value);
+            applyFn(value);
+          });
+        }
+
+        // Initial apply
+        applySize(defaults.size);
+        applyPerspective(defaults.perspective);
+        applyBorder(defaults.border);
+        applySpeed(defaults.speed);
+        applyTiltX(defaults.tiltX);
+        applyTiltY(defaults.tiltY);
+        applyBgAlpha(defaults.bgAlpha);
+
+        // Bind controls
+        bindControl("size", applySize);
+        bindControl("perspective", applyPerspective);
+        bindControl("border", applyBorder);
+        bindControl("speed", applySpeed);
+        bindControl("tiltX", applyTiltX);
+        bindControl("tiltY", applyTiltY);
+        bindControl("bgAlpha", applyBgAlpha);
+
+        // Reset button
+        document.getElementById("reset-btn").addEventListener("click", () => {
+          Object.keys(defaults).forEach((key) => {
+            controls[key].value = defaults[key];
+          });
+          applySize(defaults.size);
+          applyPerspective(defaults.perspective);
+          applyBorder(defaults.border);
+          applySpeed(defaults.speed);
+          applyTiltX(defaults.tiltX);
+          applyTiltY(defaults.tiltY);
+          applyBgAlpha(defaults.bgAlpha);
+        });
+      })();
+    </script>
+  </body>
+</html>
+
+

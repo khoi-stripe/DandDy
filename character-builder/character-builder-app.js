@@ -178,17 +178,34 @@ const App = (window.App = {
     }
     
     let elapsed = 0;
-    element.innerHTML = '[<span class="spinner">↻</span>] rolling the dice...';
+    // Cube markup used inside a narrator-spinner-shell so that whitespace
+    // behavior is controlled and the cube + text stay on a single line.
+    const cubeMarkup =
+      '<span class="spinner-cube-scene">' +
+      '<span class="spinner-cube-tilt">' +
+      '<span class="spinner-cube">' +
+      '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
+      '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
+      '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
+      '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
+      '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
+      '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
+      '</span></span></span>';
+
+    const renderLine = (text) =>
+      `<span class="narrator-spinner-shell">${cubeMarkup} ${text}</span>`;
+
+    element.innerHTML = renderLine('rolling the dice...');
     
     this._thinkingInterval = setInterval(() => {
       elapsed++;
       
       if (elapsed < 3) {
-        element.innerHTML = '[<span class="spinner">↻</span>] rolling the dice...';
+        element.innerHTML = renderLine('rolling the dice...');
       } else if (elapsed < 6) {
-        element.innerHTML = '[<span class="spinner">↻</span>] still rolling...';
+        element.innerHTML = renderLine('still rolling...');
       } else {
-        element.innerHTML = '[<span class="spinner">↻</span>] server waking up... hang tight!';
+        element.innerHTML = renderLine('server waking up... hang tight!');
       }
     }, 1000); // Update every second
   },
@@ -2494,34 +2511,29 @@ const App = (window.App = {
     const updatePortraitLoading = () => {
       if (!portraitEl) return;
       
+      // Use narrator-style cube (no inline overrides) so it matches the narrator spinner exactly
+      const cubeMarkup = 
+        '<span class="spinner-cube-scene">' +
+        '<span class="spinner-cube-tilt">' +
+        '<span class="spinner-cube">' +
+        '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
+        '</span></span></span>';
+      
+      const renderLine = (text) => `<span class="narrator-spinner-shell">${cubeMarkup} ${text}</span>`;
+      
       if (portraitElapsed < 5) {
-        portraitEl.innerHTML = `
-[<span class="spinner">↻</span>] GENERATING PORTRAIT...
-
-
-      . . . ( ._.)
-      `;
+        portraitEl.innerHTML = renderLine('Generating portrait...');
       } else if (portraitElapsed < 15) {
-        portraitEl.innerHTML = `
-[<span class="spinner">↻</span>] CREATING IMAGE...
-
-
-      . . . ( ._.)
-      `;
+        portraitEl.innerHTML = renderLine('Creating image...');
       } else if (portraitElapsed < 30) {
-        portraitEl.innerHTML = `
-[<span class="spinner">↻</span>] CONVERTING TO ASCII...
-
-
-      . . . ( ._.)
-      `;
+        portraitEl.innerHTML = renderLine('Converting to ASCII...');
       } else {
-        portraitEl.innerHTML = `
-[<span class="spinner">↻</span>] ALMOST DONE...
-      
-      
-      . . . ( ._.)
-      `;
+        portraitEl.innerHTML = renderLine('Almost done...');
       }
       portraitElapsed++;
     };
@@ -2538,7 +2550,9 @@ const App = (window.App = {
       }
 
       // Enlarge the font so status messages are readable, matching the
-      // Character Manager's loading treatment.
+      // Character Manager's loading treatment, and opt the portrait area
+      // into the looser loading container behavior.
+      portraitEl.classList.add('ascii-portrait--loading');
       portraitEl.style.fontSize = 'var(--font-size-small)';
       updatePortraitLoading();
       portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
@@ -2591,6 +2605,13 @@ const App = (window.App = {
         // Restore portrait font size back to ASCII default; the sheet will
         // re-render the portrait element for the newly generated art.
         portraitEl.style.fontSize = '';
+        portraitEl.classList.remove('ascii-portrait--loading');
+      }
+      if (portraitEl) {
+        // Restore portrait font size back to ASCII default; the sheet will
+        // re-render the portrait element for the newly generated art.
+        portraitEl.style.fontSize = '';
+        portraitEl.classList.remove('ascii-portrait--loading');
       }
 
       // Update the last portrait art to trigger animation
@@ -2898,19 +2919,70 @@ const App = (window.App = {
       toast.className = 'toast-notification';
       toast.setAttribute('role', 'status');
       toast.setAttribute('aria-live', 'polite');
+
+      // Inner structure: message + dismiss "X" pinned to the right in its own wrapper
+      toast.innerHTML = `
+        <span class="toast-message"></span>
+        <div class="toast-dismiss-wrapper">
+          <button type="button" class="toast-dismiss" aria-label="Dismiss notification">&times;</button>
+        </div>
+      `;
+
       const container = document.querySelector('.terminal-container') || document.body;
       container.appendChild(toast);
+
+      const dismissBtn = toast.querySelector('.toast-dismiss');
+      if (dismissBtn) {
+        dismissBtn.addEventListener('click', () => {
+          toast.classList.remove('show');
+          // Clear any pending show/hide timers
+          if (App._toastShowTimeout) {
+            clearTimeout(App._toastShowTimeout);
+            App._toastShowTimeout = null;
+          }
+          if (App._toastTimeout) {
+            clearTimeout(App._toastTimeout);
+            App._toastTimeout = null;
+          }
+        });
+      }
     }
 
-    toast.textContent = message;
-    toast.classList.add('show');
-
-    if (this._toastTimeout) {
-      clearTimeout(this._toastTimeout);
+    const messageEl = toast.querySelector('.toast-message');
+    if (messageEl) {
+      messageEl.textContent = message;
+    } else {
+      // Fallback in case markup is missing for any reason
+      toast.textContent = message;
     }
-    this._toastTimeout = setTimeout(() => {
-      toast.classList.remove('show');
-    }, 2200);
+
+    // Reset any in-flight timers so we can replay the entrance animation
+    if (App._toastShowTimeout) {
+      clearTimeout(App._toastShowTimeout);
+      App._toastShowTimeout = null;
+    }
+    if (App._toastTimeout) {
+      clearTimeout(App._toastTimeout);
+      App._toastTimeout = null;
+    }
+
+    // Ensure we start from the hidden state so the transition always plays,
+    // even immediately after a page reload.
+    toast.classList.remove('show');
+    // Force a reflow so the browser acknowledges the hidden state
+    // before we add the "show" class.
+    void toast.offsetWidth; // eslint-disable-line no-unused-expressions
+
+    App._toastShowTimeout = setTimeout(() => {
+      toast.classList.add('show');
+      App._toastShowTimeout = null;
+
+      // Keep toast visible for 5 seconds before auto-dismissing
+      App._toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+        App._toastTimeout = null;
+      }, 5000);
+    }, 80);
   },
 
   // ===== LEVEL CHANGE =====
@@ -3474,11 +3546,24 @@ const App = (window.App = {
         // Show a simple loading state in the portrait panel while the AI image
         // is being generated and converted to ASCII. Match Character Manager
         // by enlarging the font so the status message is readable and using
-        // the animated spinner glyph.
+        // the animated cube spinner.
         if (portraitEl) {
+          const cubeMarkup = 
+            '<span class="spinner-cube-scene">' +
+            '<span class="spinner-cube-tilt">' +
+            '<span class="spinner-cube">' +
+            '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
+            '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
+            '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
+            '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
+            '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
+            '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
+            '</span></span></span>';
+          const renderLine = (text) => `<span class="narrator-spinner-shell">${cubeMarkup} ${text}</span>`;
+          
+          portraitEl.classList.add('ascii-portrait--loading');
           portraitEl.style.fontSize = 'var(--font-size-small)';
-          portraitEl.innerHTML =
-            '[<span class="spinner">↻</span>] Generating AI portrait...<br><br>This can take 20–30 seconds.';
+          portraitEl.innerHTML = renderLine('Generating AI portrait... This can take 20–30 seconds.');
         }
 
         const result = await AsciiArtService.generateCustomAIPortrait(currentChar);
@@ -3521,6 +3606,7 @@ const App = (window.App = {
       const portraitEl = document.getElementById('character-portrait');
       if (portraitEl) {
         portraitEl.style.fontSize = '';
+        portraitEl.classList.remove('ascii-portrait--loading');
       }
     }
 
@@ -3795,6 +3881,12 @@ const App = (window.App = {
         // the AI image is being created.
         const portraitArt = character.customPortraitAscii || null;
 
+        // Decide whether to animate: only when we have new portrait art that
+        // differs from what was last rendered.
+        const shouldAnimate =
+          !!portraitArt &&
+          (!this._lastPortraitArt || this._lastPortraitArt !== portraitArt);
+
         this._lastPortraitArt = portraitArt || null;
 
         // Only show the "★ Custom AI Portrait" button in quick-create once
@@ -3822,13 +3914,29 @@ const App = (window.App = {
         }
 
         if (portraitEl && portraitArt) {
-          portraitEl.textContent = portraitArt;
-          // Match manager behavior: center the ASCII portrait horizontally
-          if (
-            window.CharacterSheet &&
-            typeof CharacterSheet._centerPortraitScrollSafely === 'function'
-          ) {
-            CharacterSheet._centerPortraitScrollSafely(portraitEl);
+          if (shouldAnimate) {
+            // Animate portrait character-by-character, mirroring the guided
+            // builder behavior so new quick-create portraits "type in".
+            this._portraitAnimating = true;
+            this.typePortrait(portraitEl, portraitArt).then(async () => {
+              this._portraitAnimating = false;
+              // Process any pending updates that came in during animation
+              if (this._pendingCharacterUpdate) {
+                const pending = this._pendingCharacterUpdate;
+                this._pendingCharacterUpdate = null;
+                await this.updateCharacterPanel(pending);
+              }
+            });
+          } else {
+            // Just set it immediately if it hasn't changed
+            portraitEl.textContent = portraitArt;
+            // Match manager behavior: center the ASCII portrait horizontally
+            if (
+              window.CharacterSheet &&
+              typeof CharacterSheet._centerPortraitScrollSafely === 'function'
+            ) {
+              CharacterSheet._centerPortraitScrollSafely(portraitEl);
+            }
           }
         }
 

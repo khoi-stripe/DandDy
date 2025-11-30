@@ -633,6 +633,8 @@
 /* (All modal theming is now handled by terminal-theme.css so it can be shared across apps.) */
 
 /* ===== ANIMATIONS ===== */
+/* DEPRECATED: Old text-based spinner (↻ glyph). Replaced by .spinner-cube-* in terminal-theme.css.
+   Keeping these rules for backward compatibility with any legacy code that hasn't been migrated yet. */
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -643,8 +645,6 @@
   display: inline-block;
   animation: spin 1s linear infinite;
   font-size: 18px;
-  /* Spinners inherit the current text color so they automatically match
-     the active theme (green overlays, teal sheets/cards, yellow modals, etc.). */
   color: currentColor;
   text-shadow: none;
   vertical-align: middle;
@@ -679,6 +679,22 @@
   font-family: var(--font-mono);
   font-size: calc(var(--font-size-base) * 1.1);
   text-shadow: 0 0 10px var(--terminal-accent);
+}
+
+/* Centered teal cube loaders for sheet + grid */
+.panel-loading-row .loading-text {
+  /* Match narrator spinner behavior: cube + text on one axis-aligned row */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+
+  /* Use sheet teal tokens instead of terminal green */
+  color: var(--sheet-accent);
+  text-shadow: 0 0 10px var(--sheet-accent);
+
+  /* Drive spinner-cube color via the shared UI foreground token */
+  --ui-fg-color: var(--sheet-accent);
 }
 
 /* ===== RESPONSIVE ===== */

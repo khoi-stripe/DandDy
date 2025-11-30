@@ -814,25 +814,36 @@ async function confirmGeneratePortrait() {
     const updatePortraitLoading = () => {
         if (!portraitEl) return;
         
-        const phaseOne = `[<span class="spinner">↻</span>] GENERATING AI PORTRAIT...<br><br>  Contacting image service...`;
-        const phaseTwo = `[<span class="spinner">↻</span>] GENERATING AI PORTRAIT...<br><br>  Image is being generated...<br>  (this takes 20-30 seconds)`;
-        const phaseThree = `[<span class="spinner">↻</span>] GENERATING AI PORTRAIT...<br><br>  Converting to ASCII art...`;
-        const phaseFour = `[<span class="spinner">↻</span>] ALMOST DONE...<br><br>  . . . ( ._.)`;
+        // Use narrator-style cube (no inline overrides) so it matches the narrator spinner exactly
+        const cubeMarkup = 
+            '<span class="spinner-cube-scene">' +
+            '<span class="spinner-cube-tilt">' +
+            '<span class="spinner-cube">' +
+            '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
+            '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
+            '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
+            '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
+            '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
+            '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
+            '</span></span></span>';
+        
+        const renderLine = (text) => `<span class="narrator-spinner-shell">${cubeMarkup} ${text}</span>`;
         
         if (portraitElapsed < 5) {
-            portraitEl.innerHTML = phaseOne;
+            portraitEl.innerHTML = renderLine('Contacting image service...');
         } else if (portraitElapsed < 15) {
-            portraitEl.innerHTML = phaseTwo;
+            portraitEl.innerHTML = renderLine('Image is being generated... (this takes 20-30 seconds)');
         } else if (portraitElapsed < 25) {
-            portraitEl.innerHTML = phaseThree;
+            portraitEl.innerHTML = renderLine('Converting to ASCII art...');
         } else {
-            portraitEl.innerHTML = phaseFour;
+            portraitEl.innerHTML = renderLine('Almost done...');
         }
         portraitElapsed++;
     };
     
     if (portraitEl) {
         // Enlarge font to match button/body copy while we're showing the loading message.
+        portraitEl.classList.add('ascii-portrait--loading');
         portraitEl.style.fontSize = 'var(--font-size-small)';
         updatePortraitLoading();
         portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
@@ -871,6 +882,7 @@ async function confirmGeneratePortrait() {
         // re-render the portrait element for the newly generated art.
         if (portraitEl) {
             portraitEl.style.fontSize = '';
+            portraitEl.classList.remove('ascii-portrait--loading');
         }
 
         console.log('%c🎨 PORTRAIT (Success) ✨', 'color: #0f0; font-weight: bold');
@@ -974,6 +986,7 @@ async function confirmGeneratePortrait() {
         // Restore portrait font size on error as well
         if (portraitEl) {
             portraitEl.style.fontSize = '';
+            portraitEl.classList.remove('ascii-portrait--loading');
         }
         
         // Restore previous portrait first
@@ -1405,19 +1418,70 @@ function showNotification(message) {
         toast.className = 'toast-notification';
         toast.setAttribute('role', 'status');
         toast.setAttribute('aria-live', 'polite');
+
+        // Inner structure: message + dismiss "X" pinned to the right in its own wrapper
+        toast.innerHTML = `
+            <span class="toast-message"></span>
+            <div class="toast-dismiss-wrapper">
+                <button type="button" class="toast-dismiss" aria-label="Dismiss notification">&times;</button>
+            </div>
+        `;
+
         const container = document.querySelector('.terminal-frame') || document.body;
         container.appendChild(toast);
+
+        const dismissBtn = toast.querySelector('.toast-dismiss');
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', () => {
+                toast.classList.remove('show');
+                // Clear any pending show/hide timers
+                if (window._toastShowTimeout) {
+                    clearTimeout(window._toastShowTimeout);
+                    window._toastShowTimeout = null;
+                }
+                if (window._toastTimeout) {
+                    clearTimeout(window._toastTimeout);
+                    window._toastTimeout = null;
+                }
+            });
+        }
     }
 
-    toast.textContent = message;
-    toast.classList.add('show');
+    const messageEl = toast.querySelector('.toast-message');
+    if (messageEl) {
+        messageEl.textContent = message;
+    } else {
+        // Fallback in case markup is missing for any reason
+        toast.textContent = message;
+    }
 
+    // Reset any in-flight timers so we can replay the entrance animation
+    if (window._toastShowTimeout) {
+        clearTimeout(window._toastShowTimeout);
+        window._toastShowTimeout = null;
+    }
     if (window._toastTimeout) {
         clearTimeout(window._toastTimeout);
+        window._toastTimeout = null;
     }
-    window._toastTimeout = setTimeout(() => {
-        toast.classList.remove('show');
-    }, 2200);
+
+    // Ensure we start from the hidden state so the transition always plays,
+    // even immediately after a page reload.
+    toast.classList.remove('show');
+    // Force a reflow so the browser acknowledges the hidden state
+    // before we add the "show" class.
+    void toast.offsetWidth; // eslint-disable-line no-unused-expressions
+
+    window._toastShowTimeout = setTimeout(() => {
+        toast.classList.add('show');
+        window._toastShowTimeout = null;
+
+        // Keep toast visible for 5 seconds before auto-dismissing
+        window._toastTimeout = setTimeout(() => {
+            toast.classList.remove('show');
+            window._toastTimeout = null;
+        }, 5000);
+    }, 80);
 }
 
 // Focus the first meaningful field inside a modal (inputs/textareas/selects first, then primary button).
@@ -1769,12 +1833,24 @@ function setAuthLoading(isLoading, message) {
         }
     });
 
+    const cubeMarkup = 
+        '<span class="spinner-cube-scene">' +
+        '<span class="spinner-cube-tilt">' +
+        '<span class="spinner-cube">' +
+        '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
+        '</span></span></span>';
+    
     if (loginBtn) {
         if (isLoading) {
             if (!loginBtn.dataset.originalLabel) {
                 loginBtn.dataset.originalLabel = loginBtn.innerHTML;
             }
-            loginBtn.innerHTML = `<span class="spinner" aria-hidden="true">↻</span> ${loadingLabel}`;
+            loginBtn.innerHTML = `${cubeMarkup} ${loadingLabel}`;
         } else {
             if (loginBtn.dataset.originalLabel) {
                 loginBtn.innerHTML = loginBtn.dataset.originalLabel;
@@ -1789,7 +1865,9 @@ function setAuthLoading(isLoading, message) {
             if (!registerBtn.dataset.originalLabel) {
                 registerBtn.dataset.originalLabel = registerBtn.innerHTML;
             }
-            registerBtn.innerHTML = `<span class="spinner" aria-hidden="true">↻</span> ${loadingLabel}`;
+            // Use the same cube markup as the login button; `cubeSpinner`
+            // is not defined in this module and was causing a ReferenceError.
+            registerBtn.innerHTML = `${cubeMarkup} ${loadingLabel}`;
         } else {
             if (registerBtn.dataset.originalLabel) {
                 registerBtn.innerHTML = registerBtn.dataset.originalLabel;

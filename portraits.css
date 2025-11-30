@@ -37,10 +37,30 @@
   max-width: 100%;
 }
 
-/* When we show loading states like:
- *   [<span class="spinner">↻</span>] GENERATING PORTRAIT...
- * inside the portrait frame, use the sheet's teal accent and remove the
- * extra right margin so the bracket hugs the spinner glyph. */
+/* Loading state for portrait area (used while AI portrait is being generated).
+   Loosens the constraints so status text + cube spinner behave like the demo: */
+.ascii-portrait.ascii-portrait--loading {
+  /* Allow loader text to wrap across lines */
+  white-space: pre-wrap;
+  /* Avoid overly centered, cramped feel while loading */
+  text-align: left;
+  /* Don't clip spinner/text during loading */
+  overflow-x: visible;
+  overflow-y: visible;
+  /* Give the loader some guaranteed vertical space */
+  min-height: 8rem;
+}
+
+/* Wrapper for spinner + text (used in portrait loaders and narrator text).
+   Keeps cube and text on one line, vertically centered. */
+.narrator-spinner-shell {
+  white-space: normal;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* DEPRECATED: Old text-based spinner (↻ glyph). Replaced by .spinner-cube-* in terminal-theme.css.
+ * Keeping this rule for backward compatibility with any legacy code that hasn't been migrated yet. */
 .ascii-portrait .spinner {
   color: var(--panel-teal);
   margin-right: 0;

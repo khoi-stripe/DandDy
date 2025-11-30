@@ -86,6 +86,20 @@ const AuthUI = (window.AuthUI = {
         return;
       }
 
+      // Lightweight UI-side debug logging (never logs the raw password)
+      try {
+        const cfg = window.DanddyConfig || {};
+        const debug = !!cfg.DEBUG;
+        if (debug) {
+          console.log('[AuthUI] Login submit clicked', {
+            email,
+            apiBaseUrl: cfg.API_BASE_URL,
+          });
+        }
+      } catch (_) {
+        // Ignore logging failures – never block login
+      }
+
       this.showLoading(submitButton, true, 'AUTHENTICATING...');
       errorDiv.classList.add('is-hidden');
 
@@ -324,7 +338,18 @@ const AuthUI = (window.AuthUI = {
       }
       button.disabled = true;
       const loadingLabel = label || 'WORKING...';
-      button.innerHTML = `<span class="spinner" aria-hidden="true">↻</span> ${loadingLabel}`;
+      const cubeMarkup = 
+        '<span class="spinner-cube-scene">' +
+        '<span class="spinner-cube-tilt">' +
+        '<span class="spinner-cube">' +
+        '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
+        '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
+        '</span></span></span>';
+      button.innerHTML = `${cubeMarkup} ${loadingLabel}`;
     } else {
       button.disabled = false;
       if (button.dataset.originalLabel) {

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Compare Cube Contexts</title>
+    <link rel="stylesheet" href="../terminal-theme.css">
+    <link rel="stylesheet" href="../character-builder/character-builder.css">
+    <style>
+        body {
+            padding: 40px;
+            font-size: 16px;
+        }
+        .test-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid var(--terminal-border);
+        }
+        .test-label {
+            color: var(--terminal-accent);
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        /* Mimic narrator context */
+        .narrator-context {
+            color: var(--terminal-fg);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        /* Mimic portrait context */
+        .portrait-context {
+            font-size: var(--font-size-small);
+        }
+    </style>
+</head>
+<body>
+    <h1 style="color: var(--terminal-accent);">Cube Comparison</h1>
+
+    <div class="test-section">
+        <div class="test-label">1. Base context (16px):</div>
+        <div>
+            <span class="spinner-cube-scene">
+                <span class="spinner-cube-tilt">
+                    <span class="spinner-cube">
+                        <span class="spinner-cube-face spinner-cube-face-front"></span>
+                        <span class="spinner-cube-face spinner-cube-face-back"></span>
+                        <span class="spinner-cube-face spinner-cube-face-right"></span>
+                        <span class="spinner-cube-face spinner-cube-face-left"></span>
+                        <span class="spinner-cube-face spinner-cube-face-top"></span>
+                        <span class="spinner-cube-face spinner-cube-face-bottom"></span>
+                    </span>
+                </span>
+            </span>rolling the dice...
+        </div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-label">2. Narrator context (.narrator-text class):</div>
+        <div class="narrator-text">
+            <span class="narrator-spinner-shell">
+                <span class="spinner-cube-scene">
+                    <span class="spinner-cube-tilt">
+                        <span class="spinner-cube">
+                            <span class="spinner-cube-face spinner-cube-face-front"></span>
+                            <span class="spinner-cube-face spinner-cube-face-back"></span>
+                            <span class="spinner-cube-face spinner-cube-face-right"></span>
+                            <span class="spinner-cube-face spinner-cube-face-left"></span>
+                            <span class="spinner-cube-face spinner-cube-face-top"></span>
+                            <span class="spinner-cube-face spinner-cube-face-bottom"></span>
+                        </span>
+                    </span>
+                </span>
+                <span>rolling the dice...</span>
+            </span>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-label">3. Portrait context (14px font-size-small):</div>
+        <div class="portrait-context">
+            <span class="spinner-cube-scene">
+                <span class="spinner-cube-tilt">
+                    <span class="spinner-cube">
+                        <span class="spinner-cube-face spinner-cube-face-front"></span>
+                        <span class="spinner-cube-face spinner-cube-face-back"></span>
+                        <span class="spinner-cube-face spinner-cube-face-right"></span>
+                        <span class="spinner-cube-face spinner-cube-face-left"></span>
+                        <span class="spinner-cube-face spinner-cube-face-top"></span>
+                        <span class="spinner-cube-face spinner-cube-face-bottom"></span>
+                    </span>
+                </span>
+            </span>GENERATING AI PORTRAIT...
+        </div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-label">4. With line-height: 1 (tight):</div>
+        <div style="line-height: 1;">
+            <span class="spinner-cube-scene">
+                <span class="spinner-cube-tilt">
+                    <span class="spinner-cube">
+                        <span class="spinner-cube-face spinner-cube-face-front"></span>
+                        <span class="spinner-cube-face spinner-cube-face-back"></span>
+                        <span class="spinner-cube-face spinner-cube-face-right"></span>
+                        <span class="spinner-cube-face spinner-cube-face-left"></span>
+                        <span class="spinner-cube-face spinner-cube-face-top"></span>
+                        <span class="spinner-cube-face spinner-cube-face-bottom"></span>
+                    </span>
+                </span>
+            </span>rolling the dice...
+        </div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-label">5. With line-height: 1.6 (default):</div>
+        <div style="line-height: 1.6;">
+            <span class="spinner-cube-scene">
+                <span class="spinner-cube-tilt">
+                    <span class="spinner-cube">
+                        <span class="spinner-cube-face spinner-cube-face-front"></span>
+                        <span class="spinner-cube-face spinner-cube-face-back"></span>
+                        <span class="spinner-cube-face spinner-cube-face-right"></span>
+                        <span class="spinner-cube-face spinner-cube-face-left"></span>
+                        <span class="spinner-cube-face spinner-cube-face-top"></span>
+                        <span class="spinner-cube-face spinner-cube-face-bottom"></span>
+                    </span>
+                </span>
+            </span>rolling the dice...
+        </div>
+    </div>
+
+    <div class="test-section">
+        <div class="test-label">6. Perspective override (20px):</div>
+        <div>
+            <span class="spinner-cube-scene" style="--spinner-cube-perspective: 20px;">
+                <span class="spinner-cube-tilt">
+                    <span class="spinner-cube">
+                        <span class="spinner-cube-face spinner-cube-face-front"></span>
+                        <span class="spinner-cube-face spinner-cube-face-back"></span>
+                        <span class="spinner-cube-face spinner-cube-face-right"></span>
+                        <span class="spinner-cube-face spinner-cube-face-left"></span>
+                        <span class="spinner-cube-face spinner-cube-face-top"></span>
+                        <span class="spinner-cube-face spinner-cube-face-bottom"></span>
+                    </span>
+                </span>
+            </span>rolling the dice...
+        </div>
+    </div>
+
+</body>
+</html>
+
