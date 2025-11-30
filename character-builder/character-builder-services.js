@@ -1520,7 +1520,10 @@ Format your response as JSON array of strings, one for each option in order. Exa
 
     try {
       console.log('%c🎨 DALL-E: Calling backend AI...', 'color: #0ff; font-weight: bold');
-      console.log('  Prompt:', prompt.substring(0, 100) + '...');
+      // Log only a preview of the prompt so the console isn't flooded,
+      // but make it clear that the full prompt (without truncation) is
+      // sent to the backend.
+      console.log('  Prompt (preview):', prompt.substring(0, 100) + (prompt.length > 100 ? '…' : ''));
       console.log('  Note: Image generation takes 20-30s (longer than text AI)...');
       
       const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`, {

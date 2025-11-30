@@ -342,7 +342,8 @@ body::before {
   position: absolute;
   bottom: 16px;
   left: 16px;
-  transform: translateX(-16px) translateY(0);
+  /* Start fully off-screen to the left so the entrance animation is obvious */
+  transform: translateX(-140%) translateY(0);
 
   padding: 8px 16px;
   /* Use a solid black background so the toast reads clearly against the UI. */
@@ -361,7 +362,7 @@ body::before {
   opacity: 0;
   pointer-events: none;
 
-  /* Slide in from the top-left edge with a soft easing curve */
+  /* Slide in horizontally from the left edge with a soft easing curve */
   transition:
     opacity 0.22s cubic-bezier(0.2, 0.8, 0.2, 1.05),
     transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1.05);
@@ -578,6 +579,12 @@ body::before {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+/* Optional variant for headers that should not show the dividing line
+   below the title (used by certain sections in the builder sheet). */
+.sheet-header--no-divider {
+  border-bottom: none;
 }
 
 .sheet-header-title {

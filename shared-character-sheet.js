@@ -63,7 +63,7 @@ const CharacterSheet = (window.CharacterSheet = {
       
       ${this._renderBasicInfo(parsed, context, {})}
       
-      ${parsed.hasCombatStats ? this._renderCombatStats(parsed) : ''}
+      ${parsed.hasCombatStats ? this._renderCombatStats(parsed, context) : ''}
       
       ${parsed.hasAbilities ? this._renderAbilities(parsed, context) : ''}
       
@@ -367,10 +367,15 @@ const CharacterSheet = (window.CharacterSheet = {
     `;
   },
 
-  _renderCombatStats(parsed) {
+  _renderCombatStats(parsed, context) {
+    const headerClass =
+      context === 'builder'
+        ? 'sheet-header sheet-header--no-divider'
+        : 'sheet-header';
+
     return `
       <div class="sheet-section">
-        <div class="sheet-header">
+        <div class="${headerClass}">
           <div class="sheet-header-title">[ COMBAT STATS ]</div>
         </div>
         <div class="stat-grid">
@@ -406,10 +411,15 @@ const CharacterSheet = (window.CharacterSheet = {
   _renderAbilities(parsed, context) {
     const abilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
+    const headerClass =
+      context === 'builder'
+        ? 'sheet-header sheet-header--no-divider'
+        : 'sheet-header';
+
     // Use grid layout for both contexts (identical formatting)
     return `
       <div class="sheet-section">
-        <div class="sheet-header">
+        <div class="${headerClass}">
           <div class="sheet-header-title">[ ABILITY SCORES ]</div>
         </div>
         <div class="ability-grid">

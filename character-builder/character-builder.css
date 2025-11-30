@@ -1164,6 +1164,19 @@
     --font-size-large: 18px;
     --spacing-xl: 16px;
   }
+
+  /* Match manager sheet responsive layout: collapse grids and wrap header actions */
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .ability-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .sheet-title-buttons {
+    flex-wrap: wrap;
+  }
 }
 
 
