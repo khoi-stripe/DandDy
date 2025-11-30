@@ -181,9 +181,21 @@ body {
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
   line-height: var(--line-height);
-  background-color: #1a1a1a;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-color: #000000;
+  /* Radial terminal glow + subtle dot grid over pure black background.
+     Layer 1: large, soft green light source centered behind the terminal
+     Layer 2: subtle white dot grid */
+  background-image:
+    radial-gradient(
+      ellipse at center,
+      hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.28) 0,
+      transparent 90%
+    ),
+    radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+  /* Make the glow larger than the viewport so it always extends beyond
+     the terminal frame in both width and height. (Slightly reduced vs prior) */
+  background-size: 112% 104%, 20px 20px;
+  background-position: center, 0 0;
   color: var(--terminal-fg);
   overflow-x: hidden;
   padding: 64px;
@@ -196,7 +208,8 @@ body {
   background-color: var(--terminal-bg);
   border: 1px solid var(--terminal-border);
   border-radius: 8px;
-  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6);
+  /* Let the "light source" be rendered by the body radial-gradient instead of a uniform box shadow */
+  box-shadow: none;
   overflow: hidden;
   max-width: var(--max-width);
   margin: 0 auto;
@@ -932,13 +945,12 @@ body {
 
 .selector-option:hover,
 .selector-option:focus {
-  /* Themed tint based on active context */
-  background-color: hsla(
-    var(--theme-terminal-h),
-    var(--theme-terminal-s),
-    var(--theme-terminal-l-bright),
-    0.16
-  );
+  /* Themed tint based on active UI context:
+     - Default terminal frame: terminal green (via ui tokens)
+     - Character sheet: teal (overrides ui tokens inside sheet)
+     - Modals: yellow (overrides ui tokens inside modal) */
+  background-color: color-mix(in srgb, var(--ui-primary-bg-color) 20%, transparent);
+  /* Keep text in the bright themed foreground color so it never inverts. */
   color: var(--ui-fg-color);
 }
 
@@ -1147,11 +1159,11 @@ body {
 /* ===== MODAL BASE ===== */
 .modal {
   display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  /* Confine modal overlay to the bounds of the terminal container instead of the full viewport.
+     The nearest positioned ancestor (e.g., .terminal-frame / .terminal-container) acts as the
+     containing box. */
+  position: absolute;
+  inset: 0;
   background-color: rgba(0, 0, 0, 0.6);
   z-index: 1000;
   /* Keep background dimmed but sharp — no blur */
@@ -1174,13 +1186,21 @@ body {
   justify-content: center;
 }
 
+.modal.show.closing {
+  /* Keep layout active while close animation runs */
+  display: flex;
+}
+
 .modal-content {
   background-color: var(--terminal-bg);
   border: 2px solid var(--modal-accent);
   border-radius: 4px;
   max-width: 700px;
   width: 90%;
-  max-height: 90vh;
+  /* Keep the modal fully within the terminal frame, even on short viewports.
+     Height is constrained relative to the terminal container (via .modal),
+     with internal scrolling handled by .modal-body. */
+  max-height: calc(100% - 48px);
   box-shadow: 0 20px 60px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.35);
   display: flex;
   flex-direction: column;
@@ -1190,9 +1210,18 @@ body {
 
 /* Modal open animation:
    - Mirrors selector listbox behavior: scaleY from center + fade in
-   - Applied whenever a modal gains the .show class */
-.modal.show .modal-content {
+   - Applied whenever a modal gains the .show class
+   - Disabled while the modal is in the .closing state so the close animation
+     can take over cleanly. */
+.modal.show:not(.closing) .modal-content {
   animation: modal-open 220ms cubic-bezier(0.2, 0.8, 0.2, 1.05) forwards;
+}
+
+/* Modal close animation:
+   - Reverse of modal-open
+   - Shrinks back toward the center when the modal is closing */
+.modal.show.closing .modal-content {
+  animation: modal-close 200ms cubic-bezier(0.2, 0.8, 0.2, 1.05) forwards;
 }
 
 .modal-header {
@@ -1365,6 +1394,18 @@ body {
   100% {
     transform: scaleY(1);
     opacity: 1;
+  }
+}
+
+/* Modal close animation: shrink vertically back toward center */
+@keyframes modal-close {
+  0% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(0.15);
+    opacity: 0;
   }
 }
 

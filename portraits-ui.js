@@ -163,7 +163,15 @@
           </div>
         </div>
       `;
-      document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+      // Attach the portrait history modal to the terminal frame/container so
+      // its overlay and content stay within the app window instead of the
+      // full browser viewport.
+      const host =
+        document.querySelector('.terminal-frame') ||
+        document.querySelector('.terminal-container') ||
+        document.body;
+      host.insertAdjacentHTML('beforeend', modalHtml);
 
       this._populateAsciiPreviews(versions);
       this._initKeyboardFocus();

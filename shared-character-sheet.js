@@ -527,253 +527,273 @@ const CharacterSheet = (window.CharacterSheet = {
           document.body.appendChild(menu);
         }
 
-        const shellRect = shell.getBoundingClientRect();
-        const triggerRect = triggerEl.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
+        try {
+          const shellRect = shell.getBoundingClientRect();
+          const triggerRect = triggerEl.getBoundingClientRect();
+          const viewportWidth = window.innerWidth;
 
-        // Decide whether to use viewport-based fixed positioning (sheet header,
-        // portrait history modal, etc.) or local absolute positioning relative
-        // to the selector shell (settings modal).
-        const useFixedPositioning = inPortraitModal || !inModal;
+          // Decide whether to use viewport-based fixed positioning (sheet header,
+          // portrait history modal, etc.) or local absolute positioning relative
+          // to the selector shell (settings modal and search/sort bar).
+          //
+          // - Non‑modal selectors default to fixed positioning so menus can
+          //   escape overflow/scroll containers (sheet headers, manager grid).
+          // - Selectors inside the search/sort actions bar use local absolute
+          //   positioning so the sort dropdown stays anchored under its button.
+          const inSearchActions = !!triggerEl.closest('.search-actions');
+          const useFixedPositioning = inPortraitModal || (!inModal && !inSearchActions);
 
-        // Measure menu size without affecting final animation. Temporarily
-        // neutralize transforms so we get the *full* height instead of the
-        // scaled (collapsed) height from CSS.
-        const prevDisplay = menu.style.display;
-        const prevVisibility = menu.style.visibility;
-        const prevTransform = menu.style.transform;
+          // Measure menu size without affecting final animation. Temporarily
+          // neutralize transforms so we get the *full* height instead of the
+          // scaled (collapsed) height from CSS.
+          const prevDisplay = menu.style.display;
+          const prevVisibility = menu.style.visibility;
+          const prevTransform = menu.style.transform;
 
-        // Clear any previous inline sizing from earlier openings so we always
-        // measure from a clean baseline. Use fixed/absolute positioning during
-        // measurement so getBoundingClientRect returns consistent values.
-        menu.style.maxHeight = '';
-        menu.style.position = useFixedPositioning ? 'fixed' : 'absolute';
-        menu.style.top = '0';
-        menu.style.left = '0';
-        menu.style.visibility = 'hidden';
-        menu.style.display = 'block';
-        menu.style.transform = 'none';
+          // Clear any previous inline sizing from earlier openings so we always
+          // measure from a clean baseline. Use fixed/absolute positioning during
+          // measurement so getBoundingClientRect returns consistent values.
+          menu.style.maxHeight = '';
+          menu.style.position = useFixedPositioning ? 'fixed' : 'absolute';
+          menu.style.top = '0';
+          menu.style.left = '0';
+          menu.style.visibility = 'hidden';
+          menu.style.display = 'block';
+          menu.style.transform = 'none';
 
-        const menuRect = menu.getBoundingClientRect();
-        let menuHeight = menuRect.height || 0;
-        let menuWidth = menuRect.width || 0;
+          const menuRect = menu.getBoundingClientRect();
+          let menuHeight = menuRect.height || 0;
+          let menuWidth = menuRect.width || 0;
 
-        // Ensure the listbox width works well relative to its trigger.
-        // - For most selectors, we only guarantee the menu is at least as wide
-        //   as the trigger so wide buttons don't "overhang" a narrow menu.
-        // - For special cases (like the narrator selector in settings), we can
-        //   force the menu to *exactly* match the trigger width by adding
-        //   `.selector-shell--match-width` to the shell.
-        const triggerWidth = triggerRect.width || 0;
-        const menuMaxWidth = 360; // matches .selector-menu max-width in CSS
-        const forceMatchWidth = shell.classList.contains('selector-shell--match-width');
+          // Ensure the listbox width works well relative to its trigger.
+          // - For most selectors, we only guarantee the menu is at least as wide
+          //   as the trigger so wide buttons don't "overhang" a narrow menu.
+          // - For special cases (like the narrator selector in settings), we can
+          //   force the menu to *exactly* match the trigger width by adding
+          //   `.selector-shell--match-width` to the shell.
+          const triggerWidth = triggerRect.width || 0;
+          const menuMaxWidth = 360; // matches .selector-menu max-width in CSS
+          const minMenuWidth = 200; // keep in sync with .selector-menu min-width
+          const forceMatchWidth = shell.classList.contains('selector-shell--match-width');
 
-        if (triggerWidth > 0) {
+          if (triggerWidth > 0) {
+            if (forceMatchWidth) {
+              // For match-width shells (like narrator voice/text speed in settings),
+              // force the menu to match the trigger width but never drop below the
+              // global 200px min-width so very small triggers still get a readable menu.
+              const targetWidth = Math.max(triggerWidth, minMenuWidth);
+              menu.style.width = `${targetWidth}px`;
+              menu.style.minWidth = `${targetWidth}px`;
+              menu.style.maxWidth = `${targetWidth}px`;
+              const remeasureRect = menu.getBoundingClientRect();
+              menuWidth = remeasureRect.width || menuWidth;
+              menuHeight = remeasureRect.height || menuHeight;
+            } else if (triggerWidth <= menuMaxWidth && menuWidth < triggerWidth) {
+              // Default behavior: ensure the menu is at least as wide as the trigger,
+              // but don't exceed the global max width.
+              menu.style.minWidth = `${triggerWidth}px`;
+              const remeasureRect = menu.getBoundingClientRect();
+              menuWidth = remeasureRect.width || menuWidth;
+              menuHeight = remeasureRect.height || menuHeight;
+            }
+          }
+
+          menu.style.display = prevDisplay;
+          menu.style.visibility = prevVisibility;
+          menu.style.transform = prevTransform;
+
+          // Shared vertical positioning logic (decide whether to open above/below)
+          const viewportHeight = window.innerHeight;
+          const padding = 8; // breathing room from host edges
+          const gapY = 4; // small gap between trigger and menu
+
+          // Treat the nearest terminal frame/container as the visual "viewport"
+          // so menus stay within the green app frame instead of the browser
+          // viewport. Fall back to the real viewport if no frame is found.
+          const host =
+            triggerEl.closest('.terminal-frame, .terminal-container') ||
+            document.documentElement;
+          const hostRect = host.getBoundingClientRect();
+
+          const hostTop = hostRect.top + padding;
+          const hostBottom = hostRect.bottom - padding;
+
+          // Calculate available space above and below trigger within the host
+          const spaceAbove = triggerRect.top - hostTop;
+          const spaceBelow = hostBottom - triggerRect.bottom;
+
+          // Determine if menu fits in each direction
+          const fitsBelow = spaceBelow >= menuHeight + gapY;
+          const fitsAbove = spaceAbove >= menuHeight + gapY;
+
+          // Choose direction: prefer below for top-half triggers, above for bottom-half
+          const triggerCenterY = triggerRect.top + triggerRect.height / 2;
+          const inTopHalf = triggerCenterY < viewportHeight / 2;
+
+          let openBelow;
+          if (fitsBelow && fitsAbove) {
+            // Both fit: use viewport half as hint
+            openBelow = inTopHalf;
+          } else if (fitsBelow) {
+            openBelow = true;
+          } else if (fitsAbove) {
+            openBelow = false;
+          } else {
+            // Neither fits perfectly: use the side with more space
+            openBelow = spaceBelow >= spaceAbove;
+          }
+
+          // For match-width shells (like the narrator settings selectors), always
+          // prefer opening below so the trigger stays visible above the listbox.
           if (forceMatchWidth) {
-            // For match-width shells (like narrator voice in settings), force the
-            // menu to exactly match the trigger width, even if it's wider than
-            // the normal 360px cap.
-            menu.style.width = `${triggerWidth}px`;
-            menu.style.minWidth = `${triggerWidth}px`;
-            menu.style.maxWidth = `${triggerWidth}px`;
-            const remeasureRect = menu.getBoundingClientRect();
-            menuWidth = remeasureRect.width || menuWidth;
-            menuHeight = remeasureRect.height || menuHeight;
-          } else if (triggerWidth <= menuMaxWidth && menuWidth < triggerWidth) {
-            // Default behavior: ensure the menu is at least as wide as the trigger,
-            // but don't exceed the global max width.
-            menu.style.minWidth = `${triggerWidth}px`;
-            const remeasureRect = menu.getBoundingClientRect();
-            menuWidth = remeasureRect.width || menuWidth;
-            menuHeight = remeasureRect.height || menuHeight;
-          }
-        }
-
-        menu.style.display = prevDisplay;
-        menu.style.visibility = prevVisibility;
-        menu.style.transform = prevTransform;
-
-        // Shared vertical positioning logic (decide whether to open above/below)
-        const viewportHeight = window.innerHeight;
-        const padding = 8; // breathing room from host edges
-        const gapY = 4; // small gap between trigger and menu
-
-        // Treat the nearest terminal frame/container as the visual "viewport"
-        // so menus stay within the green app frame instead of the browser
-        // viewport. Fall back to the real viewport if no frame is found.
-        const host =
-          triggerEl.closest('.terminal-frame, .terminal-container') ||
-          document.documentElement;
-        const hostRect = host.getBoundingClientRect();
-
-        const hostTop = hostRect.top + padding;
-        const hostBottom = hostRect.bottom - padding;
-
-        // Calculate available space above and below trigger within the host
-        const spaceAbove = triggerRect.top - hostTop;
-        const spaceBelow = hostBottom - triggerRect.bottom;
-
-        // Determine if menu fits in each direction
-        const fitsBelow = spaceBelow >= menuHeight + gapY;
-        const fitsAbove = spaceAbove >= menuHeight + gapY;
-
-        // Choose direction: prefer below for top-half triggers, above for bottom-half
-        const triggerCenterY = triggerRect.top + triggerRect.height / 2;
-        const inTopHalf = triggerCenterY < viewportHeight / 2;
-
-        let openBelow;
-        if (fitsBelow && fitsAbove) {
-          // Both fit: use viewport half as hint
-          openBelow = inTopHalf;
-        } else if (fitsBelow) {
-          openBelow = true;
-        } else if (fitsAbove) {
-          openBelow = false;
-        } else {
-          // Neither fits perfectly: use the side with more space
-          openBelow = spaceBelow >= spaceAbove;
-        }
-
-        // For match-width shells (like the narrator settings selectors), always
-        // prefer opening below so the trigger stays visible above the listbox.
-        if (forceMatchWidth) {
-          openBelow = true;
-        }
-
-        if (useFixedPositioning) {
-          // ===== Host-based fixed positioning (non-modal + portrait history) =====
-
-          // Position the menu using a single top coordinate (no bottom), and
-          // clamp so it always stays within the padded host vertically.
-          const maxTop = hostBottom - menuHeight;
-          let top;
-
-          if (openBelow) {
-            // Open below: start directly under trigger, then clamp if needed.
-            top = triggerRect.bottom + gapY;
-            if (top > maxTop) {
-              top = Math.max(hostTop, maxTop);
-            }
-          } else {
-            // Open above: start with bottom of menu sitting just above trigger.
-            top = triggerRect.top - gapY - menuHeight;
-            if (top < hostTop) {
-              top = hostTop;
-            }
+            openBelow = true;
           }
 
-          menu.style.position = 'fixed';
-          menu.style.top = `${top}px`;
-          menu.style.bottom = 'auto';
+          if (useFixedPositioning) {
+            // ===== Host-based fixed positioning (non-modal + portrait history) =====
 
-          // If menu would extend past host, cap its height so it scrolls
-          // instead of clipping off-screen.
-          const availableHeight = hostBottom - top;
-          if (menuHeight > availableHeight) {
-            menu.style.maxHeight = `${availableHeight}px`;
-            menu.style.overflowY = 'auto';
+            // Position the menu using a single top coordinate (no bottom), and
+            // clamp so it always stays within the padded host vertically.
+            const maxTop = hostBottom - menuHeight;
+            let top;
+
+            if (openBelow) {
+              // Open below: start directly under trigger, then clamp if needed.
+              top = triggerRect.bottom + gapY;
+              if (top > maxTop) {
+                top = Math.max(hostTop, maxTop);
+              }
+            } else {
+              // Open above: start with bottom of menu sitting just above trigger.
+              top = triggerRect.top - gapY - menuHeight;
+              if (top < hostTop) {
+                top = hostTop;
+              }
+            }
+
+            menu.style.position = 'fixed';
+            menu.style.top = `${top}px`;
+            menu.style.bottom = 'auto';
+
+            // If menu would extend past host, cap its height so it scrolls
+            // instead of clipping off-screen.
+            const availableHeight = hostBottom - top;
+            if (menuHeight > availableHeight) {
+              menu.style.maxHeight = `${availableHeight}px`;
+              menu.style.overflowY = 'auto';
+            } else {
+              menu.style.maxHeight = '';
+              menu.style.overflowY = '';
+            }
+
+            // Horizontal offset: keep menus inside the host frame. For the
+            // portrait history modal specifically, open the menu to the *side*
+            // of the card so it doesn't obscure the three-dot trigger; for all
+            // other hosts fall back to the standard behavior.
+            const hostLeft = hostRect.left + padding;
+            const hostRight = hostRect.right - padding;
+
+            let targetLeft;
+            if (inPortraitModal) {
+              const sideGapX = 8;
+              const spaceRight = hostRight - triggerRect.right;
+              const spaceLeft = triggerRect.left - hostLeft;
+              const openRight = spaceRight >= spaceLeft;
+
+              if (openRight && spaceRight >= menuWidth + sideGapX) {
+                // Place menu to the right of the trigger/card
+                targetLeft = triggerRect.right + sideGapX;
+              } else {
+                // Place menu to the left of the trigger/card
+                targetLeft = triggerRect.left - sideGapX - menuWidth;
+              }
+
+              // Clamp within host bounds
+              if (targetLeft < hostLeft) {
+                targetLeft = hostLeft;
+              }
+              if (targetLeft + menuWidth > hostRight) {
+                targetLeft = Math.max(hostLeft, hostRight - menuWidth);
+              }
+            } else {
+              const minLeft = hostLeft;
+              const maxLeft = Math.max(minLeft, hostRight - menuWidth);
+
+              const fitsRight =
+                triggerRect.left + menuWidth <= hostRight;
+              const fitsLeft =
+                triggerRect.right - menuWidth >= hostLeft;
+
+              if (fitsRight && !fitsLeft) {
+                // Enough room to the right but not to the left: open to the right.
+                targetLeft = triggerRect.left;
+              } else if (!fitsRight && fitsLeft) {
+                // Not enough room to the right but enough to the left: right-align
+                // menu with trigger so it grows back to the left.
+                targetLeft = triggerRect.right - menuWidth;
+              } else {
+                // Both sides viable or both tight: start with left-aligned and then
+                // clamp within host padding.
+                targetLeft = triggerRect.left;
+              }
+
+              // Clamp horizontal position so the menu stays within host padding.
+              if (targetLeft < minLeft) {
+                targetLeft = minLeft;
+              }
+              if (targetLeft > maxLeft) {
+                targetLeft = maxLeft;
+              }
+            }
+
+            menu.style.left = `${targetLeft}px`;
+            menu.style.right = 'auto';
+            // Ensure the menu appears above modals and other content.
+            // Use higher z-index when inside any modal to appear above modal backdrop.
+            menu.style.zIndex = inModal ? '1100' : '1000';
           } else {
+            // ===== Local absolute positioning inside modal / search bar =====
+
+            menu.style.position = 'absolute';
+
+            // Vertical: position relative to the selector shell so the menu
+            // visually hugs the trigger, ignoring viewport-based clamping.
+            let top;
+            if (openBelow) {
+              if (forceMatchWidth) {
+                // For match-width shells, align the menu so it starts directly
+                // under the trigger, independent of shell offsets.
+                top = triggerRect.height + gapY;
+              } else {
+                top = triggerRect.bottom - shellRect.top + gapY;
+              }
+            } else {
+              top = triggerRect.top - shellRect.top - menuHeight - gapY;
+            }
+            menu.style.top = `${top}px`;
+            menu.style.bottom = 'auto';
+
+            // Horizontal: align left edge of menu with left edge of trigger.
+            const left = triggerRect.left - shellRect.left;
+            menu.style.left = `${left}px`;
+            menu.style.right = 'auto';
+
+            // Inside the settings modal / search bar, the container is already
+            // constrained, so we generally don't need extra viewport clamping.
             menu.style.maxHeight = '';
             menu.style.overflowY = '';
+            menu.style.zIndex = inModal ? '1100' : '1000';
           }
-
-          // Horizontal offset: keep menus inside the host frame. For the
-          // portrait history modal specifically, open the menu to the *side*
-          // of the card so it doesn't obscure the three-dot trigger; for all
-          // other hosts fall back to the standard behavior.
-          const hostLeft = hostRect.left + padding;
-          const hostRight = hostRect.right - padding;
-
-          let targetLeft;
-          if (inPortraitModal) {
-            const sideGapX = 8;
-            const spaceRight = hostRight - triggerRect.right;
-            const spaceLeft = triggerRect.left - hostLeft;
-            const openRight = spaceRight >= spaceLeft;
-
-            if (openRight && spaceRight >= menuWidth + sideGapX) {
-              // Place menu to the right of the trigger/card
-              targetLeft = triggerRect.right + sideGapX;
-            } else {
-              // Place menu to the left of the trigger/card
-              targetLeft = triggerRect.left - sideGapX - menuWidth;
-            }
-
-            // Clamp within host bounds
-            if (targetLeft < hostLeft) {
-              targetLeft = hostLeft;
-            }
-            if (targetLeft + menuWidth > hostRight) {
-              targetLeft = Math.max(hostLeft, hostRight - menuWidth);
-            }
-          } else {
-            const minLeft = hostLeft;
-            const maxLeft = Math.max(minLeft, hostRight - menuWidth);
-
-            const fitsRight =
-              triggerRect.left + menuWidth <= hostRight;
-            const fitsLeft =
-              triggerRect.right - menuWidth >= hostLeft;
-
-            if (fitsRight && !fitsLeft) {
-              // Enough room to the right but not to the left: open to the right.
-              targetLeft = triggerRect.left;
-            } else if (!fitsRight && fitsLeft) {
-              // Not enough room to the right but enough to the left: right-align
-              // menu with trigger so it grows back to the left.
-              targetLeft = triggerRect.right - menuWidth;
-            } else {
-              // Both sides viable or both tight: start with left-aligned and then
-              // clamp within host padding.
-              targetLeft = triggerRect.left;
-            }
-
-            // Clamp horizontal position so the menu stays within host padding.
-            if (targetLeft < minLeft) {
-              targetLeft = minLeft;
-            }
-            if (targetLeft > maxLeft) {
-              targetLeft = maxLeft;
-            }
-          }
-
-          menu.style.left = `${targetLeft}px`;
-          menu.style.right = 'auto';
-          // Ensure the menu appears above modals and other content.
-          // Use higher z-index when inside any modal to appear above modal backdrop.
-          menu.style.zIndex = inModal ? '1100' : '1000';
-        } else {
-          // ===== Local absolute positioning inside modal (builder settings) =====
-
+        } catch (err) {
+          // In case anything above fails (e.g., unexpected DOM state), fall back
+          // to a very simple "open below trigger" layout so the menu still opens.
           menu.style.position = 'absolute';
-
-          // Vertical: position relative to the selector shell so the menu
-          // visually hugs the trigger, ignoring viewport-based clamping.
-          let top;
-          if (openBelow) {
-            if (forceMatchWidth) {
-              // For match-width shells, align the menu so it starts directly
-              // under the trigger, independent of shell offsets.
-              top = triggerRect.height + gapY;
-            } else {
-              top = triggerRect.bottom - shellRect.top + gapY;
-            }
-          } else {
-            top = triggerRect.top - shellRect.top - menuHeight - gapY;
-          }
-          menu.style.top = `${top}px`;
-          menu.style.bottom = 'auto';
-
-          // Horizontal: align left edge of menu with left edge of trigger.
-          const left = triggerRect.left - shellRect.left;
-          menu.style.left = `${left}px`;
+          menu.style.top = `${triggerEl.offsetHeight + 4}px`;
+          menu.style.left = '0';
           menu.style.right = 'auto';
-
-          // Inside the settings modal, the content scroll area is already
-          // constrained, so we generally don't need extra viewport clamping.
           menu.style.maxHeight = '';
           menu.style.overflowY = '';
-          menu.style.zIndex = '1100';
+          menu.style.zIndex = inModal ? '1100' : '1000';
         }
 
         shell.classList.add('is-open');

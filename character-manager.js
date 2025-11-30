@@ -577,10 +577,17 @@ async function editCharacter(id) {
 
 function closeEditDetailsModal() {
     const modal = document.getElementById('editDetailsModal');
-    if (modal) {
-        modal.classList.remove('show');
+    if (!modal) {
+        currentEditCharacterId = null;
+        return;
     }
-    currentEditCharacterId = null;
+
+    animateModalClose(modal, {
+        removeOnClose: false,
+        onClosed: () => {
+            currentEditCharacterId = null;
+        },
+    });
 }
 
 async function saveEditDetails() {
@@ -633,6 +640,16 @@ async function saveEditDetails() {
     closeEditDetailsModal();
 }
 
+// Resolve the best host element for manager UI modals so that they are
+// visually scoped to the terminal frame instead of the full viewport.
+function getManagerModalHost() {
+    return (
+        document.querySelector('.terminal-frame') ||
+        document.querySelector('.terminal-container') ||
+        document.body
+    );
+}
+
 async function renameCharacter(id) {
     const character = await CharacterStorage.getById(id);
     if (!character) return;
@@ -646,7 +663,7 @@ async function renameCharacter(id) {
         <div class="modal-content">
           <div class="modal-header">
             <h2 class="modal-title">[ RENAME CHARACTER ]</h2>
-            <button class="modal-close" onclick="document.getElementById('renameModal').remove()">&times;</button>
+            <button class="modal-close" onclick="closeRenameModal()">&times;</button>
           </div>
           <div class="modal-body">
             <p class="terminal-text-small modal-section-label">New name:</p>
@@ -660,14 +677,15 @@ async function renameCharacter(id) {
       </div>
     `;
 
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('renameModal');
     const input = document.getElementById('renameInput');
     const cancelBtn = document.getElementById('renameCancel');
     const okBtn = document.getElementById('renameOk');
 
     const close = () => {
-        if (modal) modal.remove();
+        if (!modal) return;
+        animateModalClose(modal, { removeOnClose: true });
     };
 
     cancelBtn.addEventListener('click', close);
@@ -741,9 +759,24 @@ async function generatePortraitForCharacter(id) {
 }
 
 function closePortraitPromptModal() {
-    document.getElementById('portraitPromptModal').classList.remove('show');
-    document.getElementById('portraitPrompt').value = '';
-    currentPortraitCharacterId = null;
+    const modal = document.getElementById('portraitPromptModal');
+    if (!modal) {
+        const promptInput = document.getElementById('portraitPrompt');
+        if (promptInput) promptInput.value = '';
+        currentPortraitCharacterId = null;
+        return;
+    }
+
+    const cleanup = () => {
+        const promptInput = document.getElementById('portraitPrompt');
+        if (promptInput) promptInput.value = '';
+        currentPortraitCharacterId = null;
+    };
+
+    animateModalClose(modal, {
+        removeOnClose: false,
+        onClosed: cleanup,
+    });
 }
 
 async function confirmGeneratePortrait() {
@@ -1057,19 +1090,33 @@ function showImportModal() {
 
 function closeImportModal() {
     console.log('🚪 closeImportModal() called, isImporting was:', isImporting);
-    document.getElementById('importModal').classList.remove('show');
-    document.getElementById('importFile').value = '';
-    document.getElementById('fileName').textContent = '';
-    
-    // Re-enable the import button and reset text
-    const importButton = getImportModalPrimaryButton();
-    if (importButton) {
-        importButton.disabled = true;  // Disable for next time modal opens
-        importButton.textContent = 'IMPORT';
+    const modal = document.getElementById('importModal');
+    if (!modal) {
+        isImporting = false;
+        return;
     }
-    
-    isImporting = false;  // Reset flag when closing
-    console.log('🚪 closeImportModal() done, isImporting now:', isImporting);
+
+    const cleanup = () => {
+        const fileInput = document.getElementById('importFile');
+        const fileName = document.getElementById('fileName');
+        if (fileInput) fileInput.value = '';
+        if (fileName) fileName.textContent = '';
+
+        // Re-enable the import button and reset text
+        const importButton = getImportModalPrimaryButton();
+        if (importButton) {
+            importButton.disabled = true;  // Disable for next time modal opens
+            importButton.textContent = 'IMPORT';
+        }
+
+        isImporting = false;  // Reset flag when closing
+        console.log('🚪 closeImportModal() done, isImporting now:', isImporting);
+    };
+
+    animateModalClose(modal, {
+        removeOnClose: false,
+        onClosed: cleanup,
+    });
 }
 
 // Store duplicate resolution data temporarily
@@ -1101,9 +1148,20 @@ function showDuplicateResolutionModal(characterName, existingId, importData) {
 
 function closeDuplicateModal() {
     console.log('🚪 DUPLICATE MODAL: Closing');
-    document.getElementById('duplicateModal').classList.remove('show');
-    pendingDuplicateResolution = null;
-    isImporting = false;  // Reset flag
+    const modal = document.getElementById('duplicateModal');
+    if (!modal) {
+        pendingDuplicateResolution = null;
+        isImporting = false;
+        return;
+    }
+
+    animateModalClose(modal, {
+        removeOnClose: false,
+        onClosed: () => {
+            pendingDuplicateResolution = null;
+            isImporting = false;  // Reset flag
+        },
+    });
 }
 
 function resolveDuplicate(action) {
@@ -1414,6 +1472,68 @@ function focusFirstFieldInModal(modal) {
     }
 }
 
+// Generic helper: animate modal close so it shrinks toward center instead of
+// disappearing instantly. Expects terminal-theme.css modal keyframes.
+/**
+ * @param {HTMLElement} modal
+ * @param {{ removeOnClose?: boolean, onClosed?: () => void }} options
+ */
+function animateModalClose(modal, options = {}) {
+    if (!modal) return;
+
+    const { removeOnClose = false, onClosed } = options;
+
+    // Avoid double-closing the same modal.
+    if (modal.classList.contains('closing')) {
+        return;
+    }
+
+    // Keep .show so layout stays active while the close animation runs.
+    modal.classList.add('closing');
+
+    const content = modal.querySelector('.modal-content') || modal;
+
+    const finish = () => {
+        if (removeOnClose) {
+            if (modal && modal.parentNode) {
+                modal.parentNode.removeChild(modal);
+            }
+        } else {
+            modal.classList.remove('show');
+            modal.classList.remove('closing');
+        }
+
+        if (typeof onClosed === 'function') {
+            onClosed();
+        }
+    };
+
+    if (content && typeof content.addEventListener === 'function') {
+        content.addEventListener('animationend', finish, { once: true });
+    } else {
+        finish();
+    }
+}
+
+// Helper hooks so inline onclick handlers can use the shared animator.
+function closeGenericConfirmModal() {
+    const modal = document.getElementById('genericConfirmModal');
+    if (!modal) return;
+    animateModalClose(modal, { removeOnClose: true });
+}
+
+function closeGenericAlertModal() {
+    const modal = document.getElementById('genericAlertModal');
+    if (!modal) return;
+    animateModalClose(modal, { removeOnClose: true });
+}
+
+function closeRenameModal() {
+    const modal = document.getElementById('renameModal');
+    if (!modal) return;
+    animateModalClose(modal, { removeOnClose: true });
+}
+
 // Generic confirmation modal using terminal modal styles
 function showConfirmDialog(message, onConfirm) {
     const existing = document.getElementById('genericConfirmModal');
@@ -1425,7 +1545,7 @@ function showConfirmDialog(message, onConfirm) {
         <div class="modal-content">
           <div class="modal-header">
             <h2 class="modal-title">[ CONFIRM ]</h2>
-            <button class="modal-close" onclick="document.getElementById('genericConfirmModal').remove()">&times;</button>
+            <button class="modal-close" onclick="closeGenericConfirmModal()">&times;</button>
           </div>
           <div class="modal-body">
             <p class="terminal-text">${escapedMessage}</p>
@@ -1438,13 +1558,14 @@ function showConfirmDialog(message, onConfirm) {
       </div>
     `;
 
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('genericConfirmModal');
     const cancelBtn = document.getElementById('genericConfirmCancel');
     const okBtn = document.getElementById('genericConfirmOk');
 
     const close = () => {
-        if (modal) modal.remove();
+        if (!modal) return;
+        animateModalClose(modal, { removeOnClose: true });
     };
 
     cancelBtn.addEventListener('click', close);
@@ -1471,7 +1592,7 @@ function showAlertDialog(message) {
         <div class="modal-content">
           <div class="modal-header">
             <h2 class="modal-title">[ NOTICE ]</h2>
-            <button class="modal-close" onclick="document.getElementById('genericAlertModal').remove()">&times;</button>
+            <button class="modal-close" onclick="closeGenericAlertModal()">&times;</button>
           </div>
           <div class="modal-body">
             <p class="terminal-text">${escapedMessage}</p>
@@ -1483,12 +1604,13 @@ function showAlertDialog(message) {
       </div>
     `;
 
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('genericAlertModal');
     const okBtn = document.getElementById('genericAlertOk');
 
     const close = () => {
-        if (modal) modal.remove();
+        if (!modal) return;
+        animateModalClose(modal, { removeOnClose: true });
     };
 
     okBtn.addEventListener('click', close);
