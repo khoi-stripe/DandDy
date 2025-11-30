@@ -558,20 +558,35 @@ const CharacterSheet = (window.CharacterSheet = {
         let menuHeight = menuRect.height || 0;
         let menuWidth = menuRect.width || 0;
 
-        // Ensure the listbox is at least as wide as the trigger. This keeps
-        // wide triggers (like settings selectors) from "overhanging" a
-        // narrower menu, while allowing small triggers (like the overflow
-        // button) to use the default wider menu.
-        // However, cap this at a reasonable max (360px from CSS) so extremely
-        // wide triggers don't create unwieldy menus.
+        // Ensure the listbox width works well relative to its trigger.
+        // - For most selectors, we only guarantee the menu is at least as wide
+        //   as the trigger so wide buttons don't "overhang" a narrow menu.
+        // - For special cases (like the narrator selector in settings), we can
+        //   force the menu to *exactly* match the trigger width by adding
+        //   `.selector-shell--match-width` to the shell.
         const triggerWidth = triggerRect.width || 0;
         const menuMaxWidth = 360; // matches .selector-menu max-width in CSS
-        if (triggerWidth > 0 && menuWidth < triggerWidth && triggerWidth <= menuMaxWidth) {
-          menu.style.minWidth = `${triggerWidth}px`;
-          // Re-measure width so positioning uses the updated size.
-          const remeasureRect = menu.getBoundingClientRect();
-          menuWidth = remeasureRect.width || menuWidth;
-          menuHeight = remeasureRect.height || menuHeight;
+        const forceMatchWidth = shell.classList.contains('selector-shell--match-width');
+
+        if (triggerWidth > 0) {
+          if (forceMatchWidth) {
+            // For match-width shells (like narrator voice in settings), force the
+            // menu to exactly match the trigger width, even if it's wider than
+            // the normal 360px cap.
+            menu.style.width = `${triggerWidth}px`;
+            menu.style.minWidth = `${triggerWidth}px`;
+            menu.style.maxWidth = `${triggerWidth}px`;
+            const remeasureRect = menu.getBoundingClientRect();
+            menuWidth = remeasureRect.width || menuWidth;
+            menuHeight = remeasureRect.height || menuHeight;
+          } else if (triggerWidth <= menuMaxWidth && menuWidth < triggerWidth) {
+            // Default behavior: ensure the menu is at least as wide as the trigger,
+            // but don't exceed the global max width.
+            menu.style.minWidth = `${triggerWidth}px`;
+            const remeasureRect = menu.getBoundingClientRect();
+            menuWidth = remeasureRect.width || menuWidth;
+            menuHeight = remeasureRect.height || menuHeight;
+          }
         }
 
         menu.style.display = prevDisplay;
@@ -617,6 +632,12 @@ const CharacterSheet = (window.CharacterSheet = {
         } else {
           // Neither fits perfectly: use the side with more space
           openBelow = spaceBelow >= spaceAbove;
+        }
+
+        // For match-width shells (like the narrator settings selectors), always
+        // prefer opening below so the trigger stays visible above the listbox.
+        if (forceMatchWidth) {
+          openBelow = true;
         }
 
         if (useFixedPositioning) {
@@ -730,7 +751,13 @@ const CharacterSheet = (window.CharacterSheet = {
           // visually hugs the trigger, ignoring viewport-based clamping.
           let top;
           if (openBelow) {
-            top = triggerRect.bottom - shellRect.top + gapY;
+            if (forceMatchWidth) {
+              // For match-width shells, align the menu so it starts directly
+              // under the trigger, independent of shell offsets.
+              top = triggerRect.height + gapY;
+            } else {
+              top = triggerRect.bottom - shellRect.top + gapY;
+            }
           } else {
             top = triggerRect.top - shellRect.top - menuHeight - gapY;
           }

@@ -136,122 +136,122 @@ const Components = (window.Components = {
       <div id="settingsModal" class="modal show" onclick="App.closeSettings()">
         <div class="modal-content builder-settings-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">⚙ Settings</h2>
-            <button class="modal-close" onclick="App.closeSettings()">&times;</button>
+            <div class="modal-header-main">
+              <h2 class="modal-title">⚙ Narrator Settings</h2>
+            </div>
+            <button class="modal-close" onclick="App.closeSettings()" aria-label="Close settings">&times;</button>
           </div>
           <div class="modal-body">
-            <div class="settings-row">
-              <div class="settings-label">Narrator Voice</div>
-              <div class="selector-shell">
-                <button
-                  class="terminal-btn selector-trigger"
-                  id="narrator-select-trigger"
-                  type="button"
-                  aria-haspopup="listbox"
-                  aria-expanded="false"
-                  onclick="CharacterSheet.toggleSelectorMenu(this)"
-                >
-                  <span class="selector-trigger-label" id="narrator-select-label">
-                    ${currentNarratorLabel}
-                  </span>
-                  <span class="selector-caret">⌄</span>
-                </button>
-                <div
-                  class="selector-menu"
-                  role="listbox"
-                  aria-label="Narrator voice"
-                  aria-hidden="true"
-                >
-                  ${narratorOptionsMenu}
-                </div>
-              </div>
-              <select
-                id="narrator-select"
-                class="terminal-select settings-select"
-                style="display: none;"
-              >
-                ${narratorsList
-                  .map((narrator) => {
-                    const optionText = `${narrator.emoji} ${narrator.name} - ${narrator.description}`;
-                    const truncatedText = truncate(optionText, 60);
-                    return `
-                      <option value="${narrator.id}" ${
-                        narrator.id === currentNarratorId ? 'selected' : ''
-                      }>
-                        ${truncatedText}
-                      </option>
-                    `;
-                  })
-                  .join('')}
-              </select>
-              <div class="settings-help">
-                Choose your narrator's personality. This affects all commentary during character creation.
-              </div>
-            </div>
-
-            <div class="settings-row">
-              <div class="settings-label">Narrator Text Speed</div>
-              <div class="selector-shell">
-                <button
-                  class="terminal-btn selector-trigger"
-                  id="text-speed-select-trigger"
-                  type="button"
-                  aria-haspopup="listbox"
-                  aria-expanded="false"
-                  onclick="CharacterSheet.toggleSelectorMenu(this)"
-                >
-                  <span class="selector-trigger-label" id="text-speed-select-label">
-                    ${currentTextSpeedLabel}
-                  </span>
-                  <span class="selector-caret">⌄</span>
-                </button>
-                <div
-                  class="selector-menu"
-                  role="listbox"
-                  aria-label="Narrator text speed"
-                  aria-hidden="true"
-                >
-                  ${textSpeedOptions
-                    .map(
-                      (opt) => `
+            <div class="settings-layout">
+              <div class="settings-grid">
+                <section class="settings-section">
+                  <div class="settings-row">
+                    <div class="settings-label">Narrator Voice</div>
+                    <div class="selector-shell selector-shell--match-width">
                       <button
-                        class="selector-option"
+                        class="terminal-btn selector-trigger"
+                        id="narrator-select-trigger"
                         type="button"
-                        role="option"
-                        data-value="${opt.value}"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        onclick="CharacterSheet.toggleSelectorMenu(this)"
                       >
-                        <span class="selector-option-label">
-                          ${opt.label}
+                        <span class="selector-trigger-label" id="narrator-select-label">
+                          ${currentNarratorLabel}
                         </span>
                       </button>
-                    `,
-                    )
-                    .join('')}
-                </div>
-              </div>
-              <select
-                id="text-speed-select"
-                class="terminal-select settings-select"
-                style="display: none;"
-              >
-                ${textSpeedOptions
-                  .map(
-                    (opt) => `
-                    <option value="${opt.value}" ${
-                      opt.value === currentTextSpeedOption.value ? 'selected' : ''
-                    }>
-                      ${opt.label}
-                    </option>
-                  `,
-                  )
-                  .join('')}
-              </select>
-              <div class="settings-help">
-                Controls how quickly the narrator types. Higher values finish lines faster.
+                      <div
+                        class="selector-menu"
+                        role="listbox"
+                        aria-label="Narrator voice"
+                        aria-hidden="true"
+                      >
+                        ${narratorOptionsMenu}
+                      </div>
+                    </div>
+                    <select
+                      id="narrator-select"
+                      class="terminal-select settings-select"
+                      style="display: none;"
+                    >
+                      ${narratorsList
+                        .map((narrator) => {
+                          const optionText = `${narrator.emoji} ${narrator.name} - ${narrator.description}`;
+                          const truncatedText = truncate(optionText, 60);
+                          return `
+                            <option value="${narrator.id}" ${
+                              narrator.id === currentNarratorId ? 'selected' : ''
+                            }>
+                              ${truncatedText}
+                            </option>
+                          `;
+                        })
+                        .join('')}
+                    </select>
+                  </div>
+                </section>
+
+                <section class="settings-section">
+                  <div class="settings-row">
+                    <div class="settings-label">Narrator Text Speed</div>
+                    <div class="selector-shell selector-shell--match-width">
+                      <button
+                        class="terminal-btn selector-trigger"
+                        id="text-speed-select-trigger"
+                        type="button"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        onclick="CharacterSheet.toggleSelectorMenu(this)"
+                      >
+                        <span class="selector-trigger-label" id="text-speed-select-label">
+                          ${currentTextSpeedLabel}
+                        </span>
+                      </button>
+                      <div
+                        class="selector-menu"
+                        role="listbox"
+                        aria-label="Narrator text speed"
+                        aria-hidden="true"
+                      >
+                        ${textSpeedOptions
+                          .map(
+                            (opt) => `
+                            <button
+                              class="selector-option"
+                              type="button"
+                              role="option"
+                              data-value="${opt.value}"
+                            >
+                              <span class="selector-option-label">
+                                ${opt.label}
+                              </span>
+                            </button>
+                          `,
+                          )
+                          .join('')}
+                      </div>
+                    </div>
+                    <select
+                      id="text-speed-select"
+                      class="terminal-select settings-select"
+                      style="display: none;"
+                    >
+                      ${textSpeedOptions
+                        .map(
+                          (opt) => `
+                          <option value="${opt.value}" ${
+                            opt.value === currentTextSpeedOption.value ? 'selected' : ''
+                          }>
+                            ${opt.label}
+                          </option>
+                        `,
+                        )
+                        .join('')}
+                    </select>
+                  </div>
+                </section>
               </div>
             </div>
-
-            <div id="backend-status" class="terminal-text-small terminal-text-dim mt-md"></div>
           </div>
           <div class="modal-footer modal-footer-end">
             <button class="terminal-btn" onclick="App.closeSettings()">CANCEL</button>

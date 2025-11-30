@@ -397,8 +397,31 @@
   }
 }
 
+.settings-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.settings-intro {
+  max-width: 520px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-md);
+}
+
+.settings-section {
+  padding: var(--spacing-sm);
+  border-radius: 4px;
+  border: 1px solid var(--terminal-border-subtle);
+  background: rgba(0, 0, 0, 0.4);
+}
+
 .settings-row {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
 }
 
 .settings-label {
@@ -409,6 +432,10 @@
 .settings-help {
   font-size: var(--font-size-small);
   margin-top: var(--spacing-xs);
+}
+
+.settings-footnote {
+  max-width: 520px;
 }
 
 /* Builder settings modal: allow selector menus to escape without clipping */
@@ -426,12 +453,6 @@
 
 /* (All shared modal theming is handled by terminal-theme.css so it can be reused across apps.) */
 
-.modal-footer {
-  padding: var(--spacing-lg);
-  border-top: none;
-  gap: var(--spacing-md);
-}
-
 /* Settings modal: narrator select */
 .settings-select {
   width: 100%;
@@ -445,6 +466,12 @@
 
 .modal .settings-help {
   color: rgba(255, 215, 0, 0.75);
+}
+
+@media (max-width: 720px) {
+  .settings-layout {
+    gap: var(--spacing-sm);
+  }
 }
 
 /* Splash actions */
