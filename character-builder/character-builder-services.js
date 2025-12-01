@@ -1572,9 +1572,16 @@ Format your response as JSON array of strings, one for each option in order. Exa
         // Check for safety system rejection
         if (response.status === 400 && errorData.detail && errorData.detail.includes('safety system')) {
           console.warn('⚠️ OpenAI safety system rejection:', errorData.detail);
+          console.warn('📝 REJECTED PROMPT:', prompt);
+          
+          // Analyze the prompt to help identify problematic sections
+          const analysis = this.analyzeRejectedPrompt(prompt);
+          
           const safetyError = new Error('Portrait generation was flagged by OpenAI\'s content safety system');
           safetyError.isSafetyRejection = true;
           safetyError.originalMessage = errorData.detail;
+          safetyError.rejectedPrompt = prompt; // Capture the prompt for debugging
+          safetyError.promptAnalysis = analysis; // Include analysis results
           throw safetyError;
         }
         
@@ -1712,6 +1719,85 @@ Format your response as JSON array of strings, one for each option in order. Exa
     const characterDescription = this.buildCharacterDescription(character);
 
     return [...renderingInstructions, characterDescription].join(', ');
+  },
+
+  // Analyze a rejected prompt to help identify problematic sections
+  analyzeRejectedPrompt(prompt) {
+    console.log('%c🔍 Analyzing Rejected Prompt', 'color: #ff0; font-weight: bold; font-size: 14px;');
+    console.log('─'.repeat(80));
+    
+    // Common problematic patterns that might trigger safety filters
+    const potentialIssues = [];
+    const warningPatterns = [
+      { pattern: /\b(blood|gore|violence|death|kill|weapon|sword|axe|dagger|knife)\b/gi, category: 'Violence/Weapons' },
+      { pattern: /\b(dark|evil|demon|devil|hell|sinister|menacing|malevolent)\b/gi, category: 'Dark Themes' },
+      { pattern: /\b(naked|nude|exposed|bare|revealing|sensual|seductive)\b/gi, category: 'Adult Content' },
+      { pattern: /\b(child|young|minor|kid|juvenile)\b/gi, category: 'Age-Related' },
+      { pattern: /\b(slave|slavery|bound|chained|prisoner)\b/gi, category: 'Sensitive Topics' },
+    ];
+
+    // Check for each pattern
+    warningPatterns.forEach(({ pattern, category }) => {
+      const matches = prompt.match(pattern);
+      if (matches && matches.length > 0) {
+        potentialIssues.push({
+          category,
+          matches: [...new Set(matches.map(m => m.toLowerCase()))],
+          count: matches.length
+        });
+      }
+    });
+
+    // Try to break down the prompt into sections
+    const sections = prompt.split(', ').filter(s => s.trim());
+    
+    console.log('📋 PROMPT SECTIONS (%d total):', sections.length);
+    sections.forEach((section, idx) => {
+      const sectionLower = section.toLowerCase();
+      let hasWarning = false;
+      
+      // Check if this section contains problematic terms
+      for (const { pattern } of warningPatterns) {
+        if (pattern.test(section)) {
+          hasWarning = true;
+          break;
+        }
+      }
+      
+      const marker = hasWarning ? '⚠️ ' : '   ';
+      console.log(`${marker}${idx + 1}. ${section}`);
+    });
+    
+    console.log('─'.repeat(80));
+    
+    if (potentialIssues.length > 0) {
+      console.log('%c⚠️  POTENTIAL ISSUES DETECTED:', 'color: #f90; font-weight: bold;');
+      potentialIssues.forEach(issue => {
+        console.log(`  • ${issue.category}: ${issue.matches.join(', ')} (${issue.count}x)`);
+      });
+    } else {
+      console.log('%c✓ No obvious problematic patterns detected', 'color: #0f0;');
+      console.log('  The rejection may be due to:');
+      console.log('  • Combination of terms that seem innocent individually');
+      console.log('  • Character race/class combinations OpenAI finds problematic');
+      console.log('  • Background story content or phrasing');
+      console.log('  • OpenAI policy updates or temporary sensitivity changes');
+    }
+    
+    console.log('─'.repeat(80));
+    console.log('%c💡 DEBUGGING SUGGESTIONS:', 'color: #0ff; font-weight: bold;');
+    console.log('  1. Try regenerating - sometimes the same prompt works on retry');
+    console.log('  2. Simplify the backstory or character description');
+    console.log('  3. Remove alignment-based descriptions (e.g., "menacing aura")');
+    console.log('  4. Adjust weapon/equipment descriptions to be less specific');
+    console.log('  5. Use the custom prompt modal to test simplified versions');
+    console.log('─'.repeat(80));
+    
+    return {
+      sections,
+      potentialIssues,
+      hasKnownProblematicTerms: potentialIssues.length > 0
+    };
   },
 });
 

@@ -806,7 +806,7 @@
 
 .auth-screen .spinner,
 .manager-screen .spinner {
-  font-size: 16px;
+  font-size: 14px;
   color: var(--terminal-fg);
   text-shadow: none;
   margin-bottom: var(--spacing-md);

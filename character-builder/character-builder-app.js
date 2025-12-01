@@ -833,6 +833,12 @@ const App = (window.App = {
     // Wait for DOM and keyboard nav to settle, then scroll
     await Utils.sleep(150);
     Utils.scrollToBottom(true);
+    
+    // Focus the roll button instead of the selector
+    const rollButton = document.querySelector('.ability-method-roll');
+    if (rollButton) {
+      rollButton.focus();
+    }
   },
 
   async showNameChoice(question) {
@@ -1223,7 +1229,40 @@ const App = (window.App = {
       }
     } catch (error) {
       console.error('Guided-mode AI portrait generation error:', error);
-      // Fall back silently to whatever portrait is already displayed
+      
+      // Show user-facing error message based on error type
+      if (error.isSafetyRejection) {
+        console.group('🚫 OpenAI Content Safety Rejection - Guided Mode');
+        console.error('Rejected prompt:', error.rejectedPrompt || 'Unknown');
+        console.error('Original error:', error.originalMessage);
+        if (error.promptAnalysis) {
+          console.log('Analysis included above ↑');
+        }
+        console.groupEnd();
+        
+        // Build user message with helpful context
+        let userMessage = 'OpenAI flagged this portrait request. ';
+        
+        if (error.promptAnalysis && error.promptAnalysis.hasKnownProblematicTerms) {
+          const issues = error.promptAnalysis.potentialIssues;
+          const categories = issues.map(i => i.category).join(', ');
+          userMessage += `Possible triggers: ${categories}. `;
+        }
+        
+        userMessage += 'Check browser console for detailed analysis and suggestions.';
+        
+        this.showSystemMessage(userMessage);
+      } else if (error.isRateLimit) {
+        this.showSystemMessage(
+          'Rate limit exceeded. Please wait a moment before generating another portrait.',
+        );
+      } else {
+        this.showSystemMessage(
+          'Failed to generate AI portrait. Using template portrait instead.',
+        );
+      }
+      
+      // Fall back to whatever portrait is already displayed
       // (pre-generated ASCII or template).
     } finally {
       const portraitEl = document.getElementById('character-portrait');
@@ -2752,9 +2791,26 @@ const App = (window.App = {
       
       // Check error type and show appropriate message
       if (error.isSafetyRejection) {
-        this.showSystemMessage(
-          'OpenAI flagged this portrait request. Try modifying your character description or prompt.',
-        );
+        console.group('🚫 OpenAI Content Safety Rejection - Custom Prompt Mode');
+        console.error('Rejected prompt:', error.rejectedPrompt || 'Unknown');
+        console.error('Original error:', error.originalMessage);
+        if (error.promptAnalysis) {
+          console.log('Analysis included above ↑');
+        }
+        console.groupEnd();
+        
+        // Build user message with helpful context
+        let userMessage = 'OpenAI flagged this portrait request. ';
+        
+        if (error.promptAnalysis && error.promptAnalysis.hasKnownProblematicTerms) {
+          const issues = error.promptAnalysis.potentialIssues;
+          const categories = issues.map(i => i.category).join(', ');
+          userMessage += `Possible triggers: ${categories}. `;
+        }
+        
+        userMessage += 'Check browser console for detailed analysis and suggestions.';
+        
+        this.showSystemMessage(userMessage);
       } else if (error.isRateLimit) {
         this.showSystemMessage(
           'Rate limit exceeded. Please wait a moment before generating another portrait. Try again in a few minutes.',
@@ -3741,7 +3797,40 @@ const App = (window.App = {
       }
     } catch (error) {
       console.error('Quick-create AI portrait generation error:', error);
-      // Fall back silently to whatever portrait is already displayed
+      
+      // Show user-facing error message based on error type
+      if (error.isSafetyRejection) {
+        console.group('🚫 OpenAI Content Safety Rejection - Quick Create Mode');
+        console.error('Rejected prompt:', error.rejectedPrompt || 'Unknown');
+        console.error('Original error:', error.originalMessage);
+        if (error.promptAnalysis) {
+          console.log('Analysis included above ↑');
+        }
+        console.groupEnd();
+        
+        // Build user message with helpful context
+        let userMessage = 'OpenAI flagged this portrait request. ';
+        
+        if (error.promptAnalysis && error.promptAnalysis.hasKnownProblematicTerms) {
+          const issues = error.promptAnalysis.potentialIssues;
+          const categories = issues.map(i => i.category).join(', ');
+          userMessage += `Possible triggers: ${categories}. `;
+        }
+        
+        userMessage += 'Check browser console for detailed analysis and suggestions.';
+        
+        this.showSystemMessage(userMessage);
+      } else if (error.isRateLimit) {
+        this.showSystemMessage(
+          'Rate limit exceeded. Please wait a moment before generating another portrait.',
+        );
+      } else {
+        this.showSystemMessage(
+          'Failed to generate AI portrait. Using template portrait instead.',
+        );
+      }
+      
+      // Fall back to whatever portrait is already displayed
       // (pre-generated ASCII or template). Guided mode behavior is unchanged.
     } finally {
       // Whatever happens above (success or failure), restore portrait font
