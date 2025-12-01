@@ -73,6 +73,11 @@
   --sheet-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.08);
   --sheet-ability-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.08);
   
+  /* Legacy panel-teal tokens (for backward compatibility with character-builder
+     and portrait history components that reference these directly) */
+  --panel-teal: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+  --panel-teal-dim: hsl(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim));
+  
   /* Scrollbar Tokens (derived from terminal green) */
   --scrollbar-thumb-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-dim), 0.45);
   --scrollbar-thumb-hover-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.85);
@@ -250,8 +255,11 @@ body::before {
 }
 
 .terminal-title {
-  font-size: var(--font-size-base);
   color: var(--terminal-accent);
+  font-size: var(--font-size-large);
+  font-weight: bold;
+  line-height: 1.1;
+  letter-spacing: 0.03em;
 }
 
 .terminal-footer {
@@ -1648,7 +1656,7 @@ body::before {
   }
   
   .terminal-title {
-    font-size: var(--font-size-base);
+    font-size: var(--font-size-large);
   }
   
   .button-group {

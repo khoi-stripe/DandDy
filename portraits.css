@@ -77,7 +77,10 @@
 /* Smaller portrait preview inside history modal to keep it readable
    without overwhelming the layout. */
 .portrait-history-preview.ascii-portrait {
-  font-size: inherit; /* Match base card-thumbnail typography */
+  /* Slightly smaller ASCII inside history previews so it better matches
+     the character grid cards without overwhelming the modal. */
+  font-size: 2.2px;
+  line-height: 1.1;
   max-height: 100%;
   overflow-y: hidden;
 }
@@ -88,10 +91,9 @@
   gap: var(--spacing-md);
   overflow-x: auto;
   overflow-y: visible;
-  /* Give the scrollbar some breathing room below the cards and create
-     dedicated side gutters for the carousel arrows so they don't sit
-     directly on top of card content. */
-  padding-block: var(--spacing-sm) var(--spacing-md);
+  /* Give the scrollbar and glow plenty of breathing room so the yellow breathing
+     glow animation doesn't get clipped at the top or bottom of the cards. */
+  padding-block: var(--spacing-lg) var(--spacing-xl);
   padding-inline: 48px;
   scroll-behavior: smooth;
 }
@@ -108,10 +110,12 @@
   box-sizing: border-box;
 }
 
-/* Portrait history cards use the same vertical card layout pattern. */
+/* Portrait history cards use the same vertical card layout pattern.
+   All styles match the character grid but use YELLOW theme instead of green. */
 .portrait-history-modal .character-card {
   background-color: var(--terminal-bg);
-  border: 1px solid var(--terminal-border);
+  /* Default/unselected: dim yellow outline */
+  border: 1px solid var(--modal-accent-dim);
   padding: 0;
   transition: all var(--transition-speed);
   cursor: pointer;
@@ -124,23 +128,34 @@
   aspect-ratio: 3 / 4;
 }
 
-/* Hover and keyboard focus (unselected) - green accent, translucent bg */
+/* Hover and keyboard focus (unselected) - bright yellow outline, text, and ASCII */
 .portrait-history-modal .character-card:hover:not(.is-selected),
 .portrait-history-modal .character-card.is-keyboard-focused:not(.is-selected) {
-  border-color: var(--terminal-accent);
+  border-color: var(--modal-accent);
   background-color: hsla(
-    var(--theme-terminal-h),
-    var(--theme-terminal-s),
-    var(--theme-terminal-l-bright),
+    var(--theme-yellow-h),
+    var(--theme-yellow-s),
+    var(--theme-yellow-l-bright),
     0.08
   );
   box-shadow: 0 0 15px
     hsla(
-      var(--theme-terminal-h),
-      var(--theme-terminal-s),
-      var(--theme-terminal-l-bright),
+      var(--theme-yellow-h),
+      var(--theme-yellow-s),
+      var(--theme-yellow-l-bright),
       0.25
     );
+}
+
+.portrait-history-modal .character-card:hover:not(.is-selected) .card-thumbnail,
+.portrait-history-modal .character-card.is-keyboard-focused:not(.is-selected) .card-thumbnail,
+.portrait-history-modal .character-card:hover:not(.is-selected) .card-thumbnail .ascii-portrait,
+.portrait-history-modal .character-card.is-keyboard-focused:not(.is-selected) .card-thumbnail .ascii-portrait,
+.portrait-history-modal .character-card:hover:not(.is-selected) .card-name,
+.portrait-history-modal .character-card.is-keyboard-focused:not(.is-selected) .card-name,
+.portrait-history-modal .character-card:hover:not(.is-selected) .card-info,
+.portrait-history-modal .character-card.is-keyboard-focused:not(.is-selected) .card-info {
+  color: var(--modal-accent);
 }
 
 /* Ensure thumbnails in history cards render images nicely */
@@ -171,7 +186,7 @@
 }
 
 .portrait-history-modal .card-name {
-  color: var(--terminal-fg);
+  color: var(--modal-accent-dim);
   font-size: var(--font-size-small);
   line-height: 1.2;
   margin-bottom: 0;
@@ -181,7 +196,7 @@
 }
 
 .portrait-history-modal .card-info {
-  color: var(--terminal-dim);
+  color: var(--modal-accent-dim);
   font-size: var(--font-size-small);
   line-height: 1.2;
   overflow: hidden;
@@ -189,138 +204,82 @@
   white-space: nowrap;
 }
 
-/* Yellow-themed cards inside portrait history modal */
-.portrait-history-modal .character-card {
-  border-color: var(--modal-accent);
+/* Default ASCII art in unselected cards uses dim yellow */
+.portrait-history-modal .character-card .card-thumbnail,
+.portrait-history-modal .character-card .card-thumbnail .ascii-portrait {
+  color: var(--modal-accent-dim);
+}
+
+/* Selected card uses bright yellow (matching character grid pattern) */
+.portrait-history-modal .character-card.is-selected {
+  border-color: var(--modal-accent) !important;
   background-color: hsla(
     var(--theme-yellow-h),
     var(--theme-yellow-s),
     var(--theme-yellow-l-bright),
-    0.06
-  );
-}
-
-.portrait-history-modal .character-card .card-name {
-  color: var(--modal-accent);
-}
-
-.portrait-history-modal .character-card .card-info {
-  color: hsla(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright),
-    0.8
-  );
-}
-
-/* Default: ASCII art in unselected portrait history cards is yellow */
-.portrait-history-modal .character-card:not(.is-selected) .card-thumbnail,
-.portrait-history-modal
-  .character-card:not(.is-selected)
-  .card-thumbnail
-  .ascii-portrait {
-  color: var(--modal-accent);
-}
-
-/* Yellow-themed buttons inside portrait history cards */
-.portrait-history-modal .portrait-history-actions .terminal-btn {
-  border-color: var(--modal-accent);
-  color: var(--modal-accent);
-  background: transparent;
-}
-
-.portrait-history-modal .portrait-history-actions .terminal-btn:hover {
-  background-color: hsla(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright),
-    0.15
-  );
-  box-shadow: 0 0 10px
-    hsla(
-      var(--theme-yellow-h),
-      var(--theme-yellow-s),
-      var(--theme-yellow-l-bright),
-      0.6
-    );
-}
-
-/* When a portrait history card is focused/selected, switch the entire card UI
-   (borders, text, buttons, ASCII) to the teal theme used for active characters. */
-.portrait-history-modal .character-card.is-selected,
-.portrait-history-modal .character-card.is-keyboard-focused {
-  border-color: var(--panel-teal);
-  box-shadow: 0 0 16px
-    hsla(
-      var(--theme-teal-h),
-      calc(var(--theme-teal-s) * 0.67),
-      var(--theme-teal-l-dim),
-      0.7
-    );
-  background-color: hsla(
-    var(--theme-teal-h),
-    var(--theme-teal-s),
-    var(--theme-teal-l-bright),
-    0.12
-  );
-}
-
-.portrait-history-modal .character-card.is-selected .card-name,
-.portrait-history-modal .character-card.is-keyboard-focused .card-name {
-  color: var(--panel-teal);
-}
-
-.portrait-history-modal .character-card.is-selected .card-info,
-.portrait-history-modal .character-card.is-keyboard-focused .card-info {
-  color: var(--panel-teal-dim);
+    0.08
+  ) !important;
+  /* Yellow breathing glow (matching card-glow pattern) */
+  box-shadow:
+    0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.5),
+    0 0 14px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45),
+    0 0 28px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.3),
+    0 10px 22px rgba(0, 0, 0, 0.6) !important;
+  animation: portrait-history-card-glow 4.6s ease-in-out 0.3s infinite !important;
 }
 
 .portrait-history-modal .character-card.is-selected .card-thumbnail,
-.portrait-history-modal .character-card.is-keyboard-focused .card-thumbnail,
-.portrait-history-modal
-  .character-card.is-selected
-  .card-thumbnail
-  .ascii-portrait,
-.portrait-history-modal
-  .character-card.is-keyboard-focused
-  .card-thumbnail
-  .ascii-portrait {
-  color: var(--panel-teal);
+.portrait-history-modal .character-card.is-selected .card-thumbnail .ascii-portrait {
+  /* Selected: bright yellow ASCII art */
+  color: var(--modal-accent) !important;
 }
 
-.portrait-history-modal
-  .character-card.is-selected
-  .portrait-history-actions
-  .terminal-btn,
-.portrait-history-modal
-  .character-card.is-keyboard-focused
-  .portrait-history-actions
-  .terminal-btn {
-  border-color: var(--panel-teal);
-  color: var(--panel-teal);
+.portrait-history-modal .character-card.is-selected .card-name {
+  /* Selected: reversed text area → bright yellow background, black text */
+  color: #000000 !important;
 }
 
-.portrait-history-modal
-  .character-card.is-selected
-  .portrait-history-actions
-  .terminal-btn:hover,
-.portrait-history-modal
-  .character-card.is-keyboard-focused
-  .portrait-history-actions
-  .terminal-btn:hover {
+.portrait-history-modal .character-card.is-selected .card-info {
+  color: #000000 !important;
+}
+
+.portrait-history-modal .character-card.is-selected .card-details {
+  background-color: var(--modal-accent);
+  color: #000000;
+}
+
+/* Hover and keyboard focus for selected cards - keep bright yellow treatment */
+.portrait-history-modal .character-card.is-selected:hover,
+.portrait-history-modal .character-card.is-selected.is-keyboard-focused {
+  border-color: var(--modal-accent) !important;
   background-color: hsla(
-    var(--theme-teal-h),
-    var(--theme-teal-s),
-    var(--theme-teal-l-bright),
-    0.18
-  );
-  box-shadow: 0 0 10px
-    hsla(
-      var(--theme-teal-h),
-      calc(var(--theme-teal-s) * 0.67),
-      var(--theme-teal-l-dim),
-      0.6
-    );
+    var(--theme-yellow-h),
+    var(--theme-yellow-s),
+    var(--theme-yellow-l-bright),
+    0.14
+  ) !important;
+  /* Maintain the same glow intensity while hovered/focused so it feels stable */
+  box-shadow:
+    0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.5),
+    0 0 14px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45),
+    0 0 28px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.3),
+    0 10px 22px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Overflow button on selected cards: black icon on yellow background */
+.portrait-history-modal .character-card.is-selected .portrait-history-overflow-btn,
+.portrait-history-modal .character-card.is-selected:hover .portrait-history-overflow-btn,
+.portrait-history-modal .character-card.is-selected.is-keyboard-focused .portrait-history-overflow-btn {
+  border-color: #000000;
+  color: #000000;
+  background: transparent;
+}
+
+.portrait-history-modal .character-card.is-selected .portrait-history-overflow-btn:hover,
+.portrait-history-modal .character-card.is-selected:hover .portrait-history-overflow-btn:hover,
+.portrait-history-modal .character-card.is-selected.is-keyboard-focused .portrait-history-overflow-btn:hover {
+  background-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
 }
 
 /* Layout for date + overflow inside a single footer band */
@@ -427,25 +386,16 @@
 }
 
 /* Portrait history listbox hover/focus background:
-   - Unfocused cards (default menu): yellow modal theme
-   - Focused/selected card menu: teal sheet theme to match the active card */
+   All cards use yellow modal theme (both selected and unselected) */
 .portrait-history-menu-detached .selector-option:hover,
-.portrait-history-menu-detached .selector-option:focus {
+.portrait-history-menu-detached .selector-option:focus,
+.portrait-history-menu-detached--teal .selector-option:hover,
+.portrait-history-menu-detached--teal .selector-option:focus {
   background-color: hsla(
     var(--theme-yellow-h),
     var(--theme-yellow-s),
     var(--theme-yellow-l-bright),
     0.16
-  );
-}
-
-.portrait-history-menu-detached--teal .selector-option:hover,
-.portrait-history-menu-detached--teal .selector-option:focus {
-  background-color: hsla(
-    var(--theme-teal-h),
-    var(--theme-teal-s),
-    var(--theme-teal-l-bright),
-    0.18
   );
 }
 
@@ -480,39 +430,9 @@
     );
 }
 
-/* Selected/keyboard-focused cards use teal theme for overflow button */
-.portrait-history-modal
-  .character-card.is-selected
-  .portrait-history-overflow-btn,
-.portrait-history-modal
-  .character-card.is-keyboard-focused
-  .portrait-history-overflow-btn {
-  border-color: var(--panel-teal);
-  color: var(--panel-teal);
-}
-
-.portrait-history-modal
-  .character-card.is-selected
-  .portrait-history-overflow-btn:hover,
-.portrait-history-modal
-  .character-card.is-keyboard-focused
-  .portrait-history-overflow-btn:hover {
-  background-color: hsla(
-    var(--theme-teal-h),
-    var(--theme-teal-s),
-    var(--theme-teal-l-bright),
-    0.18
-  );
-  box-shadow: 0 0 10px
-    hsla(
-      var(--theme-teal-h),
-      calc(var(--theme-teal-s) * 0.67),
-      var(--theme-teal-l-dim),
-      0.6
-    );
-}
-
-/* Portrait history menus that are moved to document.body need explicit theme tokens */
+/* Portrait history menus that are moved to document.body need explicit theme tokens
+   AND must re-declare all base selector-menu styles since they lose inheritance
+   when detached from the modal DOM tree. */
 .portrait-history-menu-detached {
   /* Default to the modal's yellow theme when detached so they match the
      non-teal portrait history UI. */
@@ -532,13 +452,59 @@
     var(--theme-yellow-l-bright),
     0.7
   );
+  
+  /* Re-declare base selector-menu visual properties that are lost when
+     the menu is moved to document.body (outside the modal context). */
+  background: var(--terminal-bg);
+  border: 1px solid var(--ui-border-color);
+  border-radius: 4px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.9);
 }
 
-/* When the detached menu belongs to the focused/selected card, we switch its
-   tokens to the teal theme so the listbox matches the teal card chrome. */
+/* When the detached menu belongs to the focused/selected card, keep it yellow
+   (same as the base detached menu) since selected cards now use yellow theme.
+   We add a slightly stronger glow to make it stand out more. */
 .portrait-history-menu-detached--teal {
-  --ui-border-color: var(--panel-teal);
-  --ui-fg-color: var(--panel-teal);
-  --ui-dim-color: var(--panel-teal-dim);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.95);
+}
+
+/* Yellow breathing glow animation for selected portrait history cards
+   (matches the card-glow pattern but uses yellow theme instead of green) */
+@keyframes portrait-history-card-glow {
+  0% {
+    box-shadow:
+      0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.5),
+      0 0 14px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45),
+      0 0 28px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.3),
+      0 10px 22px rgba(0, 0, 0, 0.6);
+  }
+  27% {
+    box-shadow:
+      0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.65),
+      0 0 18px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.55),
+      0 0 32px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.34),
+      0 10px 22px rgba(0, 0, 0, 0.6);
+  }
+  54% {
+    box-shadow:
+      0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.8),
+      0 0 20px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.7),
+      0 0 40px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45),
+      0 10px 22px rgba(0, 0, 0, 0.6);
+  }
+  81% {
+    box-shadow:
+      0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.6),
+      0 0 16px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.5),
+      0 0 30px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.33),
+      0 10px 22px rgba(0, 0, 0, 0.6);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.5),
+      0 0 14px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45),
+      0 0 28px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.3),
+      0 10px 22px rgba(0, 0, 0, 0.6);
+  }
 }
 
