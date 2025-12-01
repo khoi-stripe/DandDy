@@ -110,7 +110,7 @@
   height: 80px;
   position: relative;
   transform-style: preserve-3d;
-  animation: portrait-cube-spin 16s infinite linear;
+  animation: portrait-cube-spin 24s infinite linear;
 }
 
 .portrait-placeholder-cube i {

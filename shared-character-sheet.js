@@ -38,7 +38,7 @@ const CharacterSheet = (window.CharacterSheet = {
     } = options;
 
     // Parse character data (handle both old and new formats)
-    const parsed = this._parseCharacterData(character);
+    const parsed = this._parseCharacterData(character, context);
 
     // Build HTML
     return `
@@ -392,6 +392,11 @@ const CharacterSheet = (window.CharacterSheet = {
       context === 'builder'
         ? 'sheet-header sheet-header--no-divider'
         : 'sheet-header';
+    
+    // In builder context, check if combat stats have been populated
+    // Show dashes for empty/default values until they're set
+    const isBuilder = context === 'builder';
+    const hasCombatStats = parsed.hpMax > 0;
 
     return `
       <div class="sheet-section">
@@ -401,27 +406,27 @@ const CharacterSheet = (window.CharacterSheet = {
         <div class="stat-grid">
           <div class="stat-box">
             <div class="stat-box-label">HIT POINTS</div>
-            <div class="stat-box-value">${parsed.hpCurrent} / ${parsed.hpMax}</div>
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hpCurrent} / ${parsed.hpMax}`}</div>
           </div>
           <div class="stat-box">
             <div class="stat-box-label">ARMOR CLASS</div>
-            <div class="stat-box-value">${parsed.armorClass}</div>
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : parsed.armorClass}</div>
           </div>
           <div class="stat-box">
             <div class="stat-box-label">INITIATIVE</div>
-            <div class="stat-box-value">${this.formatModifier(parsed.initiative)}</div>
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : this.formatModifier(parsed.initiative)}</div>
           </div>
           <div class="stat-box">
             <div class="stat-box-label">SPEED</div>
-            <div class="stat-box-value">${parsed.speed} ft</div>
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.speed} ft`}</div>
           </div>
           <div class="stat-box">
             <div class="stat-box-label">PROF BONUS</div>
-            <div class="stat-box-value">+${parsed.proficiencyBonus}</div>
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `+${parsed.proficiencyBonus}`}</div>
           </div>
           <div class="stat-box">
             <div class="stat-box-label">HIT DIE</div>
-            <div class="stat-box-value">d${parsed.hitDie}</div>
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `d${parsed.hitDie}`}</div>
           </div>
         </div>
       </div>
@@ -1204,7 +1209,7 @@ const CharacterSheet = (window.CharacterSheet = {
           <div class="sheet-header-title">[ BACKGROUND FEATURE ]</div>
         </div>
         <div class="sheet-content">
-          <div class="stat-line"><span class="stat-label">${name}:</span></div>
+          <div class="stat-line"><span class="stat-label">${name}</span></div>
           <div class="text-dim mt-sm">${description}</div>
         </div>
       </div>
@@ -1267,7 +1272,10 @@ const CharacterSheet = (window.CharacterSheet = {
   // DATA PARSING & HELPERS
   // ========================================
 
-  _parseCharacterData(character) {
+  _parseCharacterData(character, context = 'manager') {
+    // In builder context, show all sections from the start (except spells)
+    const isBuilder = context === 'builder';
+    
     // Handle HP (old and new formats)
     const hp = character.hitPoints || { current: 0, max: 0 };
     const hpMax = typeof hp === 'number' ? hp : hp.max || 0;
@@ -1384,30 +1392,34 @@ const CharacterSheet = (window.CharacterSheet = {
       spellSlots: character.spellSlots || {},
 
       // Flags for conditional rendering
+      // In builder, always show sections (except spells until we know they're a caster)
       hasRace: !!raceName,
       hasClass: !!className,
-      hasAbilities: Object.keys(abilities).length > 0, // Show abilities section even if not rolled yet (will show dashes)
-      hasCombatStats: hpMax > 0 || character.armorClass,
-      hasSavingThrows:
+      hasAbilities: isBuilder || Object.keys(abilities).length > 0,
+      hasCombatStats: isBuilder || hpMax > 0 || character.armorClass,
+      hasSavingThrows: isBuilder || (
         character.savingThrowModifiers &&
-        Object.keys(character.savingThrowModifiers).length > 0,
-      hasSkills:
+        Object.keys(character.savingThrowModifiers).length > 0
+      ),
+      hasSkills: isBuilder || (
         Object.keys(skillModifiers).length > 0 ||
-        skillProficiencies.length > 0,
+        skillProficiencies.length > 0
+      ),
       hasSpells:
         (character.cantrips && character.cantrips.length > 0) ||
         (character.spellsKnown && character.spellsKnown.length > 0) ||
         (character.spellsPrepared && character.spellsPrepared.length > 0),
-      hasRacialTraits: racialTraits.length > 0,
-      hasEquipment: allEquipment.length > 0,
+      hasRacialTraits: isBuilder || racialTraits.length > 0,
+      hasEquipment: isBuilder || allEquipment.length > 0,
       hasClassEquipment:
         (!explicitEquipment || explicitEquipment.length === 0) &&
         classEquipment.length > 0,
-      hasToolProficiencies:
-        character.toolProficiencies && character.toolProficiencies.length > 0,
-      hasLanguages: languages.length > 0 || character.languageChoices > 0,
-      hasBackgroundFeature: !!backgroundFeature,
-      hasBackstory: !!character.backstory,
+      hasToolProficiencies: isBuilder || (
+        character.toolProficiencies && character.toolProficiencies.length > 0
+      ),
+      hasLanguages: isBuilder || languages.length > 0 || character.languageChoices > 0,
+      hasBackgroundFeature: isBuilder || !!backgroundFeature,
+      hasBackstory: isBuilder || !!character.backstory,
       hasExportInfo: !!character.exportDate,
     };
   },
