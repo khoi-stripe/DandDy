@@ -221,6 +221,8 @@
     gap: 4px;
     justify-content: space-between;
     white-space: nowrap;
+    /* Match search input padding to maintain consistent height */
+    padding: var(--spacing-sm) var(--spacing-md);
 }
 
 .search-sort-btn:hover {
