@@ -618,8 +618,15 @@
 /* LEFT PANEL - Selected card uses bright terminal green (no teal) */
 .character-card.is-selected {
     border-color: var(--terminal-border) !important;
-    box-shadow: 0 0 15px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.5) !important;
     background-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.08);
+    /* Breathing glow borrowed from toast timing, but slower + more organic,
+       plus a subtle drop shadow to ground the card. */
+    box-shadow:
+        0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.5),
+        0 0 14px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.45),
+        0 0 28px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.3),
+        0 10px 22px rgba(0, 0, 0, 0.6);
+    animation: card-glow 4.6s ease-in-out 0.3s infinite;
 }
 
 .character-card.is-selected .card-thumbnail {
@@ -646,7 +653,13 @@
 .character-card.is-selected.is-keyboard-focused {
     border-color: var(--terminal-border) !important;
     background-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.14);
-    box-shadow: 0 0 18px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.7) !important;
+    /* Maintain the same glow intensity while hovered/focused so it feels stable,
+       and keep the grounding drop shadow. */
+    box-shadow:
+        0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.5),
+        0 0 18px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.7),
+        0 0 34px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.4),
+        0 10px 24px rgba(0, 0, 0, 0.7) !important;
 }
 
 /* (All modal theming is now handled by terminal-theme.css so it can be shared across apps.) */

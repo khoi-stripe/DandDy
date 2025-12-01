@@ -10,7 +10,7 @@
   --theme-terminal-h: 120;
   --theme-terminal-s: 100%;
   --theme-terminal-l-bright: 50%;
-  --theme-terminal-l-dim: 27%;
+  --theme-terminal-l-dim: 35%;
   
   /* Sheet Teal Theme */
   --theme-teal-h: 181;
@@ -438,6 +438,41 @@ body::before {
       0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.5),
       0 0 14px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45),
       0 0 28px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.3);
+  }
+}
+
+/* Shared card glow animation (slower, slightly irregular breathing).
+   Uses terminal theme tokens so it feels organic but not distracting. */
+@keyframes card-glow {
+  0% {
+    box-shadow:
+      0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.5),
+      0 0 14px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.45),
+      0 0 28px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.3);
+  }
+  27% {
+    box-shadow:
+      0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.65),
+      0 0 18px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.55),
+      0 0 32px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.34);
+  }
+  54% {
+    box-shadow:
+      0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.8),
+      0 0 20px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.7),
+      0 0 40px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.45);
+  }
+  81% {
+    box-shadow:
+      0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.6),
+      0 0 16px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.5),
+      0 0 30px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.33);
+  }
+  100% {
+    box-shadow:
+      0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.5),
+      0 0 14px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.45),
+      0 0 28px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.3);
   }
 }
 
@@ -977,6 +1012,11 @@ body::before {
   text-align: left;
   white-space: nowrap;
   gap: var(--spacing-xs);
+}
+
+.selector-trigger:hover {
+  /* Subtle translucent tint on hover, consistent with selector options */
+  background-color: color-mix(in srgb, var(--ui-primary-bg-color) 20%, transparent);
 }
 
 .selector-trigger-label {
