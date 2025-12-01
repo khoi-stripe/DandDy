@@ -445,6 +445,16 @@ const CharacterSheet = (window.CharacterSheet = {
         <div class="ability-grid">
           ${abilities
             .map((ability) => {
+              // Show dashes if abilities haven't been set yet (baseAbilities is null)
+              if (!parsed.abilitiesSet) {
+                return `
+                  <div class="ability-box">
+                    <div class="ability-name">${ability.toUpperCase()}</div>
+                    <div class="ability-score">— <span class="ability-modifier">(—)</span></div>
+                  </div>
+                `;
+              }
+              
               const score = parsed.abilities[ability] || 10;
               const modifier =
                 parsed.abilityModifiers[ability] !== undefined
@@ -1269,12 +1279,15 @@ const CharacterSheet = (window.CharacterSheet = {
     
     // Check if abilities have been actually rolled/populated.
     // - In the builder, baseAbilities is set when abilities are rolled.
+    // - For builder context (when baseAbilities exists in the character object structure),
+    //   only show actual values when baseAbilities has been set (not null).
     // - In manager/cloud-sourced characters, baseAbilities may be undefined,
-    //   but we still want to show abilities when they exist.
-    const hasAbilityKeys = abilities && Object.keys(abilities).length > 0;
+    //   so we check if any ability score differs from the default 10.
+    const hasNonDefaultAbilities = abilities && 
+      Object.values(abilities).some(score => score !== 10 && score !== 0);
     const abilitiesPopulated =
       (character.baseAbilities !== null && character.baseAbilities !== undefined) ||
-      hasAbilityKeys;
+      (character.baseAbilities === undefined && hasNonDefaultAbilities);
 
     // Handle race/class/background names (enhanced export has nested data)
     const raceName = character.raceData?.name || character.race || null;
@@ -1337,6 +1350,7 @@ const CharacterSheet = (window.CharacterSheet = {
       // Abilities
       abilities,
       abilityModifiers,
+      abilitiesSet: abilitiesPopulated,
 
       // Saving throws
       savingThrows: character.savingThrows || [],
@@ -1372,7 +1386,7 @@ const CharacterSheet = (window.CharacterSheet = {
       // Flags for conditional rendering
       hasRace: !!raceName,
       hasClass: !!className,
-      hasAbilities: abilitiesPopulated && Object.keys(abilities).length > 0,
+      hasAbilities: Object.keys(abilities).length > 0, // Show abilities section even if not rolled yet (will show dashes)
       hasCombatStats: hpMax > 0 || character.armorClass,
       hasSavingThrows:
         character.savingThrowModifiers &&

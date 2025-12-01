@@ -1829,7 +1829,7 @@ body::before {
   --spinner-cube-size: 0.75em;
   --spinner-cube-depth: calc(var(--spinner-cube-size) / 2);
   --spinner-cube-border-width: 0.5px;
-  --spinner-cube-perspective: 32px;
+  --spinner-cube-perspective: 20px;
   --spinner-cube-speed: 1s;
   --spinner-cube-tilt-x: 0deg;
   --spinner-cube-tilt-y: 0deg;
@@ -1849,7 +1849,7 @@ body::before {
   --spinner-cube-size: 0.75em;
   --spinner-cube-depth: calc(var(--spinner-cube-size) / 2);
   --spinner-cube-border-width: 0.5px;
-  --spinner-cube-perspective: 32px;
+  --spinner-cube-perspective: 20px;
   --spinner-cube-speed: 1s;
   --spinner-cube-tilt-x: 0deg;
   --spinner-cube-tilt-y: 0deg;
@@ -1860,7 +1860,7 @@ body::before {
   --spinner-cube-size: 0.75em;
   --spinner-cube-depth: calc(var(--spinner-cube-size) / 2);
   --spinner-cube-border-width: 0.5px;
-  --spinner-cube-perspective: 32px;
+  --spinner-cube-perspective: 20px;
   --spinner-cube-speed: 1s;
   --spinner-cube-tilt-x: 0deg;
   --spinner-cube-tilt-y: 0deg;
