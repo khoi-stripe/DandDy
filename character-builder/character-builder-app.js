@@ -2820,6 +2820,9 @@ const App = (window.App = {
     }
   },
 
+  // Track if we've shown the guest save notice this session
+  _guestSaveNoticeShown: false,
+
   // Explicit save entry point for the completion screen.
   async saveCharacter(showMessage = true) {
     const state = CharacterState.get();
@@ -2843,6 +2846,14 @@ const App = (window.App = {
       if (showMessage) {
         // Use a short, non-intrusive toast instead of an inline narrator system line.
         this.showToast('Character saved');
+      }
+
+      // Show reminder to log in if in guest mode (only once per session)
+      if (!this._guestSaveNoticeShown && window.AuthService && !window.AuthService.isAuthenticated()) {
+        this._guestSaveNoticeShown = true;
+        setTimeout(() => {
+          this.showNotification('💡 Log in or create an account to save your character to the cloud', 'info');
+        }, 1000);
       }
     } catch (error) {
       console.error('Error saving character:', error);

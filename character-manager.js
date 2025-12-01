@@ -740,6 +740,7 @@ async function saveEditDetails() {
     }
 
     await CharacterStorage.update(currentEditCharacterId, updates);
+    markUserChanges(); // Show guest notice if applicable
     await AppState.loadCharacters();
     UI.render();
     viewCharacter(currentEditCharacterId);
@@ -803,6 +804,7 @@ async function renameCharacter(id) {
         }
         close();
         await CharacterStorage.update(id, { name: newName });
+        markUserChanges(); // Show guest notice if applicable
         await AppState.loadCharacters();
         UI.render();
         viewCharacter(id);
@@ -1074,6 +1076,7 @@ async function confirmGeneratePortrait() {
 
         // Persist to storage (cloud or local depending on auth state)
         await CharacterStorage.update(portraitCharacterId, updates);
+        markUserChanges(); // Show guest notice if applicable
 
         // Apply the new portrait directly into the currently visible manager UI
         // so we avoid a full grid/sheet re-render and instead "draw in" the art.
@@ -1489,9 +1492,10 @@ async function handleOverwriteCharacter(existingId, importData) {
     }
 
     const result = await CharacterStorage.add(character);
+    markUserChanges(); // Show guest notice if applicable
     
     if (result) {
-        console.log('✅ OVERWRITE SUCCESS: Character replaced');
+        console.log('✅ KEEP BOTH SUCCESS: Character imported as', newName);
         await AppState.loadCharacters();
         UI.render();
         closeImportModal();
@@ -1527,6 +1531,7 @@ async function handleKeepBothCharacters(importData) {
     delete character.id;
     
     const result = await CharacterStorage.add(character);
+    markUserChanges(); // Show guest notice if applicable
     
     if (result) {
         console.log('✅ KEEP BOTH SUCCESS: Character imported as', newName);
@@ -1953,11 +1958,42 @@ function showAlertDialog(message) {
     }
 }
 
+// Track guest notice state per session
+let guestNoticeShownThisSession = false;
+let userHasMadeChanges = false;
+
 // Dismiss the guest notice banner (per-session only)
 function dismissGuestNotice() {
     const guestNotice = document.getElementById('guestNotice');
     if (guestNotice) {
         guestNotice.classList.add('is-hidden');
+        guestNoticeShownThisSession = true;
+    }
+}
+
+// Show guest notice when user makes changes (if not logged in and not shown yet)
+function maybeShowGuestNotice() {
+    // Only show if not authenticated and hasn't been shown this session
+    if (window.AuthService && window.AuthService.isAuthenticated()) {
+        return;
+    }
+    
+    if (guestNoticeShownThisSession) {
+        return;
+    }
+    
+    const guestNotice = document.getElementById('guestNotice');
+    if (guestNotice) {
+        guestNotice.classList.remove('is-hidden');
+        guestNoticeShownThisSession = true;
+    }
+}
+
+// Mark that user has made changes (called when creating/editing characters)
+function markUserChanges() {
+    if (!userHasMadeChanges) {
+        userHasMadeChanges = true;
+        maybeShowGuestNotice();
     }
 }
 
@@ -2471,10 +2507,8 @@ function updateAuthUI() {
             showAuthModal();
         };
 
-        // Show guest notice when not authenticated
-        if (guestNotice) {
-            guestNotice.classList.remove('is-hidden');
-        }
+        // Don't show guest notice by default - only when user makes changes
+        // (handled by maybeShowGuestNotice() function)
     }
 }
 
