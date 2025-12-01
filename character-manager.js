@@ -923,44 +923,47 @@ async function confirmGeneratePortrait() {
     const updatePortraitLoading = () => {
         if (!portraitEl) return;
         
-        // Use narrator-style cube (no inline overrides) so it matches the narrator spinner exactly
-        const cubeMarkup = 
-            '<span class="spinner-cube-scene">' +
-            '<span class="spinner-cube-tilt">' +
-            '<span class="spinner-cube">' +
-            '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
-            '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
-            '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
-            '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
-            '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
-            '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
-            '</span></span></span>';
-        
-        const renderLine = (text) => `<span class="narrator-spinner-shell">${cubeMarkup} ${text}</span>`;
-        
+        // Use the new spinning cube placeholder from builder
+        let message = '';
         if (portraitElapsed < 5) {
-            portraitEl.innerHTML = renderLine('Contacting image service...');
+            message = 'Generating portrait...';
         } else if (portraitElapsed < 15) {
-            portraitEl.innerHTML = renderLine('Image is being generated... (this takes 20-30 seconds)');
-        } else if (portraitElapsed < 25) {
-            portraitEl.innerHTML = renderLine('Converting to ASCII art...');
+            message = 'Creating image...';
+        } else if (portraitElapsed < 30) {
+            message = 'Converting to ASCII...';
         } else {
-            portraitEl.innerHTML = renderLine('Almost done...');
+            message = 'Almost done...';
         }
+        
+        portraitEl.innerHTML = `
+            <div class="portrait-placeholder-content">
+                <div class="portrait-placeholder-cube-container">
+                    <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                    </div>
+                </div>
+                <div class="portrait-placeholder-text">${message}</div>
+            </div>
+        `;
         portraitElapsed++;
     };
     
     if (portraitEl) {
-        // Enlarge font to match button/body copy while we're showing the loading message.
-        portraitEl.classList.add('ascii-portrait--loading');
-        portraitEl.style.fontSize = 'var(--font-size-small)';
+        // Add placeholder class for proper cube display with flexbox and 3D context
+        portraitEl.classList.add('ascii-portrait--placeholder');
+        portraitEl.classList.remove('ascii-portrait--loading');
+        portraitEl.style.fontSize = '';
         updatePortraitLoading();
         portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
     }
 
     console.log('%c🎨 PORTRAIT: Starting AI portrait generation...', 'color: #0ff; font-weight: bold');
     console.log('  Note: DALL-E takes 20-30s when backend is warm, 60s+ on cold start...');
-    showNotification('Generating custom AI portrait... This may take 20-30 seconds.');
 
     try {
         // Add rendering instructions to the user's character description
@@ -987,11 +990,11 @@ async function confirmGeneratePortrait() {
         if (portraitLoadingInterval) {
             clearInterval(portraitLoadingInterval);
         }
-        // Restore portrait font size back to ASCII default; the sheet will
+        // Restore portrait font size and remove placeholder class; the sheet will
         // re-render the portrait element for the newly generated art.
         if (portraitEl) {
             portraitEl.style.fontSize = '';
-            portraitEl.classList.remove('ascii-portrait--loading');
+            portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
         }
 
         console.log('%c🎨 PORTRAIT (Success) ✨', 'color: #0f0; font-weight: bold');
@@ -1159,10 +1162,10 @@ async function confirmGeneratePortrait() {
         if (portraitLoadingInterval) {
             clearInterval(portraitLoadingInterval);
         }
-        // Restore portrait font size on error as well
+        // Restore portrait font size and remove placeholder class on error as well
         if (portraitEl) {
             portraitEl.style.fontSize = '';
-            portraitEl.classList.remove('ascii-portrait--loading');
+            portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
         }
         
         // Restore previous portrait first

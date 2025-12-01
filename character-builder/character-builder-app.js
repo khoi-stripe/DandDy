@@ -2889,6 +2889,16 @@ const App = (window.App = {
       return;
     }
 
+    // Validate character has minimum required fields before saving
+    if (!character.name || !character.race || !character.class) {
+      if (showMessage) {
+        this.showSystemMessage(
+          'Character must have at least a name, race, and class before saving.',
+        );
+      }
+      return;
+    }
+
     try {
       console.log('💾 Saving character to shared storage (explicit save)...');
       // Saving should be a non-disruptive action – we don't want to re-animate
@@ -3853,8 +3863,9 @@ const App = (window.App = {
     const state = CharacterState.get();
     const character = state.character;
 
-    // Treat characters without an ID as "unsaved" in shared storage.
-    const hasUnsavedChanges = character && !character.id;
+    // Only prompt to save if character is complete (has name, race, class) and unsaved
+    const isComplete = character && character.name && character.race && character.class;
+    const hasUnsavedChanges = character && !character.id && isComplete;
 
     if (hasUnsavedChanges) {
       // Ask the user if they want to save before starting over.
@@ -3877,7 +3888,7 @@ const App = (window.App = {
         },
       );
     } else {
-      // Character is already saved; immediately start a new one with no extra confirmation.
+      // Character is already saved or incomplete; immediately start a new one.
       this._startNewInternal();
     }
   },

@@ -256,7 +256,7 @@ body::before {
 
 .terminal-title {
   color: var(--terminal-accent);
-  font-size: var(--font-size-large);
+  font-size: 18px;
   font-weight: bold;
   line-height: 1.1;
   letter-spacing: 0.03em;
@@ -530,7 +530,7 @@ body::before {
 
 .sheet-title {
   color: var(--sheet-accent);
-  font-size: var(--font-size-large);
+  font-size: 18px;
   font-weight: bold;
   line-height: 1.1;
   letter-spacing: 0.03em;
@@ -1660,7 +1660,7 @@ body::before {
   }
   
   .terminal-title {
-    font-size: var(--font-size-large);
+    font-size: 18px;
   }
   
   .button-group {
