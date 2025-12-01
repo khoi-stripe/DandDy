@@ -54,7 +54,7 @@ const CharacterSheet = (window.CharacterSheet = {
         onTogglePortrait,
       })}
       
-      ${showPortrait && parsed.hasRace
+      ${showPortrait
         ? this._renderPortrait(character, parsed, context, {
             onGeneratePortrait,
             onTogglePortrait,
@@ -322,9 +322,29 @@ const CharacterSheet = (window.CharacterSheet = {
     const portraitId = context === 'builder' ? 'character-portrait' : `character-portrait-${safeIdForDom}`;
     const originalPortraitId =
       context === 'builder' ? 'original-portrait' : `original-portrait-${safeIdForDom}`;
+    
+    // Check if we need to show placeholder (no ASCII portrait content yet)
+    const needsPlaceholder = !asciiPortrait && !originalPortraitUrl;
+    
     return `
       <div class="portrait-container">
-        <div class="ascii-portrait" id="${portraitId}"></div>
+        <div class="ascii-portrait ${needsPlaceholder ? 'ascii-portrait--placeholder' : ''}" id="${portraitId}">
+          ${needsPlaceholder ? `
+            <div class="portrait-placeholder-content">
+              <div class="portrait-placeholder-cube-container">
+                <div class="portrait-placeholder-cube">
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                </div>
+              </div>
+              <div class="portrait-placeholder-text">Waiting for character data…</div>
+            </div>
+          ` : ''}
+        </div>
         ${originalPortraitUrl
           ? `<img id="${originalPortraitId}" class="original-portrait is-hidden" src="${originalPortraitUrl}" alt="Character portrait">`
           : ''}

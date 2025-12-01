@@ -40,6 +40,23 @@ const SecureAIService = (window.SecureAIService = {
         throw new Error('Rate limit exceeded. Please try again later.');
       }
 
+      if (response.status === 400) {
+        const error = await response.json();
+        if (error.detail && error.detail.includes('safety system')) {
+          console.warn('⚠️ OpenAI safety system rejection:', error.detail);
+          // Show user-friendly notification
+          if (window.UIService) {
+            window.UIService.showNotification(
+              'OpenAI flagged this request. Using fallback response instead.',
+              'warning',
+              5000
+            );
+          }
+          return null;
+        }
+        throw new Error(error.detail || 'Failed to generate completion');
+      }
+
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.detail || 'Failed to generate completion');
@@ -99,6 +116,22 @@ const SecureAIService = (window.SecureAIService = {
         }),
       });
 
+      if (response.status === 400) {
+        const error = await response.json();
+        if (error.detail && error.detail.includes('safety system')) {
+          console.warn('⚠️ OpenAI safety system rejection:', error.detail);
+          if (window.UIService) {
+            window.UIService.showNotification(
+              'OpenAI flagged the name generation request. Please try different options.',
+              'warning',
+              5000
+            );
+          }
+          return null;
+        }
+        throw new Error(error.detail || 'Failed to generate names');
+      }
+
       if (!response.ok) {
         throw new Error('Failed to generate names');
       }
@@ -125,6 +158,22 @@ const SecureAIService = (window.SecureAIService = {
           background: character.background,
         }),
       });
+
+      if (response.status === 400) {
+        const error = await response.json();
+        if (error.detail && error.detail.includes('safety system')) {
+          console.warn('⚠️ OpenAI safety system rejection:', error.detail);
+          if (window.UIService) {
+            window.UIService.showNotification(
+              'OpenAI flagged the backstory request. Please try different character details.',
+              'warning',
+              5000
+            );
+          }
+          return null;
+        }
+        throw new Error(error.detail || 'Failed to generate backstory');
+      }
 
       if (!response.ok) {
         throw new Error('Failed to generate backstory');
@@ -156,6 +205,22 @@ const SecureAIService = (window.SecureAIService = {
 
       if (response.status === 429) {
         throw new Error('Rate limit exceeded. Image generation uses quota heavily. Please try again later.');
+      }
+
+      if (response.status === 400) {
+        const error = await response.json();
+        if (error.detail && error.detail.includes('safety system')) {
+          console.warn('⚠️ OpenAI safety system rejection:', error.detail);
+          if (window.UIService) {
+            window.UIService.showNotification(
+              'OpenAI flagged the portrait request. Please try modifying your character description.',
+              'error',
+              6000
+            );
+          }
+          throw new Error('Portrait generation was flagged by content safety system');
+        }
+        throw new Error(error.detail || 'Failed to generate image');
       }
 
       if (!response.ok) {

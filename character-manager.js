@@ -1176,7 +1176,11 @@ async function confirmGeneratePortrait() {
         }
         
         // Graceful error handling - inform but don't block
-        if (error.isRateLimit) {
+        if (error.isSafetyRejection) {
+            console.log('%c🎨 PORTRAIT (Safety System Rejection)', 'color: #fa0; font-weight: bold');
+            console.log('  OpenAI flagged this request:', error.originalMessage || error.message);
+            showNotification('⚠️ OpenAI flagged this portrait request. Try modifying your character description or prompt.');
+        } else if (error.isRateLimit) {
             console.log('%c🎨 PORTRAIT (Rate Limited)', 'color: #fa0; font-weight: bold');
             showNotification('⚠️ Rate limit exceeded. Please wait a few minutes before trying again.');
         } else if (error.name === 'AbortError' || (error.message && error.message.includes('timed out'))) {
@@ -2653,6 +2657,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const fromBuilder = urlParams.get('from') === 'builder';
     const splashDismissed = sessionStorage.getItem('welcomeSplashDismissed') === 'true';
+
+    // Show guest notice banner if returning from builder after saving while not logged in
+    if (fromBuilder && !isAuthenticated) {
+        const showGuestNotice = sessionStorage.getItem('showGuestNoticeOnReturn') === 'true';
+        if (showGuestNotice) {
+            sessionStorage.removeItem('showGuestNoticeOnReturn'); // Clear the flag
+            // Show the banner after a short delay to ensure DOM is ready
+            setTimeout(() => {
+                maybeShowGuestNotice();
+            }, 100);
+        }
+    }
 
     // Show welcome modal (splash art + three choices) only when not logged in.
     const welcomeModal = document.getElementById('welcomeModal');

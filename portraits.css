@@ -56,6 +56,102 @@
   min-height: 8rem;
 }
 
+/* Placeholder state for portrait area (shown while user answers narrator questions).
+   Fixed 16:9 aspect ratio container with centered message. */
+.ascii-portrait.ascii-portrait--placeholder {
+  /* Fixed 16:9 aspect ratio */
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  max-width: 100%;
+  /* Center the message text and cube */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  /* Light background to distinguish from the main sheet */
+  background: rgba(0, 0, 0, 0.2);
+  /* Allow text to wrap */
+  white-space: normal;
+  /* Override user-select none from base .ascii-portrait */
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+.portrait-placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+}
+
+.portrait-placeholder-text {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--panel-teal);
+  text-align: center;
+  padding: 0 var(--spacing-md);
+  font-family: var(--font-mono);
+  white-space: normal;
+}
+
+/* 80px spinning cube for placeholder */
+.portrait-placeholder-cube-container {
+  perspective: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portrait-placeholder-cube {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: portrait-cube-spin 8s infinite linear;
+}
+
+.portrait-placeholder-cube i {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 1.8px solid var(--panel-teal);
+  background: rgba(0, 255, 255, 0.05);
+  opacity: 0.5;
+}
+
+/* Active state when generating portrait - full glow and faster spin */
+.portrait-placeholder-cube--generating {
+  animation: portrait-cube-spin 4s infinite linear;
+}
+
+.portrait-placeholder-cube--generating i {
+  opacity: 1;
+  box-shadow: 
+    inset 0 0 30px rgba(0, 255, 255, 0.2),
+    0 0 20px rgba(0, 255, 255, 0.3);
+}
+
+/* Cube faces */
+.portrait-placeholder-cube i:nth-child(1) { transform: translateZ(40px); }
+.portrait-placeholder-cube i:nth-child(2) { transform: rotateY(180deg) translateZ(40px); }
+.portrait-placeholder-cube i:nth-child(3) { transform: rotateY(90deg) translateZ(40px); }
+.portrait-placeholder-cube i:nth-child(4) { transform: rotateY(-90deg) translateZ(40px); }
+.portrait-placeholder-cube i:nth-child(5) { transform: rotateX(90deg) translateZ(40px); }
+.portrait-placeholder-cube i:nth-child(6) { transform: rotateX(-90deg) translateZ(40px); }
+
+@keyframes portrait-cube-spin {
+  from {
+    transform: rotateX(0deg) rotateY(0deg);
+  }
+  to {
+    transform: rotateX(0deg) rotateY(360deg);
+  }
+}
+
 /* Wrapper for spinner + text (used in portrait loaders and narrator text).
    Keeps cube and text on one line, vertically centered. */
 .narrator-spinner-shell {

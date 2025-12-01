@@ -1171,28 +1171,24 @@ const App = (window.App = {
       const portraitEl = document.getElementById('character-portrait');
 
       // Show a loading state in the portrait panel while the AI image is
-      // being generated and converted to ASCII. Reuse the cube spinner used
-      // elsewhere so the experience feels consistent.
+      // being generated and converted to ASCII. Use the placeholder container
+      // with the cube spinning faster and glowing.
       if (portraitEl) {
-        const cubeMarkup =
-          '<span class="spinner-cube-scene">' +
-          '<span class="spinner-cube-tilt">' +
-          '<span class="spinner-cube">' +
-          '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
-          '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
-          '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
-          '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
-          '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
-          '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
-          '</span></span></span>';
-        const renderLine = (text) =>
-          `<span class="narrator-spinner-shell">${cubeMarkup} ${text}</span>`;
-
-        portraitEl.classList.add('ascii-portrait--loading');
-        portraitEl.style.fontSize = 'var(--font-size-small)';
-        portraitEl.innerHTML = renderLine(
-          'Generating AI portrait... This can take 20–30 seconds.',
-        );
+        portraitEl.innerHTML = `
+          <div class="portrait-placeholder-content">
+            <div class="portrait-placeholder-cube-container">
+              <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+              </div>
+            </div>
+            <div class="portrait-placeholder-text">Generating AI portrait… <br>This can take 20–30 seconds.</div>
+          </div>
+        `;
       }
 
       const result = await AsciiArtService.generateCustomAIPortrait(character);
@@ -2632,37 +2628,39 @@ const App = (window.App = {
 
     const portraitEl = document.getElementById('character-portrait');
 
-    // Show progressive loading state
+    // Show progressive loading state with glowing, faster-spinning cube
     let portraitElapsed = 0;
     let portraitLoadingInterval = null;
     
     const updatePortraitLoading = () => {
       if (!portraitEl) return;
       
-      // Use narrator-style cube (no inline overrides) so it matches the narrator spinner exactly
-      const cubeMarkup = 
-        '<span class="spinner-cube-scene">' +
-        '<span class="spinner-cube-tilt">' +
-        '<span class="spinner-cube">' +
-        '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
-        '</span></span></span>';
-      
-      const renderLine = (text) => `<span class="narrator-spinner-shell">${cubeMarkup} ${text}</span>`;
-      
+      let message = '';
       if (portraitElapsed < 5) {
-        portraitEl.innerHTML = renderLine('Generating portrait...');
+        message = 'Generating portrait...';
       } else if (portraitElapsed < 15) {
-        portraitEl.innerHTML = renderLine('Creating image...');
+        message = 'Creating image...';
       } else if (portraitElapsed < 30) {
-        portraitEl.innerHTML = renderLine('Converting to ASCII...');
+        message = 'Converting to ASCII...';
       } else {
-        portraitEl.innerHTML = renderLine('Almost done...');
+        message = 'Almost done...';
       }
+      
+      portraitEl.innerHTML = `
+        <div class="portrait-placeholder-content">
+          <div class="portrait-placeholder-cube-container">
+            <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+            </div>
+          </div>
+          <div class="portrait-placeholder-text">${message}</div>
+        </div>
+      `;
       portraitElapsed++;
     };
     
@@ -2677,11 +2675,7 @@ const App = (window.App = {
         });
       }
 
-      // Enlarge the font so status messages are readable, matching the
-      // Character Manager's loading treatment, and opt the portrait area
-      // into the looser loading container behavior.
-      portraitEl.classList.add('ascii-portrait--loading');
-      portraitEl.style.fontSize = 'var(--font-size-small)';
+      // Start showing the loading state with glowing, spinning cube
       updatePortraitLoading();
       portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
     }
@@ -2756,8 +2750,12 @@ const App = (window.App = {
         clearInterval(portraitLoadingInterval);
       }
       
-      // Check if it's a rate limit error
-      if (error.isRateLimit) {
+      // Check error type and show appropriate message
+      if (error.isSafetyRejection) {
+        this.showSystemMessage(
+          'OpenAI flagged this portrait request. Try modifying your character description or prompt.',
+        );
+      } else if (error.isRateLimit) {
         this.showSystemMessage(
           'Rate limit exceeded. Please wait a moment before generating another portrait. Try again in a few minutes.',
         );
@@ -2851,6 +2849,8 @@ const App = (window.App = {
       // Show reminder to log in if in guest mode (only once per session)
       if (!this._guestSaveNoticeShown && window.AuthService && !window.AuthService.isAuthenticated()) {
         this._guestSaveNoticeShown = true;
+        // Set flag to show guest notice banner when returning to character manager
+        sessionStorage.setItem('showGuestNoticeOnReturn', 'true');
         setTimeout(() => {
           this.showNotification('💡 Log in or create an account to save your character to the cloud', 'info');
         }, 1000);
@@ -3688,27 +3688,25 @@ const App = (window.App = {
       if (CONFIG.ENABLE_AI && currentChar.race && currentChar.class && window.AsciiArtService) {
         const portraitEl = document.getElementById('character-portrait');
 
-        // Show a simple loading state in the portrait panel while the AI image
-        // is being generated and converted to ASCII. Match Character Manager
-        // by enlarging the font so the status message is readable and using
-        // the animated cube spinner.
+        // Show a loading state in the portrait panel while the AI image
+        // is being generated and converted to ASCII. Use the placeholder container
+        // with the cube spinning faster and glowing.
         if (portraitEl) {
-          const cubeMarkup = 
-            '<span class="spinner-cube-scene">' +
-            '<span class="spinner-cube-tilt">' +
-            '<span class="spinner-cube">' +
-            '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
-            '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
-            '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
-            '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
-            '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
-            '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
-            '</span></span></span>';
-          const renderLine = (text) => `<span class="narrator-spinner-shell">${cubeMarkup} ${text}</span>`;
-          
-          portraitEl.classList.add('ascii-portrait--loading');
-          portraitEl.style.fontSize = 'var(--font-size-small)';
-          portraitEl.innerHTML = renderLine('Generating AI portrait... This can take 20–30 seconds.');
+          portraitEl.innerHTML = `
+            <div class="portrait-placeholder-content">
+              <div class="portrait-placeholder-cube-container">
+                <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                </div>
+              </div>
+              <div class="portrait-placeholder-text">Generating AI portrait… <br>This can take 20–30 seconds.</div>
+            </div>
+          `;
         }
 
         const result = await AsciiArtService.generateCustomAIPortrait(currentChar);
@@ -3797,16 +3795,22 @@ const App = (window.App = {
 
   _startNewInternal() {
     // User confirmed: clear current character and restart flow.
+    // Clear panels BEFORE resetting state so the state change listener can properly re-render
+    const narratorPanel = document.getElementById('narrator-panel');
+    const characterPanel = document.getElementById('character-panel');
+    if (narratorPanel) narratorPanel.innerHTML = '';
+    
+    // Reset state and caches
     CharacterState.reset();
     OptionVariationsCache.reset();
     if (window.AIService && typeof AIService.resetNarratorSession === 'function') {
       AIService.resetNarratorSession();
     }
     this._lastPortraitArt = null; // Reset portrait tracking for new character
-    const narratorPanel = document.getElementById('narrator-panel');
-    const characterPanel = document.getElementById('character-panel');
-    if (narratorPanel) narratorPanel.innerHTML = '';
-    if (characterPanel) characterPanel.innerHTML = '';
+    
+    // Don't manually clear character panel - let the state change listener handle it
+    // The CharacterState.reset() above will trigger updateCharacterPanel via the subscriber
+    
     // Skip intro and go directly to entry-mode for returning users
     this.showQuestion('entry-mode');
   },
@@ -3990,6 +3994,7 @@ const App = (window.App = {
       entryMode = null;
     }
     const isQuickMode = entryMode === 'quick';
+    const isGuidedMode = entryMode === 'guided';
 
     // If a portrait animation is in progress, queue this update for after animation completes
     if (this._portraitAnimating) {
@@ -4013,17 +4018,16 @@ const App = (window.App = {
     // If we have a race, normally we load a pre-generated portrait
     // (race+class combo or race-only) and fall back to the simple template.
     if (character.race) {
-      // In quick-create mode, NEVER call the pre-generated portrait loader.
-      // We either show the final custom AI portrait (when available) or
-      // an empty frame + status text while generation is in progress. We also
-      // explicitly ignore any asciiPortrait that may have been set by older
-      // exports or background upgrades so templates never appear in
-      // quick-create.
-      if (isQuickMode) {
-        // Before AI generation starts, quick-create characters will not yet
-        // have a custom portrait. In that case render the sheet with an empty
-        // portrait frame so we can show a "Generating..." status message while
-        // the AI image is being created.
+      // In quick-create and co-create (guided) modes, NEVER call the pre-generated 
+      // portrait loader. We either show the final custom AI portrait (when available) 
+      // or a placeholder message while gathering character information. We explicitly 
+      // ignore any asciiPortrait that may have been set by older exports or background 
+      // upgrades so templates/pre-generated art never appear during character creation.
+      if (isQuickMode || isGuidedMode) {
+        // Before custom AI portrait is generated, characters will not yet
+        // have a custom portrait. In that case render the sheet with a placeholder
+        // message in the portrait area. The placeholder will show:
+        // "Your portrait will be generated once we learn more about your character"
         const portraitArt = character.customPortraitAscii || null;
 
         // Decide whether to animate: only when we have new portrait art that
@@ -4038,14 +4042,14 @@ const App = (window.App = {
         // Consume any pending suppression flag after we've decided.
         this._suppressNextPortraitAnimation = false;
 
-        // Only show the "★ Custom AI Portrait" button in quick-create once
-        // the initial custom portrait has been generated and is ready to
-        // display. Until then, we keep the portrait frame but hide the button
-        // to avoid suggesting an action that is already in progress.
+        // Only show the "★ Custom AI Portrait" button once the initial custom 
+        // portrait has been generated and is ready to display. Until then, we 
+        // keep the portrait frame but hide the button to avoid suggesting an 
+        // action that is already in progress.
         const hasCustomPortrait = !!portraitArt;
 
-        // Always show the portrait container in quick mode so the waiting
-        // message from quickCreateCharacter() has a place to render.
+        // Always show the portrait container so the placeholder message
+        // or custom portrait has a place to render.
         panel.innerHTML = Components.renderCharacterSheet(
           character,
           null,
@@ -4064,8 +4068,7 @@ const App = (window.App = {
 
         if (portraitEl && portraitArt) {
           if (shouldAnimate) {
-            // Animate portrait character-by-character, mirroring the guided
-            // builder behavior so new quick-create portraits "type in".
+            // Animate portrait character-by-character so new custom portraits "type in"
             this._portraitAnimating = true;
             this.typePortrait(portraitEl, portraitArt).then(async () => {
               this._portraitAnimating = false;
@@ -4092,8 +4095,9 @@ const App = (window.App = {
         return;
       }
 
+      // Legacy mode: Load pre-generated or fallback portrait text
+      // This code path is only reached if entryMode is not set (shouldn't happen in normal flow)
       try {
-        // Load pre-generated or fallback portrait text
         const portraitArt = await AsciiArtService.generateAIPortrait(character);
         
         // Check again if animation is in progress (might have started while we were loading)
@@ -4210,11 +4214,13 @@ const App = (window.App = {
       return;
     }
 
-    // No race yet – just render without portrait
+    // No race yet – show portrait container with placeholder during character creation.
+    // Always show the placeholder in builder mode since user is actively creating a character.
+    // The placeholder will display: "Your portrait will be generated once we learn more about your character"
     panel.innerHTML = Components.renderCharacterSheet(
       character,
       null,
-      false,
+      true, // Always show portrait placeholder during initial character creation
     );
   },
 

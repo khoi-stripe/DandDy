@@ -211,6 +211,15 @@ async def chat_completion(
     
     except openai.RateLimitError as e:
         raise HTTPException(status_code=429, detail="OpenAI rate limit exceeded. Please try again later.")
+    except openai.BadRequestError as e:
+        # Check if this is a safety system rejection
+        error_message = str(e)
+        if "safety system" in error_message.lower():
+            raise HTTPException(
+                status_code=400, 
+                detail="Your request was flagged by OpenAI's safety system. Please try rephrasing your prompt or selecting different options."
+            )
+        raise HTTPException(status_code=400, detail=f"Invalid request: {error_message}")
     except openai.APIError as e:
         raise HTTPException(status_code=502, detail=f"OpenAI API error: {str(e)}")
     except Exception as e:
@@ -298,6 +307,15 @@ async def generate_image(
     
     except openai.RateLimitError:
         raise HTTPException(status_code=429, detail="OpenAI rate limit exceeded. Please try again later.")
+    except openai.BadRequestError as e:
+        # Check if this is a safety system rejection
+        error_message = str(e)
+        if "safety system" in error_message.lower():
+            raise HTTPException(
+                status_code=400, 
+                detail="Your image request was flagged by OpenAI's safety system. Please try modifying your character description or portrait prompt."
+            )
+        raise HTTPException(status_code=400, detail=f"Invalid request: {error_message}")
     except openai.APIError as e:
         raise HTTPException(status_code=502, detail=f"OpenAI API error: {str(e)}")
     except Exception as e:
@@ -356,6 +374,25 @@ async def generate_narrator_comment(
             "comment": response.choices[0].message.content.strip()
         }
     
+    except openai.BadRequestError as e:
+        # Check if this is a safety system rejection
+        error_message = str(e)
+        if "safety system" in error_message.lower():
+            # Return a user-friendly fallback comment for safety rejections
+            import random
+            fallbacks = [
+                'Interesting choice. ( ._. )',
+                "Well, that tracks.",
+                "Bold move. We'll see how that works out.",
+                'Sure. Why not.',
+            ]
+            return {
+                "success": False,
+                "comment": random.choice(fallbacks),
+                "error": "safety_system_rejection",
+                "error_message": "Request was flagged by safety system"
+            }
+        raise HTTPException(status_code=400, detail=f"Invalid request: {error_message}")
     except Exception as e:
         # Return fallback on error (using deadpan fallbacks as default)
         fallbacks = [
@@ -411,6 +448,15 @@ async def generate_character_names(
             "names": names[:request.count]
         }
     
+    except openai.BadRequestError as e:
+        # Check if this is a safety system rejection
+        error_message = str(e)
+        if "safety system" in error_message.lower():
+            raise HTTPException(
+                status_code=400, 
+                detail="Your name generation request was flagged by OpenAI's safety system. Please try different race/class combinations."
+            )
+        raise HTTPException(status_code=400, detail=f"Invalid request: {error_message}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate names: {str(e)}")
 
@@ -448,6 +494,15 @@ async def generate_character_backstory(
             "backstory": response.choices[0].message.content.strip()
         }
     
+    except openai.BadRequestError as e:
+        # Check if this is a safety system rejection
+        error_message = str(e)
+        if "safety system" in error_message.lower():
+            raise HTTPException(
+                status_code=400, 
+                detail="Your backstory request was flagged by OpenAI's safety system. Please try modifying your character details or personality traits."
+            )
+        raise HTTPException(status_code=400, detail=f"Invalid request: {error_message}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate backstory: {str(e)}")
 

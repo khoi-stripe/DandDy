@@ -718,6 +718,25 @@ const AIService = (window.AIService = {
       });
 
       if (!response.ok) {
+        // Check for safety system rejection
+        if (response.status === 400) {
+          try {
+            const errorData = await response.json();
+            if (errorData.detail && errorData.detail.includes('safety system')) {
+              console.warn('⚠️ OpenAI safety system rejection:', errorData.detail);
+              // Show user-friendly notification
+              if (window.UIService) {
+                window.UIService.showNotification(
+                  'OpenAI flagged this request. Using fallback response instead.',
+                  'warning',
+                  5000
+                );
+              }
+            }
+          } catch (e) {
+            // Error parsing JSON, continue with fallback
+          }
+        }
         console.log(`Backend API error: ${response.status} - will use fallback`);
         return null;
       }
@@ -1548,6 +1567,15 @@ Format your response as JSON array of strings, one for each option in order. Exa
           const rateLimitError = new Error(errorData.detail || 'Rate limit exceeded');
           rateLimitError.isRateLimit = true;
           throw rateLimitError;
+        }
+        
+        // Check for safety system rejection
+        if (response.status === 400 && errorData.detail && errorData.detail.includes('safety system')) {
+          console.warn('⚠️ OpenAI safety system rejection:', errorData.detail);
+          const safetyError = new Error('Portrait generation was flagged by OpenAI\'s content safety system');
+          safetyError.isSafetyRejection = true;
+          safetyError.originalMessage = errorData.detail;
+          throw safetyError;
         }
         
         throw new Error(errorData.detail || `API error: ${response.status}`);
