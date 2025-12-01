@@ -1691,13 +1691,14 @@ Format your response as JSON array of strings, one for each option in order. Exa
       }
     }
 
-    // Backstory (include full text so prompts match what the user sees)
-    if (character.backstory) {
-      const raw = String(character.backstory).replace(/\s+/g, ' ').trim();
-      if (raw) {
-        parts.push(`backstory: ${raw}`);
-      }
-    }
+    // Backstory removed from portrait prompts to reduce OpenAI safety rejections
+    // User-written text is unpredictable and frequently triggers content filters
+    // if (character.backstory) {
+    //   const raw = String(character.backstory).replace(/\s+/g, ' ').trim();
+    //   if (raw) {
+    //     parts.push(`backstory: ${raw}`);
+    //   }
+    // }
 
     parts.push('full body portrait, fantasy art style, detailed');
 
