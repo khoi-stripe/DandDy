@@ -301,6 +301,11 @@
     text-align: center;
     padding: 0;
     flex: 1 1 auto;
+    /* Prevent text selection on ASCII art */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .card-details {
