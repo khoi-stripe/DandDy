@@ -1102,13 +1102,9 @@ const App = (window.App = {
     await Utils.typewriter(messageEl, completionText);
     Utils.scrollToBottom(true);
 
-    // Kick off auto AI portrait generation for guided (co-create) mode once
-    // the character is fully defined (including backstory). This runs in the
-    // background and does NOT block the completion UI.
-    if (typeof this.autoGenerateGuidedAIPortraitIfReady === 'function') {
-      this.autoGenerateGuidedAIPortraitIfReady();
-    }
-
+    // NOTE: AI portrait generation now starts after name selection (earlier in flow)
+    // since we removed backstory from the prompt. This gives it more time to complete.
+    
     // NOTE: We don't save here anymore - we wait for portrait to load first
     // This prevents creating duplicate characters in cloud storage
 
@@ -1132,9 +1128,9 @@ const App = (window.App = {
   },
 
   // In guided (co-create) mode, automatically generate a custom AI portrait
-  // once we have the full character context (race, class, background,
-  // alignment, name, backstory, etc.). This mirrors the quick-create behavior
-  // but runs in the background so it doesn't block the conversational flow.
+  // once we have the essential character context (race, class, name).
+  // Triggered after name selection since backstory is no longer used in prompts.
+  // This runs in the background and doesn't block the conversational flow.
   async autoGenerateGuidedAIPortraitIfReady() {
     try {
       if (
@@ -1156,14 +1152,13 @@ const App = (window.App = {
         return;
       }
 
-      // Require the core fields that we normally include in portrait prompts.
+      // Require the core fields that we include in portrait prompts.
+      // Name is now the trigger point (backstory removed from prompts).
+      // We also have race, class, background, and alignment at this point.
       const hasCoreFields =
         character.race &&
         character.class &&
-        character.background &&
-        character.alignment &&
-        character.name &&
-        character.backstory;
+        character.name;
 
       if (!hasCoreFields) {
         return;
@@ -1173,6 +1168,9 @@ const App = (window.App = {
       if (character.customPortraitAscii || (character.customPortraitCount || 0) > 0) {
         return;
       }
+      
+      // Mark that portrait generation is in progress (used by updateCharacterPanel)
+      this._guidedPortraitGenerating = true;
 
       const portraitEl = document.getElementById('character-portrait');
 
@@ -1265,6 +1263,9 @@ const App = (window.App = {
       // Fall back to whatever portrait is already displayed
       // (pre-generated ASCII or template).
     } finally {
+      // Clear the generating flag so future re-renders work normally
+      this._guidedPortraitGenerating = false;
+      
       const portraitEl = document.getElementById('character-portrait');
       if (portraitEl) {
         portraitEl.style.fontSize = '';
@@ -1691,6 +1692,11 @@ const App = (window.App = {
 
     CharacterState.updateCharacter({ name });
 
+    // Start generating AI portrait in background now that we have name, race, class
+    if (typeof this.autoGenerateGuidedAIPortraitIfReady === 'function') {
+      this.autoGenerateGuidedAIPortraitIfReady();
+    }
+
     const narratorPanel = document.getElementById('narrator-panel');
     narratorPanel.innerHTML += Components.renderNarratorMessage(
       `${name}. Sure. Why not.`,
@@ -1726,6 +1732,11 @@ const App = (window.App = {
     }
 
     CharacterState.updateCharacter({ name });
+
+    // Start generating AI portrait in background now that we have name, race, class
+    if (typeof this.autoGenerateGuidedAIPortraitIfReady === 'function') {
+      this.autoGenerateGuidedAIPortraitIfReady();
+    }
 
     const narratorPanel = document.getElementById('narrator-panel');
     narratorPanel.innerHTML += Components.renderNarratorMessage(
@@ -3532,6 +3543,117 @@ const App = (window.App = {
   },
 
   // ===== QUICK CREATE MODE =====
+  
+  // Generate AI portrait for quick-create mode (runs in background)
+  async _generateQuickCreatePortrait() {
+    try {
+      const stateAfter = CharacterState.get();
+      const currentChar = stateAfter.character || {};
+
+      if (!CONFIG.ENABLE_AI || !currentChar.race || !currentChar.class || !window.AsciiArtService) {
+        return;
+      }
+
+      const portraitEl = document.getElementById('character-portrait');
+
+      // Show a loading state in the portrait panel while the AI image
+      // is being generated and converted to ASCII. Use the placeholder container
+      // with the cube spinning faster and glowing.
+      if (portraitEl) {
+        portraitEl.innerHTML = `
+          <div class="portrait-placeholder-content">
+            <div class="portrait-placeholder-cube-container">
+              <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+              </div>
+            </div>
+            <div class="portrait-placeholder-text">Generating AI portrait… <br>This can take 20–30 seconds.</div>
+          </div>
+        `;
+      }
+
+      const result = await AsciiArtService.generateCustomAIPortrait(currentChar);
+
+      if (result && result.asciiArt) {
+        const currentCount = currentChar.customPortraitCount || 0;
+        const updatedMetadata = window.PortraitHistory
+          ? window.PortraitHistory.addVersion(
+              currentChar,
+              result.asciiArt,
+              result.imageUrl || null,
+              {
+                source: 'quick-ai',
+                prompt:
+                  (AIService.buildCharacterDescription &&
+                    AIService.buildCharacterDescription(currentChar)) ||
+                  null,
+              },
+            )
+          : currentChar.portraitMetadata || {};
+
+        CharacterState.updateCharacter({
+          originalPortraitUrl: result.imageUrl || null,
+          customPortraitAscii: result.asciiArt,
+          customPortraitCount: currentCount + 1,
+          portraitMetadata: updatedMetadata,
+        });
+
+        // Reset last portrait so the new AI art re-animates in the panel.
+        this._lastPortraitArt = null;
+      }
+    } catch (error) {
+      console.error('Quick-create AI portrait generation error:', error);
+      
+      // Show user-facing error message based on error type
+      if (error.isSafetyRejection) {
+        console.group('🚫 OpenAI Content Safety Rejection - Quick Create Mode');
+        console.error('Rejected prompt:', error.rejectedPrompt || 'Unknown');
+        console.error('Original error:', error.originalMessage);
+        if (error.promptAnalysis) {
+          console.log('Analysis included above ↑');
+        }
+        console.groupEnd();
+        
+        // Build user message with helpful context
+        let userMessage = 'OpenAI flagged this portrait request. ';
+        
+        if (error.promptAnalysis && error.promptAnalysis.hasKnownProblematicTerms) {
+          const issues = error.promptAnalysis.potentialIssues;
+          const categories = issues.map(i => i.category).join(', ');
+          userMessage += `Possible triggers: ${categories}. `;
+        }
+        
+        userMessage += 'Check browser console for detailed analysis and suggestions.';
+        
+        this.showSystemMessage(userMessage);
+      } else if (error.isRateLimit) {
+        this.showSystemMessage(
+          'Rate limit exceeded. Please wait a moment before generating another portrait.',
+        );
+      } else {
+        this.showSystemMessage(
+          'Failed to generate AI portrait. Using template portrait instead.',
+        );
+      }
+      
+      // Fall back to whatever portrait is already displayed
+      // (pre-generated ASCII or template). Guided mode behavior is unchanged.
+    } finally {
+      // Whatever happens above (success or failure), restore portrait font
+      // size so the final ASCII art uses the default sizing from CSS.
+      const portraitEl = document.getElementById('character-portrait');
+      if (portraitEl) {
+        portraitEl.style.fontSize = '';
+        portraitEl.classList.remove('ascii-portrait--loading');
+      }
+    }
+  },
+
   async quickCreateCharacter() {
     const narratorPanel = document.getElementById('narrator-panel');
     if (!narratorPanel) return;
@@ -3677,6 +3799,9 @@ const App = (window.App = {
     await Utils.typewriter(nameEl, narrator.quickCreateName(name));
     Utils.scrollToBottom(true);
 
+    // Start generating AI portrait in background now (runs while backstory generates)
+    this._quickCreatePortraitGeneration = this._generateQuickCreatePortrait();
+
     // Try to auto-generate a backstory
     let backstory = '';
     
@@ -3743,113 +3868,14 @@ const App = (window.App = {
       }
     }
 
-    // For quick-create, always generate a custom AI portrait so the final
-    // character uses true AI art instead of pre-generated templates. Guided
-    // (co-create) mode continues to rely on pre-generated portraits to avoid
-    // blocking the flow on image generation.
-    try {
-      const stateAfter = CharacterState.get();
-      const currentChar = stateAfter.character || {};
-
-      if (CONFIG.ENABLE_AI && currentChar.race && currentChar.class && window.AsciiArtService) {
-        const portraitEl = document.getElementById('character-portrait');
-
-        // Show a loading state in the portrait panel while the AI image
-        // is being generated and converted to ASCII. Use the placeholder container
-        // with the cube spinning faster and glowing.
-        if (portraitEl) {
-          portraitEl.innerHTML = `
-            <div class="portrait-placeholder-content">
-              <div class="portrait-placeholder-cube-container">
-                <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                </div>
-              </div>
-              <div class="portrait-placeholder-text">Generating AI portrait… <br>This can take 20–30 seconds.</div>
-            </div>
-          `;
-        }
-
-        const result = await AsciiArtService.generateCustomAIPortrait(currentChar);
-
-        if (result && result.asciiArt) {
-          const currentCount = currentChar.customPortraitCount || 0;
-          const updatedMetadata = window.PortraitHistory
-            ? window.PortraitHistory.addVersion(
-                currentChar,
-                result.asciiArt,
-                result.imageUrl || null,
-                {
-                  source: 'quick-ai',
-                  prompt:
-                    (AIService.buildCharacterDescription &&
-                      AIService.buildCharacterDescription(currentChar)) ||
-                    null,
-                },
-              )
-            : currentChar.portraitMetadata || {};
-
-          CharacterState.updateCharacter({
-            originalPortraitUrl: result.imageUrl || null,
-            customPortraitAscii: result.asciiArt,
-            customPortraitCount: currentCount + 1,
-            portraitMetadata: updatedMetadata,
-          });
-
-          // Reset last portrait so the new AI art re-animates in the panel.
-          this._lastPortraitArt = null;
-        }
+    // Wait for portrait generation to complete (if it was started)
+    if (this._quickCreatePortraitGeneration) {
+      try {
+        await this._quickCreatePortraitGeneration;
+      } catch (error) {
+        // Error already handled in _generateQuickCreatePortrait
       }
-    } catch (error) {
-      console.error('Quick-create AI portrait generation error:', error);
-      
-      // Show user-facing error message based on error type
-      if (error.isSafetyRejection) {
-        console.group('🚫 OpenAI Content Safety Rejection - Quick Create Mode');
-        console.error('Rejected prompt:', error.rejectedPrompt || 'Unknown');
-        console.error('Original error:', error.originalMessage);
-        if (error.promptAnalysis) {
-          console.log('Analysis included above ↑');
-        }
-        console.groupEnd();
-        
-        // Build user message with helpful context
-        let userMessage = 'OpenAI flagged this portrait request. ';
-        
-        if (error.promptAnalysis && error.promptAnalysis.hasKnownProblematicTerms) {
-          const issues = error.promptAnalysis.potentialIssues;
-          const categories = issues.map(i => i.category).join(', ');
-          userMessage += `Possible triggers: ${categories}. `;
-        }
-        
-        userMessage += 'Check browser console for detailed analysis and suggestions.';
-        
-        this.showSystemMessage(userMessage);
-      } else if (error.isRateLimit) {
-        this.showSystemMessage(
-          'Rate limit exceeded. Please wait a moment before generating another portrait.',
-        );
-      } else {
-        this.showSystemMessage(
-          'Failed to generate AI portrait. Using template portrait instead.',
-        );
-      }
-      
-      // Fall back to whatever portrait is already displayed
-      // (pre-generated ASCII or template). Guided mode behavior is unchanged.
-    } finally {
-      // Whatever happens above (success or failure), restore portrait font
-      // size so the final ASCII art uses the default sizing from CSS.
-      const portraitEl = document.getElementById('character-portrait');
-      if (portraitEl) {
-        portraitEl.style.fontSize = '';
-        portraitEl.classList.remove('ascii-portrait--loading');
-      }
+      this._quickCreatePortraitGeneration = null;
     }
 
     // Jump straight to the completion screen
@@ -4150,6 +4176,15 @@ const App = (window.App = {
 
         // Always show the portrait container so the placeholder message
         // or custom portrait has a place to render.
+        
+        // IMPORTANT: If portrait generation is in progress (in either quick or guided mode),
+        // we need to preserve the current portrait HTML (the fast-spinning "Generating..." cube).
+        // Otherwise the re-render will replace it with the slow "Waiting..." cube.
+        const isGenerating = !!this._quickCreatePortraitGeneration || !!this._guidedPortraitGenerating;
+        const currentPortraitHTML = isGenerating 
+          ? document.getElementById('character-portrait')?.innerHTML 
+          : null;
+        
         panel.innerHTML = Components.renderCharacterSheet(
           character,
           null,
@@ -4161,6 +4196,11 @@ const App = (window.App = {
 
         const portraitEl = document.getElementById('character-portrait');
         const originalPortraitEl = document.getElementById('original-portrait');
+        
+        // Restore the generating state if we captured it
+        if (isGenerating && currentPortraitHTML && portraitEl) {
+          portraitEl.innerHTML = currentPortraitHTML;
+        }
 
         if (originalPortraitEl && character.originalPortraitUrl) {
           originalPortraitEl.src = character.originalPortraitUrl;

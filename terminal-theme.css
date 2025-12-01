@@ -353,9 +353,10 @@ body::before {
   /* Anchor inside the nearest terminal container/frame, not the viewport */
   position: absolute;
   bottom: 16px;
-  left: 16px;
-  /* Start fully off-screen to the left so the entrance animation is obvious */
-  transform: translateX(-140%) translateY(0);
+  left: 50%;
+  /* Start fully off-screen below the bottom edge so it slides up into view
+     Also offset horizontally by -50% to center the toast */
+  transform: translateX(-50%) translateY(calc(100% + 32px));
 
   /* Extra padding so the toast reads as a more prominent, self-contained panel */
   padding: 12px 20px;
@@ -379,7 +380,7 @@ body::before {
   /* Reserve space on the right for the dismiss button so text never sits under it */
   padding-right: 48px;
 
-  /* Slide in horizontally from the left edge with a soft, very subtle bouncy easing curve */
+  /* Slide in vertically from the bottom with a soft, very subtle bouncy easing curve */
   transition:
     opacity 0.5s cubic-bezier(0.22, 0.7, 0.3, 1.02),
     transform 0.8s cubic-bezier(0.22, 0.7, 0.3, 1.02);
@@ -387,7 +388,7 @@ body::before {
 
 .toast-notification.show {
   opacity: 1;
-  transform: translateX(0) translateY(0);
+  transform: translateX(-50%) translateY(0);
   /* Continuous, subtle breathing glow while the toast is visible */
   animation: toast-glow 2.1s ease-in-out 0.15s infinite;
 }

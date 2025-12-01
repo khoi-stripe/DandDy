@@ -105,6 +105,11 @@
   justify-content: center;
 }
 
+/* Add bobbing animation to container when cube is generating */
+.portrait-placeholder-cube-container:has(.portrait-placeholder-cube--generating) {
+  animation: portrait-cube-bob 2s infinite ease-in-out;
+}
+
 .portrait-placeholder-cube {
   width: 80px;
   height: 80px;
@@ -149,6 +154,15 @@
   }
   to {
     transform: rotateX(0deg) rotateY(360deg);
+  }
+}
+
+@keyframes portrait-cube-bob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
   }
 }
 
