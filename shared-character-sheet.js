@@ -359,7 +359,7 @@ const CharacterSheet = (window.CharacterSheet = {
       ? this.escapeHtml(parsed.backgroundName)
       : '';
     const alignment = parsed.alignment
-      ? this.escapeHtml(parsed.alignment)
+      ? this.escapeHtml(this.formatAlignment(parsed.alignment))
       : '';
 
     return `
@@ -1491,6 +1491,34 @@ const CharacterSheet = (window.CharacterSheet = {
       .split('-')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
+  },
+
+  /**
+   * Convert alignment abbreviation to full name
+   * @param {string} alignmentId - Abbreviation like 'lg', 'ce', etc.
+   * @returns {string} Full alignment name like 'Lawful Good', 'Chaotic Evil', etc.
+   */
+  formatAlignment(alignmentId) {
+    const alignmentMap = {
+      'lg': 'Lawful Good',
+      'ng': 'Neutral Good',
+      'cg': 'Chaotic Good',
+      'ln': 'Lawful Neutral',
+      'n': 'True Neutral',
+      'cn': 'Chaotic Neutral',
+      'le': 'Lawful Evil',
+      'ne': 'Neutral Evil',
+      'ce': 'Chaotic Evil'
+    };
+    
+    if (!alignmentId) return '';
+    
+    // If it's already a full name (not an abbreviation), return as-is
+    if (alignmentId.length > 3) return alignmentId;
+    
+    // Convert to lowercase for case-insensitive lookup
+    const key = alignmentId.toLowerCase();
+    return alignmentMap[key] || alignmentId;
   },
 
   /**
