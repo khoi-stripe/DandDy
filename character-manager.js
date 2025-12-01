@@ -549,6 +549,31 @@ async function editCharacter(id) {
     // CHARACTER NAME
     setValue('editName', character.name || '');
 
+    // LEVEL
+    const level = parsed.level != null ? parsed.level : (character.level || 1);
+    setValue('editLevel', level);
+
+    // ABILITY SCORES
+    const abilities = parsed.abilities || {};
+    setValue('editStr', abilities.str != null ? abilities.str : '');
+    setValue('editDex', abilities.dex != null ? abilities.dex : '');
+    setValue('editCon', abilities.con != null ? abilities.con : '');
+    setValue('editInt', abilities.int != null ? abilities.int : '');
+    setValue('editWis', abilities.wis != null ? abilities.wis : '');
+    setValue('editCha', abilities.cha != null ? abilities.cha : '');
+
+    // COMBAT STATS
+    setValue('editHpMax', parsed.hpMax != null ? parsed.hpMax : '');
+    setValue('editHpCurrent', parsed.hpCurrent != null ? parsed.hpCurrent : '');
+    const tempHp =
+        character.hitPoints && typeof character.hitPoints === 'object'
+            ? character.hitPoints.temp || 0
+            : 0;
+    setValue('editHpTemp', tempHp);
+    setValue('editArmorClass', parsed.armorClass != null ? parsed.armorClass : '');
+    setValue('editInitiative', parsed.initiative != null ? parsed.initiative : '');
+    setValue('editSpeed', parsed.speed != null ? parsed.speed : '');
+
     // SKILL PROFICIENCIES (text-only list, one per line)
     const skillList = (parsed.skillProficiencies || []).map(s => CharacterSheet.formatSkillName(s)).join('\n');
     setValue('editSkills', skillList);
@@ -622,6 +647,41 @@ async function saveEditDetails() {
     const nameEl = document.getElementById('editName');
     const nameText = nameEl ? nameEl.value.trim() : '';
 
+    const levelValue = getNumber('editLevel');
+
+    const getNumber = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return null;
+        const raw = el.value.trim();
+        if (!raw) return null;
+        const value = parseInt(raw, 10);
+        return Number.isFinite(value) ? value : null;
+    };
+
+    // Ability scores
+    const abilityUpdates = {};
+    const str = getNumber('editStr');
+    const dex = getNumber('editDex');
+    const con = getNumber('editCon');
+    const intScore = getNumber('editInt');
+    const wis = getNumber('editWis');
+    const cha = getNumber('editCha');
+
+    if (str !== null) abilityUpdates.str = str;
+    if (dex !== null) abilityUpdates.dex = dex;
+    if (con !== null) abilityUpdates.con = con;
+    if (intScore !== null) abilityUpdates.int = intScore;
+    if (wis !== null) abilityUpdates.wis = wis;
+    if (cha !== null) abilityUpdates.cha = cha;
+
+    // Combat stats
+    const hpMax = getNumber('editHpMax');
+    const hpCurrent = getNumber('editHpCurrent');
+    const hpTemp = getNumber('editHpTemp');
+    const armorClass = getNumber('editArmorClass');
+    const initiative = getNumber('editInitiative');
+    const speed = getNumber('editSpeed');
+
     const updates = {
         // Store raw IDs/names; CharacterSheet will format as needed
         name: nameText,
@@ -631,6 +691,42 @@ async function saveEditDetails() {
         languages: languageLines,
         backstory: backstoryText,
     };
+
+    if (levelValue !== null) {
+        // Clamp to a reasonable D&D range just in case
+        const safeLevel = Math.min(20, Math.max(1, levelValue));
+        updates.level = safeLevel;
+    }
+
+    if (Object.keys(abilityUpdates).length > 0) {
+        updates.abilities = {
+            ...(character.abilities || character.abilityScores || {}),
+            ...abilityUpdates,
+        };
+    }
+
+    const hasHpUpdate = hpMax !== null || hpCurrent !== null || hpTemp !== null;
+    if (hasHpUpdate) {
+        const prevHp = character.hitPoints;
+        const baseHp =
+            prevHp && typeof prevHp === 'object'
+                ? { ...prevHp }
+                : { max: prevHp || 0, current: prevHp || 0, temp: 0 };
+        if (hpMax !== null) baseHp.max = hpMax;
+        if (hpCurrent !== null) baseHp.current = hpCurrent;
+        if (hpTemp !== null) baseHp.temp = hpTemp;
+        updates.hitPoints = baseHp;
+    }
+
+    if (armorClass !== null) {
+        updates.armorClass = armorClass;
+    }
+    if (initiative !== null) {
+        updates.initiative = initiative;
+    }
+    if (speed !== null) {
+        updates.speed = speed;
+    }
 
     await CharacterStorage.update(currentEditCharacterId, updates);
     await AppState.loadCharacters();

@@ -589,6 +589,22 @@
     margin-top: var(--spacing-lg);
 }
 
+/* Ability + combat grids inside Edit Details modal */
+.modal-grid-abilities,
+.modal-grid-combat {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.modal-grid-abilities label,
+.modal-grid-combat label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
 /* ===== TEAL THEME OVERRIDES (cards, panels) ===== */
 /* Teal color variables (used for cards/panels; modals use yellow theme below) */
 :root {

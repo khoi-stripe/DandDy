@@ -309,14 +309,81 @@
     <div id="editDetailsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">✎ Edit Character Details</h2>
+                <h2 class="modal-title">[ EDIT CHARACTER ]</h2>
                 <button class="modal-close" onclick="closeEditDetailsModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <p class="terminal-text">Adjust campaign-specific details. These edits affect this saved copy only.</p>
+                <p class="terminal-text">Adjust campaign-specific details and table-use stats. These edits affect this saved copy only.</p>
 
                 <p class="terminal-text-small">Character Name</p>
                 <input type="text" id="editName" class="terminal-input" placeholder="Enter character name">
+
+                <p class="terminal-text-small modal-section-label">Level</p>
+                <input
+                    type="number"
+                    id="editLevel"
+                    class="terminal-input"
+                    min="1"
+                    max="20"
+                    inputmode="numeric"
+                    placeholder="1-20"
+                >
+
+                <p class="terminal-text-small modal-section-label">Combat Stats</p>
+                <div class="modal-grid-combat">
+                    <label class="terminal-text-small">
+                        HP Max
+                        <input type="number" id="editHpMax" class="terminal-input" min="0" inputmode="numeric">
+                    </label>
+                    <label class="terminal-text-small">
+                        HP Current
+                        <input type="number" id="editHpCurrent" class="terminal-input" min="0" inputmode="numeric">
+                    </label>
+                    <label class="terminal-text-small">
+                        Temp HP
+                        <input type="number" id="editHpTemp" class="terminal-input" min="0" inputmode="numeric">
+                    </label>
+                    <label class="terminal-text-small">
+                        Armor Class
+                        <input type="number" id="editArmorClass" class="terminal-input" min="0" inputmode="numeric">
+                    </label>
+                    <label class="terminal-text-small">
+                        Initiative
+                        <input type="number" id="editInitiative" class="terminal-input" inputmode="numeric">
+                    </label>
+                    <label class="terminal-text-small">
+                        Speed (ft)
+                        <input type="number" id="editSpeed" class="terminal-input" min="0" inputmode="numeric">
+                    </label>
+                </div>
+
+                <p class="terminal-text-small modal-section-label">Ability Scores <span class="terminal-text-dim">(base scores)</span></p>
+                <div class="modal-grid-abilities">
+                    <label class="terminal-text-small">
+                        STR
+                        <input type="number" id="editStr" class="terminal-input" min="1" max="30" inputmode="numeric">
+                    </label>
+                    <label class="terminal-text-small">
+                        DEX
+                        <input type="number" id="editDex" class="terminal-input" min="1" max="30" inputmode="numeric">
+                    </label>
+                    <label class="terminal-text-small">
+                        CON
+                        <input type="number" id="editCon" class="terminal-input" min="1" max="30" inputmode="numeric">
+                    </label>
+                    <label class="terminal-text-small">
+                        INT
+                        <input type="number" id="editInt" class="terminal-input" min="1" max="30" inputmode="numeric">
+                    </label>
+                    <label class="terminal-text-small">
+                        WIS
+                        <input type="number" id="editWis" class="terminal-input" min="1" max="30" inputmode="numeric">
+                    </label>
+                    <label class="terminal-text-small">
+                        CHA
+                        <input type="number" id="editCha" class="terminal-input" min="1" max="30" inputmode="numeric">
+                    </label>
+                </div>
 
                 <p class="terminal-text-small modal-section-label">Skill Proficiencies <span class="terminal-text-dim">(one per line)</span></p>
                 <textarea id="editSkills" class="terminal-textarea terminal-input" placeholder="e.g. Perception&#10;Stealth&#10;Investigation"></textarea>

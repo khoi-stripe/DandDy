@@ -93,8 +93,20 @@ class CharacterUpdate(BaseModel):
     name: Optional[str] = None
     level: Optional[int] = None
     experience_points: Optional[int] = None
+    # Ability Scores (editable from manager)
+    strength: Optional[int] = None
+    dexterity: Optional[int] = None
+    constitution: Optional[int] = None
+    intelligence: Optional[int] = None
+    wisdom: Optional[int] = None
+    charisma: Optional[int] = None
+    # Combat Stats (editable from manager)
+    hit_points_max: Optional[int] = None
     hit_points_current: Optional[int] = None
     hit_points_temp: Optional[int] = None
+    armor_class: Optional[int] = None
+    initiative: Optional[int] = None
+    speed: Optional[int] = 30
     death_save_successes: Optional[int] = None
     death_save_failures: Optional[int] = None
     conditions: Optional[List[str]] = None

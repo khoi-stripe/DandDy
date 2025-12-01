@@ -185,9 +185,24 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       if (updates.level !== undefined) apiUpdates.level = updates.level;
       if (updates.experiencePoints !== undefined) apiUpdates.experience_points = updates.experiencePoints;
       
+      // Ability Scores (partial updates from manager)
+      if (updates.abilities) {
+        const abilities = updates.abilities;
+        if (abilities.str !== undefined) apiUpdates.strength = abilities.str;
+        if (abilities.dex !== undefined) apiUpdates.dexterity = abilities.dex;
+        if (abilities.con !== undefined) apiUpdates.constitution = abilities.con;
+        if (abilities.int !== undefined) apiUpdates.intelligence = abilities.int;
+        if (abilities.wis !== undefined) apiUpdates.wisdom = abilities.wis;
+        if (abilities.cha !== undefined) apiUpdates.charisma = abilities.cha;
+      }
+
       // Combat stats
+      if (updates.hitPoints?.max !== undefined) apiUpdates.hit_points_max = updates.hitPoints.max;
       if (updates.hitPoints?.current !== undefined) apiUpdates.hit_points_current = updates.hitPoints.current;
       if (updates.hitPoints?.temp !== undefined) apiUpdates.hit_points_temp = updates.hitPoints.temp;
+      if (updates.armorClass !== undefined) apiUpdates.armor_class = updates.armorClass;
+      if (updates.initiative !== undefined) apiUpdates.initiative = updates.initiative;
+      if (updates.speed !== undefined) apiUpdates.speed = updates.speed;
       
       // Arrays
       if (updates.skillProficiencies !== undefined) apiUpdates.skill_proficiencies = updates.skillProficiencies;

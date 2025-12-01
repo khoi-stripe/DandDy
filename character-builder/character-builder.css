@@ -70,6 +70,30 @@
   word-wrap: break-word;
 }
 
+/* Dimmed conversation hierarchy
+   - Older narrator messages and question cards are slightly dimmed
+   - The newest section stays bright
+   - Hovering or focusing a dimmed section temporarily brightens it again
+*/
+.narrator-message,
+.question-card {
+  transition: opacity 180ms ease-out, filter 180ms ease-out;
+}
+
+.narrator-message.is-dimmed,
+.question-card.is-dimmed {
+  opacity: 0.35;
+  filter: grayscale(0.2);
+}
+
+.narrator-message.is-dimmed:hover,
+.question-card.is-dimmed:hover,
+.narrator-message.is-dimmed:focus-within,
+.question-card.is-dimmed:focus-within {
+  opacity: 1;
+  filter: none;
+}
+
 /* Wrapper used ONLY for narrator spinners so we can reset whitespace behavior
    without affecting the rest of the narrator text. */
 .narrator-spinner-shell {

@@ -483,8 +483,10 @@ body::before {
 
 .sheet-title {
   color: var(--sheet-accent);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-large);
   font-weight: bold;
+  line-height: 1.1;
+  letter-spacing: 0.03em;
   flex: 1 1 auto;
   min-width: 0;
   word-wrap: break-word;
