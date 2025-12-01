@@ -1311,7 +1311,8 @@ const CharacterSheet = (window.CharacterSheet = {
       initiative: character.initiative || 0,
       speed: character.speed || 30,
       proficiencyBonus: character.proficiencyBonus || 2,
-      hitDie: character.classData?.hitDie || 6,
+      // Prefer any explicit character-level override, then fall back to class data.
+      hitDie: character.hitDie || character.classData?.hitDie || 6,
 
       // Abilities
       abilities,

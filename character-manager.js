@@ -562,7 +562,7 @@ async function editCharacter(id) {
     setValue('editWis', abilities.wis != null ? abilities.wis : '');
     setValue('editCha', abilities.cha != null ? abilities.cha : '');
 
-    // COMBAT STATS
+    // COMBAT STATS (match sheet's Combat Stats section)
     setValue('editHpMax', parsed.hpMax != null ? parsed.hpMax : '');
     setValue('editHpCurrent', parsed.hpCurrent != null ? parsed.hpCurrent : '');
     const tempHp =
@@ -573,6 +573,8 @@ async function editCharacter(id) {
     setValue('editArmorClass', parsed.armorClass != null ? parsed.armorClass : '');
     setValue('editInitiative', parsed.initiative != null ? parsed.initiative : '');
     setValue('editSpeed', parsed.speed != null ? parsed.speed : '');
+    setValue('editProfBonus', parsed.proficiencyBonus != null ? parsed.proficiencyBonus : '');
+    setValue('editHitDie', parsed.hitDie != null ? parsed.hitDie : '');
 
     // SKILL PROFICIENCIES (text-only list, one per line)
     const skillList = (parsed.skillProficiencies || []).map(s => CharacterSheet.formatSkillName(s)).join('\n');
@@ -681,6 +683,8 @@ async function saveEditDetails() {
     const armorClass = getNumber('editArmorClass');
     const initiative = getNumber('editInitiative');
     const speed = getNumber('editSpeed');
+    const profBonus = getNumber('editProfBonus');
+    const hitDie = getNumber('editHitDie');
 
     const updates = {
         // Store raw IDs/names; CharacterSheet will format as needed
@@ -726,6 +730,13 @@ async function saveEditDetails() {
     }
     if (speed !== null) {
         updates.speed = speed;
+    }
+    if (profBonus !== null) {
+        updates.proficiencyBonus = profBonus;
+    }
+    if (hitDie !== null) {
+        // Allow manager edits to override the class hit die used in the sheet.
+        updates.hitDie = hitDie;
     }
 
     await CharacterStorage.update(currentEditCharacterId, updates);
@@ -1210,6 +1221,16 @@ async function typeManagerPortrait(element, portraitText) {
             if (charCount >= charsPerFrame) {
                 element.textContent = currentText;
                 charCount = 0;
+
+                // Keep the portrait visually centered in its frame during the
+                // typewriter animation so there's no sudden jump at the end.
+                if (
+                    window.CharacterSheet &&
+                    typeof CharacterSheet._centerPortraitScrollSafely === 'function'
+                ) {
+                    CharacterSheet._centerPortraitScrollSafely(element);
+                }
+
                 await new Promise(resolve => requestAnimationFrame(resolve));
             }
         }

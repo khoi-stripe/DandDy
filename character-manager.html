@@ -313,7 +313,7 @@
                 <button class="modal-close" onclick="closeEditDetailsModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <p class="terminal-text">Adjust campaign-specific details and table-use stats. These edits affect this saved copy only.</p>
+                <p class="terminal-text">Adjust campaign-specific details and table-use stats.</p>
 
                 <p class="terminal-text-small">Character Name</p>
                 <input type="text" id="editName" class="terminal-input" placeholder="Enter character name">
@@ -354,6 +354,14 @@
                     <label class="terminal-text-small">
                         Speed (ft)
                         <input type="number" id="editSpeed" class="terminal-input" min="0" inputmode="numeric">
+                    </label>
+                    <label class="terminal-text-small">
+                        Prof Bonus
+                        <input type="number" id="editProfBonus" class="terminal-input" inputmode="numeric">
+                    </label>
+                    <label class="terminal-text-small">
+                        Hit Die
+                        <input type="number" id="editHitDie" class="terminal-input" min="1" inputmode="numeric">
                     </label>
                 </div>
 
@@ -524,7 +532,7 @@
                 <button class="modal-close" onclick="closePortraitPromptModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <p class="terminal-text">Describe your character's appearance. AI will generate a portrait optimized for ASCII art.</p>
+                <p class="terminal-text">Describe your character's appearance.</p>
                 <p class="terminal-text-small terminal-text-dim portrait-modal-subhead">Be descriptive! (e.g., "a stoic dwarf fighter with a braided beard, holding a glowing axe")</p>
                 <textarea id="portraitPrompt" class="terminal-textarea terminal-input" rows="6" placeholder="Enter custom description..."></textarea>
             </div>

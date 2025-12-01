@@ -164,63 +164,11 @@ const App = (window.App = {
       this.updateCharacterPanel(state.character);
     });
 
-    // Set up automatic dimming for previous narrator sections so that only the
-    // most recent section stays fully bright. Hovering or focusing older
-    // sections will temporarily brighten them again (handled via CSS).
-    this._setupNarratorDimming();
-
     // Start the flow
     CharacterState.reset();
     OptionVariationsCache.reset(); // Reset option variations for new character
     this._lastPortraitArt = null; // Reset portrait tracking for new character
     await this.showQuestion('intro');
-  },
-
-  /**
-   * Wire up a MutationObserver on the narrator panel so any time the
-   * conversation grows (new narrator line, question card, or system message),
-   * we automatically dim older sections and keep the newest one bright.
-   */
-  _setupNarratorDimming() {
-    const narratorPanel = document.getElementById('narrator-panel');
-    if (!narratorPanel || typeof MutationObserver === 'undefined') {
-      return;
-    }
-
-    // Run once on init in case there is already content.
-    this._updateNarratorDimming();
-
-    const observer = new MutationObserver(() => {
-      this._updateNarratorDimming();
-    });
-
-    observer.observe(narratorPanel, {
-      childList: true,
-    });
-
-    this._narratorDimmingObserver = observer;
-  },
-
-  /**
-   * Apply `.is-dimmed` to all but the latest narrator/message section so the
-   * most recent step in the flow reads as the "active" one. CSS handles
-   * hover/focus states so older sections brighten while interacted with.
-   */
-  _updateNarratorDimming() {
-    const narratorPanel = document.getElementById('narrator-panel');
-    if (!narratorPanel) return;
-
-    const sections = narratorPanel.querySelectorAll(
-      '.narrator-message, .question-card',
-    );
-    if (!sections.length) return;
-
-    const lastIndex = sections.length - 1;
-    sections.forEach((el, index) => {
-      const isActive = index === lastIndex;
-      el.classList.toggle('is-active', isActive);
-      el.classList.toggle('is-dimmed', !isActive);
-    });
   },
 
   // Show progressive "thinking" messages while waiting for AI
@@ -4296,11 +4244,21 @@ const App = (window.App = {
       for (let charIndex = 0; charIndex < line.length; charIndex++) {
         currentText += line[charIndex];
         charCount++;
-        
+
         // Update DOM every N characters
         if (charCount >= charsPerFrame) {
           element.textContent = currentText;
           charCount = 0;
+
+          // Keep the portrait visually centered in its frame *while* it types
+          // so there's no final "jump" when the animation completes.
+          if (
+            window.CharacterSheet &&
+            typeof CharacterSheet._centerPortraitScrollSafely === 'function'
+          ) {
+            CharacterSheet._centerPortraitScrollSafely(element);
+          }
+
           await new Promise(resolve => requestAnimationFrame(resolve));
         }
       }
