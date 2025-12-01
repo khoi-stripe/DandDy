@@ -319,6 +319,10 @@ body::before {
   text-align: center;
   overflow: auto;
   max-height: 80vh;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .splash-text {
