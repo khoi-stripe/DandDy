@@ -3941,7 +3941,13 @@ const App = (window.App = {
     this.showQuestion('entry-mode');
   },
 
-  showConfirmationOverlay(message, onConfirm, options = {}) {
+  showConfirmationOverlay(message, onConfirm, onCancel, options = {}) {
+    // Support old signature where third param was options object
+    if (typeof onCancel === 'object' && onCancel !== null && !options) {
+      options = onCancel;
+      onCancel = null;
+    }
+
     const targetSelector = options.targetSelector;
 
     // While a confirmation dialog is open, pause keyboard navigation so
@@ -3960,7 +3966,7 @@ const App = (window.App = {
             </p>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" id="confirm-no">CANCEL</button>
+            <button class="terminal-btn" id="confirm-no">NO</button>
             <button class="terminal-btn terminal-btn-primary" id="confirm-yes">YES</button>
           </div>
         </div>
@@ -4021,7 +4027,7 @@ const App = (window.App = {
     });
 
     cancelBtn.addEventListener('click', () => {
-      runCloseAnimation();
+      runCloseAnimation(onCancel);
     });
   },
 
@@ -4433,8 +4439,42 @@ function startLoadingAnimation() {
 
 // Exit back to the Character Manager app from builder mode
 function exitToManager() {
-  // Navigate back to the manager UI. Adjust the path if the entry point changes.
-  window.location.href = '../character-manager.html?from=builder';
+  const state = CharacterState.get();
+  const character = state.character;
+
+  // Only prompt to save if character is complete (has name, race, class) and unsaved
+  const isComplete = character && character.name && character.race && character.class;
+  const hasUnsavedChanges = character && !character.id && isComplete;
+
+  if (hasUnsavedChanges) {
+    // Ask the user if they want to save before exiting
+    App.showConfirmationOverlay(
+      'You have not saved this character yet. Save before exiting?',
+      async () => {
+        // First attempt to save; if save fails, we stay in the builder
+        await App.saveCharacter(true);
+
+        // Re-check that we now have an ID before exiting
+        const latest = CharacterState.get().character;
+        if (!latest || !latest.id) {
+          App.showSystemMessage(
+            'Character was not saved. Staying in the builder.',
+          );
+          return;
+        }
+
+        // Character saved successfully, proceed to exit
+        window.location.href = '../character-manager.html?from=builder';
+      },
+      () => {
+        // User clicked "No, don't save" - exit without saving
+        window.location.href = '../character-manager.html?from=builder';
+      }
+    );
+  } else {
+    // Character is already saved or incomplete; immediately exit
+    window.location.href = '../character-manager.html?from=builder';
+  }
 }
 
 function dismissBuilderSplash(instant = false) {
@@ -4507,6 +4547,23 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Keep narrator panel scrolled to bottom on resize
   window.addEventListener('resize', () => {
     Utils.scrollToBottom();
+  });
+
+  // Warn before leaving page if there are unsaved changes
+  window.addEventListener('beforeunload', (e) => {
+    const state = CharacterState.get();
+    const character = state.character;
+
+    // Only prompt if character is complete (has name, race, class) and unsaved
+    const isComplete = character && character.name && character.race && character.class;
+    const hasUnsavedChanges = character && !character.id && isComplete;
+
+    if (hasUnsavedChanges) {
+      // Modern browsers ignore custom messages and show a generic one
+      e.preventDefault();
+      e.returnValue = ''; // Chrome requires returnValue to be set
+      return ''; // Some browsers require a return value
+    }
   });
 
   // Keyboard navigation
