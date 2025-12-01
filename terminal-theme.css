@@ -486,7 +486,7 @@ body::before {
 
 /* ===== SHARED CHARACTER SHEET LAYOUT ===== */
 .character-sheet {
-  border: 1px solid var(--sheet-border-color);
+  border: 1px solid var(--sheet-accent-dim);
   padding: var(--spacing-md);
   max-width: 100%;
   overflow-wrap: break-word;
