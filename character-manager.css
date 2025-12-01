@@ -411,12 +411,9 @@
 
 .original-portrait {
     width: 100%;
-    max-width: 100%;
-    height: auto;
+    height: 100%;
     display: block;
-    object-fit: contain;
-    text-align: center;
-    margin: 0 auto;
+    object-fit: cover;
     border: none;
 }
 

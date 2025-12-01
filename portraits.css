@@ -195,7 +195,7 @@
 
 .portrait-history-modal .card-name {
   color: var(--modal-accent-dim);
-  font-size: var(--font-size-small);
+  font-size: 12px;
   line-height: 1.2;
   margin-bottom: 0;
   overflow: hidden;
@@ -205,7 +205,7 @@
 
 .portrait-history-modal .card-info {
   color: var(--modal-accent-dim);
-  font-size: var(--font-size-small);
+  font-size: 12px;
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
