@@ -176,6 +176,14 @@
   height: 100%;
 }
 
+.portrait-history-modal .card-thumbnail .ascii-portrait {
+  /* Center ASCII art horizontally within the thumbnail */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 .portrait-history-modal .card-thumbnail img {
   object-fit: cover; /* Scale & crop to fill card thumbnail */
   display: block;
