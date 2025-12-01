@@ -2051,12 +2051,7 @@ function cancelAuthFlow() {
         const welcomeModal = document.getElementById('welcomeModal');
         if (welcomeModal) {
             welcomeModal.classList.add('show');
-
-            // Try to focus the first CTA button again for keyboard users.
-            const firstBtn = welcomeModal.querySelector('.welcome-actions .terminal-btn');
-            if (firstBtn) {
-                firstBtn.focus();
-            }
+            // Don't auto-focus any button - let the user choose
         }
         authOpenedFromWelcome = false;
     }
@@ -2472,11 +2467,7 @@ function handleLogout() {
         const welcomeModal = document.getElementById('welcomeModal');
         if (welcomeModal) {
             welcomeModal.classList.add('show');
-            // Focus the first button in the welcome modal
-            const firstBtn = welcomeModal.querySelector('.welcome-actions .terminal-btn');
-            if (firstBtn) {
-                setTimeout(() => firstBtn.focus(), 100);
-            }
+            // Don't auto-focus any button - let the user choose
         }
     });
 }
@@ -2720,11 +2711,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 3. User is not returning from the builder
         if (!isAuthenticated && !splashDismissed && !fromBuilder) {
             welcomeModal.classList.add('show');
-            if (welcomeButtons.length) {
-                focusWelcomeButton(0);
-            } else if (typeof focusFirstFieldInModal === 'function') {
-                focusFirstFieldInModal(welcomeModal);
-            }
+            // Don't auto-focus any button - let the user choose
         }
 
         welcomeModal.addEventListener('keydown', (e) => {
