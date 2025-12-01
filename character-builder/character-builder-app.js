@@ -2845,7 +2845,9 @@ const App = (window.App = {
 
       if (showMessage) {
         // Use a short, non-intrusive toast instead of an inline narrator system line.
-        this.showToast('Character saved');
+        // Show different message based on authentication status
+        const isAuthenticated = window.AuthService && window.AuthService.isAuthenticated();
+        this.showToast(isAuthenticated ? 'Character saved' : 'Character only saved locally');
       }
 
       // Show reminder to log in if in guest mode (only once per session)

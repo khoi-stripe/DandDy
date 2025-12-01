@@ -2220,6 +2220,8 @@ async function handleLogin() {
     try {
         const result = await window.AuthService.login(email, password);
         if (result && result.success) {
+            // Mark splash as dismissed on successful login
+            sessionStorage.setItem('welcomeSplashDismissed', 'true');
             closeAuthModal();
             updateAuthUI();
             showNotification(`✓ Logged in as ${email}`);
@@ -2286,6 +2288,8 @@ async function handleRegister() {
     try {
         const result = await window.AuthService.register(email, password);
         if (result.success) {
+            // Mark splash as dismissed on successful registration
+            sessionStorage.setItem('welcomeSplashDismissed', 'true');
             closeAuthModal();
             updateAuthUI();
             showNotification(`✓ Registered as ${email}`);
@@ -2460,6 +2464,9 @@ function handleLogout() {
         // Reload with local storage
         await AppState.loadCharacters();
         UI.render();
+        
+        // Clear the dismissed flag so welcome modal appears on explicit logout
+        sessionStorage.removeItem('welcomeSplashDismissed');
         
         // Show welcome modal (splash screen) after logout
         const welcomeModal = document.getElementById('welcomeModal');
@@ -2651,6 +2658,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Sync header / guest notice with actual auth state
     updateAuthUI();
 
+    // Check if user is returning from builder or has already dismissed the splash
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromBuilder = urlParams.get('from') === 'builder';
+    const splashDismissed = sessionStorage.getItem('welcomeSplashDismissed') === 'true';
+
     // Show welcome modal (splash art + three choices) only when not logged in.
     const welcomeModal = document.getElementById('welcomeModal');
     // Wire welcome modal buttons: LOG IN, CREATE ACCOUNT, DEMO MODE
@@ -2658,6 +2670,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (welcomeLoginBtn) {
         welcomeLoginBtn.addEventListener('click', () => {
             authOpenedFromWelcome = true;
+            // Don't set dismissed flag yet - only set it on successful login
             if (welcomeModal) welcomeModal.classList.remove('show');
             showAuthModal();
         });
@@ -2667,6 +2680,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (welcomeRegisterBtn) {
         welcomeRegisterBtn.addEventListener('click', () => {
             authOpenedFromWelcome = true;
+            // Don't set dismissed flag yet - only set it on successful registration
             if (welcomeModal) welcomeModal.classList.remove('show');
             showAuthModal();
             showRegisterForm();
@@ -2676,6 +2690,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const welcomeDemoBtn = document.getElementById('welcomeDemoBtn');
     if (welcomeDemoBtn) {
         welcomeDemoBtn.addEventListener('click', () => {
+            // Mark splash as dismissed so it won't reappear when returning from builder
+            sessionStorage.setItem('welcomeSplashDismissed', 'true');
             // Simply close the modal; user continues in local "demo" mode.
             if (welcomeModal) welcomeModal.classList.remove('show');
         });
@@ -2698,8 +2714,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         };
 
-        // If not authenticated, show modal and focus the first button.
-        if (!isAuthenticated) {
+        // Show welcome modal only if:
+        // 1. User is not authenticated, AND
+        // 2. User hasn't already dismissed the splash this session (e.g., by clicking DEMO MODE), AND
+        // 3. User is not returning from the builder
+        if (!isAuthenticated && !splashDismissed && !fromBuilder) {
             welcomeModal.classList.add('show');
             if (welcomeButtons.length) {
                 focusWelcomeButton(0);
