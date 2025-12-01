@@ -184,6 +184,21 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       if (updates.name !== undefined) apiUpdates.name = updates.name;
       if (updates.level !== undefined) apiUpdates.level = updates.level;
       if (updates.experiencePoints !== undefined) apiUpdates.experience_points = updates.experiencePoints;
+      if (updates.alignment !== undefined) {
+        // Convert frontend alignment ID (lg, ce, etc.) to backend enum format
+        const alignmentMap = {
+          'lg': 'lawful_good',
+          'ng': 'neutral_good',
+          'cg': 'chaotic_good',
+          'ln': 'lawful_neutral',
+          'n': 'true_neutral',
+          'cn': 'chaotic_neutral',
+          'le': 'lawful_evil',
+          'ne': 'neutral_evil',
+          'ce': 'chaotic_evil'
+        };
+        apiUpdates.alignment = alignmentMap[updates.alignment] || updates.alignment;
+      }
       
       // Ability Scores (partial updates from manager)
       if (updates.abilities) {

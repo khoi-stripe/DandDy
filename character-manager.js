@@ -553,6 +553,9 @@ async function editCharacter(id) {
     const level = parsed.level != null ? parsed.level : (character.level || 1);
     setValue('editLevel', level);
 
+    // ALIGNMENT
+    setValue('editAlignment', character.alignment || '');
+
     // ABILITY SCORES
     const abilities = parsed.abilities || {};
     setValue('editStr', abilities.str != null ? abilities.str : '');
@@ -686,6 +689,9 @@ async function saveEditDetails() {
     const profBonus = getNumber('editProfBonus');
     const hitDie = getNumber('editHitDie');
 
+    // Alignment
+    const alignmentValue = document.getElementById('editAlignment')?.value || '';
+
     const updates = {
         // Store raw IDs/names; CharacterSheet will format as needed
         name: nameText,
@@ -700,6 +706,10 @@ async function saveEditDetails() {
         // Clamp to a reasonable D&D range just in case
         const safeLevel = Math.min(20, Math.max(1, levelValue));
         updates.level = safeLevel;
+    }
+
+    if (alignmentValue) {
+        updates.alignment = alignmentValue;
     }
 
     if (Object.keys(abilityUpdates).length > 0) {
