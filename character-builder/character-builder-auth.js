@@ -384,7 +384,17 @@ const AuthUI = (window.AuthUI = {
       document.getElementById('header-logout')?.addEventListener('click', () => {
         if (confirm('Are you sure you want to logout?')) {
           AuthService.logout();
-          window.location.reload();
+          
+          // Show login screen after logout (with register and guest mode options)
+          if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
+            window.AuthUI.showLogin(
+              () => window.location.reload(),  // onSuccess
+              () => {},                         // onSwitchToRegister (handled within AuthUI)
+              () => {}                          // onGuestMode
+            );
+          } else {
+            window.location.reload();
+          }
         }
       });
     }

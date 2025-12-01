@@ -138,6 +138,15 @@ function handleLogout() {
         // Fallback to immediate logout if confirmation UI is not available
         window.AuthService.logout();
         updateAuthUI();
+        
+        // Show login screen after logout
+        if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
+            window.AuthUI.showLogin(
+                () => location.reload(),  // onSuccess
+                () => {},                 // onSwitchToRegister (handled within AuthUI)
+                () => {}                  // onGuestMode
+            );
+        }
         return;
     }
 
@@ -155,6 +164,15 @@ function handleLogout() {
 
             if (window.App && window.App.showNotification) {
                 window.App.showNotification('✓ Logged out', 'success');
+            }
+            
+            // Show login screen after logout
+            if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
+                window.AuthUI.showLogin(
+                    () => location.reload(),  // onSuccess
+                    () => {},                 // onSwitchToRegister (handled within AuthUI)
+                    () => {}                  // onGuestMode
+                );
             }
         },
     );

@@ -2424,6 +2424,17 @@ function handleLogout() {
         // Reload with local storage
         await AppState.loadCharacters();
         UI.render();
+        
+        // Show welcome modal (splash screen) after logout
+        const welcomeModal = document.getElementById('welcomeModal');
+        if (welcomeModal) {
+            welcomeModal.classList.add('show');
+            // Focus the first button in the welcome modal
+            const firstBtn = welcomeModal.querySelector('.welcome-actions .terminal-btn');
+            if (firstBtn) {
+                setTimeout(() => firstBtn.focus(), 100);
+            }
+        }
     });
 }
 
