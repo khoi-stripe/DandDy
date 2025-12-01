@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>CSS 3D Icosahedron</title>
+    <link rel="stylesheet" href="../terminal-theme.css" />
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 40px;
+        gap: 40px;
+      }
+
+      h1 {
+        color: var(--terminal-accent);
+        font-family: monospace;
+        text-align: center;
+      }
+
+      .container {
+        perspective: 800px;
+        perspective-origin: 50% 50%;
+      }
+
+      .icosahedron {
+        width: 200px;
+        height: 200px;
+        position: relative;
+        transform-style: preserve-3d;
+        animation: spin 10s infinite linear;
+      }
+
+      .face {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        border-width: 0 50px 86.6px 50px;
+        border-color: transparent transparent var(--terminal-accent) transparent;
+        margin-left: -50px;
+        margin-top: -28.87px;
+      }
+
+      /* Wireframe variant */
+      .icosahedron.wireframe .face {
+        background: transparent;
+        border-color: transparent transparent rgba(0, 255, 255, 0.2) transparent;
+      }
+
+      /* Solid variant */
+      .icosahedron.solid .face {
+        border-color: transparent transparent rgba(0, 255, 255, 0.6) transparent;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+      }
+
+      /* Icosahedron - 12 vertices positioned using spherical coordinates */
+      /* The 12 vertices arranged in 3 tiers: 1 top, 5 upper, 5 lower, 1 bottom */
+      /* Each face connects 3 vertices */
+      
+      .face:nth-child(1) { transform: rotateY(0deg) rotateX(31.72deg) translateZ(100px); }
+      .face:nth-child(2) { transform: rotateY(72deg) rotateX(31.72deg) translateZ(100px); }
+      .face:nth-child(3) { transform: rotateY(144deg) rotateX(31.72deg) translateZ(100px); }
+      .face:nth-child(4) { transform: rotateY(216deg) rotateX(31.72deg) translateZ(100px); }
+      .face:nth-child(5) { transform: rotateY(288deg) rotateX(31.72deg) translateZ(100px); }
+      
+      .face:nth-child(6) { transform: rotateY(36deg) rotateX(79.19deg) translateZ(100px); }
+      .face:nth-child(7) { transform: rotateY(108deg) rotateX(79.19deg) translateZ(100px); }
+      .face:nth-child(8) { transform: rotateY(180deg) rotateX(79.19deg) translateZ(100px); }
+      .face:nth-child(9) { transform: rotateY(252deg) rotateX(79.19deg) translateZ(100px); }
+      .face:nth-child(10) { transform: rotateY(324deg) rotateX(79.19deg) translateZ(100px); }
+      
+      .face:nth-child(11) { transform: rotateY(0deg) rotateX(100.81deg) translateZ(100px); }
+      .face:nth-child(12) { transform: rotateY(72deg) rotateX(100.81deg) translateZ(100px); }
+      .face:nth-child(13) { transform: rotateY(144deg) rotateX(100.81deg) translateZ(100px); }
+      .face:nth-child(14) { transform: rotateY(216deg) rotateX(100.81deg) translateZ(100px); }
+      .face:nth-child(15) { transform: rotateY(288deg) rotateX(100.81deg) translateZ(100px); }
+      
+      .face:nth-child(16) { transform: rotateY(36deg) rotateX(148.28deg) translateZ(100px); }
+      .face:nth-child(17) { transform: rotateY(108deg) rotateX(148.28deg) translateZ(100px); }
+      .face:nth-child(18) { transform: rotateY(180deg) rotateX(148.28deg) translateZ(100px); }
+      .face:nth-child(19) { transform: rotateY(252deg) rotateX(148.28deg) translateZ(100px); }
+      .face:nth-child(20) { transform: rotateY(324deg) rotateX(148.28deg) translateZ(100px); }
+
+      @keyframes spin {
+        from {
+          transform: rotateX(-10deg) rotateY(0deg);
+        }
+        to {
+          transform: rotateX(-10deg) rotateY(360deg);
+        }
+      }
+
+      .shape-row {
+        display: flex;
+        gap: 100px;
+        align-items: center;
+      }
+
+      .shape-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .label {
+        color: var(--terminal-accent);
+        font-family: monospace;
+        font-size: 16px;
+      }
+
+      .info {
+        max-width: 600px;
+        padding: 20px;
+        background: rgba(0, 255, 255, 0.05);
+        border: 1px solid var(--terminal-accent);
+        font-family: monospace;
+        color: var(--terminal-accent);
+        line-height: 1.6;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CSS 3D Icosahedron</h1>
+    
+    <div class="info">
+      20 equilateral triangular faces • 12 vertices • 30 edges
+    </div>
+
+    <div class="shape-row">
+      <div class="shape-wrapper">
+        <div class="container">
+          <div class="icosahedron wireframe">
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+          </div>
+        </div>
+        <div class="label">Wireframe</div>
+      </div>
+
+      <div class="shape-wrapper">
+        <div class="container">
+          <div class="icosahedron solid">
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+            <div class="face"></div>
+          </div>
+        </div>
+        <div class="label">Solid</div>
+      </div>
+    </div>
+
+    <div class="info" style="margin-top: 20px;">
+      <strong>Geometry:</strong> The icosahedron uses the golden ratio (φ = 1.618...) in its construction.
+      Each vertex is surrounded by 5 triangular faces, and opposite vertices are separated by 180°.
+      The key angle is arctan(0.5) ≈ 26.565°.
+    </div>
+  </body>
+</html>
+

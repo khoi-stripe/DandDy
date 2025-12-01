@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>3D Polyhedron Showcase</title>
+    <link rel="stylesheet" href="../terminal-theme.css" />
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 60px;
+        padding: 40px;
+      }
+
+      h1, h2 {
+        color: var(--terminal-accent);
+        text-align: center;
+        font-family: monospace;
+      }
+
+      .shape-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 80px;
+        flex-wrap: wrap;
+      }
+
+      .shape-container {
+        perspective: 400px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      .shape-label {
+        color: var(--terminal-accent);
+        font-family: monospace;
+        font-size: 14px;
+        text-align: center;
+      }
+
+      .shape {
+        width: 120px;
+        height: 120px;
+        position: relative;
+        transform-style: preserve-3d;
+        animation: spin 8s infinite linear;
+      }
+
+      .shape i {
+        position: absolute;
+        display: block;
+        border: 2px solid var(--terminal-accent);
+        background: rgba(0, 255, 255, 0.05);
+        box-shadow: 
+          inset 0 0 30px rgba(0, 255, 255, 0.2),
+          0 0 20px rgba(0, 255, 255, 0.3);
+      }
+
+      /* Solid variant */
+      .shape-solid i {
+        background: rgba(0, 0, 0, 0.8);
+        box-shadow: 
+          0 0 20px rgba(0, 255, 255, 0.3);
+      }
+
+      /* CUBE - 6 faces */
+      .cube i {
+        width: 120px;
+        height: 120px;
+      }
+      .cube i:nth-child(1) { transform: translateZ(60px); }
+      .cube i:nth-child(2) { transform: rotateY(180deg) translateZ(60px); }
+      .cube i:nth-child(3) { transform: rotateY(90deg) translateZ(60px); }
+      .cube i:nth-child(4) { transform: rotateY(-90deg) translateZ(60px); }
+      .cube i:nth-child(5) { transform: rotateX(90deg) translateZ(60px); }
+      .cube i:nth-child(6) { transform: rotateX(-90deg) translateZ(60px); }
+
+      /* OCTAHEDRON - 8 faces (triangular) */
+      /* Square-based double pyramid */
+      .octahedron i {
+        width: 0;
+        height: 0;
+        border-left: 60px solid transparent;
+        border-right: 60px solid transparent;
+        border-bottom: 103.92px solid var(--terminal-accent);
+        background: transparent;
+        border-bottom-color: rgba(0, 255, 255, 0.1);
+        transform-origin: 60px 69.28px;
+      }
+      .octahedron-solid i {
+        border-bottom-color: rgba(0, 255, 255, 0.3);
+      }
+      
+      /* Top pyramid - 4 faces around top vertex */
+      .octahedron i:nth-child(1) { 
+        transform: rotateX(-35.26deg) rotateY(0deg) rotateZ(90deg) translateZ(75px);
+      }
+      .octahedron i:nth-child(2) { 
+        transform: rotateX(-35.26deg) rotateY(90deg) rotateZ(90deg) translateZ(75px);
+      }
+      .octahedron i:nth-child(3) { 
+        transform: rotateX(-35.26deg) rotateY(180deg) rotateZ(90deg) translateZ(75px);
+      }
+      .octahedron i:nth-child(4) { 
+        transform: rotateX(-35.26deg) rotateY(270deg) rotateZ(90deg) translateZ(75px);
+      }
+      
+      /* Bottom pyramid - 4 faces around bottom vertex */
+      .octahedron i:nth-child(5) { 
+        transform: rotateX(144.74deg) rotateY(0deg) rotateZ(90deg) translateZ(75px);
+      }
+      .octahedron i:nth-child(6) { 
+        transform: rotateX(144.74deg) rotateY(90deg) rotateZ(90deg) translateZ(75px);
+      }
+      .octahedron i:nth-child(7) { 
+        transform: rotateX(144.74deg) rotateY(180deg) rotateZ(90deg) translateZ(75px);
+      }
+      .octahedron i:nth-child(8) { 
+        transform: rotateX(144.74deg) rotateY(270deg) rotateZ(90deg) translateZ(75px);
+      }
+
+      /* DODECAHEDRON - 12 pentagonal faces */
+      /* Golden ratio based geometry */
+      .dodecahedron i {
+        width: 65px;
+        height: 65px;
+        clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+      }
+
+      /* Top cap */
+      .dodecahedron i:nth-child(1) { 
+        transform: rotateX(0deg) rotateZ(0deg) translateZ(100px); 
+      }
+      
+      /* Upper ring - 5 faces sloping down from top */
+      .dodecahedron i:nth-child(2) { 
+        transform: rotateY(0deg) rotateX(52.62deg) rotateZ(36deg) translateZ(100px); 
+      }
+      .dodecahedron i:nth-child(3) { 
+        transform: rotateY(72deg) rotateX(52.62deg) rotateZ(36deg) translateZ(100px); 
+      }
+      .dodecahedron i:nth-child(4) { 
+        transform: rotateY(144deg) rotateX(52.62deg) rotateZ(36deg) translateZ(100px); 
+      }
+      .dodecahedron i:nth-child(5) { 
+        transform: rotateY(216deg) rotateX(52.62deg) rotateZ(36deg) translateZ(100px); 
+      }
+      .dodecahedron i:nth-child(6) { 
+        transform: rotateY(288deg) rotateX(52.62deg) rotateZ(36deg) translateZ(100px); 
+      }
+      
+      /* Lower ring - 5 faces sloping up from bottom, offset by 36deg */
+      .dodecahedron i:nth-child(7) { 
+        transform: rotateY(36deg) rotateX(127.38deg) rotateZ(36deg) translateZ(100px); 
+      }
+      .dodecahedron i:nth-child(8) { 
+        transform: rotateY(108deg) rotateX(127.38deg) rotateZ(36deg) translateZ(100px); 
+      }
+      .dodecahedron i:nth-child(9) { 
+        transform: rotateY(180deg) rotateX(127.38deg) rotateZ(36deg) translateZ(100px); 
+      }
+      .dodecahedron i:nth-child(10) { 
+        transform: rotateY(252deg) rotateX(127.38deg) rotateZ(36deg) translateZ(100px); 
+      }
+      .dodecahedron i:nth-child(11) { 
+        transform: rotateY(324deg) rotateX(127.38deg) rotateZ(36deg) translateZ(100px); 
+      }
+      
+      /* Bottom cap */
+      .dodecahedron i:nth-child(12) { 
+        transform: rotateX(180deg) rotateZ(0deg) translateZ(100px); 
+      }
+
+      /* ICOSAHEDRON - 20 triangular faces */
+      /* Based on proper icosahedral geometry with golden ratio */
+      .icosahedron i {
+        width: 0;
+        height: 0;
+        border-left: 50px solid transparent;
+        border-right: 50px solid transparent;
+        border-bottom: 86.6px solid var(--terminal-accent);
+        background: transparent;
+        border-bottom-color: rgba(0, 255, 255, 0.1);
+        transform-origin: 50px 57.735px;
+      }
+      .icosahedron-solid i {
+        border-bottom-color: rgba(0, 255, 255, 0.3);
+      }
+
+      /* Top pyramid - 5 triangles around north pole */
+      .icosahedron i:nth-child(1) { 
+        transform: rotateX(-26.565deg) rotateY(0deg) rotateZ(60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(2) { 
+        transform: rotateX(-26.565deg) rotateY(72deg) rotateZ(60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(3) { 
+        transform: rotateX(-26.565deg) rotateY(144deg) rotateZ(60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(4) { 
+        transform: rotateX(-26.565deg) rotateY(216deg) rotateZ(60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(5) { 
+        transform: rotateX(-26.565deg) rotateY(288deg) rotateZ(60deg) translateZ(80px);
+      }
+
+      /* Upper band - 5 triangles pointing up */
+      .icosahedron i:nth-child(6) { 
+        transform: rotateX(26.565deg) rotateY(36deg) rotateZ(-60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(7) { 
+        transform: rotateX(26.565deg) rotateY(108deg) rotateZ(-60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(8) { 
+        transform: rotateX(26.565deg) rotateY(180deg) rotateZ(-60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(9) { 
+        transform: rotateX(26.565deg) rotateY(252deg) rotateZ(-60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(10) { 
+        transform: rotateX(26.565deg) rotateY(324deg) rotateZ(-60deg) translateZ(80px);
+      }
+
+      /* Lower band - 5 triangles pointing down */
+      .icosahedron i:nth-child(11) { 
+        transform: rotateX(153.435deg) rotateY(0deg) rotateZ(60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(12) { 
+        transform: rotateX(153.435deg) rotateY(72deg) rotateZ(60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(13) { 
+        transform: rotateX(153.435deg) rotateY(144deg) rotateZ(60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(14) { 
+        transform: rotateX(153.435deg) rotateY(216deg) rotateZ(60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(15) { 
+        transform: rotateX(153.435deg) rotateY(288deg) rotateZ(60deg) translateZ(80px);
+      }
+
+      /* Bottom pyramid - 5 triangles around south pole */
+      .icosahedron i:nth-child(16) { 
+        transform: rotateX(206.565deg) rotateY(36deg) rotateZ(-60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(17) { 
+        transform: rotateX(206.565deg) rotateY(108deg) rotateZ(-60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(18) { 
+        transform: rotateX(206.565deg) rotateY(180deg) rotateZ(-60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(19) { 
+        transform: rotateX(206.565deg) rotateY(252deg) rotateZ(-60deg) translateZ(80px);
+      }
+      .icosahedron i:nth-child(20) { 
+        transform: rotateX(206.565deg) rotateY(324deg) rotateZ(-60deg) translateZ(80px);
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotateX(20deg) rotateY(0deg);
+        }
+        to {
+          transform: rotateX(20deg) rotateY(360deg);
+        }
+      }
+
+      .info {
+        max-width: 800px;
+        margin: 20px;
+        padding: 20px;
+        background: rgba(0, 255, 255, 0.05);
+        border: 1px solid var(--terminal-accent);
+        font-family: monospace;
+        color: var(--terminal-accent);
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Platonic Solids - CSS 3D Demo</h1>
+    
+    <div class="info">
+      <strong>The Five Platonic Solids:</strong><br>
+      These are the only five regular convex polyhedra that exist in 3D space.
+      Each face is the same regular polygon, and the same number of faces meet at each vertex.
+    </div>
+
+    <h2>Cube - 6 Faces (Hexahedron)</h2>
+    <div class="shape-row">
+      <div class="shape-container">
+        <div class="shape cube">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+        <div class="shape-label">Wireframe</div>
+      </div>
+      <div class="shape-container">
+        <div class="shape cube shape-solid">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+        <div class="shape-label">Solid</div>
+      </div>
+    </div>
+
+    <h2>Octahedron - 8 Faces</h2>
+    <div class="shape-row">
+      <div class="shape-container">
+        <div class="shape octahedron">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+        <div class="shape-label">Wireframe</div>
+      </div>
+      <div class="shape-container">
+        <div class="shape octahedron octahedron-solid shape-solid">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+        <div class="shape-label">Solid</div>
+      </div>
+    </div>
+
+    <h2>Dodecahedron - 12 Faces</h2>
+    <div class="shape-row">
+      <div class="shape-container">
+        <div class="shape dodecahedron">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+        <div class="shape-label">Wireframe</div>
+      </div>
+      <div class="shape-container">
+        <div class="shape dodecahedron shape-solid">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+        <div class="shape-label">Solid</div>
+      </div>
+    </div>
+
+    <h2>Icosahedron - 20 Faces</h2>
+    <div class="shape-row">
+      <div class="shape-container">
+        <div class="shape icosahedron">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+        <div class="shape-label">Wireframe</div>
+      </div>
+      <div class="shape-container">
+        <div class="shape icosahedron icosahedron-solid shape-solid">
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+          <i></i>
+        </div>
+        <div class="shape-label">Solid</div>
+      </div>
+    </div>
+
+    <div class="info" style="margin-top: 40px;">
+      <strong>Note:</strong> The tetrahedron (4 faces) is omitted here as it's quite small at this scale,
+      but you could add it using the same technique. These shapes are created purely with CSS 3D transforms!
+    </div>
+  </body>
+</html>
+
