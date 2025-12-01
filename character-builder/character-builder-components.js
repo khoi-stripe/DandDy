@@ -11,8 +11,6 @@ const Components = (window.Components = {
   },
 
   renderQuestion(question) {
-    const shouldShowQuestionText = question && question.id === 'entry-mode';
-
     const optionsHTML = question.options
       .map(
         (opt, index) => `
@@ -25,11 +23,6 @@ const Components = (window.Components = {
 
     return `
       <div class="question-card" data-question-id="${question.id}">
-        ${
-          shouldShowQuestionText
-            ? `<div class="question-text">${question.text}</div>`
-            : ''
-        }
         <div class="options-container">
           ${optionsHTML}
         </div>

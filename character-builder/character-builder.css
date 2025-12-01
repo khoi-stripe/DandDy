@@ -112,7 +112,7 @@
   margin-top: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
   padding: var(--spacing-md);
-  border: 1px solid var(--terminal-border);
+  border: 1px solid var(--terminal-dim);
   position: relative;
 }
 
@@ -232,18 +232,6 @@
 .ability-method-trigger-label {
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.ability-method-caret {
-  margin-left: var(--spacing-xs);
-  font-size: 12px;
-  opacity: 0.8;
-  transition: transform 180ms ease-out, opacity 160ms ease-out;
-}
-
-.ability-method-trigger.is-open .ability-method-caret {
-  transform: rotate(180deg);
-  opacity: 1;
 }
 
 .ability-method-trigger.is-open {

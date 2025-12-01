@@ -236,13 +236,7 @@ const App = (window.App = {
         await this.showMessage(question);
         break;
       case 'choice':
-        // Entry mode is a special case: show mode options immediately
-        // without an extra narrator line.
-        if (question.id === 'entry-mode') {
-          await this.showEntryMode(question);
-        } else {
-          await this.showChoice(question);
-        }
+        await this.showChoice(question);
         break;
       case 'list-choice':
         await this.showListChoice(question);
@@ -266,20 +260,6 @@ const App = (window.App = {
         await this.showSpellSelection(question);
         break;
     }
-  },
-
-  // Special handler for the entry-mode question: show options immediately
-  // without an additional narrator message.
-  async showEntryMode(question) {
-    const narratorPanel = document.getElementById('narrator-panel');
-    narratorPanel.insertAdjacentHTML(
-      'beforeend',
-      Components.renderQuestion(question),
-    );
-
-    KeyboardNav.activate();
-    await Utils.sleep(150);
-    Utils.scrollToBottom(true);
   },
 
   async showMessage(question) {
@@ -591,7 +571,6 @@ const App = (window.App = {
                 <span class="ability-method-trigger-label">
                   ${initialLabel}
                 </span>
-                <span class="ability-method-caret">⌄</span>
               </button>
               <div
                 id="ability-method-listbox"

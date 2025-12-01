@@ -763,7 +763,8 @@ body::before {
 
 .stat-box {
   text-align: center;
-  border: 1px solid var(--sheet-box-border-color);
+  /* Remove visible outline for combat stats boxes; rely on spacing + background only */
+  border: none;
   padding: var(--spacing-sm);
   background: var(--sheet-box-bg);
 }
@@ -790,7 +791,8 @@ body::before {
 }
 
 .ability-box {
-  border: 1px solid var(--sheet-box-border-color);
+  /* Remove visible outline for ability score boxes; rely on spacing + background only */
+  border: none;
   padding: var(--spacing-xs);
   background: var(--sheet-ability-box-bg);
   text-align: center;
@@ -1291,6 +1293,13 @@ body::before {
   .character-sheet .ability-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 6px;
+  }
+
+  /* In print, restore subtle outlines for combat stats and ability boxes
+     so they read clearly on paper, while keeping them borderless on screen. */
+  .character-sheet .stat-box,
+  .character-sheet .ability-box {
+    border: 1px solid var(--sheet-box-border-color);
   }
 
   /* Keep whole sections together on a page and tighten spacing */

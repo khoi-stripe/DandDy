@@ -645,11 +645,9 @@ async function saveEditDetails() {
 
     const backstoryEl = document.getElementById('editBackstory');
     const backstoryText = backstoryEl ? backstoryEl.value.trim() : '';
-
+    
     const nameEl = document.getElementById('editName');
     const nameText = nameEl ? nameEl.value.trim() : '';
-
-    const levelValue = getNumber('editLevel');
 
     const getNumber = (id) => {
         const el = document.getElementById(id);
@@ -659,6 +657,8 @@ async function saveEditDetails() {
         const value = parseInt(raw, 10);
         return Number.isFinite(value) ? value : null;
     };
+
+    const levelValue = getNumber('editLevel');
 
     // Ability scores
     const abilityUpdates = {};
