@@ -839,8 +839,10 @@ body::before {
 .terminal-btn,
 .button-primary {
   background: transparent;
-  border: 1px solid var(--ui-border-color);
-  color: var(--ui-fg-color);
+  /* Default = dimmed stroke so options feel low-friction until focused/hovered */
+  border: 1px solid var(--ui-dim-color);
+  /* Default text is also dimmed; hover/focus/selected promote to bright theme color. */
+  color: var(--ui-dim-color);
   padding: var(--spacing-xs) var(--spacing-sm);
   font-family: var(--font-mono);
   font-size: var(--font-size-small);
@@ -849,9 +851,14 @@ body::before {
   text-align: left;
 }
 
+/* Hover/keyboard-focus (non-selected): bright outline + translucent themed background.
+   Uses ui-* tokens so the effect respects the active color theme (green / teal / yellow). */
 .terminal-btn:hover:not(:disabled),
-.button-primary:hover:not(:disabled):not(.is-selected) {
-  background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.25);
+.button-primary:hover:not(:disabled):not(.is-selected),
+.button-primary.is-focused:not(.is-selected) {
+  border-color: var(--ui-border-color);
+  color: var(--ui-fg-color);
+  background: color-mix(in srgb, var(--ui-primary-bg-color) 18%, transparent);
 }
 
 .terminal-btn:disabled,
@@ -1119,10 +1126,12 @@ body::before {
 }
 
 /* Character Builder specific button states */
+
+/* Focused (via keyboard) but not selected:
+   - Reuse the same bright outline as hover, plus an explicit outline ring. */
 .button-primary.is-focused:not(.is-selected) {
-  background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.25);
-  outline: 2px solid var(--terminal-accent);
-  outline-offset: -2px;
+  outline: 1px solid var(--ui-border-color);
+  outline-offset: 0;
 }
 
 .button-primary.is-focused {
@@ -1130,27 +1139,31 @@ body::before {
 }
 
 .button-primary.is-focused.is-selected {
-  outline: 2px solid var(--terminal-accent);
-  outline-offset: -2px;
+  outline: 1px solid var(--ui-border-color);
+  outline-offset: 0;
 }
 
+/* "Locked" (other options after a selection): keep clickable but visually secondary. */
 .button-primary.is-locked:not(.is-selected) {
-  opacity: 1;
+  opacity: 0.9;
   cursor: pointer;
   background: transparent;
+  border-color: var(--ui-dim-color);
 }
 
 .button-primary.is-locked:not(.is-selected):hover {
-  background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.1);
+  border-color: var(--ui-border-color);
+  background: color-mix(in srgb, var(--ui-primary-bg-color) 14%, transparent);
 }
 
+/* Selected option = primary fill using themed ui-primary tokens. */
 .button-primary.is-selected,
 .button-primary.is-selected:disabled,
 .button-primary.is-selected:hover,
 .button-primary.is-selected:disabled:hover {
-  background: var(--terminal-fg) !important;
-  color: var(--terminal-bg) !important;
-  border-color: var(--terminal-fg) !important;
+  background: var(--ui-primary-bg-color) !important;
+  color: var(--ui-on-primary-color) !important;
+  border-color: var(--ui-primary-bg-color) !important;
   opacity: 1 !important;
   cursor: pointer !important;
 }

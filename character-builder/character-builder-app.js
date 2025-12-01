@@ -335,8 +335,33 @@ const App = (window.App = {
     // Activate keyboard navigation first
     KeyboardNav.activate();
 
-    // Wait for DOM and keyboard nav to settle, then scroll
+    // Wait for DOM and keyboard nav to settle
     await Utils.sleep(150);
+
+    // In guided (co-create) mode, default keyboard focus to the ROLL button so
+    // players can immediately press Enter to roll abilities, while still being
+    // able to arrow between the selector and the roll button.
+    try {
+      const rollButton = document.querySelector(
+        `.question-card[data-question-id="${question.id}"] .ability-method-roll`,
+      );
+      if (
+        rollButton &&
+        typeof KeyboardNav !== 'undefined' &&
+        typeof KeyboardNav.getActiveButtons === 'function'
+      ) {
+        const activeButtons = KeyboardNav.getActiveButtons();
+        const rollIndex = activeButtons.indexOf(rollButton);
+        if (rollIndex !== -1) {
+          KeyboardNav.currentFocusIndex = rollIndex;
+          KeyboardNav.updateFocus();
+        }
+      }
+    } catch (e) {
+      // Non-fatal: fall back to the default keyboard focus behavior
+      console.error('Ability method keyboard focus override failed', e);
+    }
+
     Utils.scrollToBottom(true);
   },
 
@@ -1092,6 +1117,13 @@ const App = (window.App = {
     await Utils.typewriter(messageEl, completionText);
     Utils.scrollToBottom(true);
 
+    // Kick off auto AI portrait generation for guided (co-create) mode once
+    // the character is fully defined (including backstory). This runs in the
+    // background and does NOT block the completion UI.
+    if (typeof this.autoGenerateGuidedAIPortraitIfReady === 'function') {
+      this.autoGenerateGuidedAIPortraitIfReady();
+    }
+
     // NOTE: We don't save here anymore - we wait for portrait to load first
     // This prevents creating duplicate characters in cloud storage
 
@@ -1112,6 +1144,119 @@ const App = (window.App = {
 
     // Activate keyboard navigation
     KeyboardNav.activate();
+  },
+
+  // In guided (co-create) mode, automatically generate a custom AI portrait
+  // once we have the full character context (race, class, background,
+  // alignment, name, backstory, etc.). This mirrors the quick-create behavior
+  // but runs in the background so it doesn't block the conversational flow.
+  async autoGenerateGuidedAIPortraitIfReady() {
+    try {
+      if (
+        !window.CharacterState ||
+        typeof CharacterState.get !== 'function' ||
+        !window.AsciiArtService ||
+        !CONFIG.ENABLE_AI
+      ) {
+        return;
+      }
+
+      const state = CharacterState.get() || {};
+      const character = state.character || {};
+      const answers = state.answers || {};
+      const entryMode = answers['entry-mode'];
+
+      // Only run this logic for guided (co-create) mode.
+      if (entryMode !== 'guided') {
+        return;
+      }
+
+      // Require the core fields that we normally include in portrait prompts.
+      const hasCoreFields =
+        character.race &&
+        character.class &&
+        character.background &&
+        character.alignment &&
+        character.name &&
+        character.backstory;
+
+      if (!hasCoreFields) {
+        return;
+      }
+
+      // If we already have a custom AI portrait, don't regenerate.
+      if (character.customPortraitAscii || (character.customPortraitCount || 0) > 0) {
+        return;
+      }
+
+      const portraitEl = document.getElementById('character-portrait');
+
+      // Show a loading state in the portrait panel while the AI image is
+      // being generated and converted to ASCII. Reuse the cube spinner used
+      // elsewhere so the experience feels consistent.
+      if (portraitEl) {
+        const cubeMarkup =
+          '<span class="spinner-cube-scene">' +
+          '<span class="spinner-cube-tilt">' +
+          '<span class="spinner-cube">' +
+          '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
+          '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
+          '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
+          '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
+          '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
+          '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
+          '</span></span></span>';
+        const renderLine = (text) =>
+          `<span class="narrator-spinner-shell">${cubeMarkup} ${text}</span>`;
+
+        portraitEl.classList.add('ascii-portrait--loading');
+        portraitEl.style.fontSize = 'var(--font-size-small)';
+        portraitEl.innerHTML = renderLine(
+          'Generating AI portrait... This can take 20–30 seconds.',
+        );
+      }
+
+      const result = await AsciiArtService.generateCustomAIPortrait(character);
+
+      if (result && result.asciiArt) {
+        const currentCount = character.customPortraitCount || 0;
+        const updatedMetadata =
+          window.PortraitHistory && typeof PortraitHistory.addVersion === 'function'
+            ? PortraitHistory.addVersion(
+                character,
+                result.asciiArt,
+                result.imageUrl || null,
+                {
+                  source: 'guided-auto',
+                  prompt:
+                    (AIService.buildCharacterDescription &&
+                      AIService.buildCharacterDescription(character)) ||
+                    null,
+                },
+              )
+            : character.portraitMetadata || {};
+
+        CharacterState.updateCharacter({
+          originalPortraitUrl: result.imageUrl || null,
+          customPortraitAscii: result.asciiArt,
+          customPortraitCount: currentCount + 1,
+          portraitMetadata: updatedMetadata,
+        });
+
+        // Reset last portrait so the new AI art re-animates in the panel.
+        this._lastPortraitArt = null;
+      }
+    } catch (error) {
+      console.error('Guided-mode AI portrait generation error:', error);
+      // Fall back silently to whatever portrait is already displayed
+      // (pre-generated ASCII or template).
+    } finally {
+      const portraitEl = document.getElementById('character-portrait');
+      if (portraitEl) {
+        portraitEl.style.fontSize = '';
+        portraitEl.classList.remove('ascii-portrait--loading');
+      }
+    }
   },
 
   // Persist changes to shared storage only after a character has been saved once.
