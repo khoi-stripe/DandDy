@@ -40,6 +40,12 @@ Thumbs.db
 # Logs
 *.log
 
+# Databases
+*.db
+
+# Jupyter Notebooks
+*.ipynb
+
 # Environment
 .env
 .env.local
