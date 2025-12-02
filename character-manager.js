@@ -2971,10 +2971,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const currentLabel = sortLabels[AppState.sortMode] || 'Date modified';
             sortToggleBtn.textContent = `Sort: ${currentLabel}`;
 
+            // Keep the listbox selection state in sync with the trigger label.
+            // This ensures the option marked as selected in the listbox always
+            // matches the active sort mode shown in the button.
             const options = sortDropdown.querySelectorAll('.sort-option');
             options.forEach((opt) => {
                 const value = opt.getAttribute('data-sort-value');
-                opt.classList.toggle('is-selected', value === AppState.sortMode);
+                const isSelected = value === AppState.sortMode;
+                opt.classList.toggle('is-selected', isSelected);
+                opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
             });
 
             // Ensure width stays sized for the longest label
