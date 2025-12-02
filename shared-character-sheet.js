@@ -359,6 +359,15 @@ const CharacterSheet = (window.CharacterSheet = {
     const background = parsed.backgroundName
       ? this.escapeHtml(parsed.backgroundName)
       : '';
+    
+    // Debug alignment
+    if (isBuilder && parsed.alignment) {
+      console.log('🎯 Alignment Debug:', {
+        raw: parsed.alignment,
+        formatted: this.formatAlignment(parsed.alignment)
+      });
+    }
+    
     const alignment = parsed.alignment
       ? this.escapeHtml(this.formatAlignment(parsed.alignment))
       : '';
