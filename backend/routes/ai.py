@@ -11,6 +11,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 import uuid
 import json
+import base64
 
 import httpx
 import boto3
@@ -447,7 +448,11 @@ async def generate_image(
         if not data:
             # Log the raw response type for debugging
             try:
-                print("⚠️  DALL-E response had no data field or was empty.", "type=", type(response))
+                print(
+                    "⚠️  DALL-E response had no data field or was empty.",
+                    "type=",
+                    type(response),
+                )
             except Exception:
                 pass
             raise Exception("OpenAI did not return any image data")
@@ -459,62 +464,100 @@ async def generate_image(
         if openai_url is None and isinstance(first_image, dict):
             openai_url = first_image.get("url")
 
+        # Some deployments return base64 instead of a URL.
+        image_b64 = getattr(first_image, "b64_json", None)
+        if image_b64 is None and isinstance(first_image, dict):
+            image_b64 = first_image.get("b64_json")
+
         revised_prompt = getattr(first_image, "revised_prompt", None)
         if revised_prompt is None and isinstance(first_image, dict):
             revised_prompt = first_image.get("revised_prompt")
 
-        if not openai_url:
-            raise Exception("OpenAI did not return an image URL")
-
         # Debug logging for DALL-E response
         print("🎨 DALL-E image generated.")
         print(f"   Prompt (truncated): {request.prompt[:120]}...")
-        print(f"   OpenAI URL (truncated): {openai_url[:80]}...")
+        if openai_url:
+            print(f"   OpenAI URL (truncated): {openai_url[:80]}...")
+        elif image_b64:
+            print("   OpenAI response provided base64 image data (no URL).")
+        else:
+            print("   OpenAI image response had neither URL nor base64 data.")
 
-        # Default to OpenAI's temporary URL; we'll overwrite if R2 upload succeeds.
-        final_url = openai_url
+        # Default to OpenAI's temporary URL when present; we'll overwrite if
+        # R2 upload succeeds. If only base64 is available, we'll synthesize a
+        # URL (either via R2 upload or a data: URL as a last resort).
+        final_url = openai_url if openai_url else None
 
-        # Step 2: If Cloudflare R2 is configured, download the image and upload it to R2
+        # Step 2: If Cloudflare R2 is configured, download or decode the image
+        # and upload it to R2
         r2_client = _get_r2_client()
-        if r2_client and openai_url:
+        if r2_client and (openai_url or image_b64):
             try:
-                async with httpx.AsyncClient(timeout=60.0) as client:
-                    img_resp = await client.get(openai_url)
-                    img_resp.raise_for_status()
+                # Obtain raw bytes for the image, preferring the direct URL
+                # when available, otherwise decoding base64.
+                if openai_url:
+                    async with httpx.AsyncClient(timeout=60.0) as client:
+                        img_resp = await client.get(openai_url)
+                        img_resp.raise_for_status()
 
-                    content_type = img_resp.headers.get("content-type", "image/png")
-                    # Basic extension detection; defaults to .png
-                    ext = "jpg" if "jpeg" in content_type or "jpg" in content_type else "png"
+                        content_type = img_resp.headers.get(
+                            "content-type", "image/png"
+                        )
+                        body_bytes = img_resp.content
+                elif image_b64:
+                    # Decode base64 data. We default to PNG when the source
+                    # format is unknown.
+                    body_bytes = base64.b64decode(image_b64)
+                    content_type = "image/png"
+                else:
+                    raise Exception("OpenAI did not return image bytes for upload")
 
-                    # Use a reasonably unique key for the portrait
-                    timestamp = int(time.time())
-                    key = f"portraits/{timestamp}_{uuid.uuid4().hex}.{ext}"
+                # Basic extension detection; defaults to .png
+                ext = (
+                    "jpg"
+                    if "jpeg" in content_type or "jpg" in content_type
+                    else "png"
+                )
 
-                    print("☁️  Uploading portrait to Cloudflare R2...")
-                    print(f"   Bucket: {R2_BUCKET_NAME}")
-                    print(f"   Key: {key}")
-                    print(f"   Content-Type: {content_type}")
+                # Use a reasonably unique key for the portrait
+                timestamp = int(time.time())
+                key = f"portraits/{timestamp}_{uuid.uuid4().hex}.{ext}"
 
-                    r2_client.put_object(
-                        Bucket=R2_BUCKET_NAME,
-                        Key=key,
-                        Body=img_resp.content,
-                        ContentType=content_type,
-                    )
+                print("☁️  Uploading portrait to Cloudflare R2...")
+                print(f"   Bucket: {R2_BUCKET_NAME}")
+                print(f"   Key: {key}")
+                print(f"   Content-Type: {content_type}")
 
-                    # Prefer explicit public base URL when provided (recommended for R2 dev/public buckets),
-                    # otherwise fall back to the S3-style endpoint.
-                    if R2_PUBLIC_BASE_URL:
-                        base = R2_PUBLIC_BASE_URL.rstrip("/")
-                        final_url = f"{base}/{key}"
-                    else:
-                        final_url = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com/{R2_BUCKET_NAME}/{key}"
+                r2_client.put_object(
+                    Bucket=R2_BUCKET_NAME,
+                    Key=key,
+                    Body=body_bytes,
+                    ContentType=content_type,
+                )
 
-                    print("✅ Cloudflare R2 upload complete.")
-                    print(f"   Final image URL: {final_url}")
+                # Prefer explicit public base URL when provided (recommended for R2 dev/public buckets),
+                # otherwise fall back to the S3-style endpoint.
+                if R2_PUBLIC_BASE_URL:
+                    base = R2_PUBLIC_BASE_URL.rstrip("/")
+                    final_url = f"{base}/{key}"
+                else:
+                    final_url = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com/{R2_BUCKET_NAME}/{key}"
+
+                print("✅ Cloudflare R2 upload complete.")
+                print(f"   Final image URL: {final_url}")
             except Exception as r2_error:
                 # Non-fatal: log and fall back to the original OpenAI URL
                 print(f"⚠️  Failed to upload image to Cloudflare R2: {r2_error}")
+
+        # If we still have no URL at this point but we do have base64 data,
+        # fall back to a data: URL so the frontend can at least render it
+        # without needing another network hop. (CORS proxies are not needed
+        # for data URLs.)
+        if not final_url and image_b64:
+            final_url = f"data:image/png;base64,{image_b64}"
+
+        if not final_url:
+            raise Exception("OpenAI did not return an image URL or image data")
 
         return {
             "success": True,
