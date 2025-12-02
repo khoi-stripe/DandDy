@@ -10,6 +10,7 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 import uuid
+import json
 
 import httpx
 import boto3
@@ -26,6 +27,10 @@ settings = get_settings()
 OPENAI_API_KEY = settings.openai_api_key
 MAX_REQUESTS_PER_MINUTE = settings.max_requests_per_user_per_minute
 MAX_REQUESTS_PER_DAY = settings.max_requests_per_user_per_day
+
+# Optional: Grafana Loki config for centralized logging
+GRAFANA_LOKI_URL = os.getenv("GRAFANA_LOKI_URL")
+GRAFANA_LOKI_TOKEN = os.getenv("GRAFANA_LOKI_TOKEN")
 
 # Cloudflare R2 configuration (optional)
 R2_ACCOUNT_ID = settings.r2_account_id
@@ -51,6 +56,166 @@ if not OPENAI_API_KEY:
 
 # Initialize OpenAI client
 openai.api_key = OPENAI_API_KEY
+
+
+def _push_log_to_loki(labels: dict, log: dict):
+    """
+    Best-effort push of a single structured log line to Grafana Loki.
+    Fails silently so it never breaks the main request path.
+    """
+    if not (GRAFANA_LOKI_URL and GRAFANA_LOKI_TOKEN):
+        return
+
+    try:
+        ts_ns = str(int(time.time() * 1_000_000_000))
+        payload = {
+            "streams": [
+                {
+                    "stream": labels,
+                    "values": [[ts_ns, json.dumps(log, default=str)]],
+                }
+            ]
+        }
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {GRAFANA_LOKI_TOKEN}",
+        }
+        # Fire-and-forget; short timeout so we don't block user requests
+        httpx.post(GRAFANA_LOKI_URL, headers=headers, json=payload, timeout=2.0)
+    except Exception as e:
+        # Keep this minimal to avoid log loops
+        print("[LOKI ERROR]", str(e))
+
+
+def _extract_openai_headers(response) -> dict:
+    """
+    Best-effort extraction of HTTP headers from OpenAI responses.
+
+    Different OpenAI client versions expose headers differently. We try a few
+    common patterns but always fail safe with an empty dict.
+    """
+    headers = {}
+    try:
+        # Newer clients may expose `response.response_headers`
+        raw = getattr(response, "response_headers", None)
+        if raw:
+            headers = dict(raw)
+        else:
+            # Some internal response objects keep a `_response` with `headers`
+            internal = getattr(response, "_response", None)
+            if internal is not None:
+                raw_headers = getattr(internal, "headers", None)
+                if raw_headers:
+                    headers = dict(raw_headers)
+    except Exception:
+        headers = {}
+
+    # Normalize keys to lowercase for easier lookups
+    return {str(k).lower(): v for k, v in headers.items()}
+
+
+def _call_openai_with_logging(kind: str, fn, *, model: str | None = None, context: dict | None = None, **kwargs):
+    """
+    Thin wrapper around OpenAI SDK calls that logs timing, usage, and
+    (when available) rate-limit headers.
+
+    - `kind` is a short string like "chat.completion" or "images.generate"
+    - `fn` is the OpenAI function to call, e.g. `openai.chat.completions.create`
+    - `model` is logged for observability
+    - `context` can include feature/user identifiers for debugging
+
+    NOTE: This function intentionally re-raises OpenAI errors so callers
+    can convert them into appropriate HTTP responses.
+    """
+    start = time.time()
+    try:
+        response = fn(**kwargs)
+        duration_ms = int((time.time() - start) * 1000)
+
+        headers = _extract_openai_headers(response)
+        usage = getattr(response, "usage", None)
+
+        prompt_tokens = getattr(usage, "prompt_tokens", None) if usage else None
+        completion_tokens = getattr(usage, "completion_tokens", None) if usage else None
+        total_tokens = getattr(usage, "total_tokens", None) if usage else None
+
+        log = {
+            "event": "openai.rate_debug",
+            "at": datetime.utcnow().isoformat() + "Z",
+            "kind": kind,
+            "model": model,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+            "remaining_requests": headers.get("x-ratelimit-remaining-requests"),
+            "remaining_tokens": headers.get("x-ratelimit-remaining-tokens"),
+            "reset_requests": headers.get("x-ratelimit-reset-requests"),
+            "reset_tokens": headers.get("x-ratelimit-reset-tokens"),
+            "limit_requests": headers.get("x-ratelimit-limit-requests"),
+            "limit_tokens": headers.get("x-ratelimit-limit-tokens"),
+            "duration_ms": duration_ms,
+        }
+
+        if context:
+            log["context"] = context
+
+        # Console logging as JSON; easy for log aggregators to parse
+        print("[OPENAI RATE DEBUG]", json.dumps(log, default=str))
+
+        # Ship to Grafana Loki if configured
+        _push_log_to_loki(
+            {
+                "app": "danddy-api",
+                "source": "openai",
+                "event": "openai.rate_debug",
+                "kind": kind,
+                "model": model or "",
+            },
+            log,
+        )
+        return response
+
+    except openai.RateLimitError as e:
+        duration_ms = int((time.time() - start) * 1000)
+        headers = {}
+        try:
+            headers = _extract_openai_headers(getattr(e, "response", None)) if getattr(e, "response", None) else {}
+        except Exception:
+            headers = {}
+
+        rate_log = {
+            "event": "openai.rate_limit_hit",
+            "at": datetime.utcnow().isoformat() + "Z",
+            "kind": kind,
+            "model": model,
+            "message": str(e),
+            "duration_ms": duration_ms,
+            "remaining_requests": headers.get("x-ratelimit-remaining-requests"),
+            "remaining_tokens": headers.get("x-ratelimit-remaining-tokens"),
+            "reset_requests": headers.get("x-ratelimit-reset-requests"),
+            "reset_tokens": headers.get("x-ratelimit-reset-tokens"),
+        }
+
+        if context:
+            rate_log["context"] = context
+
+        print("[OPENAI RATE LIMIT HIT]", json.dumps(rate_log, default=str))
+
+        _push_log_to_loki(
+            {
+                "app": "danddy-api",
+                "source": "openai",
+                "event": "openai.rate_limit_hit",
+                "kind": kind,
+                "model": model or "",
+            },
+            rate_log,
+        )
+        raise
+
+    except Exception:
+        # Let callers handle non-rate-limit errors; this wrapper is observability-focused.
+        raise
 
 
 def _get_r2_client():
@@ -191,11 +356,17 @@ async def chat_completion(
             messages.append({"role": "system", "content": request.system_prompt})
         messages.append({"role": "user", "content": request.prompt})
         
-        response = openai.chat.completions.create(
+        response = _call_openai_with_logging(
+            kind="chat.completion",
+            fn=openai.chat.completions.create,
             model="gpt-3.5-turbo",
             messages=messages,
             max_tokens=request.max_tokens,
-            temperature=request.temperature
+            temperature=request.temperature,
+            context={
+                "feature": "chat_completion",
+                "client_id": client_id,
+            },
         )
         
         content = response.choices[0].message.content.strip()
@@ -239,16 +410,46 @@ async def generate_image(
     
     try:
         # Step 1: Generate image with OpenAI's image model
-        response = openai.images.generate(
+        response = _call_openai_with_logging(
+            kind="images.generate",
+            fn=openai.images.generate,
             model="gpt-image-1",
             prompt=request.prompt,
             n=1,
             size=request.size,
             quality=request.quality,
+            # Be explicit that we want a URL back (not base64) so the frontend
+            # can download/convert it.
+            response_format="url",
+            context={
+                "feature": "image_generation",
+                "client_id": client_id,
+            },
         )
 
-        openai_url = response.data[0].url
-        revised_prompt = response.data[0].revised_prompt
+        # Defensive handling in case the SDK or response shape changes.
+        data = getattr(response, "data", None)
+        if not data:
+            # Log the raw response type for debugging
+            try:
+                print("⚠️  DALL-E response had no data field or was empty.", "type=", type(response))
+            except Exception:
+                pass
+            raise Exception("OpenAI did not return any image data")
+
+        first_image = data[0]
+
+        # Support both object-style and dict-style access just in case.
+        openai_url = getattr(first_image, "url", None)
+        if openai_url is None and isinstance(first_image, dict):
+            openai_url = first_image.get("url")
+
+        revised_prompt = getattr(first_image, "revised_prompt", None)
+        if revised_prompt is None and isinstance(first_image, dict):
+            revised_prompt = first_image.get("revised_prompt")
+
+        if not openai_url:
+            raise Exception("OpenAI did not return an image URL")
 
         # Debug logging for DALL-E response
         print("🎨 DALL-E image generated.")
@@ -360,14 +561,21 @@ async def generate_narrator_comment(
     )
     
     try:
-        response = openai.chat.completions.create(
+        response = _call_openai_with_logging(
+            kind="chat.completion",
+            fn=openai.chat.completions.create,
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_prompt},
             ],
             max_tokens=100,
-            temperature=0.8
+            temperature=0.8,
+            context={
+                "feature": "narrator_comment",
+                "client_id": client_id,
+                "narrator_id": request.narrator_id,
+            },
         )
         
         return {
@@ -427,11 +635,17 @@ async def generate_character_names(
     )
     
     try:
-        response = openai.chat.completions.create(
+        response = _call_openai_with_logging(
+            kind="chat.completion",
+            fn=openai.chat.completions.create,
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=200,
-            temperature=0.9
+            temperature=0.9,
+            context={
+                "feature": "character_names",
+                "client_id": client_id,
+            },
         )
         
         content = response.choices[0].message.content.strip()
@@ -483,11 +697,17 @@ async def generate_character_backstory(
     prompt += "Make it dramatic but deadpan in tone."
     
     try:
-        response = openai.chat.completions.create(
+        response = _call_openai_with_logging(
+            kind="chat.completion",
+            fn=openai.chat.completions.create,
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=300,
-            temperature=0.8
+            temperature=0.8,
+            context={
+                "feature": "character_backstory",
+                "client_id": client_id,
+            },
         )
         
         return {
