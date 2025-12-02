@@ -176,6 +176,13 @@ const KeyboardNav = {
 const DEBUG_MANAGER = !!(window.DanddyConfig && window.DanddyConfig.DEBUG);
 const CharacterStorage = window.CharacterStorage;
 
+// Utility: normalize card subtitle text (race + class) to sentence case
+function toSentenceCase(text) {
+    if (!text) return '';
+    const lower = String(text).toLowerCase();
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
 // ========================================
 // APP STATE
 // ========================================
@@ -404,8 +411,8 @@ const UI = {
         // Handle race/class names (enhanced export has nested data)
         const raceNameRaw = character.raceData?.name || character.race || '?';
         const classNameRaw = character.classData?.name || character.class || '?';
-        const raceName = escapeHtml(raceNameRaw);
-        const className = escapeHtml(classNameRaw);
+        const raceClassSentence = toSentenceCase(`${raceNameRaw} ${classNameRaw}`.trim());
+        const raceClass = escapeHtml(raceClassSentence || '?');
         const name = escapeHtml(character.name || 'Unnamed Character');
         
         // Get ASCII portrait for thumbnail using shared logic so the card
@@ -423,7 +430,7 @@ const UI = {
                 <div class="card-details">
                     <div class="card-name">${name}</div>
                     <div class="card-info">
-                        ${raceName} ${className}${character.level ? ` • Lvl ${character.level}` : ''}
+                        ${raceClass}${character.level ? ` • Lvl ${character.level}` : ''}
                     </div>
                 </div>
             </div>
@@ -1810,6 +1817,17 @@ function showNotification(rawMessage) {
         )
         .trim();
 
+    // Normalize overly-emphatic punctuation so toast messages stay calm and
+    // readable. We keep question marks intact but strip trailing exclamation
+    // marks (including "!!" etc.) which tend to feel shouty in short toasts.
+    const displayMessage = cleanedMessage
+        // Collapse any run of exclamation marks to a single one
+        .replace(/!{2,}/g, '!')
+        // Remove a trailing exclamation mark (or run of them) while preserving
+        // any final period or closing paren that may follow.
+        .replace(/!+(\s*[\.\)])?$/u, '$1')
+        .trim();
+
     // Toast notification shared across the app (anchored to the terminal frame)
     let toast = document.getElementById('toastNotification');
     if (!toast) {
@@ -1851,10 +1869,10 @@ function showNotification(rawMessage) {
 
     const messageEl = toast.querySelector('.toast-message');
     if (messageEl) {
-        messageEl.textContent = cleanedMessage;
+        messageEl.textContent = displayMessage;
     } else {
         // Fallback in case markup is missing for any reason
-        toast.textContent = cleanedMessage;
+        toast.textContent = displayMessage;
     }
 
     // Reset any in-flight timers so we can replay the entrance animation

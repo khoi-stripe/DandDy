@@ -3424,6 +3424,17 @@ const App = (window.App = {
       )
       .trim();
 
+    // Normalize overly-emphatic punctuation so toast messages stay calm and
+    // readable. We keep question marks intact but strip trailing exclamation
+    // marks (including "!!" etc.) which tend to feel shouty in short toasts.
+    const displayMessage = cleanedMessage
+      // Collapse any run of exclamation marks to a single one
+      .replace(/!{2,}/g, '!')
+      // Remove a trailing exclamation mark (or run of them) while preserving
+      // any final period or closing paren that may follow.
+      .replace(/!+(\s*[\.\)])?$/u, '$1')
+      .trim();
+
     let toast = document.getElementById('toastNotification');
     if (!toast) {
       toast = document.createElement('div');
@@ -3465,10 +3476,10 @@ const App = (window.App = {
 
     const messageEl = toast.querySelector('.toast-message');
     if (messageEl) {
-      messageEl.textContent = cleanedMessage;
+      messageEl.textContent = displayMessage;
     } else {
       // Fallback in case markup is missing for any reason
-      toast.textContent = cleanedMessage;
+      toast.textContent = displayMessage;
     }
 
     // Reset any in-flight timers so we can replay the entrance animation
