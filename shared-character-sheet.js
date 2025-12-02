@@ -354,13 +354,19 @@ const CharacterSheet = (window.CharacterSheet = {
 
   _renderBasicInfo(parsed, context, callbacks) {
     const isBuilder = context === 'builder';
-    const race = parsed.raceName ? this.escapeHtml(parsed.raceName) : '';
-    const cls = parsed.className ? this.escapeHtml(parsed.className) : '';
+    const race = parsed.raceName
+      ? this.escapeHtml(this.toSentenceCase(parsed.raceName))
+      : '';
+    const cls = parsed.className
+      ? this.escapeHtml(this.toSentenceCase(parsed.className))
+      : '';
     const background = parsed.backgroundName
-      ? this.escapeHtml(parsed.backgroundName)
+      ? this.escapeHtml(this.toSentenceCase(parsed.backgroundName))
       : '';
     const alignment = parsed.alignment
-      ? this.escapeHtml(this.formatAlignment(parsed.alignment))
+      ? this.escapeHtml(
+          this.toSentenceCase(this.formatAlignment(parsed.alignment)),
+        )
       : '';
 
     return `
@@ -1504,6 +1510,18 @@ const CharacterSheet = (window.CharacterSheet = {
       .split('-')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
+  },
+
+  /**
+   * Convert a string to sentence case: first letter uppercase, rest lowercase.
+   * Used for basic info fields like race, class, background, and alignment so
+   * that older characters with lowercase values still render consistently.
+   */
+  toSentenceCase(value) {
+    if (value === null || value === undefined) return '';
+    const str = String(value).trim();
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   },
 
   /**
