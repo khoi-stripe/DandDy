@@ -113,7 +113,7 @@
         class: backendChar.character_class,
         level: backendChar.level,
         background: backendChar.background,
-        alignment: backendChar.alignment,
+        alignment: this._mapAlignmentFromBackend(backendChar.alignment),
         experiencePoints: backendChar.experience_points,
 
         abilities: {
@@ -292,7 +292,7 @@
         class: apiChar.character_class,
         level: apiChar.level,
         background: apiChar.background,
-        alignment: apiChar.alignment,
+        alignment: this._mapAlignmentFromBackend(apiChar.alignment),
         experiencePoints: apiChar.experience_points,
 
         abilities: {
@@ -390,7 +390,20 @@
 
     _mapAlignmentFromBuilder(alignment) {
       if (!alignment) return null;
+      
+      // Map both abbreviations (from builder) and full names to backend format
       const map = {
+        // Abbreviations (what builder actually stores)
+        'lg': 'lawful_good',
+        'ng': 'neutral_good',
+        'cg': 'chaotic_good',
+        'ln': 'lawful_neutral',
+        'n': 'true_neutral',
+        'cn': 'chaotic_neutral',
+        'le': 'lawful_evil',
+        'ne': 'neutral_evil',
+        'ce': 'chaotic_evil',
+        // Full names (for backwards compatibility)
         'Lawful Good': 'lawful_good',
         'Neutral Good': 'neutral_good',
         'Chaotic Good': 'chaotic_good',
@@ -407,6 +420,24 @@
     _mapAlignmentFromManager(alignment) {
       // Manager already uses the same string labels as builder; reuse mapping.
       return this._mapAlignmentFromBuilder(alignment);
+    },
+
+    _mapAlignmentFromBackend(backendAlignment) {
+      if (!backendAlignment) return null;
+      
+      // Map backend format (e.g., 'lawful_good') to frontend abbreviations (e.g., 'lg')
+      const reverseMap = {
+        'lawful_good': 'lg',
+        'neutral_good': 'ng',
+        'chaotic_good': 'cg',
+        'lawful_neutral': 'ln',
+        'true_neutral': 'n',
+        'chaotic_neutral': 'cn',
+        'lawful_evil': 'le',
+        'neutral_evil': 'ne',
+        'chaotic_evil': 'ce',
+      };
+      return reverseMap[backendAlignment] || null;
     },
 
     _calculateACFromBuilder(character) {
