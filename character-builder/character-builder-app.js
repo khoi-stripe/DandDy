@@ -4439,6 +4439,12 @@ function startLoadingAnimation() {
   }
 }
 
+// Flag to suppress beforeunload warning during intentional navigation
+let allowNavigationFlag = false;
+window.suppressBeforeunloadWarning = () => {
+  allowNavigationFlag = true;
+};
+
 // Exit back to the Character Manager app from builder mode
 function exitToManager() {
   const state = CharacterState.get();
@@ -4558,16 +4564,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     Utils.scrollToBottom();
   });
 
-  // Flag to suppress beforeunload warning during intentional navigation
-  let allowNavigation = false;
-  window.suppressBeforeunloadWarning = () => {
-    allowNavigation = true;
-  };
-
   // Warn before leaving page if there are unsaved changes
   window.addEventListener('beforeunload', (e) => {
-    // Skip warning if navigation is intentional (user clicked DISCARD)
-    if (allowNavigation) return;
+    // Skip warning if navigation is intentional (user clicked DISCARD/SAVE)
+    if (allowNavigationFlag) return;
 
     const state = CharacterState.get();
     const character = state.character;
