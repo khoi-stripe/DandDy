@@ -3949,6 +3949,8 @@ const App = (window.App = {
     }
 
     const targetSelector = options.targetSelector;
+    const primaryLabel = options.primaryLabel || 'YES';
+    const secondaryLabel = options.secondaryLabel || 'NO';
 
     // While a confirmation dialog is open, pause keyboard navigation so
     // arrow keys don't move focus behind the modal.
@@ -3966,8 +3968,8 @@ const App = (window.App = {
             </p>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" id="confirm-no">NO</button>
-            <button class="terminal-btn terminal-btn-primary" id="confirm-yes">YES</button>
+            <button class="terminal-btn" id="confirm-no">${secondaryLabel}</button>
+            <button class="terminal-btn terminal-btn-primary" id="confirm-yes">${primaryLabel}</button>
           </div>
         </div>
       </div>`;
@@ -4449,9 +4451,14 @@ function exitToManager() {
   if (hasUnsavedChanges) {
     // Ask the user if they want to save before exiting
     App.showConfirmationOverlay(
-      'You have not saved this character yet. Save before exiting?',
+      'You have unsaved changes. What would you like to do?',
+      () => {
+        // User clicked "DISCARD" - exit without saving
+        window.suppressBeforeunloadWarning();
+        window.location.href = '../character-manager.html?from=builder';
+      },
       async () => {
-        // First attempt to save; if save fails, we stay in the builder
+        // User clicked "SAVE" - attempt to save; if save fails, we stay in the builder
         await App.saveCharacter(true);
 
         // Re-check that we now have an ID before exiting
@@ -4464,15 +4471,17 @@ function exitToManager() {
         }
 
         // Character saved successfully, proceed to exit
+        window.suppressBeforeunloadWarning();
         window.location.href = '../character-manager.html?from=builder';
       },
-      () => {
-        // User clicked "No, don't save" - exit without saving
-        window.location.href = '../character-manager.html?from=builder';
+      {
+        primaryLabel: 'DISCARD',
+        secondaryLabel: 'SAVE'
       }
     );
   } else {
     // Character is already saved or incomplete; immediately exit
+    window.suppressBeforeunloadWarning();
     window.location.href = '../character-manager.html?from=builder';
   }
 }
@@ -4549,8 +4558,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     Utils.scrollToBottom();
   });
 
+  // Flag to suppress beforeunload warning during intentional navigation
+  let allowNavigation = false;
+  window.suppressBeforeunloadWarning = () => {
+    allowNavigation = true;
+  };
+
   // Warn before leaving page if there are unsaved changes
   window.addEventListener('beforeunload', (e) => {
+    // Skip warning if navigation is intentional (user clicked DISCARD)
+    if (allowNavigation) return;
+
     const state = CharacterState.get();
     const character = state.character;
 

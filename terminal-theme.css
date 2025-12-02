@@ -382,8 +382,8 @@ body::before {
 
   /* Slide in vertically from the bottom with a soft, very subtle bouncy easing curve */
   transition:
-    opacity 0.5s cubic-bezier(0.22, 0.7, 0.3, 1.02),
-    transform 0.8s cubic-bezier(0.22, 0.7, 0.3, 1.02);
+    opacity 0.4s cubic-bezier(0.22, 0.7, 0.3, 1.02),
+    transform 0.4s cubic-bezier(0.22, 0.7, 0.3, 1.02);
 }
 
 .toast-notification.show {
@@ -1722,7 +1722,7 @@ body::before {
   --spinner-cube-depth: calc(var(--spinner-cube-size) / 2);
   --spinner-cube-border-width: 0.5px;
   /* Default perspective for spinner cubes (matches comparison row #6) */
-  --spinner-cube-perspective: 20px;
+  --spinner-cube-perspective: 200px;
   --spinner-cube-speed: 1s;
   --spinner-cube-tilt-x: 0deg;
   --spinner-cube-tilt-y: 0deg;
@@ -1815,10 +1815,10 @@ body::before {
 
 @keyframes spinner-cube-spin {
   from {
-    transform: rotateY(0deg);
+    transform: rotateX(-35deg) rotateY(0deg);
   }
   to {
-    transform: rotateY(360deg);
+    transform: rotateX(-35deg) rotateY(360deg);
   }
 }
 
@@ -1830,7 +1830,7 @@ body::before {
   --spinner-cube-size: 0.75em;
   --spinner-cube-depth: calc(var(--spinner-cube-size) / 2);
   --spinner-cube-border-width: 0.5px;
-  --spinner-cube-perspective: 20px;
+  --spinner-cube-perspective: 200px;
   --spinner-cube-speed: 1s;
   --spinner-cube-tilt-x: 0deg;
   --spinner-cube-tilt-y: 0deg;
@@ -1850,7 +1850,7 @@ body::before {
   --spinner-cube-size: 0.75em;
   --spinner-cube-depth: calc(var(--spinner-cube-size) / 2);
   --spinner-cube-border-width: 0.5px;
-  --spinner-cube-perspective: 20px;
+  --spinner-cube-perspective: 200px;
   --spinner-cube-speed: 1s;
   --spinner-cube-tilt-x: 0deg;
   --spinner-cube-tilt-y: 0deg;
@@ -1861,7 +1861,7 @@ body::before {
   --spinner-cube-size: 0.75em;
   --spinner-cube-depth: calc(var(--spinner-cube-size) / 2);
   --spinner-cube-border-width: 0.5px;
-  --spinner-cube-perspective: 20px;
+  --spinner-cube-perspective: 200px;
   --spinner-cube-speed: 1s;
   --spinner-cube-tilt-x: 0deg;
   --spinner-cube-tilt-y: 0deg;
