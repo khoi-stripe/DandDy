@@ -983,6 +983,173 @@ const AIService = (window.AIService = {
     return unique.slice(0, desiredCount);
   },
 
+  /**
+   * Combined helper: ask the backend once for BOTH
+   *   - name suggestions, and
+   *   - a backstory template that uses the literal token {{NAME}}
+   *
+   * This lets us front-load the "heavy" AI work earlier in the flow and
+   * avoid a second OpenAI call when the user later reaches the backstory
+   * step. The final, player-chosen name is substituted client-side.
+   */
+  async generateCharacterSummary(character, options = {}) {
+    const nameCount =
+      typeof options.nameCount === 'number' && options.nameCount > 0
+        ? options.nameCount
+        : 3;
+
+    const race = character && character.race;
+    const classType = character && character.class;
+
+    // Local, always-available fallback for both names and template
+    const buildLocalFallback = () => {
+      const fallbackNames = this.generateFallbackNames(race || 'human', nameCount);
+      const template =
+        '{{NAME}} is a ' +
+        `${race || 'mysterious'} ${classType || 'adventurer'} with a mysterious past. ` +
+        "They don't talk about it much. Probably for the best.";
+      return {
+        names: fallbackNames,
+        backstoryTemplate: template,
+      };
+    };
+
+    if (!CONFIG.ENABLE_AI) {
+      console.log(
+        '%c📦 SUMMARY (Fallback - AI Disabled)',
+        'color: #ff0; font-weight: bold',
+      );
+      return buildLocalFallback();
+    }
+
+    try {
+      console.log(
+        '%c📦 SUMMARY: Calling backend AI for names + backstory template...',
+        'color: #0ff; font-weight: bold',
+      );
+
+      const response = await this.fetchWithTimeout(
+        `${CONFIG.BACKEND_URL}/api/ai/characters/summary`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            race: race,
+            class_type: classType,
+            alignment: character && character.alignment,
+            background: character && character.background,
+            personality:
+              character && (character.personalityTrait || character.personality),
+            name_count: nameCount * 2, // ask for extra to allow uniqueness filtering
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const status = response.status;
+        let detail = null;
+        try {
+          const errBody = await response.json();
+          if (errBody && errBody.detail) {
+            detail = errBody.detail;
+          }
+        } catch {
+          // ignore JSON parse errors; we'll fall back below
+        }
+
+        if (status === 429) {
+          console.log(
+            '%c📦 SUMMARY (Cooldown / Rate Limit)',
+            'color: #ff0; font-weight: bold',
+          );
+          if (window.UIService) {
+            window.UIService.showNotification(
+              detail ||
+                'AI character generation is cooling down. Using offline suggestions for this one.',
+              'warning',
+              6000,
+            );
+          }
+        } else {
+          console.log(
+            '%c📦 SUMMARY (Fallback - API Error)',
+            'color: #f80; font-weight: bold',
+          );
+          console.log('  Status:', status);
+        }
+
+        return buildLocalFallback();
+      }
+
+      const data = await response.json();
+      if (!data || data.success !== true) {
+        console.log(
+          '%c📦 SUMMARY (Fallback - Bad Payload)',
+          'color: #f80; font-weight: bold',
+        );
+        return buildLocalFallback();
+      }
+
+      let names = Array.isArray(data.names) ? data.names.slice() : [];
+      const template =
+        typeof data.backstory_template === 'string' && data.backstory_template.trim()
+          ? data.backstory_template
+          : null;
+
+      // Run through our global uniqueness filter so we avoid repeating
+      // first/last names across this browser session.
+      if (names.length) {
+        names = this._filterAndRegisterUniqueNames(names, nameCount);
+      }
+
+      if (!names.length) {
+        console.log(
+          '%c📦 SUMMARY (Fallback - No Names From Backend)',
+          'color: #f80; font-weight: bold',
+        );
+        const fallback = buildLocalFallback();
+        // Preserve backend-provided template if we got one.
+        if (template) {
+          fallback.backstoryTemplate = template;
+        }
+        return fallback;
+      }
+
+      console.log(
+        '%c📦 SUMMARY (AI Generated) ✨',
+        'color: #0f0; font-weight: bold',
+      );
+      console.log('  Names:', names);
+
+      return {
+        names,
+        backstoryTemplate:
+          template ||
+          (character && character.backstory) ||
+          buildLocalFallback().backstoryTemplate,
+      };
+    } catch (error) {
+      if (error.message && error.message.includes('timed out')) {
+        console.log(
+          '%c📦 SUMMARY (Fallback - Backend Waking Up)',
+          'color: #f80; font-weight: bold',
+        );
+        console.log(
+          '  ⏰ Timeout reached. Using local fallback for now; backend warmup continues...',
+        );
+      } else {
+        console.log(
+          '%c📦 SUMMARY (Fallback - Connection Error)',
+          'color: #f00; font-weight: bold',
+        );
+        console.error('  Error:', error);
+      }
+      return buildLocalFallback();
+    }
+  },
+
   generateFallbackNames(race, count) {
     const namePatterns = {
       dwarf: {
@@ -1574,11 +1741,10 @@ Format your response as JSON array of strings, one for each option in order. Exa
         body: JSON.stringify({
           prompt: prompt,
           size: '1024x1024',
-          // gpt-image-1 supports: low, medium, high, auto
-          // Use "high" for best quality portraits (roughly equivalent to previous HD behavior).
+          // Use "high" for best quality portraits (kept for compatibility with existing backend validation).
           quality: 'high',
         }),
-      }, 45000); // 45 seconds for image generation (DALL-E is slower than text)
+      }, 70000); // 70 seconds for image generation (DALL-E can be very slow, plus R2 upload)
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -1746,27 +1912,22 @@ Format your response as JSON array of strings, one for each option in order. Exa
 
   // Build full DALL-E prompt with rendering instructions (not shown to user)
   buildPortraitPrompt(character) {
-    const renderingInstructions = [
-      'Create a high-contrast black-and-white fantasy illustration',
-      'Use a hybrid style inspired by Frank Frazetta, Mike Mignola, Eduardo Risso, Boris Vallejo, Larry Elmore, and Clyde Caldwell',
-      'Bold, carved chiaroscuro shadows with large black ink shapes and clean white highlights',
-      'Use limited, controlled directional hatching (no more than 25%) only in selected mid-tones',
-      'Absolutely no dense engraving, soft grayscale, or smooth gradients anywhere in the image',
-      'Pure black (#000000) background with no scenery, gradients, or textures',
-      'Emphasize strong, clear silhouette readability optimized for ASCII art conversion with clean edges and minimal noise',
-      'Realistic heroic anatomy with roughly a 1:7 head-to-body ratio and grounded proportions',
-      'Smaller head, longer arms, muscular but not exaggerated; no cartoon, chibi, or caricature proportions',
-      'Dynamic stance with natural weight and gesture appropriate to the character’s class (spellcasting, leaping, brandishing a weapon, etc.)',
-      'Use a 3:4 aspect ratio where the character fills the frame powerfully',
-      'Cloak and cloth flow should add movement without cluttering the silhouette',
-      'Strictly avoid any visible text, symbols, runes, lettering, UI, or markings of any kind',
-      'Avoid flat graphic icon style, over-rendered gradients, busy backgrounds, or painterly/watercolor looks',
-      'Overall mood: classic dark-fantasy ink illustration that feels powerful, dramatic, mythic, and heroic',
-    ];
-
     const characterDescription = this.buildCharacterDescription(character);
 
-    return [...renderingInstructions, characterDescription].join(', ');
+    const renderingInstructions = [
+      `Create a high-contrast black-and-white fantasy illustration of a ${characterDescription} in a dramatic pose.`,
+      'Art style: classic fantasy ink illustration with strong contrast.',
+      'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
+      'Include some controlled, directional hatching to define form (light mid-tone texture only).',
+      'Use realistic heroic anatomy with natural proportions (smaller head, longer arms, taller figure).',
+      'Pose should feel dynamic and expressive.',
+      'Frame the character so the entire head, hands, and primary weapon or spell effect are fully visible in the image (no cropping at the top of the head).',
+      'Camera angle can vary between frontal, three-quarter, or slightly low-angle heroic views to add variety, while keeping the character clearly readable.',
+      'Background should be simple, entirely black, and free of symbols or text.',
+      'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+      'Aspect ratio 3:4.',
+    ];
+    return renderingInstructions.join(' ');
   },
 
   // Analyze a rejected prompt to help identify problematic sections

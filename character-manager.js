@@ -364,7 +364,11 @@ const UI = {
         
         // Populate ASCII thumbnails after rendering
         characters.forEach(char => {
-            const asciiPortrait = char.portrait?.ascii || char.customPortraitAscii || char.asciiPortrait || null;
+            // Use the same portrait selection logic as the character sheet so
+            // cards and detail views stay in sync.
+            const asciiPortrait = window.CharacterSheet
+                ? window.CharacterSheet.getAsciiPortrait(char)
+                : (char.customPortraitAscii || char.portrait?.ascii || char.asciiPortrait || null);
             if (asciiPortrait) {
                 const thumbnailEl = document.getElementById(`card-thumb-${char.id}`);
                 if (thumbnailEl) {
@@ -404,8 +408,11 @@ const UI = {
         const className = escapeHtml(classNameRaw);
         const name = escapeHtml(character.name || 'Unnamed Character');
         
-        // Get ASCII portrait for thumbnail
-        const asciiPortrait = character.portrait?.ascii || character.customPortraitAscii || character.asciiPortrait || null;
+        // Get ASCII portrait for thumbnail using shared logic so the card
+        // matches the character sheet view.
+        const asciiPortrait = window.CharacterSheet
+            ? window.CharacterSheet.getAsciiPortrait(character)
+            : (character.customPortraitAscii || character.portrait?.ascii || character.asciiPortrait || null);
         const hasPortrait = asciiPortrait && asciiPortrait.length > 0;
 
         return `
@@ -1052,24 +1059,20 @@ async function confirmGeneratePortrait() {
     try {
         // Add rendering instructions to the user's character description
         const renderingInstructions = [
-            'Create a high-contrast black-and-white fantasy illustration',
-            'Use a hybrid style inspired by Frank Frazetta, Mike Mignola, Eduardo Risso, Boris Vallejo, Larry Elmore, and Clyde Caldwell',
-            'Bold, carved chiaroscuro shadows with large black ink shapes and clean white highlights',
-            'Use limited, controlled directional hatching (no more than 25%) only in selected mid-tones',
-            'Absolutely no dense engraving, soft grayscale, or smooth gradients anywhere in the image',
-            'Pure black (#000000) background with no scenery, gradients, or textures',
-            'Emphasize strong, clear silhouette readability optimized for ASCII art conversion with clean edges and minimal noise',
-            'Realistic heroic anatomy with roughly a 1:7 head-to-body ratio and grounded proportions',
-            'Smaller head, longer arms, muscular but not exaggerated; no cartoon, chibi, or caricature proportions',
-            'Dynamic stance with natural weight and gesture appropriate to the character’s class (spellcasting, leaping, brandishing a weapon, etc.)',
-            'Use a 3:4 aspect ratio where the character fills the frame powerfully',
-            'Cloak and cloth flow should add movement without cluttering the silhouette',
-            'Strictly avoid any visible text, symbols, runes, lettering, UI, or markings of any kind',
-            'Avoid flat graphic icon style, over-rendered gradients, busy backgrounds, or painterly/watercolor looks',
-            'Overall mood: classic dark-fantasy ink illustration that feels powerful, dramatic, mythic, and heroic',
+            'Create a high-contrast black-and-white fantasy illustration in a dramatic pose.',
+            'Art style: classic fantasy ink illustration with strong contrast.',
+            'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
+            'Include some controlled, directional hatching to define form (light mid-tone texture only).',
+            'Use realistic heroic anatomy with natural proportions (smaller head, longer arms, taller figure).',
+            'Pose should feel dynamic and expressive.',
+            'Frame the character so the entire head, hands, and primary weapon or spell effect are fully visible in the image (no cropping at the top of the head).',
+            'Camera angle can vary between frontal, three-quarter, or slightly low-angle heroic views to add variety, while keeping the character clearly readable.',
+            'Background should be simple, entirely black, and free of symbols or text.',
+            'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+            'Aspect ratio 3:4.',
         ];
         
-        const fullPrompt = [...renderingInstructions, customPrompt].join(', ');
+        const fullPrompt = [...renderingInstructions, customPrompt].join(' ');
         
         // Generate custom portrait with full prompt
         const result = await window.AsciiArtService.generateCustomAIPortraitWithPrompt(fullPrompt);

@@ -23,6 +23,10 @@ router = APIRouter(tags=["AI"])
 # Rate limiting in-memory storage (use Redis in production)
 _rate_limit_store = defaultdict(list)
 
+# Additional, feature-specific cooldowns (in-memory; use Redis in production)
+_character_summary_last_request: dict[str, datetime] = {}
+
+
 # Load configuration from settings
 settings = get_settings()
 OPENAI_API_KEY = settings.openai_api_key
@@ -259,8 +263,8 @@ class ImageGenerationRequest(BaseModel):
     """Request for DALL-E image generation"""
     prompt: str = Field(..., min_length=10, max_length=4000)
     size: str = Field("1024x1024", pattern="^(256x256|512x512|1024x1024|1792x1024|1024x1792)$")
-    # gpt-image-1 supports: low, medium, high, auto
-    quality: str = Field("high", pattern="^(low|medium|high|auto)$")
+    # DALL-E 3 accepts: standard, hd (we also tolerate older gpt-image-1 values for compatibility)
+    quality: str = Field("standard", pattern="^(standard|hd|low|medium|high|auto)$")
 
 
 class NamesGenerationRequest(BaseModel):
@@ -277,6 +281,23 @@ class BackstoryGenerationRequest(BaseModel):
     class_type: str = Field(..., min_length=1, max_length=50)
     personality: Optional[str] = None
     background: Optional[str] = None
+
+
+class CharacterSummaryRequest(BaseModel):
+    """
+    Combined request for name suggestions + backstory template in a single
+    upstream OpenAI call. The backstory template uses a {{NAME}} placeholder
+    instead of baking in any specific name so the frontend can substitute the
+    final, player-chosen name later.
+    """
+
+    race: str = Field(..., min_length=1, max_length=50)
+    class_type: str = Field(..., min_length=1, max_length=50)
+    alignment: Optional[str] = Field(None, max_length=50)
+    background: Optional[str] = Field(None, max_length=100)
+    personality: Optional[str] = Field(None, max_length=200)
+    # How many distinct name suggestions to return
+    name_count: int = Field(3, ge=1, le=10)
 
 
 class NarratorCommentRequest(BaseModel):
@@ -333,6 +354,35 @@ def check_rate_limit(client_id: str):
     
     # Record this request
     _rate_limit_store[client_id].append(now)
+
+
+def check_character_summary_cooldown(client_id: str, cooldown_seconds: int = 20):
+    """
+    Enforce a short cooldown between expensive character summary generations
+    (names + backstory template) per client.
+
+    This is in addition to the general per-minute/day rate limits and is
+    specifically tuned to discourage rapid-fire "new character" spam while
+    still allowing other lighter AI features to function.
+    """
+    if cooldown_seconds <= 0:
+        return
+
+    now = datetime.now()
+    last = _character_summary_last_request.get(client_id)
+    if last is not None:
+        elapsed = (now - last).total_seconds()
+        if elapsed < cooldown_seconds:
+            remaining = int(cooldown_seconds - elapsed) + 1
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    "Character generation is cooling down. "
+                    f"Please wait about {remaining} more seconds before starting a new AI-assisted character."
+                ),
+            )
+
+    _character_summary_last_request[client_id] = now
 
 
 # Routes
@@ -422,7 +472,7 @@ async def generate_image(
         response = _call_openai_with_logging(
             kind="images.generate",
             fn=openai.images.generate,
-            model="gpt-image-1",
+            model="dall-e-3",
             prompt=request.prompt,
             n=1,
             size=request.size,
@@ -806,4 +856,158 @@ async def generate_character_backstory(
         raise HTTPException(status_code=400, detail=f"Invalid request: {error_message}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate backstory: {str(e)}")
+
+
+@router.post("/characters/summary")
+async def generate_character_summary(
+    request: CharacterSummaryRequest,
+    http_request: Request
+):
+    """
+    Generate BOTH:
+      - a short list of candidate character names, and
+      - a concise backstory template that uses the literal token {{NAME}}
+        everywhere the character's name would normally appear.
+
+    This lets the frontend:
+      - pay for a single upstream OpenAI call, and
+      - substitute the final player-chosen name client-side without
+        needing another model call.
+    """
+    check_api_key()
+    client_id = get_client_id(http_request)
+    check_rate_limit(client_id)
+    # Extra protection specifically for "new character" style operations: even
+    # if the general per-minute/day rate limit is not hit, enforce a short
+    # cooldown between summary generations for the same client.
+    check_character_summary_cooldown(client_id, cooldown_seconds=20)
+
+    # Build a single structured prompt for both names and backstory template
+    prompt = (
+        "You are helping create a Dungeons & Dragons character.\n\n"
+        f"Details:\n"
+        f"- Race: {request.race}\n"
+        f"- Class: {request.class_type}\n"
+        f"- Alignment: {request.alignment or 'unspecified'}\n"
+        f"- Background: {request.background or 'unspecified'}\n"
+        f"- Personality: {request.personality or 'unspecified'}\n\n"
+        f"Task 1: Suggest {request.name_count} distinct, lore-friendly fantasy character "
+        "names that fit this character. Include both given name and, where natural, a "
+        "surname.\n\n"
+        "Task 2: Write a dramatic but concise backstory for this character, 100 words "
+        "maximum.\n\n"
+        "IMPORTANT NAME RULE:\n"
+        "- Do NOT pick a specific name for the character in the backstory.\n"
+        "- Instead, use the exact placeholder token {{NAME}} everywhere the character's "
+        "name would normally appear.\n"
+        "- Example: \"{{NAME}} grew up in a small village...\".\n\n"
+        "RESPONSE FORMAT (VERY IMPORTANT):\n"
+        "Return ONLY valid JSON with this exact shape, no extra commentary:\n"
+        '{\n'
+        '  \"names\": [\"Name One\", \"Name Two\", \"Name Three\"],\n'
+        '  \"backstory_template\": \"Backstory text with {{NAME}} placeholder\"\n'
+        "}\n"
+    )
+
+    try:
+        response = _call_openai_with_logging(
+            kind="chat.completion",
+            fn=openai.chat.completions.create,
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=600,
+            temperature=0.8,
+            context={
+                "feature": "character_summary",
+                "client_id": client_id,
+            },
+        )
+
+        raw_content = response.choices[0].message.content.strip()
+
+        # Best-effort JSON extraction: models occasionally wrap JSON in prose.
+        parsed = None
+        try:
+            parsed = json.loads(raw_content)
+        except json.JSONDecodeError:
+            # Try to salvage the first {...} block if present
+            start = raw_content.find("{")
+            end = raw_content.rfind("}")
+            if start != -1 and end != -1 and end > start:
+                try:
+                    parsed = json.loads(raw_content[start : end + 1])
+                except json.JSONDecodeError:
+                    parsed = None
+
+        if not isinstance(parsed, dict):
+            raise HTTPException(
+                status_code=502,
+                detail="AI response could not be parsed as JSON for character summary.",
+            )
+
+        names = parsed.get("names") or []
+        backstory_template = parsed.get("backstory_template") or parsed.get(
+            "backstory"
+        )
+
+        # Normalize names list
+        if isinstance(names, str):
+            # Support newline- or comma-separated strings as a fallback
+            parts = [n.strip() for n in names.replace("\r", "").split("\n") if n.strip()]
+            if not parts:
+                parts = [n.strip() for n in names.split(",") if n.strip()]
+            names = parts
+
+        if not isinstance(names, list):
+            names = []
+
+        # Clean each name and trim to requested count
+        clean_names = []
+        for name in names:
+            if not isinstance(name, str):
+                continue
+            text = name.strip()
+            if not text:
+                continue
+            # Strip leading list markers like "1. " or "1) "
+            text = text.split(". ", 1)[-1].split(") ", 1)[-1]
+            if text:
+                clean_names.append(text)
+
+        clean_names = clean_names[: request.name_count]
+
+        # Ensure we always return something non-empty if possible
+        if not clean_names:
+            # Fall back to a very simple synthetic name using race/class
+            fallback_name = f"{request.race.title()} {request.class_type.title()}"
+            clean_names = [fallback_name]
+
+        if not isinstance(backstory_template, str) or not backstory_template.strip():
+            backstory_template = (
+                "{{NAME}} is a "
+                f"{request.race} {request.class_type} with a mysterious past. "
+                "They do not talk about it much. Probably for the best."
+            )
+
+        return {
+            "success": True,
+            "names": clean_names,
+            "backstory_template": backstory_template.strip(),
+        }
+
+    except openai.BadRequestError as e:
+        error_message = str(e)
+        if "safety system" in error_message.lower():
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Your character summary request was flagged by OpenAI's safety system. "
+                    "Please try slightly different race/class/background details."
+                ),
+            )
+        raise HTTPException(status_code=400, detail=f"Invalid request: {error_message}")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate character summary: {str(e)}"
+        )
 

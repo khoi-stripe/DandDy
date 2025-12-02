@@ -72,13 +72,15 @@ class PortraitGenerator:
         parts = []
         
         # Base style - optimized for ASCII conversion and dark-fantasy ink look
-        parts.append("Create a high-contrast black-and-white fantasy illustration")
-        parts.append("Use a hybrid style inspired by Frank Frazetta, Mike Mignola, Eduardo Risso, Boris Vallejo, Larry Elmore, and Clyde Caldwell")
-        parts.append("Bold, carved chiaroscuro shadows with large black ink shapes and clean white highlights")
-        parts.append("Use limited, controlled directional hatching (no more than 25%) only in selected mid-tones")
-        parts.append("Absolutely no dense engraving, soft grayscale, or smooth gradients anywhere in the image")
-        parts.append("Pure black (#000000) background with no scenery, gradients, or textures")
-        parts.append("Emphasize strong, clear silhouette readability optimized for ASCII art conversion with clean edges and minimal noise")
+        parts.append("Create a high-contrast black-and-white fantasy illustration in a dramatic pose.")
+        parts.append("Art style: classic fantasy ink illustration with strong contrast.")
+        parts.append("Use bold shadow shapes, strong silhouettes, and clean white highlights.")
+        parts.append("Include some controlled, directional hatching to define form (light mid-tone texture only).")
+        parts.append("Use realistic heroic anatomy with natural proportions (smaller head, longer arms, taller figure).")
+        parts.append("Pose should feel dynamic and expressive.")
+        parts.append("Background should be simple, entirely black, and free of symbols or text.")
+        parts.append("Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.")
+        parts.append("Aspect ratio 3:4.")
         
         # Race descriptions
         race_descriptions = {

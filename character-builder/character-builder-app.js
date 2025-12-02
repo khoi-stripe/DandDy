@@ -992,12 +992,37 @@ const App = (window.App = {
       narratorPanel.lastElementChild.querySelector('.narrator-text');
     this.showProgressiveThinking(nameThinkingEl);
 
-    // Generate name suggestions using AI
-    const names = await AIService.generateNames(
-      state.character.race,
-      state.character.class,
-      3,
-    );
+    // Generate BOTH name suggestions and a backstory template using a single
+    // backend AI call. This front-loads the heavy work so the later backstory
+    // step can feel instant.
+    let names = [];
+    try {
+      const summary = await AIService.generateCharacterSummary(state.character, {
+        nameCount: 3,
+      });
+      if (summary && Array.isArray(summary.names) && summary.names.length) {
+        names = summary.names;
+      }
+      // Stash the backstory template (if provided) on the character so the
+      // backstory step can simply substitute {{NAME}} later without another
+      // API call.
+      if (summary && summary.backstoryTemplate) {
+        CharacterState.updateCharacter({
+          backstoryTemplate: summary.backstoryTemplate,
+        });
+      }
+    } catch (e) {
+      console.error('Name/backstory summary error; falling back to names-only flow:', e);
+    }
+
+    // Absolute fallback in case summary failed for any reason
+    if (!names.length) {
+      names = await AIService.generateNames(
+        state.character.race,
+        state.character.class,
+        3,
+      );
+    }
 
     // Remove the thinking message
     this.stopProgressiveThinking();
@@ -1085,9 +1110,23 @@ const App = (window.App = {
       narratorPanel.lastElementChild.querySelector('.narrator-text');
     this.showProgressiveThinking(backstoryThinkingEl);
 
-    // Generate backstory (this might take a moment)
-    const backstory = await AIService.generateBackstory(state.character);
-    CharacterState.updateCharacter({ backstory });
+    // Prefer using a cached backstory template (generated earlier during the
+    // name step) so this feels instant and does not require another AI call.
+    let backstory = state.character.backstory;
+    const template = state.character.backstoryTemplate;
+    const nameForTemplate = state.character.name || 'This character';
+
+    if (!backstory && template && typeof template === 'string') {
+      backstory = template.replace(/{{\s*NAME\s*}}/g, nameForTemplate);
+      CharacterState.updateCharacter({ backstory });
+    }
+
+    // Fallback: if we have no template or something went wrong, fall back to
+    // the original behavior and call the dedicated backstory endpoint.
+    if (!backstory) {
+      backstory = await AIService.generateBackstory(state.character);
+      CharacterState.updateCharacter({ backstory });
+    }
 
     // Stop thinking and clear the element, then type out the backstory
     this.stopProgressiveThinking();
@@ -1264,11 +1303,12 @@ const App = (window.App = {
 
     // Normalize the portrait container into a loading state so the cube + text
     // layout matches the shared portrait styles in `portraits.css`.
-    // - Remove the placeholder variant (16:9 flex box) used before we have any
-    //   character data so it doesn't distort the loader on subsequent runs.
-    // - Add the loading variant, which loosens white-space/overflow and
+    // - Ensure the placeholder variant (16:9 flex box) is present so the cube
+    //   stays centered and the 3D context is correct even after custom art
+    //   has been rendered previously.
+    // - Also add the loading variant, which loosens white-space/overflow and
     //   guarantees a minimum height for the spinner + status text.
-    portraitEl.classList.remove('ascii-portrait--placeholder');
+    portraitEl.classList.add('ascii-portrait--placeholder');
     portraitEl.classList.add('ascii-portrait--loading');
     // Clear any custom inline sizing overrides from previous renders.
     portraitEl.style.fontSize = '';
@@ -1408,16 +1448,16 @@ const App = (window.App = {
         this.showSystemMessage(userMessage);
       } else if (error.isRateLimit) {
         this.showSystemMessage(
-          'Rate limit exceeded. Please wait a moment before generating another portrait.',
+          'AI portrait generation hit a rate limit, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
         );
       } else {
         this.showSystemMessage(
-          'Failed to generate AI portrait. Using template portrait instead.',
+          'AI portrait generation failed, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
         );
       }
       
-      // Fall back to whatever portrait is already displayed
-      // (pre-generated ASCII or template).
+      // Ensure we at least have a pre-generated portrait to fall back to
+      await this._ensurePreGeneratedPortraitFallback(character);
     } finally {
       // Clear the generating flag so future re-renders work normally
       this._guidedPortraitGenerating = false;
@@ -1425,7 +1465,7 @@ const App = (window.App = {
       const portraitEl = document.getElementById('character-portrait');
       if (portraitEl) {
         portraitEl.style.fontSize = '';
-        portraitEl.classList.remove('ascii-portrait--loading');
+        portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
       }
     }
   },
@@ -2776,6 +2816,53 @@ const App = (window.App = {
     this.openPromptModal(character);
   },
 
+  /**
+   * Ensure we have at least a pre-generated portrait (ASCII + optional image)
+   * for the given character. Used when custom AI portrait generation fails
+   * (rate limits, backend errors, etc.) so we can gracefully fall back to
+   * our static portrait set instead of leaving the frame empty.
+   *
+   * When `options.force` is true, we will attempt to load a pre-generated
+   * portrait even if the character already appears to have one; this is
+   * useful in quick-create flows that start from a blank portrait.
+   */
+  async _ensurePreGeneratedPortraitFallback(character, options = {}) {
+    const force = !!(options && options.force);
+
+    try {
+      if (!window.AsciiArtService || !character || !character.race || !character.class) {
+        return;
+      }
+
+      const currentState = CharacterState.get();
+      const existing = currentState && currentState.character ? currentState.character : {};
+
+      if (
+        !force &&
+        (existing.customPortraitAscii ||
+          (existing.portrait && (existing.portrait.ascii || existing.portrait.url)) ||
+          existing.asciiPortrait)
+      ) {
+        // We already have some kind of portrait attached; don't overwrite it.
+        return;
+      }
+
+      // This will prefer race/class-specific ASCII from generated_portraits/,
+      // fall back to race-only, and only as a last resort use a simple
+      // text template. It also updates CharacterState with asciiPortrait and
+      // originalPortraitUrl when successful.
+      await AsciiArtService.generateAIPortrait(character);
+
+      // Clear last-portrait cache so the pre-generated art will animate in.
+      this._lastPortraitArt = null;
+
+      const latest = CharacterState.get().character;
+      await this.updateCharacterPanel(latest);
+    } catch (fallbackError) {
+      console.error('Failed to apply pre-generated portrait fallback:', fallbackError);
+    }
+  },
+
   openPromptModal(character) {
     // Show only the character description to the user (not the rendering instructions)
     const defaultPrompt = AIService.buildCharacterDescription
@@ -2894,24 +2981,20 @@ const App = (window.App = {
       // Add rendering instructions to the user's character description
       // (hidden system-level guidance for the image model)
       const renderingInstructions = [
-        'Create a high-contrast black-and-white fantasy illustration',
-        'Use a hybrid style inspired by Frank Frazetta, Mike Mignola, Eduardo Risso, Boris Vallejo, Larry Elmore, and Clyde Caldwell',
-        'Bold, carved chiaroscuro shadows with large black ink shapes and clean white highlights',
-        'Use limited, controlled directional hatching (no more than 25%) only in selected mid-tones',
-        'Absolutely no dense engraving, soft grayscale, or smooth gradients anywhere in the image',
-        'Pure black (#000000) background with no scenery, gradients, or textures',
-        'Emphasize strong, clear silhouette readability optimized for ASCII art conversion with clean edges and minimal noise',
-        'Realistic heroic anatomy with roughly a 1:7 head-to-body ratio and grounded proportions',
-        'Smaller head, longer arms, muscular but not exaggerated; no cartoon, chibi, or caricature proportions',
-        'Dynamic stance with natural weight and gesture appropriate to the character’s class (spellcasting, leaping, brandishing a weapon, etc.)',
-        'Use a 3:4 aspect ratio where the character fills the frame powerfully',
-        'Cloak and cloth flow should add movement without cluttering the silhouette',
-        'Strictly avoid any visible text, symbols, runes, lettering, UI, or markings of any kind',
-        'Avoid flat graphic icon style, over-rendered gradients, busy backgrounds, or painterly/watercolor looks',
-        'Overall mood: classic dark-fantasy ink illustration that feels powerful, dramatic, mythic, and heroic',
+        'Create a high-contrast black-and-white fantasy illustration in a dramatic pose.',
+        'Art style: classic fantasy ink illustration with strong contrast.',
+        'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
+        'Include some controlled, directional hatching to define form (light mid-tone texture only).',
+        'Use realistic heroic anatomy with natural proportions (smaller head, longer arms, taller figure).',
+        'Pose should feel dynamic and expressive.',
+        'Frame the character so the entire head, hands, and primary weapon or spell effect are fully visible in the image (no cropping at the top of the head).',
+        'Camera angle can vary between frontal, three-quarter, or slightly low-angle heroic views to add variety, while keeping the character clearly readable.',
+        'Background should be simple, entirely black, and free of symbols or text.',
+        'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+        'Aspect ratio 3:4.',
       ];
       
-      const fullPrompt = [...renderingInstructions, customPrompt].join(', ');
+      const fullPrompt = [...renderingInstructions, customPrompt].join(' ');
       
       // Generate custom portrait with full prompt (including hidden rendering instructions)
       const result =
@@ -2941,7 +3024,7 @@ const App = (window.App = {
         // Restore portrait font size back to ASCII default; the sheet will
         // re-render the portrait element for the newly generated art.
         portraitEl.style.fontSize = '';
-        portraitEl.classList.remove('ascii-portrait--loading');
+        portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
       }
 
       // Update the last portrait art to trigger animation
@@ -2977,23 +3060,35 @@ const App = (window.App = {
         this.showSystemMessage(userMessage);
       } else if (error.isRateLimit) {
         this.showSystemMessage(
-          'Rate limit exceeded. Please wait a moment before generating another portrait. Try again in a few minutes.',
+          'AI portrait generation hit a rate limit, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
         );
       } else {
-      this.showSystemMessage(
-        'Failed to generate custom AI portrait. Falling back to template.',
-      );
-      }
-      
-      // Fallback to template
-      const state = CharacterState.get();
-      if (portraitEl) {
-        // Restore font size and show fallback portrait
-        portraitEl.style.fontSize = '';
-        portraitEl.textContent = AsciiArtService.getFullPortrait(
-          state.character,
+        this.showSystemMessage(
+          'AI portrait generation failed, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
         );
       }
+      
+      // Restore portrait font sizing and swap back to a safe, pre-generated portrait.
+      const state = CharacterState.get();
+      if (portraitEl) {
+        portraitEl.style.fontSize = '';
+        portraitEl.classList.remove(
+          'ascii-portrait--loading',
+          'ascii-portrait--placeholder',
+        );
+      }
+
+      // If we already have some portrait art (custom or pre-generated), just
+      // re-render the sheet; otherwise, load a pre-generated portrait now.
+      await this._ensurePreGeneratedPortraitFallback(state.character, {
+        force: !(
+          state.character &&
+          (state.character.customPortraitAscii ||
+            state.character.asciiPortrait ||
+            (state.character.portrait &&
+              (state.character.portrait.ascii || state.character.portrait.url)))
+        ),
+      });
     }
   },
 
@@ -3826,23 +3921,23 @@ const App = (window.App = {
         this.showSystemMessage(userMessage);
       } else if (error.isRateLimit) {
         this.showSystemMessage(
-          'Rate limit exceeded. Please wait a moment before generating another portrait.',
+          'AI portrait generation hit a rate limit, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
         );
       } else {
         this.showSystemMessage(
-          'Failed to generate AI portrait. Using template portrait instead.',
+          'AI portrait generation failed, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
         );
       }
       
-      // Fall back to whatever portrait is already displayed
-      // (pre-generated ASCII or template). Guided mode behavior is unchanged.
+      // Ensure we at least have a pre-generated portrait to fall back to.
+      await this._ensurePreGeneratedPortraitFallback(currentChar, { force: true });
     } finally {
       // Whatever happens above (success or failure), restore portrait font
       // size so the final ASCII art uses the default sizing from CSS.
       const portraitEl = document.getElementById('character-portrait');
       if (portraitEl) {
         portraitEl.style.fontSize = '';
-        portraitEl.classList.remove('ascii-portrait--loading');
+        portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
       }
     }
   },
@@ -4106,9 +4201,9 @@ const App = (window.App = {
     if (hasUnsavedChanges) {
       // Ask the user if they want to save before starting over.
       this.showConfirmationOverlay(
-        'You have not saved this character yet. Save before creating a new one?',
+        'You have not saved this character yet. What would you like to do?',
         async () => {
-          // First attempt to save; if save fails, we keep the current character.
+          // User chose SAVE: first attempt to save; if save fails, we keep the current character.
           await this.saveCharacter(true);
 
           // Re-check that we now have an ID before clearing.
@@ -4121,6 +4216,16 @@ const App = (window.App = {
           }
 
           this._startNewInternal();
+        },
+        () => {
+          // User chose DISCARD: start a fresh character without saving.
+          this._startNewInternal();
+        },
+        {
+          primaryLabel: 'SAVE',
+          secondaryLabel: 'DISCARD',
+          // Both CTAs use the secondary visual style in this flow.
+          primaryClass: 'terminal-btn',
         },
       );
     } else {
@@ -4161,6 +4266,9 @@ const App = (window.App = {
     const targetSelector = options.targetSelector;
     const primaryLabel = options.primaryLabel || 'YES';
     const secondaryLabel = options.secondaryLabel || 'NO';
+    const primaryClass =
+      options.primaryClass || 'terminal-btn terminal-btn-primary';
+    const secondaryClass = options.secondaryClass || 'terminal-btn';
 
     // While a confirmation dialog is open, pause keyboard navigation so
     // arrow keys don't move focus behind the modal.
@@ -4178,8 +4286,8 @@ const App = (window.App = {
             </p>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" id="confirm-no">${secondaryLabel}</button>
-            <button class="terminal-btn terminal-btn-primary" id="confirm-yes">${primaryLabel}</button>
+            <button class="${secondaryClass}" id="confirm-no">${secondaryLabel}</button>
+            <button class="${primaryClass}" id="confirm-yes">${primaryLabel}</button>
           </div>
         </div>
       </div>`;
@@ -4424,7 +4532,10 @@ const App = (window.App = {
         // generations).
         if (isGenerating && currentPortraitHTML && portraitEl) {
           portraitEl.innerHTML = currentPortraitHTML;
-          portraitEl.classList.remove('ascii-portrait--placeholder');
+          // Keep both placeholder + loading classes in sync with the initial
+          // loader render so the cube geometry doesn't get distorted after
+          // a sheet re-render.
+          portraitEl.classList.add('ascii-portrait--placeholder');
           portraitEl.classList.add('ascii-portrait--loading');
         }
 

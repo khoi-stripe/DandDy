@@ -16,7 +16,7 @@ const PRODUCTION_BACKEND_URL =
 //
 window.CONFIG = {
   TYPEWRITER_SPEED: 30, // milliseconds per character
-  AI_TIMEOUT: 20000, // 20 seconds - then fallback (but keep trying in background)
+  AI_TIMEOUT: 40000, // 40 seconds - then fallback (but keep trying in background)
   
   // AI Feature Toggles
   //

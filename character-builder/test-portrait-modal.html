@@ -439,7 +439,7 @@ Select a race and class above to enable portrait generation.
               'Authorization': `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
-              model: 'gpt-image-1',
+              model: 'dall-e-3',
               prompt: prompt,
               n: 1,
               size: '1024x1024',
@@ -637,13 +637,17 @@ Select a race and class above to enable portrait generation.
         const parts = [];
         
         // ASCII optimization instructions
-        parts.push("Create a high-contrast black-and-white fantasy illustration");
-        parts.push("Use a hybrid style inspired by Frank Frazetta, Mike Mignola, Eduardo Risso, Boris Vallejo, Larry Elmore, and Clyde Caldwell");
-        parts.push("Bold, carved chiaroscuro shadows with large black ink shapes and clean white highlights");
-        parts.push("Use limited, controlled directional hatching (no more than 25%) only in selected mid-tones");
-        parts.push("Absolutely no dense engraving, soft grayscale, or smooth gradients anywhere in the image");
-        parts.push("Pure black (#000000) background with no scenery, gradients, or textures");
-        parts.push("Emphasize strong, clear silhouette readability optimized for ASCII art conversion with clean edges and minimal noise");
+        parts.push("Create a high-contrast black-and-white fantasy illustration in a dramatic pose.");
+        parts.push("Art style: classic fantasy ink illustration with strong contrast.");
+        parts.push("Use bold shadow shapes, strong silhouettes, and clean white highlights.");
+        parts.push("Include some controlled, directional hatching to define form (light mid-tone texture only).");
+        parts.push("Use realistic heroic anatomy with natural proportions (smaller head, longer arms, taller figure).");
+        parts.push("Pose should feel dynamic and expressive.");
+        parts.push("Frame the character so the entire head, hands, and primary weapon or spell effect are fully visible in the image (no cropping at the top of the head).");
+        parts.push("Camera angle can vary between frontal, three-quarter, or slightly low-angle heroic views to add variety, while keeping the character clearly readable.");
+        parts.push("Background should be simple, entirely black, and free of symbols or text.");
+        parts.push("Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.");
+        parts.push("Aspect ratio 3:4.");
         
         // Character description
         if (character.race) {
