@@ -417,7 +417,13 @@ async def generate_image(
             prompt=request.prompt,
             n=1,
             size=request.size,
-            quality=request.quality,
+            # NOTE: Some OpenAI image backends / deployments currently reject the
+            # `quality` parameter entirely with "Unknown parameter: 'quality'".
+            # To keep this endpoint compatible across environments, we do NOT
+            # pass `quality` through, even though our Pydantic model still
+            # accepts it from the client. This makes the backend tolerant of
+            # older or custom OpenAI deployments.
+            # quality=request.quality,
             # Be explicit that we want a URL back (not base64) so the frontend
             # can download/convert it.
             response_format="url",
