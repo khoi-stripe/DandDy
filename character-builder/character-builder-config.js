@@ -18,10 +18,25 @@ window.CONFIG = {
   TYPEWRITER_SPEED: 30, // milliseconds per character
   AI_TIMEOUT: 20000, // 20 seconds - then fallback (but keep trying in background)
   
-  // AI Feature Toggle
-  // Set to false to disable AI features (will use fallback text instead)
-  // Set to true to enable AI features (requires backend server to be running)
+  // AI Feature Toggles
+  //
+  // - ENABLE_AI: master switch. When false, all AI calls are skipped and
+  //   local fallback text/logic is used instead.
+  // - ENABLE_AI_NARRATOR_COMMENTS: when false, narrator quips during the
+  //   question flow never call the backend and always use local fallbacks.
+  // - ENABLE_AI_OPTION_VARIATIONS: when false, option labels use their
+  //   built‑in text instead of asking AI to rewrite them.
+  // - NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER: hard cap on how many times
+  //   the narrator will hit the backend per character creation run. After
+  //   that, it automatically falls back to local lines.
+  //
+  // These defaults bias toward keeping the most impactful AI features
+  // (names, backstory, portraits) while trimming narrator chatter and
+  // cosmetic option-variation calls.
   ENABLE_AI: true,
+  ENABLE_AI_NARRATOR_COMMENTS: false,
+  ENABLE_AI_OPTION_VARIATIONS: false,
+  NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER: 1,
   
   // SECURE: Use backend proxy instead of direct OpenAI calls
   // Use shared backend origin for all parts of the app

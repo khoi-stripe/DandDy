@@ -1254,6 +1254,34 @@ const App = (window.App = {
     KeyboardNav.activate();
   },
 
+  /**
+   * Render the standard AI portrait loading state in the portrait panel.
+   * Uses the glowing, fast-spinning cube plus unified status text:
+   * "Generating AI portrait… This can take 20–30 seconds."
+   */
+  _renderPortraitGeneratingLoader(portraitEl) {
+    if (!portraitEl) return;
+
+    portraitEl.innerHTML = `
+      <div class="portrait-placeholder-content">
+        <div class="portrait-placeholder-cube-container">
+          <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+            <i></i>
+          </div>
+        </div>
+        <div class="portrait-placeholder-text">
+          Generating AI portrait…<br>
+          This can take 20–30 seconds.
+        </div>
+      </div>
+    `;
+  },
+
   // In guided (co-create) mode, automatically generate a custom AI portrait
   // once we have the essential character context (race, class, name).
   // Triggered after name selection since backstory is no longer used in prompts.
@@ -1305,24 +1333,7 @@ const App = (window.App = {
       // being generated and converted to ASCII. Use the placeholder container
       // with the cube spinning faster and glowing.
       if (portraitEl) {
-        portraitEl.innerHTML = `
-          <div class="portrait-placeholder-content">
-            <div class="portrait-placeholder-cube-container">
-              <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-              </div>
-            </div>
-            <div class="portrait-placeholder-text">
-              Generating character art…<br>
-              (This usually takes 20–30 seconds)
-            </div>
-          </div>
-        `;
+        this._renderPortraitGeneratingLoader(portraitEl);
       }
 
       const result = await AsciiArtService.generateCustomAIPortrait(character);
@@ -2849,60 +2860,6 @@ const App = (window.App = {
 
     const portraitEl = document.getElementById('character-portrait');
     
-    // Show progressive loading state with glowing, faster-spinning cube
-    let portraitElapsed = 0;
-    let portraitLoadingInterval = null;
-    let portraitLoadingActive = true;
-    
-    const updatePortraitLoading = () => {
-      if (!portraitEl || !portraitLoadingActive) return;
-
-      // Single-line status with animated ellipsis and a fixed subtext.
-      const baseMessage = 'Generating character art';
-      // Animate the trailing dots so the ellipsis feels alive without
-      // changing the overall text width (to avoid recentring).
-      const dotCount = (portraitElapsed % 3) + 1;
-
-      // Create the cube + text container once; thereafter only update text + dot state
-      let textEl = portraitEl.querySelector('.portrait-placeholder-text');
-      if (!textEl) {
-        portraitEl.innerHTML = `
-          <div class="portrait-placeholder-content">
-            <div class="portrait-placeholder-cube-container">
-              <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-              </div>
-            </div>
-            <div class="portrait-placeholder-text" data-dots="${dotCount}">
-              <span class="portrait-placeholder-message">${baseMessage}</span>
-              <span class="portrait-placeholder-dots">
-                <span class="dot dot-1">.</span>
-                <span class="dot dot-2">.</span>
-                <span class="dot dot-3">.</span>
-              </span>
-              <div class="portrait-placeholder-subtext">
-                (This usually takes 20–30 seconds)
-              </div>
-            </div>
-          </div>
-        `;
-        textEl = portraitEl.querySelector('.portrait-placeholder-text');
-      } else {
-        textEl.setAttribute('data-dots', String(dotCount));
-        const messageEl = textEl.querySelector('.portrait-placeholder-message');
-        if (messageEl) {
-          messageEl.textContent = baseMessage;
-        }
-      }
-
-      portraitElapsed++;
-    };
-    
     if (portraitEl) {
       // While generating, scroll the character sheet back to the top so the
       // user immediately sees the portrait frame and loading status message.
@@ -2914,9 +2871,8 @@ const App = (window.App = {
         });
       }
 
-      // Start showing the loading state with glowing, spinning cube
-      updatePortraitLoading();
-      portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
+      // Show the standard loading state with glowing, spinning cube and unified text.
+      this._renderPortraitGeneratingLoader(portraitEl);
     }
 
     try {
@@ -2958,17 +2914,6 @@ const App = (window.App = {
         portraitMetadata: updatedMetadata,
       });
 
-      // Stop the loading animation
-      portraitLoadingActive = false;
-      if (portraitLoadingInterval) {
-        clearInterval(portraitLoadingInterval);
-      }
-      if (portraitEl) {
-        // Restore portrait font size back to ASCII default; the sheet will
-        // re-render the portrait element for the newly generated art.
-        portraitEl.style.fontSize = '';
-        portraitEl.classList.remove('ascii-portrait--loading');
-      }
       if (portraitEl) {
         // Restore portrait font size back to ASCII default; the sheet will
         // re-render the portrait element for the newly generated art.
@@ -2984,13 +2929,7 @@ const App = (window.App = {
       await this.updateCharacterPanel(state.character);
     } catch (error) {
       console.error('Error generating custom AI portrait with prompt:', error);
-      
-      // Stop the loading animation
-      portraitLoadingActive = false;
-      if (portraitLoadingInterval) {
-        clearInterval(portraitLoadingInterval);
-      }
-      
+
       // Check error type and show appropriate message
       if (error.isSafetyRejection) {
         console.group('🚫 OpenAI Content Safety Rejection - Custom Prompt Mode');
@@ -3802,21 +3741,7 @@ const App = (window.App = {
       // is being generated and converted to ASCII. Use the placeholder container
       // with the cube spinning faster and glowing.
       if (portraitEl) {
-        portraitEl.innerHTML = `
-          <div class="portrait-placeholder-content">
-            <div class="portrait-placeholder-cube-container">
-              <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-              </div>
-            </div>
-            <div class="portrait-placeholder-text">Generating AI portrait… <br>This can take 20–30 seconds.</div>
-          </div>
-        `;
+        this._renderPortraitGeneratingLoader(portraitEl);
       }
 
       const result = await AsciiArtService.generateCustomAIPortrait(currentChar);

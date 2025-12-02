@@ -85,7 +85,8 @@ class ImageGenerationRequest(BaseModel):
     """Request for DALL-E image generation"""
     prompt: str = Field(..., min_length=10, max_length=4000)
     size: str = Field("1024x1024", pattern="^(256x256|512x512|1024x1024|1792x1024|1024x1792)$")
-    quality: str = Field("standard", pattern="^(standard|hd)$")
+    # gpt-image-1 supports: low, medium, high, auto
+    quality: str = Field("high", pattern="^(low|medium|high|auto)$")
 
 
 class NamesGenerationRequest(BaseModel):

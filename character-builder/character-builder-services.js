@@ -617,6 +617,8 @@ const AIService = (window.AIService = {
   // Track whether we've already allowed an "Ah, the classic..."-style line
   // for the current character generation run.
   _usedClassicThisRun: false,
+  // Track how many AI narrator comments we've made for the current character.
+  _narratorCommentCount: 0,
   // Track used names across this browser session to avoid repeats
   // and increase diversity of generated suggestions.
   _usedFirstNames: new Set(),
@@ -630,6 +632,7 @@ const AIService = (window.AIService = {
   resetNarratorSession() {
     this._lastNarratorComment = null;
     this._usedClassicThisRun = false;
+    this._narratorCommentCount = 0;
   },
 
   // Background warmup: Keep trying to wake up the backend
@@ -760,8 +763,21 @@ const AIService = (window.AIService = {
     const narrator = getNarrator(narratorId);
     const fallbacks = narrator.fallbacks;
 
-    if (!CONFIG.ENABLE_AI) {
-      console.log('%c🤖 NARRATOR (Fallback - AI Disabled)', 'color: #ff0; font-weight: bold');
+    // Determine how many backend narrator calls we're allowed per character.
+    const maxComments =
+      typeof CONFIG.NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER === 'number'
+        ? CONFIG.NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER
+        : Infinity;
+
+    const narratorAiDisabled =
+      CONFIG.ENABLE_AI_NARRATOR_COMMENTS === false || !CONFIG.ENABLE_AI;
+
+    // If narrator AI is disabled or we've hit the cap, immediately use a local line.
+    if (narratorAiDisabled || this._narratorCommentCount >= maxComments) {
+      console.log(
+        '%c🤖 NARRATOR (Fallback - Disabled or limit reached)',
+        'color: #ff0; font-weight: bold',
+      );
       return Utils.randomChoice(fallbacks);
     }
 
@@ -837,6 +853,8 @@ const AIService = (window.AIService = {
     }
 
       this._lastNarratorComment = responseText;
+      // Count this as one successful AI narrator comment for this character.
+      this._narratorCommentCount += 1;
       return responseText;
     } catch (error) {
       if (error.message.includes('timed out')) {
@@ -1469,8 +1487,11 @@ const AIService = (window.AIService = {
   },
 
   async generateOptionVariations(questionText, options) {
-    if (!CONFIG.ENABLE_AI) {
-      console.log('%c🎲 OPTIONS (Fallback - AI Disabled)', 'color: #ff0; font-weight: bold');
+    if (!CONFIG.ENABLE_AI || CONFIG.ENABLE_AI_OPTION_VARIATIONS === false) {
+      console.log(
+        '%c🎲 OPTIONS (Fallback - AI Disabled or variations off)',
+        'color: #ff0; font-weight: bold',
+      );
       return options.map((opt) => opt.text);
     }
 
@@ -1553,7 +1574,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
         body: JSON.stringify({
           prompt: prompt,
           size: '1024x1024',
-          quality: 'standard',
+          // gpt-image-1 supports: low, medium, high, auto
+          // Use "high" for best quality portraits (roughly equivalent to previous HD behavior).
+          quality: 'high',
         }),
       }, 45000); // 45 seconds for image generation (DALL-E is slower than text)
 
