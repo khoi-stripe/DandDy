@@ -186,6 +186,14 @@
     fromManagerToBackend(character) {
       if (!character) return null;
 
+      // Normalize background feature into a dict, even if it started as a string.
+      const rawBackgroundFeature =
+        character.backgroundFeature || character.backgroundData?.feature || {};
+      const backgroundFeatureDict =
+        typeof rawBackgroundFeature === 'string'
+          ? { name: rawBackgroundFeature }
+          : rawBackgroundFeature;
+
       return {
         name: character.name || 'Unnamed Character',
         race: character.race || character.raceData?.name || 'Human',
@@ -224,10 +232,15 @@
         languages: character.languages || [],
 
         // Features & Traits
-        racial_traits: character.racialTraits || character.raceData?.traits || [],
-        class_features: character.classFeatures || character.classData?.features || [],
-        feats: character.feats || [],
-        background_feature: character.backgroundFeature || character.backgroundData?.feature || {},
+        // Backend expects arrays of dicts, not raw strings.
+        racial_traits: this._arrayToDict(
+          character.racialTraits || character.raceData?.traits || [],
+        ),
+        class_features: this._arrayToDict(
+          character.classFeatures || character.classData?.features || [],
+        ),
+        feats: this._arrayToDict(character.feats || []),
+        background_feature: backgroundFeatureDict,
 
         // Personality
         personality_traits: character.personalityTraits || character.personalityTrait || null,

@@ -1061,11 +1061,11 @@ const CharacterSheet = (window.CharacterSheet = {
               : '';
           const desc =
             spell && spell.description
-              ? `<div class="text-dim terminal-text-small" style="margin-left: 1rem;">${this.escapeHtml(
+              ? `<div class="text-dim terminal-text-small spell-list-description">${this.escapeHtml(
                   spell.description,
                 )}</div>`
               : '';
-        return `<div class="text-dim" style="margin-bottom: 0.25rem;">• ${name}${school}</div>${desc}`;
+        return `<div class="text-dim spell-list-item">• ${name}${school}</div>${desc}`;
         })
         .join('');
     };
@@ -1097,7 +1097,7 @@ const CharacterSheet = (window.CharacterSheet = {
     }
 
     // Spellcasting ability note
-    if (parsed.spellcastingAbility) {
+      if (parsed.spellcastingAbility) {
       const abilityName = {
         int: 'Intelligence',
         wis: 'Wisdom',
@@ -1105,7 +1105,7 @@ const CharacterSheet = (window.CharacterSheet = {
       }[parsed.spellcastingAbility] || parsed.spellcastingAbility;
       
       spellsContent += `
-        <div class="text-dim terminal-text-small" style="margin-top: 0.5rem;">
+        <div class="text-dim terminal-text-small spellcasting-ability-note">
           Spellcasting Ability: ${this.escapeHtml(abilityName)}
         </div>
       `;
@@ -1294,6 +1294,22 @@ const CharacterSheet = (window.CharacterSheet = {
   _parseCharacterData(character, context = 'manager') {
     // In builder context, show all sections from the start (except spells)
     const isBuilder = context === 'builder';
+    // Minimal built-in mapping of standard 5e class hit dice so the sheet
+    // can render correct values even when DND_DATA is not loaded (e.g. manager).
+    const HIT_DIE_BY_CLASS = {
+      barbarian: 12,
+      fighter: 10,
+      paladin: 10,
+      ranger: 10,
+      cleric: 8,
+      druid: 8,
+      monk: 8,
+      rogue: 8,
+      bard: 8,
+      warlock: 8,
+      wizard: 6,
+      sorcerer: 6,
+    };
     
     // Handle HP (old and new formats)
     const hp = character.hitPoints || { current: 0, max: 0 };
@@ -1321,6 +1337,35 @@ const CharacterSheet = (window.CharacterSheet = {
     const className = character.classData?.name || character.class || null;
     const backgroundName =
       character.backgroundData?.name || character.background || null;
+
+    // Derive hit die:
+    // - Prefer any explicit character-level override (manager edits)
+    // - Then fall back to nested classData if present
+    // - Then try to infer from a built-in class → hitDie map
+    // - Then, if DND_DATA is available (builder context), use its classes list
+    // - Finally, use a conservative default of d6 if nothing else is available
+    let hitDie = character.hitDie || character.classData?.hitDie || null;
+    if (!hitDie) {
+      const rawClass = character.class || className || '';
+      const normalized = rawClass.toString().trim().toLowerCase().replace(/\s+/g, '-');
+      if (normalized && HIT_DIE_BY_CLASS[normalized]) {
+        hitDie = HIT_DIE_BY_CLASS[normalized];
+      }
+    }
+    if (!hitDie && window.DND_DATA && Array.isArray(window.DND_DATA.classes)) {
+      const classIdOrName = character.class || className;
+      if (classIdOrName) {
+        const cls = window.DND_DATA.classes.find(
+          (c) => c.id === classIdOrName || c.name === classIdOrName,
+        );
+        if (cls && cls.hitDie) {
+          hitDie = cls.hitDie;
+        }
+      }
+    }
+    if (!hitDie) {
+      hitDie = 6;
+    }
 
     // Handle equipment
     const classEquipment = character.classData?.equipment || [];
@@ -1371,8 +1416,7 @@ const CharacterSheet = (window.CharacterSheet = {
       initiative: character.initiative || 0,
       speed: character.speed || 30,
       proficiencyBonus: character.proficiencyBonus || 2,
-      // Prefer any explicit character-level override, then fall back to class data.
-      hitDie: character.hitDie || character.classData?.hitDie || 6,
+      hitDie,
 
       // Abilities
       abilities,

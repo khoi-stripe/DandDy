@@ -262,7 +262,7 @@
       box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
     }
 
-    .prompt-modal-buttons {
+      .prompt-modal-buttons {
       display: flex;
       gap: var(--spacing-md);
       justify-content: flex-end;
@@ -310,6 +310,11 @@
       border-radius: 4px;
       font-size: 14px;
     }
+
+      .api-status {
+        margin-top: 8px;
+        color: var(--terminal-dim);
+      }
   </style>
 </head>
 <body>
@@ -333,7 +338,7 @@
         placeholder="Enter OpenAI API Key (sk-...)"
       >
       <button class="settings-btn" onclick="TestApp.saveAPIKey()">Save API Key</button>
-      <div id="api-status" style="margin-top: 8px; color: var(--terminal-dim);"></div>
+      <div id="api-status" class="api-status"></div>
     </div>
 
     <div class="character-section">

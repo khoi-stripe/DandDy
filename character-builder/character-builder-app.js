@@ -31,6 +31,117 @@ const KeyboardNav = (window.KeyboardNav = {
     this.tryActivate();
   },
 
+  /**
+   * Calculate a reasonable default Armor Class based on class, abilities,
+   * and a simplified 5e armor model.
+   *
+   * Precedence:
+   * - If class is Barbarian/Monk *and* no armorCategory is set → Unarmored Defense.
+   * - Otherwise, if armorCategory is set → use armor + optional shield.
+   * - Otherwise → 10 + DEX mod (no armor).
+   */
+  calculateArmorClassForClass(classId, abilities, armorCategory = null, hasShield = false) {
+    const dexMod = Utils.abilityModifier(abilities.dex);
+    const conMod = Utils.abilityModifier(abilities.con);
+    const wisMod = Utils.abilityModifier(abilities.wis);
+
+    // Unarmored Defense for Barbarian/Monk when not wearing armor
+    if (classId === 'barbarian' && !armorCategory) {
+      return 10 + dexMod + conMod;
+    }
+    if (classId === 'monk' && !armorCategory) {
+      return 10 + dexMod + wisMod;
+    }
+
+    // Armor-based AC when an armor category is present
+    let baseAC;
+    switch (armorCategory) {
+      case 'light':
+        // Typical light armor baseline (leather): 11 + DEX
+        baseAC = 11 + dexMod;
+        break;
+      case 'medium':
+        // Typical medium armor (scale mail): 14 + min(DEX, +2)
+        baseAC = 14 + Math.min(dexMod, 2);
+        break;
+      case 'heavy':
+        // Typical heavy armor (chain mail): fixed 16, no DEX
+        baseAC = 16;
+        break;
+      default:
+        // No armor: 10 + DEX
+        baseAC = 10 + dexMod;
+        break;
+    }
+
+    if (hasShield) {
+      baseAC += 2;
+    }
+
+    return baseAC;
+  },
+
+  /**
+   * Infer a coarse armor loadout (armor category + shield) from the class's
+   * starting equipment text. This doesn't try to be exhaustive – it gives us
+   * stable fields we can later surface in UI.
+   */
+  inferArmorLoadoutForClass(classId) {
+    const cls = DND_DATA.classes.find((c) => c.id === classId);
+    if (!cls || !Array.isArray(cls.equipment)) {
+      return { armorCategory: null, hasShield: false };
+    }
+
+    const equipmentText = cls.equipment.join(' ').toLowerCase();
+
+    let armorCategory = null;
+    if (equipmentText.includes('leather armor') || equipmentText.includes('light armor')) {
+      armorCategory = 'light';
+    } else if (equipmentText.includes('medium armor')) {
+      armorCategory = 'medium';
+    } else if (equipmentText.includes('heavy armor')) {
+      armorCategory = 'heavy';
+    }
+
+    const hasShield =
+      equipmentText.includes('shield') ||
+      equipmentText.includes('wooden shield');
+
+    return { armorCategory, hasShield };
+  },
+
+  /**
+   * Map an armorCategory + class into concrete armor item strings that should
+   * appear in the equipment list (e.g., "Leather Armor", "Chain Mail", "Shield").
+   */
+  getStartingArmorItems(classId, armorCategory, hasShield) {
+    const items = [];
+
+    if (armorCategory === 'light') {
+      items.push('Leather Armor');
+    } else if (armorCategory === 'medium') {
+      // Barbarians often start in hide; others in scale mail.
+      if (classId === 'barbarian') {
+        items.push('Hide Armor');
+      } else {
+        items.push('Scale Mail');
+      }
+    } else if (armorCategory === 'heavy') {
+      items.push('Chain Mail');
+    }
+
+    if (hasShield) {
+      // Druids/clerics often have wooden shields; others a generic shield.
+      if (classId === 'druid' || classId === 'cleric') {
+        items.push('Wooden Shield');
+      } else {
+        items.push('Shield');
+      }
+    }
+
+    return items;
+  },
+
   tryActivate() {
     setTimeout(() => {
       const buttons = this.getActiveButtons();
@@ -378,7 +489,23 @@ const App = (window.App = {
       }
     });
 
-    // Reorder options: recommended first, then others
+    // Ensure recommended options appear in the SAME order as the narrator's
+    // recommendation list, so the "RECOMMENDED" buttons match the bullet list
+    // that was just narrated to the player.
+    if (recommendations.length > 0 && recommendedOptions.length > 1) {
+      const indexInRecommendations = (value) => {
+        const idx = recommendations.indexOf(value);
+        return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+      };
+
+      recommendedOptions.sort(
+        (a, b) =>
+          indexInRecommendations(a.opt.value) -
+          indexInRecommendations(b.opt.value),
+      );
+    }
+
+    // Reorder options: recommended first (in narrated order), then others
     const reorderedOptions = [...recommendedOptions, ...otherOptions];
 
     // Store the reordered mapping for handleAnswer to use
@@ -398,7 +525,7 @@ const App = (window.App = {
           const currentIndex = displayIndex++;
           return `
               <button class="button-primary" onclick="App.handleListAnswer('${question.id}', ${currentIndex})">
-                ${opt.text}
+                * ${opt.text}
               </button>
             `;
         })
@@ -582,7 +709,7 @@ const App = (window.App = {
               </div>
             </div>
             <button class="button-primary ability-method-roll" onclick="App.handleAbilityFromSelect()">
-              > ROLL
+              ROLL
             </button>
           </div>
         </div>
@@ -1190,7 +1317,10 @@ const App = (window.App = {
                 <i></i>
               </div>
             </div>
-            <div class="portrait-placeholder-text">Generating AI portrait… <br>This can take 20–30 seconds.</div>
+            <div class="portrait-placeholder-text">
+              Generating character art…<br>
+              (This usually takes 20–30 seconds)
+            </div>
           </div>
         `;
       }
@@ -1513,9 +1643,27 @@ const App = (window.App = {
     });
 
     const state = CharacterState.get();
-    const classData = DND_DATA.classes.find(
+    let classData = DND_DATA.classes.find(
       (c) => c.id === state.character.class,
     );
+
+    // Guard against missing or invalid class data so the flow never stalls
+    // on the ability generation step. If something went wrong earlier and we
+    // don't have a valid class, fall back to a generic Fighter-like profile.
+    if (!classData) {
+      console.error(
+        'handleAbilityMethod: missing class data for',
+        state.character?.class,
+      );
+      classData = {
+        id: 'fighter',
+        name: 'Fighter (fallback)',
+        hitDie: 10,
+        primaryAbility: ['str'],
+        savingThrows: ['str', 'con'],
+        equipment: [],
+      };
+    }
 
     let abilities = {};
 
@@ -1545,21 +1693,44 @@ const App = (window.App = {
       };
     }
 
-    // Apply racial bonuses
-    const race = DND_DATA.races.find((r) => r.id === state.character.race);
-    Object.keys(race.abilityBonuses).forEach((ability) => {
-      abilities[ability] += race.abilityBonuses[ability];
+    // Apply racial bonuses (with a safe fallback if race data is missing)
+    const race =
+      DND_DATA.races.find((r) => r.id === state.character.race) || {
+        abilityBonuses: {},
+      };
+    Object.keys(race.abilityBonuses || {}).forEach((ability) => {
+      const bonus = race.abilityBonuses[ability] || 0;
+      abilities[ability] = (abilities[ability] || 0) + bonus;
     });
+
+    // Infer a coarse armor loadout from class equipment
+    // Infer a coarse armor loadout from class equipment. The helper lives
+    // on KeyboardNav (where the armor helpers are defined), so delegate to it.
+    const { armorCategory, hasShield } = KeyboardNav.inferArmorLoadoutForClass(
+      state.character.class,
+    );
 
     // Calculate HP (level 1)
     const conMod = Utils.abilityModifier(abilities.con);
     const hitPoints = classData.hitDie + conMod;
+
+    // Calculate a default Armor Class based on class + abilities + armor,
+    // delegating to the shared armor helper on KeyboardNav.
+    const armorClass = KeyboardNav.calculateArmorClassForClass(
+      state.character.class,
+      abilities,
+      armorCategory,
+      hasShield,
+    );
 
     // Store both base (level 1) abilities and current abilities
     CharacterState.updateCharacter({
       baseAbilities: { ...abilities },
       abilities,
       hitPoints,
+      armorClass,
+      armorCategory,
+      hasShield,
     });
     CharacterState.set({ abilityMethod: method });
 
@@ -1953,17 +2124,17 @@ const App = (window.App = {
           })
           .join('')
       : hasCustomPortraitWithoutHistory
-        ? `<div class="terminal-text-small terminal-text-dim" style="padding: 20px; text-align: center;">
+        ? `<div class="terminal-text-small terminal-text-dim portrait-history-callout">
               <p><strong>No portrait history yet.</strong></p>
-              <p style="margin-top: 10px;">This character's portrait was created before the history feature was added.</p>
-              <p style="margin-top: 10px;">Generate a new custom AI portrait to:</p>
-              <ul style="text-align: left; margin: 10px auto; display: inline-block;">
+              <p>This character's portrait was created before the history feature was added.</p>
+              <p>Generate a new custom AI portrait to:</p>
+              <ul class="portrait-history-callout-list">
                 <li>• Save your current portrait as Version 1</li>
                 <li>• Add the new portrait as Version 2</li>
                 <li>• Enable portrait version switching</li>
               </ul>
             </div>`
-        : `<p class="terminal-text-small terminal-text-dim" style="padding: 20px; text-align: center;">
+        : `<p class="terminal-text-small terminal-text-dim portrait-history-callout">
               No saved portraits yet.<br><br>
               Generate a custom AI portrait to start building a history.
             </p>`;
@@ -2677,40 +2848,58 @@ const App = (window.App = {
     this.closePromptModal(false); // Close modal without regenerating yet
 
     const portraitEl = document.getElementById('character-portrait');
-
+    
     // Show progressive loading state with glowing, faster-spinning cube
     let portraitElapsed = 0;
     let portraitLoadingInterval = null;
+    let portraitLoadingActive = true;
     
     const updatePortraitLoading = () => {
-      if (!portraitEl) return;
-      
-      let message = '';
-      if (portraitElapsed < 5) {
-        message = 'Generating portrait...';
-      } else if (portraitElapsed < 15) {
-        message = 'Creating image...';
-      } else if (portraitElapsed < 30) {
-        message = 'Converting to ASCII...';
-      } else {
-        message = 'Almost done...';
-      }
-      
-      portraitEl.innerHTML = `
-        <div class="portrait-placeholder-content">
-          <div class="portrait-placeholder-cube-container">
-            <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-              <i></i>
-              <i></i>
-              <i></i>
-              <i></i>
-              <i></i>
-              <i></i>
+      if (!portraitEl || !portraitLoadingActive) return;
+
+      // Single-line status with animated ellipsis and a fixed subtext.
+      const baseMessage = 'Generating character art';
+      // Animate the trailing dots so the ellipsis feels alive without
+      // changing the overall text width (to avoid recentring).
+      const dotCount = (portraitElapsed % 3) + 1;
+
+      // Create the cube + text container once; thereafter only update text + dot state
+      let textEl = portraitEl.querySelector('.portrait-placeholder-text');
+      if (!textEl) {
+        portraitEl.innerHTML = `
+          <div class="portrait-placeholder-content">
+            <div class="portrait-placeholder-cube-container">
+              <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+              </div>
+            </div>
+            <div class="portrait-placeholder-text" data-dots="${dotCount}">
+              <span class="portrait-placeholder-message">${baseMessage}</span>
+              <span class="portrait-placeholder-dots">
+                <span class="dot dot-1">.</span>
+                <span class="dot dot-2">.</span>
+                <span class="dot dot-3">.</span>
+              </span>
+              <div class="portrait-placeholder-subtext">
+                (This usually takes 20–30 seconds)
+              </div>
             </div>
           </div>
-          <div class="portrait-placeholder-text">${message}</div>
-        </div>
-      `;
+        `;
+        textEl = portraitEl.querySelector('.portrait-placeholder-text');
+      } else {
+        textEl.setAttribute('data-dots', String(dotCount));
+        const messageEl = textEl.querySelector('.portrait-placeholder-message');
+        if (messageEl) {
+          messageEl.textContent = baseMessage;
+        }
+      }
+
       portraitElapsed++;
     };
     
@@ -2770,6 +2959,7 @@ const App = (window.App = {
       });
 
       // Stop the loading animation
+      portraitLoadingActive = false;
       if (portraitLoadingInterval) {
         clearInterval(portraitLoadingInterval);
       }
@@ -2796,6 +2986,7 @@ const App = (window.App = {
       console.error('Error generating custom AI portrait with prompt:', error);
       
       // Stop the loading animation
+      portraitLoadingActive = false;
       if (portraitLoadingInterval) {
         clearInterval(portraitLoadingInterval);
       }
@@ -2915,7 +3106,10 @@ const App = (window.App = {
       // Saving should be a non-disruptive action – we don't want to re-animate
       // the ASCII portrait when the only change is an assigned ID/timestamps.
       this._suppressNextPortraitAnimation = true;
-      const saved = await window.StorageService.saveCharacter(character);
+
+      // Build a complete character snapshot with derived stats (AC, speed, etc.)
+      const completeCharacter = this.buildCompleteCharacter(character);
+      const saved = await window.StorageService.saveCharacter(completeCharacter);
       CharacterState.updateCharacter(saved);
 
       if (showMessage) {
@@ -2957,7 +3151,17 @@ const App = (window.App = {
     // Calculate derived stats
     const proficiencyBonus = Math.ceil(character.level / 4) + 1;
     const initiative = abilityMods.dex;
-    const armorClass = 10 + abilityMods.dex; // Base AC (can be enhanced with armor)
+    // Prefer any armorClass already stored on the character (e.g., from builder),
+    // otherwise derive a reasonable default based on class + abilities + armor.
+    const armorClass =
+      character.armorClass != null
+        ? character.armorClass
+        : KeyboardNav.calculateArmorClassForClass(
+            character.class,
+            character.abilities,
+            character.armorCategory,
+            character.hasShield,
+          );
     const speed = race?.speed || 30;
 
     // Calculate HP (if not already set)
@@ -2972,6 +3176,22 @@ const App = (window.App = {
         skills[skill] = abilityMod + proficiencyBonus;
       });
     }
+
+    // Build starting armor items based on armorCategory/hasShield
+    // Note: armor helpers live on `KeyboardNav` for now, so call through that namespace.
+    const armorItems = KeyboardNav.getStartingArmorItems(
+      character.class,
+      character.armorCategory,
+      character.hasShield,
+    );
+
+    // Merge armor items into explicit equipment (without duplicating)
+    const explicitEquipment = [...(character.equipment || [])];
+    armorItems.forEach((item) => {
+      if (!explicitEquipment.includes(item)) {
+        explicitEquipment.push(item);
+      }
+    });
 
     // Get portrait data
     const portraitContainer = document.getElementById('character-portrait');
@@ -3027,6 +3247,8 @@ const App = (window.App = {
       armorClass,
       speed,
       hitPoints,
+      armorCategory: character.armorCategory || null,
+      hasShield: !!character.hasShield,
 
       // Skills with modifiers
       skillModifiers: skills,
@@ -3063,6 +3285,9 @@ const App = (window.App = {
         languages: background.languages,
         equipment: background.equipment
       } : null,
+
+      // Equipment (including any inferred armor/shield items)
+      equipment: explicitEquipment,
 
       // Portrait data
       portrait: {
@@ -3130,7 +3355,15 @@ const App = (window.App = {
   },
 
   // Toast used for quick, non-blocking feedback (e.g. "Prompt copied"), anchored to the terminal container.
-  showToast(message) {
+  showToast(rawMessage) {
+    const message = (rawMessage == null) ? '' : String(rawMessage);
+    // Remove any leading glyphs (checkmarks, warning icons, etc.) so builder
+    // toasts stay clean and rely only on text + the "×" close button.
+    const cleanedMessage = message.replace(
+      /^[\s\u200b]*(?:[✓✔✕✖✗★⚠💡❌⏰🔌]+[\s\u00a0\u200b]*)+/u,
+      ''
+    );
+
     let toast = document.getElementById('toastNotification');
     if (!toast) {
       toast = document.createElement('div');
@@ -3172,10 +3405,10 @@ const App = (window.App = {
 
     const messageEl = toast.querySelector('.toast-message');
     if (messageEl) {
-      messageEl.textContent = message;
+      messageEl.textContent = cleanedMessage;
     } else {
       // Fallback in case markup is missing for any reason
-      toast.textContent = message;
+      toast.textContent = cleanedMessage;
     }
 
     // Reset any in-flight timers so we can replay the entrance animation
@@ -3394,10 +3627,19 @@ const App = (window.App = {
     const hitPoints =
       newLevel <= 1 ? baseHP : baseHP + (newLevel - 1) * perLevel;
 
+    // Recalculate Armor Class based on updated abilities + existing armor loadout
+    const armorClass = KeyboardNav.calculateArmorClassForClass(
+      character.class,
+      abilities,
+      character.armorCategory,
+      character.hasShield,
+    );
+
     CharacterState.updateCharacter({
       level: newLevel,
       abilities,
       hitPoints,
+      armorClass,
     });
 
     this.showSystemMessage(
@@ -3716,9 +3958,23 @@ const App = (window.App = {
       abilities[ability] += race.abilityBonuses[ability];
     });
 
+    // Infer a coarse armor loadout from class equipment using the shared
+    // helpers on KeyboardNav (where armor logic lives).
+    const { armorCategory, hasShield } = KeyboardNav.inferArmorLoadoutForClass(
+      cls.id,
+    );
+
     // Calculate HP for level 1
     const conMod = Utils.abilityModifier(abilities.con);
     const hitPoints = cls.hitDie + conMod;
+
+    // Calculate a default Armor Class based on class + abilities + armor
+    const armorClass = KeyboardNav.calculateArmorClassForClass(
+      cls.id,
+      abilities,
+      armorCategory,
+      hasShield,
+    );
 
     // Try to auto-generate a name
     let name = '';
@@ -3765,6 +4021,9 @@ const App = (window.App = {
       baseAbilities: { ...abilities },
       abilities,
       hitPoints,
+      armorClass,
+      armorCategory,
+      hasShield,
       name,
       // Apply background benefits
       skillProficiencies: background.skillProficiencies || [],

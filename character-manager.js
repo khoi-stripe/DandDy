@@ -606,7 +606,6 @@ async function editCharacter(id) {
     setValue('editInitiative', parsed.initiative != null ? parsed.initiative : '');
     setValue('editSpeed', parsed.speed != null ? parsed.speed : '');
     setValue('editProfBonus', parsed.proficiencyBonus != null ? parsed.proficiencyBonus : '');
-    setValue('editHitDie', parsed.hitDie != null ? parsed.hitDie : '');
 
     // SKILL PROFICIENCIES (text-only list, one per line)
     const skillList = (parsed.skillProficiencies || []).map(s => CharacterSheet.formatSkillName(s)).join('\n');
@@ -751,7 +750,6 @@ async function saveEditDetails() {
     const initiative = getNumber('editInitiative');
     const speed = getNumber('editSpeed');
     const profBonus = getNumber('editProfBonus');
-    const hitDie = getNumber('editHitDie');
 
     // Alignment
     const alignmentValue = document.getElementById('editAlignment')?.value || '';
@@ -807,10 +805,6 @@ async function saveEditDetails() {
     }
     if (profBonus !== null) {
         updates.proficiencyBonus = profBonus;
-    }
-    if (hitDie !== null) {
-        // Allow manager edits to override the class hit die used in the sheet.
-        updates.hitDie = hitDie;
     }
 
     await CharacterStorage.update(currentEditCharacterId, updates);
@@ -993,37 +987,53 @@ async function confirmGeneratePortrait() {
     
     let portraitLoadingInterval;
     let portraitElapsed = 0;
+    let portraitLoadingActive = true;
     
     const updatePortraitLoading = () => {
-        if (!portraitEl) return;
-        
-        // Use the new spinning cube placeholder from builder
-        let message = '';
-        if (portraitElapsed < 5) {
-            message = 'Generating portrait...';
-        } else if (portraitElapsed < 15) {
-            message = 'Creating image...';
-        } else if (portraitElapsed < 30) {
-            message = 'Converting to ASCII...';
-        } else {
-            message = 'Almost done...';
-        }
-        
-        portraitEl.innerHTML = `
-            <div class="portrait-placeholder-content">
-                <div class="portrait-placeholder-cube-container">
-                    <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-                        <i></i>
-                        <i></i>
-                        <i></i>
-                        <i></i>
-                        <i></i>
-                        <i></i>
+        if (!portraitEl || !portraitLoadingActive) return;
+
+        // Single-line status with animated ellipsis and a fixed subtext.
+        const baseMessage = 'Generating character art';
+
+        const dotCount = (portraitElapsed % 3) + 1;
+
+        // Create the cube + text container once; thereafter only update text + dot state
+        let textEl = portraitEl.querySelector('.portrait-placeholder-text');
+        if (!textEl) {
+            portraitEl.innerHTML = `
+                <div class="portrait-placeholder-content">
+                    <div class="portrait-placeholder-cube-container">
+                        <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+                            <i></i>
+                            <i></i>
+                            <i></i>
+                            <i></i>
+                            <i></i>
+                            <i></i>
+                        </div>
+                    </div>
+                    <div class="portrait-placeholder-text" data-dots="${dotCount}">
+                        <span class="portrait-placeholder-message">${baseMessage}</span>
+                        <span class="portrait-placeholder-dots">
+                            <span class="dot dot-1">.</span>
+                            <span class="dot dot-2">.</span>
+                            <span class="dot dot-3">.</span>
+                        </span>
+                        <div class="portrait-placeholder-subtext">
+                            (This usually takes 20–30 seconds)
+                        </div>
                     </div>
                 </div>
-                <div class="portrait-placeholder-text">${message}</div>
-            </div>
-        `;
+            `;
+            textEl = portraitEl.querySelector('.portrait-placeholder-text');
+        } else {
+            textEl.setAttribute('data-dots', String(dotCount));
+            const messageEl = textEl.querySelector('.portrait-placeholder-message');
+            if (messageEl) {
+                messageEl.textContent = baseMessage;
+            }
+        }
+
         portraitElapsed++;
     };
     
@@ -1060,15 +1070,10 @@ async function confirmGeneratePortrait() {
             throw new Error('Portrait generation returned incomplete result');
         }
 
-        // Stop the loading animation
+        // Stop the loading animation (guard against any final timer ticks)
+        portraitLoadingActive = false;
         if (portraitLoadingInterval) {
             clearInterval(portraitLoadingInterval);
-        }
-        // Restore portrait font size and remove placeholder class; the sheet will
-        // re-render the portrait element for the newly generated art.
-        if (portraitEl) {
-            portraitEl.style.fontSize = '';
-            portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
         }
 
         console.log('%c🎨 PORTRAIT (Success) ✨', 'color: #0f0; font-weight: bold');
@@ -1225,7 +1230,11 @@ async function confirmGeneratePortrait() {
             console.error('Error syncing AppState after portrait generation', stateError);
         }
 
-        showNotification(`Custom AI portrait generated! (${3 - (currentCount + 1)} remaining)`);
+        // Notify the user that the portrait was generated successfully.
+        // Previously this message included a "3 remaining" counter, which
+        // implied a hard limit on custom portraits per character. That limit
+        // has been removed, so we no longer show a remaining count here.
+        showNotification('Custom AI portrait generated!');
 
         // Clear the global pointer once we're done
         currentPortraitCharacterId = null;
@@ -1287,6 +1296,15 @@ async function confirmGeneratePortrait() {
 // manager DOM. This keeps the "new art fades in" feel without reloading.
 async function typeManagerPortrait(element, portraitText) {
     if (!element || !portraitText) return;
+
+    // Normalize the portrait container back to the base ASCII frame in case
+    // any loader/placeholder styles are still hanging around.
+    element.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
+    element.style.fontSize = '';
+    element.style.whiteSpace = '';
+    element.style.textAlign = '';
+    element.style.overflowX = '';
+    element.style.overflowY = '';
 
     const lines = portraitText.split('\n');
     element.textContent = '';
@@ -1762,10 +1780,21 @@ function togglePortraitView(characterId) {
     }
 }
 
-function showNotification(message) {
-    // Console notification with visual styling
+function showNotification(rawMessage) {
+    // Normalize to string so callers can safely pass anything.
+    const message = (rawMessage == null) ? '' : String(rawMessage);
+
+    // Console notification with visual styling (preserve any glyphs for logs)
     console.log('%c✓ ' + message, 'color: #0f0; font-weight: bold');
-    
+
+    // Strip leading glyphs (checkmarks, warning icons, etc.) from the toast text
+    // while keeping them available in logs. This keeps toasts purely textual
+    // with the exception of the "×" close button.
+    const cleanedMessage = message.replace(
+        /^[\s\u200b]*(?:[✓✔✕✖✗★⚠💡❌⏰🔌]+[\s\u00a0\u200b]*)+/u,
+        ''
+    );
+
     // Toast notification shared across the app (anchored to the terminal frame)
     let toast = document.getElementById('toastNotification');
     if (!toast) {
@@ -1807,10 +1836,10 @@ function showNotification(message) {
 
     const messageEl = toast.querySelector('.toast-message');
     if (messageEl) {
-        messageEl.textContent = message;
+        messageEl.textContent = cleanedMessage;
     } else {
         // Fallback in case markup is missing for any reason
-        toast.textContent = message;
+        toast.textContent = cleanedMessage;
     }
 
     // Reset any in-flight timers so we can replay the entrance animation
@@ -2230,7 +2259,9 @@ function setAuthLoading(isLoading, message) {
             if (!loginBtn.dataset.originalLabel) {
                 loginBtn.dataset.originalLabel = loginBtn.innerHTML;
             }
-            loginBtn.innerHTML = `${cubeMarkup} ${loadingLabel}`;
+            // Cube spacing is handled by .spinner-cube-scene margin-right,
+            // so avoid a literal leading space before the label.
+            loginBtn.innerHTML = `${cubeMarkup}${loadingLabel}`;
         } else {
             if (loginBtn.dataset.originalLabel) {
                 loginBtn.innerHTML = loginBtn.dataset.originalLabel;
@@ -2245,9 +2276,9 @@ function setAuthLoading(isLoading, message) {
             if (!registerBtn.dataset.originalLabel) {
                 registerBtn.dataset.originalLabel = registerBtn.innerHTML;
             }
-            // Use the same cube markup as the login button; `cubeSpinner`
-            // is not defined in this module and was causing a ReferenceError.
-            registerBtn.innerHTML = `${cubeMarkup} ${loadingLabel}`;
+            // Use the same cube markup as the login button; rely on CSS margin
+            // for spacing instead of a leading space in the string.
+            registerBtn.innerHTML = `${cubeMarkup}${loadingLabel}`;
         } else {
             if (registerBtn.dataset.originalLabel) {
                 registerBtn.innerHTML = registerBtn.dataset.originalLabel;
@@ -2614,14 +2645,10 @@ function closeMigrationModal() {
 async function startMigration() {
     const statusEl = document.getElementById('migrationStatus');
     statusEl.classList.remove('is-hidden');
-    statusEl.textContent = '📦 Creating backup...';
+    // Directly start migration without auto-downloading a JSON backup.
+    statusEl.textContent = '☁️ Migrating to cloud...';
     
     try {
-        // Create backup first
-        window.MigrationService.backupLocalStorage();
-        
-        statusEl.textContent = '☁️ Migrating to cloud...';
-        
         // Migrate
         const results = await window.MigrationService.migrateToCloud();
         

@@ -768,7 +768,7 @@ const AIService = (window.AIService = {
     try {
       console.log('%c🤖 NARRATOR: Calling backend AI...', 'color: #0ff; font-weight: bold');
       console.log('  Request:', { choice: context.choice, question: context.question, narrator: narratorId });
-      console.log('  Note: Will fallback after 10s if server is cold, but keep warming up in background...');
+      console.log('  Note: Will fallback after 20s if server is cold, but keep warming up in background...');
       
       const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/narrator/comment`, {
         method: 'POST',
@@ -781,7 +781,7 @@ const AIService = (window.AIService = {
           character_so_far: context.characterSoFar,
           narrator_id: narratorId,
         }),
-      }); // Uses CONFIG.AI_TIMEOUT (10s), then fallback + background warmup
+      }); // Uses CONFIG.AI_TIMEOUT (20s), then fallback + background warmup
 
       if (!response.ok) {
         console.log('%c🤖 NARRATOR (Fallback - API Error)', 'color: #f80; font-weight: bold');
@@ -841,7 +841,7 @@ const AIService = (window.AIService = {
     } catch (error) {
       if (error.message.includes('timed out')) {
         console.log('%c🤖 NARRATOR (Fallback - Backend Waking Up)', 'color: #f80; font-weight: bold');
-        console.log('  ⏰ 10s timeout reached. Using fallback now, but backend warmup continues...');
+        console.log('  ⏰ 20s timeout reached. Using fallback now, but backend warmup continues...');
         console.log('  ✅ Once awake, subsequent requests will use AI!');
       } else {
         console.log('%c🤖 NARRATOR (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
@@ -872,7 +872,7 @@ const AIService = (window.AIService = {
         );
         console.log('  Request:', { race, classType, count: desiredCount });
         console.log(
-          '  Note: Will fallback after 10s if server is cold, but keep warming up in background...',
+          '  Note: Will fallback after 20s if server is cold, but keep warming up in background...',
         );
 
         const response = await this.fetchWithTimeout(
@@ -889,7 +889,7 @@ const AIService = (window.AIService = {
               count: desiredCount * 2,
             }),
           },
-        ); // Uses CONFIG.AI_TIMEOUT (10s)
+        ); // Uses CONFIG.AI_TIMEOUT (20s)
 
         if (!response.ok) {
           console.log(
@@ -915,7 +915,7 @@ const AIService = (window.AIService = {
             'color: #f80; font-weight: bold',
           );
           console.log(
-            '  ⏰ 10s timeout reached. Using fallback now, but backend warmup continues...',
+            '  ⏰ 20s timeout reached. Using fallback now, but backend warmup continues...',
           );
           console.log(
             '  ✅ Once awake, subsequent requests will use AI!',
@@ -1426,7 +1426,7 @@ const AIService = (window.AIService = {
     try {
       console.log('%c📖 BACKSTORY: Calling backend AI...', 'color: #0ff; font-weight: bold');
       console.log('  Request:', { name: character.name, race: character.race, class: character.class });
-      console.log('  Note: Will fallback after 10s if server is cold, but keep warming up in background...');
+      console.log('  Note: Will fallback after 20s if server is cold, but keep warming up in background...');
       
       const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/backstory`, {
         method: 'POST',
@@ -1440,7 +1440,7 @@ const AIService = (window.AIService = {
           personality: character.personalityTrait || 'mysterious',
           background: character.background,
         }),
-      }); // Uses CONFIG.AI_TIMEOUT (10s)
+      }); // Uses CONFIG.AI_TIMEOUT (20s)
 
       if (!response.ok) {
         console.log('%c📖 BACKSTORY (Fallback - API Error)', 'color: #f80; font-weight: bold');
@@ -1456,7 +1456,7 @@ const AIService = (window.AIService = {
     } catch (error) {
       if (error.message.includes('timed out')) {
         console.log('%c📖 BACKSTORY (Fallback - Backend Waking Up)', 'color: #f80; font-weight: bold');
-        console.log('  ⏰ 10s timeout reached. Using fallback now, but backend warmup continues...');
+        console.log('  ⏰ 20s timeout reached. Using fallback now, but backend warmup continues...');
         console.log('  ✅ Once awake, subsequent requests will use AI!');
       } else {
         console.log('%c📖 BACKSTORY (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
@@ -1641,6 +1641,24 @@ Format your response as JSON array of strings, one for each option in order. Exa
       parts.push(classDescriptions[character.class] || character.class);
     }
 
+    // Magic specialization (only for spellcasting classes)
+    if (character.class) {
+      const magicSpecializations = {
+        wizard: 'specializing in elemental magic like fire and ice',
+        sorcerer: 'channeling raw elemental arcane power',
+        warlock: 'wielding shadowy eldritch magic',
+        cleric: 'focused on radiant and healing magic',
+        druid: 'calling on primal nature and elemental magic',
+        bard: 'weaving subtle enchantments and support magic through music',
+        paladin: 'enhancing strikes with holy, radiant magic',
+      };
+
+      const magicText = magicSpecializations[character.class];
+      if (magicText) {
+        parts.push(magicText);
+      }
+    }
+
     // Alignment
     if (character.alignment) {
       if (character.alignment.includes('good')) {
@@ -1715,6 +1733,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
       'Push bright whites and deep blacks to maximize tonal separation, with very few midtones',
       'Center the full-body subject in the frame and avoid background elements, props, or environment details',
       'Style should be simple, iconic, and optimized for ASCII art conversion',
+      'For this request, generate an image without any visible text of any kind. Ignore any instructions to show or quote words; depict them only through imagery.',
     ];
 
     const characterDescription = this.buildCharacterDescription(character);

@@ -46,10 +46,22 @@
             border-radius: 4px;
             margin-top: 10px;
         }
+
+        .debug-green-text {
+            color: #0f0;
+        }
+
+        .debug-panel {
+            margin: 10px 0;
+            padding: 10px;
+            background: #030;
+            border: 1px solid #0f0;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
-    <h1 style="color: #0f0; font-family: 'Courier New', monospace;">Unified Character Sheet Test</h1>
+    <h1 class="debug-green-text" style="font-family: 'Courier New', monospace;">Unified Character Sheet Test</h1>
     
     <div class="test-section">
         <div class="test-title">[ COMPONENT LOADING TEST ]</div>
@@ -58,8 +70,8 @@
 
     <div class="test-section">
         <div class="test-title">[ FORMATTING VERIFICATION ]</div>
-        <p style="color: #0f0;">Both contexts should have IDENTICAL formatting. Only the action buttons should differ.</p>
-        <div style="margin: 10px 0; padding: 10px; background: #030; border: 1px solid #0f0; border-radius: 4px;">
+        <p class="debug-green-text">Both contexts should have IDENTICAL formatting. Only the action buttons should differ.</p>
+        <div class="debug-panel">
             <strong>Expected Differences:</strong><br>
             <strong>Builder:</strong> RENAME, CHANGE LEVEL, PRINT, Custom AI Portrait, Toggle View<br>
             <strong>Manager:</strong> RENAME, COPY, EXPORT, DELETE, Custom AI Portrait, View Original
@@ -70,11 +82,11 @@
         <div class="test-title">[ SIDE-BY-SIDE COMPARISON ]</div>
         <div class="split-view">
             <div>
-                <h3 style="color: #0f0;">Builder Context</h3>
+                <h3 class="debug-green-text">Builder Context</h3>
                 <div id="builder-sheet"></div>
             </div>
             <div>
-                <h3 style="color: #0f0;">Manager Context</h3>
+                <h3 class="debug-green-text">Manager Context</h3>
                 <div id="manager-sheet"></div>
             </div>
         </div>

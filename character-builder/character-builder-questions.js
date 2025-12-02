@@ -44,6 +44,32 @@ const QUESTIONS = (window.QUESTIONS = [
       { text: 'Just bored, honestly', value: 'bored', trait: 'casual' },
     ],
     aiPromptContext: 'player motivation for adventuring',
+    next: 'playstyle',
+  },
+
+  {
+    id: 'playstyle',
+    type: 'choice',
+    text: 'What kind of playstyle sounds most fun to you?',
+    options: [
+      {
+        text: 'Sneaky and tactical',
+        value: 'sneaky',
+      },
+      {
+        text: 'Tanky and hard to kill',
+        value: 'tanky',
+      },
+      {
+        text: 'Social and talkative',
+        value: 'social',
+      },
+      {
+        text: 'Blasting things from the back line',
+        value: 'blaster',
+      },
+    ],
+    aiPromptContext: 'player preferred combat and roleplay playstyle',
     next: 'physicality',
   },
 
@@ -181,7 +207,7 @@ const QUESTIONS = (window.QUESTIONS = [
       const answers = state.answers;
       const suggestions = [];
 
-      // Simple logic to suggest classes based on previous answers
+      // Physicality preferences
       if (answers.physicality === 'strong') {
         suggestions.push('fighter', 'barbarian', 'paladin');
       }
@@ -191,15 +217,41 @@ const QUESTIONS = (window.QUESTIONS = [
       if (answers.physicality === 'mystical') {
         suggestions.push('wizard', 'sorcerer', 'warlock');
       }
+
+      // Social tendencies
       if (answers.social === 'charismatic') {
-        suggestions.push('bard', 'paladin');
+        suggestions.push('bard', 'paladin', 'warlock');
       }
+
+      // Playstyle preferences (sneaky / tanky / social / blaster)
+      if (answers.playstyle === 'sneaky') {
+        suggestions.push('rogue', 'ranger', 'monk');
+      }
+      if (answers.playstyle === 'tanky') {
+        suggestions.push('barbarian', 'fighter', 'paladin');
+      }
+      if (answers.playstyle === 'social') {
+        suggestions.push('bard', 'paladin', 'warlock');
+      }
+      if (answers.playstyle === 'blaster') {
+        suggestions.push('wizard', 'sorcerer', 'warlock');
+      }
+
+      // If we collected multiple ideas, bias toward the ones that appear more often
+      const counts = {};
+      suggestions.forEach((cls) => {
+        counts[cls] = (counts[cls] || 0) + 1;
+      });
+      const ranked = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([cls]) => cls);
+
+      const finalSuggestions =
+        ranked.length > 0 ? ranked.slice(0, 3) : ['fighter', 'wizard', 'rogue'];
 
       return {
         message: 'Given your choices, might I suggest...',
-        suggestions: suggestions.length
-          ? suggestions.slice(0, 3)
-          : ['fighter', 'wizard', 'rogue'],
+        suggestions: finalSuggestions,
       };
     },
     next: 'class-choice',

@@ -378,7 +378,7 @@
                         </button>
                     </div>
                 </div>
-                <select id="editAlignment" class="terminal-select" style="display: none;">
+                <select id="editAlignment" class="terminal-select is-hidden">
                     <option value="">Select Alignment</option>
                     <option value="lg">Lawful Good</option>
                     <option value="ng">Neutral Good</option>
@@ -420,10 +420,6 @@
                     <label class="terminal-text-small">
                         Prof Bonus
                         <input type="number" id="editProfBonus" class="terminal-input" inputmode="numeric">
-                    </label>
-                    <label class="terminal-text-small">
-                        Hit Die
-                        <input type="number" id="editHitDie" class="terminal-input" min="1" inputmode="numeric">
                     </label>
                 </div>
 
@@ -556,7 +552,7 @@
                         <button type="button" class="password-toggle-btn" data-target="passwordResetNewPassword" aria-label="Show password">SHOW</button>
                     </div>
                 </div>
-                <div id="passwordResetMessage" class="terminal-text-small terminal-text-dim" style="margin-top: 8px;"></div>
+                <div id="passwordResetMessage" class="terminal-text-small terminal-text-dim mt-sm"></div>
             </div>
             <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="closePasswordResetModal()">CANCEL</button>
@@ -576,7 +572,7 @@
             <div class="modal-body">
                 <p class="terminal-text">You have <strong id="migrationCount">0</strong> character(s) stored locally.</p>
                 <p class="terminal-text">Would you like to migrate them to cloud storage? This will sync your characters across devices.</p>
-                <p class="terminal-text-small terminal-text-dim">Note: A backup will be automatically downloaded before migration.</p>
+                <p class="terminal-text-small terminal-text-dim">Note: After successful migration, your local copies will be cleared.</p>
                 <div id="migrationStatus" class="terminal-text is-hidden"></div>
             </div>
             <div class="modal-footer modal-footer-centered">

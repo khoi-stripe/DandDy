@@ -275,6 +275,24 @@ const SecureAIService = (window.SecureAIService = {
       parts.push(classDescriptions[character.class] || character.class);
     }
 
+    // Magic specialization (only for spellcasting classes)
+    if (character.class) {
+      const magicSpecializations = {
+        wizard: 'specializing in elemental magic like fire and ice',
+        sorcerer: 'channeling raw elemental arcane power',
+        warlock: 'wielding shadowy eldritch magic',
+        cleric: 'focused on radiant and healing magic',
+        druid: 'calling on primal nature and elemental magic',
+        bard: 'weaving subtle enchantments and support magic through music',
+        paladin: 'enhancing strikes with holy, radiant magic',
+      };
+
+      const magicText = magicSpecializations[character.class];
+      if (magicText) {
+        parts.push(magicText);
+      }
+    }
+
     // Alignment
     if (character.alignment) {
       if (character.alignment.includes('good')) {
@@ -299,6 +317,7 @@ const SecureAIService = (window.SecureAIService = {
       'Push bright whites and deep blacks to maximize tonal separation, with very few midtones',
       'Center the full-body subject in the frame and avoid background elements, props, or environment details',
       'Style should be simple, iconic, and optimized for ASCII art conversion',
+      'For this request, generate an image without any visible text of any kind. Ignore any instructions to show or quote words; depict them only through imagery.',
     ];
 
     const characterDescription = this.buildCharacterDescription(character);

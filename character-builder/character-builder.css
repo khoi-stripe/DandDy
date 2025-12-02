@@ -141,9 +141,10 @@
 .recommendations-divider {
   width: 100%;
   border: none;
-  border-top: 2px dashed var(--terminal-accent);
+  /* Subtle, dim divider between recommended and other options */
+  border-top: 1px solid var(--terminal-accent-dim);
   margin: var(--spacing-sm) 0 var(--spacing-md);
-  opacity: 1;
+  opacity: 0.5;
 }
 
 /* Confirmation Overlay - marker class used with prompt-modal-overlay (no additional styles needed) */

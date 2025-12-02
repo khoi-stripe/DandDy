@@ -30,10 +30,18 @@
         .portrait-context {
             font-size: var(--font-size-small);
         }
+
+        .line-height-tight {
+            line-height: 1;
+        }
+
+        .line-height-relaxed {
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
-    <h1 style="color: var(--terminal-accent);">Cube Comparison</h1>
+    <h1 class="terminal-text-accent">Cube Comparison</h1>
 
     <div class="test-section">
         <div class="test-label">1. Base context (16px):</div>
@@ -94,7 +102,7 @@
 
     <div class="test-section">
         <div class="test-label">4. With line-height: 1 (tight):</div>
-        <div style="line-height: 1;">
+        <div class="line-height-tight">
             <span class="spinner-cube-scene">
                 <span class="spinner-cube-tilt">
                     <span class="spinner-cube">
@@ -112,7 +120,7 @@
 
     <div class="test-section">
         <div class="test-label">5. With line-height: 1.6 (default):</div>
-        <div style="line-height: 1.6;">
+        <div class="line-height-relaxed">
             <span class="spinner-cube-scene">
                 <span class="spinner-cube-tilt">
                     <span class="spinner-cube">

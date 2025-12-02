@@ -94,6 +94,15 @@
             margin: 0;
             font-size: var(--font-size-small);
         }
+
+        .demo-indented-list {
+            margin-left: var(--spacing-lg);
+            margin-top: var(--spacing-sm);
+        }
+
+        .demo-strong {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body class="theme-green">
@@ -140,16 +149,16 @@
                 <div class="demo-section">
                     <h2>How It Works</h2>
                     <p class="terminal-text-dim">All colors are derived from HSL base values:</p>
-                    <ul style="color: var(--terminal-dim); margin-left: var(--spacing-lg); margin-top: var(--spacing-sm);">
+                    <ul class="demo-indented-list terminal-text-dim">
                         <li><code>--theme-terminal-h</code>: Terminal hue (120 = green)</li>
                         <li><code>--theme-teal-h</code>: Sheet hue (181 = teal)</li>
                         <li><code>--theme-yellow-h</code>: Modal hue (48 = yellow)</li>
                     </ul>
                     <br>
-                    <p class="terminal-text-accent" style="font-weight: bold;">
+                    <p class="terminal-text-accent demo-strong">
                         Click the theme buttons above to see instant color changes!
                     </p>
-                    <p class="terminal-text-dim" style="margin-top: var(--spacing-sm);">
+                    <p class="terminal-text-dim mt-sm">
                         Notice how ALL UI elements (50+ colors) update simultaneously because they're all derived from the same HSL foundation.
                     </p>
                 </div>

@@ -97,6 +97,49 @@
   white-space: normal;
 }
 
+/* Keep animated ellipsis from shifting the centered text by using a
+   fixed-width dot wrapper and toggling visibility instead of text length. */
+.portrait-placeholder-message {
+  display: inline-block;
+}
+
+.portrait-placeholder-dots {
+  display: inline-flex;
+  width: 1.8em; /* Enough space for three monospace dots */
+  justify-content: flex-start;
+}
+
+.portrait-placeholder-dots .dot {
+  display: inline-block;
+  width: 0.6em;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 120ms linear;
+}
+
+.portrait-placeholder-text[data-dots="1"] .dot-1 {
+  opacity: 1;
+}
+
+.portrait-placeholder-text[data-dots="2"] .dot-1,
+.portrait-placeholder-text[data-dots="2"] .dot-2 {
+  opacity: 1;
+}
+
+.portrait-placeholder-text[data-dots="3"] .dot-1,
+.portrait-placeholder-text[data-dots="3"] .dot-2,
+.portrait-placeholder-text[data-dots="3"] .dot-3 {
+  opacity: 1;
+}
+
+.portrait-placeholder-subtext {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--terminal-dim);
+}
+
 /* 80px spinning cube for placeholder */
 .portrait-placeholder-cube-container {
   perspective: 200px;

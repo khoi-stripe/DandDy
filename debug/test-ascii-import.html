@@ -58,6 +58,18 @@
             font-family: monospace;
             padding: 10px;
         }
+        .section-spacer {
+            margin-top: 20px;
+        }
+        .link-cyan {
+            color: #0ff;
+        }
+        .text-warning {
+            color: #ff0;
+        }
+        .text-error {
+            color: #f00;
+        }
     </style>
 </head>
 <body>
@@ -153,10 +165,10 @@
                 
                 if (asciiPortrait) {
                     display.innerHTML = `
-                        <div style="margin-top: 20px;">
+                        <div class="section-spacer">
                             <h3>✅ Successfully loaded: ${char.name || 'Unnamed Character'}</h3>
                             <p>ASCII Art Length: ${asciiPortrait.length} characters</p>
-                            ${originalPortraitUrl ? `<p>Original Portrait URL: <a href="${originalPortraitUrl}" target="_blank" style="color: #0ff;">${originalPortraitUrl.substring(0, 50)}...</a></p>` : ''}
+                            ${originalPortraitUrl ? `<p>Original Portrait URL: <a href="${originalPortraitUrl}" target="_blank" class="link-cyan">${originalPortraitUrl.substring(0, 50)}...</a></p>` : ''}
                             <div class="portrait-container">
                                 <div class="ascii-portrait" id="test-portrait"></div>
                             </div>
@@ -166,7 +178,7 @@
                     document.getElementById('test-portrait').textContent = asciiPortrait;
                 } else {
                     display.innerHTML = `
-                        <div style="margin-top: 20px; color: #ff0;">
+                        <div class="section-spacer text-warning">
                             <h3>⚠️ Character loaded but no ASCII portrait found</h3>
                             <p>Character: ${char.name || 'Unnamed Character'}</p>
                             <p>This is expected for characters exported before ASCII art was implemented.</p>
@@ -175,7 +187,7 @@
                 }
             } catch (error) {
                 display.innerHTML = `
-                    <div style="margin-top: 20px; color: #f00;">
+                    <div class="section-spacer text-error">
                         <h3>❌ Error loading character</h3>
                         <p>${error.message}</p>
                     </div>

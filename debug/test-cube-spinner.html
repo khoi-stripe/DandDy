@@ -20,10 +20,57 @@
             margin-bottom: 10px;
             font-weight: bold;
         }
+
+        .raw-cube-shell {
+            perspective: 24px;
+            display: inline-block;
+            width: 36px;
+            height: 36px;
+        }
+
+        .raw-cube {
+            width: 12px;
+            height: 12px;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: spinner-cube-spin 1s linear infinite;
+        }
+
+        .raw-cube-face {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border: 0.5px solid var(--terminal-accent);
+            background: rgba(0, 255, 255, 0.05);
+        }
+
+        .raw-cube-face-front {
+            transform: translateZ(6px);
+        }
+
+        .raw-cube-face-back {
+            transform: rotateY(180deg) translateZ(6px);
+        }
+
+        .raw-cube-face-right {
+            transform: rotateY(90deg) translateZ(6px);
+        }
+
+        .raw-cube-face-left {
+            transform: rotateY(-90deg) translateZ(6px);
+        }
+
+        .raw-cube-face-top {
+            transform: rotateX(90deg) translateZ(6px);
+        }
+
+        .raw-cube-face-bottom {
+            transform: rotateX(-90deg) translateZ(6px);
+        }
     </style>
 </head>
 <body>
-    <h1 style="color: var(--terminal-accent);">Cube Spinner Tests</h1>
+    <h1 class="terminal-text-accent">Cube Spinner Tests</h1>
 
     <div class="test-row">
         <div class="test-label">1. Inline with text (like button loading):</div>
@@ -90,14 +137,14 @@
 
     <div class="test-row">
         <div class="test-label">5. Debug: Raw cube (no scene wrapper):</div>
-        <div style="perspective: 24px; display: inline-block; width: 36px; height: 36px;">
-            <div style="width: 12px; height: 12px; position: relative; transform-style: preserve-3d; animation: spinner-cube-spin 1s linear infinite;">
-                <div style="position: absolute; width: 12px; height: 12px; border: 0.5px solid var(--terminal-accent); background: rgba(0,255,255,0.05); transform: translateZ(6px);"></div>
-                <div style="position: absolute; width: 12px; height: 12px; border: 0.5px solid var(--terminal-accent); background: rgba(0,255,255,0.05); transform: rotateY(180deg) translateZ(6px);"></div>
-                <div style="position: absolute; width: 12px; height: 12px; border: 0.5px solid var(--terminal-accent); background: rgba(0,255,255,0.05); transform: rotateY(90deg) translateZ(6px);"></div>
-                <div style="position: absolute; width: 12px; height: 12px; border: 0.5px solid var(--terminal-accent); background: rgba(0,255,255,0.05); transform: rotateY(-90deg) translateZ(6px);"></div>
-                <div style="position: absolute; width: 12px; height: 12px; border: 0.5px solid var(--terminal-accent); background: rgba(0,255,255,0.05); transform: rotateX(90deg) translateZ(6px);"></div>
-                <div style="position: absolute; width: 12px; height: 12px; border: 0.5px solid var(--terminal-accent); background: rgba(0,255,255,0.05); transform: rotateX(-90deg) translateZ(6px);"></div>
+        <div class="raw-cube-shell">
+            <div class="raw-cube">
+                <div class="raw-cube-face raw-cube-face-front"></div>
+                <div class="raw-cube-face raw-cube-face-back"></div>
+                <div class="raw-cube-face raw-cube-face-right"></div>
+                <div class="raw-cube-face raw-cube-face-left"></div>
+                <div class="raw-cube-face raw-cube-face-top"></div>
+                <div class="raw-cube-face raw-cube-face-bottom"></div>
             </div>
         </div>
         Test text

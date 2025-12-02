@@ -572,11 +572,11 @@
 
       if (!hasVersions) {
         if (hasCustomPortraitWithoutHistory) {
-          return `<div class="terminal-text-small terminal-text-dim" style="padding: 20px; text-align: center;">
+          return `<div class="terminal-text-small terminal-text-dim portrait-history-callout">
               <p><strong>No portrait history yet.</strong></p>
-              <p style="margin-top: 10px;">This character's portrait was created before the history feature was added.</p>
-              <p style="margin-top: 10px;">Generate a new custom AI portrait to:</p>
-              <ul style="text-align: left; margin: 10px auto; display: inline-block;">
+              <p>This character's portrait was created before the history feature was added.</p>
+              <p>Generate a new custom AI portrait to:</p>
+              <ul class="portrait-history-callout-list">
                 <li>• Save your current portrait as Version 1</li>
                 <li>• Add the new portrait as Version 2</li>
                 <li>• Enable portrait version switching</li>
@@ -584,7 +584,7 @@
             </div>`;
         }
 
-        return `<p class="terminal-text-small terminal-text-dim" style="padding: 20px; text-align: center;">
+        return `<p class="terminal-text-small terminal-text-dim portrait-history-callout">
               No saved portraits yet.<br><br>
               Generate a custom AI portrait to start building a history.
             </p>`;

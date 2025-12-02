@@ -15,7 +15,7 @@ const Components = (window.Components = {
       .map(
         (opt, index) => `
           <button class="button-primary" onclick="App.handleAnswer('${question.id}', ${index})">
-            > ${opt.text}
+            ${opt.text}
           </button>
         `,
       )
@@ -36,7 +36,7 @@ const Components = (window.Components = {
         <div class="question-text">${question.text}</div>
         <input type="text" class="input-field" id="text-input" placeholder="${question.placeholder || 'Type here...'}">
         <button class="button-primary mt-md" onclick="App.handleTextInput('${question.id}')">
-          > CONTINUE
+          CONTINUE
         </button>
       </div>
     `;
@@ -170,8 +170,7 @@ const Components = (window.Components = {
                     </div>
                     <select
                       id="narrator-select"
-                      class="terminal-select settings-select"
-                      style="display: none;"
+                      class="terminal-select settings-select hidden"
                     >
                       ${narratorsList
                         .map((narrator) => {
@@ -232,8 +231,7 @@ const Components = (window.Components = {
                     </div>
                     <select
                       id="text-speed-select"
-                      class="terminal-select settings-select"
-                      style="display: none;"
+                      class="terminal-select settings-select hidden"
                     >
                       ${textSpeedOptions
                         .map(
