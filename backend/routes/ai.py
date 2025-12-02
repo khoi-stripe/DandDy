@@ -129,7 +129,15 @@ def _call_openai_with_logging(kind: str, fn, *, model: str | None = None, contex
     """
     start = time.time()
     try:
-        response = fn(**kwargs)
+        # IMPORTANT: `model` is used both for logging and for the actual OpenAI
+        # call. Because it's a named parameter on this wrapper (for logging),
+        # it does *not* automatically flow through `**kwargs`, so we must pass
+        # it explicitly when present. Otherwise OpenAI will raise
+        # "Missing required arguments; Expected either ('messages' and 'model')..."
+        if model is not None:
+            response = fn(model=model, **kwargs)
+        else:
+            response = fn(**kwargs)
         duration_ms = int((time.time() - start) * 1000)
 
         headers = _extract_openai_headers(response)
@@ -513,8 +521,30 @@ async def generate_image(
             "revised_prompt": revised_prompt,
         }
     
-    except openai.RateLimitError:
-        raise HTTPException(status_code=429, detail="OpenAI rate limit exceeded. Please try again later.")
+    except openai.RateLimitError as e:
+        # Distinguish between normal OpenAI rate limits and upstream
+        # Cloudflare 1015 HTML responses ("You are being rate limited").
+        message = str(e) if e else ""
+        lower_msg = message.lower()
+
+        if (
+            "error 1015" in lower_msg
+            or "you are being rate limited" in lower_msg
+            or "access denied | api.openai.com used cloudflare" in lower_msg
+        ):
+            # This is not something the user can fix by tweaking prompts; it's
+            # Cloudflare temporarily blocking our server IP. Surface a clear,
+            # user-friendly message and a 429 so the frontend can show a
+            # "try again later" UI rather than a generic failure.
+            raise HTTPException(
+                status_code=429,
+                detail="Image service is temporarily rate limited by OpenAI/Cloudflare (Error 1015). Please try again in a few minutes.",
+            )
+
+        raise HTTPException(
+            status_code=429,
+            detail="OpenAI rate limit exceeded. Please try again later.",
+        )
     except openai.BadRequestError as e:
         # Check if this is a safety system rejection
         error_message = str(e)
