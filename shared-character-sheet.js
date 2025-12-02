@@ -856,10 +856,14 @@ const CharacterSheet = (window.CharacterSheet = {
         menu.setAttribute('aria-hidden', 'false');
         triggerEl.setAttribute('aria-expanded', 'true');
 
-        // Focus first option for immediate keyboard navigation
-        const firstOption = menu.querySelector('.selector-option');
-        if (firstOption) {
-          firstOption.focus();
+        // Focus the currently selected option for immediate keyboard navigation.
+        // This prefers any option with aria-selected="true" (e.g. alignment/sort),
+        // and falls back to the first option when none is marked selected.
+        const selectedOption =
+          menu.querySelector('.selector-option[aria-selected="true"]') ||
+          menu.querySelector('.selector-option');
+        if (selectedOption) {
+          selectedOption.focus();
         }
       } else {
         closeShell(shell);
