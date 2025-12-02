@@ -1052,12 +1052,21 @@ async function confirmGeneratePortrait() {
     try {
         // Add rendering instructions to the user's character description
         const renderingInstructions = [
-            'Fantasy D&D character portrait',
-            'Create a high-contrast, grayscale illustration on a pure black background',
-            'Use bold, graphic shapes with thick outlines and minimal fine detail',
-            'The image should have bright highlights and deep shadows to maximize tonal separation',
-            'Center the subject in the frame and avoid background texture',
-            'Style should be simple, iconic, and optimized for ASCII art conversion',
+            'Create a high-contrast black-and-white fantasy illustration',
+            'Use a hybrid style inspired by Frank Frazetta, Mike Mignola, Eduardo Risso, Boris Vallejo, Larry Elmore, and Clyde Caldwell',
+            'Bold, carved chiaroscuro shadows with large black ink shapes and clean white highlights',
+            'Use limited, controlled directional hatching (no more than 25%) only in selected mid-tones',
+            'Absolutely no dense engraving, soft grayscale, or smooth gradients anywhere in the image',
+            'Pure black (#000000) background with no scenery, gradients, or textures',
+            'Emphasize strong, clear silhouette readability optimized for ASCII art conversion with clean edges and minimal noise',
+            'Realistic heroic anatomy with roughly a 1:7 head-to-body ratio and grounded proportions',
+            'Smaller head, longer arms, muscular but not exaggerated; no cartoon, chibi, or caricature proportions',
+            'Dynamic stance with natural weight and gesture appropriate to the character’s class (spellcasting, leaping, brandishing a weapon, etc.)',
+            'Use a 3:4 aspect ratio where the character fills the frame powerfully',
+            'Cloak and cloth flow should add movement without cluttering the silhouette',
+            'Strictly avoid any visible text, symbols, runes, lettering, UI, or markings of any kind',
+            'Avoid flat graphic icon style, over-rendered gradients, busy backgrounds, or painterly/watercolor looks',
+            'Overall mood: classic dark-fantasy ink illustration that feels powerful, dramatic, mythic, and heroic',
         ];
         
         const fullPrompt = [...renderingInstructions, customPrompt].join(', ');

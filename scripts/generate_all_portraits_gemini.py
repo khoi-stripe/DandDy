@@ -71,9 +71,14 @@ class PortraitGenerator:
         """Build a prompt for the character image"""
         parts = []
         
-        # Base style
-        parts.append("Fantasy D&D character portrait in classic fantasy art style")
-        parts.append("high contrast dramatic lighting")
+        # Base style - optimized for ASCII conversion and dark-fantasy ink look
+        parts.append("Create a high-contrast black-and-white fantasy illustration")
+        parts.append("Use a hybrid style inspired by Frank Frazetta, Mike Mignola, Eduardo Risso, Boris Vallejo, Larry Elmore, and Clyde Caldwell")
+        parts.append("Bold, carved chiaroscuro shadows with large black ink shapes and clean white highlights")
+        parts.append("Use limited, controlled directional hatching (no more than 25%) only in selected mid-tones")
+        parts.append("Absolutely no dense engraving, soft grayscale, or smooth gradients anywhere in the image")
+        parts.append("Pure black (#000000) background with no scenery, gradients, or textures")
+        parts.append("Emphasize strong, clear silhouette readability optimized for ASCII art conversion with clean edges and minimal noise")
         
         # Race descriptions
         race_descriptions = {
@@ -92,18 +97,18 @@ class PortraitGenerator:
         # Class descriptions (if provided)
         if class_name:
             class_descriptions = {
-                'fighter': 'wearing heavy armor and holding a sword',
-                'wizard': 'in flowing robes holding a staff with magical aura',
-                'rogue': 'in dark leather armor with daggers',
-                'paladin': 'in shining armor with a holy shield',
-                'barbarian': 'with wild hair wielding a massive axe',
-                'warlock': 'with dark robes and eldritch symbols glowing',
-                'cleric': 'in religious robes with holy symbol',
-                'druid': 'in natural robes with vines and leaves',
-                'bard': 'with musical instrument and colorful clothes',
-                'monk': 'in simple robes in martial stance',
-                'ranger': 'with bow and forest gear',
-                'sorcerer': 'with magical energy swirling around'
+                'fighter': 'wearing heavy armor and holding a sword in a powerful mid-swing battle pose',
+                'wizard': 'in flowing robes, one hand raised casting a spell while gripping a staff with magical aura',
+                'rogue': 'in dark leather armor, low and poised with twin daggers ready to strike',
+                'paladin': 'in shining armor, shield braced and weapon raised in a protective stance',
+                'barbarian': 'with wild hair, muscles tensed, roaring as they swing a massive axe',
+                'warlock': 'in dark robes, one hand extended as if invoking eldritch power and symbols glowing',
+                'cleric': 'in religious robes, holy symbol raised as if channeling radiant power',
+                'druid': 'in natural robes with vines and leaves, staff planted as they call on primal forces',
+                'bard': 'with a musical instrument mid-performance, stance open and charismatic',
+                'monk': 'in simple robes, mid-strike in a focused martial arts stance',
+                'ranger': 'with a drawn bow and forest gear, body twisted slightly as if loosing an arrow',
+                'sorcerer': 'with magical energy swirling around outstretched hands in an active casting pose'
             }
             parts.append(class_descriptions.get(class_name.lower(), f"as a {class_name}"))
         

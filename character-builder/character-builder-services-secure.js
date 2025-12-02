@@ -259,18 +259,18 @@ const SecureAIService = (window.SecureAIService = {
     // Class
     if (character.class) {
       const classDescriptions = {
-        fighter: 'wearing heavy armor and holding a sword',
-        wizard: 'in flowing robes holding a staff',
-        rogue: 'in dark leather armor with daggers',
-        cleric: 'in holy vestments with a sacred symbol',
-        ranger: 'with a bow and forest attire',
-        paladin: 'in shining armor with a holy shield',
-        barbarian: 'with wild hair wielding a massive axe',
-        bard: 'with a lute and colorful clothing',
-        druid: 'with nature-themed robes and wooden staff',
-        monk: 'in simple robes in a martial stance',
-        sorcerer: 'with crackling magical energy',
-        warlock: 'with dark robes and eldritch symbols',
+        fighter: 'wearing heavy armor and holding a sword in a powerful mid-swing battle pose',
+        wizard: 'in flowing robes, one hand raised casting a spell while gripping a staff',
+        rogue: 'in dark leather armor, low and poised with twin daggers ready to strike',
+        cleric: 'in holy vestments, holy symbol raised as if channeling radiant power',
+        ranger: 'with a drawn bow, body twisted slightly as if loosing an arrow',
+        paladin: 'in shining armor, shield braced and weapon raised in a protective stance',
+        barbarian: 'with wild hair, muscles tensed, roaring as they swing a massive weapon',
+        bard: 'with a lute or instrument mid-performance, stance open and charismatic',
+        druid: 'in nature-themed robes, staff planted as they call on primal forces',
+        monk: 'in simple robes, mid-strike in a focused martial arts stance',
+        sorcerer: 'with crackling magical energy swirling around outstretched hands',
+        warlock: 'in dark robes, one hand extended as if invoking eldritch power',
       };
       parts.push(classDescriptions[character.class] || character.class);
     }
@@ -301,23 +301,28 @@ const SecureAIService = (window.SecureAIService = {
         parts.push('with a menacing aura');
       }
     }
-
-    parts.push('full body portrait, fantasy art style, detailed');
-
+  
     return parts.join(', ');
   },
 
   // Build full DALL-E prompt with rendering instructions
   buildPortraitPrompt(character) {
     const renderingInstructions = [
-      'Fantasy D&D character portrait',
-      'The background must be completely solid black (hex #000000) with no gradients, textures, scenery, or lighting details',
-      'Render the character in pure black-and-white, high-contrast grayscale only (no color anywhere in the image)',
-      'Use bold, graphic shapes with thick outlines and minimal fine detail',
-      'Push bright whites and deep blacks to maximize tonal separation, with very few midtones',
-      'Center the full-body subject in the frame and avoid background elements, props, or environment details',
-      'Style should be simple, iconic, and optimized for ASCII art conversion',
-      'For this request, generate an image without any visible text of any kind. Ignore any instructions to show or quote words; depict them only through imagery.',
+      'Create a high-contrast black-and-white fantasy illustration',
+      'Use a hybrid style inspired by Frank Frazetta, Mike Mignola, Eduardo Risso, Boris Vallejo, Larry Elmore, and Clyde Caldwell',
+      'Bold, carved chiaroscuro shadows with large black ink shapes and clean white highlights',
+      'Use limited, controlled directional hatching (no more than 25%) only in selected mid-tones',
+      'Absolutely no dense engraving, soft grayscale, or smooth gradients anywhere in the image',
+      'Pure black (#000000) background with no scenery, gradients, or textures',
+      'Emphasize strong, clear silhouette readability optimized for ASCII art conversion with clean edges and minimal noise',
+      'Realistic heroic anatomy with roughly a 1:7 head-to-body ratio and grounded proportions',
+      'Smaller head, longer arms, muscular but not exaggerated; no cartoon, chibi, or caricature proportions',
+      'Dynamic stance with natural weight and gesture appropriate to the character’s class (spellcasting, leaping, brandishing a weapon, etc.)',
+      'Use a 3:4 aspect ratio where the character fills the frame powerfully',
+      'Cloak and cloth flow should add movement without cluttering the silhouette',
+      'Strictly avoid any visible text, symbols, runes, lettering, UI, or markings of any kind',
+      'Avoid flat graphic icon style, over-rendered gradients, busy backgrounds, or painterly/watercolor looks',
+      'Overall mood: classic dark-fantasy ink illustration that feels powerful, dramatic, mythic, and heroic',
     ];
 
     const characterDescription = this.buildCharacterDescription(character);

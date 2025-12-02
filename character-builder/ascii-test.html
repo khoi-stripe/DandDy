@@ -357,12 +357,13 @@
       const parts = [];
       
       // Style directives optimized for ASCII art conversion
-      parts.push('Fantasy D&D character portrait');
-      parts.push('Create a high-contrast, grayscale illustration on a pure black background');
-      parts.push('Use bold, graphic shapes with thick outlines and minimal fine detail');
-      parts.push('The image should have bright highlights and deep shadows to maximize tonal separation');
-      parts.push('Center the subject in the frame and avoid background texture');
-      parts.push('Style should be simple, iconic, and optimized for ASCII art conversion');
+      parts.push('Create a high-contrast black-and-white fantasy illustration');
+      parts.push('Use a hybrid style inspired by Frank Frazetta, Mike Mignola, Eduardo Risso, Boris Vallejo, Larry Elmore, and Clyde Caldwell');
+      parts.push('Bold, carved chiaroscuro shadows with large black ink shapes and clean white highlights');
+      parts.push('Use limited, controlled directional hatching (no more than 25%) only in selected mid-tones');
+      parts.push('Absolutely no dense engraving, soft grayscale, or smooth gradients anywhere in the image');
+      parts.push('Pure black (#000000) background with no scenery, gradients, or textures');
+      parts.push('Emphasize strong, clear silhouette readability optimized for ASCII art conversion with clean edges and minimal noise');
       
       // Race
       const raceDescriptions = {
@@ -379,12 +380,12 @@
       
       // Class
       const classDescriptions = {
-        fighter: 'wearing heavy armor and holding a sword',
-        wizard: 'in flowing robes holding a staff',
-        rogue: 'in dark leather armor with daggers',
-        paladin: 'in shining armor with a holy shield',
-        barbarian: 'with wild hair wielding a massive axe',
-        warlock: 'with dark robes and eldritch symbols',
+        fighter: 'wearing heavy armor and holding a sword in a powerful mid-swing battle pose',
+        wizard: 'in flowing robes, one hand raised casting a spell while gripping a staff',
+        rogue: 'in dark leather armor, low and poised with twin daggers ready to strike',
+        paladin: 'in shining armor, shield braced and weapon raised in a protective stance',
+        barbarian: 'with wild hair, muscles tensed, roaring as they swing a massive weapon',
+        warlock: 'in dark robes, one hand extended as if invoking eldritch power and eldritch symbols',
       };
       if (character.class) {
         parts.push(classDescriptions[character.class] || character.class);
@@ -398,8 +399,6 @@
           parts.push('with a menacing aura');
         }
       }
-      
-      parts.push('full body portrait, fantasy art style, detailed');
       
       return parts.join(', ');
     }

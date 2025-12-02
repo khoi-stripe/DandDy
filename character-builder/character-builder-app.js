@@ -1262,6 +1262,21 @@ const App = (window.App = {
   _renderPortraitGeneratingLoader(portraitEl) {
     if (!portraitEl) return;
 
+    // Normalize the portrait container into a loading state so the cube + text
+    // layout matches the shared portrait styles in `portraits.css`.
+    // - Remove the placeholder variant (16:9 flex box) used before we have any
+    //   character data so it doesn't distort the loader on subsequent runs.
+    // - Add the loading variant, which loosens white-space/overflow and
+    //   guarantees a minimum height for the spinner + status text.
+    portraitEl.classList.remove('ascii-portrait--placeholder');
+    portraitEl.classList.add('ascii-portrait--loading');
+    // Clear any custom inline sizing overrides from previous renders.
+    portraitEl.style.fontSize = '';
+    portraitEl.style.whiteSpace = '';
+    portraitEl.style.textAlign = '';
+    portraitEl.style.overflowX = '';
+    portraitEl.style.overflowY = '';
+
     portraitEl.innerHTML = `
       <div class="portrait-placeholder-content">
         <div class="portrait-placeholder-cube-container">
@@ -2879,13 +2894,21 @@ const App = (window.App = {
       // Add rendering instructions to the user's character description
       // (hidden system-level guidance for the image model)
       const renderingInstructions = [
-        'Fantasy D&D character portrait',
-        'The background must be completely solid black (hex #000000) with no gradients, textures, scenery, or lighting details',
-        'Render the character in pure black-and-white, high-contrast grayscale only (no color anywhere in the image)',
-        'Use bold, graphic shapes with thick outlines and minimal fine detail',
-        'Push bright whites and deep blacks to maximize tonal separation, with very few midtones',
-        'Center the full-body subject in the frame and avoid background elements, props, or environment details',
-        'Style should be simple, iconic, and optimized for ASCII art conversion',
+        'Create a high-contrast black-and-white fantasy illustration',
+        'Use a hybrid style inspired by Frank Frazetta, Mike Mignola, Eduardo Risso, Boris Vallejo, Larry Elmore, and Clyde Caldwell',
+        'Bold, carved chiaroscuro shadows with large black ink shapes and clean white highlights',
+        'Use limited, controlled directional hatching (no more than 25%) only in selected mid-tones',
+        'Absolutely no dense engraving, soft grayscale, or smooth gradients anywhere in the image',
+        'Pure black (#000000) background with no scenery, gradients, or textures',
+        'Emphasize strong, clear silhouette readability optimized for ASCII art conversion with clean edges and minimal noise',
+        'Realistic heroic anatomy with roughly a 1:7 head-to-body ratio and grounded proportions',
+        'Smaller head, longer arms, muscular but not exaggerated; no cartoon, chibi, or caricature proportions',
+        'Dynamic stance with natural weight and gesture appropriate to the character’s class (spellcasting, leaping, brandishing a weapon, etc.)',
+        'Use a 3:4 aspect ratio where the character fills the frame powerfully',
+        'Cloak and cloth flow should add movement without cluttering the silhouette',
+        'Strictly avoid any visible text, symbols, runes, lettering, UI, or markings of any kind',
+        'Avoid flat graphic icon style, over-rendered gradients, busy backgrounds, or painterly/watercolor looks',
+        'Overall mood: classic dark-fantasy ink illustration that feels powerful, dramatic, mythic, and heroic',
       ];
       
       const fullPrompt = [...renderingInstructions, customPrompt].join(', ');
@@ -4375,9 +4398,11 @@ const App = (window.App = {
         // IMPORTANT: If portrait generation is in progress (in either quick or guided mode),
         // we need to preserve the current portrait HTML (the fast-spinning "Generating..." cube).
         // Otherwise the re-render will replace it with the slow "Waiting..." cube.
-        const isGenerating = !!this._quickCreatePortraitGeneration || !!this._guidedPortraitGenerating;
-        const currentPortraitHTML = isGenerating 
-          ? document.getElementById('character-portrait')?.innerHTML 
+        const isGenerating =
+          !!this._quickCreatePortraitGeneration || !!this._guidedPortraitGenerating;
+        const portraitNode = document.getElementById('character-portrait');
+        const currentPortraitHTML = isGenerating && portraitNode
+          ? portraitNode.innerHTML
           : null;
         
         panel.innerHTML = Components.renderCharacterSheet(
@@ -4392,9 +4417,15 @@ const App = (window.App = {
         const portraitEl = document.getElementById('character-portrait');
         const originalPortraitEl = document.getElementById('original-portrait');
         
-        // Restore the generating state if we captured it
+        // Restore the generating state if we captured it. We also need to
+        // re-apply the loading class so the cube keeps its correct geometry
+        // after the sheet re-renders (otherwise the container may revert to
+        // the placeholder/layout styles and distort the cube on subsequent
+        // generations).
         if (isGenerating && currentPortraitHTML && portraitEl) {
           portraitEl.innerHTML = currentPortraitHTML;
+          portraitEl.classList.remove('ascii-portrait--placeholder');
+          portraitEl.classList.add('ascii-portrait--loading');
         }
 
         if (originalPortraitEl && character.originalPortraitUrl) {
