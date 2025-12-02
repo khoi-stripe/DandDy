@@ -543,6 +543,20 @@ function selectAlignment(value, label) {
     if (labelEl) {
         labelEl.textContent = label;
     }
+    
+    // Update selected state in menu options
+    const trigger = document.getElementById('editAlignment-trigger');
+    if (trigger) {
+        const shell = trigger.closest('.selector-shell');
+        if (shell) {
+            const options = shell.querySelectorAll('.selector-option');
+            options.forEach(opt => {
+                const isSelected = opt.getAttribute('data-value') === value;
+                opt.classList.toggle('is-selected', isSelected);
+                opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+        }
+    }
 }
 
 async function editCharacter(id) {
@@ -571,7 +585,7 @@ async function editCharacter(id) {
     const alignmentValue = character.alignment || 'n';
     setValue('editAlignment', alignmentValue);
     
-    // Update selector trigger label
+    // Update selector trigger label and selected state
     const alignmentNames = {
         'lg': 'Lawful Good',
         'ng': 'Neutral Good',
@@ -583,9 +597,24 @@ async function editCharacter(id) {
         'ne': 'Neutral Evil',
         'ce': 'Chaotic Evil'
     };
+    const alignmentName = alignmentNames[alignmentValue] || 'Select Alignment';
     const alignmentLabel = document.getElementById('editAlignment-label');
     if (alignmentLabel) {
-        alignmentLabel.textContent = alignmentNames[alignmentValue] || 'Select Alignment';
+        alignmentLabel.textContent = alignmentName;
+    }
+    
+    // Mark selected option in menu
+    const alignmentTrigger = document.getElementById('editAlignment-trigger');
+    if (alignmentTrigger) {
+        const shell = alignmentTrigger.closest('.selector-shell');
+        if (shell) {
+            const options = shell.querySelectorAll('.selector-option');
+            options.forEach(opt => {
+                const isSelected = opt.getAttribute('data-value') === alignmentValue;
+                opt.classList.toggle('is-selected', isSelected);
+                opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+        }
     }
 
     // ABILITY SCORES
