@@ -531,6 +531,20 @@ async function viewCharacter(id, options = {}) {
 
 let currentEditCharacterId = null;
 
+function selectAlignment(value, label) {
+    // Update hidden select value
+    const select = document.getElementById('editAlignment');
+    if (select) {
+        select.value = value;
+    }
+    
+    // Update visible trigger label
+    const labelEl = document.getElementById('editAlignment-label');
+    if (labelEl) {
+        labelEl.textContent = label;
+    }
+}
+
 async function editCharacter(id) {
     const character = await CharacterStorage.getById(id);
     if (!character) return;
@@ -554,7 +568,25 @@ async function editCharacter(id) {
     setValue('editLevel', level);
 
     // ALIGNMENT (default to 'n' - True Neutral if not set)
-    setValue('editAlignment', character.alignment || 'n');
+    const alignmentValue = character.alignment || 'n';
+    setValue('editAlignment', alignmentValue);
+    
+    // Update selector trigger label
+    const alignmentNames = {
+        'lg': 'Lawful Good',
+        'ng': 'Neutral Good',
+        'cg': 'Chaotic Good',
+        'ln': 'Lawful Neutral',
+        'n': 'True Neutral',
+        'cn': 'Chaotic Neutral',
+        'le': 'Lawful Evil',
+        'ne': 'Neutral Evil',
+        'ce': 'Chaotic Evil'
+    };
+    const alignmentLabel = document.getElementById('editAlignment-label');
+    if (alignmentLabel) {
+        alignmentLabel.textContent = alignmentNames[alignmentValue] || 'Select Alignment';
+    }
 
     // ABILITY SCORES
     const abilities = parsed.abilities || {};

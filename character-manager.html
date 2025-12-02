@@ -330,7 +330,55 @@
                 >
 
                 <p class="terminal-text-small modal-section-label">Alignment</p>
-                <select id="editAlignment" class="terminal-input">
+                <div class="selector-shell selector-shell--match-width">
+                    <button
+                        class="terminal-btn selector-trigger"
+                        id="editAlignment-trigger"
+                        type="button"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        onclick="CharacterSheet.toggleSelectorMenu(this)"
+                    >
+                        <span class="selector-trigger-label" id="editAlignment-label">
+                            Select Alignment
+                        </span>
+                    </button>
+                    <div
+                        class="selector-menu"
+                        role="listbox"
+                        aria-label="Alignment"
+                        aria-hidden="true"
+                    >
+                        <button class="selector-option" type="button" role="option" data-value="lg" onclick="selectAlignment('lg', 'Lawful Good')">
+                            <span class="selector-option-label">Lawful Good</span>
+                        </button>
+                        <button class="selector-option" type="button" role="option" data-value="ng" onclick="selectAlignment('ng', 'Neutral Good')">
+                            <span class="selector-option-label">Neutral Good</span>
+                        </button>
+                        <button class="selector-option" type="button" role="option" data-value="cg" onclick="selectAlignment('cg', 'Chaotic Good')">
+                            <span class="selector-option-label">Chaotic Good</span>
+                        </button>
+                        <button class="selector-option" type="button" role="option" data-value="ln" onclick="selectAlignment('ln', 'Lawful Neutral')">
+                            <span class="selector-option-label">Lawful Neutral</span>
+                        </button>
+                        <button class="selector-option" type="button" role="option" data-value="n" onclick="selectAlignment('n', 'True Neutral')">
+                            <span class="selector-option-label">True Neutral</span>
+                        </button>
+                        <button class="selector-option" type="button" role="option" data-value="cn" onclick="selectAlignment('cn', 'Chaotic Neutral')">
+                            <span class="selector-option-label">Chaotic Neutral</span>
+                        </button>
+                        <button class="selector-option" type="button" role="option" data-value="le" onclick="selectAlignment('le', 'Lawful Evil')">
+                            <span class="selector-option-label">Lawful Evil</span>
+                        </button>
+                        <button class="selector-option" type="button" role="option" data-value="ne" onclick="selectAlignment('ne', 'Neutral Evil')">
+                            <span class="selector-option-label">Neutral Evil</span>
+                        </button>
+                        <button class="selector-option" type="button" role="option" data-value="ce" onclick="selectAlignment('ce', 'Chaotic Evil')">
+                            <span class="selector-option-label">Chaotic Evil</span>
+                        </button>
+                    </div>
+                </div>
+                <select id="editAlignment" class="terminal-select" style="display: none;">
                     <option value="">Select Alignment</option>
                     <option value="lg">Lawful Good</option>
                     <option value="ng">Neutral Good</option>
