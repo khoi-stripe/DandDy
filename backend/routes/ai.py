@@ -432,9 +432,10 @@ async def generate_image(
             # accepts it from the client. This makes the backend tolerant of
             # older or custom OpenAI deployments.
             # quality=request.quality,
-            # Be explicit that we want a URL back (not base64) so the frontend
-            # can download/convert it.
-            response_format="url",
+            #
+            # Likewise, older image endpoints may not support `response_format`.
+            # We rely on the default behavior (URL) and continue to read
+            # `response.data[0].url` below.
             context={
                 "feature": "image_generation",
                 "client_id": client_id,
