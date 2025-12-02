@@ -3297,11 +3297,14 @@ const App = (window.App = {
   showToast(rawMessage) {
     const message = (rawMessage == null) ? '' : String(rawMessage);
     // Remove any leading glyphs (checkmarks, warning icons, etc.) so builder
-    // toasts stay clean and rely only on text + the "×" close button.
-    const cleanedMessage = message.replace(
-      /^[\s\u200b]*(?:[✓✔✕✖✗★⚠💡❌⏰🔌]+[\s\u00a0\u200b]*)+/u,
-      ''
-    );
+    // toasts stay clean and rely only on text + the "×" close button. Also
+    // trim stray leading/trailing whitespace so messages render cleanly.
+    const cleanedMessage = message
+      .replace(
+        /^[\s\u200b]*(?:[✓✔✕✖✗★⚠💡❌⏰🔌]+[\s\u00a0\u200b]*)+/u,
+        ''
+      )
+      .trim();
 
     let toast = document.getElementById('toastNotification');
     if (!toast) {

@@ -137,7 +137,7 @@
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.4;
-  color: var(--terminal-dim);
+  color: var(--sheet-accent);
 }
 
 /* 80px spinning cube for placeholder */

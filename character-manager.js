@@ -1789,11 +1789,14 @@ function showNotification(rawMessage) {
 
     // Strip leading glyphs (checkmarks, warning icons, etc.) from the toast text
     // while keeping them available in logs. This keeps toasts purely textual
-    // with the exception of the "×" close button.
-    const cleanedMessage = message.replace(
-        /^[\s\u200b]*(?:[✓✔✕✖✗★⚠💡❌⏰🔌]+[\s\u00a0\u200b]*)+/u,
-        ''
-    );
+    // with the exception of the "×" close button. Also trim leading/trailing
+    // whitespace so any stray spaces from callers are cleaned up.
+    const cleanedMessage = message
+        .replace(
+            /^[\s\u200b]*(?:[✓✔✕✖✗★⚠💡❌⏰🔌]+[\s\u00a0\u200b]*)+/u,
+            ''
+        )
+        .trim();
 
     // Toast notification shared across the app (anchored to the terminal frame)
     let toast = document.getElementById('toastNotification');
