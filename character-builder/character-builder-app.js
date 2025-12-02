@@ -4452,13 +4452,8 @@ function exitToManager() {
     // Ask the user if they want to save before exiting
     App.showConfirmationOverlay(
       'You have unsaved changes. What would you like to do?',
-      () => {
-        // User clicked "DISCARD" - exit without saving
-        window.suppressBeforeunloadWarning();
-        window.location.href = '../character-manager.html?from=builder';
-      },
       async () => {
-        // User clicked "SAVE" - attempt to save; if save fails, we stay in the builder
+        // User clicked "SAVE" (primary button) - attempt to save; if save fails, we stay in the builder
         await App.saveCharacter(true);
 
         // Re-check that we now have an ID before exiting
@@ -4474,9 +4469,14 @@ function exitToManager() {
         window.suppressBeforeunloadWarning();
         window.location.href = '../character-manager.html?from=builder';
       },
+      () => {
+        // User clicked "DISCARD" (secondary button) - exit without saving
+        window.suppressBeforeunloadWarning();
+        window.location.href = '../character-manager.html?from=builder';
+      },
       {
-        primaryLabel: 'DISCARD',
-        secondaryLabel: 'SAVE'
+        primaryLabel: 'SAVE',
+        secondaryLabel: 'DISCARD'
       }
     );
   } else {
