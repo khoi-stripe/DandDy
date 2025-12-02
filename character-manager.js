@@ -584,38 +584,6 @@ async function editCharacter(id) {
     // ALIGNMENT (default to 'n' - True Neutral if not set)
     const alignmentValue = character.alignment || 'n';
     setValue('editAlignment', alignmentValue);
-    
-    // Update selector trigger label and selected state
-    const alignmentNames = {
-        'lg': 'Lawful Good',
-        'ng': 'Neutral Good',
-        'cg': 'Chaotic Good',
-        'ln': 'Lawful Neutral',
-        'n': 'True Neutral',
-        'cn': 'Chaotic Neutral',
-        'le': 'Lawful Evil',
-        'ne': 'Neutral Evil',
-        'ce': 'Chaotic Evil'
-    };
-    const alignmentName = alignmentNames[alignmentValue] || 'Select Alignment';
-    const alignmentLabel = document.getElementById('editAlignment-label');
-    if (alignmentLabel) {
-        alignmentLabel.textContent = alignmentName;
-    }
-    
-    // Mark selected option in menu
-    const alignmentTrigger = document.getElementById('editAlignment-trigger');
-    if (alignmentTrigger) {
-        const shell = alignmentTrigger.closest('.selector-shell');
-        if (shell) {
-            const options = shell.querySelectorAll('.selector-option');
-            options.forEach(opt => {
-                const isSelected = opt.getAttribute('data-value') === alignmentValue;
-                opt.classList.toggle('is-selected', isSelected);
-                opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-            });
-        }
-    }
 
     // ABILITY SCORES
     const abilities = parsed.abilities || {};
@@ -663,6 +631,41 @@ async function editCharacter(id) {
     const modal = document.getElementById('editDetailsModal');
     if (modal) {
         modal.classList.add('show');
+        
+        // Update alignment selector after modal is visible (needs to be deferred)
+        const savedAlignmentValue = alignmentValue; // Capture in closure
+        setTimeout(() => {
+            const alignmentNames = {
+                'lg': 'Lawful Good',
+                'ng': 'Neutral Good',
+                'cg': 'Chaotic Good',
+                'ln': 'Lawful Neutral',
+                'n': 'True Neutral',
+                'cn': 'Chaotic Neutral',
+                'le': 'Lawful Evil',
+                'ne': 'Neutral Evil',
+                'ce': 'Chaotic Evil'
+            };
+            const alignmentName = alignmentNames[savedAlignmentValue] || 'Select Alignment';
+            const alignmentLabel = document.getElementById('editAlignment-label');
+            if (alignmentLabel) {
+                alignmentLabel.textContent = alignmentName;
+            }
+            
+            // Mark selected option in menu
+            const alignmentTrigger = document.getElementById('editAlignment-trigger');
+            if (alignmentTrigger) {
+                const shell = alignmentTrigger.closest('.selector-shell');
+                if (shell) {
+                    const options = shell.querySelectorAll('.selector-option');
+                    options.forEach(opt => {
+                        const isSelected = opt.getAttribute('data-value') === savedAlignmentValue;
+                        opt.classList.toggle('is-selected', isSelected);
+                        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+                    });
+                }
+            }
+        }, 0);
     }
 }
 
