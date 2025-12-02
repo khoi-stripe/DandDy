@@ -353,6 +353,7 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderBasicInfo(parsed, context, callbacks) {
+    const isBuilder = context === 'builder';
     const race = parsed.raceName ? this.escapeHtml(parsed.raceName) : '';
     const cls = parsed.className ? this.escapeHtml(parsed.className) : '';
     const background = parsed.backgroundName
@@ -366,19 +367,26 @@ const CharacterSheet = (window.CharacterSheet = {
       <div class="sheet-section">
         <div class="sheet-header"></div>
         <div class="sheet-content">
-          ${race
-            ? `<div class="stat-line"><span class="stat-label">Race:</span> <span class="stat-value">${race}</span></div>`
-            : ''}
-          ${cls
-            ? `<div class="stat-line"><span class="stat-label">Class:</span> <span class="stat-value">${cls}</span></div>`
-            : ''}
-          ${background
-            ? `<div class="stat-line"><span class="stat-label">Background:</span> <span class="stat-value">${background}</span></div>`
-            : ''}
-          <div class="stat-line">
-            <span class="stat-label">Alignment:</span>
-            <span class="stat-value">${alignment || '—'}</span>
-          </div>
+          ${
+            isBuilder || race
+              ? `<div class="stat-line"><span class="stat-label">Race:</span> <span class="stat-value">${race || '—'}</span></div>`
+              : ''
+          }
+          ${
+            isBuilder || cls
+              ? `<div class="stat-line"><span class="stat-label">Class:</span> <span class="stat-value">${cls || '—'}</span></div>`
+              : ''
+          }
+          ${
+            isBuilder || background
+              ? `<div class="stat-line"><span class="stat-label">Background:</span> <span class="stat-value">${background || '—'}</span></div>`
+              : ''
+          }
+          ${
+            isBuilder || alignment
+              ? `<div class="stat-line"><span class="stat-label">Alignment:</span> <span class="stat-value">${alignment || '—'}</span></div>`
+              : ''
+          }
           <div class="stat-line">
             <span class="stat-label">Level:</span>
             <span class="stat-value">${parsed.level}</span>
