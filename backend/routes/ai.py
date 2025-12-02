@@ -237,9 +237,9 @@ async def generate_image(
     check_rate_limit(client_id)
     
     try:
-        # Step 1: Generate image with DALL-E
+        # Step 1: Generate image with OpenAI's image model
         response = openai.images.generate(
-            model="dall-e-3",
+            model="gpt-image-1",
             prompt=request.prompt,
             n=1,
             size=request.size,

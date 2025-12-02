@@ -111,15 +111,15 @@ class PortraitGenerator:
         return ", ".join(parts)
     
     def generate_dalle_image(self, prompt: str) -> Optional[bytes]:
-        """Generate an image using DALL-E 3"""
+        """Generate an image using OpenAI's gpt-image-1 model"""
         try:
-            print(f"  📸 Generating DALL-E image...")
+            print(f"  📸 Generating image with gpt-image-1...")
             print(f"     Prompt: {prompt[:80]}...")
             
             response = self.session.post(
                 'https://api.openai.com/v1/images/generations',
                 json={
-                    'model': 'dall-e-3',
+                    'model': 'gpt-image-1',
                     'prompt': prompt,
                     'n': 1,
                     'size': '1024x1024',
