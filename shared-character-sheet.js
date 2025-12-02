@@ -297,7 +297,7 @@ const CharacterSheet = (window.CharacterSheet = {
     const safeTitle =
       character.name && typeof character.name === 'string'
         ? this.escapeHtml(character.name)
-        : '[ Character sheet ]';
+        : '[ CHARACTER SHEET ]';
 
     return `
       <div class="sheet-title-header">
@@ -410,31 +410,31 @@ const CharacterSheet = (window.CharacterSheet = {
     return `
       <div class="sheet-section">
         <div class="${headerClass}">
-          <div class="sheet-header-title">[ Combat stats ]</div>
+          <div class="sheet-header-title">[ COMBAT STATS ]</div>
         </div>
         <div class="stat-grid">
           <div class="stat-box">
-            <div class="stat-box-label">Hit points</div>
+            <div class="stat-box-label">HIT POINTS</div>
             <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hpCurrent} / ${parsed.hpMax}`}</div>
           </div>
           <div class="stat-box">
-            <div class="stat-box-label">Armor class</div>
+            <div class="stat-box-label">ARMOR CLASS</div>
             <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : parsed.armorClass}</div>
           </div>
           <div class="stat-box">
-            <div class="stat-box-label">Initiative</div>
+            <div class="stat-box-label">INITIATIVE</div>
             <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : this.formatModifier(parsed.initiative)}</div>
           </div>
           <div class="stat-box">
-            <div class="stat-box-label">Speed</div>
+            <div class="stat-box-label">SPEED</div>
             <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.speed} ft`}</div>
           </div>
           <div class="stat-box">
-            <div class="stat-box-label">Proficiency bonus</div>
+            <div class="stat-box-label">PROF BONUS</div>
             <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `+${parsed.proficiencyBonus}`}</div>
           </div>
           <div class="stat-box">
-            <div class="stat-box-label">Hit die</div>
+            <div class="stat-box-label">HIT DIE</div>
             <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `d${parsed.hitDie}`}</div>
           </div>
         </div>
@@ -454,7 +454,7 @@ const CharacterSheet = (window.CharacterSheet = {
     return `
       <div class="sheet-section">
         <div class="${headerClass}">
-          <div class="sheet-header-title">[ Ability scores ]</div>
+          <div class="sheet-header-title">[ ABILITY SCORES ]</div>
         </div>
         <div class="ability-grid">
           ${abilities
@@ -942,7 +942,7 @@ const CharacterSheet = (window.CharacterSheet = {
     return `
       <div class="sheet-section">
         <div class="sheet-header">
-          <div class="sheet-header-title">[ Saving throws ]</div>
+          <div class="sheet-header-title">[ SAVING THROWS ]</div>
         </div>
         <div class="sheet-content">
           ${Object.entries(parsed.savingThrowModifiers)
@@ -1070,7 +1070,7 @@ const CharacterSheet = (window.CharacterSheet = {
     if (cantrips.length > 0) {
       spellsContent += `
         <div class="sheet-subsection">
-          <div class="sheet-subsection-title">Cantrips (at-will)</div>
+          <div class="sheet-subsection-title">CANTRIPS (At-Will)</div>
           ${renderSpellList(cantrips)}
         </div>
       `;
@@ -1084,7 +1084,7 @@ const CharacterSheet = (window.CharacterSheet = {
       
       spellsContent += `
         <div class="sheet-subsection">
-          <div class="sheet-subsection-title">1st level${preparedText}${slotsText}</div>
+          <div class="sheet-subsection-title">1ST LEVEL${preparedText}${slotsText}</div>
           ${renderSpellList(spellList)}
         </div>
       `;
@@ -1108,7 +1108,7 @@ const CharacterSheet = (window.CharacterSheet = {
     return `
       <div class="sheet-section">
         <div class="sheet-header">
-          <div class="sheet-header-title">[ Spells ]</div>
+          <div class="sheet-header-title">[ SPELLS ]</div>
         </div>
         <div class="sheet-content">
           ${spellsContent}
@@ -1125,7 +1125,7 @@ const CharacterSheet = (window.CharacterSheet = {
     return `
       <div class="sheet-section">
         <div class="sheet-header">
-          <div class="sheet-header-title">[ Racial traits ]</div>
+          <div class="sheet-header-title">[ RACIAL TRAITS ]</div>
         </div>
         <div class="sheet-content">
           ${traitsMarkup}
@@ -1147,7 +1147,7 @@ const CharacterSheet = (window.CharacterSheet = {
     return `
       <div class="sheet-section">
         <div class="sheet-header">
-          <div class="sheet-header-title">[ ${parsed.hasClassEquipment ? 'Equipment' : 'Class equipment'} ]</div>
+          <div class="sheet-header-title">[ ${parsed.hasClassEquipment ? 'EQUIPMENT' : 'CLASS EQUIPMENT'} ]</div>
         </div>
         <div class="sheet-content">
           ${equipmentMarkup}
@@ -1167,7 +1167,7 @@ const CharacterSheet = (window.CharacterSheet = {
     return `
       <div class="sheet-section">
         <div class="sheet-header">
-          <div class="sheet-header-title">[ Tool proficiencies ]</div>
+          <div class="sheet-header-title">[ TOOL PROFICIENCIES ]</div>
         </div>
         <div class="sheet-content">
           ${toolsMarkup}
@@ -1187,7 +1187,7 @@ const CharacterSheet = (window.CharacterSheet = {
     return `
       <div class="sheet-section">
         <div class="sheet-header">
-          <div class="sheet-header-title">[ Languages ]</div>
+          <div class="sheet-header-title">[ LANGUAGES ]</div>
         </div>
         <div class="sheet-content">
           ${
@@ -1219,7 +1219,7 @@ const CharacterSheet = (window.CharacterSheet = {
     return `
       <div class="sheet-section">
         <div class="sheet-header">
-          <div class="sheet-header-title">[ Background feature ]</div>
+          <div class="sheet-header-title">[ BACKGROUND FEATURE ]</div>
         </div>
         <div class="sheet-content">
           <div class="stat-line"><span class="stat-label">${name}</span></div>
@@ -1235,7 +1235,7 @@ const CharacterSheet = (window.CharacterSheet = {
     return `
       <div class="sheet-section">
         <div class="sheet-header">
-          <div class="sheet-header-title">[ Backstory ]</div>
+          <div class="sheet-header-title">[ BACKSTORY ]</div>
         </div>
         <div class="sheet-content text-dim">
           ${backstory}
@@ -1253,7 +1253,7 @@ const CharacterSheet = (window.CharacterSheet = {
     return `
       <div class="sheet-section">
         <div class="sheet-header">
-          <div class="sheet-header-title">[ Export info ]</div>
+          <div class="sheet-header-title">[ EXPORT INFO ]</div>
         </div>
         <div class="sheet-content">
           <div class="stat-line">
