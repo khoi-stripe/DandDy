@@ -553,8 +553,8 @@ async function editCharacter(id) {
     const level = parsed.level != null ? parsed.level : (character.level || 1);
     setValue('editLevel', level);
 
-    // ALIGNMENT
-    setValue('editAlignment', character.alignment || '');
+    // ALIGNMENT (default to 'n' - True Neutral if not set)
+    setValue('editAlignment', character.alignment || 'n');
 
     // ABILITY SCORES
     const abilities = parsed.abilities || {};

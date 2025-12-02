@@ -375,9 +375,10 @@ const CharacterSheet = (window.CharacterSheet = {
           ${background
             ? `<div class="stat-line"><span class="stat-label">Background:</span> <span class="stat-value">${background}</span></div>`
             : ''}
-          ${alignment
-            ? `<div class="stat-line"><span class="stat-label">Alignment:</span> <span class="stat-value">${alignment}</span></div>`
-            : ''}
+          <div class="stat-line">
+            <span class="stat-label">Alignment:</span>
+            <span class="stat-value">${alignment || '—'}</span>
+          </div>
           <div class="stat-line">
             <span class="stat-label">Level:</span>
             <span class="stat-value">${parsed.level}</span>
