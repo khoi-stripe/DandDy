@@ -90,9 +90,11 @@ class CharacterCreate(CharacterBase):
     campaign_id: Optional[int] = None
 
 class CharacterUpdate(BaseModel):
+    # Basic Info (editable from manager)
     name: Optional[str] = None
     level: Optional[int] = None
     experience_points: Optional[int] = None
+    alignment: Optional[Alignment] = None
     # Ability Scores (editable from manager)
     strength: Optional[int] = None
     dexterity: Optional[int] = None
