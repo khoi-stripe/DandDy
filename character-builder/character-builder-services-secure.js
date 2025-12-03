@@ -311,7 +311,7 @@ const SecureAIService = (window.SecureAIService = {
 
     const renderingInstructions = [
       `Create a high-contrast black-and-white fantasy illustration of a ${characterDescription} in a dramatic pose.`,
-      'Graphic fantasy illustration with huge shadow masses, hard-edged silhouettes, sparse linework, minimal mid-tones, and small, deliberate white highlights. Gothic and atmospheric, with simplified forms and dramatic negative space.',
+      'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
       'Pose should feel dynamic and expressive.',
       'Camera angle can vary between frontal, three-quarter, or slightly low-angle heroic views to add variety, while keeping the character clearly readable.',
       'Background should be simple, entirely black, and free of symbols or text.',

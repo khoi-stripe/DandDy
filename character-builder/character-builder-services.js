@@ -2228,7 +2228,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
 
     const renderingInstructions = [
       `Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,
-      'Graphic fantasy illustration with huge shadow masses, hard-edged silhouettes, sparse linework, minimal mid-tones, and small, deliberate white highlights. Gothic and atmospheric, with simplified forms and dramatic negative space.',
+      'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
       `Pose: ${posePrompt}`,
       cameraPrompt,
       'Background should be simple, entirely black, and free of symbols or text.',
