@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from database.database import engine, Base, ensure_timestamp_columns
 from routes import auth, characters, campaigns, ai, users
 import os
@@ -54,6 +55,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Enable gzip compression for larger responses to reduce bandwidth and improve
+# perceived latency, especially for character payloads and AI responses.
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Include routers with /api prefix
 app.include_router(auth.router, prefix="/api")

@@ -24,7 +24,8 @@
   const TOKEN_STORAGE_KEY = 'dnd_auth_token';
   const USER_STORAGE_KEY = 'dnd_user_info';
   const CHARACTER_STORAGE_KEY = 'dnd_characters';
-  const DEBUG = true; // verbose logging enabled for local debugging
+  // Only treat local/file:// environments as "debug" to avoid noisy logs in production.
+  const DEBUG = isLocalEnvironment;
 
   global.DanddyConfig = {
     isLocalEnvironment,
@@ -35,6 +36,21 @@
     CHARACTER_STORAGE_KEY,
     DEBUG,
   };
+
+  // In non‑debug (production) environments, silence noisy console methods while
+  // preserving errors and warnings. This lets us keep existing console.log calls
+  // in the codebase without paying the runtime cost in production.
+  if (!DEBUG && global.console) {
+    try {
+      ['log', 'info', 'debug'].forEach((method) => {
+        if (typeof global.console[method] === 'function') {
+          global.console[method] = () => {};
+        }
+      });
+    } catch (e) {
+      // Fail silently – logging should never break the app.
+    }
+  }
 })(window);
 
 

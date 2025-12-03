@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, JSON, Enum, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, JSON, Enum, DateTime, Index
 from sqlalchemy.orm import relationship
 import enum
 from datetime import datetime
@@ -17,6 +17,15 @@ class Alignment(enum.Enum):
 
 class Character(Base):
     __tablename__ = "characters"
+    __table_args__ = (
+        # Indexes to speed up common queries:
+        # - owner_id: listing a user's characters
+        # - campaign_id: loading characters in a campaign
+        # - updated_at: sorting/filtering by last modified
+        Index("idx_characters_owner_id", "owner_id"),
+        Index("idx_characters_campaign_id", "campaign_id"),
+        Index("idx_characters_updated_at", "updated_at"),
+    )
     
     id = Column(Integer, primary_key=True, index=True)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
