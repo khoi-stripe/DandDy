@@ -1424,6 +1424,7 @@ async function confirmGeneratePortrait() {
         const renderingInstructions = [
             'Create a high-contrast black-and-white fantasy illustration.',
             'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
+            'Include some controlled, directional hatching to define form (light mid-tone texture only).',
             `Pose: ${posePrompt}`,
             cameraPrompt,
             'Background should be simple, entirely black, and free of symbols or text.',
