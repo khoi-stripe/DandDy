@@ -51,5 +51,7 @@ Thumbs.db
 .env.local
 
 # Generated JS bundles (no-Node bundler output)
-manager.bundle.js
-character-builder/builder.bundle.js
+# NOTE: These are now tracked so production can serve the built JS directly.
+# If you regenerate them locally, commit the updated bundles.
+# manager.bundle.js
+# character-builder/builder.bundle.js
