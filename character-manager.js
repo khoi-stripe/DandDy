@@ -157,8 +157,11 @@ const KeyboardNav = {
     },
 
     reset() {
+        // Reset keyboard focus index without forcing an immediate sheet
+        // update. This avoids surprising jumps in the right-hand character
+        // sheet when the grid is re-rendered (e.g. after sorting or search).
         this.currentFocusIndex = 0;
-        this.updateFocus();
+        this.updateFocus(true);
     },
 
     clearAll() {
@@ -191,6 +194,10 @@ const AppState = {
     filteredCharacters: [],
     searchTerm: '',
     sortMode: 'dateModified', // 'alphabetical' | 'dateModified'
+    // The character id that should be considered "selected" across the UI.
+    // This is the single source of truth used to keep the left-hand card
+    // highlight, keyboard focus, and right-hand sheet in sync.
+    selectedCharacterId: null,
     loading: false,
 
     async init() {
@@ -291,6 +298,11 @@ const AppState = {
     }
 };
 
+// Tracks the most recent in-flight viewCharacter call so that slower, stale
+// requests (for previously selected characters) can't overwrite the sheet for
+// the most recently clicked or focused card.
+let latestViewCharacterRequestId = 0;
+
 // ========================================
 // UI RENDERING
 // ========================================
@@ -319,22 +331,78 @@ const UI = {
     },
 
     render() {
+        const previousSelectedId =
+            typeof AppState !== 'undefined' && AppState
+                ? AppState.selectedCharacterId
+                : null;
+
         this.renderCharacterGrid();
         this.updateCount();
-        
-        // Auto-select first character if available
-        const characters = AppState.filteredCharacters;
-        if (characters.length > 0) {
-            const firstCharId = characters[0].id;
-            // Check if a character is already selected
-            const hasSelected = document.querySelector('.character-card.is-selected');
-            if (!hasSelected) {
-                viewCharacter(firstCharId);
+
+        const characters =
+            typeof AppState !== 'undefined' &&
+            AppState &&
+            Array.isArray(AppState.filteredCharacters)
+                ? AppState.filteredCharacters
+                : [];
+        const placeholder = document.querySelector('.sheet-placeholder');
+        const sheetEl = document.getElementById('characterSheet');
+
+        if (!characters.length) {
+            if (placeholder) placeholder.classList.remove('is-hidden');
+            if (sheetEl) sheetEl.classList.add('is-hidden');
+            if (typeof AppState !== 'undefined' && AppState) {
+                AppState.selectedCharacterId = null;
             }
-        } else {
-            // Hide character sheet if no characters
-            document.querySelector('.sheet-placeholder').classList.remove('is-hidden');
-            document.getElementById('characterSheet').classList.add('is-hidden');
+            return;
+        }
+
+        // Ensure we have a valid selected id within the current filtered list.
+        let targetId = previousSelectedId || null;
+        const hasValidPreviousSelection =
+            targetId &&
+            characters.some((c) => String(c.id) === String(targetId));
+
+        if (!hasValidPreviousSelection) {
+            targetId = characters[0] && characters[0].id;
+        }
+
+        if (typeof AppState !== 'undefined' && AppState) {
+            AppState.selectedCharacterId = targetId || null;
+        }
+
+        // Sync the card highlight and keyboard focus with the selected id.
+        const grid = document.getElementById('characterGrid');
+        if (grid && targetId) {
+            const cards = Array.from(grid.querySelectorAll('.character-card'));
+            cards.forEach((card) => card.classList.remove('is-selected'));
+
+            const selectedCard = grid.querySelector(`[data-id="${targetId}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('is-selected');
+
+                if (
+                    typeof KeyboardNav !== 'undefined' &&
+                    KeyboardNav &&
+                    typeof KeyboardNav.getCharacterCards === 'function'
+                ) {
+                    const allCards = KeyboardNav.getCharacterCards();
+                    const cardIndex = allCards.indexOf(selectedCard);
+                    if (cardIndex !== -1) {
+                        KeyboardNav.currentFocusIndex = cardIndex;
+                        // Keep keyboard focus visuals in sync without
+                        // re-triggering a sheet update.
+                        KeyboardNav.updateFocus(true);
+                    }
+                }
+            }
+        }
+
+        // Only re-render the sheet when the effective selection actually
+        // changed (e.g. first load, after delete, or when filters remove the
+        // previously selected character).
+        if (targetId && targetId !== previousSelectedId) {
+            viewCharacter(targetId, { skipKeyboardSync: true });
         }
     },
 
@@ -504,6 +572,15 @@ function createNewCharacter() {
 async function viewCharacter(id, options = {}) {
     const { fromKeyboard = false, skipKeyboardSync = false } = options;
 
+    // Record this request so that slower async lookups for previously
+    // selected characters can't override the sheet for the most recently
+    // clicked or focused card.
+    const requestId = ++latestViewCharacterRequestId;
+
+    if (typeof AppState !== 'undefined' && AppState) {
+        AppState.selectedCharacterId = id;
+    }
+
     // Prefer the already-loaded characters from AppState to avoid extra storage/API calls
     let character = null;
     if (typeof AppState !== 'undefined' && AppState && Array.isArray(AppState.filteredCharacters)) {
@@ -516,6 +593,12 @@ async function viewCharacter(id, options = {}) {
     if (!character) {
         // Fallback to storage lookup (cloud/local)
         character = await CharacterStorage.getById(id);
+    }
+
+    // If a newer viewCharacter call started while we were waiting on
+    // storage/cloud, abandon this update to avoid stale mismatches.
+    if (requestId !== latestViewCharacterRequestId) {
+        return;
     }
 
     if (character) {
