@@ -3144,12 +3144,8 @@ const App = (window.App = {
 
       const renderingInstructions = [
         'Create a high-contrast black-and-white fantasy illustration.',
-        'Art style: classic fantasy ink illustration with strong contrast.',
-        'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
-        'Include some controlled, directional hatching to define form (light mid-tone texture only).',
-        'Use realistic heroic anatomy with natural proportions (smaller head, longer arms, taller figure).',
+        'Graphic fantasy illustration with huge shadow masses, hard-edged silhouettes, sparse linework, minimal mid-tones, and small, deliberate white highlights. Gothic and atmospheric, with simplified forms and dramatic negative space.',
         `Pose: ${posePrompt}`,
-        'Frame the character so the entire head, hands, and primary weapon or spell effect are fully visible in the image (no cropping at the top of the head).',
         cameraPrompt,
         'Background should be simple, entirely black, and free of symbols or text.',
         'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',

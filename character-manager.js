@@ -1141,18 +1141,35 @@ async function confirmGeneratePortrait() {
     let portraitElapsed = 0;
     let portraitLoadingActive = true;
     
-    const updatePortraitLoading = () => {
-        if (!portraitEl || !portraitLoadingActive) return;
+   const updatePortraitLoading = () => {
+       if (!portraitEl || !portraitLoadingActive) return;
 
-        // Single-line status with animated ellipsis and a fixed subtext.
-        const baseMessage = 'Generating character art';
+       // Single-line status with animated ellipsis and a subtext that reflects the current image model.
+       const baseMessage = 'Generating character art';
+
+       // Default subtext assumes DALL·E 3 timing; GPT Image 1 can take longer.
+       let subtext = '(This usually takes 20–30 seconds)';
+       try {
+           let imageModel = 'dall-e-3';
+           if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+               imageModel = StorageService.getImageModel();
+           } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_IMAGE_MODEL) {
+               imageModel = CONFIG.DEFAULT_IMAGE_MODEL;
+           }
+
+           if (imageModel === 'gpt-image-1') {
+               subtext = '(This can take up to a minute)';
+           }
+       } catch (e) {
+           // Fall back to default subtext on any error.
+       }
 
         const dotCount = (portraitElapsed % 3) + 1;
 
         // Create the cube + text container once; thereafter only update text + dot state
         let textEl = portraitEl.querySelector('.portrait-placeholder-text');
         if (!textEl) {
-            portraitEl.innerHTML = `
+           portraitEl.innerHTML = `
                 <div class="portrait-placeholder-content">
                     <div class="portrait-placeholder-cube-container">
                         <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
@@ -1172,7 +1189,7 @@ async function confirmGeneratePortrait() {
                             <span class="dot dot-3">.</span>
                         </span>
                         <div class="portrait-placeholder-subtext">
-                            (This usually takes 20–30 seconds)
+                            ${subtext}
                         </div>
                     </div>
                 </div>
@@ -1406,12 +1423,8 @@ async function confirmGeneratePortrait() {
 
         const renderingInstructions = [
             'Create a high-contrast black-and-white fantasy illustration.',
-            'Art style: classic fantasy ink illustration with strong contrast.',
-            'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
-            'Include some controlled, directional hatching to define form (light mid-tone texture only).',
-            'Use realistic heroic anatomy with natural proportions (smaller head, longer arms, taller figure).',
+            'Graphic fantasy illustration with huge shadow masses, hard-edged silhouettes, sparse linework, minimal mid-tones, and small, deliberate white highlights. Gothic and atmospheric, with simplified forms and dramatic negative space.',
             `Pose: ${posePrompt}`,
-            'Frame the character so the entire head, hands, and primary weapon or spell effect are fully visible in the image (no cropping at the top of the head).',
             cameraPrompt,
             'Background should be simple, entirely black, and free of symbols or text.',
             'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',

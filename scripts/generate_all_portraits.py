@@ -67,7 +67,7 @@ class PortraitGenerator:
         parts.append("Create a high-contrast black-and-white fantasy illustration.")
         parts.append("Art style: classic fantasy ink illustration with strong contrast.")
         parts.append("Use bold shadow shapes, strong silhouettes, and clean white highlights.")
-        parts.append("Include some controlled, directional hatching to define form (light mid-tone texture only).")
+        # parts.append("Include some controlled, directional hatching to define form (light mid-tone texture only).")
         parts.append("Use realistic heroic anatomy with natural proportions (smaller head, longer arms, taller figure).")
         
         # Class-specific randomized poses and camera angles

@@ -1815,17 +1815,35 @@ const CharacterSheet = (window.CharacterSheet = {
   async _applyUpgradedPortrait(character, context, portraitEl, ascii, key) {
     if (!character || !ascii) return;
 
+    // If a custom AI portrait has been created (or version history exists),
+    // never let a late-arriving "upgrade from files" overwrite it. This guards
+    // against races where `_maybeUpgradePortraitFromFiles` was kicked off
+    // before the player generated a custom portrait, but finishes afterward.
+    const hasCustomPortrait =
+      !!character.customPortraitAscii ||
+      (character.portraitMetadata &&
+        Array.isArray(character.portraitMetadata.versions) &&
+        character.portraitMetadata.versions.length > 0);
+    if (hasCustomPortrait) {
+      return;
+    }
+
     character.asciiPortrait = ascii;
     character.asciiPortraitKey = key;
 
-    // Persist the upgraded portrait so future loads are instant
-    // Use silent mode so automatic portrait upgrades don't mark character as "modified"
+    // Persist the upgraded portrait so future loads are instant.
+    // Use silent mode so automatic portrait upgrades don't mark character
+    // as "modified" in manager views.
     try {
       if (context === 'manager' && window.CharacterStorage && character.id) {
-        window.CharacterStorage.update(character.id, {
-          asciiPortrait: ascii,
-          asciiPortraitKey: key,
-        }, { silent: true });  // Silent mode: don't update modified timestamp
+        window.CharacterStorage.update(
+          character.id,
+          {
+            asciiPortrait: ascii,
+            asciiPortraitKey: key,
+          },
+          { silent: true },
+        );
       } else if (context === 'builder' && window.CharacterState) {
         // In builder context, update local state only. We no longer auto-save
         // new characters here; the player explicitly saves from the builder UI.
