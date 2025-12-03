@@ -303,7 +303,9 @@
   width: 100%;
   height: 100%;
   border: none;
-  display: none;
+  /* Visible by default; visibility is controlled via the shared `is-hidden`
+     utility class so builder + manager stay in sync. */
+  display: block;
   object-fit: cover;
 }
 
@@ -438,14 +440,15 @@
 }
 
 .settings-section {
-  padding: var(--spacing-sm);
+  padding: var(--spacing-md);
   border-radius: 4px;
-  border: 1px solid var(--ui-border-color);
-  background: rgba(0, 0, 0, 0.4);
+  /* Use a translucent, theme-aware background instead of an explicit outline.
+     This respects the active UI theme tokens (green / teal / yellow). */
+  background: color-mix(in srgb, var(--ui-primary-bg-color) 10%, transparent);
 }
 
 .settings-row {
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: 0;
 }
 
 .settings-label {

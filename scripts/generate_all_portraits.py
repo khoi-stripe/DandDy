@@ -64,12 +64,217 @@ class PortraitGenerator:
         parts = []
         
         # Base style - OPTIMIZED FOR ASCII CONVERSION
-        parts.append("Create a high-contrast black-and-white fantasy illustration in a dramatic pose.")
+        parts.append("Create a high-contrast black-and-white fantasy illustration.")
         parts.append("Art style: classic fantasy ink illustration with strong contrast.")
         parts.append("Use bold shadow shapes, strong silhouettes, and clean white highlights.")
         parts.append("Include some controlled, directional hatching to define form (light mid-tone texture only).")
         parts.append("Use realistic heroic anatomy with natural proportions (smaller head, longer arms, taller figure).")
-        parts.append("Pose should feel dynamic and expressive.")
+        
+        # Class-specific randomized poses and camera angles
+        class_key = (class_name or "default").lower()
+
+        pose_variants_by_class: Dict[str, List[str]] = {
+            # Martial / weapon-focused
+            "fighter": [
+                "posed mid-swing with a heavy weapon, body twisted to show the arc of the strike",
+                "standing in a ready battle stance, shield raised and weapon held low but tense",
+                "caught in the moment of blocking an attack, weight shifted back with shield braced",
+                "charging forward with weapon raised overhead, cloak and gear trailing behind",
+                "standing atop fallen rubble in a victorious stance, weapon planted like a banner",
+            ],
+            "barbarian": [
+                "leaning forward in a feral roar, muscles tensed, weapon mid-swing",
+                "standing wide and grounded, one foot on a rock, gripping a massive weapon with both hands",
+                "caught mid-leap as if diving into battle, hair and trophies flying outward",
+                "holding a weapon across the shoulders, posture relaxed but intimidating",
+                "bracing against an unseen impact, teeth bared and stance low and aggressive",
+            ],
+            "paladin": [
+                "kneeling with shield planted in front, weapon held upright in a solemn vow pose",
+                "standing tall with shield forward and weapon raised in a protective gesture",
+                "framed in a side stance, shield angled and weapon ready for a precise strike",
+                "holding a holy symbol aloft with one hand while resting the weapon point-down",
+                "striding forward with shield half-raised, cloak sweeping back in a confident march",
+            ],
+            "rogue": [
+                "crouched low in the shadows, one dagger drawn and the other held behind for balance",
+                "leaning casually against an unseen wall, one hand resting on a hidden blade",
+                "mid-step on a narrow ledge, body turned sideways with cloak pulled close",
+                "poised behind an unseen target, daggers reversed in a silent takedown stance",
+                "perched on a raised surface, knees bent, ready to spring into motion",
+            ],
+            "monk": [
+                "balanced on one leg in a classic kick pose, arms forming a flowing guard shape",
+                "mid-strike with an open palm, body rotated and lines clean and focused",
+                "seated in calm meditation, legs crossed and hands resting in a composed mudra",
+                "low sweeping stance with one arm extended and the other drawn back defensively",
+                "caught at the peak of a spinning kick, robes and sashes tracing the motion",
+            ],
+            "ranger": [
+                "drawing a bow with the string fully pulled, body turned in a three-quarter stance",
+                "kneeling on one knee with bow lowered, scanning the distance like a watchful scout",
+                "mid-stride through an implied forest floor, bow held loosely but ready",
+                "standing on a slight rise, bow raised and arrow aimed slightly downward",
+                "leaning against an unseen tree, one hand resting on the bow, posture relaxed but alert",
+            ],
+
+            # Casters and support
+            "wizard": [
+                "standing with one hand raised and fingers splayed, arcane energy swirling upward",
+                "leaning over an invisible spellbook, staff angled forward as if channeling power",
+                "mid-gesture with both hands shaping a spell, sleeves and robes pulled by the motion",
+                "holding a staff planted before them, gaze lifted as if calling down distant power",
+                "caught turning dramatically, cloak sweeping, one hand tracing a glowing sigil",
+            ],
+            "sorcerer": [
+                "surrounded by swirling magical energy, one hand outstretched and the other pulled close",
+                "standing with arms wide, raw power coiling around their torso and shoulders",
+                "mid-step as a surge of magic bursts from the ground around their feet",
+                "leaning back slightly as if resisting an overwhelming tide of inner power",
+                "cradling a concentrated sphere of magic between both hands at chest height",
+            ],
+            "warlock": [
+                "holding a pact focus or talisman forward, dark energy streaming from it",
+                "standing in a relaxed stance with one hand behind their back, the other tracing eldritch runes",
+                "reaching upward toward an unseen patron, cloak and garments pulled by unnatural wind",
+                "half-turned away, casting a spell over their shoulder with a sly or knowing posture",
+                "arms crossed loosely while faint sigils burn in the air around them",
+            ],
+            "cleric": [
+                "raising a holy symbol high, light radiating outward in a protective arc",
+                "standing with shield angled and mace lowered, posture firm and resolute",
+                "kneeling in prayerful focus, holy symbol clasped between both hands",
+                "reaching one hand toward an unseen ally as if channeling healing energy",
+                "planting a weapon or staff into the ground as radiant power rises around them",
+            ],
+            "druid": [
+                "standing with staff planted in the earth, vines and leaves swirling around",
+                "mid-transformation pose, body partly turned and framed by natural shapes",
+                "kneeling to touch the ground, one hand extended as if coaxing growth",
+                "arms lifted as if calling wind or storm, cloak and hair driven by imaginary weather",
+                "leaning gently against an unseen tree, posture relaxed and rooted",
+            ],
+            "bard": [
+                "mid-performance with an instrument, one foot forward and body open to an unseen crowd",
+                "leaning back in a dramatic flourish, cloak and hair trailing with the motion",
+                "perched casually on an unseen stool or crate, instrument resting comfortably in hand",
+                "bowing deeply at the end of a performance, one arm sweeping wide",
+                "caught mid-step in a dance-like pose, instrument held close to the torso",
+            ],
+
+            # Default / non-class-specific fallback
+            "default": [
+                "standing in a relaxed but heroic stance, weight shifted slightly to one side",
+                "mid-stride as if walking toward the viewer with confident energy",
+                "standing in profile with head turned toward the viewer, posture composed and steady",
+                "seated on an implied stone or crate, leaning slightly forward in a thoughtful pose",
+                "standing with arms loosely folded or resting on a weapon, calm and watchful",
+            ],
+        }
+
+        camera_variants_by_class: Dict[str, List[str]] = {
+            "fighter": [
+                "Camera angle: slightly low and three-quarter to emphasize strength and presence.",
+                "Camera angle: eye-level, centered on the torso and weapon for a direct confrontation.",
+                "Camera angle: three-quarter from the shield side, highlighting defense and stance.",
+                "Camera angle: slightly above, looking down to show battlefield context around the figure.",
+                "Camera angle: close to ground level, making the character loom large in the frame.",
+            ],
+            "barbarian": [
+                "Camera angle: low and close, exaggerating size and ferocity.",
+                "Camera angle: three-quarter with a strong diagonal, emphasizing motion and power.",
+                "Camera angle: eye-level but tilted slightly to make the pose feel unstable and wild.",
+                "Camera angle: pulled back to show the full silhouette and large weapon in motion.",
+                "Camera angle: slightly below the shoulders, looking up into a battle roar.",
+            ],
+            "paladin": [
+                "Camera angle: eye-level, straight on, emphasizing honor and symmetry.",
+                "Camera angle: slightly low, looking up past the shield to give a guardian feeling.",
+                "Camera angle: three-quarter from the weapon side, showing both devotion and readiness.",
+                "Camera angle: slightly above, as if from the viewpoint of someone being protected.",
+                "Camera angle: close to the chest and shoulders, focusing on heraldry and holy symbols.",
+            ],
+            "rogue": [
+                "Camera angle: slightly above and to the side, emphasizing stealth and environment.",
+                "Camera angle: three-quarter from behind, with the face turned back toward the viewer.",
+                "Camera angle: low and angled sharply, creating long, dramatic shadows.",
+                "Camera angle: tight framing around the upper body, leaving the background mostly in shadow.",
+                "Camera angle: oblique and off-center, reinforcing a feeling of secrecy and motion.",
+            ],
+            "monk": [
+                "Camera angle: mid-distance and centered, capturing clean lines of the martial pose.",
+                "Camera angle: slightly low, emphasizing balance and upward motion in kicks or strikes.",
+                "Camera angle: from above, looking down on a circular stance pattern.",
+                "Camera angle: three-quarter, letting limbs and flowing cloth create dynamic diagonals.",
+                "Camera angle: side-on profile to highlight precision and alignment of the form.",
+            ],
+            "ranger": [
+                "Camera angle: three-quarter from the front, aligned with the drawn bow and arrow.",
+                "Camera angle: from slightly behind the shoulder, looking along the line of the bowstring.",
+                "Camera angle: slightly elevated, framing the ranger and implied terrain below.",
+                "Camera angle: low and angled upward through implied undergrowth or rough ground.",
+                "Camera angle: mid-distance, with the character slightly off-center to suggest open space.",
+            ],
+            "wizard": [
+                "Camera angle: three-quarter, framing both staff and spell effect in the same view.",
+                "Camera angle: slightly low, making the spellcasting gesture feel towering and grand.",
+                "Camera angle: slightly above, looking down on a circle of arcane energy.",
+                "Camera angle: tight on the upper body and hands, emphasizing complex spell gestures.",
+                "Camera angle: oblique and off-center, with arcane elements framing the composition.",
+            ],
+            "sorcerer": [
+                "Camera angle: close and low, centered on the chest where power is gathering.",
+                "Camera angle: three-quarter from the side, showing energy spiraling around the figure.",
+                "Camera angle: above and tilted, as if the viewer is caught in the swirl of magic.",
+                "Camera angle: tight framing on the face and hands, emphasizing raw intensity.",
+                "Camera angle: pulled back slightly, letting arcs of power form a halo-like shape.",
+            ],
+            "warlock": [
+                "Camera angle: slightly low and off-center, giving a subtle, ominous imbalance.",
+                "Camera angle: three-quarter from behind, looking toward an unseen source of power.",
+                "Camera angle: eye-level but pushed to one side, leaving empty darkness opposite the figure.",
+                "Camera angle: close to the focus or talisman, with the character looming just behind it.",
+                "Camera angle: slightly above, letting eldritch patterns form around the character's feet.",
+            ],
+            "cleric": [
+                "Camera angle: slightly low, looking up toward the raised holy symbol.",
+                "Camera angle: eye-level, centered to evoke balance and stability.",
+                "Camera angle: three-quarter, allowing both shield and symbol to read clearly.",
+                "Camera angle: slightly above, as if from the viewpoint of a blessed ally.",
+                "Camera angle: mid-distance with the character framed symmetrically in the composition.",
+            ],
+            "druid": [
+                "Camera angle: low and close to the ground, emphasizing roots, stones, and natural forms.",
+                "Camera angle: three-quarter, with implied branches or leaves partially framing the view.",
+                "Camera angle: slightly above, looking down as if from a bird's-eye vantage.",
+                "Camera angle: eye-level but softened, placing the character gently into the environment.",
+                "Camera angle: mid-distance, with the figure slightly off-center to leave room for nature.",
+            ],
+            "bard": [
+                "Camera angle: eye-level, as if the viewer is part of an unseen audience.",
+                "Camera angle: three-quarter, capturing both gesture and instrument clearly.",
+                "Camera angle: slightly low, turning a performance flourish into a heroic moment.",
+                "Camera angle: above and angled, as if looking down from a balcony over a small stage.",
+                "Camera angle: tight around the upper body and instrument, focusing on expression.",
+            ],
+            "default": [
+                "Camera angle: three-quarter view that clearly shows the full silhouette.",
+                "Camera angle: eye-level, centered, with the figure dominating the frame.",
+                "Camera angle: slightly low, making the character feel larger and more heroic.",
+                "Camera angle: slightly above, looking down just enough to show shoulders and gear.",
+                "Camera angle: mid-distance with the character placed slightly off-center for balance.",
+            ],
+        }
+
+        pose_list = pose_variants_by_class.get(class_key, pose_variants_by_class["default"])
+        camera_list = camera_variants_by_class.get(class_key, camera_variants_by_class["default"])
+
+        pose_prompt = random.choice(pose_list)
+        camera_prompt = random.choice(camera_list)
+
+        parts.append(f"Pose: {pose_prompt}")
+        parts.append(camera_prompt)
+
         parts.append("Background should be simple, entirely black, and free of symbols or text.")
         parts.append("Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.")
         parts.append("Aspect ratio 3:4.")

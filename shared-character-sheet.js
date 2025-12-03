@@ -183,6 +183,23 @@ const CharacterSheet = (window.CharacterSheet = {
     const originalPortraitUrl =
       character.portrait?.url || character.originalPortraitUrl || null;
 
+    // Read the global portrait view mode so the overflow toggle label/icon
+    // matches the actual default view (ASCII vs Original). This mirrors the
+    // logic used in _renderPortrait so builder + manager stay in sync.
+    let portraitViewMode = 'ascii';
+    try {
+      if (window.StorageService && StorageService.getPortraitViewMode) {
+        portraitViewMode = StorageService.getPortraitViewMode();
+      } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+        portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+      }
+    } catch (e) {
+      // Non‑fatal: keep default
+    }
+
+    const showOriginalByDefault =
+      !!originalPortraitUrl && portraitViewMode === 'original';
+
     if (
       parsed.hasRace &&
       parsed.hasClass &&
@@ -198,9 +215,11 @@ const CharacterSheet = (window.CharacterSheet = {
     }
 
     if (originalPortraitUrl && (onTogglePortrait || context === 'manager')) {
+      const toggleIcon = showOriginalByDefault ? '≡' : '◉';
+      const toggleLabel = showOriginalByDefault ? 'View ASCII Art' : 'View original art';
       headerActions.push({
-        icon: '◉',
-        label: 'View original art',
+        icon: toggleIcon,
+        label: toggleLabel,
         onclick: toggleFn,
         id: toggleBtnId,
       });

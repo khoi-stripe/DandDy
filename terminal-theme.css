@@ -1484,6 +1484,20 @@ body::before {
   overflow-y: auto;
 }
 
+/* Reusable modal section container (mirrors settings-section styling).
+   - Opt-in per modal: add .modal-section to any inner container inside .modal-body.
+   - Uses ui-* tokens so it respects the active modal theme (yellow / teal / etc.). */
+.modal-section {
+  padding: var(--spacing-md);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--ui-primary-bg-color) 10%, transparent);
+}
+
+/* Vertical spacing between stacked modal sections (matches settings modal rhythm). */
+.modal-section + .modal-section {
+  margin-top: var(--spacing-md);
+}
+
 .modal-footer {
   padding: var(--spacing-lg);
   border-top: none;

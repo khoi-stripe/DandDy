@@ -222,7 +222,7 @@ const NARRATORS = (window.NARRATORS = {
 });
 
 // Default narrator ID
-const DEFAULT_NARRATOR_ID = 'deadpan';
+const DEFAULT_NARRATOR_ID = 'scholarly';
 
 // Get list of narrator objects for UI
 function getNarratorList() {

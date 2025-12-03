@@ -76,7 +76,7 @@ window.CONFIG = {
   // The actual choice is stored per-browser via StorageService so both the
   // builder and manager stay in sync. This config value is only used as a
   // sane fallback when no explicit preference has been saved yet.
-  DEFAULT_IMAGE_MODEL: 'dall-e-3',
+  DEFAULT_IMAGE_MODEL: 'gpt-image-1',
 
   // Default portrait view mode when no explicit preference has been saved yet.
   // - "ascii": show ASCII portraits by default

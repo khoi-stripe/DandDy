@@ -35,7 +35,9 @@
 
 .ascii-portrait {
   font-size: 7px;
-  line-height: 1.2;
+  /* Slightly condensed vertical spacing so the ASCII block feels denser
+     without crushing readability. */
+  line-height: 1.1;
   color: var(--terminal-accent);
   text-align: center;
   white-space: pre;
