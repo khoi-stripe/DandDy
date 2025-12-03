@@ -197,40 +197,6 @@ const StorageService = (window.StorageService = {
     localStorage.setItem('dnd_text_speed_multiplier', String(num));
   },
 
-  // Preferred AI image model for custom portraits.
-  // Stored per-browser so builder + manager can share the same choice.
-  getImageModel() {
-    try {
-      const raw = localStorage.getItem('dnd_image_model');
-      const fallback =
-        (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) ||
-        'dall-e-3';
-      if (!raw) return fallback;
-      const value = String(raw).trim();
-      const allowed = ['dall-e-3', 'gpt-image-1'];
-      return allowed.includes(value) ? value : fallback;
-    } catch (e) {
-      console.warn('StorageService.getImageModel failed, using fallback', e);
-      return (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) || 'dall-e-3';
-    }
-  },
-
-  setImageModel(model) {
-    try {
-      const value = String(model || '').trim();
-      const allowed = ['dall-e-3', 'gpt-image-1'];
-      if (!allowed.includes(value)) {
-        console.warn('StorageService.setImageModel: ignoring unsupported model', value);
-        // Clear invalid values so we fall back cleanly next time.
-        localStorage.removeItem('dnd_image_model');
-        return;
-      }
-      localStorage.setItem('dnd_image_model', value);
-    } catch (e) {
-      console.warn('StorageService.setImageModel failed', e);
-    }
-  },
-
   // ==== CHARACTER STORAGE (via shared CharacterStorage facade) ====
 
   /**
@@ -1017,173 +983,6 @@ const AIService = (window.AIService = {
     return unique.slice(0, desiredCount);
   },
 
-  /**
-   * Combined helper: ask the backend once for BOTH
-   *   - name suggestions, and
-   *   - a backstory template that uses the literal token {{NAME}}
-   *
-   * This lets us front-load the "heavy" AI work earlier in the flow and
-   * avoid a second OpenAI call when the user later reaches the backstory
-   * step. The final, player-chosen name is substituted client-side.
-   */
-  async generateCharacterSummary(character, options = {}) {
-    const nameCount =
-      typeof options.nameCount === 'number' && options.nameCount > 0
-        ? options.nameCount
-        : 3;
-
-    const race = character && character.race;
-    const classType = character && character.class;
-
-    // Local, always-available fallback for both names and template
-    const buildLocalFallback = () => {
-      const fallbackNames = this.generateFallbackNames(race || 'human', nameCount);
-      const template =
-        '{{NAME}} is a ' +
-        `${race || 'mysterious'} ${classType || 'adventurer'} with a mysterious past. ` +
-        "They don't talk about it much. Probably for the best.";
-      return {
-        names: fallbackNames,
-        backstoryTemplate: template,
-      };
-    };
-
-    if (!CONFIG.ENABLE_AI) {
-      console.log(
-        '%c📦 SUMMARY (Fallback - AI Disabled)',
-        'color: #ff0; font-weight: bold',
-      );
-      return buildLocalFallback();
-    }
-
-    try {
-      console.log(
-        '%c📦 SUMMARY: Calling backend AI for names + backstory template...',
-        'color: #0ff; font-weight: bold',
-      );
-
-      const response = await this.fetchWithTimeout(
-        `${CONFIG.BACKEND_URL}/api/ai/characters/summary`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            race: race,
-            class_type: classType,
-            alignment: character && character.alignment,
-            background: character && character.background,
-            personality:
-              character && (character.personalityTrait || character.personality),
-            name_count: nameCount * 2, // ask for extra to allow uniqueness filtering
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const status = response.status;
-        let detail = null;
-        try {
-          const errBody = await response.json();
-          if (errBody && errBody.detail) {
-            detail = errBody.detail;
-          }
-        } catch {
-          // ignore JSON parse errors; we'll fall back below
-        }
-
-        if (status === 429) {
-          console.log(
-            '%c📦 SUMMARY (Cooldown / Rate Limit)',
-            'color: #ff0; font-weight: bold',
-          );
-          if (window.UIService) {
-            window.UIService.showNotification(
-              detail ||
-                'AI character generation is cooling down. Using offline suggestions for this one.',
-              'warning',
-              6000,
-            );
-          }
-        } else {
-          console.log(
-            '%c📦 SUMMARY (Fallback - API Error)',
-            'color: #f80; font-weight: bold',
-          );
-          console.log('  Status:', status);
-        }
-
-        return buildLocalFallback();
-      }
-
-      const data = await response.json();
-      if (!data || data.success !== true) {
-        console.log(
-          '%c📦 SUMMARY (Fallback - Bad Payload)',
-          'color: #f80; font-weight: bold',
-        );
-        return buildLocalFallback();
-      }
-
-      let names = Array.isArray(data.names) ? data.names.slice() : [];
-      const template =
-        typeof data.backstory_template === 'string' && data.backstory_template.trim()
-          ? data.backstory_template
-          : null;
-
-      // Run through our global uniqueness filter so we avoid repeating
-      // first/last names across this browser session.
-      if (names.length) {
-        names = this._filterAndRegisterUniqueNames(names, nameCount);
-      }
-
-      if (!names.length) {
-        console.log(
-          '%c📦 SUMMARY (Fallback - No Names From Backend)',
-          'color: #f80; font-weight: bold',
-        );
-        const fallback = buildLocalFallback();
-        // Preserve backend-provided template if we got one.
-        if (template) {
-          fallback.backstoryTemplate = template;
-        }
-        return fallback;
-      }
-
-      console.log(
-        '%c📦 SUMMARY (AI Generated) ✨',
-        'color: #0f0; font-weight: bold',
-      );
-      console.log('  Names:', names);
-
-      return {
-        names,
-        backstoryTemplate:
-          template ||
-          (character && character.backstory) ||
-          buildLocalFallback().backstoryTemplate,
-      };
-    } catch (error) {
-      if (error.message && error.message.includes('timed out')) {
-        console.log(
-          '%c📦 SUMMARY (Fallback - Backend Waking Up)',
-          'color: #f80; font-weight: bold',
-        );
-        console.log(
-          '  ⏰ Timeout reached. Using local fallback for now; backend warmup continues...',
-        );
-      } else {
-        console.log(
-          '%c📦 SUMMARY (Fallback - Connection Error)',
-          'color: #f00; font-weight: bold',
-        );
-        console.error('  Error:', error);
-      }
-      return buildLocalFallback();
-    }
-  },
-
   generateFallbackNames(race, count) {
     const namePatterns = {
       dwarf: {
@@ -1760,24 +1559,11 @@ Format your response as JSON array of strings, one for each option in order. Exa
     }
 
     try {
-      // Resolve current image model preference (builder + manager share this).
-      let model = 'dall-e-3';
-      try {
-        if (window.StorageService && typeof StorageService.getImageModel === 'function') {
-          model = StorageService.getImageModel();
-        } else if (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) {
-          model = CONFIG.DEFAULT_IMAGE_MODEL;
-        }
-      } catch (e) {
-        console.warn('AIService.generateImageFromPrompt: failed to read image model, using default', e);
-      }
-
-      console.log('%c🎨 IMAGE: Calling backend AI...', 'color: #0ff; font-weight: bold');
+      console.log('%c🎨 DALL-E: Calling backend AI...', 'color: #0ff; font-weight: bold');
       // Log only a preview of the prompt so the console isn't flooded,
       // but make it clear that the full prompt (without truncation) is
       // sent to the backend.
       console.log('  Prompt (preview):', prompt.substring(0, 100) + (prompt.length > 100 ? '…' : ''));
-      console.log('  Model:', model);
       console.log('  Note: Image generation takes 20-30s (longer than text AI)...');
       
       const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`, {
@@ -1790,13 +1576,12 @@ Format your response as JSON array of strings, one for each option in order. Exa
           size: '1024x1024',
           // Use "high" for best quality portraits (kept for compatibility with existing backend validation).
           quality: 'high',
-          model: model,
         }),
-      }, 70000); // 70 seconds for image generation (DALL-E can be very slow, plus R2 upload)
+      }, 45000); // 45 seconds for image generation (DALL-E is slower than text)
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log('%c🎨 IMAGE (Error)', 'color: #f00; font-weight: bold');
+        console.log('%c🎨 DALL-E (Error)', 'color: #f00; font-weight: bold');
         console.log('  Error:', errorData.detail);
         
         // Check for rate limiting
@@ -1827,13 +1612,13 @@ Format your response as JSON array of strings, one for each option in order. Exa
 
       const data = await response.json();
       if (data.success) {
-        console.log('%c🎨 IMAGE (Generated) ✨', 'color: #0f0; font-weight: bold');
+        console.log('%c🎨 DALL-E (Image Generated) ✨', 'color: #0f0; font-weight: bold');
         console.log('  URL:', data.url.substring(0, 50) + '...');
         return data.url;
       }
       return null;
     } catch (error) {
-      console.log('%c🎨 IMAGE (Failed)', 'color: #f00; font-weight: bold');
+      console.log('%c🎨 DALL-E (Failed)', 'color: #f00; font-weight: bold');
       console.error('  Error:', error);
       throw error;
     }
@@ -1967,12 +1752,11 @@ Format your response as JSON array of strings, one for each option in order. Exa
       'Art style: classic fantasy ink illustration with strong contrast.',
       'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
       'Include some controlled, directional hatching to define form (light mid-tone texture only).',
+      'No grayscale gradients.',
       'Use realistic heroic anatomy with natural proportions (smaller head, longer arms, taller figure).',
       'Pose should feel dynamic and expressive.',
-      'Frame the character so the entire head, hands, and primary weapon or spell effect are fully visible in the image (no cropping at the top of the head).',
-      'Camera angle can vary between frontal, three-quarter, or slightly low-angle heroic views to add variety, while keeping the character clearly readable.',
       'Background should be simple, entirely black, and free of symbols or text.',
-      'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+      'Overall mood: classic dark-fantasy ink illustration with a dramatic, mythic tone.',
       'Aspect ratio 3:4.',
     ];
     return renderingInstructions.join(' ');

@@ -170,14 +170,24 @@
     <!-- Header -->
     <header class="terminal-header">
         <div class="header-content">
-            <div class="terminal-title">[ DandDy v2.0 ]</div>
+            <div class="terminal-title">
+                <span class="terminal-title-text">[ DandDy v2.0 ]</span>
+                <button
+                    id="managerSettingsBtn"
+                    class="manager-settings-link"
+                    type="button"
+                    aria-label="Settings"
+                    title="Settings"
+                    onclick="SettingsModal.open()"
+                >⚙</button>
+            </div>
             <div class="header-actions">
                 <span id="userInfoDisplay">
                     <span id="userStatusIcon" class="user-status-icon" aria-hidden="true"></span>
                     <span id="userStatusText" class="user-status-text"></span>
                 </span>
                 <button id="authBtn" class="terminal-btn terminal-btn-small ui-theme-teal">LOGIN</button>
-                    <button id="newCharacterBtn" class="terminal-btn terminal-btn-primary ui-theme-teal">+ NEW CHARACTER</button>
+                <button id="newCharacterBtn" class="terminal-btn terminal-btn-primary ui-theme-teal">+ NEW CHARACTER</button>
             </div>
         </div>
     </header>
@@ -301,6 +311,30 @@
                 <button class="terminal-btn" onclick="closeDuplicateModal()">CANCEL</button>
                 <button class="terminal-btn terminal-btn-warning" onclick="resolveDuplicate('overwrite')">REPLACE EXISTING</button>
                 <button class="terminal-btn terminal-btn-primary" onclick="resolveDuplicate('keep-both')">KEEP BOTH</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manager Settings Modal -->
+    <div id="managerSettingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">⚙ Settings</h2>
+                <button class="modal-close" onclick="closeManagerSettings()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="terminal-text-small modal-section-label">Portrait AI Model</p>
+                <p class="terminal-text-small terminal-text-dim">
+                    Choose which OpenAI image model to use when generating custom portraits.
+                </p>
+                <select id="manager-image-model-select" class="terminal-select">
+                    <option value="dall-e-3">DALL·E 3 (high detail)</option>
+                    <option value="gpt-image-1">GPT Image 1 (new)</option>
+                </select>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="closeManagerSettings()">CANCEL</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="saveManagerSettings()">SAVE</button>
             </div>
         </div>
     </div>
@@ -612,7 +646,9 @@
     <script src="version.js"></script>
     <script src="character-builder/character-builder-config.js"></script>
     <script src="character-builder/character-builder-utils.js"></script>
+    <script src="character-builder/character-builder-narrators.js"></script>
     <script src="character-builder/character-builder-services.js"></script>
+    <script src="character-builder/character-builder-components.js"></script>
     <script src="shared-character-sheet.js"></script>
     <script src="character-manager-api.js"></script>
     <script src="character-storage.js"></script>

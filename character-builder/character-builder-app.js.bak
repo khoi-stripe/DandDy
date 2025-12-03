@@ -992,37 +992,12 @@ const App = (window.App = {
       narratorPanel.lastElementChild.querySelector('.narrator-text');
     this.showProgressiveThinking(nameThinkingEl);
 
-    // Generate BOTH name suggestions and a backstory template using a single
-    // backend AI call. This front-loads the heavy work so the later backstory
-    // step can feel instant.
-    let names = [];
-    try {
-      const summary = await AIService.generateCharacterSummary(state.character, {
-        nameCount: 3,
-      });
-      if (summary && Array.isArray(summary.names) && summary.names.length) {
-        names = summary.names;
-      }
-      // Stash the backstory template (if provided) on the character so the
-      // backstory step can simply substitute {{NAME}} later without another
-      // API call.
-      if (summary && summary.backstoryTemplate) {
-        CharacterState.updateCharacter({
-          backstoryTemplate: summary.backstoryTemplate,
-        });
-      }
-    } catch (e) {
-      console.error('Name/backstory summary error; falling back to names-only flow:', e);
-    }
-
-    // Absolute fallback in case summary failed for any reason
-    if (!names.length) {
-      names = await AIService.generateNames(
-        state.character.race,
-        state.character.class,
-        3,
-      );
-    }
+    // Generate name suggestions using AI
+    const names = await AIService.generateNames(
+      state.character.race,
+      state.character.class,
+      3,
+    );
 
     // Remove the thinking message
     this.stopProgressiveThinking();
@@ -1110,23 +1085,9 @@ const App = (window.App = {
       narratorPanel.lastElementChild.querySelector('.narrator-text');
     this.showProgressiveThinking(backstoryThinkingEl);
 
-    // Prefer using a cached backstory template (generated earlier during the
-    // name step) so this feels instant and does not require another AI call.
-    let backstory = state.character.backstory;
-    const template = state.character.backstoryTemplate;
-    const nameForTemplate = state.character.name || 'This character';
-
-    if (!backstory && template && typeof template === 'string') {
-      backstory = template.replace(/{{\s*NAME\s*}}/g, nameForTemplate);
-      CharacterState.updateCharacter({ backstory });
-    }
-
-    // Fallback: if we have no template or something went wrong, fall back to
-    // the original behavior and call the dedicated backstory endpoint.
-    if (!backstory) {
-      backstory = await AIService.generateBackstory(state.character);
-      CharacterState.updateCharacter({ backstory });
-    }
+    // Generate backstory (this might take a moment)
+    const backstory = await AIService.generateBackstory(state.character);
+    CharacterState.updateCharacter({ backstory });
 
     // Stop thinking and clear the element, then type out the backstory
     this.stopProgressiveThinking();
@@ -1448,16 +1409,16 @@ const App = (window.App = {
         this.showSystemMessage(userMessage);
       } else if (error.isRateLimit) {
         this.showSystemMessage(
-          'AI portrait generation hit a rate limit, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
+          'Rate limit exceeded. Please wait a moment before generating another portrait.',
         );
       } else {
         this.showSystemMessage(
-          'AI portrait generation failed, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
+          'Failed to generate AI portrait. Using template portrait instead.',
         );
       }
       
-      // Ensure we at least have a pre-generated portrait to fall back to
-      await this._ensurePreGeneratedPortraitFallback(character);
+      // Fall back to whatever portrait is already displayed
+      // (pre-generated ASCII or template).
     } finally {
       // Clear the generating flag so future re-renders work normally
       this._guidedPortraitGenerating = false;
@@ -1986,30 +1947,139 @@ const App = (window.App = {
     await this.showQuestion(this.currentQuestion.next);
   },
 
+  async openSettings() {
+    if (document.getElementById('settingsModal')) return; // Already open
+
+    const settingsHTML = Components.renderSettings();
+    const terminalContainer = document.querySelector('.terminal-container');
+    terminalContainer.insertAdjacentHTML('beforeend', settingsHTML);
+
+    const modal = document.getElementById('settingsModal');
+    if (modal && Utils.focusFirstFieldInModal) {
+      Utils.focusFirstFieldInModal(modal);
+    }
+
+    // Wire up selector-style controls for narrator + text speed
+    if (modal && typeof this.initSettingsSelectors === 'function') {
+      this.initSettingsSelectors(modal);
+    }
+
+    // Check backend status
+    this.checkBackendStatus();
+
+    // ESC key to close
+    this._settingsEscHandler = (e) => {
+      if (e.key === 'Escape') this.closeSettings();
+    };
+    document.addEventListener('keydown', this._settingsEscHandler);
+  },
+
+  /**
+   * Initialize settings selectors: wire up option clicks to update the
+   * hidden <select> elements and trigger labels.
+   * The toggle behavior is handled by onclick="CharacterSheet.toggleSelectorMenu(this)" in the HTML.
+   * @param {HTMLElement} modal
+   */
+  initSettingsSelectors(modal) {
+    if (!modal) return;
+
+    // Narrator selector
+    const narratorTrigger = modal.querySelector('#narrator-select-trigger');
+    const narratorLabel = modal.querySelector('#narrator-select-label');
+    const narratorSelect = modal.querySelector('#narrator-select');
+    const narratorOptions = modal.querySelectorAll('.selector-menu[aria-label="Narrator voice"] .selector-option');
+
+    if (narratorTrigger && narratorLabel && narratorSelect && narratorOptions.length) {
+      narratorOptions.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = option.getAttribute('data-value');
+          const label = option.querySelector('.selector-option-label');
+          if (value && label) {
+            narratorLabel.textContent = label.textContent.trim();
+            narratorSelect.value = value;
+          }
+        });
+      });
+    }
+
+    // Text speed selector
+    const speedTrigger = modal.querySelector('#text-speed-select-trigger');
+    const speedLabel = modal.querySelector('#text-speed-select-label');
+    const speedSelect = modal.querySelector('#text-speed-select');
+    const speedOptions = modal.querySelectorAll('.selector-menu[aria-label="Narrator text speed"] .selector-option');
+
+    if (speedTrigger && speedLabel && speedSelect && speedOptions.length) {
+      speedOptions.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = option.getAttribute('data-value');
+          const label = option.querySelector('.selector-option-label');
+          if (value && label) {
+            speedLabel.textContent = label.textContent.trim();
+            speedSelect.value = value;
+          }
+        });
+      });
+    }
+  },
+
   async checkBackendStatus() {
     // Backend status indicator has been removed from the settings modal UI.
     // This method is kept as a no-op for backwards compatibility.
     return;
   },
 
-  // Legacy settings helpers are now routed through the shared SettingsModal
-  // so both builder + manager use a single implementation.
-  async openSettings() {
-    if (window.SettingsModal && typeof SettingsModal.open === 'function') {
-      SettingsModal.open();
-    }
-  },
-
   closeSettings() {
-    if (window.SettingsModal && typeof SettingsModal.close === 'function') {
-      SettingsModal.close();
+    const modal = document.getElementById('settingsModal');
+    if (!modal) {
+      if (this._settingsEscHandler) {
+        document.removeEventListener('keydown', this._settingsEscHandler);
+        this._settingsEscHandler = null;
+      }
+      return;
+    }
+
+    const content = modal.querySelector('.modal-content') || modal;
+
+    const handleClose = () => {
+      if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
+
+      if (this._settingsEscHandler) {
+        document.removeEventListener('keydown', this._settingsEscHandler);
+        this._settingsEscHandler = null;
+      }
+    };
+
+    if (!modal.classList.contains('closing')) {
+      modal.classList.add('closing');
+    }
+
+    if (content && content.addEventListener) {
+      content.addEventListener('animationend', handleClose, { once: true });
+    } else {
+      handleClose();
     }
   },
 
   saveSettings() {
-    if (window.SettingsModal && typeof SettingsModal.save === 'function') {
-      SettingsModal.save();
+    // Save narrator selection
+    const narratorSelect = document.getElementById('narrator-select');
+    if (narratorSelect) {
+      StorageService.setNarratorId(narratorSelect.value);
     }
+
+    // Save text speed selection
+    const textSpeedSelect = document.getElementById('text-speed-select');
+    if (textSpeedSelect && StorageService.setTextSpeedMultiplier) {
+      StorageService.setTextSpeedMultiplier(textSpeedSelect.value);
+    }
+
+    // Use a non-intrusive toast for settings changes instead of a narrator line
+    this.showToast('Settings saved!');
+    this.closeSettings();
   },
 
   // Build the inner HTML for the portrait history modal body. This is shared
@@ -2707,53 +2777,6 @@ const App = (window.App = {
     this.openPromptModal(character);
   },
 
-  /**
-   * Ensure we have at least a pre-generated portrait (ASCII + optional image)
-   * for the given character. Used when custom AI portrait generation fails
-   * (rate limits, backend errors, etc.) so we can gracefully fall back to
-   * our static portrait set instead of leaving the frame empty.
-   *
-   * When `options.force` is true, we will attempt to load a pre-generated
-   * portrait even if the character already appears to have one; this is
-   * useful in quick-create flows that start from a blank portrait.
-   */
-  async _ensurePreGeneratedPortraitFallback(character, options = {}) {
-    const force = !!(options && options.force);
-
-    try {
-      if (!window.AsciiArtService || !character || !character.race || !character.class) {
-        return;
-      }
-
-      const currentState = CharacterState.get();
-      const existing = currentState && currentState.character ? currentState.character : {};
-
-      if (
-        !force &&
-        (existing.customPortraitAscii ||
-          (existing.portrait && (existing.portrait.ascii || existing.portrait.url)) ||
-          existing.asciiPortrait)
-      ) {
-        // We already have some kind of portrait attached; don't overwrite it.
-        return;
-      }
-
-      // This will prefer race/class-specific ASCII from generated_portraits/,
-      // fall back to race-only, and only as a last resort use a simple
-      // text template. It also updates CharacterState with asciiPortrait and
-      // originalPortraitUrl when successful.
-      await AsciiArtService.generateAIPortrait(character);
-
-      // Clear last-portrait cache so the pre-generated art will animate in.
-      this._lastPortraitArt = null;
-
-      const latest = CharacterState.get().character;
-      await this.updateCharacterPanel(latest);
-    } catch (fallbackError) {
-      console.error('Failed to apply pre-generated portrait fallback:', fallbackError);
-    }
-  },
-
   openPromptModal(character) {
     // Show only the character description to the user (not the rendering instructions)
     const defaultPrompt = AIService.buildCharacterDescription
@@ -2876,12 +2899,11 @@ const App = (window.App = {
         'Art style: classic fantasy ink illustration with strong contrast.',
         'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
         'Include some controlled, directional hatching to define form (light mid-tone texture only).',
+        'No grayscale gradients.',
         'Use realistic heroic anatomy with natural proportions (smaller head, longer arms, taller figure).',
         'Pose should feel dynamic and expressive.',
-        'Frame the character so the entire head, hands, and primary weapon or spell effect are fully visible in the image (no cropping at the top of the head).',
-        'Camera angle can vary between frontal, three-quarter, or slightly low-angle heroic views to add variety, while keeping the character clearly readable.',
         'Background should be simple, entirely black, and free of symbols or text.',
-        'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+        'Overall mood: classic dark-fantasy ink illustration with a dramatic, mythic tone.',
         'Aspect ratio 3:4.',
       ];
       
@@ -2951,35 +2973,23 @@ const App = (window.App = {
         this.showSystemMessage(userMessage);
       } else if (error.isRateLimit) {
         this.showSystemMessage(
-          'AI portrait generation hit a rate limit, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
+          'Rate limit exceeded. Please wait a moment before generating another portrait. Try again in a few minutes.',
         );
       } else {
-        this.showSystemMessage(
-          'AI portrait generation failed, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
-        );
+      this.showSystemMessage(
+        'Failed to generate custom AI portrait. Falling back to template.',
+      );
       }
       
-      // Restore portrait font sizing and swap back to a safe, pre-generated portrait.
+      // Fallback to template
       const state = CharacterState.get();
       if (portraitEl) {
+        // Restore font size and show fallback portrait
         portraitEl.style.fontSize = '';
-        portraitEl.classList.remove(
-          'ascii-portrait--loading',
-          'ascii-portrait--placeholder',
+        portraitEl.textContent = AsciiArtService.getFullPortrait(
+          state.character,
         );
       }
-
-      // If we already have some portrait art (custom or pre-generated), just
-      // re-render the sheet; otherwise, load a pre-generated portrait now.
-      await this._ensurePreGeneratedPortraitFallback(state.character, {
-        force: !(
-          state.character &&
-          (state.character.customPortraitAscii ||
-            state.character.asciiPortrait ||
-            (state.character.portrait &&
-              (state.character.portrait.ascii || state.character.portrait.url)))
-        ),
-      });
     }
   },
 
@@ -3315,17 +3325,6 @@ const App = (window.App = {
       )
       .trim();
 
-    // Normalize overly-emphatic punctuation so toast messages stay calm and
-    // readable. We keep question marks intact but strip trailing exclamation
-    // marks (including "!!" etc.) which tend to feel shouty in short toasts.
-    const displayMessage = cleanedMessage
-      // Collapse any run of exclamation marks to a single one
-      .replace(/!{2,}/g, '!')
-      // Remove a trailing exclamation mark (or run of them) while preserving
-      // any final period or closing paren that may follow.
-      .replace(/!+(\s*[\.\)])?$/u, '$1')
-      .trim();
-
     let toast = document.getElementById('toastNotification');
     if (!toast) {
       toast = document.createElement('div');
@@ -3367,10 +3366,10 @@ const App = (window.App = {
 
     const messageEl = toast.querySelector('.toast-message');
     if (messageEl) {
-      messageEl.textContent = displayMessage;
+      messageEl.textContent = cleanedMessage;
     } else {
       // Fallback in case markup is missing for any reason
-      toast.textContent = displayMessage;
+      toast.textContent = cleanedMessage;
     }
 
     // Reset any in-flight timers so we can replay the entrance animation
@@ -3823,16 +3822,16 @@ const App = (window.App = {
         this.showSystemMessage(userMessage);
       } else if (error.isRateLimit) {
         this.showSystemMessage(
-          'AI portrait generation hit a rate limit, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
+          'Rate limit exceeded. Please wait a moment before generating another portrait.',
         );
       } else {
         this.showSystemMessage(
-          'AI portrait generation failed, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
+          'Failed to generate AI portrait. Using template portrait instead.',
         );
       }
       
-      // Ensure we at least have a pre-generated portrait to fall back to.
-      await this._ensurePreGeneratedPortraitFallback(currentChar, { force: true });
+      // Fall back to whatever portrait is already displayed
+      // (pre-generated ASCII or template). Guided mode behavior is unchanged.
     } finally {
       // Whatever happens above (success or failure), restore portrait font
       // size so the final ASCII art uses the default sizing from CSS.
@@ -4103,9 +4102,9 @@ const App = (window.App = {
     if (hasUnsavedChanges) {
       // Ask the user if they want to save before starting over.
       this.showConfirmationOverlay(
-        'You have not saved this character yet. What would you like to do?',
+        'You have not saved this character yet. Save before creating a new one?',
         async () => {
-          // User chose SAVE: first attempt to save; if save fails, we keep the current character.
+          // First attempt to save; if save fails, we keep the current character.
           await this.saveCharacter(true);
 
           // Re-check that we now have an ID before clearing.
@@ -4118,16 +4117,6 @@ const App = (window.App = {
           }
 
           this._startNewInternal();
-        },
-        () => {
-          // User chose DISCARD: start a fresh character without saving.
-          this._startNewInternal();
-        },
-        {
-          primaryLabel: 'SAVE',
-          secondaryLabel: 'DISCARD',
-          // Both CTAs use the secondary visual style in this flow.
-          primaryClass: 'terminal-btn',
         },
       );
     } else {
@@ -4168,9 +4157,6 @@ const App = (window.App = {
     const targetSelector = options.targetSelector;
     const primaryLabel = options.primaryLabel || 'YES';
     const secondaryLabel = options.secondaryLabel || 'NO';
-    const primaryClass =
-      options.primaryClass || 'terminal-btn terminal-btn-primary';
-    const secondaryClass = options.secondaryClass || 'terminal-btn';
 
     // While a confirmation dialog is open, pause keyboard navigation so
     // arrow keys don't move focus behind the modal.
@@ -4188,8 +4174,8 @@ const App = (window.App = {
             </p>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="${secondaryClass}" id="confirm-no">${secondaryLabel}</button>
-            <button class="${primaryClass}" id="confirm-yes">${primaryLabel}</button>
+            <button class="terminal-btn" id="confirm-no">${secondaryLabel}</button>
+            <button class="terminal-btn terminal-btn-primary" id="confirm-yes">${primaryLabel}</button>
           </div>
         </div>
       </div>`;

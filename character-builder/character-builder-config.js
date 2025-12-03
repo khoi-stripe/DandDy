@@ -67,4 +67,14 @@ window.CONFIG = {
   //
   // Leave as null to disable original image URLs for pre-generated portraits.
   PREGENERATED_PORTRAIT_BASE_URL: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/pregen',
+
+  // Default image model for custom AI portraits.
+  //
+  // - "dall-e-3": current high-quality default
+  // - "gpt-image-1": GPT Image 1 (new image model)
+  //
+  // The actual choice is stored per-browser via StorageService so both the
+  // builder and manager stay in sync. This config value is only used as a
+  // sane fallback when no explicit preference has been saved yet.
+  DEFAULT_IMAGE_MODEL: 'dall-e-3',
 };

@@ -176,13 +176,6 @@ const KeyboardNav = {
 const DEBUG_MANAGER = !!(window.DanddyConfig && window.DanddyConfig.DEBUG);
 const CharacterStorage = window.CharacterStorage;
 
-// Utility: normalize card subtitle text (race + class) to sentence case
-function toSentenceCase(text) {
-    if (!text) return '';
-    const lower = String(text).toLowerCase();
-    return lower.charAt(0).toUpperCase() + lower.slice(1);
-}
-
 // ========================================
 // APP STATE
 // ========================================
@@ -371,11 +364,7 @@ const UI = {
         
         // Populate ASCII thumbnails after rendering
         characters.forEach(char => {
-            // Use the same portrait selection logic as the character sheet so
-            // cards and detail views stay in sync.
-            const asciiPortrait = window.CharacterSheet
-                ? window.CharacterSheet.getAsciiPortrait(char)
-                : (char.customPortraitAscii || char.portrait?.ascii || char.asciiPortrait || null);
+            const asciiPortrait = char.portrait?.ascii || char.customPortraitAscii || char.asciiPortrait || null;
             if (asciiPortrait) {
                 const thumbnailEl = document.getElementById(`card-thumb-${char.id}`);
                 if (thumbnailEl) {
@@ -411,15 +400,12 @@ const UI = {
         // Handle race/class names (enhanced export has nested data)
         const raceNameRaw = character.raceData?.name || character.race || '?';
         const classNameRaw = character.classData?.name || character.class || '?';
-        const raceClassSentence = toSentenceCase(`${raceNameRaw} ${classNameRaw}`.trim());
-        const raceClass = escapeHtml(raceClassSentence || '?');
+        const raceName = escapeHtml(raceNameRaw);
+        const className = escapeHtml(classNameRaw);
         const name = escapeHtml(character.name || 'Unnamed Character');
         
-        // Get ASCII portrait for thumbnail using shared logic so the card
-        // matches the character sheet view.
-        const asciiPortrait = window.CharacterSheet
-            ? window.CharacterSheet.getAsciiPortrait(character)
-            : (character.customPortraitAscii || character.portrait?.ascii || character.asciiPortrait || null);
+        // Get ASCII portrait for thumbnail
+        const asciiPortrait = character.portrait?.ascii || character.customPortraitAscii || character.asciiPortrait || null;
         const hasPortrait = asciiPortrait && asciiPortrait.length > 0;
 
         return `
@@ -430,7 +416,7 @@ const UI = {
                 <div class="card-details">
                     <div class="card-name">${name}</div>
                     <div class="card-info">
-                        ${raceClass}${character.level ? ` • Lvl ${character.level}` : ''}
+                        ${raceName} ${className}${character.level ? ` • Lvl ${character.level}` : ''}
                     </div>
                 </div>
             </div>
@@ -1070,12 +1056,11 @@ async function confirmGeneratePortrait() {
             'Art style: classic fantasy ink illustration with strong contrast.',
             'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
             'Include some controlled, directional hatching to define form (light mid-tone texture only).',
+            'No grayscale gradients.',
             'Use realistic heroic anatomy with natural proportions (smaller head, longer arms, taller figure).',
             'Pose should feel dynamic and expressive.',
-            'Frame the character so the entire head, hands, and primary weapon or spell effect are fully visible in the image (no cropping at the top of the head).',
-            'Camera angle can vary between frontal, three-quarter, or slightly low-angle heroic views to add variety, while keeping the character clearly readable.',
             'Background should be simple, entirely black, and free of symbols or text.',
-            'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+            'Overall mood: classic dark-fantasy ink illustration with a dramatic, mythic tone.',
             'Aspect ratio 3:4.',
         ];
         
@@ -1817,17 +1802,6 @@ function showNotification(rawMessage) {
         )
         .trim();
 
-    // Normalize overly-emphatic punctuation so toast messages stay calm and
-    // readable. We keep question marks intact but strip trailing exclamation
-    // marks (including "!!" etc.) which tend to feel shouty in short toasts.
-    const displayMessage = cleanedMessage
-        // Collapse any run of exclamation marks to a single one
-        .replace(/!{2,}/g, '!')
-        // Remove a trailing exclamation mark (or run of them) while preserving
-        // any final period or closing paren that may follow.
-        .replace(/!+(\s*[\.\)])?$/u, '$1')
-        .trim();
-
     // Toast notification shared across the app (anchored to the terminal frame)
     let toast = document.getElementById('toastNotification');
     if (!toast) {
@@ -1869,10 +1843,10 @@ function showNotification(rawMessage) {
 
     const messageEl = toast.querySelector('.toast-message');
     if (messageEl) {
-        messageEl.textContent = displayMessage;
+        messageEl.textContent = cleanedMessage;
     } else {
         // Fallback in case markup is missing for any reason
-        toast.textContent = displayMessage;
+        toast.textContent = cleanedMessage;
     }
 
     // Reset any in-flight timers so we can replay the entrance animation
@@ -1952,8 +1926,6 @@ function focusFirstFieldInModal(modal) {
         }, 0);
     }
 }
-
-// Manager now uses the shared SettingsModal defined in character-builder-components.js
 
 // Generic helper: animate modal close so it shrinks toward center instead of
 // disappearing instantly. Expects terminal-theme.css modal keyframes.
@@ -2732,10 +2704,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Apply app version to header and welcome modal from global version config.
     try {
         const version = window.DANDDY_VERSION || '2.0.0';
-        const headerTitleText = document.querySelector('.terminal-title-text');
+        const headerTitle = document.querySelector('.terminal-title');
         const welcomeVersion = document.querySelector('.welcome-version');
-        if (headerTitleText) {
-            headerTitleText.textContent = `[ DandDy v${version} ]`;
+        if (headerTitle) {
+            headerTitle.textContent = `[ DandDy v${version} ]`;
         }
         if (welcomeVersion) {
             welcomeVersion.textContent = `DandDy v${version}`;

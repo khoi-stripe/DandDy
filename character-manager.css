@@ -539,6 +539,73 @@
    - Buttons: use ui-theme-teal via HTML classes */
 .terminal-header .terminal-title {
     color: var(--sheet-accent);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.manager-settings-link {
+    /* Match builder's icon-only settings button */
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--sheet-accent-dim);
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+.manager-settings-link:hover {
+    color: var(--sheet-accent);
+    text-shadow: 0 0 5px var(--sheet-accent);
+    text-decoration: none;
+}
+
+/* Settings modal layout (shared with builder via SettingsModal) */
+.settings-layout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-md);
+}
+
+.settings-section {
+    padding: var(--spacing-sm);
+    border-radius: 4px;
+    border: 1px solid var(--terminal-border-subtle);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.settings-row {
+    margin-bottom: var(--spacing-sm);
+}
+
+.settings-label {
+    display: block;
+    margin-bottom: var(--spacing-sm);
+}
+
+/* Inside modals, settings labels use the standard terminal warning yellow */
+.modal .settings-label {
+    color: var(--terminal-warning);
+}
+
+/* Ensure selector menus in the shared Settings modal are never clipped */
+.builder-settings-modal {
+    overflow: visible;
+}
+
+.builder-settings-modal .modal-body {
+    overflow-y: visible;
+}
+
+.builder-settings-modal .selector-menu {
+    z-index: 999;
 }
 
 #userInfoDisplay {

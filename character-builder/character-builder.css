@@ -448,7 +448,7 @@
 
 .settings-label {
   display: block;
-  margin-bottom: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
 }
 
 .settings-help {
@@ -481,7 +481,7 @@
   margin-top: 8px;
 }
 
-/* Inside modals, settings copy adopts the modal's yellow theme */
+/* Inside modals, settings labels use the standard terminal warning yellow */
 .modal .settings-label {
   color: var(--terminal-warning);
 }

@@ -260,11 +260,20 @@ class ChatCompletionRequest(BaseModel):
 
 
 class ImageGenerationRequest(BaseModel):
-    """Request for DALL-E image generation"""
+    """Request for image generation"""
     prompt: str = Field(..., min_length=10, max_length=4000)
     size: str = Field("1024x1024", pattern="^(256x256|512x512|1024x1024|1792x1024|1024x1792)$")
     # DALL-E 3 accepts: standard, hd (we also tolerate older gpt-image-1 values for compatibility)
     quality: str = Field("standard", pattern="^(standard|hd|low|medium|high|auto)$")
+    # Image model to use. We currently support:
+    # - dall-e-3      (default)
+    # - gpt-image-1   (GPT Image 1 image model)
+    # Additional models can be added here later without breaking callers.
+    model: str = Field(
+        "dall-e-3",
+        pattern="^(dall-e-3|gpt-image-1)$",
+        description="OpenAI image model identifier (e.g., 'dall-e-3' or 'gpt-image-1')",
+    )
 
 
 class NamesGenerationRequest(BaseModel):
@@ -462,17 +471,22 @@ async def generate_image(
     request: ImageGenerationRequest,
     http_request: Request
 ):
-    """Generate image using DALL-E"""
+    """Generate image using OpenAI image models (DALL-E 3, GPT Image 1, etc.)"""
     check_api_key()
     client_id = get_client_id(http_request)
     check_rate_limit(client_id)
     
     try:
         # Step 1: Generate image with OpenAI's image model
+        # Default defensively to DALL-E 3 if the requested model is missing/invalid.
+        model = request.model or "dall-e-3"
+        if model not in ("dall-e-3", "gpt-image-1"):
+            model = "dall-e-3"
+
         response = _call_openai_with_logging(
             kind="images.generate",
             fn=openai.images.generate,
-            model="dall-e-3",
+            model=model,
             prompt=request.prompt,
             n=1,
             size=request.size,
