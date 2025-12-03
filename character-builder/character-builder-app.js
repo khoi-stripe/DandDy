@@ -2987,6 +2987,9 @@ const App = (window.App = {
     const asciiPortrait = document.getElementById('character-portrait');
     const originalPortrait = document.getElementById('original-portrait');
     const toggleBtn = document.getElementById('toggle-portrait-btn');
+    const container = asciiPortrait
+      ? asciiPortrait.closest('.portrait-container')
+      : null;
 
     if (!asciiPortrait || !originalPortrait || !toggleBtn) return;
 
@@ -2999,6 +3002,9 @@ const App = (window.App = {
       // Switch to original
       asciiPortrait.style.display = 'none';
       originalPortrait.style.display = 'block';
+      if (container) {
+        container.classList.add('portrait-container--original-mode');
+      }
 
       if (iconSpan && labelSpan) {
         iconSpan.textContent = '≡';
@@ -3012,6 +3018,9 @@ const App = (window.App = {
       // Switch to ASCII
       asciiPortrait.style.display = 'block';
       originalPortrait.style.display = 'none';
+      if (container) {
+        container.classList.remove('portrait-container--original-mode');
+      }
 
       if (iconSpan && labelSpan) {
         iconSpan.textContent = '◉';
@@ -3022,6 +3031,17 @@ const App = (window.App = {
 
       toggleBtn.title = 'Toggle between ASCII and original art';
     }
+  },
+
+  /**
+   * (Deprecated) Kept for backwards compatibility. The shared character sheet
+   * now applies the default portrait view (ASCII vs Original) during initial
+   * render based on StorageService.getPortraitViewMode(), so this helper is
+   * no longer needed. It is intentionally a no-op.
+   */
+  _applyPreferredPortraitViewBuilder(character) {
+    // No-op: behavior handled by CharacterSheet._renderPortrait.
+    void character;
   },
 
   // Track if we've shown the guest save notice this session
@@ -4471,6 +4491,10 @@ const App = (window.App = {
           }
         }
 
+        // Apply preferred default portrait view (ASCII vs Original) in builder
+        // once elements are wired up so we don't flash the teal background.
+        this._applyPreferredPortraitViewBuilder(character);
+
         return;
       }
 
@@ -4589,6 +4613,9 @@ const App = (window.App = {
             }
           }
         }
+
+        // Apply preferred default portrait view (ASCII vs Original) in builder
+        this._applyPreferredPortraitViewBuilder(character);
       }
       return;
     }

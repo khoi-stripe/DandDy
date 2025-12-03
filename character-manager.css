@@ -577,7 +577,7 @@
 .settings-section {
     padding: var(--spacing-sm);
     border-radius: 4px;
-    border: 1px solid var(--terminal-border-subtle);
+    border: 1px solid var(--ui-border-color);
     background: rgba(0, 0, 0, 0.4);
 }
 
@@ -590,9 +590,62 @@
     margin-bottom: var(--spacing-sm);
 }
 
-/* Inside modals, settings labels use the standard terminal warning yellow */
-.modal .settings-label {
-    color: var(--terminal-warning);
+/* Inside modals, settings labels and radio labels follow the modal yellow theme */
+.modal .settings-label,
+.modal .settings-radio-label {
+    color: var(--modal-accent);
+}
+
+/* Settings modal: custom radio buttons for portrait view and similar options */
+.settings-radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+.settings-radio-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+}
+
+.settings-radio-option input[type='radio'] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    border: 1.5px solid var(--modal-accent);
+    background: transparent;
+    margin: 0;
+    position: relative;
+    box-shadow: 0 0 0 0 transparent;
+    cursor: pointer;
+}
+
+.settings-radio-option input[type='radio']::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border-radius: inherit;
+    background: var(--modal-accent);
+    transform: scale(0);
+    opacity: 0;
+    transition:
+        transform 120ms ease-out,
+        opacity 120ms ease-out;
+}
+
+.settings-radio-option input[type='radio']:checked::before {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.settings-radio-option input[type='radio']:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 255, 0, 0.5);
 }
 
 /* Ensure selector menus in the shared Settings modal are never clipped */

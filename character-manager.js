@@ -1759,6 +1759,9 @@ function togglePortraitView(characterId) {
     const asciiPortrait = document.getElementById(`character-portrait-${characterId}`);
     const originalPortrait = document.getElementById(`original-portrait-${characterId}`);
     const toggleBtn = document.getElementById(`toggle-portrait-btn-${characterId}`);
+    const container = asciiPortrait
+        ? asciiPortrait.closest('.portrait-container')
+        : null;
 
     if (!asciiPortrait || !originalPortrait || !toggleBtn) {
         console.warn('Portrait elements not found for character:', characterId);
@@ -1774,6 +1777,9 @@ function togglePortraitView(characterId) {
         // Switch to original
         asciiPortrait.classList.add('is-hidden');
         originalPortrait.classList.remove('is-hidden');
+        if (container) {
+            container.classList.add('portrait-container--original-mode');
+        }
 
         if (iconSpan && labelSpan) {
             iconSpan.textContent = '≡';
@@ -1787,6 +1793,9 @@ function togglePortraitView(characterId) {
         // Switch to ASCII
         asciiPortrait.classList.remove('is-hidden');
         originalPortrait.classList.add('is-hidden');
+        if (container) {
+            container.classList.remove('portrait-container--original-mode');
+        }
 
         if (iconSpan && labelSpan) {
             iconSpan.textContent = '◉';

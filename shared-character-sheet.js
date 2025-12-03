@@ -316,6 +316,19 @@ const CharacterSheet = (window.CharacterSheet = {
       null;
     const originalPortraitUrl =
       character.portrait?.url || character.originalPortraitUrl || null;
+
+    // Global portrait view mode (ASCII vs Original). Builder + manager share
+    // this preference via StorageService; fall back to config default.
+    let portraitViewMode = 'ascii';
+    try {
+      if (window.StorageService && StorageService.getPortraitViewMode) {
+        portraitViewMode = StorageService.getPortraitViewMode();
+      } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+        portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+      }
+    } catch (e) {
+      // Non-fatal: keep default
+    }
     
     // Use different IDs for builder vs manager
     const safeIdForDom = character.id || 'current';
@@ -325,10 +338,15 @@ const CharacterSheet = (window.CharacterSheet = {
     
     // Check if we need to show placeholder (no ASCII portrait content yet)
     const needsPlaceholder = !asciiPortrait && !originalPortraitUrl;
-    
+
+    const showOriginalByDefault =
+      !!originalPortraitUrl &&
+      portraitViewMode === 'original' &&
+      !needsPlaceholder;
+
     return `
-      <div class="portrait-container">
-        <div class="ascii-portrait ${needsPlaceholder ? 'ascii-portrait--placeholder' : ''}" id="${portraitId}">
+      <div class="portrait-container${showOriginalByDefault ? ' portrait-container--original-mode' : ''}">
+        <div class="ascii-portrait ${needsPlaceholder ? 'ascii-portrait--placeholder' : ''} ${showOriginalByDefault ? 'is-hidden' : ''}" id="${portraitId}">
           ${needsPlaceholder ? `
             <div class="portrait-placeholder-content">
               <div class="portrait-placeholder-cube-container">
@@ -346,7 +364,7 @@ const CharacterSheet = (window.CharacterSheet = {
           ` : ''}
         </div>
         ${originalPortraitUrl
-          ? `<img id="${originalPortraitId}" class="original-portrait is-hidden" src="${originalPortraitUrl}" alt="Character portrait">`
+          ? `<img id="${originalPortraitId}" class="original-portrait${showOriginalByDefault ? '' : ' is-hidden'}" src="${originalPortraitUrl}" alt="Character portrait">`
           : ''}
       </div>
     `;

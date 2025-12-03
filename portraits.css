@@ -13,6 +13,18 @@
   gap: var(--spacing-md);
 }
 
+/* When viewing the original image in the sheet, tint the container teal
+   and let the PNG multiply against it for a subtle ink-on-paper effect. */
+.portrait-container--original-mode {
+  background: var(--panel-teal);
+  /* Inset 1px black outline to mask any faint edges on the image */
+  box-shadow: inset 0 0 0 1px #000000;
+}
+
+.portrait-container--original-mode .original-portrait {
+  mix-blend-mode: multiply;
+}
+
 .portrait-actions {
   display: flex;
   gap: var(--spacing-sm);

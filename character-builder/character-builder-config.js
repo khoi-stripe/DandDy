@@ -77,4 +77,9 @@ window.CONFIG = {
   // builder and manager stay in sync. This config value is only used as a
   // sane fallback when no explicit preference has been saved yet.
   DEFAULT_IMAGE_MODEL: 'dall-e-3',
+
+  // Default portrait view mode when no explicit preference has been saved yet.
+  // - "ascii": show ASCII portraits by default
+  // - "original": prefer original images when available
+  DEFAULT_PORTRAIT_VIEW_MODE: 'ascii',
 };

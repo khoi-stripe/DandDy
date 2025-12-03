@@ -917,6 +917,9 @@
         const originalPortraitId = `original-portrait-${characterId}`;
         const asciiEl = document.getElementById(portraitId);
         const imgEl = document.getElementById(originalPortraitId);
+        const container = asciiEl
+          ? asciiEl.closest('.portrait-container')
+          : null;
 
         // Update ASCII art if we have a visible container and ASCII content.
         if (asciiEl && version.ascii) {
@@ -930,9 +933,30 @@
         }
 
         // Update original image src so "View original art" immediately shows
-        // the selected version's image.
+        // the selected version's image (respecting global portrait view mode).
         if (imgEl && version.url) {
           imgEl.src = version.url;
+
+          if (
+            container &&
+            window.StorageService &&
+            StorageService.getPortraitViewMode
+          ) {
+            const mode = StorageService.getPortraitViewMode();
+            if (mode === 'original') {
+              imgEl.addEventListener(
+                'load',
+                () => {
+                  if (asciiEl) {
+                    asciiEl.classList.add('is-hidden');
+                  }
+                  imgEl.classList.remove('is-hidden');
+                  container.classList.add('portrait-container--original-mode');
+                },
+                { once: true },
+              );
+            }
+          }
         }
 
         // Also update the grid card thumbnail (if it exists) so the list view

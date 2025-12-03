@@ -157,6 +157,16 @@ const Components = (window.Components = {
       imageModelOptions[0];
     const currentImageModelLabel = currentImageModelOption.label;
 
+    // Portrait view mode (ASCII vs Original)
+    const getPortraitViewMode = () => {
+      if (window.StorageService && StorageService.getPortraitViewMode) {
+        return StorageService.getPortraitViewMode();
+      }
+      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'ascii';
+    };
+
+    const currentPortraitViewMode = getPortraitViewMode();
+
     return `
       <div id="settingsModal" class="modal show" onclick="SettingsModal.close()">
         <div class="modal-content builder-settings-modal" onclick="event.stopPropagation();">
@@ -336,6 +346,34 @@ const Components = (window.Components = {
                         )
                         .join('')}
                     </select>
+                  </div>
+                </section>
+
+                <section class="settings-section">
+                  <div class="settings-row settings-row--stacked">
+                    <div class="settings-label">Default portrait view</div>
+                    <div class="settings-field">
+                      <div class="settings-radio-group" role="radiogroup" aria-label="Default portrait view">
+                        <label class="settings-radio-option">
+                          <input
+                            type="radio"
+                            name="portrait-view-mode"
+                            value="ascii"
+                            ${currentPortraitViewMode === 'original' ? '' : 'checked'}
+                          >
+                          <span class="settings-radio-label">ASCII</span>
+                        </label>
+                        <label class="settings-radio-option">
+                          <input
+                            type="radio"
+                            name="portrait-view-mode"
+                            value="original"
+                            ${currentPortraitViewMode === 'original' ? 'checked' : ''}
+                          >
+                          <span class="settings-radio-label">Original</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </section>
               </div>
@@ -531,6 +569,14 @@ const SettingsModal = (window.SettingsModal = {
     const imageModelSelect = document.getElementById('image-model-select');
     if (imageModelSelect && window.StorageService && StorageService.setImageModel) {
       StorageService.setImageModel(imageModelSelect.value);
+    }
+
+    // Save global portrait view mode (ASCII vs Original)
+    const portraitModeInput = document.querySelector(
+      'input[name="portrait-view-mode"]:checked',
+    );
+    if (portraitModeInput && window.StorageService && StorageService.setPortraitViewMode) {
+      StorageService.setPortraitViewMode(portraitModeInput.value);
     }
 
     // Use a non-intrusive toast for settings changes instead of a narrator line

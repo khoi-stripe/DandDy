@@ -231,6 +231,44 @@ const StorageService = (window.StorageService = {
     }
   },
 
+  // Global portrait view preference (ASCII vs Original).
+  // Stored per-browser so builder + manager can share the same choice.
+  getPortraitViewMode() {
+    try {
+      const raw = localStorage.getItem('dnd_portrait_view_mode');
+      const fallback =
+        (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'ascii';
+      if (!raw) return fallback;
+      const value = String(raw).trim().toLowerCase();
+      const allowed = ['ascii', 'original'];
+      return allowed.includes(value) ? value : fallback;
+    } catch (e) {
+      console.warn(
+        'StorageService.getPortraitViewMode failed, using fallback',
+        e,
+      );
+      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'ascii';
+    }
+  },
+
+  setPortraitViewMode(mode) {
+    try {
+      const value = String(mode || '').trim().toLowerCase();
+      const allowed = ['ascii', 'original'];
+      if (!allowed.includes(value)) {
+        console.warn(
+          'StorageService.setPortraitViewMode: ignoring unsupported mode',
+          value,
+        );
+        localStorage.removeItem('dnd_portrait_view_mode');
+        return;
+      }
+      localStorage.setItem('dnd_portrait_view_mode', value);
+    } catch (e) {
+      console.warn('StorageService.setPortraitViewMode failed', e);
+    }
+  },
+
   // ==== CHARACTER STORAGE (via shared CharacterStorage facade) ====
 
   /**

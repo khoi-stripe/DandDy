@@ -42,7 +42,7 @@
   
   /* ===== DERIVED COLOR TOKENS ===== */
   /* Background & Neutrals */
-  --terminal-bg: #0a0a0a;
+  --terminal-bg: #000000;
   --scrollbar-track-color: #050505;
   
   /* Terminal Green Tokens */
