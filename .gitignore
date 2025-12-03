@@ -49,3 +49,7 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Generated JS bundles (no-Node bundler output)
+manager.bundle.js
+character-builder/builder.bundle.js
