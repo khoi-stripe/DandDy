@@ -1421,16 +1421,31 @@ async function confirmGeneratePortrait() {
         const cameraPrompt =
             cameraList[Math.floor(Math.random() * cameraList.length)];
 
-        const renderingInstructions = [
-            'Create a high-contrast black-and-white fantasy illustration.',
-            'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
-            'Include some controlled, directional hatching to define form (light mid-tone texture only).',
-            `Pose: ${posePrompt}`,
-            cameraPrompt,
-            'Background should be simple, entirely black, and free of symbols or text.',
-            'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
-            'Aspect ratio 3:4.',
-        ];
+        let renderingInstructions;
+        if (
+            typeof window !== 'undefined' &&
+            window.PortraitPrompt &&
+            typeof window.PortraitPrompt.buildBasePortraitInstructions === 'function'
+        ) {
+            renderingInstructions = window.PortraitPrompt.buildBasePortraitInstructions(
+                {
+                    posePrompt,
+                    cameraPrompt,
+                },
+            );
+        } else {
+            // Fallback if PortraitPrompt is not available.
+            renderingInstructions = [
+                'Create a high-contrast black-and-white fantasy illustration.',
+                'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
+                'Include some controlled, directional hatching to define form (light mid-tone texture only).',
+                `Pose: ${posePrompt}`,
+                cameraPrompt,
+                'Background should be simple, entirely black, and free of symbols or text.',
+                'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+                'Aspect ratio 3:4.',
+            ];
+        }
         
         const fullPrompt = [...renderingInstructions, customPrompt].join(' ');
         

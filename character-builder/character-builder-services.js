@@ -2226,16 +2226,33 @@ Format your response as JSON array of strings, one for each option in order. Exa
     const cameraPrompt =
       cameraList[Math.floor(Math.random() * cameraList.length)];
 
-    const renderingInstructions = [
-      `Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,
-      'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
-      'Include some controlled, directional hatching to define form (light mid-tone texture only).',
-      `Pose: ${posePrompt}`,
-      cameraPrompt,
-      'Background should be simple, entirely black, and free of symbols or text.',
-      'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
-      'Aspect ratio 3:4.',
-    ];
+    let renderingInstructions;
+    if (
+      typeof window !== 'undefined' &&
+      window.PortraitPrompt &&
+      typeof window.PortraitPrompt.buildBasePortraitInstructions === 'function'
+    ) {
+      renderingInstructions = window.PortraitPrompt.buildBasePortraitInstructions(
+        {
+          characterDescription,
+          posePrompt,
+          cameraPrompt,
+        },
+      );
+    } else {
+      // Fallback: keep a local copy in case PortraitPrompt is not loaded.
+      renderingInstructions = [
+        `Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,
+        'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
+        'Include some controlled, directional hatching to define form (light mid-tone texture only).',
+        `Pose: ${posePrompt}`,
+        cameraPrompt,
+        'Background should be simple, entirely black, and free of symbols or text.',
+        'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+        'Aspect ratio 3:4.',
+      ];
+    }
+
     return renderingInstructions.join(' ');
   },
 

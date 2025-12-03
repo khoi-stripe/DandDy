@@ -309,16 +309,37 @@ const SecureAIService = (window.SecureAIService = {
   buildPortraitPrompt(character) {
     const characterDescription = this.buildCharacterDescription(character);
 
-    const renderingInstructions = [
-      `Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,
-      'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
-      'Include some controlled, directional hatching to define form (light mid-tone texture only).',
-      'Pose should feel dynamic and expressive.',
-      'Camera angle can vary between frontal, three-quarter, or slightly low-angle heroic views to add variety, while keeping the character clearly readable.',
-      'Background should be simple, entirely black, and free of symbols or text.',
-      'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
-      'Aspect ratio 3:4.',
-    ];
+    let renderingInstructions;
+    if (
+      typeof window !== 'undefined' &&
+      window.PortraitPrompt &&
+      typeof window.PortraitPrompt.buildBasePortraitInstructions === 'function'
+    ) {
+      // Use shared base instructions but let this secure helper manage pose/camera text.
+      renderingInstructions = window.PortraitPrompt.buildBasePortraitInstructions(
+        {
+          characterDescription,
+        },
+      );
+      renderingInstructions.splice(
+        3,
+        0,
+        'Pose should feel dynamic and expressive.',
+        'Camera angle can vary between frontal, three-quarter, or slightly low-angle heroic views to add variety, while keeping the character clearly readable.',
+      );
+    } else {
+      // Fallback copy if PortraitPrompt is not available.
+      renderingInstructions = [
+        `Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,
+        'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
+        'Include some controlled, directional hatching to define form (light mid-tone texture only).',
+        'Pose should feel dynamic and expressive.',
+        'Camera angle can vary between frontal, three-quarter, or slightly low-angle heroic views to add variety, while keeping the character clearly readable.',
+        'Background should be simple, entirely black, and free of symbols or text.',
+        'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+        'Aspect ratio 3:4.',
+      ];
+    }
 
     return renderingInstructions.join(' ');
   },
