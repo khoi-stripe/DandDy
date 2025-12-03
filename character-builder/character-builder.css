@@ -422,7 +422,8 @@
 .settings-layout {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  /* Slightly tighter vertical rhythm so selectors sit closer together */
+  gap: var(--spacing-sm);
 }
 
 .settings-intro {
@@ -432,7 +433,8 @@
 .settings-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--spacing-md);
+  /* Reduce spacing between stacked selector rows */
+  gap: var(--spacing-sm);
 }
 
 .settings-section {

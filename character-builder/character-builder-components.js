@@ -118,12 +118,14 @@ const Components = (window.Components = {
       .map((narrator) => {
         const optionText = `${narrator.emoji} ${narrator.name} - ${narrator.description}`;
         const truncatedText = truncate(optionText, 60);
+        const isSelected = narrator.id === currentNarratorId;
         return `
           <button
-            class="selector-option"
+            class="selector-option${isSelected ? ' is-selected' : ''}"
             type="button"
             role="option"
             data-value="${narrator.id}"
+            aria-selected="${isSelected ? 'true' : 'false'}"
           >
             <span class="selector-option-label">
               ${truncatedText}
@@ -236,20 +238,23 @@ const Components = (window.Components = {
                         aria-hidden="true"
                       >
                         ${textSpeedOptions
-                          .map(
-                            (opt) => `
+                          .map((opt) => {
+                            const isSelected =
+                              opt.value === currentTextSpeedOption.value;
+                            return `
                             <button
-                              class="selector-option"
+                              class="selector-option${isSelected ? ' is-selected' : ''}"
                               type="button"
                               role="option"
                               data-value="${opt.value}"
+                              aria-selected="${isSelected ? 'true' : 'false'}"
                             >
                               <span class="selector-option-label">
                                 ${opt.label}
                               </span>
                             </button>
-                          `,
-                          )
+                          `;
+                          })
                           .join('')}
                       </div>
                     </div>
@@ -295,20 +300,23 @@ const Components = (window.Components = {
                         aria-hidden="true"
                       >
                         ${imageModelOptions
-                          .map(
-                            (opt) => `
+                          .map((opt) => {
+                            const isSelected =
+                              opt.value === currentImageModelOption.value;
+                            return `
                             <button
-                              class="selector-option"
+                              class="selector-option${isSelected ? ' is-selected' : ''}"
                               type="button"
                               role="option"
                               data-value="${opt.value}"
+                              aria-selected="${isSelected ? 'true' : 'false'}"
                             >
                               <span class="selector-option-label">
                                 ${opt.label}
                               </span>
                             </button>
-                          `,
-                          )
+                          `;
+                          })
                           .join('')}
                       </div>
                     </div>
@@ -404,6 +412,12 @@ const SettingsModal = (window.SettingsModal = {
           if (value && label) {
             narratorLabel.textContent = label.textContent.trim();
             narratorSelect.value = value;
+            // Keep menu selection state in sync with the trigger
+            narratorOptions.forEach((opt) => {
+              const isSelected = opt === option;
+              opt.classList.toggle('is-selected', isSelected);
+              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
           }
         });
       });
@@ -426,6 +440,12 @@ const SettingsModal = (window.SettingsModal = {
           if (value && label) {
             speedLabel.textContent = label.textContent.trim();
             speedSelect.value = value;
+            // Keep menu selection state in sync with the trigger
+            speedOptions.forEach((opt) => {
+              const isSelected = opt === option;
+              opt.classList.toggle('is-selected', isSelected);
+              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
           }
         });
       });
@@ -448,6 +468,12 @@ const SettingsModal = (window.SettingsModal = {
           if (value && label) {
             imageModelLabel.textContent = label.textContent.trim();
             imageModelSelect.value = value;
+            // Keep menu selection state in sync with the trigger
+            imageModelOptions.forEach((opt) => {
+              const isSelected = opt === option;
+              opt.classList.toggle('is-selected', isSelected);
+              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
           }
         });
       });
