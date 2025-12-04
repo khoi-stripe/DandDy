@@ -199,7 +199,8 @@ const SecureAIService = (window.SecureAIService = {
         body: JSON.stringify({
           prompt,
           size: '1024x1024',
-          quality: 'standard',
+          // Use "medium" as the default quality to balance cost and detail.
+          quality: 'medium',
         }),
       });
 

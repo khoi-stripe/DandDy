@@ -180,8 +180,9 @@ const CharacterSheet = (window.CharacterSheet = {
           ? `openPortraitHistory('${character.id}')`
           : null;
 
-    const originalPortraitUrl =
-      character.portrait?.url || character.originalPortraitUrl || null;
+    // Use the same helper as _renderPortrait to ensure header toggle button
+    // visibility matches the actual portrait being displayed.
+    const originalPortraitUrl = this.getOriginalPortraitUrl(character);
 
     // Read the global portrait view mode so the overflow toggle label/icon
     // matches the actual default view (ASCII vs Original). This mirrors the
@@ -332,36 +333,13 @@ const CharacterSheet = (window.CharacterSheet = {
     // Prefer the active portrait version from history (if any) so the sheet
     // always matches the grid card + history modal. Fall back to legacy
     // top-level fields when no history metadata is present.
-    let asciiPortrait = null;
-    let originalPortraitUrl =
-      character.portrait?.url || character.originalPortraitUrl || null;
-
-    try {
-      const metadata = character.portraitMetadata;
-      if (
-        metadata &&
-        Array.isArray(metadata.versions) &&
-        metadata.activeVersionId
-      ) {
-        const activeVersion = metadata.versions.find(
-          (v) => v && v.id === metadata.activeVersionId,
-        );
-        if (activeVersion) {
-          if (activeVersion.ascii) {
-            asciiPortrait = activeVersion.ascii;
-          }
-          if (activeVersion.url) {
-            originalPortraitUrl = activeVersion.url;
-          }
-        }
-      }
-    } catch (e) {
-      // Non-fatal; fall back to legacy fields below.
-    }
-
-    if (!asciiPortrait) {
-      asciiPortrait = this.getAsciiPortrait(character);
-    }
+    //
+    // IMPORTANT: We must get BOTH ascii and url from the same source to avoid
+    // mismatches (e.g., showing version A's image with version B's ASCII).
+    // Use getAsciiPortrait() for ASCII since it has robust fallbacks, then
+    // use getOriginalPortraitUrl() to get the matching URL.
+    const asciiPortrait = this.getAsciiPortrait(character);
+    const originalPortraitUrl = this.getOriginalPortraitUrl(character);
 
     // Global portrait view mode (ASCII vs Original). Builder + manager share
     // this preference via StorageService; fall back to config default.
@@ -583,10 +561,11 @@ const CharacterSheet = (window.CharacterSheet = {
       const m = openShell._detachedMenu || openShell.querySelector('.selector-menu');
       if (!btn || !m) return;
 
-      // Restore menu to original parent if it was moved (portrait history)
+      // Restore menu to original parent if it was moved (any modal)
       if (m._originalParent) {
         m.classList.remove('portrait-history-menu-detached');
         m.classList.remove('portrait-history-menu-detached--teal');
+        m.classList.remove('selector-menu-detached');
         m._originalParent.appendChild(m);
         delete m._originalParent;
         delete openShell._detachedMenu;
@@ -627,25 +606,33 @@ const CharacterSheet = (window.CharacterSheet = {
         const inModal = !!triggerEl.closest('.modal');
         const inPortraitModal = !!triggerEl.closest('.portrait-history-modal');
 
-        // Move menu outside clipping ancestors to prevent overflow:hidden clipping
-        if (inPortraitModal) {
+        // Move menu outside modal ancestors to prevent:
+        // 1. overflow:hidden clipping
+        // 2. CSS transform creating a new containing block (breaks fixed positioning)
+        // This applies to ALL modals, not just portrait-history.
+        if (inModal) {
           menu._originalParent = menu.parentElement;
           // Store reference in shell so handlers can find the menu later
           shell._detachedMenu = menu;
-          // Base class to preserve modal-style theming when moved to body
-          menu.classList.add('portrait-history-menu-detached');
 
-          // If the trigger lives inside a focused/selected history card, also
-          // opt the detached menu into the teal theme so it matches the card.
-          const card = triggerEl.closest('.character-card');
-          const isTealCard =
-            card &&
-            (card.classList.contains('is-selected') ||
-              card.classList.contains('is-keyboard-focused'));
-          if (isTealCard) {
-            menu.classList.add('portrait-history-menu-detached--teal');
+          // Add theming class based on modal type
+          if (inPortraitModal) {
+            menu.classList.add('portrait-history-menu-detached');
+            // If the trigger lives inside a focused/selected history card, also
+            // opt the detached menu into the teal theme so it matches the card.
+            const card = triggerEl.closest('.character-card');
+            const isTealCard =
+              card &&
+              (card.classList.contains('is-selected') ||
+                card.classList.contains('is-keyboard-focused'));
+            if (isTealCard) {
+              menu.classList.add('portrait-history-menu-detached--teal');
+            } else {
+              menu.classList.remove('portrait-history-menu-detached--teal');
+            }
           } else {
-            menu.classList.remove('portrait-history-menu-detached--teal');
+            // For other modals (settings, etc.), add a generic detached class
+            menu.classList.add('selector-menu-detached');
           }
 
           document.body.appendChild(menu);
@@ -656,16 +643,15 @@ const CharacterSheet = (window.CharacterSheet = {
           const triggerRect = triggerEl.getBoundingClientRect();
           const viewportWidth = window.innerWidth;
 
-          // Decide whether to use viewport-based fixed positioning (sheet header,
-          // portrait history modal, etc.) or local absolute positioning relative
-          // to the selector shell (settings modal and search/sort bar).
+          // Decide whether to use viewport-based fixed positioning or local
+          // absolute positioning relative to the selector shell.
           //
-          // - Non‑modal selectors default to fixed positioning so menus can
-          //   escape overflow/scroll containers (sheet headers, manager grid).
-          // - Selectors inside the search/sort actions bar use local absolute
-          //   positioning so the sort dropdown stays anchored under its button.
+          // RULE: Always use fixed positioning so menus can escape overflow
+          // containers (e.g. terminal-container with overflow:hidden).
+          // EXCEPTION: Search/sort bar uses absolute positioning so the
+          // dropdown stays anchored to its button during page scroll.
           const inSearchActions = !!triggerEl.closest('.search-actions');
-          const useFixedPositioning = inPortraitModal || (!inModal && !inSearchActions);
+          const useFixedPositioning = !inSearchActions;
 
           // Measure menu size without affecting final animation. Temporarily
           // neutralize transforms so we get the *full* height instead of the
@@ -731,16 +717,54 @@ const CharacterSheet = (window.CharacterSheet = {
           const padding = 8; // breathing room from host edges
           const gapY = 4; // small gap between trigger and menu
 
-          // Treat the nearest terminal frame/container as the visual "viewport"
-          // so menus stay within the green app frame instead of the browser
-          // viewport. Fall back to the real viewport if no frame is found.
-          const host =
-            triggerEl.closest('.terminal-frame, .terminal-container') ||
-            document.documentElement;
-          const hostRect = host.getBoundingClientRect();
+          // Determine the bounding container for the menu:
+          // - In a modal: use the modal-body bounds (so menu stays within modal content area)
+          // - Not in a modal: use the terminal frame bounds
+          // This ensures menus are visually contained within their logical parent.
+          //
+          // NOTE: We use .modal-body (not .modal-content) because modals with
+          // overflow:visible would give us incorrect bounds when the menu overflows.
+          let host;
+          let hostBottom;
+          let hostTop;
+          const verticalSafeMargin = 12;
 
-          const hostTop = hostRect.top + padding;
-          const hostBottom = hostRect.bottom - padding;
+          if (inModal) {
+            // For modals, find the modal-body as the content area constraint.
+            // Also check for modal-footer to ensure we don't overlap it.
+            const modalContent = triggerEl.closest('.modal-content');
+            const modalBody = triggerEl.closest('.modal-body');
+            const modalFooter = modalContent?.querySelector('.modal-footer');
+
+            if (modalBody) {
+              const bodyRect = modalBody.getBoundingClientRect();
+              hostTop = bodyRect.top + padding;
+              hostBottom = bodyRect.bottom - padding;
+            } else if (modalContent) {
+              const contentRect = modalContent.getBoundingClientRect();
+              hostTop = contentRect.top + padding + verticalSafeMargin;
+              hostBottom = contentRect.bottom - padding - verticalSafeMargin;
+            } else {
+              // Fallback to terminal frame
+              host = triggerEl.closest('.terminal-frame, .terminal-container') || document.documentElement;
+              const hostRect = host.getBoundingClientRect();
+              hostTop = hostRect.top + padding + verticalSafeMargin;
+              hostBottom = hostRect.bottom - padding - verticalSafeMargin;
+            }
+
+            // If there's a modal footer, ensure we don't extend past it
+            if (modalFooter) {
+              const footerRect = modalFooter.getBoundingClientRect();
+              hostBottom = Math.min(hostBottom, footerRect.top - padding);
+            }
+          } else {
+            host =
+              triggerEl.closest('.terminal-frame, .terminal-container') ||
+              document.documentElement;
+            const hostRect = host.getBoundingClientRect();
+            hostTop = hostRect.top + padding + verticalSafeMargin;
+            hostBottom = hostRect.bottom - padding - verticalSafeMargin;
+          }
 
           // Calculate available space above and below trigger within the host
           const spaceAbove = triggerRect.top - hostTop;
@@ -750,14 +774,15 @@ const CharacterSheet = (window.CharacterSheet = {
           const fitsBelow = spaceBelow >= menuHeight + gapY;
           const fitsAbove = spaceAbove >= menuHeight + gapY;
 
-          // Choose direction: prefer below for top-half triggers, above for bottom-half
+          // Choose direction: prefer below for top-half triggers, above for bottom-half.
+          // For match-width shells (like settings), we prefer below if both fit.
           const triggerCenterY = triggerRect.top + triggerRect.height / 2;
           const inTopHalf = triggerCenterY < viewportHeight / 2;
 
           let openBelow;
           if (fitsBelow && fitsAbove) {
-            // Both fit: use viewport half as hint
-            openBelow = inTopHalf;
+            // Both fit: use viewport half as hint, but prefer below for match-width
+            openBelow = forceMatchWidth ? true : inTopHalf;
           } else if (fitsBelow) {
             openBelow = true;
           } else if (fitsAbove) {
@@ -767,55 +792,70 @@ const CharacterSheet = (window.CharacterSheet = {
             openBelow = spaceBelow >= spaceAbove;
           }
 
-          // For match-width shells (like the narrator settings selectors), always
-          // prefer opening below so the trigger stays visible above the listbox.
-          if (forceMatchWidth) {
-            openBelow = true;
-          }
-
           if (useFixedPositioning) {
             // ===== Host-based fixed positioning (non-modal + portrait history) =====
 
-            // Position the menu using a single top coordinate (no bottom), and
-            // clamp so it always stays within the padded host vertically.
-            const maxTop = hostBottom - menuHeight;
-            let top;
+            // Calculate available space in each direction BEFORE positioning.
+            // This ensures we use the full available space, not just the
+            // measured menu height (which might be pre-constrained by CSS).
+            const spaceAboveTrigger = triggerRect.top - gapY - hostTop;
+            const spaceBelowTrigger = hostBottom - triggerRect.bottom - gapY;
 
-            if (openBelow) {
-              // Open below: start directly under trigger, then clamp if needed.
-              top = triggerRect.bottom + gapY;
-              if (top > maxTop) {
-                top = Math.max(hostTop, maxTop);
-              }
-            } else {
-              // Open above: start with bottom of menu sitting just above trigger.
-              top = triggerRect.top - gapY - menuHeight;
-              if (top < hostTop) {
-                top = hostTop;
-              }
-            }
+            let top;
+            let availableHeight;
 
             menu.style.position = 'fixed';
-            menu.style.top = `${top}px`;
-            menu.style.bottom = 'auto';
 
-            // If menu would extend past host, cap its height so it scrolls
-            // instead of clipping off-screen.
-            const availableHeight = hostBottom - top;
-            if (menuHeight > availableHeight) {
+            if (openBelow) {
+              // Open below: anchor menu at its top edge, just under trigger
+              const top = triggerRect.bottom + gapY;
+              availableHeight = hostBottom - top;
+              
+              menu.style.top = `${top}px`;
+              menu.style.bottom = 'auto';
+            } else {
+              // Open above: anchor menu at its BOTTOM edge, just above trigger.
+              // This lets the menu "grow upward" naturally.
+              const menuBottom = window.innerHeight - (triggerRect.top - gapY);
+              availableHeight = spaceAboveTrigger;
+              
+              menu.style.top = 'auto';
+              menu.style.bottom = `${menuBottom}px`;
+            }
+
+            // Set max-height to constrain within bounds (enables scrolling if needed)
+            if (availableHeight > 0) {
               menu.style.maxHeight = `${availableHeight}px`;
               menu.style.overflowY = 'auto';
-            } else {
-              menu.style.maxHeight = '';
-              menu.style.overflowY = '';
             }
 
             // Horizontal offset: keep menus inside the host frame. For the
             // portrait history modal specifically, open the menu to the *side*
             // of the card so it doesn't obscure the three-dot trigger; for all
             // other hosts fall back to the standard behavior.
-            const hostLeft = hostRect.left + padding;
-            const hostRight = hostRect.right - padding;
+            //
+            // For horizontal bounds, we use the modal-content (not modal-body)
+            // since we want the full width of the modal dialog.
+            let hostLeft, hostRight;
+            if (inModal) {
+              const modalContent = triggerEl.closest('.modal-content');
+              if (modalContent) {
+                const contentRect = modalContent.getBoundingClientRect();
+                hostLeft = contentRect.left + padding;
+                hostRight = contentRect.right - padding;
+              } else {
+                // Fallback
+                hostLeft = padding;
+                hostRight = viewportWidth - padding;
+              }
+            } else if (host) {
+              const hostRect = host.getBoundingClientRect();
+              hostLeft = hostRect.left + padding;
+              hostRight = hostRect.right - padding;
+            } else {
+              hostLeft = padding;
+              hostRight = viewportWidth - padding;
+            }
 
             let targetLeft;
             if (inPortraitModal) {
@@ -876,24 +916,30 @@ const CharacterSheet = (window.CharacterSheet = {
             // Use higher z-index when inside any modal to appear above modal backdrop.
             menu.style.zIndex = inModal ? '1100' : '1000';
           } else {
-            // ===== Local absolute positioning inside modal / search bar =====
+            // ===== Local absolute positioning (search/sort bar only) =====
+            // The search bar needs absolute positioning so dropdown stays
+            // anchored to its button during page scroll.
 
             menu.style.position = 'absolute';
 
-            // Vertical: position relative to the selector shell so the menu
-            // visually hugs the trigger, ignoring viewport-based clamping.
-            let top;
+            // Compute desired top in viewport space, clamped within the host,
+            // then convert to shell-relative coordinates for absolute positioning.
+            const maxTopViewport = hostBottom - menuHeight;
+            let topViewport;
+
             if (openBelow) {
-              if (forceMatchWidth) {
-                // For match-width shells, align the menu so it starts directly
-                // under the trigger, independent of shell offsets.
-                top = triggerRect.height + gapY;
-              } else {
-                top = triggerRect.bottom - shellRect.top + gapY;
+              topViewport = triggerRect.bottom + gapY;
+              if (topViewport > maxTopViewport) {
+                topViewport = Math.max(hostTop, maxTopViewport);
               }
             } else {
-              top = triggerRect.top - shellRect.top - menuHeight - gapY;
+              topViewport = triggerRect.top - gapY - menuHeight;
+              if (topViewport < hostTop) {
+                topViewport = hostTop;
+              }
             }
+
+            const top = topViewport - shellRect.top;
             menu.style.top = `${top}px`;
             menu.style.bottom = 'auto';
 
@@ -902,11 +948,24 @@ const CharacterSheet = (window.CharacterSheet = {
             menu.style.left = `${left}px`;
             menu.style.right = 'auto';
 
-            // Inside the settings modal / search bar, the container is already
-            // constrained, so we generally don't need extra viewport clamping.
-            menu.style.maxHeight = '';
-            menu.style.overflowY = '';
-            menu.style.zIndex = inModal ? '1100' : '1000';
+            // Cap height so long menus scroll instead of clipping.
+            let availableHeight = hostBottom - topViewport;
+            if (!openBelow) {
+              availableHeight = Math.min(
+                availableHeight,
+                triggerRect.top - gapY - topViewport,
+              );
+            }
+
+            if (menuHeight > availableHeight && availableHeight > 0) {
+              menu.style.maxHeight = `${availableHeight}px`;
+              menu.style.overflowY = 'auto';
+            } else {
+              menu.style.maxHeight = '';
+              menu.style.overflowY = '';
+            }
+
+            menu.style.zIndex = '1000';
           }
         } catch (err) {
           // In case anything above fails (e.g., unexpected DOM state), fall back
@@ -1624,6 +1683,50 @@ const CharacterSheet = (window.CharacterSheet = {
     // 4) Legacy asciiPortrait without key tagging
     if (character.asciiPortrait) {
       return character.asciiPortrait;
+    }
+
+    return null;
+  },
+
+  /**
+   * Determine the best original portrait URL to use for a character.
+   * Mirrors getAsciiPortrait() to ensure ASCII and URL come from the same source.
+   * Prefers:
+   * 1) Active portrait version's URL from history
+   * 2) originalPortraitUrl (custom AI portrait URL)
+   * 3) portrait.url (exported portrait object)
+   */
+  getOriginalPortraitUrl(character) {
+    if (!character) return null;
+
+    // Prefer the active portrait version from history when available so
+    // manager, builder, and history views all agree on "current" art.
+    try {
+      const metadata = character.portraitMetadata;
+      if (
+        metadata &&
+        Array.isArray(metadata.versions) &&
+        metadata.activeVersionId
+      ) {
+        const activeVersion = metadata.versions.find(
+          (v) => v && v.id === metadata.activeVersionId,
+        );
+        if (activeVersion && activeVersion.url) {
+          return activeVersion.url;
+        }
+      }
+    } catch (e) {
+      // Non-fatal; fall through to legacy fields.
+    }
+
+    // 1) Explicit custom portrait URL
+    if (character.originalPortraitUrl) {
+      return character.originalPortraitUrl;
+    }
+
+    // 2) Exported portrait object from builder
+    if (character.portrait && character.portrait.url) {
+      return character.portrait.url;
     }
 
     return null;

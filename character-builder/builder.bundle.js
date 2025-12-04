@@ -1027,6 +1027,692 @@
 
 
 
+// ===== BUNDLE PART: portrait-prompts.js =====
+
+// Shared helpers for building AI portrait prompt style instructions.
+// Exposes PortraitPrompt on window so both builder and manager can use
+// the same base text for image generation.
+
+(function (global) {
+  /**
+   * Centralized portrait prompt helper.
+   *
+   * Concepts:
+   * - "Base" instructions: shared structure that always keeps
+   *   characterDescription, posePrompt, and cameraPrompt.
+   * - "Theme": a named style preset that controls the experimental
+   *   description block (ink style, rendering notes, background, etc).
+   *
+   * This lets you test different prompt wordings by adding/editing
+   * theme definitions below, then switching themes from the Settings UI.
+   */
+
+  const DEFAULT_THEME_ID = 'cinematic-inks';
+  const ADMIN_STORAGE_KEY = 'dnd_portrait_prompt_entries_v1';
+
+  // In-memory cache of admin-configured variables (race/class/scene/style).
+  let adminCache = null;
+
+  function normalize(str) {
+    return (str || '').toString().trim();
+  }
+
+  function loadAdminCache() {
+    if (adminCache) return adminCache;
+
+    const empty = {
+      races: {},
+      classes: {},
+      scenes: {},
+      styles: {},
+      poses: {},   // pose variants by class
+      cameras: {}, // camera angle variants by class
+    };
+
+    try {
+      const raw = global.localStorage
+        ? global.localStorage.getItem(ADMIN_STORAGE_KEY)
+        : null;
+      if (!raw) {
+        adminCache = empty;
+        return adminCache;
+      }
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) {
+        adminCache = empty;
+        return adminCache;
+      }
+
+      /** @type {{[key: string]: string[]}} */
+      const races = {};
+      /** @type {{[key: string]: string[]}} */
+      const classes = {};
+      /** @type {{[key: string]: string[]}} */
+      const scenes = {};
+      /** @type {{[key: string]: string[]}} */
+      const poses = {};
+      /** @type {{[key: string]: string[]}} */
+      const cameras = {};
+      /** @type {{[key: string]: { styleDescription?: string, sceneDescription?: string }}} */
+      const styles = {};
+
+      parsed.forEach((entry) => {
+        if (!entry || !entry.kind || !entry.key) return;
+        const kind = normalize(entry.kind).toLowerCase();
+        const key = normalize(entry.key).toLowerCase();
+        if (!key) return;
+
+        if (kind === 'race') {
+          const desc = normalize(entry.description);
+          if (desc) {
+            if (!Array.isArray(races[key])) races[key] = [];
+            races[key].push(desc);
+          }
+        } else if (kind === 'class') {
+          const desc = normalize(entry.description);
+          if (desc) {
+            if (!Array.isArray(classes[key])) classes[key] = [];
+            classes[key].push(desc);
+          }
+        } else if (kind === 'scene' || kind === 'background') {
+          // "background" is kept for backwards compatibility with older
+          // entries; treat it as a scene variable.
+          const desc = normalize(entry.description);
+          if (desc) {
+            if (!Array.isArray(scenes[key])) scenes[key] = [];
+            scenes[key].push(desc);
+          }
+        } else if (kind === 'pose') {
+          // Pose variants keyed by class (e.g. "fighter", "wizard", "default")
+          const desc = normalize(entry.description);
+          if (desc) {
+            if (!Array.isArray(poses[key])) poses[key] = [];
+            poses[key].push(desc);
+          }
+        } else if (kind === 'camera') {
+          // Camera angle variants keyed by class
+          const desc = normalize(entry.description);
+          if (desc) {
+            if (!Array.isArray(cameras[key])) cameras[key] = [];
+            cameras[key].push(desc);
+          }
+        } else if (kind === 'style') {
+          const styleDesc = normalize(entry.styleDescription || entry.description);
+          const sceneDesc = normalize(entry.backgroundDescription);
+          if (!styles[key]) {
+            styles[key] = {};
+          }
+          if (styleDesc) styles[key].styleDescription = styleDesc;
+          if (sceneDesc) styles[key].sceneDescription = sceneDesc;
+        }
+      });
+
+      adminCache = { races, classes, scenes, styles, poses, cameras };
+      return adminCache;
+    } catch (e) {
+      // Non-fatal: if anything goes wrong, fall back to empty cache.
+      adminCache = empty;
+      return adminCache;
+    }
+  }
+
+  function getVariableSnippet(kind, key) {
+    const cache = loadAdminCache();
+    const k = normalize(key).toLowerCase();
+    if (!k) return null;
+
+    if (kind === 'race') {
+      const variants = cache.races[k];
+      if (Array.isArray(variants) && variants.length) {
+        const idx = Math.floor(Math.random() * variants.length);
+        return variants[idx];
+      }
+      return null;
+    }
+    if (kind === 'class') {
+      const variants = cache.classes[k];
+      if (Array.isArray(variants) && variants.length) {
+        const idx = Math.floor(Math.random() * variants.length);
+        return variants[idx];
+      }
+      return null;
+    }
+    if (kind === 'scene') {
+      const variants = cache.scenes[k];
+      if (Array.isArray(variants) && variants.length) {
+        const idx = Math.floor(Math.random() * variants.length);
+        return variants[idx];
+      }
+      return null;
+    }
+    if (kind === 'pose') {
+      const variants = cache.poses[k];
+      if (Array.isArray(variants) && variants.length) {
+        const idx = Math.floor(Math.random() * variants.length);
+        return variants[idx];
+      }
+      return null;
+    }
+    if (kind === 'camera') {
+      const variants = cache.cameras[k];
+      if (Array.isArray(variants) && variants.length) {
+        const idx = Math.floor(Math.random() * variants.length);
+        return variants[idx];
+      }
+      return null;
+    }
+    return null;
+  }
+
+  /**
+   * Get all pose variants for a given class key.
+   * Returns an array of pose descriptions, or null if none configured.
+   * @param {string} classKey
+   * @returns {string[]|null}
+   */
+  function getPoseVariants(classKey) {
+    const cache = loadAdminCache();
+    const k = normalize(classKey).toLowerCase();
+    if (!k) return null;
+    const variants = cache.poses[k];
+    if (Array.isArray(variants) && variants.length) {
+      return variants;
+    }
+    return null;
+  }
+
+  /**
+   * Get all camera variants for a given class key.
+   * Returns an array of camera descriptions, or null if none configured.
+   * @param {string} classKey
+   * @returns {string[]|null}
+   */
+  function getCameraVariants(classKey) {
+    const cache = loadAdminCache();
+    const k = normalize(classKey).toLowerCase();
+    if (!k) return null;
+    const variants = cache.cameras[k];
+    if (Array.isArray(variants) && variants.length) {
+      return variants;
+    }
+    return null;
+  }
+
+  function getStyleOverrides(themeId) {
+    const cache = loadAdminCache();
+    const k = normalize(themeId);
+    if (!k) return null;
+    const entry = cache.styles[k];
+    if (!entry) return null;
+    return {
+      styleDescription: entry.styleDescription || '',
+    };
+  }
+
+  /**
+   * Theme registry.
+   *
+   * Each theme defines:
+   * - id: stable key used in localStorage / settings
+   * - label: user-facing name
+   * - description: short explanation (shown in settings)
+   * - buildStyleLines(options): returns an array of style instructions
+   *   that will be inserted between the characterDescription line and
+   *   the pose/camera lines.
+   *
+   * NOTE: This is the main place to freely experiment with wording.
+   */
+  const THEMES = {
+    'cinematic-inks': {
+      id: 'cinematic-inks',
+      label: 'Cinematic Inks (default)',
+      description:
+        'More cinematic lighting and framing while staying in black-and-white ink.',
+      buildStyleLines(options) {
+        const lines = [];
+        lines.push(
+          'Render in dramatic black-and-white ink with deep shadows and sharp rim lighting.',
+        );
+        lines.push(
+          'Treat the illustration like a film still: strong focal point, clear subject separation, and layered depth.',
+        );
+        lines.push(
+          'Use a limited range of mid-tone hatching to suggest volume without muddying the forms.',
+        );
+        lines.push(
+          'Keep the background abstract and mostly dark so the character silhouette and face read instantly.',
+        );
+        lines.push(
+          'Overall mood: cinematic fantasy portrait, serious and iconic, suitable for a character sheet.',
+        );
+        lines.push('Aspect ratio 3:4.');
+        return lines;
+      },
+    },
+  };
+
+  /**
+   * Resolve a theme by id, falling back to the default.
+   */
+  function getThemeById(themeId) {
+    if (themeId && THEMES[themeId]) {
+      return THEMES[themeId];
+    }
+    return THEMES[DEFAULT_THEME_ID];
+  }
+
+  /**
+   * Build the base list of style instructions for a portrait prompt.
+   *
+   * Historically this returned a flat list of sentences that included both
+   * style and background notes plus pose/camera. Newer callers that want a
+   * structured template should prefer `buildStyleAndBackgroundDescriptions`.
+   */
+  function buildBasePortraitInstructions(options) {
+    const {
+      characterDescription,
+      posePrompt,
+      cameraPrompt,
+      themeId,
+    } = options || {};
+
+    const parts = [];
+
+    // Legacy subject line for compatibility with older callers.
+    if (characterDescription) {
+      parts.push(
+        `Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,
+      );
+    } else {
+      parts.push('Create a high-contrast black-and-white fantasy illustration.');
+    }
+
+    // Theme-specific experimental block
+    const theme = getThemeById(themeId);
+    if (theme && typeof theme.buildStyleLines === 'function') {
+      try {
+        const styleLines = theme.buildStyleLines({
+          characterDescription,
+          posePrompt,
+          cameraPrompt,
+        });
+        if (Array.isArray(styleLines)) {
+          styleLines.forEach((line) => {
+            if (line && typeof line === 'string') {
+              parts.push(line);
+            }
+          });
+        }
+      } catch (e) {
+        // Non-fatal: if a custom theme throws, fall back to classic ink block.
+        const fallback = THEMES[DEFAULT_THEME_ID];
+        if (fallback && typeof fallback.buildStyleLines === 'function') {
+          const fallbackLines = fallback.buildStyleLines({
+            characterDescription,
+            posePrompt,
+            cameraPrompt,
+          });
+          if (Array.isArray(fallbackLines)) {
+            fallbackLines.forEach((line) => {
+              if (line && typeof line === 'string') {
+                parts.push(line);
+              }
+            });
+          }
+        }
+      }
+    }
+
+    // Pose and camera instructions (always preserved)
+    if (posePrompt) {
+      parts.push(`Pose: ${posePrompt}`);
+    }
+
+    if (cameraPrompt) {
+      parts.push(cameraPrompt);
+    }
+
+    return parts;
+  }
+
+  /**
+   * Build compact style + background descriptions for use in higher-level
+   * prompt templates.
+   *
+   * Returns:
+   *   { styleDescription: string, backgroundDescription: string | null }
+   */
+  function buildStyleAndBackgroundDescriptions(options) {
+    const { themeId } = options || {};
+
+    // 1) Prefer explicit overrides from the admin UI when available.
+    const overrides = getStyleOverrides(themeId);
+    let styleDescription = '';
+    let backgroundDescription = null;
+    if (overrides && overrides.styleDescription) {
+      styleDescription = overrides.styleDescription;
+    }
+
+    // 2) If no admin-provided scene description, try a randomized scene snippet
+    // keyed by the current theme.
+    if (backgroundDescription == null) {
+      const sceneSnippet = getVariableSnippet('scene', themeId);
+      if (sceneSnippet) {
+        backgroundDescription = sceneSnippet;
+      }
+    }
+
+    // 3) Fall back to theme-defined style lines when no override present.
+    if (!styleDescription || backgroundDescription == null) {
+      const theme = getThemeById(themeId);
+
+      let styleLines = [];
+      if (theme && typeof theme.buildStyleLines === 'function') {
+        try {
+          const lines = theme.buildStyleLines(options || {});
+          if (Array.isArray(lines)) {
+            styleLines = lines.filter(
+              (l) => typeof l === 'string' && l.trim(),
+            );
+          }
+        } catch (e) {
+          // Non-fatal: fall back to default theme
+          const fallback = THEMES[DEFAULT_THEME_ID];
+          if (fallback && typeof fallback.buildStyleLines === 'function') {
+            const lines = fallback.buildStyleLines(options || {});
+            if (Array.isArray(lines)) {
+              styleLines = lines.filter(
+                (l) => typeof l === 'string' && l.trim(),
+              );
+            }
+          }
+        }
+      }
+
+      const backgroundLines = [];
+      const otherLines = [];
+
+      styleLines.forEach((line) => {
+        if (/background/i.test(line)) {
+          backgroundLines.push(line);
+        } else {
+          otherLines.push(line);
+        }
+      });
+
+      if (!styleDescription) {
+        styleDescription = otherLines.join(' ');
+      }
+      if (backgroundDescription == null) {
+        backgroundDescription = backgroundLines.length
+          ? backgroundLines.join(' ')
+          : null;
+      }
+    }
+
+    return {
+      styleDescription,
+      backgroundDescription,
+    };
+  }
+
+  /**
+   * Build a compact list of rendering instructions for custom-portrait flows.
+   *
+   * This is the shared helper used by both the Character Builder and Manager
+   * when the player supplies their own text prompt. It keeps:
+   *
+   * - Pose: {posePrompt}
+   * - {cameraPrompt}
+   * - STYLE: {styleDescription}
+   * - Scene: {backgroundDescription}
+   *
+   * and pulls style/background text from:
+   * - Admin-defined styles in the prompt style editor (per theme)
+   * - Theme defaults in this file
+   *
+   * Callers are responsible for resolving the active theme id (via
+   * StorageService.getPortraitPromptTheme / CONFIG, etc.) and passing it in.
+   *
+   * @param {{ posePrompt?: string, cameraPrompt?: string, themeId?: string }} options
+   * @returns {string[]} array of instruction lines
+   */
+  function buildCustomPortraitInstructions(options) {
+    const opts = options || {};
+    const posePrompt = opts.posePrompt || '';
+    const cameraPrompt = opts.cameraPrompt || '';
+    const themeId = opts.themeId;
+
+    let styleDescription = '';
+    let backgroundDescription = '';
+
+    try {
+      const sections =
+        buildStyleAndBackgroundDescriptions({
+          posePrompt,
+          cameraPrompt,
+          themeId,
+        }) || {};
+      styleDescription = sections.styleDescription || '';
+      backgroundDescription = sections.backgroundDescription || '';
+    } catch (e) {
+      // Non-fatal – fall through to simple defaults below.
+    }
+
+    if (!styleDescription) {
+      styleDescription =
+        'High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';
+    }
+    if (!backgroundDescription) {
+      backgroundDescription =
+        'Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';
+    }
+
+    const lines = [];
+    if (posePrompt) {
+      lines.push(`Pose: ${posePrompt}`);
+    }
+    if (cameraPrompt) {
+      lines.push(cameraPrompt);
+    }
+    if (styleDescription) {
+      lines.push(`STYLE: ${styleDescription}`);
+    }
+    if (backgroundDescription) {
+      lines.push(`Scene: ${backgroundDescription}`);
+    }
+
+    return lines;
+  }
+
+  /**
+   * Public API
+   */
+  const PortraitPrompt = (global.PortraitPrompt = global.PortraitPrompt || {});
+
+  PortraitPrompt.buildBasePortraitInstructions = buildBasePortraitInstructions;
+  PortraitPrompt.buildStyleAndBackgroundDescriptions =
+    buildStyleAndBackgroundDescriptions;
+   // Shared helper for builder + manager custom-portrait flows
+  PortraitPrompt.buildCustomPortraitInstructions =
+    buildCustomPortraitInstructions;
+  PortraitPrompt.getVariableSnippet = getVariableSnippet;
+  
+  // Pose and camera variant accessors for admin-configured data
+  PortraitPrompt.getPoseVariants = getPoseVariants;
+  PortraitPrompt.getCameraVariants = getCameraVariants;
+  
+  // Force reload of admin cache (useful after admin UI changes)
+  PortraitPrompt.invalidateCache = function invalidateCache() {
+    adminCache = null;
+  };
+
+  PortraitPrompt.getDefaultThemeId = function getDefaultThemeId() {
+    return DEFAULT_THEME_ID;
+  };
+
+  PortraitPrompt.getThemes = function getThemes() {
+    // Built-in themes first
+    const baseThemes = Object.keys(THEMES).map((id) => {
+      const theme = THEMES[id];
+      return {
+        id: theme.id,
+        label: theme.label,
+        description: theme.description,
+      };
+    });
+
+    // Then any additional style entries defined via the admin UI that do not
+    // already correspond to a built-in theme id.
+    let customThemes = [];
+    try {
+      const cache = loadAdminCache();
+      const styleKeys = cache && cache.styles ? Object.keys(cache.styles) : [];
+      const extraIds = styleKeys.filter((id) => !THEMES[id]);
+
+      customThemes = extraIds.map((id) => {
+        const styleEntry = cache.styles[id] || {};
+        const rawDesc = styleEntry.styleDescription || '';
+        const trimmed =
+          rawDesc && rawDesc.length > 120
+            ? rawDesc.slice(0, 117) + '...'
+            : rawDesc;
+        return {
+          id,
+          label: `Custom: ${id}`,
+          description: trimmed || 'Custom portrait style',
+        };
+      });
+    } catch (e) {
+      // Non-fatal – if anything goes wrong, just return the base themes.
+      customThemes = [];
+    }
+
+    return baseThemes.concat(customThemes);
+  };
+})(window);
+
+
+
+
+
+// ===== BUNDLE PART: shared-portrait-data.js =====
+
+// ========================================
+// SHARED PORTRAIT POSE & CAMERA DATA
+// ========================================
+// Provides pose and camera angle selection for portrait generation.
+// Data is sourced from the admin UI (prompt-style-admin.html) via PortraitPrompt.
+//
+// The admin UI is the single source of truth. Use "Load defaults" button
+// in the admin to populate with built-in poses/cameras.
+
+const PortraitPoseData = (window.PortraitPoseData = {
+  /**
+   * Get a random pose for a given class.
+   * Reads from admin-configured poses via PortraitPrompt.
+   * @param {string} classKey - The character class (lowercase)
+   * @returns {string} A random pose description
+   */
+  getRandomPose(classKey) {
+    const normalizedKey = (classKey || 'default').toLowerCase();
+
+    if (window.PortraitPrompt && typeof PortraitPrompt.getPoseVariants === 'function') {
+      // Try class-specific first, then fall back to "default" key
+      let poses = PortraitPrompt.getPoseVariants(normalizedKey);
+      if (!poses || !poses.length) {
+        poses = PortraitPrompt.getPoseVariants('default');
+      }
+      if (poses && poses.length) {
+        return poses[Math.floor(Math.random() * poses.length)];
+      }
+    }
+
+    // No poses configured - return a generic fallback
+    console.warn(
+      `PortraitPoseData: No poses configured for "${normalizedKey}". ` +
+      'Use the admin UI (prompt-style-admin.html) to load defaults.',
+    );
+    return 'standing in a heroic pose';
+  },
+
+  /**
+   * Get a random camera angle for a given class.
+   * Reads from admin-configured cameras via PortraitPrompt.
+   * @param {string} classKey - The character class (lowercase)
+   * @returns {string} A random camera angle description
+   */
+  getRandomCamera(classKey) {
+    const normalizedKey = (classKey || 'default').toLowerCase();
+
+    if (window.PortraitPrompt && typeof PortraitPrompt.getCameraVariants === 'function') {
+      // Try class-specific first, then fall back to "default" key
+      let cameras = PortraitPrompt.getCameraVariants(normalizedKey);
+      if (!cameras || !cameras.length) {
+        cameras = PortraitPrompt.getCameraVariants('default');
+      }
+      if (cameras && cameras.length) {
+        return cameras[Math.floor(Math.random() * cameras.length)];
+      }
+    }
+
+    // No cameras configured - return a generic fallback
+    console.warn(
+      `PortraitPoseData: No cameras configured for "${normalizedKey}". ` +
+      'Use the admin UI (prompt-style-admin.html) to load defaults.',
+    );
+    return 'Camera angle: three-quarter view';
+  },
+
+  /**
+   * Get both pose and camera for a class in one call.
+   * @param {string} classKey - The character class (lowercase)
+   * @returns {{ pose: string, camera: string }}
+   */
+  getRandomPoseAndCamera(classKey) {
+    return {
+      pose: this.getRandomPose(classKey),
+      camera: this.getRandomCamera(classKey),
+    };
+  },
+
+  /**
+   * Check if poses are configured for a class (or default).
+   * @param {string} classKey
+   * @returns {boolean}
+   */
+  hasPoses(classKey) {
+    const normalizedKey = (classKey || 'default').toLowerCase();
+    if (window.PortraitPrompt && typeof PortraitPrompt.getPoseVariants === 'function') {
+      let poses = PortraitPrompt.getPoseVariants(normalizedKey);
+      if (!poses || !poses.length) {
+        poses = PortraitPrompt.getPoseVariants('default');
+      }
+      return poses && poses.length > 0;
+    }
+    return false;
+  },
+
+  /**
+   * Check if cameras are configured for a class (or default).
+   * @param {string} classKey
+   * @returns {boolean}
+   */
+  hasCameras(classKey) {
+    const normalizedKey = (classKey || 'default').toLowerCase();
+    if (window.PortraitPrompt && typeof PortraitPrompt.getCameraVariants === 'function') {
+      let cameras = PortraitPrompt.getCameraVariants(normalizedKey);
+      if (!cameras || !cameras.length) {
+        cameras = PortraitPrompt.getCameraVariants('default');
+      }
+      return cameras && cameras.length > 0;
+    }
+    return false;
+  },
+});
+
+
+
 // ===== BUNDLE PART: character-manager-api.js =====
 
 // ========================================
@@ -2007,6 +2693,10 @@ window.CONFIG = {
   // - "ascii": show ASCII portraits by default
   // - "original": prefer original images when available
   DEFAULT_PORTRAIT_VIEW_MODE: 'ascii',
+
+  // Default portrait prompt theme when no explicit preference has been saved yet.
+  // This should match one of PortraitPrompt.getThemes().id values.
+  DEFAULT_PORTRAIT_PROMPT_THEME: 'cinematic-inks',
 };
 
 
@@ -4137,6 +4827,82 @@ const StorageService = (window.StorageService = {
     }
   },
 
+  // Preferred portrait prompt theme for AI portraits.
+  // Stored per-browser so builder + manager can share the same choice.
+  getPortraitPromptTheme() {
+    try {
+      const raw = localStorage.getItem('dnd_portrait_prompt_theme');
+      const fallback =
+        (CONFIG && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) || null;
+      if (!raw) return fallback;
+      const value = String(raw).trim();
+
+      // If the shared PortraitPrompt helper is available, validate against it
+      // so we gracefully fall back when themes change.
+      if (
+        typeof window !== 'undefined' &&
+        window.PortraitPrompt &&
+        typeof window.PortraitPrompt.getThemes === 'function'
+      ) {
+        try {
+          const themes = window.PortraitPrompt.getThemes();
+          const allowedIds = Array.isArray(themes)
+            ? themes.map((t) => t.id)
+            : [];
+          if (allowedIds.includes(value)) {
+            return value;
+          }
+          return fallback;
+        } catch (e) {
+          // Non-fatal – fall through to returning the raw value.
+        }
+      }
+
+      return value || fallback;
+    } catch (e) {
+      console.warn('StorageService.getPortraitPromptTheme failed, using fallback', e);
+      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) || null;
+    }
+  },
+
+  setPortraitPromptTheme(themeId) {
+    try {
+      const value = String(themeId || '').trim();
+      if (!value) {
+        localStorage.removeItem('dnd_portrait_prompt_theme');
+        return;
+      }
+
+      // If the shared PortraitPrompt helper is available, validate against it.
+      if (
+        typeof window !== 'undefined' &&
+        window.PortraitPrompt &&
+        typeof window.PortraitPrompt.getThemes === 'function'
+      ) {
+        try {
+          const themes = window.PortraitPrompt.getThemes();
+          const allowedIds = Array.isArray(themes)
+            ? themes.map((t) => t.id)
+            : [];
+          if (!allowedIds.includes(value)) {
+            console.warn(
+              'StorageService.setPortraitPromptTheme: ignoring unknown theme id',
+              value,
+            );
+            localStorage.removeItem('dnd_portrait_prompt_theme');
+            return;
+          }
+        } catch (e) {
+          // Non-fatal – if validation fails, still store the value.
+        }
+      }
+
+      localStorage.setItem('dnd_portrait_prompt_theme', value);
+    } catch (e) {
+      console.warn('StorageService.setPortraitPromptTheme failed', e);
+    }
+  },
+
   // ==== CHARACTER STORAGE (via shared CharacterStorage facade) ====
 
   /**
@@ -5702,8 +6468,8 @@ Format your response as JSON array of strings, one for each option in order. Exa
         body: JSON.stringify({
           prompt: prompt,
           size: '1024x1024',
-          // Use "high" for best quality portraits (kept for compatibility with existing backend validation).
-          quality: 'high',
+          // Default to "medium" to keep quality good while reducing cost/latency.
+          quality: 'medium',
           model: model,
         }),
       }, 70000); // 70 seconds for image generation (DALL-E can be very slow, plus R2 upload)
@@ -5713,16 +6479,37 @@ Format your response as JSON array of strings, one for each option in order. Exa
         console.log('%c🎨 IMAGE (Error)', 'color: #f00; font-weight: bold');
         console.log('  Error:', errorData.detail);
         
+        // Helper to extract error message from Pydantic validation errors or plain strings
+        const extractErrorMessage = (detail) => {
+          if (!detail) return null;
+          // Pydantic returns validation errors as an array of objects
+          if (Array.isArray(detail)) {
+            return detail.map(err => {
+              if (typeof err === 'string') return err;
+              // Pydantic format: { loc: [...], msg: '...', type: '...' }
+              const field = err.loc ? err.loc.slice(1).join('.') : 'unknown';
+              return `${field}: ${err.msg || err.message || JSON.stringify(err)}`;
+            }).join('; ');
+          }
+          if (typeof detail === 'object') {
+            return detail.msg || detail.message || JSON.stringify(detail);
+          }
+          return String(detail);
+        };
+        
+        const errorMessage = extractErrorMessage(errorData.detail);
+        
         // Check for rate limiting
         if (response.status === 429) {
-          const rateLimitError = new Error(errorData.detail || 'Rate limit exceeded');
+          const rateLimitError = new Error(errorMessage || 'Rate limit exceeded');
           rateLimitError.isRateLimit = true;
           throw rateLimitError;
         }
         
-        // Check for safety system rejection
-        if (response.status === 400 && errorData.detail && errorData.detail.includes('safety system')) {
-          console.warn('⚠️ OpenAI safety system rejection:', errorData.detail);
+        // Check for safety system rejection (handle both string and array detail)
+        const detailStr = typeof errorData.detail === 'string' ? errorData.detail : errorMessage;
+        if (response.status === 400 && detailStr && detailStr.toLowerCase().includes('safety system')) {
+          console.warn('⚠️ OpenAI safety system rejection:', detailStr);
           console.warn('📝 REJECTED PROMPT:', prompt);
           
           // Analyze the prompt to help identify problematic sections
@@ -5730,13 +6517,13 @@ Format your response as JSON array of strings, one for each option in order. Exa
           
           const safetyError = new Error('Portrait generation was flagged by OpenAI\'s content safety system');
           safetyError.isSafetyRejection = true;
-          safetyError.originalMessage = errorData.detail;
+          safetyError.originalMessage = detailStr;
           safetyError.rejectedPrompt = prompt; // Capture the prompt for debugging
           safetyError.promptAnalysis = analysis; // Include analysis results
           throw safetyError;
         }
         
-        throw new Error(errorData.detail || `API error: ${response.status}`);
+        throw new Error(errorMessage || `API error: ${response.status}`);
       }
 
       const data = await response.json();
@@ -5874,228 +6661,147 @@ Format your response as JSON array of strings, one for each option in order. Exa
 
   // Build full DALL-E prompt with rendering instructions (not shown to user)
   buildPortraitPrompt(character) {
-    const characterDescription = this.buildCharacterDescription(character);
-
     // Normalize class key for lookups
     const classKey = (character.class || 'default').toLowerCase();
 
-    // Class-specific pose variants (5 each where applicable)
-    const poseVariantsByClass = {
-      // Martial / weapon-focused
-      fighter: [
-        'posed mid-swing with a heavy weapon, body twisted to show the arc of the strike',
-        'standing in a ready battle stance, shield raised and weapon held low but tense',
-        'caught in the moment of blocking an attack, weight shifted back with shield braced',
-        'bust-length portrait (shoulders-up chest shot), armor and pauldrons filling most of the frame, weapon only implied near the edge of the composition',
-        'half-body view from the top of the head to the waist, shield and weapon crossing in front of the torso in a strong diagonal',
-      ],
-      barbarian: [
-        'leaning forward in a feral roar, muscles tensed, weapon mid-swing',
-        'standing wide and grounded, one foot on a rock, gripping a massive weapon with both hands',
-        'caught mid-leap as if diving into battle, hair and trophies flying outward',
-        'bust-length portrait (shoulders-up) with wild hair and trophies framing the face, weapon only partially visible',
-        'half-body view from head to waist, torso twisted slightly as they grip a massive weapon across their body',
-      ],
-      paladin: [
-        'kneeling with shield planted in front, weapon held upright in a solemn vow pose',
-        'standing tall with shield forward and weapon raised in a protective gesture',
-        'framed in a side stance, shield angled and weapon ready for a precise strike',
-        'bust-length portrait (chest and shoulders) with polished armor and holy symbol prominent, gaze lifted slightly upward',
-        'half-body view from head to waist, shield raised to one side and weapon held upright along the torso',
-      ],
-      rogue: [
-        'crouched low in the shadows, one dagger drawn and the other held behind for balance',
-        'leaning casually against an unseen wall, one hand resting on a hidden blade',
-        'mid-step on a narrow ledge, body turned sideways with cloak pulled close',
-        'bust-length portrait (shoulders-up) emerging from shadow, cloak and hood framing the face, one dagger just at the edge of frame',
-        'half-body view from head to waist, body angled three-quarter with one hand resting lightly on a hidden blade at the belt',
-      ],
-      monk: [
-        'balanced on one leg in a classic kick pose, arms forming a flowing guard shape',
-        'mid-strike with an open palm, body rotated and lines clean and focused',
-        'seated in calm meditation, legs crossed and hands resting in a composed mudra',
-        'bust-length portrait (shoulders-up), calm expression and neatly arranged robes, one hand raised near the chest in a subtle gesture',
-        'half-body view from head to waist in a centered stance, arms forming a clean symmetrical guard in front of the torso',
-      ],
-      ranger: [
-        'drawing a bow with the string fully pulled, body turned in a three-quarter stance',
-        'kneeling on one knee with bow lowered, scanning the distance like a watchful scout',
-        'mid-stride through an implied forest floor, bow held loosely but ready',
-        'bust-length portrait (shoulders-up) with cloak and quiver framing the head and shoulders, bow only hinted at near the edge of frame',
-        'half-body view from head to waist, bow held across the chest in a relaxed but ready posture',
-      ],
- 
-      // Casters and support
-      wizard: [
-        'standing with one hand raised and fingers splayed, arcane energy swirling upward',
-        'leaning over an invisible spellbook, staff angled forward as if channeling power',
-        'mid-gesture with both hands shaping a spell, sleeves and robes pulled by the motion',
-        'bust-length portrait (shoulders-up) with arcane light reflecting off the face and shoulders, staff or spell effect just entering frame',
-        'half-body view from head to waist, one arm across the torso cradling a spellbook while the other hand traces glowing sigils',
-      ],
-      sorcerer: [
-        'surrounded by swirling magical energy, one hand outstretched and the other pulled close',
-        'standing with arms wide, raw power coiling around their torso and shoulders',
-        'mid-step as a surge of magic bursts from the ground around their feet',
-        'bust-length portrait (shoulders-up) wreathed in subtle magical glow around the shoulders and chest, expression intense',
-        'half-body view from head to waist, arms drawn in close as swirling power wraps the upper torso',
-      ],
-      warlock: [
-        'holding a pact focus or talisman forward, dark energy streaming from it',
-        'standing in a relaxed stance with one hand behind their back, the other tracing eldritch runes',
-        'reaching upward toward an unseen patron, cloak and garments pulled by unnatural wind',
-        'bust-length portrait (shoulders-up) with pact focus or talisman held near the chest, faint eldritch patterns behind the head and shoulders',
-        'half-body view from head to waist, cloak falling around the torso while one hand rests lightly on a focus at the belt',
-      ],
-      cleric: [
-        'raising a holy symbol high, light radiating outward in a protective arc',
-        'standing with shield angled and mace lowered, posture firm and resolute',
-        'kneeling in prayerful focus, holy symbol clasped between both hands',
-        'bust-length portrait (shoulders-up) with holy symbol and upper armor prominent in frame, expression serene but resolute',
-        'half-body view from head to waist, shield or mace held close to the torso in a protective stance',
-      ],
-      druid: [
-        'standing with staff planted in the earth, vines and leaves swirling around',
-        'mid-transformation pose, body partly turned and framed by natural shapes',
-        'kneeling to touch the ground, one hand extended as if coaxing growth',
-        'bust-length portrait (shoulders-up) framed by leaves, branches, or antler-like shapes around the head and shoulders',
-        'half-body view from head to waist, staff or natural focus held across the chest with cloak or furs draped over the shoulders',
-      ],
-      bard: [
-        'mid-performance with an instrument, one foot forward and body open to an unseen crowd',
-        'leaning back in a dramatic flourish, cloak and hair trailing with the motion',
-        'perched casually on an unseen stool or crate, instrument resting comfortably in hand',
-        'bust-length portrait (shoulders-up) with instrument or microphone-like focus near the chest, hair and clothing adding dynamic shapes',
-        'half-body view from head to waist, instrument cradled against the torso in a relaxed, performative pose',
-      ],
- 
-      // Default / non-class-specific fallback
-      default: [
-        'standing in a relaxed but heroic stance, weight shifted slightly to one side',
-        'mid-stride as if walking toward the viewer with confident energy',
-        'standing in profile with head turned toward the viewer, posture composed and steady',
-        'bust-length portrait (shoulders-up) with the character centered in frame, clothing and armor details emphasized around the chest and shoulders',
-        'half-body view from head to waist, stance relaxed but confident with hands or a weapon resting near the torso',
-      ],
-    };
+    // Use shared pose and camera data from PortraitPoseData module
+    const { pose: posePrompt, camera: cameraPrompt } =
+      window.PortraitPoseData && typeof PortraitPoseData.getRandomPoseAndCamera === 'function'
+        ? PortraitPoseData.getRandomPoseAndCamera(classKey)
+        : {
+            pose: 'standing in a relaxed but heroic stance',
+            camera: 'Camera angle: three-quarter view that clearly shows the full silhouette.',
+          };
 
-    // Camera angle variants (5 each where applicable)
-    const cameraVariantsByClass = {
-      fighter: [
-        'Camera angle: slightly low and three-quarter to emphasize strength and presence.',
-        'Camera angle: eye-level, centered on the torso and weapon for a direct confrontation.',
-        'Camera angle: three-quarter from the shield side, highlighting defense and stance.',
-        'Camera angle: slightly above, looking down to show battlefield context around the figure.',
-        'Camera angle: close to ground level, making the character loom large in the frame.',
-      ],
-      barbarian: [
-        'Camera angle: low and close, exaggerating size and ferocity.',
-        'Camera angle: three-quarter with a strong diagonal, emphasizing motion and power.',
-        'Camera angle: eye-level but tilted slightly to make the pose feel unstable and wild.',
-        'Camera angle: pulled back to show the full silhouette and large weapon in motion.',
-        'Camera angle: slightly below the shoulders, looking up into a battle roar.',
-      ],
-      paladin: [
-        'Camera angle: eye-level, straight on, emphasizing honor and symmetry.',
-        'Camera angle: slightly low, looking up past the shield to give a guardian feeling.',
-        'Camera angle: three-quarter from the weapon side, showing both devotion and readiness.',
-        'Camera angle: slightly above, as if from the viewpoint of someone being protected.',
-        'Camera angle: close to the chest and shoulders, focusing on heraldry and holy symbols.',
-      ],
-      rogue: [
-        'Camera angle: slightly above and to the side, emphasizing stealth and environment.',
-        'Camera angle: three-quarter from behind, with the face turned back toward the viewer.',
-        'Camera angle: low and angled sharply, creating long, dramatic shadows.',
-        'Camera angle: tight framing around the upper body, leaving the background mostly in shadow.',
-        'Camera angle: oblique and off-center, reinforcing a feeling of secrecy and motion.',
-      ],
-      monk: [
-        'Camera angle: mid-distance and centered, capturing clean lines of the martial pose.',
-        'Camera angle: slightly low, emphasizing balance and upward motion in kicks or strikes.',
-        'Camera angle: from above, looking down on a circular stance pattern.',
-        'Camera angle: three-quarter, letting limbs and flowing cloth create dynamic diagonals.',
-        'Camera angle: side-on profile to highlight precision and alignment of the form.',
-      ],
-      ranger: [
-        'Camera angle: three-quarter from the front, aligned with the drawn bow and arrow.',
-        'Camera angle: from slightly behind the shoulder, looking along the line of the bowstring.',
-        'Camera angle: slightly elevated, framing the ranger and implied terrain below.',
-        'Camera angle: low and angled upward through implied undergrowth or rough ground.',
-        'Camera angle: mid-distance, with the character slightly off-center to suggest open space.',
-      ],
-      wizard: [
-        'Camera angle: three-quarter, framing both staff and spell effect in the same view.',
-        'Camera angle: slightly low, making the spellcasting gesture feel towering and grand.',
-        'Camera angle: slightly above, looking down on a circle of arcane energy.',
-        'Camera angle: tight on the upper body and hands, emphasizing complex spell gestures.',
-        'Camera angle: oblique and off-center, with arcane elements framing the composition.',
-      ],
-      sorcerer: [
-        'Camera angle: close and low, centered on the chest where power is gathering.',
-        'Camera angle: three-quarter from the side, showing energy spiraling around the figure.',
-        'Camera angle: above and tilted, as if the viewer is caught in the swirl of magic.',
-        'Camera angle: tight framing on the face and hands, emphasizing raw intensity.',
-        'Camera angle: pulled back slightly, letting arcs of power form a halo-like shape.',
-      ],
-      warlock: [
-        'Camera angle: slightly low and off-center, giving a subtle, ominous imbalance.',
-        'Camera angle: three-quarter from behind, looking toward an unseen source of power.',
-        'Camera angle: eye-level but pushed to one side, leaving empty darkness opposite the figure.',
-        'Camera angle: close to the focus or talisman, with the character looming just behind it.',
-        'Camera angle: slightly above, letting eldritch patterns form around the character\'s feet.',
-      ],
-      cleric: [
-        'Camera angle: slightly low, looking up toward the raised holy symbol.',
-        'Camera angle: eye-level, centered to evoke balance and stability.',
-        'Camera angle: three-quarter, allowing both shield and symbol to read clearly.',
-        'Camera angle: slightly above, as if from the viewpoint of a blessed ally.',
-        'Camera angle: mid-distance with the character framed symmetrically in the composition.',
-      ],
-      druid: [
-        'Camera angle: low and close to the ground, emphasizing roots, stones, and natural forms.',
-        'Camera angle: three-quarter, with implied branches or leaves partially framing the view.',
-        'Camera angle: slightly above, looking down as if from a bird\'s-eye vantage.',
-        'Camera angle: eye-level but softened, placing the character gently into the environment.',
-        'Camera angle: mid-distance, with the figure slightly off-center to leave room for nature.',
-      ],
-      bard: [
-        'Camera angle: eye-level, as if the viewer is part of an unseen audience.',
-        'Camera angle: three-quarter, capturing both gesture and instrument clearly.',
-        'Camera angle: slightly low, turning a performance flourish into a heroic moment.',
-        'Camera angle: above and angled, as if looking down from a balcony over a small stage.',
-        'Camera angle: tight around the upper body and instrument, focusing on expression.',
-      ],
-      default: [
-        'Camera angle: three-quarter view that clearly shows the full silhouette.',
-        'Camera angle: eye-level, centered, with the figure dominating the frame.',
-        'Camera angle: slightly low, making the character feel larger and more heroic.',
-        'Camera angle: slightly above, looking down just enough to show shoulders and gear.',
-        'Camera angle: mid-distance with the character placed slightly off-center for balance.',
-      ],
-    };
+    // Resolve current portrait prompt theme (if any)
+    let promptThemeId = null;
+    try {
+      if (
+        typeof window !== 'undefined' &&
+        window.StorageService &&
+        typeof window.StorageService.getPortraitPromptTheme === 'function'
+      ) {
+        promptThemeId = window.StorageService.getPortraitPromptTheme();
+      } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) {
+        promptThemeId = CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME;
+      }
+    } catch (e) {
+      // Non-fatal: fall back to default theme behavior below.
+    }
 
-    // Select randomized pose and camera angle for this generation
-    const poseList =
-      poseVariantsByClass[classKey] || poseVariantsByClass.default;
-    const cameraList =
-      cameraVariantsByClass[classKey] || cameraVariantsByClass.default;
+    // Build compact STYLE / Background descriptions from theme (when available)
+    let styleDescription = '';
+    let backgroundDescription = '';
+    if (
+      typeof window !== 'undefined' &&
+      window.PortraitPrompt &&
+      typeof window.PortraitPrompt.buildStyleAndBackgroundDescriptions ===
+        'function'
+    ) {
+      try {
+        const sections =
+          window.PortraitPrompt.buildStyleAndBackgroundDescriptions({
+            posePrompt,
+            cameraPrompt,
+            themeId: promptThemeId,
+          }) || {};
+        styleDescription = sections.styleDescription || '';
+        backgroundDescription = sections.backgroundDescription || '';
+      } catch (e) {
+        // Non-fatal – fall through to simple defaults below.
+      }
+    }
 
-    const posePrompt =
-      poseList[Math.floor(Math.random() * poseList.length)];
-    const cameraPrompt =
-      cameraList[Math.floor(Math.random() * cameraList.length)];
+    if (!styleDescription) {
+      styleDescription =
+        'High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';
+    }
+    if (!backgroundDescription) {
+      backgroundDescription =
+        'Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';
+    }
 
-    const renderingInstructions = [
-      `Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,
-      'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
-      'Include some controlled, directional hatching to define form (light mid-tone texture only).',
-      `Pose: ${posePrompt}`,
-      cameraPrompt,
-      'Background should be simple, entirely black, and free of symbols or text.',
-      'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
-      'Aspect ratio 3:4.',
-    ];
-    return renderingInstructions.join(' ');
+    // Build simple header line: {CHARACTER_NAME}: {RACE}, {CLASS}, {BACKGROUND}
+    const name = (character && character.name) || 'Unnamed character';
+
+    const raceId = character && character.race ? String(character.race) : null;
+    const classId =
+      character && character.class ? String(character.class) : null;
+
+    let raceLabel = raceId;
+    let classLabel = classId;
+
+    // Prefer admin-configured snippets for race/class when available.
+    try {
+      if (
+        typeof window !== 'undefined' &&
+        window.PortraitPrompt &&
+        typeof window.PortraitPrompt.getVariableSnippet === 'function'
+      ) {
+        if (raceId) {
+          const customRace =
+            window.PortraitPrompt.getVariableSnippet('race', raceId);
+          if (customRace) raceLabel = customRace;
+        }
+        if (classId) {
+          const customClass =
+            window.PortraitPrompt.getVariableSnippet('class', classId);
+          if (customClass) classLabel = customClass;
+        }
+      }
+    } catch (e) {
+      // Non-fatal – fall back to simple labels.
+    }
+
+    let backgroundLabel = null;
+    if (character && character.background) {
+      backgroundLabel = String(character.background);
+      try {
+        if (
+          typeof DND_DATA !== 'undefined' &&
+          Array.isArray(DND_DATA.backgrounds)
+        ) {
+          const bgObj = DND_DATA.backgrounds.find(
+            (b) => b.id === character.background,
+          );
+          if (bgObj && bgObj.name) {
+            backgroundLabel = String(bgObj.name);
+          }
+        }
+      } catch (e) {
+        // Non-fatal – fall back to raw background value.
+      }
+    }
+
+    const headerParts = [];
+    if (raceLabel) headerParts.push(raceLabel);
+    if (classLabel) headerParts.push(classLabel);
+    if (backgroundLabel) headerParts.push(backgroundLabel);
+
+    const headerSuffix = headerParts.join(', ');
+    const headerLine = headerSuffix
+      ? `${name}: ${headerSuffix}`
+      : `${name}`;
+
+    // Final multi-line prompt template:
+    // {CHARACTER_NAME}: {RACE}, {CLASS}, {BACKGROUND}
+    //
+    // Pose: {POSE_VARIANT}
+    //
+    // Camera: {CAMERA_ANGLE}
+    //
+    // STYLE: {DESCRIPTION}
+    //
+    // Scene: {DESCRIPTION}
+    let prompt = `${headerLine}\n\nPose: ${posePrompt}\n\n${cameraPrompt}`;
+    if (styleDescription) {
+      prompt += `\n\nSTYLE: ${styleDescription}`;
+    }
+    if (backgroundDescription) {
+      prompt += `\n\nScene: ${backgroundDescription}`;
+    }
+
+    return prompt;
   },
 
   // Analyze a rejected prompt to help identify problematic sections
@@ -6535,8 +7241,9 @@ const CharacterSheet = (window.CharacterSheet = {
           ? `openPortraitHistory('${character.id}')`
           : null;
 
-    const originalPortraitUrl =
-      character.portrait?.url || character.originalPortraitUrl || null;
+    // Use the same helper as _renderPortrait to ensure header toggle button
+    // visibility matches the actual portrait being displayed.
+    const originalPortraitUrl = this.getOriginalPortraitUrl(character);
 
     // Read the global portrait view mode so the overflow toggle label/icon
     // matches the actual default view (ASCII vs Original). This mirrors the
@@ -6683,13 +7390,17 @@ const CharacterSheet = (window.CharacterSheet = {
 
   _renderPortrait(character, parsed, context, callbacks) {
     const { onGeneratePortrait, onTogglePortrait } = callbacks;
-    const asciiPortrait =
-      character.portrait?.ascii ||
-      character.customPortraitAscii ||
-      character.asciiPortrait ||
-      null;
-    const originalPortraitUrl =
-      character.portrait?.url || character.originalPortraitUrl || null;
+
+    // Prefer the active portrait version from history (if any) so the sheet
+    // always matches the grid card + history modal. Fall back to legacy
+    // top-level fields when no history metadata is present.
+    //
+    // IMPORTANT: We must get BOTH ascii and url from the same source to avoid
+    // mismatches (e.g., showing version A's image with version B's ASCII).
+    // Use getAsciiPortrait() for ASCII since it has robust fallbacks, then
+    // use getOriginalPortraitUrl() to get the matching URL.
+    const asciiPortrait = this.getAsciiPortrait(character);
+    const originalPortraitUrl = this.getOriginalPortraitUrl(character);
 
     // Global portrait view mode (ASCII vs Original). Builder + manager share
     // this preference via StorageService; fall back to config default.
@@ -6911,10 +7622,11 @@ const CharacterSheet = (window.CharacterSheet = {
       const m = openShell._detachedMenu || openShell.querySelector('.selector-menu');
       if (!btn || !m) return;
 
-      // Restore menu to original parent if it was moved (portrait history)
+      // Restore menu to original parent if it was moved (any modal)
       if (m._originalParent) {
         m.classList.remove('portrait-history-menu-detached');
         m.classList.remove('portrait-history-menu-detached--teal');
+        m.classList.remove('selector-menu-detached');
         m._originalParent.appendChild(m);
         delete m._originalParent;
         delete openShell._detachedMenu;
@@ -6955,25 +7667,33 @@ const CharacterSheet = (window.CharacterSheet = {
         const inModal = !!triggerEl.closest('.modal');
         const inPortraitModal = !!triggerEl.closest('.portrait-history-modal');
 
-        // Move menu outside clipping ancestors to prevent overflow:hidden clipping
-        if (inPortraitModal) {
+        // Move menu outside modal ancestors to prevent:
+        // 1. overflow:hidden clipping
+        // 2. CSS transform creating a new containing block (breaks fixed positioning)
+        // This applies to ALL modals, not just portrait-history.
+        if (inModal) {
           menu._originalParent = menu.parentElement;
           // Store reference in shell so handlers can find the menu later
           shell._detachedMenu = menu;
-          // Base class to preserve modal-style theming when moved to body
-          menu.classList.add('portrait-history-menu-detached');
 
-          // If the trigger lives inside a focused/selected history card, also
-          // opt the detached menu into the teal theme so it matches the card.
-          const card = triggerEl.closest('.character-card');
-          const isTealCard =
-            card &&
-            (card.classList.contains('is-selected') ||
-              card.classList.contains('is-keyboard-focused'));
-          if (isTealCard) {
-            menu.classList.add('portrait-history-menu-detached--teal');
+          // Add theming class based on modal type
+          if (inPortraitModal) {
+            menu.classList.add('portrait-history-menu-detached');
+            // If the trigger lives inside a focused/selected history card, also
+            // opt the detached menu into the teal theme so it matches the card.
+            const card = triggerEl.closest('.character-card');
+            const isTealCard =
+              card &&
+              (card.classList.contains('is-selected') ||
+                card.classList.contains('is-keyboard-focused'));
+            if (isTealCard) {
+              menu.classList.add('portrait-history-menu-detached--teal');
+            } else {
+              menu.classList.remove('portrait-history-menu-detached--teal');
+            }
           } else {
-            menu.classList.remove('portrait-history-menu-detached--teal');
+            // For other modals (settings, etc.), add a generic detached class
+            menu.classList.add('selector-menu-detached');
           }
 
           document.body.appendChild(menu);
@@ -6984,16 +7704,15 @@ const CharacterSheet = (window.CharacterSheet = {
           const triggerRect = triggerEl.getBoundingClientRect();
           const viewportWidth = window.innerWidth;
 
-          // Decide whether to use viewport-based fixed positioning (sheet header,
-          // portrait history modal, etc.) or local absolute positioning relative
-          // to the selector shell (settings modal and search/sort bar).
+          // Decide whether to use viewport-based fixed positioning or local
+          // absolute positioning relative to the selector shell.
           //
-          // - Non‑modal selectors default to fixed positioning so menus can
-          //   escape overflow/scroll containers (sheet headers, manager grid).
-          // - Selectors inside the search/sort actions bar use local absolute
-          //   positioning so the sort dropdown stays anchored under its button.
+          // RULE: Always use fixed positioning so menus can escape overflow
+          // containers (e.g. terminal-container with overflow:hidden).
+          // EXCEPTION: Search/sort bar uses absolute positioning so the
+          // dropdown stays anchored to its button during page scroll.
           const inSearchActions = !!triggerEl.closest('.search-actions');
-          const useFixedPositioning = inPortraitModal || (!inModal && !inSearchActions);
+          const useFixedPositioning = !inSearchActions;
 
           // Measure menu size without affecting final animation. Temporarily
           // neutralize transforms so we get the *full* height instead of the
@@ -7059,16 +7778,54 @@ const CharacterSheet = (window.CharacterSheet = {
           const padding = 8; // breathing room from host edges
           const gapY = 4; // small gap between trigger and menu
 
-          // Treat the nearest terminal frame/container as the visual "viewport"
-          // so menus stay within the green app frame instead of the browser
-          // viewport. Fall back to the real viewport if no frame is found.
-          const host =
-            triggerEl.closest('.terminal-frame, .terminal-container') ||
-            document.documentElement;
-          const hostRect = host.getBoundingClientRect();
+          // Determine the bounding container for the menu:
+          // - In a modal: use the modal-body bounds (so menu stays within modal content area)
+          // - Not in a modal: use the terminal frame bounds
+          // This ensures menus are visually contained within their logical parent.
+          //
+          // NOTE: We use .modal-body (not .modal-content) because modals with
+          // overflow:visible would give us incorrect bounds when the menu overflows.
+          let host;
+          let hostBottom;
+          let hostTop;
+          const verticalSafeMargin = 12;
 
-          const hostTop = hostRect.top + padding;
-          const hostBottom = hostRect.bottom - padding;
+          if (inModal) {
+            // For modals, find the modal-body as the content area constraint.
+            // Also check for modal-footer to ensure we don't overlap it.
+            const modalContent = triggerEl.closest('.modal-content');
+            const modalBody = triggerEl.closest('.modal-body');
+            const modalFooter = modalContent?.querySelector('.modal-footer');
+
+            if (modalBody) {
+              const bodyRect = modalBody.getBoundingClientRect();
+              hostTop = bodyRect.top + padding;
+              hostBottom = bodyRect.bottom - padding;
+            } else if (modalContent) {
+              const contentRect = modalContent.getBoundingClientRect();
+              hostTop = contentRect.top + padding + verticalSafeMargin;
+              hostBottom = contentRect.bottom - padding - verticalSafeMargin;
+            } else {
+              // Fallback to terminal frame
+              host = triggerEl.closest('.terminal-frame, .terminal-container') || document.documentElement;
+              const hostRect = host.getBoundingClientRect();
+              hostTop = hostRect.top + padding + verticalSafeMargin;
+              hostBottom = hostRect.bottom - padding - verticalSafeMargin;
+            }
+
+            // If there's a modal footer, ensure we don't extend past it
+            if (modalFooter) {
+              const footerRect = modalFooter.getBoundingClientRect();
+              hostBottom = Math.min(hostBottom, footerRect.top - padding);
+            }
+          } else {
+            host =
+              triggerEl.closest('.terminal-frame, .terminal-container') ||
+              document.documentElement;
+            const hostRect = host.getBoundingClientRect();
+            hostTop = hostRect.top + padding + verticalSafeMargin;
+            hostBottom = hostRect.bottom - padding - verticalSafeMargin;
+          }
 
           // Calculate available space above and below trigger within the host
           const spaceAbove = triggerRect.top - hostTop;
@@ -7078,14 +7835,15 @@ const CharacterSheet = (window.CharacterSheet = {
           const fitsBelow = spaceBelow >= menuHeight + gapY;
           const fitsAbove = spaceAbove >= menuHeight + gapY;
 
-          // Choose direction: prefer below for top-half triggers, above for bottom-half
+          // Choose direction: prefer below for top-half triggers, above for bottom-half.
+          // For match-width shells (like settings), we prefer below if both fit.
           const triggerCenterY = triggerRect.top + triggerRect.height / 2;
           const inTopHalf = triggerCenterY < viewportHeight / 2;
 
           let openBelow;
           if (fitsBelow && fitsAbove) {
-            // Both fit: use viewport half as hint
-            openBelow = inTopHalf;
+            // Both fit: use viewport half as hint, but prefer below for match-width
+            openBelow = forceMatchWidth ? true : inTopHalf;
           } else if (fitsBelow) {
             openBelow = true;
           } else if (fitsAbove) {
@@ -7095,55 +7853,70 @@ const CharacterSheet = (window.CharacterSheet = {
             openBelow = spaceBelow >= spaceAbove;
           }
 
-          // For match-width shells (like the narrator settings selectors), always
-          // prefer opening below so the trigger stays visible above the listbox.
-          if (forceMatchWidth) {
-            openBelow = true;
-          }
-
           if (useFixedPositioning) {
             // ===== Host-based fixed positioning (non-modal + portrait history) =====
 
-            // Position the menu using a single top coordinate (no bottom), and
-            // clamp so it always stays within the padded host vertically.
-            const maxTop = hostBottom - menuHeight;
-            let top;
+            // Calculate available space in each direction BEFORE positioning.
+            // This ensures we use the full available space, not just the
+            // measured menu height (which might be pre-constrained by CSS).
+            const spaceAboveTrigger = triggerRect.top - gapY - hostTop;
+            const spaceBelowTrigger = hostBottom - triggerRect.bottom - gapY;
 
-            if (openBelow) {
-              // Open below: start directly under trigger, then clamp if needed.
-              top = triggerRect.bottom + gapY;
-              if (top > maxTop) {
-                top = Math.max(hostTop, maxTop);
-              }
-            } else {
-              // Open above: start with bottom of menu sitting just above trigger.
-              top = triggerRect.top - gapY - menuHeight;
-              if (top < hostTop) {
-                top = hostTop;
-              }
-            }
+            let top;
+            let availableHeight;
 
             menu.style.position = 'fixed';
-            menu.style.top = `${top}px`;
-            menu.style.bottom = 'auto';
 
-            // If menu would extend past host, cap its height so it scrolls
-            // instead of clipping off-screen.
-            const availableHeight = hostBottom - top;
-            if (menuHeight > availableHeight) {
+            if (openBelow) {
+              // Open below: anchor menu at its top edge, just under trigger
+              const top = triggerRect.bottom + gapY;
+              availableHeight = hostBottom - top;
+              
+              menu.style.top = `${top}px`;
+              menu.style.bottom = 'auto';
+            } else {
+              // Open above: anchor menu at its BOTTOM edge, just above trigger.
+              // This lets the menu "grow upward" naturally.
+              const menuBottom = window.innerHeight - (triggerRect.top - gapY);
+              availableHeight = spaceAboveTrigger;
+              
+              menu.style.top = 'auto';
+              menu.style.bottom = `${menuBottom}px`;
+            }
+
+            // Set max-height to constrain within bounds (enables scrolling if needed)
+            if (availableHeight > 0) {
               menu.style.maxHeight = `${availableHeight}px`;
               menu.style.overflowY = 'auto';
-            } else {
-              menu.style.maxHeight = '';
-              menu.style.overflowY = '';
             }
 
             // Horizontal offset: keep menus inside the host frame. For the
             // portrait history modal specifically, open the menu to the *side*
             // of the card so it doesn't obscure the three-dot trigger; for all
             // other hosts fall back to the standard behavior.
-            const hostLeft = hostRect.left + padding;
-            const hostRight = hostRect.right - padding;
+            //
+            // For horizontal bounds, we use the modal-content (not modal-body)
+            // since we want the full width of the modal dialog.
+            let hostLeft, hostRight;
+            if (inModal) {
+              const modalContent = triggerEl.closest('.modal-content');
+              if (modalContent) {
+                const contentRect = modalContent.getBoundingClientRect();
+                hostLeft = contentRect.left + padding;
+                hostRight = contentRect.right - padding;
+              } else {
+                // Fallback
+                hostLeft = padding;
+                hostRight = viewportWidth - padding;
+              }
+            } else if (host) {
+              const hostRect = host.getBoundingClientRect();
+              hostLeft = hostRect.left + padding;
+              hostRight = hostRect.right - padding;
+            } else {
+              hostLeft = padding;
+              hostRight = viewportWidth - padding;
+            }
 
             let targetLeft;
             if (inPortraitModal) {
@@ -7204,24 +7977,30 @@ const CharacterSheet = (window.CharacterSheet = {
             // Use higher z-index when inside any modal to appear above modal backdrop.
             menu.style.zIndex = inModal ? '1100' : '1000';
           } else {
-            // ===== Local absolute positioning inside modal / search bar =====
+            // ===== Local absolute positioning (search/sort bar only) =====
+            // The search bar needs absolute positioning so dropdown stays
+            // anchored to its button during page scroll.
 
             menu.style.position = 'absolute';
 
-            // Vertical: position relative to the selector shell so the menu
-            // visually hugs the trigger, ignoring viewport-based clamping.
-            let top;
+            // Compute desired top in viewport space, clamped within the host,
+            // then convert to shell-relative coordinates for absolute positioning.
+            const maxTopViewport = hostBottom - menuHeight;
+            let topViewport;
+
             if (openBelow) {
-              if (forceMatchWidth) {
-                // For match-width shells, align the menu so it starts directly
-                // under the trigger, independent of shell offsets.
-                top = triggerRect.height + gapY;
-              } else {
-                top = triggerRect.bottom - shellRect.top + gapY;
+              topViewport = triggerRect.bottom + gapY;
+              if (topViewport > maxTopViewport) {
+                topViewport = Math.max(hostTop, maxTopViewport);
               }
             } else {
-              top = triggerRect.top - shellRect.top - menuHeight - gapY;
+              topViewport = triggerRect.top - gapY - menuHeight;
+              if (topViewport < hostTop) {
+                topViewport = hostTop;
+              }
             }
+
+            const top = topViewport - shellRect.top;
             menu.style.top = `${top}px`;
             menu.style.bottom = 'auto';
 
@@ -7230,11 +8009,24 @@ const CharacterSheet = (window.CharacterSheet = {
             menu.style.left = `${left}px`;
             menu.style.right = 'auto';
 
-            // Inside the settings modal / search bar, the container is already
-            // constrained, so we generally don't need extra viewport clamping.
-            menu.style.maxHeight = '';
-            menu.style.overflowY = '';
-            menu.style.zIndex = inModal ? '1100' : '1000';
+            // Cap height so long menus scroll instead of clipping.
+            let availableHeight = hostBottom - topViewport;
+            if (!openBelow) {
+              availableHeight = Math.min(
+                availableHeight,
+                triggerRect.top - gapY - topViewport,
+              );
+            }
+
+            if (menuHeight > availableHeight && availableHeight > 0) {
+              menu.style.maxHeight = `${availableHeight}px`;
+              menu.style.overflowY = 'auto';
+            } else {
+              menu.style.maxHeight = '';
+              menu.style.overflowY = '';
+            }
+
+            menu.style.zIndex = '1000';
           }
         } catch (err) {
           // In case anything above fails (e.g., unexpected DOM state), fall back
@@ -7908,6 +8700,26 @@ const CharacterSheet = (window.CharacterSheet = {
   getAsciiPortrait(character) {
     if (!character) return null;
 
+    // Prefer the active portrait version from history when available so
+    // manager, builder, and history views all agree on "current" art.
+    try {
+      const metadata = character.portraitMetadata;
+      if (
+        metadata &&
+        Array.isArray(metadata.versions) &&
+        metadata.activeVersionId
+      ) {
+        const activeVersion = metadata.versions.find(
+          (v) => v && v.id === metadata.activeVersionId,
+        );
+        if (activeVersion && activeVersion.ascii) {
+          return activeVersion.ascii;
+        }
+      }
+    } catch (e) {
+      // Non-fatal; fall through to legacy fields.
+    }
+
     const key = `${character.race || ''}|${character.class || ''}`;
 
     // 1) Explicit custom portrait always wins
@@ -7932,6 +8744,50 @@ const CharacterSheet = (window.CharacterSheet = {
     // 4) Legacy asciiPortrait without key tagging
     if (character.asciiPortrait) {
       return character.asciiPortrait;
+    }
+
+    return null;
+  },
+
+  /**
+   * Determine the best original portrait URL to use for a character.
+   * Mirrors getAsciiPortrait() to ensure ASCII and URL come from the same source.
+   * Prefers:
+   * 1) Active portrait version's URL from history
+   * 2) originalPortraitUrl (custom AI portrait URL)
+   * 3) portrait.url (exported portrait object)
+   */
+  getOriginalPortraitUrl(character) {
+    if (!character) return null;
+
+    // Prefer the active portrait version from history when available so
+    // manager, builder, and history views all agree on "current" art.
+    try {
+      const metadata = character.portraitMetadata;
+      if (
+        metadata &&
+        Array.isArray(metadata.versions) &&
+        metadata.activeVersionId
+      ) {
+        const activeVersion = metadata.versions.find(
+          (v) => v && v.id === metadata.activeVersionId,
+        );
+        if (activeVersion && activeVersion.url) {
+          return activeVersion.url;
+        }
+      }
+    } catch (e) {
+      // Non-fatal; fall through to legacy fields.
+    }
+
+    // 1) Explicit custom portrait URL
+    if (character.originalPortraitUrl) {
+      return character.originalPortraitUrl;
+    }
+
+    // 2) Exported portrait object from builder
+    if (character.portrait && character.portrait.url) {
+      return character.portrait.url;
     }
 
     return null;
@@ -8170,17 +9026,35 @@ const CharacterSheet = (window.CharacterSheet = {
   async _applyUpgradedPortrait(character, context, portraitEl, ascii, key) {
     if (!character || !ascii) return;
 
+    // If a custom AI portrait has been created (or version history exists),
+    // never let a late-arriving "upgrade from files" overwrite it. This guards
+    // against races where `_maybeUpgradePortraitFromFiles` was kicked off
+    // before the player generated a custom portrait, but finishes afterward.
+    const hasCustomPortrait =
+      !!character.customPortraitAscii ||
+      (character.portraitMetadata &&
+        Array.isArray(character.portraitMetadata.versions) &&
+        character.portraitMetadata.versions.length > 0);
+    if (hasCustomPortrait) {
+      return;
+    }
+
     character.asciiPortrait = ascii;
     character.asciiPortraitKey = key;
 
-    // Persist the upgraded portrait so future loads are instant
-    // Use silent mode so automatic portrait upgrades don't mark character as "modified"
+    // Persist the upgraded portrait so future loads are instant.
+    // Use silent mode so automatic portrait upgrades don't mark character
+    // as "modified" in manager views.
     try {
       if (context === 'manager' && window.CharacterStorage && character.id) {
-        window.CharacterStorage.update(character.id, {
-          asciiPortrait: ascii,
-          asciiPortraitKey: key,
-        }, { silent: true });  // Silent mode: don't update modified timestamp
+        window.CharacterStorage.update(
+          character.id,
+          {
+            asciiPortrait: ascii,
+            asciiPortraitKey: key,
+          },
+          { silent: true },
+        );
       } else if (context === 'builder' && window.CharacterState) {
         // In builder context, update local state only. We no longer auto-save
         // new characters here; the player explicitly saves from the builder UI.
@@ -8368,6 +9242,1191 @@ const PortraitHistory = (window.PortraitHistory = {
 
 
 
+// ===== BUNDLE PART: portraits-ui.js =====
+
+// ========================================
+// SHARED PORTRAIT UI MODULE
+// - Portrait history modal
+// - Keyboard navigation
+// - ASCII/original toggle
+//
+// Used by: Character Manager (and later Character Builder)
+// ========================================
+
+(function () {
+  const state = {
+    context: null, // { type: 'manager', characterId }
+    focusIndex: 0,
+    escHandler: null,
+    keyHandler: null,
+  };
+
+  const PortraitUI = (window.PortraitUI = {
+    /**
+     * Open the portrait history modal for a manager character.
+     * @param {string} characterId
+     */
+    async openManagerHistory(characterId) {
+      if (!characterId) return;
+
+      // Avoid duplicate modals
+      if (document.getElementById('portraitHistoryModal')) {
+        return;
+      }
+
+      // Prefer the in-memory manager cache first so we avoid extra localStorage
+      // scans or cloud round-trips whenever the character grid has already
+      // loaded this character.
+      let character = null;
+      try {
+        if (window.AppState && Array.isArray(AppState.characters)) {
+          character =
+            AppState.characters.find(
+              (c) =>
+                c &&
+                (c.id === characterId ||
+                  String(c.id) === String(characterId)),
+            ) || null;
+        }
+      } catch (e) {
+        // Non-fatal – fall back to storage facade below.
+      }
+
+      // Fallback to hybrid storage facade when the character is not present
+      // in the current AppState cache (for example, when opening history
+      // from a context that hasn't loaded the grid).
+      if (!character) {
+        const CharacterStorage = window.CharacterStorage;
+        if (!CharacterStorage || typeof CharacterStorage.getById !== 'function') {
+          console.warn(
+            'PortraitUI.openManagerHistory: CharacterStorage.getById is not available',
+          );
+          this.closeHistory();
+          return;
+        }
+
+        try {
+          character = await CharacterStorage.getById(characterId);
+        } catch (e) {
+          console.error(
+            'PortraitUI.openManagerHistory: CharacterStorage.getById failed',
+            e,
+          );
+          this.closeHistory();
+          return;
+        }
+      }
+
+      if (!character) {
+        console.warn(
+          'PortraitUI.openManagerHistory: character not found for id',
+          characterId,
+        );
+        this.closeHistory();
+        return;
+      }
+
+      // Normalize metadata + versions using shared helper so builder and
+      // manager stay in sync. Fall back to a simple inline version if the
+      // helper is unavailable for any reason.
+      const normalized =
+        window.PortraitHistory &&
+        typeof PortraitHistory.normalizeForDisplay === 'function'
+          ? PortraitHistory.normalizeForDisplay(character)
+          : (() => {
+              const fallbackMetadata = character.portraitMetadata || {};
+              const fallbackRaw = Array.isArray(fallbackMetadata.versions)
+                ? fallbackMetadata.versions
+                : [];
+              return {
+                metadata: fallbackMetadata,
+                versions: fallbackRaw,
+                hasVersions: fallbackRaw.length > 0,
+                hasCustomPortraitWithoutHistory: !fallbackRaw.length,
+              };
+            })();
+
+      const metadata = normalized.metadata;
+      const versions = normalized.versions;
+      const hasVersions = normalized.hasVersions;
+
+      // Debug hook to verify manager history is opening with the expected data.
+      try {
+        console.log('%c🎨 MANAGER PORTRAIT HISTORY OPEN', 'color:#0ff;font-weight:bold;');
+        console.log('  Character ID:', characterId);
+        console.log('  Versions count:', versions.length);
+        console.log('  Active version ID:', metadata.activeVersionId || '(none)');
+      } catch (e) {
+        // Non-fatal logging failure
+      }
+
+      // If the character already has a custom portrait but no version history yet,
+      // show a helpful empty state rather than the generic "no saved portraits" copy.
+      const hasCustomPortraitWithoutHistory =
+        normalized.hasCustomPortraitWithoutHistory;
+
+      state.context = {
+        type: 'manager',
+        characterId,
+        metadata,
+        // Store the display-ordered versions so focus/index updates match
+        // the DOM order.
+        versions,
+        hasCustomPortraitWithoutHistory,
+      };
+
+      const listHtml = this._buildHistoryCardsHtml(
+        'manager',
+        characterId,
+        metadata,
+        versions,
+        hasCustomPortraitWithoutHistory,
+      );
+
+      // Build and insert the full modal once data is ready so there is no
+      // intermediate loading skeleton state.
+      const modalHtml = `
+        <div id="portraitHistoryModal" class="modal show" onclick="PortraitUI.closeHistory()">
+          <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
+            <div class="modal-header">
+              <h2 class="modal-title">[ Portrait History ]</h2>
+              <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
+            </div>
+            <div class="modal-body">
+              <p class="terminal-text-small terminal-text-dim">
+                View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
+              </p>
+              <div class="portrait-history-carousel">
+                ${
+                  versions.length > 1
+                    ? `<button
+                        type="button"
+                        class="portrait-history-nav portrait-history-nav-left"
+                        aria-label="Previous portrait"
+                        aria-controls="portraitHistoryList"
+                        onclick="event.stopPropagation(); PortraitUI.moveFocus(-1);"
+                      >
+                        <span aria-hidden="true">‹</span>
+                      </button>`
+                    : ''
+                }
+                <div
+                  id="portraitHistoryList"
+                  class="portrait-history-card-row${
+                    versions.length === 1 ? ' is-single' : ''
+                  }"
+                >
+                  ${listHtml}
+                </div>
+                ${
+                  versions.length > 1
+                    ? `<button
+                        type="button"
+                        class="portrait-history-nav portrait-history-nav-right"
+                        aria-label="Next portrait"
+                        aria-controls="portraitHistoryList"
+                        onclick="event.stopPropagation(); PortraitUI.moveFocus(1);"
+                      >
+                        <span aria-hidden="true">›</span>
+                      </button>`
+                    : ''
+                }
+              </div>
+            </div>
+            <div class="modal-footer modal-footer-end">
+              <button class="terminal-btn" onclick="PortraitUI.closeHistory()">CANCEL</button>
+              <button class="terminal-btn terminal-btn-primary" onclick="PortraitUI.confirmSelection()">USE SELECTED</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Attach the portrait history modal to the terminal frame/container so
+      // its overlay and content stay within the app window instead of the
+      // full browser viewport.
+      const host =
+        document.querySelector('.terminal-frame') ||
+        document.querySelector('.terminal-container') ||
+        document.body;
+      host.insertAdjacentHTML('beforeend', modalHtml);
+
+      this._populateAsciiPreviews(versions);
+      this._initKeyboardFocus();
+      this._attachKeyboardHandlers();
+    },
+
+    /**
+     * Shared ASCII thumbnail cropping.
+     * Prefer any host-provided implementation (UI.cropAsciiForThumbnail) and
+     * fall back to the standard race/class portrait cropping heuristic.
+     */
+    cropAsciiForThumbnail(asciiArt, heightLines = 80, widthChars = 160) {
+      try {
+        if (window.UI && typeof window.UI.cropAsciiForThumbnail === 'function') {
+          return window.UI.cropAsciiForThumbnail(asciiArt, heightLines, widthChars);
+        }
+      } catch (e) {
+        // Non-fatal: fall through to local implementation
+      }
+
+      if (!asciiArt || typeof asciiArt !== 'string') return '';
+
+      const lines = asciiArt.split('\n');
+      const totalLines = lines.length;
+      const startLine = 0; // Always start from the top (keep heads/faces)
+      const endLine = Math.min(totalLines, heightLines);
+
+      const topLines = lines
+        .slice(startLine, endLine)
+        .map((line) => line.slice(0, widthChars));
+
+      return topLines.join('\n');
+    },
+
+    /**
+     * Shared helper: return a human-readable subtext for the portrait loader
+     * based on the currently selected image model (DALL·E 3 vs GPT Image 1).
+     *
+     * This is used by both the builder and manager so the cube loader's
+     * timing hint stays consistent across apps.
+     *
+     * @returns {string}
+     */
+    getImageModelSubtext() {
+      let subtext = '(This usually takes 20–30 seconds)';
+      try {
+        let imageModel = 'dall-e-3';
+        if (
+          window.StorageService &&
+          typeof StorageService.getImageModel === 'function'
+        ) {
+          imageModel = StorageService.getImageModel();
+        } else if (
+          typeof CONFIG !== 'undefined' &&
+          CONFIG.DEFAULT_IMAGE_MODEL
+        ) {
+          imageModel = CONFIG.DEFAULT_IMAGE_MODEL;
+        }
+
+        if (imageModel === 'gpt-image-1') {
+          subtext = '(This can take up to a minute)';
+        }
+      } catch (e) {
+        // Fall back to default subtext on any error.
+      }
+      return subtext;
+    },
+
+    /**
+     * Shared portrait "cube" loader for the character sheet portrait area.
+     *
+     * Normalizes the portrait container and ensures that the fast-spinning
+     * cube + status text markup is present. Subsequent calls will *update*
+     * the message / subtext / dot state without re-rendering the whole
+     * container, so it's safe to call from a timer.
+     *
+     * @param {HTMLElement} portraitEl
+     * @param {{ baseMessage?: string, subtext?: string, dotCount?: number, isLoading?: boolean }} options
+     * @returns {HTMLElement|null} the `.portrait-placeholder-text` element
+     */
+    renderGeneratingLoader(portraitEl, options) {
+      if (!portraitEl) return null;
+
+      const opts = options || {};
+      const baseMessage = opts.baseMessage || 'Generating character art';
+      const subtext =
+        opts.subtext || this.getImageModelSubtext() || '(This usually takes 20–30 seconds)';
+      const dotCount = Number.isFinite(opts.dotCount) ? opts.dotCount : 1;
+      const isLoading = opts.isLoading !== false;
+
+      // Normalize container classes so cube styles work consistently.
+      portraitEl.classList.add('ascii-portrait--placeholder');
+      if (isLoading) {
+        portraitEl.classList.add('ascii-portrait--loading');
+      }
+
+      // Ensure the cube + text shell exists once; thereafter only update text.
+      let textEl = portraitEl.querySelector('.portrait-placeholder-text');
+      if (!textEl) {
+        portraitEl.innerHTML = `
+          <div class="portrait-placeholder-content">
+            <div class="portrait-placeholder-cube-container">
+              <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+              </div>
+            </div>
+            <div class="portrait-placeholder-text" data-dots="${dotCount}">
+              <span class="portrait-placeholder-message">${baseMessage}</span>
+              <span class="portrait-placeholder-dots">
+                <span class="dot dot-1">.</span>
+                <span class="dot dot-2">.</span>
+                <span class="dot dot-3">.</span>
+              </span>
+              <div class="portrait-placeholder-subtext">
+                ${subtext}
+              </div>
+            </div>
+          </div>
+        `;
+        textEl = portraitEl.querySelector('.portrait-placeholder-text');
+      } else {
+        // Update text + dot state without reconstructing DOM.
+        textEl.setAttribute('data-dots', String(dotCount));
+        const messageEl =
+          textEl.querySelector('.portrait-placeholder-message');
+        if (messageEl) {
+          messageEl.textContent = baseMessage;
+        }
+        const subtextEl =
+          textEl.querySelector('.portrait-placeholder-subtext');
+        if (subtextEl) {
+          subtextEl.textContent = subtext;
+        }
+      }
+
+      return textEl || null;
+    },
+
+    // ========================================
+    // PUBLIC UI ACTIONS (used by onclick="")
+    // ========================================
+
+    closeHistory() {
+      // Close any open overflow menus in the modal first
+      const openShells = document.querySelectorAll('.portrait-history-modal .selector-shell.is-open');
+      openShells.forEach((shell) => {
+        const menu = shell._detachedMenu || shell.querySelector('.selector-menu');
+        const trigger = shell.querySelector('.selector-trigger');
+        
+        if (menu && menu._originalParent) {
+          // Restore detached menus before removing modal
+          menu.classList.remove('portrait-history-menu-detached');
+          menu.classList.remove('portrait-history-menu-detached--teal');
+          menu._originalParent.appendChild(menu);
+          delete menu._originalParent;
+          delete shell._detachedMenu;
+        }
+        
+        if (trigger) {
+          trigger.classList.remove('is-open');
+        }
+        if (menu) {
+          menu.classList.remove('is-open');
+          menu.setAttribute('aria-hidden', 'true');
+        }
+        shell.classList.remove('is-open');
+      });
+      
+      const modal = document.getElementById('portraitHistoryModal');
+      if (modal) modal.remove();
+
+      this._detachKeyboardHandlers();
+      state.focusIndex = 0;
+      state.context = null;
+    },
+
+    selectCard(versionId) {
+      const cards = this._getCards();
+      if (!cards.length) return;
+
+      let targetIndex = 0;
+      cards.forEach((card, i) => {
+        const matches = card.getAttribute('data-version-id') === versionId;
+        if (matches) {
+          targetIndex = i;
+        }
+      });
+
+      state.focusIndex = targetIndex;
+      this._updateFocus();
+    },
+
+    moveFocus(delta) {
+      const cards = this._getCards();
+      if (!cards.length) return;
+
+      const current =
+        typeof state.focusIndex === 'number' ? state.focusIndex : 0;
+      const next = Math.max(0, Math.min(cards.length - 1, current + delta));
+      state.focusIndex = next;
+      this._updateFocus();
+    },
+
+    toggleView(versionId) {
+      const asciiEl = document.querySelector(
+        `.portrait-history-preview.ascii-portrait[data-version-id="${versionId}"]`,
+      );
+      const imgEl = document.querySelector(
+        `.portrait-history-image[data-version-id="${versionId}"]`,
+      );
+      // The overflow menu may be detached from the card, so look for the
+      // button globally instead of limiting to .portrait-history-actions.
+      const btn = document.querySelector(
+        `button[data-toggle-version-id="${versionId}"]`,
+      );
+
+      if (!imgEl || !asciiEl) return;
+
+      const showingAscii = imgEl.classList.contains('is-hidden');
+
+      if (showingAscii) {
+        // Switch to original image
+        asciiEl.classList.add('is-hidden');
+        imgEl.classList.remove('is-hidden');
+        if (btn) {
+          const label = btn.querySelector('.selector-option-label');
+          if (label) {
+            label.textContent = 'View ASCII';
+          } else {
+            btn.textContent = 'View ASCII';
+          }
+        }
+      } else {
+        // Switch back to ASCII art
+        imgEl.classList.add('is-hidden');
+        asciiEl.classList.remove('is-hidden');
+        if (btn) {
+          const label = btn.querySelector('.selector-option-label');
+          if (label) {
+            label.textContent = 'View original';
+          } else {
+            btn.textContent = 'View original';
+          }
+        }
+      }
+    },
+
+    async confirmSelection() {
+      const ctx = state.context;
+      if (!ctx || ctx.type !== 'manager') {
+        this.closeHistory();
+        return;
+      }
+
+      const cards = this._getCards();
+      if (!cards.length) {
+        this.closeHistory();
+        return;
+      }
+
+      const index =
+        typeof state.focusIndex === 'number' ? state.focusIndex : 0;
+      const card = cards[index];
+      if (!card) {
+        this.closeHistory();
+        return;
+      }
+
+      const versionId = card.getAttribute('data-version-id');
+      if (!versionId) {
+        this.closeHistory();
+        return;
+      }
+
+      // Debug: log which version is being applied.
+      try {
+        console.log('%c🎨 MANAGER PORTRAIT USE SELECTED', 'color:#0ff;font-weight:bold;');
+        console.log('  Character ID:', ctx.characterId);
+        console.log('  Selected version ID:', versionId);
+      } catch (e) {
+        // Non-fatal
+      }
+
+      // Show a lightweight inline loading state while we apply the new portrait.
+      const modal = document.getElementById('portraitHistoryModal');
+      const useBtn =
+        modal && modal.querySelector('.modal-footer .terminal-btn-primary');
+      const originalLabel = useBtn ? useBtn.textContent : null;
+      if (useBtn) {
+        useBtn.disabled = true;
+        useBtn.textContent = 'Applying...';
+      }
+
+      try {
+        await this._usePortraitVersionManager(ctx.characterId, versionId);
+      } catch (error) {
+        console.error(
+          'PortraitUI.confirmSelection: failed to apply portrait version',
+          error,
+        );
+        if (typeof window.showNotification === 'function') {
+          window.showNotification(
+            'Failed to switch portrait. Please try again.',
+          );
+        }
+        // If something went wrong, restore button state so the user can retry.
+        if (useBtn) {
+          useBtn.disabled = false;
+          useBtn.textContent = originalLabel || 'USE SELECTED';
+        }
+      }
+    },
+
+    async copyPrompt(characterId, versionId) {
+      const CharacterStorage = window.CharacterStorage;
+      if (!CharacterStorage || typeof CharacterStorage.getById !== 'function') {
+        return;
+      }
+
+      const character = await CharacterStorage.getById(characterId);
+      if (!character) return;
+
+      const metadata = character.portraitMetadata || {};
+      const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+      const version = versions.find((v) => v.id === versionId);
+
+      if (!version || !version.prompt) {
+        if (typeof window.showNotification === 'function') {
+          window.showNotification('No saved prompt for this portrait.');
+        }
+        return;
+      }
+
+      const promptText = version.prompt;
+
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(promptText);
+        } else {
+          // Fallback for older browsers: use a temporary textarea
+          const textarea = document.createElement('textarea');
+          textarea.value = promptText;
+          textarea.setAttribute('readonly', '');
+          textarea.style.position = 'absolute';
+          textarea.style.left = '-9999px';
+          document.body.appendChild(textarea);
+          textarea.select();
+          try {
+            document.execCommand('copy');
+          } finally {
+            document.body.removeChild(textarea);
+          }
+        }
+        if (typeof window.showNotification === 'function') {
+          window.showNotification('Portrait prompt copied to clipboard.');
+        }
+      } catch (error) {
+        console.error('PortraitUI.copyPrompt: failed to copy prompt', error);
+        if (typeof window.showNotification === 'function') {
+          window.showNotification(
+            'Could not copy prompt. Please copy it manually from the card.',
+          );
+        }
+      }
+    },
+
+    deleteVersion(characterId, versionId) {
+      const CharacterStorage = window.CharacterStorage;
+      if (!CharacterStorage || typeof CharacterStorage.getById !== 'function') {
+        return;
+      }
+
+      const confirmDialog = window.showConfirmDialog;
+      if (typeof confirmDialog !== 'function') {
+        console.warn(
+          'PortraitUI.deleteVersion: showConfirmDialog is not available',
+        );
+        return;
+      }
+
+      const onConfirm = async () => {
+        const character = await CharacterStorage.getById(characterId);
+        if (!character) return;
+
+        const metadata = character.portraitMetadata || {};
+        const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+        if (!versions.length) {
+          this.closeHistory();
+          return;
+        }
+
+        const remaining = versions.filter((v) => v.id !== versionId);
+        const deletedWasActive = metadata.activeVersionId === versionId;
+
+        const updatedMetadata = {
+          ...metadata,
+          versions: remaining,
+          activeVersionId: deletedWasActive
+            ? remaining[0]?.id || null
+            : metadata.activeVersionId,
+        };
+
+        const updates = {
+          portraitMetadata: updatedMetadata,
+        };
+
+        if (deletedWasActive) {
+          if (remaining[0]) {
+            updates.originalPortraitUrl =
+              remaining[0].url || character.originalPortraitUrl || null;
+            updates.customPortraitAscii =
+              remaining[0].ascii || character.customPortraitAscii || '';
+            updates.portrait = {
+              ...(character.portrait || {}),
+              url:
+                remaining[0].url ||
+                (character.portrait && character.portrait.url) ||
+                null,
+              ascii:
+                remaining[0].ascii ||
+                (character.portrait && character.portrait.ascii) ||
+                '',
+            };
+          } else {
+            // No remaining custom versions – clear custom portrait so we fall back to pre-generated ASCII.
+            updates.originalPortraitUrl = null;
+            updates.customPortraitAscii = '';
+            updates.portrait = {
+              ...(character.portrait || {}),
+              url: null,
+              ascii: character.asciiPortrait || '',
+            };
+          }
+        }
+
+        await CharacterStorage.update(characterId, updates);
+        if (window.AppState && typeof AppState.loadCharacters === 'function') {
+          await AppState.loadCharacters();
+        }
+        if (window.UI && typeof UI.render === 'function') {
+          UI.render();
+        }
+        if (typeof window.viewCharacter === 'function') {
+          window.viewCharacter(characterId);
+        }
+
+        this.closeHistory();
+        if (remaining.length) {
+          this.openManagerHistory(characterId);
+        }
+      };
+
+      confirmDialog(
+        'Delete this saved portrait version? This cannot be undone.',
+        onConfirm,
+      );
+    },
+
+    // ========================================
+    // INTERNAL HELPERS
+    // ========================================
+
+    _buildHistoryCardsHtml(
+      context,
+      characterId,
+      metadata,
+      versions,
+      hasCustomPortraitWithoutHistory,
+    ) {
+      const hasVersions = versions.length > 0;
+
+      if (!hasVersions) {
+        if (hasCustomPortraitWithoutHistory) {
+          return `<div class="terminal-text-small terminal-text-dim portrait-history-callout">
+              <p><strong>No portrait history yet.</strong></p>
+              <p>This character's portrait was created before the history feature was added.</p>
+              <p>Generate a new custom AI portrait to:</p>
+              <ul class="portrait-history-callout-list">
+                <li>• Save your current portrait as Version 1</li>
+                <li>• Add the new portrait as Version 2</li>
+                <li>• Enable portrait version switching</li>
+              </ul>
+            </div>`;
+        }
+
+        return `<p class="terminal-text-small terminal-text-dim portrait-history-callout">
+              No saved portraits yet.<br><br>
+              Generate a custom AI portrait to start building a history.
+            </p>`;
+      }
+
+      return versions
+        .map((v) => {
+          const isActive = metadata.activeVersionId === v.id;
+          const createdDate = v.createdAt ? new Date(v.createdAt) : null;
+          const dateLabel = createdDate
+            ? createdDate.toLocaleDateString()
+            : '';
+          const timeLabel = createdDate
+            ? createdDate.toLocaleTimeString()
+            : '';
+          const title = dateLabel || 'Unknown date';
+          const infoText = timeLabel || '';
+
+          const hasImage = !!v.url;
+          const hasPrompt = !!v.prompt;
+
+          const thumbHtml = `
+            <div class="card-thumbnail">
+              <div class="ascii-portrait portrait-history-preview" data-version-id="${v.id}"></div>
+              ${
+                hasImage
+                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image is-hidden" data-version-id="${v.id}">`
+                  : ''
+              }
+            </div>`;
+
+          // Overflow menu for per-version actions (View, Prompt, Delete)
+          const actionItems = [];
+
+          if (hasImage) {
+            actionItems.push(`
+              <button
+                class="selector-option"
+                type="button"
+                role="menuitem"
+                onclick="event.stopPropagation(); PortraitUI.toggleView('${v.id}')"
+                data-toggle-version-id="${v.id}"
+              >
+                <span class="selector-option-icon">◉</span>
+                <span class="selector-option-label">View original</span>
+              </button>
+            `);
+          }
+
+          if (hasPrompt) {
+            actionItems.push(`
+              <button
+                class="selector-option"
+                type="button"
+                role="menuitem"
+                onclick="event.stopPropagation(); PortraitUI.copyPrompt('${characterId}', '${v.id}')"
+                title="Copy this portrait's prompt to your clipboard"
+              >
+                <span class="selector-option-icon">✎</span>
+                <span class="selector-option-label">Copy prompt</span>
+              </button>
+            `);
+          }
+
+          actionItems.push(`
+            <button
+              class="selector-option portrait-history-delete-option"
+              type="button"
+              role="menuitem"
+              onclick="event.stopPropagation(); PortraitUI.deleteVersion('${characterId}', '${v.id}')"
+              title="Delete this portrait version"
+              aria-label="Delete portrait version"
+            >
+              <span class="selector-option-icon">×</span>
+              <span class="selector-option-label">Delete version</span>
+            </button>
+          `);
+
+          const actionsMenu =
+            actionItems.length > 0
+              ? `
+              <div class="portrait-history-actions selector-shell">
+                <button
+                  class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-label="More portrait actions"
+                  onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"
+                >
+                  <span class="sheet-actions-icon" aria-hidden="true">
+                    <span class="sheet-actions-dot dot-1"></span>
+                    <span class="sheet-actions-dot dot-2"></span>
+                    <span class="sheet-actions-dot dot-3"></span>
+                  </span>
+                </button>
+                <div class="selector-menu portrait-history-menu" role="menu" aria-hidden="true">
+                  ${actionItems.join('')}
+                </div>
+              </div>
+            `
+              : '';
+
+          return `
+            <div class="character-card portrait-history-card${
+              isActive ? ' is-selected' : ''
+            }" data-version-id="${v.id}" onclick="PortraitUI.selectCard('${v.id}')">
+              ${thumbHtml}
+              <div class="card-details portrait-history-details">
+                <div class="portrait-history-meta">
+                  <div class="card-name">${title}</div>
+                  <div class="card-info">${infoText || '&nbsp;'}</div>
+                </div>
+                ${actionsMenu}
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    },
+
+    _populateAsciiPreviews(versions) {
+      if (!Array.isArray(versions) || versions.length === 0) return;
+
+      if (
+        window.PortraitHistory &&
+        typeof PortraitHistory.batchPopulateAsciiPreviews === 'function'
+      ) {
+        PortraitHistory.batchPopulateAsciiPreviews(versions, (ascii) =>
+          this.cropAsciiForThumbnail(ascii),
+        );
+        return;
+      }
+
+      // Fallback: simple synchronous population if shared helper is unavailable.
+      versions.forEach((v) => {
+        if (!v) return;
+        const el = document.querySelector(
+          `.portrait-history-preview.ascii-portrait[data-version-id="${v.id}"]`,
+        );
+        if (el && v.ascii) {
+          el.textContent = this.cropAsciiForThumbnail(v.ascii);
+        }
+
+        const promptEl = document.querySelector(
+          `.portrait-history-prompt[data-version-id="${v.id}"]`,
+        );
+        if (promptEl && v.prompt) {
+          promptEl.textContent = v.prompt;
+        }
+      });
+    },
+
+    _getCards() {
+      return Array.from(
+        document.querySelectorAll('#portraitHistoryModal .character-card'),
+      );
+    },
+
+    _updateNavButtons(currentIndex) {
+      const cards = this._getCards();
+      const total = cards.length;
+      const prevBtn = document.querySelector(
+        '#portraitHistoryModal .portrait-history-nav-left',
+      );
+      const nextBtn = document.querySelector(
+        '#portraitHistoryModal .portrait-history-nav-right',
+      );
+
+      const hasMultiple = total > 1;
+
+      if (prevBtn) {
+        const disabled = !hasMultiple || currentIndex <= 0;
+        prevBtn.disabled = disabled;
+        prevBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      }
+
+      if (nextBtn) {
+        const disabled = !hasMultiple || currentIndex >= total - 1;
+        nextBtn.disabled = disabled;
+        nextBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+      }
+    },
+
+    _updateFocus() {
+      const cards = this._getCards();
+      if (!cards.length) return;
+
+      const index =
+        typeof state.focusIndex === 'number' ? state.focusIndex : 0;
+
+      cards.forEach((card, i) => {
+        const isFocused = i === index;
+        card.classList.toggle('is-keyboard-focused', isFocused);
+        card.classList.toggle('is-selected', isFocused);
+      });
+
+      // Ensure the focused card is scrolled into view within the horizontal
+      // list so keyboard and button navigation always reveal the selection.
+      const activeCard = cards[index];
+      if (activeCard && typeof activeCard.scrollIntoView === 'function') {
+        try {
+          activeCard.scrollIntoView({
+            block: 'nearest',
+            inline: 'nearest', // keep the focused card fully visible but do not center it
+            behavior: 'smooth',
+          });
+        } catch (e) {
+          // Non-fatal; older browsers may not support options object
+          activeCard.scrollIntoView();
+        }
+      }
+
+      this._updateNavButtons(index);
+    },
+
+    _initKeyboardFocus() {
+      const cards = this._getCards();
+      if (!cards.length) return;
+
+      // Prefer focusing the card that represents the current active portrait,
+      // falling back to the first card if no active version is set.
+      let initialIndex = 0;
+      try {
+        const ctx = state.context;
+        const activeId = ctx && ctx.metadata && ctx.metadata.activeVersionId;
+        if (activeId) {
+          const matchIndex = cards.findIndex(
+            (card) => card.getAttribute('data-version-id') === activeId,
+          );
+          if (matchIndex >= 0) {
+            initialIndex = matchIndex;
+          }
+        }
+      } catch (e) {
+        // Non-fatal: just fall back to index 0
+      }
+
+      state.focusIndex = initialIndex;
+      this._updateFocus();
+    },
+
+    _attachKeyboardHandlers() {
+      state.escHandler = (e) => {
+        if (e.key === 'Escape') this.closeHistory();
+      };
+
+      state.keyHandler = (e) => {
+        const modal = document.getElementById('portraitHistoryModal');
+        if (!modal) return;
+
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          this.moveFocus(-1);
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          this.moveFocus(1);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          this.moveFocus(-1);
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          this.moveFocus(1);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          this.confirmSelection();
+        }
+      };
+
+      document.addEventListener('keydown', state.escHandler);
+      document.addEventListener('keydown', state.keyHandler);
+    },
+
+    _detachKeyboardHandlers() {
+      if (state.escHandler) {
+        document.removeEventListener('keydown', state.escHandler);
+        state.escHandler = null;
+      }
+      if (state.keyHandler) {
+        document.removeEventListener('keydown', state.keyHandler);
+        state.keyHandler = null;
+      }
+    },
+
+    async _usePortraitVersionManager(characterId, versionId) {
+      const CharacterStorage = window.CharacterStorage;
+      if (!CharacterStorage || typeof CharacterStorage.getById !== 'function') {
+        return;
+      }
+
+      const character = await CharacterStorage.getById(characterId);
+      if (!character) return;
+
+      const metadata = character.portraitMetadata || {};
+      const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+      const version = versions.find((v) => v.id === versionId);
+
+      if (!version) {
+        if (typeof window.showNotification === 'function') {
+          window.showNotification('Portrait version not found.');
+        }
+        return;
+      }
+
+       // Debug: log current vs target portrait details.
+      try {
+        console.log('%c🎨 MANAGER PORTRAIT APPLY VERSION', 'color:#0ff;font-weight:bold;');
+        console.log('  Character ID:', characterId);
+        console.log('  Applying version ID:', versionId);
+        console.log('  Version has ascii:', !!version.ascii, 'len:', (version.ascii || '').length);
+        console.log('  Version has url:', !!version.url, 'url:', version.url || '(none)');
+        console.log(
+          '  Current customPortraitAscii len:',
+          (character.customPortraitAscii || '').length,
+        );
+        console.log(
+          '  Current portrait.ascii len:',
+          (character.portrait && character.portrait.ascii
+            ? character.portrait.ascii.length
+            : 0),
+        );
+      } catch (e) {
+        // Non-fatal
+      }
+
+      // Immediately patch the visible manager UI so the user sees the new art
+      // without needing to wait for storage reload timing or a full refresh.
+      try {
+        const portraitId = `character-portrait-${characterId}`;
+        const originalPortraitId = `original-portrait-${characterId}`;
+        const asciiEl = document.getElementById(portraitId);
+        const imgEl = document.getElementById(originalPortraitId);
+        const container = asciiEl
+          ? asciiEl.closest('.portrait-container')
+          : null;
+
+        // Update ASCII art if we have a visible container and ASCII content.
+        if (asciiEl && version.ascii) {
+          asciiEl.textContent = version.ascii;
+          if (
+            window.CharacterSheet &&
+            typeof CharacterSheet._centerPortraitScrollSafely === 'function'
+          ) {
+            CharacterSheet._centerPortraitScrollSafely(asciiEl);
+          }
+        }
+
+        // Update original image src so "View original art" immediately shows
+        // the selected version's image (respecting global portrait view mode).
+        if (imgEl && version.url) {
+          imgEl.src = version.url;
+
+          if (
+            container &&
+            window.StorageService &&
+            StorageService.getPortraitViewMode
+          ) {
+            const mode = StorageService.getPortraitViewMode();
+            if (mode === 'original') {
+              imgEl.addEventListener(
+                'load',
+                () => {
+                  if (asciiEl) {
+                    asciiEl.classList.add('is-hidden');
+                  }
+                  imgEl.classList.remove('is-hidden');
+                  container.classList.add('portrait-container--original-mode');
+                },
+                { once: true },
+              );
+            }
+          }
+        }
+
+        // Also update the grid card thumbnail (if it exists) so the list view
+        // immediately reflects the selected portrait version.
+        const thumbEl = document.getElementById(`card-thumb-${characterId}`);
+        if (thumbEl && version.ascii) {
+          try {
+            if (window.UI && typeof UI.cropAsciiForThumbnail === 'function') {
+              thumbEl.textContent = UI.cropAsciiForThumbnail(version.ascii);
+            } else {
+              // Fallback: simple top-crop similar to CharacterSheet behavior
+              const lines = version.ascii.split('\n');
+              const topLines = lines.slice(0, 80).map((line) => line.slice(0, 160));
+              thumbEl.textContent = topLines.join('\n');
+            }
+          } catch (thumbError) {
+            console.error(
+              'PortraitUI._usePortraitVersionManager: thumbnail update failed',
+              thumbError,
+            );
+          }
+        }
+      } catch (e) {
+        console.error(
+          'PortraitUI._usePortraitVersionManager: direct DOM patch failed',
+          e,
+        );
+      }
+
+      const updatedMetadata = {
+        ...metadata,
+        activeVersionId: version.id,
+      };
+
+      const updates = {
+        originalPortraitUrl:
+          version.url || character.originalPortraitUrl || null,
+        customPortraitAscii:
+          version.ascii || character.customPortraitAscii || '',
+        portraitMetadata: updatedMetadata,
+        portrait: {
+          ...(character.portrait || {}),
+          url:
+            version.url ||
+            (character.portrait && character.portrait.url) ||
+            null,
+          ascii:
+            version.ascii ||
+            (character.portrait && character.portrait.ascii) ||
+            '',
+        },
+      };
+
+      // Persist the change to storage using the shared CharacterStorage
+      // facade. This will update either cloud or local data depending on
+      // the current auth state. We deliberately do NOT immediately re-render
+      // from storage results here to avoid snapping the UI back to any stale
+      // data that a just-in-time refetch might return.
+      try {
+        await CharacterStorage.update(characterId, updates);
+      } catch (e) {
+        console.error(
+          'PortraitUI._usePortraitVersionManager: storage update failed',
+          e,
+        );
+      }
+
+      // Keep AppState in sync for future renders/navigation so that whenever
+      // the grid or sheet *does* re-render from state, it uses this new
+      // portrait version. We rely on our direct DOM patch above to keep the
+      // currently visible sheet/card in sync right away.
+      try {
+        const nextCharacter = { ...character, ...updates };
+
+        if (window.AppState) {
+          if (Array.isArray(AppState.characters)) {
+            const idx = AppState.characters.findIndex(
+              (c) => c && c.id === characterId,
+            );
+            if (idx !== -1) {
+              AppState.characters[idx] = nextCharacter;
+            }
+          }
+          if (Array.isArray(AppState.filteredCharacters)) {
+            const fIdx = AppState.filteredCharacters.findIndex(
+              (c) => c && c.id === characterId,
+            );
+            if (fIdx !== -1) {
+              AppState.filteredCharacters[fIdx] = nextCharacter;
+            }
+          }
+        }
+      } catch (e) {
+        console.error(
+          'PortraitUI._usePortraitVersionManager: AppState sync failed',
+          e,
+        );
+      }
+      this.closeHistory();
+    },
+  });
+
+  // Backwards-compatible global hook used by shared-character-sheet.js
+  // and any debug tooling that calls openPortraitHistory(characterId).
+  if (typeof window.openPortraitHistory !== 'function') {
+    window.openPortraitHistory = function (characterId) {
+      return PortraitUI.openManagerHistory(characterId);
+    };
+  }
+})();
+
+
+
+
+
 // ===== BUNDLE PART: character-builder/character-builder-components.js =====
 
 // UI components for the DandDy terminal character builder.
@@ -8449,6 +10508,18 @@ const Components = (window.Components = {
       return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
     };
 
+    // Helper to format narrator titles: strip emoji/description and use a clean title.
+    const formatNarratorTitle = (narrator) => {
+      if (!narrator) return '';
+      const base = String(narrator.name || narrator.id || '').trim();
+      if (!base) return '';
+      return base
+        .split(/[-_\s]+/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+    };
+
     // Text speed multiplier: defaults to 1x if not set or invalid.
     const getCurrentTextSpeed = () => {
       if (!StorageService || typeof StorageService.getTextSpeedMultiplier !== 'function') {
@@ -8480,16 +10551,12 @@ const Components = (window.Components = {
     const currentNarrator =
       narratorsList.find((n) => n.id === currentNarratorId) || narratorsList[0];
     const currentNarratorLabel = currentNarrator
-      ? truncate(
-          `${currentNarrator.emoji} ${currentNarrator.name} - ${currentNarrator.description}`,
-          60,
-        )
+      ? formatNarratorTitle(currentNarrator)
       : 'Choose narrator';
 
     const narratorOptionsMenu = narratorsList
       .map((narrator) => {
-        const optionText = `${narrator.emoji} ${narrator.name} - ${narrator.description}`;
-        const truncatedText = truncate(optionText, 60);
+        const label = formatNarratorTitle(narrator);
         const isSelected = narrator.id === currentNarratorId;
         return `
           <button
@@ -8500,7 +10567,7 @@ const Components = (window.Components = {
             aria-selected="${isSelected ? 'true' : 'false'}"
           >
             <span class="selector-option-label">
-              ${truncatedText}
+              ${label}
             </span>
           </button>
         `;
@@ -8539,126 +10606,208 @@ const Components = (window.Components = {
 
     const currentPortraitViewMode = getPortraitViewMode();
 
+    // Portrait prompt theme (for AI-generated portraits)
+    const getPortraitPromptTheme = () => {
+      try {
+        if (window.StorageService && StorageService.getPortraitPromptTheme) {
+          return StorageService.getPortraitPromptTheme();
+        }
+      } catch (e) {
+        console.warn('Settings: failed to read portrait prompt theme', e);
+      }
+
+      if (
+        typeof window !== 'undefined' &&
+        window.PortraitPrompt &&
+        typeof window.PortraitPrompt.getDefaultThemeId === 'function'
+      ) {
+        try {
+          return window.PortraitPrompt.getDefaultThemeId();
+        } catch (e) {
+          // Non-fatal
+        }
+      }
+
+      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) || null;
+    };
+
+    const currentPromptThemeId = getPortraitPromptTheme();
+
+    let promptThemes = [];
+    if (
+      typeof window !== 'undefined' &&
+      window.PortraitPrompt &&
+      typeof window.PortraitPrompt.getThemes === 'function'
+    ) {
+      try {
+        promptThemes = window.PortraitPrompt.getThemes() || [];
+      } catch (e) {
+        console.warn('Settings: failed to read portrait prompt themes', e);
+      }
+    }
+
+    // Fallback to a single default theme when the helper is unavailable.
+    if (!Array.isArray(promptThemes) || !promptThemes.length) {
+      promptThemes = [
+        {
+          id: 'cinematic-inks',
+          label: 'Cinematic Inks (default)',
+          description:
+            'More cinematic lighting and framing while staying in black-and-white ink.',
+        },
+      ];
+    }
+
+    // Sort themes alphabetically by id
+    promptThemes = promptThemes.slice().sort((a, b) => {
+      const nameA = (a.id || '').toLowerCase();
+      const nameB = (b.id || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+
+    const activePromptTheme =
+      promptThemes.find((t) => t.id === currentPromptThemeId) ||
+      promptThemes[0];
+
+    // Helper to format a theme id/label into Title Case name.
+    const formatThemeName = (theme) => {
+      const rawId = (theme && theme.id) || '';
+      // Prefer id so custom themes don't inherit any legacy "(default)" suffixes.
+      const base = String(rawId || '').trim() || String(theme.label || '');
+      if (!base) return '';
+      return base
+        .split(/[-_\s]+/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+    };
+
+    const currentPromptThemeLabel = activePromptTheme
+      ? formatThemeName(activePromptTheme)
+      : 'Cinematic Inks';
+
     return `
       <div id="settingsModal" class="modal show" onclick="SettingsModal.close()">
         <div class="modal-content builder-settings-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
             <div class="modal-header-main">
-              <h2 class="modal-title">⚙ Settings</h2>
+              <h2 class="modal-title">[ ⚙ Settings ]</h2>
             </div>
             <button class="modal-close" onclick="SettingsModal.close()" aria-label="Close settings">&times;</button>
           </div>
           <div class="modal-body">
             <div class="settings-layout">
               <div class="settings-grid">
+                <div class="settings-group-label">[ Builder ]</div>
                 <section class="settings-section">
-                  <div class="settings-row">
-                    <div class="settings-label">Narrator Voice</div>
-                    <div class="selector-shell selector-shell--match-width">
-                      <button
-                        class="terminal-btn selector-trigger"
-                        id="narrator-select-trigger"
-                        type="button"
-                        aria-haspopup="listbox"
-                        aria-expanded="false"
-                        onclick="CharacterSheet.toggleSelectorMenu(this)"
-                      >
-                        <span class="selector-trigger-label" id="narrator-select-label">
-                          ${currentNarratorLabel}
-                        </span>
-                      </button>
-                      <div
-                        class="selector-menu"
-                        role="listbox"
-                        aria-label="Narrator voice"
-                        aria-hidden="true"
-                      >
-                        ${narratorOptionsMenu}
+                  <div class="settings-row-inline">
+                    <div class="settings-inline-field">
+                      <div class="settings-label">Narrator Voice</div>
+                      <div class="selector-shell selector-shell--match-width">
+                        <button
+                          class="terminal-btn selector-trigger"
+                          id="narrator-select-trigger"
+                          type="button"
+                          aria-haspopup="listbox"
+                          aria-expanded="false"
+                          onclick="CharacterSheet.toggleSelectorMenu(this)"
+                        >
+                          <span class="selector-trigger-label" id="narrator-select-label">
+                            ${currentNarratorLabel}
+                          </span>
+                        </button>
+                        <div
+                          class="selector-menu"
+                          role="listbox"
+                          aria-label="Narrator voice"
+                          aria-hidden="true"
+                        >
+                          ${narratorOptionsMenu}
+                        </div>
                       </div>
-                    </div>
-                    <select
-                      id="narrator-select"
-                      class="terminal-select settings-select hidden"
-                    >
-                      ${narratorsList
-                        .map((narrator) => {
-                          const optionText = `${narrator.emoji} ${narrator.name} - ${narrator.description}`;
-                          const truncatedText = truncate(optionText, 60);
-                          return `
+                      <select
+                        id="narrator-select"
+                        class="terminal-select settings-select hidden"
+                      >
+                        ${narratorsList
+                          .map((narrator) => {
+                            const label = formatNarratorTitle(narrator);
+                            return `
                             <option value="${narrator.id}" ${
                               narrator.id === currentNarratorId ? 'selected' : ''
                             }>
-                              ${truncatedText}
+                              ${label}
                             </option>
-                          `;
-                        })
-                        .join('')}
-                    </select>
-                  </div>
-                </section>
-
-                <section class="settings-section">
-                  <div class="settings-row">
-                    <div class="settings-label">Narrator Text Speed</div>
-                    <div class="selector-shell selector-shell--match-width">
-                      <button
-                        class="terminal-btn selector-trigger"
-                        id="text-speed-select-trigger"
-                        type="button"
-                        aria-haspopup="listbox"
-                        aria-expanded="false"
-                        onclick="CharacterSheet.toggleSelectorMenu(this)"
-                      >
-                        <span class="selector-trigger-label" id="text-speed-select-label">
-                          ${currentTextSpeedLabel}
-                        </span>
-                      </button>
-                      <div
-                        class="selector-menu"
-                        role="listbox"
-                        aria-label="Narrator text speed"
-                        aria-hidden="true"
-                      >
-                        ${textSpeedOptions
-                          .map((opt) => {
-                            const isSelected =
-                              opt.value === currentTextSpeedOption.value;
-                            return `
-                            <button
-                              class="selector-option${isSelected ? ' is-selected' : ''}"
-                              type="button"
-                              role="option"
-                              data-value="${opt.value}"
-                              aria-selected="${isSelected ? 'true' : 'false'}"
-                            >
-                              <span class="selector-option-label">
-                                ${opt.label}
-                              </span>
-                            </button>
                           `;
                           })
                           .join('')}
-                      </div>
+                      </select>
                     </div>
-                    <select
-                      id="text-speed-select"
-                      class="terminal-select settings-select hidden"
-                    >
-                      ${textSpeedOptions
-                        .map(
-                          (opt) => `
-                          <option value="${opt.value}" ${
-                            opt.value === currentTextSpeedOption.value ? 'selected' : ''
-                          }>
-                            ${opt.label}
-                          </option>
-                        `,
-                        )
-                        .join('')}
-                    </select>
+                    <div class="settings-inline-field">
+                      <div class="settings-label">Text Speed</div>
+                      <div class="selector-shell selector-shell--match-width">
+                        <button
+                          class="terminal-btn selector-trigger"
+                          id="text-speed-select-trigger"
+                          type="button"
+                          aria-haspopup="listbox"
+                          aria-expanded="false"
+                          onclick="CharacterSheet.toggleSelectorMenu(this)"
+                        >
+                          <span class="selector-trigger-label" id="text-speed-select-label">
+                            ${currentTextSpeedLabel}
+                          </span>
+                        </button>
+                        <div
+                          class="selector-menu"
+                          role="listbox"
+                          aria-label="Narrator text speed"
+                          aria-hidden="true"
+                        >
+                          ${textSpeedOptions
+                            .map((opt) => {
+                              const isSelected =
+                                opt.value === currentTextSpeedOption.value;
+                              return `
+                              <button
+                                class="selector-option${isSelected ? ' is-selected' : ''}"
+                                type="button"
+                                role="option"
+                                data-value="${opt.value}"
+                                aria-selected="${isSelected ? 'true' : 'false'}"
+                              >
+                                <span class="selector-option-label">
+                                  ${opt.label}
+                                </span>
+                              </button>
+                            `;
+                            })
+                            .join('')}
+                        </div>
+                      </div>
+                      <select
+                        id="text-speed-select"
+                        class="terminal-select settings-select hidden"
+                      >
+                        ${textSpeedOptions
+                          .map(
+                            (opt) => `
+                            <option value="${opt.value}" ${
+                              opt.value === currentTextSpeedOption.value
+                                ? 'selected'
+                                : ''
+                            }>
+                              ${opt.label}
+                            </option>
+                          `,
+                          )
+                          .join('')}
+                      </select>
+                    </div>
                   </div>
                 </section>
 
+                <div class="settings-group-label">[ Image generation ]</div>
                 <section class="settings-section">
                   <div class="settings-row">
                     <div class="settings-label">AI model</div>
@@ -8718,6 +10867,78 @@ const Components = (window.Components = {
                         )
                         .join('')}
                     </select>
+                  </div>
+                </section>
+
+                <section class="settings-section">
+                  <div class="settings-row settings-row--stacked">
+                    <div class="settings-label">Style</div>
+                    <div class="settings-field">
+                      <div class="selector-shell selector-shell--match-width" style="width: 100%;">
+                        <button
+                          class="terminal-btn selector-trigger"
+                          id="portrait-theme-select-trigger"
+                          type="button"
+                          aria-haspopup="listbox"
+                          aria-expanded="false"
+                          onclick="CharacterSheet.toggleSelectorMenu(this)"
+                          style="width: 100%;"
+                        >
+                          <span
+                            class="selector-trigger-label"
+                            id="portrait-theme-select-label"
+                          >
+                            ${currentPromptThemeLabel}
+                          </span>
+                        </button>
+                        <div
+                          class="selector-menu"
+                          role="listbox"
+                          aria-label="Portrait prompt theme"
+                          aria-hidden="true"
+                          style="width: 100%;"
+                        >
+                          ${promptThemes
+                            .map((theme) => {
+                              const isSelected = theme.id === activePromptTheme.id;
+                              const label = formatThemeName(theme);
+                              return `
+                              <button
+                                class="selector-option${
+                                  isSelected ? ' is-selected' : ''
+                                }"
+                                type="button"
+                                role="option"
+                                data-value="${theme.id}"
+                                aria-selected="${isSelected ? 'true' : 'false'}"
+                              >
+                                <span class="selector-option-label">
+                                  ${label}
+                                </span>
+                              </button>
+                            `;
+                            })
+                            .join('')}
+                        </div>
+                      </div>
+                      <select
+                        id="portrait-theme-select"
+                        class="terminal-select settings-select hidden"
+                      >
+                        ${promptThemes
+                          .map((theme) => {
+                            const label = formatThemeName(theme);
+                            return `
+                            <option value="${theme.id}" ${
+                              theme.id === activePromptTheme.id ? 'selected' : ''
+                            }>
+                              ${label}
+                            </option>
+                          `;
+                          })
+                          .join('')}
+                      </select>
+                    </div>
                   </div>
                 </section>
 
@@ -8888,6 +11109,36 @@ const SettingsModal = (window.SettingsModal = {
         });
       });
     }
+
+    // Portrait prompt theme selector
+    const themeTrigger = modal.querySelector(
+      '#portrait-theme-select-trigger',
+    );
+    const themeLabel = modal.querySelector('#portrait-theme-select-label');
+    const themeSelect = modal.querySelector('#portrait-theme-select');
+    const themeOptions = modal.querySelectorAll(
+      '.selector-menu[aria-label="Portrait prompt theme"] .selector-option',
+    );
+
+    if (themeTrigger && themeLabel && themeSelect && themeOptions.length) {
+      themeOptions.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = option.getAttribute('data-value');
+          const label = option.querySelector('.selector-option-label');
+          if (value && label) {
+            themeLabel.textContent = label.textContent.trim();
+            themeSelect.value = value;
+            // Keep menu selection state in sync with the trigger
+            themeOptions.forEach((opt) => {
+              const isSelected = opt === option;
+              opt.classList.toggle('is-selected', isSelected);
+              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+          }
+        });
+      });
+    }
   },
 
   close() {
@@ -8951,9 +11202,19 @@ const SettingsModal = (window.SettingsModal = {
       StorageService.setPortraitViewMode(portraitModeInput.value);
     }
 
+    // Save portrait prompt theme selection
+    const portraitThemeSelect = document.getElementById('portrait-theme-select');
+    if (
+      portraitThemeSelect &&
+      window.StorageService &&
+      StorageService.setPortraitPromptTheme
+    ) {
+      StorageService.setPortraitPromptTheme(portraitThemeSelect.value);
+    }
+
     // Use a non-intrusive toast for settings changes instead of a narrator line
     if (window.App && typeof App.showToast === 'function') {
-      App.showToast('Settings saved!');
+      App.showToast('Settings saved');
     } else if (typeof showNotification === 'function') {
       showNotification('Settings saved');
     }
@@ -10137,19 +12398,27 @@ const App = (window.App = {
 
           // Position the listbox relative to the trigger so it behaves like
           // other selector menus: always above or below (preferring below),
-          // at least as wide as the trigger, and constrained to the viewport.
-          const shell = trigger.closest('.selector-shell') || trigger.parentElement;
+          // at least as wide as the trigger, and constrained to the viewport
+          // with internal scrolling if it can't fully fit on-screen.
+          const shell =
+            trigger.closest('.selector-shell') || trigger.parentElement;
           if (shell) {
             const shellRect = shell.getBoundingClientRect();
             const triggerRect = trigger.getBoundingClientRect();
 
             // Measure menu size without affecting final animation. Temporarily
             // neutralize transforms so we get the full height instead of the
-            // scaled (collapsed) height from CSS.
+            // scaled (collapsed) height from CSS. Also clear any previous
+            // inline sizing so each open starts from a clean baseline.
             const prevDisplay = listbox.style.display;
             const prevVisibility = listbox.style.visibility;
             const prevTransform = listbox.style.transform;
 
+            listbox.style.maxHeight = '';
+            listbox.style.overflowY = '';
+            listbox.style.position = 'fixed';
+            listbox.style.top = '0';
+            listbox.style.left = '0';
             listbox.style.visibility = 'hidden';
             listbox.style.display = 'block';
             listbox.style.transform = 'none';
@@ -10174,26 +12443,69 @@ const App = (window.App = {
 
             const viewportHeight = window.innerHeight;
             const viewportWidth = window.innerWidth;
-            const padding = 8; // breathing room from viewport edges
+            const padding = 8; // breathing room from edges
             const gapY = 4; // small gap between trigger and menu when opening below
 
-            // Decide if the menu can fit fully below the trigger within the
-            // viewport padding. If not, we flip it above.
-            const fitsBelow =
-              triggerRect.bottom + gapY + menuHeight <=
-              viewportHeight - padding;
+            // Treat the nearest terminal frame/container as the visual "viewport"
+            // so the listbox never extends outside the green app frame.
+            const host =
+              trigger.closest('.terminal-frame, .terminal-container') ||
+              document.documentElement;
+            const hostRect = host.getBoundingClientRect();
+            const hostTop = hostRect.top + padding;
+            const hostBottom = hostRect.bottom - padding;
 
-            let topInViewport;
-            // Prefer below the trigger when there's enough room; otherwise open above.
-            if (fitsBelow) {
-              // Below: align the top of the listbox just under the trigger.
-              topInViewport = triggerRect.bottom + gapY;
+            // Space available above and below the trigger within the host.
+            const spaceAbove = triggerRect.top - hostTop;
+            const spaceBelow = hostBottom - triggerRect.bottom;
+
+            const fitsBelow = spaceBelow >= menuHeight + gapY;
+            const fitsAbove = spaceAbove >= menuHeight + gapY;
+
+            // Choose direction: prefer below when possible, but fall back to
+            // whichever side has room, similar to the shared selector menus.
+            const triggerCenterY = triggerRect.top + triggerRect.height / 2;
+            const inTopHalf = triggerCenterY < viewportHeight / 2;
+
+            let openBelow;
+            if (fitsBelow && fitsAbove) {
+              openBelow = inTopHalf;
+            } else if (fitsBelow) {
+              openBelow = true;
+            } else if (fitsAbove) {
+              openBelow = false;
             } else {
-              // Above: align the *bottom* of the listbox with the top of the trigger.
-              topInViewport = triggerRect.top - menuHeight;
-              if (topInViewport < padding) {
-                topInViewport = padding;
+              // Neither direction fits perfectly: use the side with more space.
+              openBelow = spaceBelow >= spaceAbove;
+            }
+
+            // Position using a single top coordinate, clamped so the menu stays
+            // fully inside the host. If there's not enough room for full height,
+            // we'll cap height and enable internal scrolling.
+            const maxTop = hostBottom - menuHeight;
+            let topInViewport;
+
+            if (openBelow) {
+              topInViewport = triggerRect.bottom + gapY;
+              if (topInViewport > maxTop) {
+                topInViewport = Math.max(hostTop, maxTop);
               }
+            } else {
+              topInViewport = triggerRect.top - gapY - menuHeight;
+              if (topInViewport < hostTop) {
+                topInViewport = hostTop;
+              }
+            }
+
+            // If the menu would extend past the host, cap its height so it scrolls
+            // instead of being clipped by the terminal container.
+            const availableHeight = hostBottom - topInViewport;
+            if (menuHeight > availableHeight && availableHeight > 0) {
+              listbox.style.maxHeight = `${availableHeight}px`;
+              listbox.style.overflowY = 'auto';
+            } else {
+              listbox.style.maxHeight = '';
+              listbox.style.overflowY = '';
             }
 
             // Horizontal alignment: start left-aligned, then if that would
@@ -10680,12 +12992,26 @@ const App = (window.App = {
   },
 
   /**
+   * Stop the portrait loading animation interval.
+   */
+  _stopPortraitLoadingAnimation() {
+    if (this._portraitLoadingInterval) {
+      clearInterval(this._portraitLoadingInterval);
+      this._portraitLoadingInterval = null;
+    }
+    this._portraitElapsed = 0;
+  },
+
+  /**
    * Render the standard AI portrait loading state in the portrait panel.
-   * Uses the glowing, fast-spinning cube plus unified status text:
-   * "Generating AI portrait… This can take 20–30 seconds."
+   * Uses the glowing, fast-spinning cube plus animated dots matching
+   * the manager view and shared PortraitUI helper.
    */
   _renderPortraitGeneratingLoader(portraitEl) {
     if (!portraitEl) return;
+
+    // Stop any existing animation interval before starting a new one.
+    this._stopPortraitLoadingAnimation();
 
     // Normalize the portrait container into a loading state so the cube + text
     // layout matches the shared portrait styles in `portraits.css`.
@@ -10703,24 +13029,92 @@ const App = (window.App = {
     portraitEl.style.overflowX = '';
     portraitEl.style.overflowY = '';
 
-    portraitEl.innerHTML = `
-      <div class="portrait-placeholder-content">
-        <div class="portrait-placeholder-cube-container">
-          <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-            <i></i>
-            <i></i>
-            <i></i>
-            <i></i>
-            <i></i>
-            <i></i>
-          </div>
-        </div>
-        <div class="portrait-placeholder-text">
-          Generating AI portrait…<br>
-          This can take 20–30 seconds.
-        </div>
-      </div>
-    `;
+    // Use standardized message matching manager view.
+    const baseMessage = 'Generating character art';
+    
+    // Model-aware subtext: GPT Image 1 takes longer than DALL·E 3.
+    let subtext = '(This usually takes 20–30 seconds)';
+    try {
+      if (
+        window.PortraitUI &&
+        typeof PortraitUI.getImageModelSubtext === 'function'
+      ) {
+        subtext = PortraitUI.getImageModelSubtext();
+      } else {
+        // Inline fallback if PortraitUI not available.
+        let imageModel = 'dall-e-3';
+        if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+          imageModel = StorageService.getImageModel();
+        } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_IMAGE_MODEL) {
+          imageModel = CONFIG.DEFAULT_IMAGE_MODEL;
+        }
+        if (imageModel === 'gpt-image-1') {
+          subtext = '(This can take up to a minute)';
+        }
+      }
+    } catch (e) {
+      // Fall back to default subtext on any error.
+    }
+
+    // Initialize elapsed counter for dot animation.
+    this._portraitElapsed = 0;
+
+    // Update function that animates the dots (cycles 1→2→3).
+    const updatePortraitLoading = () => {
+      if (!portraitEl) return;
+      const dotCount = (this._portraitElapsed % 3) + 1;
+
+      if (
+        window.PortraitUI &&
+        typeof PortraitUI.renderGeneratingLoader === 'function'
+      ) {
+        PortraitUI.renderGeneratingLoader(portraitEl, {
+          baseMessage,
+          subtext,
+          dotCount,
+          isLoading: true,
+        });
+      } else {
+        // Fallback: update dot state manually if shared helper unavailable.
+        let textEl = portraitEl.querySelector('.portrait-placeholder-text');
+        if (!textEl) {
+          portraitEl.innerHTML = `
+            <div class="portrait-placeholder-content">
+              <div class="portrait-placeholder-cube-container">
+                <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                </div>
+              </div>
+              <div class="portrait-placeholder-text" data-dots="${dotCount}">
+                <span class="portrait-placeholder-message">${baseMessage}</span>
+                <span class="portrait-placeholder-dots">
+                  <span class="dot dot-1">.</span>
+                  <span class="dot dot-2">.</span>
+                  <span class="dot dot-3">.</span>
+                </span>
+                <div class="portrait-placeholder-subtext">
+                  ${subtext}
+                </div>
+              </div>
+            </div>
+          `;
+          textEl = portraitEl.querySelector('.portrait-placeholder-text');
+        } else {
+          textEl.setAttribute('data-dots', String(dotCount));
+        }
+      }
+
+      this._portraitElapsed++;
+    };
+
+    // Render immediately, then start interval for animation.
+    updatePortraitLoading();
+    this._portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
   },
 
   // In guided (co-create) mode, automatically generate a custom AI portrait
@@ -10859,6 +13253,9 @@ const App = (window.App = {
     } finally {
       // Clear the generating flag so future re-renders work normally
       this._guidedPortraitGenerating = false;
+      
+      // Stop the animated dots interval.
+      this._stopPortraitLoadingAnimation();
       
       const portraitEl = document.getElementById('character-portrait');
       if (portraitEl) {
@@ -11591,7 +13988,7 @@ const App = (window.App = {
       <div id="portraitHistoryModal" class="modal show" onclick="App.closePortraitHistory()">
         <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">Portrait History</h2>
+            <h2 class="modal-title">[ Portrait History ]</h2>
             <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>
           </div>
           <div class="modal-body">
@@ -12161,7 +14558,7 @@ const App = (window.App = {
       <div id="promptModal" class="modal show" onclick="App.closePromptModal(false)">
         <div class="modal-content" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">★ Customize AI Portrait</h2>
+            <h2 class="modal-title">[ ★ Customize AI Portrait ]</h2>
             <button class="modal-close" onclick="App.closePromptModal(false)">&times;</button>
           </div>
           <div class="modal-body">
@@ -12327,219 +14724,88 @@ const App = (window.App = {
     try {
       // Add rendering instructions to the user's character description
       // (hidden system-level guidance for the image model)
-      // Mirror the randomized pose + camera logic from AIService.buildPortraitPrompt
+      // Use shared pose + camera data from PortraitPoseData module
       const classKey = (character.class || 'default').toLowerCase();
 
-      const poseVariantsByClass = {
-        fighter: [
-          'posed mid-swing with a heavy weapon, body twisted to show the arc of the strike',
-          'standing in a ready battle stance, shield raised and weapon held low but tense',
-          'caught in the moment of blocking an attack, weight shifted back with shield braced',
-          'charging forward with weapon raised overhead, cloak and gear trailing behind',
-          'standing atop fallen rubble in a victorious stance, weapon planted like a banner',
-        ],
-        barbarian: [
-          'leaning forward in a feral roar, muscles tensed, weapon mid-swing',
-          'standing wide and grounded, one foot on a rock, gripping a massive weapon with both hands',
-          'caught mid-leap as if diving into battle, hair and trophies flying outward',
-          'holding a weapon across the shoulders, posture relaxed but intimidating',
-          'bracing against an unseen impact, teeth bared and stance low and aggressive',
-        ],
-        paladin: [
-          'kneeling with shield planted in front, weapon held upright in a solemn vow pose',
-          'standing tall with shield forward and weapon raised in a protective gesture',
-          'framed in a side stance, shield angled and weapon ready for a precise strike',
-          'holding a holy symbol aloft with one hand while resting the weapon point-down',
-          'striding forward with shield half-raised, cloak sweeping back in a confident march',
-        ],
-        rogue: [
-          'crouched low in the shadows, one dagger drawn and the other held behind for balance',
-          'leaning casually against an unseen wall, one hand resting on a hidden blade',
-          'mid-step on a narrow ledge, body turned sideways with cloak pulled close',
-          'poised behind an unseen target, daggers reversed in a silent takedown stance',
-          'perched on a raised surface, knees bent, ready to spring into motion',
-        ],
-        monk: [
-          'balanced on one leg in a classic kick pose, arms forming a flowing guard shape',
-          'mid-strike with an open palm, body rotated and lines clean and focused',
-          'seated in calm meditation, legs crossed and hands resting in a composed mudra',
-          'low sweeping stance with one arm extended and the other drawn back defensively',
-          'caught at the peak of a spinning kick, robes and sashes tracing the motion',
-        ],
-        ranger: [
-          'drawing a bow with the string fully pulled, body turned in a three-quarter stance',
-          'kneeling on one knee with bow lowered, scanning the distance like a watchful scout',
-          'mid-stride through an implied forest floor, bow held loosely but ready',
-          'standing on a slight rise, bow raised and arrow aimed slightly downward',
-          'leaning against an unseen tree, one hand resting on the bow, posture relaxed but alert',
-        ],
-        wizard: [
-          'standing with one hand raised and fingers splayed, arcane energy swirling upward',
-          'leaning over an invisible spellbook, staff angled forward as if channeling power',
-          'mid-gesture with both hands shaping a spell, sleeves and robes pulled by the motion',
-          'holding a staff planted before them, gaze lifted as if calling down distant power',
-          'caught turning dramatically, cloak sweeping, one hand tracing a glowing sigil',
-        ],
-        sorcerer: [
-          'surrounded by swirling magical energy, one hand outstretched and the other pulled close',
-          'standing with arms wide, raw power coiling around their torso and shoulders',
-          'mid-step as a surge of magic bursts from the ground around their feet',
-          'leaning back slightly as if resisting an overwhelming tide of inner power',
-          'cradling a concentrated sphere of magic between both hands at chest height',
-        ],
-        warlock: [
-          'holding a pact focus or talisman forward, dark energy streaming from it',
-          'standing in a relaxed stance with one hand behind their back, the other tracing eldritch runes',
-          'reaching upward toward an unseen patron, cloak and garments pulled by unnatural wind',
-          'half-turned away, casting a spell over their shoulder with a sly or knowing posture',
-          'arms crossed loosely while faint sigils burn in the air around them',
-        ],
-        cleric: [
-          'raising a holy symbol high, light radiating outward in a protective arc',
-          'standing with shield angled and mace lowered, posture firm and resolute',
-          'kneeling in prayerful focus, holy symbol clasped between both hands',
-          'reaching one hand toward an unseen ally as if channeling healing energy',
-          'planting a weapon or staff into the ground as radiant power rises around them',
-        ],
-        druid: [
-          'standing with staff planted in the earth, vines and leaves swirling around',
-          'mid-transformation pose, body partly turned and framed by natural shapes',
-          'kneeling to touch the ground, one hand extended as if coaxing growth',
-          'arms lifted as if calling wind or storm, cloak and hair driven by imaginary weather',
-          'leaning gently against an unseen tree, posture relaxed and rooted',
-        ],
-        bard: [
-          'mid-performance with an instrument, one foot forward and body open to an unseen crowd',
-          'leaning back in a dramatic flourish, cloak and hair trailing with the motion',
-          'perched casually on an unseen stool or crate, instrument resting comfortably in hand',
-          'bowing deeply at the end of a performance, one arm sweeping wide',
-          'caught mid-step in a dance-like pose, instrument held close to the torso',
-        ],
-        default: [
-          'standing in a relaxed but heroic stance, weight shifted slightly to one side',
-          'mid-stride as if walking toward the viewer with confident energy',
-          'standing in profile with head turned toward the viewer, posture composed and steady',
-          'seated on an implied stone or crate, leaning slightly forward in a thoughtful pose',
-          'standing with arms loosely folded or resting on a weapon, calm and watchful',
-        ],
-      };
+      const { pose: posePrompt, camera: cameraPrompt } =
+        window.PortraitPoseData && typeof PortraitPoseData.getRandomPoseAndCamera === 'function'
+          ? PortraitPoseData.getRandomPoseAndCamera(classKey)
+          : {
+              pose: 'standing in a relaxed but heroic stance',
+              camera: 'Camera angle: three-quarter view that clearly shows the full silhouette.',
+            };
 
-      const cameraVariantsByClass = {
-        fighter: [
-          'Camera angle: slightly low and three-quarter to emphasize strength and presence.',
-          'Camera angle: eye-level, centered on the torso and weapon for a direct confrontation.',
-          'Camera angle: three-quarter from the shield side, highlighting defense and stance.',
-          'Camera angle: slightly above, looking down to show battlefield context around the figure.',
-          'Camera angle: close to ground level, making the character loom large in the frame.',
-        ],
-        barbarian: [
-          'Camera angle: low and close, exaggerating size and ferocity.',
-          'Camera angle: three-quarter with a strong diagonal, emphasizing motion and power.',
-          'Camera angle: eye-level but tilted slightly to make the pose feel unstable and wild.',
-          'Camera angle: pulled back to show the full silhouette and large weapon in motion.',
-          'Camera angle: slightly below the shoulders, looking up into a battle roar.',
-        ],
-        paladin: [
-          'Camera angle: eye-level, straight on, emphasizing honor and symmetry.',
-          'Camera angle: slightly low, looking up past the shield to give a guardian feeling.',
-          'Camera angle: three-quarter from the weapon side, showing both devotion and readiness.',
-          'Camera angle: slightly above, as if from the viewpoint of someone being protected.',
-          'Camera angle: close to the chest and shoulders, focusing on heraldry and holy symbols.',
-        ],
-        rogue: [
-          'Camera angle: slightly above and to the side, emphasizing stealth and environment.',
-          'Camera angle: three-quarter from behind, with the face turned back toward the viewer.',
-          'Camera angle: low and angled sharply, creating long, dramatic shadows.',
-          'Camera angle: tight framing around the upper body, leaving the background mostly in shadow.',
-          'Camera angle: oblique and off-center, reinforcing a feeling of secrecy and motion.',
-        ],
-        monk: [
-          'Camera angle: mid-distance and centered, capturing clean lines of the martial pose.',
-          'Camera angle: slightly low, emphasizing balance and upward motion in kicks or strikes.',
-          'Camera angle: from above, looking down on a circular stance pattern.',
-          'Camera angle: three-quarter, letting limbs and flowing cloth create dynamic diagonals.',
-          'Camera angle: side-on profile to highlight precision and alignment of the form.',
-        ],
-        ranger: [
-          'Camera angle: three-quarter from the front, aligned with the drawn bow and arrow.',
-          'Camera angle: from slightly behind the shoulder, looking along the line of the bowstring.',
-          'Camera angle: slightly elevated, framing the ranger and implied terrain below.',
-          'Camera angle: low and angled upward through implied undergrowth or rough ground.',
-          'Camera angle: mid-distance, with the character slightly off-center to suggest open space.',
-        ],
-        wizard: [
-          'Camera angle: three-quarter, framing both staff and spell effect in the same view.',
-          'Camera angle: slightly low, making the spellcasting gesture feel towering and grand.',
-          'Camera angle: slightly above, looking down on a circle of arcane energy.',
-          'Camera angle: tight on the upper body and hands, emphasizing complex spell gestures.',
-          'Camera angle: oblique and off-center, with arcane elements framing the composition.',
-        ],
-        sorcerer: [
-          'Camera angle: close and low, centered on the chest where power is gathering.',
-          'Camera angle: three-quarter from the side, showing energy spiraling around the figure.',
-          'Camera angle: above and tilted, as if the viewer is caught in the swirl of magic.',
-          'Camera angle: tight framing on the face and hands, emphasizing raw intensity.',
-          'Camera angle: pulled back slightly, letting arcs of power form a halo-like shape.',
-        ],
-        warlock: [
-          'Camera angle: slightly low and off-center, giving a subtle, ominous imbalance.',
-          'Camera angle: three-quarter from behind, looking toward an unseen source of power.',
-          'Camera angle: eye-level but pushed to one side, leaving empty darkness opposite the figure.',
-          'Camera angle: close to the focus or talisman, with the character looming just behind it.',
-          'Camera angle: slightly above, letting eldritch patterns form around the character\'s feet.',
-        ],
-        cleric: [
-          'Camera angle: slightly low, looking up toward the raised holy symbol.',
-          'Camera angle: eye-level, centered to evoke balance and stability.',
-          'Camera angle: three-quarter, allowing both shield and symbol to read clearly.',
-          'Camera angle: slightly above, as if from the viewpoint of a blessed ally.',
-          'Camera angle: mid-distance with the character framed symmetrically in the composition.',
-        ],
-        druid: [
-          'Camera angle: low and close to the ground, emphasizing roots, stones, and natural forms.',
-          'Camera angle: three-quarter, with implied branches or leaves partially framing the view.',
-          'Camera angle: slightly above, looking down as if from a bird\'s-eye vantage.',
-          'Camera angle: eye-level but softened, placing the character gently into the environment.',
-          'Camera angle: mid-distance, with the figure slightly off-center to leave room for nature.',
-        ],
-        bard: [
-          'Camera angle: eye-level, as if the viewer is part of an unseen audience.',
-          'Camera angle: three-quarter, capturing both gesture and instrument clearly.',
-          'Camera angle: slightly low, turning a performance flourish into a heroic moment.',
-          'Camera angle: above and angled, as if looking down from a balcony over a small stage.',
-          'Camera angle: tight around the upper body and instrument, focusing on expression.',
-        ],
-        default: [
-          'Camera angle: three-quarter view that clearly shows the full silhouette.',
-          'Camera angle: eye-level, centered, with the figure dominating the frame.',
-          'Camera angle: slightly low, making the character feel larger and more heroic.',
-          'Camera angle: slightly above, looking down just enough to show shoulders and gear.',
-          'Camera angle: mid-distance with the character placed slightly off-center for balance.',
-        ],
-      };
+      let renderingInstructions;
+      if (
+        typeof window !== 'undefined' &&
+        window.PortraitPrompt &&
+        typeof window.PortraitPrompt.buildCustomPortraitInstructions ===
+          'function'
+      ) {
+        // Shared helper so builder + manager use the exact same STYLE / Scene
+        // logic (including admin-defined prompt styles) for custom prompts.
+        let promptThemeId = null;
+        try {
+          if (
+            typeof window !== 'undefined' &&
+            window.StorageService &&
+            typeof window.StorageService.getPortraitPromptTheme === 'function'
+          ) {
+            promptThemeId = window.StorageService.getPortraitPromptTheme();
+          } else if (
+            typeof CONFIG !== 'undefined' &&
+            CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME
+          ) {
+            promptThemeId = CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME;
+          }
+        } catch (e) {
+          // Non-fatal: fall back to default theme behavior below.
+        }
 
-      const poseList =
-        poseVariantsByClass[classKey] || poseVariantsByClass.default;
-      const cameraList =
-        cameraVariantsByClass[classKey] || cameraVariantsByClass.default;
-
-      const posePrompt =
-        poseList[Math.floor(Math.random() * poseList.length)];
-      const cameraPrompt =
-        cameraList[Math.floor(Math.random() * cameraList.length)];
-
-      const renderingInstructions = [
-        'Create a high-contrast black-and-white fantasy illustration.',
-        'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
-        'Include some controlled, directional hatching to define form (light mid-tone texture only).',
-        `Pose: ${posePrompt}`,
-        cameraPrompt,
-        'Background should be simple, entirely black, and free of symbols or text.',
-        'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
-        'Aspect ratio 3:4.',
-      ];
+        renderingInstructions =
+          window.PortraitPrompt.buildCustomPortraitInstructions({
+            posePrompt,
+            cameraPrompt,
+            themeId: promptThemeId,
+          });
+      } else {
+        // Fallback if PortraitPrompt is not loaded for some reason.
+        renderingInstructions = [
+          'Create a high-contrast black-and-white fantasy illustration.',
+          'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
+          'Include some controlled, directional hatching to define form (light mid-tone texture only).',
+          `Pose: ${posePrompt}`,
+          cameraPrompt,
+          'Background should be simple, entirely black, and free of symbols or text.',
+          'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+          'Aspect ratio 3:4.',
+        ];
+      }
       
-      const fullPrompt = [...renderingInstructions, customPrompt].join(' ');
+      // Combine rendering instructions with the custom character description.
+      // The backend has a 4000 character limit on prompts, so we need to truncate
+      // if necessary. Prioritize keeping the character description (customPrompt)
+      // and trim style instructions if we exceed the limit.
+      const MAX_PROMPT_LENGTH = 3900; // Leave some margin below the 4000 limit
+      let fullPrompt = [...renderingInstructions, customPrompt].join(' ');
+      
+      if (fullPrompt.length > MAX_PROMPT_LENGTH) {
+        console.warn(`Portrait prompt exceeds ${MAX_PROMPT_LENGTH} chars (${fullPrompt.length}), truncating...`);
+        // Try to keep the custom prompt intact and reduce style instructions
+        const styleInstructionsText = renderingInstructions.join(' ');
+        const availableForStyle = MAX_PROMPT_LENGTH - customPrompt.length - 50; // 50 chars buffer
+        
+        if (availableForStyle > 200) {
+          // We have room for some style instructions
+          const truncatedStyle = styleInstructionsText.substring(0, availableForStyle);
+          fullPrompt = truncatedStyle + ' ' + customPrompt;
+        } else {
+          // Not much room - just use the custom prompt with minimal style
+          const minimalStyle = 'High-contrast black-and-white fantasy ink illustration.';
+          fullPrompt = minimalStyle + ' ' + customPrompt.substring(0, MAX_PROMPT_LENGTH - minimalStyle.length - 1);
+        }
+        console.log(`Truncated prompt length: ${fullPrompt.length}`);
+      }
       
       // Generate custom portrait with full prompt (including hidden rendering instructions)
       const result =
@@ -12576,8 +14842,9 @@ const App = (window.App = {
       });
 
       if (portraitEl) {
-        // Restore portrait font size back to ASCII default; the sheet will
-        // re-render the portrait element for the newly generated art.
+        // Stop the animated dots interval and restore portrait font size back
+        // to ASCII default; the sheet will re-render for the newly generated art.
+        this._stopPortraitLoadingAnimation();
         portraitEl.style.fontSize = '';
         portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
       }
@@ -13108,7 +15375,7 @@ const App = (window.App = {
       <div id="levelModal" class="modal show" onclick="App.closeLevelModal()">
         <div class="modal-content" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">Change Character Level</h2>
+            <h2 class="modal-title">[ Change Character Level ]</h2>
             <button class="modal-close" onclick="App.closeLevelModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -13311,7 +15578,7 @@ const App = (window.App = {
       <div id="nameModal" class="modal show" onclick="App.closeNameModal()">
         <div class="modal-content" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">Change Character Name</h2>
+            <h2 class="modal-title">[ Change Character Name ]</h2>
             <button class="modal-close" onclick="App.closeNameModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -13532,8 +15799,9 @@ const App = (window.App = {
       // Ensure we at least have a pre-generated portrait to fall back to.
       await this._ensurePreGeneratedPortraitFallback(currentChar, { force: true });
     } finally {
-      // Whatever happens above (success or failure), restore portrait font
-      // size so the final ASCII art uses the default sizing from CSS.
+      // Whatever happens above (success or failure), stop the animated dots
+      // and restore portrait font size so the ASCII art uses CSS defaults.
+      this._stopPortraitLoadingAnimation();
       const portraitEl = document.getElementById('character-portrait');
       if (portraitEl) {
         portraitEl.style.fontSize = '';
@@ -13622,32 +15890,50 @@ const App = (window.App = {
       hasShield,
     );
 
-    // Try to auto-generate a name
+    // Try to auto-generate name + backstory in a SINGLE API call
+    // (uses the combined /characters/summary endpoint to save rate limit)
     let name = '';
+    let backstory = '';
     
-    // Show thinking message for name generation
+    // Show thinking message for name + backstory generation
     narratorPanel.insertAdjacentHTML(
       'beforeend',
       Components.renderNarratorMessage(''),
     );
     Utils.scrollToBottom(true);
-    const nameThinkingEl =
+    const thinkingEl =
       narratorPanel.lastElementChild.querySelector('.narrator-text');
-    this.showProgressiveThinking(nameThinkingEl);
+    this.showProgressiveThinking(thinkingEl);
     
     try {
-      const names = await AIService.generateNames(race.id, cls.id, 1);
-      if (Array.isArray(names) && names[0]) {
-        name = names[0];
+      // Build a temporary character object for the summary call
+      const tempChar = {
+        race: race.id,
+        class: cls.id,
+        background: background.id,
+        alignment: alignment.id,
+      };
+      const summary = await AIService.generateCharacterSummary(tempChar, { nameCount: 3 });
+      
+      // Pick a random name from suggestions
+      if (summary && Array.isArray(summary.names) && summary.names.length) {
+        name = Utils.randomChoice(summary.names);
+      }
+      
+      // Substitute {{NAME}} in the backstory template
+      if (summary && summary.backstoryTemplate) {
+        backstory = summary.backstoryTemplate.replace(/\{\{NAME\}\}/g, name || 'The adventurer');
       }
     } catch (e) {
       // Ignore AI errors; we'll fall back below
+      console.error('Quick create summary error:', e);
     }
     
     // Stop thinking and remove the message
     this.stopProgressiveThinking();
-    nameThinkingEl.parentElement.remove();
+    thinkingEl.parentElement.remove();
 
+    // Fallback name if AI failed
     if (!name) {
       const fallbackNames = [
         'Ashen Vale',
@@ -13656,6 +15942,12 @@ const App = (window.App = {
         'Lyra Nightbloom',
       ];
       name = Utils.randomChoice(fallbackNames);
+    }
+    
+    // Fallback backstory if AI failed
+    if (!backstory) {
+      backstory =
+        'A mysterious past, a questionable present, and a future that depends entirely on your dice.';
     }
 
     // Update character state with all basic info at once to avoid multiple renders
@@ -13671,6 +15963,7 @@ const App = (window.App = {
       armorCategory,
       hasShield,
       name,
+      backstory,
       // Apply background benefits
       skillProficiencies: background.skillProficiencies || [],
       toolProficiencies: background.toolProficiencies || [],
@@ -13704,13 +15997,10 @@ const App = (window.App = {
     await Utils.typewriter(nameEl, narrator.quickCreateName(name));
     Utils.scrollToBottom(true);
 
-    // Start generating AI portrait in background now (runs while backstory generates)
+    // Start generating AI portrait in background now (runs while backstory displays)
     this._quickCreatePortraitGeneration = this._generateQuickCreatePortrait();
 
-    // Try to auto-generate a backstory
-    let backstory = '';
-    
-    // Show thinking message for backstory generation
+    // Show thinking message for backstory (just displaying, no API call needed)
     narratorPanel.insertAdjacentHTML(
       'beforeend',
       Components.renderNarratorMessage(''),
@@ -13718,21 +16008,6 @@ const App = (window.App = {
     Utils.scrollToBottom(true);
     const backstoryThinkingEl =
       narratorPanel.lastElementChild.querySelector('.narrator-text');
-    this.showProgressiveThinking(backstoryThinkingEl);
-    
-    try {
-      const current = CharacterState.get();
-      backstory = await AIService.generateBackstory(current.character);
-    } catch (e) {
-      // Simple fallback backstory
-      backstory =
-        'A mysterious past, a questionable present, and a future that depends entirely on your dice.';
-    }
-    CharacterState.updateCharacter({ backstory });
-
-    // Stop thinking and clear the message
-    this.stopProgressiveThinking();
-    backstoryThinkingEl.textContent = '';
     
     // Show the actual backstory
     await Utils.typewriter(backstoryThinkingEl, backstory);
@@ -13878,7 +16153,7 @@ const App = (window.App = {
       <div id="confirmationModal" class="modal show confirmation-overlay">
         <div class="modal-content" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">Confirm</h2>
+            <h2 class="modal-title">[ Confirm ]</h2>
           </div>
           <div class="modal-body">
             <p class="terminal-text">

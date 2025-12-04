@@ -416,6 +416,48 @@ tail -f frontend.log   # Frontend errors
 
 ---
 
+---
+
+## UI Component Patterns
+
+### Selector Menus (Dropdowns/Listboxes)
+
+**All selector menus use `CharacterSheet.toggleSelectorMenu()`** from `shared-character-sheet.js`. This function handles:
+- Positioning (viewport-aware, opens above/below based on space)
+- Modal support (detaches to `<body>` to escape CSS transforms and overflow)
+- Height constraints (auto-sizes to available space with scrolling)
+- Theming (applies correct colors when detached from modal context)
+- Accessibility (keyboard nav, focus management, ARIA)
+
+**Canonical markup:**
+```html
+<div class="selector-shell">
+  <button class="terminal-btn selector-trigger"
+          onclick="CharacterSheet.toggleSelectorMenu(this)"
+          aria-haspopup="listbox" aria-expanded="false">
+    <span class="selector-trigger-label">Selected Value</span>
+  </button>
+  <div class="selector-menu" role="listbox" aria-hidden="true">
+    <button class="selector-option" role="option" data-value="...">
+      <span class="selector-option-label">Option Text</span>
+    </button>
+  </div>
+</div>
+```
+
+### Modals with Selectors
+
+**⚠️ NEVER set `overflow: visible` on modals.** The old pattern of using `overflow: visible` to prevent dropdown clipping breaks modal scrolling.
+
+**The correct approach:**
+1. Use standard modal markup (`.modal` > `.modal-content` > `.modal-body`)
+2. Selectors inside modals work automatically - they're detached to `<body>`
+3. Only override needed: `.your-modal .selector-menu { z-index: 999; }`
+
+See `docs/OVERFLOW_BUTTON_SYSTEM.md` for detailed patterns.
+
+---
+
 ## Summary
 
 ✅ **Ports are standardized:** Backend `8000`, Frontend `8080`  

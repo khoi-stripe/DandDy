@@ -58,9 +58,21 @@
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
+/* ===== LEFT PANEL ===== */
+.left-panel {
+    padding-top: 0;
+}
+
 /* ===== CONTROLS SECTION ===== */
 .controls-section {
-    margin-bottom: var(--spacing-lg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--terminal-bg);
+    /* Extend background padding to cover scrolling content behind */
+    padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-md) var(--spacing-xl);
+    /* Negative margins to counteract left-panel padding so we go edge-to-edge */
+    margin: 0 calc(-1 * var(--spacing-xl)) var(--spacing-md) calc(-1 * var(--spacing-xl));
 }
 
 .guest-notice {
@@ -270,6 +282,10 @@
     flex-direction: column;
     overflow: hidden;
     aspect-ratio: 3 / 4;
+    /* Account for sticky controls section when scrollIntoView is called.
+       Height includes: padding (32px top + 16px bottom), search bar (~45px),
+       margin (16px), plus optional guest notice (~50px). */
+    scroll-margin-top: 160px;
 }
 
 /* Hover and keyboard focus (unselected) - bright green outline, text, and ASCII */
@@ -417,6 +433,7 @@
 
 .sheet-header-title {
     flex: 1;
+    text-transform: uppercase;
 }
 
 .original-portrait {
@@ -586,15 +603,41 @@
     margin-bottom: 0;
 }
 
+/* Inline row: places multiple fields side by side */
+.settings-row-inline {
+    display: flex;
+    gap: var(--spacing-lg);
+    align-items: flex-start;
+}
+
+.settings-inline-field {
+    flex: 1;
+    min-width: 0;
+}
+
+.settings-group-label {
+    color: var(--terminal-fg);
+    font-size: var(--font-size-base);
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+/* Yellow for modal contexts */
+.modal .settings-group-label,
+.modal-content .settings-group-label {
+    color: var(--modal-accent) !important;
+    text-transform: uppercase !important;
+}
+
 .settings-label {
     display: block;
     margin-bottom: var(--spacing-sm);
+    text-transform: uppercase;
+    color: var(--context-accent);
 }
 
-/* Inside modals, settings labels and radio labels follow the modal yellow theme */
-.modal .settings-label,
-.modal .settings-radio-label {
-    color: var(--modal-accent);
+.settings-radio-label {
+    color: var(--context-accent);
 }
 
 /* Settings modal: custom radio buttons for portrait view and similar options */
@@ -618,7 +661,7 @@
     width: 14px;
     height: 14px;
     border-radius: 999px;
-    border: 1.5px solid var(--modal-accent);
+    border: 1.5px solid var(--context-accent);
     background: transparent;
     margin: 0;
     position: relative;
@@ -631,7 +674,7 @@
     position: absolute;
     inset: 3px;
     border-radius: inherit;
-    background: var(--modal-accent);
+    background: var(--context-accent);
     transform: scale(0);
     opacity: 0;
     transition:
@@ -646,18 +689,11 @@
 
 .settings-radio-option input[type='radio']:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(255, 255, 0, 0.5);
+    box-shadow: 0 0 0 2px var(--context-hover);
 }
 
-/* Ensure selector menus in the shared Settings modal are never clipped */
-.builder-settings-modal {
-    overflow: visible;
-}
-
-.builder-settings-modal .modal-body {
-    overflow-y: visible;
-}
-
+/* Builder settings modal: selector menus are detached to <body> so they
+   escape overflow clipping automatically. Modal can scroll normally. */
 .builder-settings-modal .selector-menu {
     z-index: 999;
 }
@@ -944,5 +980,11 @@
     
     .ascii-portrait {
         font-size: 4px;
+    }
+
+    /* Stack inline fields vertically on mobile */
+    .settings-row-inline {
+        flex-direction: column;
+        gap: var(--spacing-md);
     }
 }

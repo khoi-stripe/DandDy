@@ -330,7 +330,8 @@ class PortraitGenerator:
                     'prompt': prompt,
                     'n': 1,
                     'size': '1024x1024',
-                    'quality': 'standard',
+                    # Use medium quality by default to balance cost and detail.
+                    'quality': 'medium',
                 }
             )
             

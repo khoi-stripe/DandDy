@@ -439,6 +439,20 @@
   gap: var(--spacing-sm);
 }
 
+.settings-group-label {
+  color: var(--terminal-fg);
+  font-size: var(--font-size-base);
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+/* Yellow for modal contexts - use !important to ensure override */
+.modal .settings-group-label,
+.modal-content .settings-group-label {
+  color: var(--modal-accent) !important;
+  text-transform: uppercase !important;
+}
+
 .settings-section {
   padding: var(--spacing-md);
   border-radius: 4px;
@@ -451,6 +465,18 @@
   margin-bottom: 0;
 }
 
+/* Inline row: places multiple fields side by side */
+.settings-row-inline {
+  display: flex;
+  gap: var(--spacing-lg);
+  align-items: flex-start;
+}
+
+.settings-inline-field {
+  flex: 1;
+  min-width: 0;
+}
+
 .settings-field {
   display: flex;
   flex-direction: column;
@@ -460,12 +486,12 @@
 .settings-label {
   display: block;
   margin-bottom: var(--spacing-sm);
+  color: var(--context-accent);
+  text-transform: uppercase;
 }
 
-/* Inside modals, settings labels and radio labels follow the modal yellow theme */
-.modal .settings-label,
-.modal .settings-radio-label {
-  color: var(--modal-accent);
+.settings-radio-label {
+  color: var(--context-accent);
 }
 
 /* Settings modal: custom radio buttons for portrait view and similar options */
@@ -489,7 +515,7 @@
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  border: 1.5px solid var(--modal-accent);
+  border: 1.5px solid var(--context-accent);
   background: transparent;
   margin: 0;
   position: relative;
@@ -502,7 +528,7 @@
   position: absolute;
   inset: 3px;
   border-radius: inherit;
-  background: var(--modal-accent);
+  background: var(--context-accent);
   transform: scale(0);
   opacity: 0;
   transition:
@@ -517,7 +543,7 @@
 
 .settings-radio-option input[type='radio']:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(255, 255, 0, 0.5);
+  box-shadow: 0 0 0 2px var(--context-hover);
 }
 
 .settings-help {
@@ -529,15 +555,8 @@
   max-width: 520px;
 }
 
-/* Builder settings modal: allow selector menus to escape without clipping */
-.builder-settings-modal {
-  overflow: visible;
-}
-
-.builder-settings-modal .modal-body {
-  overflow-y: visible;
-}
-
+/* Builder settings modal: selector menus are detached to <body> so they
+   escape overflow clipping automatically. Modal can scroll normally. */
 .builder-settings-modal .selector-menu {
   z-index: 999;
 }
@@ -550,18 +569,19 @@
   margin-top: 8px;
 }
 
-/* Inside modals, settings labels use the standard terminal warning yellow */
-.modal .settings-label {
-  color: var(--terminal-warning);
-}
-
-.modal .settings-help {
-  color: rgba(255, 215, 0, 0.75);
+.settings-help {
+  color: var(--context-accent-dim);
 }
 
 @media (max-width: 720px) {
   .settings-layout {
     gap: var(--spacing-sm);
+  }
+
+  /* Stack inline fields vertically on mobile */
+  .settings-row-inline {
+    flex-direction: column;
+    gap: var(--spacing-md);
   }
 }
 

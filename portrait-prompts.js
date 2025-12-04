@@ -34,6 +34,8 @@
       classes: {},
       scenes: {},
       styles: {},
+      poses: {},   // pose variants by class
+      cameras: {}, // camera angle variants by class
     };
 
     try {
@@ -56,6 +58,10 @@
       const classes = {};
       /** @type {{[key: string]: string[]}} */
       const scenes = {};
+      /** @type {{[key: string]: string[]}} */
+      const poses = {};
+      /** @type {{[key: string]: string[]}} */
+      const cameras = {};
       /** @type {{[key: string]: { styleDescription?: string, sceneDescription?: string }}} */
       const styles = {};
 
@@ -85,6 +91,20 @@
             if (!Array.isArray(scenes[key])) scenes[key] = [];
             scenes[key].push(desc);
           }
+        } else if (kind === 'pose') {
+          // Pose variants keyed by class (e.g. "fighter", "wizard", "default")
+          const desc = normalize(entry.description);
+          if (desc) {
+            if (!Array.isArray(poses[key])) poses[key] = [];
+            poses[key].push(desc);
+          }
+        } else if (kind === 'camera') {
+          // Camera angle variants keyed by class
+          const desc = normalize(entry.description);
+          if (desc) {
+            if (!Array.isArray(cameras[key])) cameras[key] = [];
+            cameras[key].push(desc);
+          }
         } else if (kind === 'style') {
           const styleDesc = normalize(entry.styleDescription || entry.description);
           const sceneDesc = normalize(entry.backgroundDescription);
@@ -96,7 +116,7 @@
         }
       });
 
-      adminCache = { races, classes, scenes, styles };
+      adminCache = { races, classes, scenes, styles, poses, cameras };
       return adminCache;
     } catch (e) {
       // Non-fatal: if anything goes wrong, fall back to empty cache.
@@ -133,6 +153,56 @@
         return variants[idx];
       }
       return null;
+    }
+    if (kind === 'pose') {
+      const variants = cache.poses[k];
+      if (Array.isArray(variants) && variants.length) {
+        const idx = Math.floor(Math.random() * variants.length);
+        return variants[idx];
+      }
+      return null;
+    }
+    if (kind === 'camera') {
+      const variants = cache.cameras[k];
+      if (Array.isArray(variants) && variants.length) {
+        const idx = Math.floor(Math.random() * variants.length);
+        return variants[idx];
+      }
+      return null;
+    }
+    return null;
+  }
+
+  /**
+   * Get all pose variants for a given class key.
+   * Returns an array of pose descriptions, or null if none configured.
+   * @param {string} classKey
+   * @returns {string[]|null}
+   */
+  function getPoseVariants(classKey) {
+    const cache = loadAdminCache();
+    const k = normalize(classKey).toLowerCase();
+    if (!k) return null;
+    const variants = cache.poses[k];
+    if (Array.isArray(variants) && variants.length) {
+      return variants;
+    }
+    return null;
+  }
+
+  /**
+   * Get all camera variants for a given class key.
+   * Returns an array of camera descriptions, or null if none configured.
+   * @param {string} classKey
+   * @returns {string[]|null}
+   */
+  function getCameraVariants(classKey) {
+    const cache = loadAdminCache();
+    const k = normalize(classKey).toLowerCase();
+    if (!k) return null;
+    const variants = cache.cameras[k];
+    if (Array.isArray(variants) && variants.length) {
+      return variants;
     }
     return null;
   }
@@ -436,6 +506,15 @@
   PortraitPrompt.buildCustomPortraitInstructions =
     buildCustomPortraitInstructions;
   PortraitPrompt.getVariableSnippet = getVariableSnippet;
+  
+  // Pose and camera variant accessors for admin-configured data
+  PortraitPrompt.getPoseVariants = getPoseVariants;
+  PortraitPrompt.getCameraVariants = getCameraVariants;
+  
+  // Force reload of admin cache (useful after admin UI changes)
+  PortraitPrompt.invalidateCache = function invalidateCache() {
+    adminCache = null;
+  };
 
   PortraitPrompt.getDefaultThemeId = function getDefaultThemeId() {
     return DEFAULT_THEME_ID;

@@ -170,7 +170,7 @@ No changes needed to HTML - the existing structure works perfectly:
 <div id="importModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 class="modal-title">↓ Import Character</h2>
+            <h2 class="modal-title">[ ↓ Import Character ]</h2>
             <button class="modal-close" onclick="closeImportModal()">&times;</button>
         </div>
         <div class="modal-body">

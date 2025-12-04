@@ -143,7 +143,7 @@
         <div id="portraitHistoryModal" class="modal show" onclick="PortraitUI.closeHistory()">
           <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
             <div class="modal-header">
-              <h2 class="modal-title">Portrait History</h2>
+              <h2 class="modal-title">[ Portrait History ]</h2>
               <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
             </div>
             <div class="modal-body">

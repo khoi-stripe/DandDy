@@ -227,6 +227,13 @@ const Components = (window.Components = {
       ];
     }
 
+    // Sort themes alphabetically by id
+    promptThemes = promptThemes.slice().sort((a, b) => {
+      const nameA = (a.id || '').toLowerCase();
+      const nameB = (b.id || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+
     const activePromptTheme =
       promptThemes.find((t) => t.id === currentPromptThemeId) ||
       promptThemes[0];
@@ -253,150 +260,123 @@ const Components = (window.Components = {
         <div class="modal-content builder-settings-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
             <div class="modal-header-main">
-              <h2 class="modal-title">⚙ Settings</h2>
+              <h2 class="modal-title">[ ⚙ Settings ]</h2>
             </div>
             <button class="modal-close" onclick="SettingsModal.close()" aria-label="Close settings">&times;</button>
           </div>
           <div class="modal-body">
             <div class="settings-layout">
               <div class="settings-grid">
+                <div class="settings-group-label">[ Builder ]</div>
                 <section class="settings-section">
-                  <div class="settings-row">
-                    <div class="settings-label">Narrator Voice</div>
-                    <div class="selector-shell selector-shell--match-width">
-                      <button
-                        class="terminal-btn selector-trigger"
-                        id="narrator-select-trigger"
-                        type="button"
-                        aria-haspopup="listbox"
-                        aria-expanded="false"
-                        onclick="CharacterSheet.toggleSelectorMenu(this)"
-                      >
-                        <span class="selector-trigger-label" id="narrator-select-label">
-                          ${currentNarratorLabel}
-                        </span>
-                      </button>
-                      <div
-                        class="selector-menu"
-                        role="listbox"
-                        aria-label="Narrator voice"
-                        aria-hidden="true"
-                      >
-                        ${narratorOptionsMenu}
+                  <div class="settings-row-inline">
+                    <div class="settings-inline-field">
+                      <div class="settings-label">Narrator Voice</div>
+                      <div class="selector-shell selector-shell--match-width">
+                        <button
+                          class="terminal-btn selector-trigger"
+                          id="narrator-select-trigger"
+                          type="button"
+                          aria-haspopup="listbox"
+                          aria-expanded="false"
+                          onclick="CharacterSheet.toggleSelectorMenu(this)"
+                        >
+                          <span class="selector-trigger-label" id="narrator-select-label">
+                            ${currentNarratorLabel}
+                          </span>
+                        </button>
+                        <div
+                          class="selector-menu"
+                          role="listbox"
+                          aria-label="Narrator voice"
+                          aria-hidden="true"
+                        >
+                          ${narratorOptionsMenu}
+                        </div>
                       </div>
-                    </div>
-                    <select
-                      id="narrator-select"
-                      class="terminal-select settings-select hidden"
-                    >
-                      ${narratorsList
-                        .map((narrator) => {
-                          const label = formatNarratorTitle(narrator);
-                          return `
-                          <option value="${narrator.id}" ${
-                            narrator.id === currentNarratorId ? 'selected' : ''
-                          }>
-                            ${label}
-                          </option>
-                        `;
-                        })
-                        .join('')}
-                    </select>
-                  </div>
-                </section>
-
-                <section class="settings-section">
-                  <div class="settings-row">
-                    <div class="settings-label">Narrator Text Speed</div>
-                    <div class="selector-shell selector-shell--match-width">
-                      <button
-                        class="terminal-btn selector-trigger"
-                        id="text-speed-select-trigger"
-                        type="button"
-                        aria-haspopup="listbox"
-                        aria-expanded="false"
-                        onclick="CharacterSheet.toggleSelectorMenu(this)"
+                      <select
+                        id="narrator-select"
+                        class="terminal-select settings-select hidden"
                       >
-                        <span class="selector-trigger-label" id="text-speed-select-label">
-                          ${currentTextSpeedLabel}
-                        </span>
-                      </button>
-                      <div
-                        class="selector-menu"
-                        role="listbox"
-                        aria-label="Narrator text speed"
-                        aria-hidden="true"
-                      >
-                        ${textSpeedOptions
-                          .map((opt) => {
-                            const isSelected =
-                              opt.value === currentTextSpeedOption.value;
+                        ${narratorsList
+                          .map((narrator) => {
+                            const label = formatNarratorTitle(narrator);
                             return `
-                            <button
-                              class="selector-option${isSelected ? ' is-selected' : ''}"
-                              type="button"
-                              role="option"
-                              data-value="${opt.value}"
-                              aria-selected="${isSelected ? 'true' : 'false'}"
-                            >
-                              <span class="selector-option-label">
-                                ${opt.label}
-                              </span>
-                            </button>
+                            <option value="${narrator.id}" ${
+                              narrator.id === currentNarratorId ? 'selected' : ''
+                            }>
+                              ${label}
+                            </option>
                           `;
                           })
                           .join('')}
-                      </div>
+                      </select>
                     </div>
-                    <select
-                      id="text-speed-select"
-                      class="terminal-select settings-select hidden"
-                    >
-                      ${textSpeedOptions
-                        .map(
-                          (opt) => `
-                          <option value="${opt.value}" ${
-                            opt.value === currentTextSpeedOption.value
-                              ? 'selected'
-                              : ''
-                          }>
-                            ${opt.label}
-                          </option>
-                        `,
-                        )
-                        .join('')}
-                    </select>
+                    <div class="settings-inline-field">
+                      <div class="settings-label">Text Speed</div>
+                      <div class="selector-shell selector-shell--match-width">
+                        <button
+                          class="terminal-btn selector-trigger"
+                          id="text-speed-select-trigger"
+                          type="button"
+                          aria-haspopup="listbox"
+                          aria-expanded="false"
+                          onclick="CharacterSheet.toggleSelectorMenu(this)"
+                        >
+                          <span class="selector-trigger-label" id="text-speed-select-label">
+                            ${currentTextSpeedLabel}
+                          </span>
+                        </button>
+                        <div
+                          class="selector-menu"
+                          role="listbox"
+                          aria-label="Narrator text speed"
+                          aria-hidden="true"
+                        >
+                          ${textSpeedOptions
+                            .map((opt) => {
+                              const isSelected =
+                                opt.value === currentTextSpeedOption.value;
+                              return `
+                              <button
+                                class="selector-option${isSelected ? ' is-selected' : ''}"
+                                type="button"
+                                role="option"
+                                data-value="${opt.value}"
+                                aria-selected="${isSelected ? 'true' : 'false'}"
+                              >
+                                <span class="selector-option-label">
+                                  ${opt.label}
+                                </span>
+                              </button>
+                            `;
+                            })
+                            .join('')}
+                        </div>
+                      </div>
+                      <select
+                        id="text-speed-select"
+                        class="terminal-select settings-select hidden"
+                      >
+                        ${textSpeedOptions
+                          .map(
+                            (opt) => `
+                            <option value="${opt.value}" ${
+                              opt.value === currentTextSpeedOption.value
+                                ? 'selected'
+                                : ''
+                            }>
+                              ${opt.label}
+                            </option>
+                          `,
+                          )
+                          .join('')}
+                      </select>
+                    </div>
                   </div>
                 </section>
 
-                <section class="settings-section">
-                  <div class="settings-row settings-row--stacked">
-                    <div class="settings-label">Default portrait view</div>
-                    <div class="settings-field">
-                      <div class="settings-radio-group" role="radiogroup" aria-label="Default portrait view">
-                        <label class="settings-radio-option">
-                          <input
-                            type="radio"
-                            name="portrait-view-mode"
-                            value="ascii"
-                            ${currentPortraitViewMode === 'original' ? '' : 'checked'}
-                          >
-                          <span class="settings-radio-label">ASCII</span>
-                        </label>
-                        <label class="settings-radio-option">
-                          <input
-                            type="radio"
-                            name="portrait-view-mode"
-                            value="original"
-                            ${currentPortraitViewMode === 'original' ? 'checked' : ''}
-                          >
-                          <span class="settings-radio-label">Original</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
+                <div class="settings-group-label">[ Image generation ]</div>
                 <section class="settings-section">
                   <div class="settings-row">
                     <div class="settings-label">AI model</div>
@@ -527,6 +507,34 @@ const Components = (window.Components = {
                           })
                           .join('')}
                       </select>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="settings-section">
+                  <div class="settings-row settings-row--stacked">
+                    <div class="settings-label">Default portrait view</div>
+                    <div class="settings-field">
+                      <div class="settings-radio-group" role="radiogroup" aria-label="Default portrait view">
+                        <label class="settings-radio-option">
+                          <input
+                            type="radio"
+                            name="portrait-view-mode"
+                            value="ascii"
+                            ${currentPortraitViewMode === 'original' ? '' : 'checked'}
+                          >
+                          <span class="settings-radio-label">ASCII</span>
+                        </label>
+                        <label class="settings-radio-option">
+                          <input
+                            type="radio"
+                            name="portrait-view-mode"
+                            value="original"
+                            ${currentPortraitViewMode === 'original' ? 'checked' : ''}
+                          >
+                          <span class="settings-radio-label">Original</span>
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -775,7 +783,7 @@ const SettingsModal = (window.SettingsModal = {
 
     // Use a non-intrusive toast for settings changes instead of a narrator line
     if (window.App && typeof App.showToast === 'function') {
-      App.showToast('Settings saved!');
+      App.showToast('Settings saved');
     } else if (typeof showNotification === 'function') {
       showNotification('Settings saved');
     }

@@ -158,9 +158,11 @@ Before deploying your overflow button:
 - ✅ Verify onclick calls `CharacterSheet.toggleSelectorMenu(this)`
 - ✅ Check console for JavaScript errors
 
-### Menu gets clipped
-- ✅ Ensure parent has `overflow: visible` or use detached menu
-- ✅ Check z-index stacking context
+### Menu gets clipped in modals
+- ✅ Menus in modals are automatically detached to `<body>` - this should work
+- ✅ Do NOT add `overflow: visible` to modals (breaks scrolling)
+- ✅ Check z-index: add `.your-modal .selector-menu { z-index: 999; }`
+- ✅ If still clipping, check if modal uses CSS `transform` (menus handle this)
 
 ### Wrong colors
 - ✅ Check parent context (sheet, modal, or default)

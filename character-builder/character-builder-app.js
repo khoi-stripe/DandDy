@@ -751,19 +751,27 @@ const App = (window.App = {
 
           // Position the listbox relative to the trigger so it behaves like
           // other selector menus: always above or below (preferring below),
-          // at least as wide as the trigger, and constrained to the viewport.
-          const shell = trigger.closest('.selector-shell') || trigger.parentElement;
+          // at least as wide as the trigger, and constrained to the viewport
+          // with internal scrolling if it can't fully fit on-screen.
+          const shell =
+            trigger.closest('.selector-shell') || trigger.parentElement;
           if (shell) {
             const shellRect = shell.getBoundingClientRect();
             const triggerRect = trigger.getBoundingClientRect();
 
             // Measure menu size without affecting final animation. Temporarily
             // neutralize transforms so we get the full height instead of the
-            // scaled (collapsed) height from CSS.
+            // scaled (collapsed) height from CSS. Also clear any previous
+            // inline sizing so each open starts from a clean baseline.
             const prevDisplay = listbox.style.display;
             const prevVisibility = listbox.style.visibility;
             const prevTransform = listbox.style.transform;
 
+            listbox.style.maxHeight = '';
+            listbox.style.overflowY = '';
+            listbox.style.position = 'fixed';
+            listbox.style.top = '0';
+            listbox.style.left = '0';
             listbox.style.visibility = 'hidden';
             listbox.style.display = 'block';
             listbox.style.transform = 'none';
@@ -788,26 +796,69 @@ const App = (window.App = {
 
             const viewportHeight = window.innerHeight;
             const viewportWidth = window.innerWidth;
-            const padding = 8; // breathing room from viewport edges
+            const padding = 8; // breathing room from edges
             const gapY = 4; // small gap between trigger and menu when opening below
 
-            // Decide if the menu can fit fully below the trigger within the
-            // viewport padding. If not, we flip it above.
-            const fitsBelow =
-              triggerRect.bottom + gapY + menuHeight <=
-              viewportHeight - padding;
+            // Treat the nearest terminal frame/container as the visual "viewport"
+            // so the listbox never extends outside the green app frame.
+            const host =
+              trigger.closest('.terminal-frame, .terminal-container') ||
+              document.documentElement;
+            const hostRect = host.getBoundingClientRect();
+            const hostTop = hostRect.top + padding;
+            const hostBottom = hostRect.bottom - padding;
 
-            let topInViewport;
-            // Prefer below the trigger when there's enough room; otherwise open above.
-            if (fitsBelow) {
-              // Below: align the top of the listbox just under the trigger.
-              topInViewport = triggerRect.bottom + gapY;
+            // Space available above and below the trigger within the host.
+            const spaceAbove = triggerRect.top - hostTop;
+            const spaceBelow = hostBottom - triggerRect.bottom;
+
+            const fitsBelow = spaceBelow >= menuHeight + gapY;
+            const fitsAbove = spaceAbove >= menuHeight + gapY;
+
+            // Choose direction: prefer below when possible, but fall back to
+            // whichever side has room, similar to the shared selector menus.
+            const triggerCenterY = triggerRect.top + triggerRect.height / 2;
+            const inTopHalf = triggerCenterY < viewportHeight / 2;
+
+            let openBelow;
+            if (fitsBelow && fitsAbove) {
+              openBelow = inTopHalf;
+            } else if (fitsBelow) {
+              openBelow = true;
+            } else if (fitsAbove) {
+              openBelow = false;
             } else {
-              // Above: align the *bottom* of the listbox with the top of the trigger.
-              topInViewport = triggerRect.top - menuHeight;
-              if (topInViewport < padding) {
-                topInViewport = padding;
+              // Neither direction fits perfectly: use the side with more space.
+              openBelow = spaceBelow >= spaceAbove;
+            }
+
+            // Position using a single top coordinate, clamped so the menu stays
+            // fully inside the host. If there's not enough room for full height,
+            // we'll cap height and enable internal scrolling.
+            const maxTop = hostBottom - menuHeight;
+            let topInViewport;
+
+            if (openBelow) {
+              topInViewport = triggerRect.bottom + gapY;
+              if (topInViewport > maxTop) {
+                topInViewport = Math.max(hostTop, maxTop);
               }
+            } else {
+              topInViewport = triggerRect.top - gapY - menuHeight;
+              if (topInViewport < hostTop) {
+                topInViewport = hostTop;
+              }
+            }
+
+            // If the menu would extend past the host, cap its height so it scrolls
+            // instead of being clipped by the terminal container.
+            const availableHeight = hostBottom - topInViewport;
+            if (menuHeight > availableHeight && availableHeight > 0) {
+              listbox.style.maxHeight = `${availableHeight}px`;
+              listbox.style.overflowY = 'auto';
+            } else {
+              listbox.style.maxHeight = '';
+              listbox.style.overflowY = '';
             }
 
             // Horizontal alignment: start left-aligned, then if that would
@@ -1294,12 +1345,26 @@ const App = (window.App = {
   },
 
   /**
+   * Stop the portrait loading animation interval.
+   */
+  _stopPortraitLoadingAnimation() {
+    if (this._portraitLoadingInterval) {
+      clearInterval(this._portraitLoadingInterval);
+      this._portraitLoadingInterval = null;
+    }
+    this._portraitElapsed = 0;
+  },
+
+  /**
    * Render the standard AI portrait loading state in the portrait panel.
-   * Uses the glowing, fast-spinning cube plus unified status text:
-   * "Generating AI portrait… This can take 20–30 seconds."
+   * Uses the glowing, fast-spinning cube plus animated dots matching
+   * the manager view and shared PortraitUI helper.
    */
   _renderPortraitGeneratingLoader(portraitEl) {
     if (!portraitEl) return;
+
+    // Stop any existing animation interval before starting a new one.
+    this._stopPortraitLoadingAnimation();
 
     // Normalize the portrait container into a loading state so the cube + text
     // layout matches the shared portrait styles in `portraits.css`.
@@ -1317,50 +1382,92 @@ const App = (window.App = {
     portraitEl.style.overflowX = '';
     portraitEl.style.overflowY = '';
 
-    const baseMessage = 'Generating AI portrait…';
-    let subtext = 'This usually takes 20–30 seconds.';
+    // Use standardized message matching manager view.
+    const baseMessage = 'Generating character art';
+    
+    // Model-aware subtext: GPT Image 1 takes longer than DALL·E 3.
+    let subtext = '(This usually takes 20–30 seconds)';
     try {
       if (
         window.PortraitUI &&
         typeof PortraitUI.getImageModelSubtext === 'function'
       ) {
         subtext = PortraitUI.getImageModelSubtext();
+      } else {
+        // Inline fallback if PortraitUI not available.
+        let imageModel = 'dall-e-3';
+        if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+          imageModel = StorageService.getImageModel();
+        } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_IMAGE_MODEL) {
+          imageModel = CONFIG.DEFAULT_IMAGE_MODEL;
+        }
+        if (imageModel === 'gpt-image-1') {
+          subtext = '(This can take up to a minute)';
+        }
       }
     } catch (e) {
       // Fall back to default subtext on any error.
     }
 
-    if (
-      window.PortraitUI &&
-      typeof PortraitUI.renderGeneratingLoader === 'function'
-    ) {
-      PortraitUI.renderGeneratingLoader(portraitEl, {
-        baseMessage,
-        subtext,
-        dotCount: 1,
-        isLoading: true,
-      });
-    } else {
-      // Fallback: simple static text block if shared helper is not available.
-      portraitEl.innerHTML = `
-        <div class="portrait-placeholder-content">
-          <div class="portrait-placeholder-cube-container">
-            <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-              <i></i>
-              <i></i>
-              <i></i>
-              <i></i>
-              <i></i>
-              <i></i>
+    // Initialize elapsed counter for dot animation.
+    this._portraitElapsed = 0;
+
+    // Update function that animates the dots (cycles 1→2→3).
+    const updatePortraitLoading = () => {
+      if (!portraitEl) return;
+      const dotCount = (this._portraitElapsed % 3) + 1;
+
+      if (
+        window.PortraitUI &&
+        typeof PortraitUI.renderGeneratingLoader === 'function'
+      ) {
+        PortraitUI.renderGeneratingLoader(portraitEl, {
+          baseMessage,
+          subtext,
+          dotCount,
+          isLoading: true,
+        });
+      } else {
+        // Fallback: update dot state manually if shared helper unavailable.
+        let textEl = portraitEl.querySelector('.portrait-placeholder-text');
+        if (!textEl) {
+          portraitEl.innerHTML = `
+            <div class="portrait-placeholder-content">
+              <div class="portrait-placeholder-cube-container">
+                <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                </div>
+              </div>
+              <div class="portrait-placeholder-text" data-dots="${dotCount}">
+                <span class="portrait-placeholder-message">${baseMessage}</span>
+                <span class="portrait-placeholder-dots">
+                  <span class="dot dot-1">.</span>
+                  <span class="dot dot-2">.</span>
+                  <span class="dot dot-3">.</span>
+                </span>
+                <div class="portrait-placeholder-subtext">
+                  ${subtext}
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="portrait-placeholder-text">
-            ${baseMessage}<br>
-            ${subtext}
-          </div>
-        </div>
-      `;
-    }
+          `;
+          textEl = portraitEl.querySelector('.portrait-placeholder-text');
+        } else {
+          textEl.setAttribute('data-dots', String(dotCount));
+        }
+      }
+
+      this._portraitElapsed++;
+    };
+
+    // Render immediately, then start interval for animation.
+    updatePortraitLoading();
+    this._portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
   },
 
   // In guided (co-create) mode, automatically generate a custom AI portrait
@@ -1499,6 +1606,9 @@ const App = (window.App = {
     } finally {
       // Clear the generating flag so future re-renders work normally
       this._guidedPortraitGenerating = false;
+      
+      // Stop the animated dots interval.
+      this._stopPortraitLoadingAnimation();
       
       const portraitEl = document.getElementById('character-portrait');
       if (portraitEl) {
@@ -2231,7 +2341,7 @@ const App = (window.App = {
       <div id="portraitHistoryModal" class="modal show" onclick="App.closePortraitHistory()">
         <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">Portrait History</h2>
+            <h2 class="modal-title">[ Portrait History ]</h2>
             <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>
           </div>
           <div class="modal-body">
@@ -2801,7 +2911,7 @@ const App = (window.App = {
       <div id="promptModal" class="modal show" onclick="App.closePromptModal(false)">
         <div class="modal-content" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">★ Customize AI Portrait</h2>
+            <h2 class="modal-title">[ ★ Customize AI Portrait ]</h2>
             <button class="modal-close" onclick="App.closePromptModal(false)">&times;</button>
           </div>
           <div class="modal-body">
@@ -2967,206 +3077,16 @@ const App = (window.App = {
     try {
       // Add rendering instructions to the user's character description
       // (hidden system-level guidance for the image model)
-      // Mirror the randomized pose + camera logic from AIService.buildPortraitPrompt
+      // Use shared pose + camera data from PortraitPoseData module
       const classKey = (character.class || 'default').toLowerCase();
 
-      const poseVariantsByClass = {
-        fighter: [
-          'posed mid-swing with a heavy weapon, body twisted to show the arc of the strike',
-          'standing in a ready battle stance, shield raised and weapon held low but tense',
-          'caught in the moment of blocking an attack, weight shifted back with shield braced',
-          'charging forward with weapon raised overhead, cloak and gear trailing behind',
-          'standing atop fallen rubble in a victorious stance, weapon planted like a banner',
-        ],
-        barbarian: [
-          'leaning forward in a feral roar, muscles tensed, weapon mid-swing',
-          'standing wide and grounded, one foot on a rock, gripping a massive weapon with both hands',
-          'caught mid-leap as if diving into battle, hair and trophies flying outward',
-          'holding a weapon across the shoulders, posture relaxed but intimidating',
-          'bracing against an unseen impact, teeth bared and stance low and aggressive',
-        ],
-        paladin: [
-          'kneeling with shield planted in front, weapon held upright in a solemn vow pose',
-          'standing tall with shield forward and weapon raised in a protective gesture',
-          'framed in a side stance, shield angled and weapon ready for a precise strike',
-          'holding a holy symbol aloft with one hand while resting the weapon point-down',
-          'striding forward with shield half-raised, cloak sweeping back in a confident march',
-        ],
-        rogue: [
-          'crouched low in the shadows, one dagger drawn and the other held behind for balance',
-          'leaning casually against an unseen wall, one hand resting on a hidden blade',
-          'mid-step on a narrow ledge, body turned sideways with cloak pulled close',
-          'poised behind an unseen target, daggers reversed in a silent takedown stance',
-          'perched on a raised surface, knees bent, ready to spring into motion',
-        ],
-        monk: [
-          'balanced on one leg in a classic kick pose, arms forming a flowing guard shape',
-          'mid-strike with an open palm, body rotated and lines clean and focused',
-          'seated in calm meditation, legs crossed and hands resting in a composed mudra',
-          'low sweeping stance with one arm extended and the other drawn back defensively',
-          'caught at the peak of a spinning kick, robes and sashes tracing the motion',
-        ],
-        ranger: [
-          'drawing a bow with the string fully pulled, body turned in a three-quarter stance',
-          'kneeling on one knee with bow lowered, scanning the distance like a watchful scout',
-          'mid-stride through an implied forest floor, bow held loosely but ready',
-          'standing on a slight rise, bow raised and arrow aimed slightly downward',
-          'leaning against an unseen tree, one hand resting on the bow, posture relaxed but alert',
-        ],
-        wizard: [
-          'standing with one hand raised and fingers splayed, arcane energy swirling upward',
-          'leaning over an invisible spellbook, staff angled forward as if channeling power',
-          'mid-gesture with both hands shaping a spell, sleeves and robes pulled by the motion',
-          'holding a staff planted before them, gaze lifted as if calling down distant power',
-          'caught turning dramatically, cloak sweeping, one hand tracing a glowing sigil',
-        ],
-        sorcerer: [
-          'surrounded by swirling magical energy, one hand outstretched and the other pulled close',
-          'standing with arms wide, raw power coiling around their torso and shoulders',
-          'mid-step as a surge of magic bursts from the ground around their feet',
-          'leaning back slightly as if resisting an overwhelming tide of inner power',
-          'cradling a concentrated sphere of magic between both hands at chest height',
-        ],
-        warlock: [
-          'holding a pact focus or talisman forward, dark energy streaming from it',
-          'standing in a relaxed stance with one hand behind their back, the other tracing eldritch runes',
-          'reaching upward toward an unseen patron, cloak and garments pulled by unnatural wind',
-          'half-turned away, casting a spell over their shoulder with a sly or knowing posture',
-          'arms crossed loosely while faint sigils burn in the air around them',
-        ],
-        cleric: [
-          'raising a holy symbol high, light radiating outward in a protective arc',
-          'standing with shield angled and mace lowered, posture firm and resolute',
-          'kneeling in prayerful focus, holy symbol clasped between both hands',
-          'reaching one hand toward an unseen ally as if channeling healing energy',
-          'planting a weapon or staff into the ground as radiant power rises around them',
-        ],
-        druid: [
-          'standing with staff planted in the earth, vines and leaves swirling around',
-          'mid-transformation pose, body partly turned and framed by natural shapes',
-          'kneeling to touch the ground, one hand extended as if coaxing growth',
-          'arms lifted as if calling wind or storm, cloak and hair driven by imaginary weather',
-          'leaning gently against an unseen tree, posture relaxed and rooted',
-        ],
-        bard: [
-          'mid-performance with an instrument, one foot forward and body open to an unseen crowd',
-          'leaning back in a dramatic flourish, cloak and hair trailing with the motion',
-          'perched casually on an unseen stool or crate, instrument resting comfortably in hand',
-          'bowing deeply at the end of a performance, one arm sweeping wide',
-          'caught mid-step in a dance-like pose, instrument held close to the torso',
-        ],
-        default: [
-          'standing in a relaxed but heroic stance, weight shifted slightly to one side',
-          'mid-stride as if walking toward the viewer with confident energy',
-          'standing in profile with head turned toward the viewer, posture composed and steady',
-          'seated on an implied stone or crate, leaning slightly forward in a thoughtful pose',
-          'standing with arms loosely folded or resting on a weapon, calm and watchful',
-        ],
-      };
-
-      const cameraVariantsByClass = {
-        fighter: [
-          'Camera angle: slightly low and three-quarter to emphasize strength and presence.',
-          'Camera angle: eye-level, centered on the torso and weapon for a direct confrontation.',
-          'Camera angle: three-quarter from the shield side, highlighting defense and stance.',
-          'Camera angle: slightly above, looking down to show battlefield context around the figure.',
-          'Camera angle: close to ground level, making the character loom large in the frame.',
-        ],
-        barbarian: [
-          'Camera angle: low and close, exaggerating size and ferocity.',
-          'Camera angle: three-quarter with a strong diagonal, emphasizing motion and power.',
-          'Camera angle: eye-level but tilted slightly to make the pose feel unstable and wild.',
-          'Camera angle: pulled back to show the full silhouette and large weapon in motion.',
-          'Camera angle: slightly below the shoulders, looking up into a battle roar.',
-        ],
-        paladin: [
-          'Camera angle: eye-level, straight on, emphasizing honor and symmetry.',
-          'Camera angle: slightly low, looking up past the shield to give a guardian feeling.',
-          'Camera angle: three-quarter from the weapon side, showing both devotion and readiness.',
-          'Camera angle: slightly above, as if from the viewpoint of someone being protected.',
-          'Camera angle: close to the chest and shoulders, focusing on heraldry and holy symbols.',
-        ],
-        rogue: [
-          'Camera angle: slightly above and to the side, emphasizing stealth and environment.',
-          'Camera angle: three-quarter from behind, with the face turned back toward the viewer.',
-          'Camera angle: low and angled sharply, creating long, dramatic shadows.',
-          'Camera angle: tight framing around the upper body, leaving the background mostly in shadow.',
-          'Camera angle: oblique and off-center, reinforcing a feeling of secrecy and motion.',
-        ],
-        monk: [
-          'Camera angle: mid-distance and centered, capturing clean lines of the martial pose.',
-          'Camera angle: slightly low, emphasizing balance and upward motion in kicks or strikes.',
-          'Camera angle: from above, looking down on a circular stance pattern.',
-          'Camera angle: three-quarter, letting limbs and flowing cloth create dynamic diagonals.',
-          'Camera angle: side-on profile to highlight precision and alignment of the form.',
-        ],
-        ranger: [
-          'Camera angle: three-quarter from the front, aligned with the drawn bow and arrow.',
-          'Camera angle: from slightly behind the shoulder, looking along the line of the bowstring.',
-          'Camera angle: slightly elevated, framing the ranger and implied terrain below.',
-          'Camera angle: low and angled upward through implied undergrowth or rough ground.',
-          'Camera angle: mid-distance, with the character slightly off-center to suggest open space.',
-        ],
-        wizard: [
-          'Camera angle: three-quarter, framing both staff and spell effect in the same view.',
-          'Camera angle: slightly low, making the spellcasting gesture feel towering and grand.',
-          'Camera angle: slightly above, looking down on a circle of arcane energy.',
-          'Camera angle: tight on the upper body and hands, emphasizing complex spell gestures.',
-          'Camera angle: oblique and off-center, with arcane elements framing the composition.',
-        ],
-        sorcerer: [
-          'Camera angle: close and low, centered on the chest where power is gathering.',
-          'Camera angle: three-quarter from the side, showing energy spiraling around the figure.',
-          'Camera angle: above and tilted, as if the viewer is caught in the swirl of magic.',
-          'Camera angle: tight framing on the face and hands, emphasizing raw intensity.',
-          'Camera angle: pulled back slightly, letting arcs of power form a halo-like shape.',
-        ],
-        warlock: [
-          'Camera angle: slightly low and off-center, giving a subtle, ominous imbalance.',
-          'Camera angle: three-quarter from behind, looking toward an unseen source of power.',
-          'Camera angle: eye-level but pushed to one side, leaving empty darkness opposite the figure.',
-          'Camera angle: close to the focus or talisman, with the character looming just behind it.',
-          'Camera angle: slightly above, letting eldritch patterns form around the character\'s feet.',
-        ],
-        cleric: [
-          'Camera angle: slightly low, looking up toward the raised holy symbol.',
-          'Camera angle: eye-level, centered to evoke balance and stability.',
-          'Camera angle: three-quarter, allowing both shield and symbol to read clearly.',
-          'Camera angle: slightly above, as if from the viewpoint of a blessed ally.',
-          'Camera angle: mid-distance with the character framed symmetrically in the composition.',
-        ],
-        druid: [
-          'Camera angle: low and close to the ground, emphasizing roots, stones, and natural forms.',
-          'Camera angle: three-quarter, with implied branches or leaves partially framing the view.',
-          'Camera angle: slightly above, looking down as if from a bird\'s-eye vantage.',
-          'Camera angle: eye-level but softened, placing the character gently into the environment.',
-          'Camera angle: mid-distance, with the figure slightly off-center to leave room for nature.',
-        ],
-        bard: [
-          'Camera angle: eye-level, as if the viewer is part of an unseen audience.',
-          'Camera angle: three-quarter, capturing both gesture and instrument clearly.',
-          'Camera angle: slightly low, turning a performance flourish into a heroic moment.',
-          'Camera angle: above and angled, as if looking down from a balcony over a small stage.',
-          'Camera angle: tight around the upper body and instrument, focusing on expression.',
-        ],
-        default: [
-          'Camera angle: three-quarter view that clearly shows the full silhouette.',
-          'Camera angle: eye-level, centered, with the figure dominating the frame.',
-          'Camera angle: slightly low, making the character feel larger and more heroic.',
-          'Camera angle: slightly above, looking down just enough to show shoulders and gear.',
-          'Camera angle: mid-distance with the character placed slightly off-center for balance.',
-        ],
-      };
-
-      const poseList =
-        poseVariantsByClass[classKey] || poseVariantsByClass.default;
-      const cameraList =
-        cameraVariantsByClass[classKey] || cameraVariantsByClass.default;
-
-      const posePrompt =
-        poseList[Math.floor(Math.random() * poseList.length)];
-      const cameraPrompt =
-        cameraList[Math.floor(Math.random() * cameraList.length)];
+      const { pose: posePrompt, camera: cameraPrompt } =
+        window.PortraitPoseData && typeof PortraitPoseData.getRandomPoseAndCamera === 'function'
+          ? PortraitPoseData.getRandomPoseAndCamera(classKey)
+          : {
+              pose: 'standing in a relaxed but heroic stance',
+              camera: 'Camera angle: three-quarter view that clearly shows the full silhouette.',
+            };
 
       let renderingInstructions;
       if (
@@ -3215,7 +3135,30 @@ const App = (window.App = {
         ];
       }
       
-      const fullPrompt = [...renderingInstructions, customPrompt].join(' ');
+      // Combine rendering instructions with the custom character description.
+      // The backend has a 4000 character limit on prompts, so we need to truncate
+      // if necessary. Prioritize keeping the character description (customPrompt)
+      // and trim style instructions if we exceed the limit.
+      const MAX_PROMPT_LENGTH = 3900; // Leave some margin below the 4000 limit
+      let fullPrompt = [...renderingInstructions, customPrompt].join(' ');
+      
+      if (fullPrompt.length > MAX_PROMPT_LENGTH) {
+        console.warn(`Portrait prompt exceeds ${MAX_PROMPT_LENGTH} chars (${fullPrompt.length}), truncating...`);
+        // Try to keep the custom prompt intact and reduce style instructions
+        const styleInstructionsText = renderingInstructions.join(' ');
+        const availableForStyle = MAX_PROMPT_LENGTH - customPrompt.length - 50; // 50 chars buffer
+        
+        if (availableForStyle > 200) {
+          // We have room for some style instructions
+          const truncatedStyle = styleInstructionsText.substring(0, availableForStyle);
+          fullPrompt = truncatedStyle + ' ' + customPrompt;
+        } else {
+          // Not much room - just use the custom prompt with minimal style
+          const minimalStyle = 'High-contrast black-and-white fantasy ink illustration.';
+          fullPrompt = minimalStyle + ' ' + customPrompt.substring(0, MAX_PROMPT_LENGTH - minimalStyle.length - 1);
+        }
+        console.log(`Truncated prompt length: ${fullPrompt.length}`);
+      }
       
       // Generate custom portrait with full prompt (including hidden rendering instructions)
       const result =
@@ -3252,8 +3195,9 @@ const App = (window.App = {
       });
 
       if (portraitEl) {
-        // Restore portrait font size back to ASCII default; the sheet will
-        // re-render the portrait element for the newly generated art.
+        // Stop the animated dots interval and restore portrait font size back
+        // to ASCII default; the sheet will re-render for the newly generated art.
+        this._stopPortraitLoadingAnimation();
         portraitEl.style.fontSize = '';
         portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
       }
@@ -3784,7 +3728,7 @@ const App = (window.App = {
       <div id="levelModal" class="modal show" onclick="App.closeLevelModal()">
         <div class="modal-content" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">Change Character Level</h2>
+            <h2 class="modal-title">[ Change Character Level ]</h2>
             <button class="modal-close" onclick="App.closeLevelModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -3987,7 +3931,7 @@ const App = (window.App = {
       <div id="nameModal" class="modal show" onclick="App.closeNameModal()">
         <div class="modal-content" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">Change Character Name</h2>
+            <h2 class="modal-title">[ Change Character Name ]</h2>
             <button class="modal-close" onclick="App.closeNameModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -4208,8 +4152,9 @@ const App = (window.App = {
       // Ensure we at least have a pre-generated portrait to fall back to.
       await this._ensurePreGeneratedPortraitFallback(currentChar, { force: true });
     } finally {
-      // Whatever happens above (success or failure), restore portrait font
-      // size so the final ASCII art uses the default sizing from CSS.
+      // Whatever happens above (success or failure), stop the animated dots
+      // and restore portrait font size so the ASCII art uses CSS defaults.
+      this._stopPortraitLoadingAnimation();
       const portraitEl = document.getElementById('character-portrait');
       if (portraitEl) {
         portraitEl.style.fontSize = '';
@@ -4298,32 +4243,50 @@ const App = (window.App = {
       hasShield,
     );
 
-    // Try to auto-generate a name
+    // Try to auto-generate name + backstory in a SINGLE API call
+    // (uses the combined /characters/summary endpoint to save rate limit)
     let name = '';
+    let backstory = '';
     
-    // Show thinking message for name generation
+    // Show thinking message for name + backstory generation
     narratorPanel.insertAdjacentHTML(
       'beforeend',
       Components.renderNarratorMessage(''),
     );
     Utils.scrollToBottom(true);
-    const nameThinkingEl =
+    const thinkingEl =
       narratorPanel.lastElementChild.querySelector('.narrator-text');
-    this.showProgressiveThinking(nameThinkingEl);
+    this.showProgressiveThinking(thinkingEl);
     
     try {
-      const names = await AIService.generateNames(race.id, cls.id, 1);
-      if (Array.isArray(names) && names[0]) {
-        name = names[0];
+      // Build a temporary character object for the summary call
+      const tempChar = {
+        race: race.id,
+        class: cls.id,
+        background: background.id,
+        alignment: alignment.id,
+      };
+      const summary = await AIService.generateCharacterSummary(tempChar, { nameCount: 3 });
+      
+      // Pick a random name from suggestions
+      if (summary && Array.isArray(summary.names) && summary.names.length) {
+        name = Utils.randomChoice(summary.names);
+      }
+      
+      // Substitute {{NAME}} in the backstory template
+      if (summary && summary.backstoryTemplate) {
+        backstory = summary.backstoryTemplate.replace(/\{\{NAME\}\}/g, name || 'The adventurer');
       }
     } catch (e) {
       // Ignore AI errors; we'll fall back below
+      console.error('Quick create summary error:', e);
     }
     
     // Stop thinking and remove the message
     this.stopProgressiveThinking();
-    nameThinkingEl.parentElement.remove();
+    thinkingEl.parentElement.remove();
 
+    // Fallback name if AI failed
     if (!name) {
       const fallbackNames = [
         'Ashen Vale',
@@ -4332,6 +4295,12 @@ const App = (window.App = {
         'Lyra Nightbloom',
       ];
       name = Utils.randomChoice(fallbackNames);
+    }
+    
+    // Fallback backstory if AI failed
+    if (!backstory) {
+      backstory =
+        'A mysterious past, a questionable present, and a future that depends entirely on your dice.';
     }
 
     // Update character state with all basic info at once to avoid multiple renders
@@ -4347,6 +4316,7 @@ const App = (window.App = {
       armorCategory,
       hasShield,
       name,
+      backstory,
       // Apply background benefits
       skillProficiencies: background.skillProficiencies || [],
       toolProficiencies: background.toolProficiencies || [],
@@ -4380,13 +4350,10 @@ const App = (window.App = {
     await Utils.typewriter(nameEl, narrator.quickCreateName(name));
     Utils.scrollToBottom(true);
 
-    // Start generating AI portrait in background now (runs while backstory generates)
+    // Start generating AI portrait in background now (runs while backstory displays)
     this._quickCreatePortraitGeneration = this._generateQuickCreatePortrait();
 
-    // Try to auto-generate a backstory
-    let backstory = '';
-    
-    // Show thinking message for backstory generation
+    // Show thinking message for backstory (just displaying, no API call needed)
     narratorPanel.insertAdjacentHTML(
       'beforeend',
       Components.renderNarratorMessage(''),
@@ -4394,21 +4361,6 @@ const App = (window.App = {
     Utils.scrollToBottom(true);
     const backstoryThinkingEl =
       narratorPanel.lastElementChild.querySelector('.narrator-text');
-    this.showProgressiveThinking(backstoryThinkingEl);
-    
-    try {
-      const current = CharacterState.get();
-      backstory = await AIService.generateBackstory(current.character);
-    } catch (e) {
-      // Simple fallback backstory
-      backstory =
-        'A mysterious past, a questionable present, and a future that depends entirely on your dice.';
-    }
-    CharacterState.updateCharacter({ backstory });
-
-    // Stop thinking and clear the message
-    this.stopProgressiveThinking();
-    backstoryThinkingEl.textContent = '';
     
     // Show the actual backstory
     await Utils.typewriter(backstoryThinkingEl, backstory);
@@ -4554,7 +4506,7 @@ const App = (window.App = {
       <div id="confirmationModal" class="modal show confirmation-overlay">
         <div class="modal-content" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">Confirm</h2>
+            <h2 class="modal-title">[ Confirm ]</h2>
           </div>
           <div class="modal-body">
             <p class="terminal-text">

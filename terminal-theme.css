@@ -93,6 +93,13 @@
   --ui-primary-bg-color: var(--terminal-border);
   --ui-on-primary-color: var(--terminal-bg);
   
+  /* Context-aware accent tokens (inheritable via theme classes) */
+  /* Default = green terminal theme; override with .theme-yellow, .theme-teal, etc. */
+  --context-accent: var(--terminal-fg);
+  --context-accent-dim: var(--terminal-dim);
+  --context-border: var(--terminal-border);
+  --context-hover: var(--terminal-hover);
+  
   /* Typography */
   --font-family: 'Google Sans Code', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'Google Sans Code', 'Courier New', Courier, monospace;
@@ -141,6 +148,43 @@
   --ui-dim-color: var(--sheet-accent-dim);
   --ui-primary-bg-color: var(--sheet-accent);
   --ui-on-primary-color: var(--terminal-bg);
+}
+
+/* ===== CONTEXT THEME CLASSES =====
+   Apply these to any container to set the color theme for all nested elements.
+   Components should use var(--context-accent) etc. to inherit the theme.
+   ================================== */
+
+/* Green terminal theme (default) */
+.theme-green {
+  --context-accent: var(--terminal-fg);
+  --context-accent-dim: var(--terminal-dim);
+  --context-border: var(--terminal-border);
+  --context-hover: var(--terminal-hover);
+}
+
+/* Yellow/gold theme (used by modals) */
+.theme-yellow {
+  --context-accent: var(--modal-accent);
+  --context-accent-dim: var(--modal-accent-dim);
+  --context-border: var(--modal-accent);
+  --context-hover: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1);
+}
+
+/* Teal theme (used by character sheets) */
+.theme-teal {
+  --context-accent: var(--sheet-accent);
+  --context-accent-dim: var(--sheet-accent-dim);
+  --context-border: var(--sheet-border-color);
+  --context-hover: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
+}
+
+/* Cyan accent theme */
+.theme-cyan {
+  --context-accent: var(--terminal-accent);
+  --context-accent-dim: var(--terminal-accent-dim);
+  --context-border: var(--terminal-accent);
+  --context-hover: hsla(var(--theme-cyan-h), var(--theme-cyan-s), var(--theme-cyan-l-bright), 0.1);
 }
 
 /* ===== BASE STYLES ===== */
@@ -722,6 +766,7 @@ body::before {
 .sheet-header-title {
   flex: 1;
   font-weight: bold;
+  text-transform: uppercase;
 }
 
 .sheet-header-action {
@@ -1168,6 +1213,48 @@ body::before {
   flex: 1;
 }
 
+/* Selector menus moved to document.body (for modals) need explicit theme tokens
+   since they lose inheritance from their modal ancestor when detached. */
+.selector-menu-detached {
+  /* Use the modal's yellow theme when detached */
+  --ui-border-color: hsl(
+    var(--theme-yellow-h),
+    var(--theme-yellow-s),
+    var(--theme-yellow-l-bright)
+  );
+  --ui-fg-color: hsl(
+    var(--theme-yellow-h),
+    var(--theme-yellow-s),
+    var(--theme-yellow-l-bright)
+  );
+  --ui-dim-color: hsla(
+    var(--theme-yellow-h),
+    var(--theme-yellow-s),
+    var(--theme-yellow-l-bright),
+    0.7
+  );
+  --ui-primary-bg-color: hsl(
+    var(--theme-yellow-h),
+    var(--theme-yellow-s),
+    var(--theme-yellow-l-bright)
+  );
+
+  /* Yellow scrollbars for detached modal menus */
+  --scrollbar-track-color: hsl(var(--theme-yellow-h), 100%, 5%);
+  --scrollbar-thumb-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.6);
+  --scrollbar-thumb-hover-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.9);
+
+  /* Re-declare base selector-menu visual properties that are lost when
+     the menu is moved to document.body (outside the modal context). */
+  background: var(--terminal-bg);
+  border: 1px solid var(--ui-border-color);
+  border-radius: 4px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.9);
+
+  /* CSS fallback max-height (JS will set more precise value based on modal bounds) */
+  overflow-y: auto;
+}
+
 /* Link-style button */
 .link-button {
   background: none;
@@ -1412,6 +1499,12 @@ body::before {
 }
 
 .modal-content {
+  /* Apply yellow theme context for all nested elements */
+  --context-accent: var(--modal-accent);
+  --context-accent-dim: var(--modal-accent-dim);
+  --context-border: var(--modal-accent);
+  --context-hover: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1);
+  
   background-color: var(--terminal-bg);
   border: 2px solid var(--modal-accent);
   border-radius: 4px;

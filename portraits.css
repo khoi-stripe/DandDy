@@ -487,23 +487,9 @@
   margin-bottom: var(--spacing-md);
 }
 
-/* Let portrait history menus escape the scrollable modal-body without
-   getting clipped, while the overall modal still scrolls if needed. */
-.portrait-history-modal .modal-body {
-  overflow-y: visible;
-}
-
-/* Allow portrait history menus to render outside the card stack while keeping
-   other modals using the default clipping behavior. */
-.portrait-history-modal {
-  overflow: visible;
-}
-
- .portrait-history-modal .modal-content {
-  overflow: visible;
-}
-
-/* Ensure portrait history listbox appears above other modal content */
+/* Portrait history modal: selector menus are detached to <body> by
+   toggleSelectorMenu() so they escape overflow clipping automatically.
+   Modal can scroll normally - no overflow:visible overrides needed. */
 .portrait-history-modal .selector-menu {
   z-index: 999;
 }

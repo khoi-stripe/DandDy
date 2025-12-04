@@ -172,6 +172,17 @@
       font-size: 12px;
       color: #78909c;
     }
+    .tag-default {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 10px;
+      padding: 2px 6px;
+      font-size: 9px;
+      background: #1a237e;
+      color: #9fa8da;
+      border: 1px solid #3949ab;
+      margin-left: 4px;
+    }
     .hint {
       font-size: 11px;
       color: #78909c;
@@ -216,7 +227,7 @@
       <div>
         <div class="admin-title">[ Portrait Prompt Config ]</div>
         <div class="admin-subtitle">
-          Manage <code>{race}</code>, <code>{class}</code>, <code>{background}</code>, and <code>{style}</code> records for portrait prompts.
+          Manage <code>{race}</code>, <code>{class}</code>, <code>{pose}</code>, <code>{camera}</code>, <code>{scene}</code>, and <code>{style}</code> records for portrait prompts.
         </div>
       </div>
       <div class="status-pill">
@@ -233,9 +244,14 @@
             <div class="panel-title">Existing entries</div>
             <div class="panel-subtitle">Filter or edit your configured variables.</div>
           </div>
-          <button class="btn btn-secondary" type="button" id="btnClearAll">
-            Clear all
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary" type="button" id="btnLoadDefaults">
+              Load defaults
+            </button>
+            <button class="btn btn-secondary" type="button" id="btnClearAll">
+              Clear all
+            </button>
+          </div>
         </div>
 
         <div class="filter-row">
@@ -243,6 +259,8 @@
             <option value="">All kinds</option>
             <option value="race">Race</option>
             <option value="class">Class</option>
+            <option value="pose">Pose</option>
+            <option value="camera">Camera</option>
             <option value="scene">Scene</option>
             <option value="style">Style</option>
           </select>
@@ -279,7 +297,7 @@
           <div>
             <div class="panel-title" id="formTitle">New entry</div>
             <div class="panel-subtitle">
-              Define a single variable at a time: a <code>race</code>, <code>class</code>, <code>scene</code>, or <code>style</code>.
+              Define a single variable at a time: <code>race</code>, <code>class</code>, <code>pose</code>, <code>camera</code>, <code>scene</code>, or <code>style</code>.
             </div>
           </div>
         </div>
@@ -293,27 +311,29 @@
               <select id="kindInput">
                 <option value="race">Race</option>
                 <option value="class">Class</option>
+                <option value="pose">Pose</option>
+                <option value="camera">Camera</option>
                 <option value="scene">Scene</option>
                 <option value="style">Style</option>
               </select>
             </div>
             <div class="field">
               <label for="keyInput">Key</label>
-              <input id="keyInput" required placeholder="e.g. dwarf, fighter, soldier, cinematic-inks" />
-              <div class="hint">
-                This should match the key used by the character generator (e.g. race id, class id, background id, or theme id).
+              <input id="keyInput" required placeholder="e.g. dwarf, fighter, default, cinematic-inks" />
+              <div class="hint" id="keyHint">
+                For pose/camera: use class id (fighter, wizard, etc.) or "default" for fallback.
               </div>
             </div>
           </div>
 
           <div class="field" id="descriptionField">
-            <label for="descriptionInput">Description snippet</label>
+            <label for="descriptionInput" id="descriptionLabel">Description snippet</label>
             <textarea
               id="descriptionInput"
               placeholder='e.g. "a grizzled dwarf with a braided beard and stocky build"'
             ></textarea>
-            <div class="hint">
-              Used for <code>{race}</code>, <code>{class}</code>, or <code>Scene:</code> text in prompts.
+            <div class="hint" id="descriptionHint">
+              Used for <code>{race}</code>, <code>{class}</code>, <code>{pose}</code>, <code>{camera}</code>, or <code>Scene:</code> text in prompts.
             </div>
           </div>
 

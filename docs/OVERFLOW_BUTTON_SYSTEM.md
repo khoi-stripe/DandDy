@@ -112,6 +112,61 @@ The overflow button (three dots → X animation) is a reusable UI component used
 4. **Viewport-aware positioning** prevents menu clipping
 5. **Detached menu support** for modals with overflow constraints
 
+## Selector Menus in Modals - IMPORTANT PATTERNS
+
+### The Problem
+Modals often use CSS `transform` for centering (e.g., `transform: translate(-50%, -50%)`), which creates a **new containing block**. This means `position: fixed` elements inside the modal are positioned relative to the modal, not the viewport. Additionally, modals may have `overflow: hidden` which clips dropdown menus.
+
+### The Solution (Implemented)
+`CharacterSheet.toggleSelectorMenu()` automatically handles this by:
+
+1. **Detaching menus to `<body>`** for ALL modals (not just specific ones)
+2. **Using fixed positioning** for menus (escapes all overflow containers)
+3. **Calculating bounds** based on context:
+   - In modals: uses `.modal-body` for vertical bounds, `.modal-content` for horizontal
+   - Outside modals: uses `.terminal-frame` or `.terminal-container`
+4. **Opening above/below** based on available space
+5. **Applying theming classes** when detached (`selector-menu-detached` for general modals, `portrait-history-menu-detached` for portrait history)
+
+### ⚠️ DO NOT use `overflow: visible` on modals
+The old pattern was to set `overflow: visible` on `.modal`, `.modal-content`, and `.modal-body` to prevent clipping. **This is no longer needed and breaks modal scrolling.**
+
+❌ **BAD (old pattern):**
+```css
+.my-modal {
+  overflow: visible;
+}
+.my-modal .modal-body {
+  overflow-y: visible;
+}
+```
+
+✅ **GOOD (current pattern):**
+```css
+/* No overflow overrides needed - menus are detached to <body> automatically */
+.my-modal .selector-menu {
+  z-index: 999;
+}
+```
+
+### Theming for Detached Menus
+When menus are detached to `<body>`, they lose their modal's CSS context. Add theming via:
+
+```css
+/* In terminal-theme.css */
+.selector-menu-detached {
+  --ui-border-color: hsl(var(--theme-yellow-h), ...);
+  --ui-fg-color: hsl(var(--theme-yellow-h), ...);
+  /* ... other theme tokens */
+}
+```
+
+### Menu Height Constraints
+The toggle function automatically:
+- **Opens below** the trigger if there's space, using all space down to the modal footer
+- **Opens above** if not enough space below, anchoring at bottom edge and growing upward
+- **Sets max-height** to available space and enables scrolling if needed
+
 ### 🔄 Recommendations
 
 #### 1. **Standardize Class Names**

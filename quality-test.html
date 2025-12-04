@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DandDy Image Quality Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #050608;
+      --card-bg: #11110f;
+      --accent: #ffd447;
+      --accent-dim: #9a8330;
+      --fg: #f7f5e9;
+      --muted: #aaaa88;
+      --error: #ff5c5c;
+      --border: #333320;
+      --mono: system-ui, -apple-system, BlinkMacSystemFont, "SF Mono", "Menlo", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: radial-gradient(circle at top, #102018 0, #050608 55%);
+      color: var(--fg);
+      font-family: var(--mono);
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      color: var(--accent);
+    }
+
+    h2 {
+      margin: 16px 0 8px;
+      font-size: 14px;
+      color: var(--accent);
+    }
+
+    p {
+      margin: 4px 0 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .frame {
+      max-width: 1120px;
+      margin: 0 auto;
+      border-radius: 10px;
+      border: 1px solid #1a3a20;
+      box-shadow:
+        0 24px 80px rgba(0, 0, 0, 0.9),
+        0 0 0 1px rgba(0, 0, 0, 0.9);
+      background-color: rgba(5, 10, 8, 0.96);
+      padding: 20px 20px 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.8fr);
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      padding: 12px 12px 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    select,
+    textarea {
+      width: 100%;
+      background: #050506;
+      border-radius: 4px;
+      border: 1px solid #44442a;
+      padding: 6px 8px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--fg);
+      outline: none;
+      resize: vertical;
+      min-height: 32px;
+    }
+
+    textarea {
+      min-height: 90px;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(255, 212, 71, 0.35);
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .row > * {
+      flex: 1;
+    }
+
+    .row--tight {
+      margin-bottom: 4px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 14px;
+      border-radius: 4px;
+      border: 1px solid var(--accent);
+      background: transparent;
+      color: var(--accent);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      gap: 6px;
+      transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+    }
+
+    .button:hover:not(:disabled) {
+      background: rgba(255, 212, 71, 0.08);
+      box-shadow: 0 0 10px rgba(255, 212, 71, 0.4);
+    }
+
+    .button:active:not(:disabled) {
+      transform: translateY(1px);
+      box-shadow: 0 0 4px rgba(255, 212, 71, 0.4);
+    }
+
+    .button:disabled {
+      opacity: 0.5;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid #44442a;
+      color: var(--muted);
+    }
+
+    .pill strong {
+      color: var(--accent-dim);
+      font-weight: normal;
+    }
+
+    .outputs {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .output-card {
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #050506;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .output-header {
+      padding: 6px 8px;
+      background: linear-gradient(to right, #16130a, #1c180b);
+      border-bottom: 1px solid #3c3418;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .output-header span.label {
+      color: var(--accent);
+      font-weight: bold;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+
+    .output-body {
+      padding: 8px;
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #15110b 0, #050506 60%);
+    }
+
+    .output-body img {
+      max-width: 100%;
+      max-height: 320px;
+      border-radius: 4px;
+      border: 1px solid #333320;
+      display: block;
+    }
+
+    .status {
+      font-size: 11px;
+      color: var(--muted);
+      min-height: 16px;
+    }
+
+    .status--error {
+      color: var(--error);
+    }
+
+    @media (max-width: 860px) {
+      body {
+        padding: 16px;
+      }
+
+      .grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .outputs {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <h1>[ DandDy ] Image Quality Test</h1>
+    <p>
+      Generate two images from the same prompt to compare OpenAI image quality settings
+      (<span class="pill"><strong>medium</strong> = quality=medium</span>,
+      <span class="pill"><strong>high</strong> = quality=high</span>).
+      Use this locally only; do not deploy with a hard-coded API key.
+    </p>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Request</h2>
+
+        <div class="row">
+          <div>
+            <label for="apiKey">OpenAI API key</label>
+            <input id="apiKey" type="password" autocomplete="off" placeholder="sk-..." />
+          </div>
+        </div>
+
+        <div class="row row--tight">
+          <div>
+            <label for="model">Model</label>
+            <select id="model">
+              <option value="dall-e-3">dall-e-3</option>
+              <option value="gpt-image-1">gpt-image-1</option>
+            </select>
+          </div>
+          <div>
+            <label for="size">Size</label>
+            <select id="size">
+              <option value="1024x1024">1024x1024</option>
+              <option value="512x512">512x512</option>
+              <option value="256x256">256x256</option>
+              <option value="1792x1024">1792x1024</option>
+              <option value="1024x1792">1024x1792</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top: 8px;">
+          <label for="prompt">Prompt</label>
+          <textarea
+            id="prompt"
+            placeholder="A heroic D&D character portrait in black-and-white ink illustration style..."
+          ></textarea>
+        </div>
+
+        <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+          <button class="button" id="generateBtn">
+            <span>GENERATE QUALITY PAIR</span>
+          </button>
+          <span id="globalStatus" class="status"></span>
+        </div>
+
+        <p style="margin-top: 10px; font-size: 11px;">
+          This page calls the official OpenAI Images API directly from your browser. Your API key is only used in
+          this tab and is not stored anywhere in the DandDy app.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Results</h2>
+        <div class="outputs">
+          <div class="output-card">
+            <div class="output-header">
+              <span class="label">MEDIUM</span>
+              <span class="pill"><strong>quality</strong>=medium</span>
+            </div>
+            <div class="output-body">
+              <img id="imgMedium" alt="Medium quality result" style="display: none;" />
+              <div id="mediumPlaceholder" class="status">Awaiting request…</div>
+            </div>
+          </div>
+
+          <div class="output-card">
+            <div class="output-header">
+              <span class="label">HIGH</span>
+              <span class="pill"><strong>quality</strong>=high</span>
+            </div>
+            <div class="output-body">
+              <img id="imgHigh" alt="High quality result" style="display: none;" />
+              <div id="highPlaceholder" class="status">Awaiting request…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const IMAGES_ENDPOINT = "https://api.openai.com/v1/images/generations";
+
+    function setStatus(id, message, isError = false) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = message || "";
+      el.classList.toggle("status--error", !!isError);
+    }
+
+    async function callImagesApi({ apiKey, prompt, model, size, quality }) {
+      const res = await fetch(IMAGES_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          prompt,
+          n: 1,
+          size,
+          quality,
+        }),
+      });
+
+      if (!res.ok) {
+        let message = `HTTP ${res.status}`;
+        try {
+          const err = await res.json();
+          if (err && err.error && err.error.message) {
+            message = err.error.message;
+          }
+        } catch (_) {
+          // ignore JSON parse errors
+        }
+        throw new Error(message);
+      }
+
+      const data = await res.json();
+      if (!data.data || !data.data.length) {
+        throw new Error("No image data returned");
+      }
+
+      const first = data.data[0];
+      if (first.url) return first.url;
+      if (first.b64_json) return `data:image/png;base64,${first.b64_json}`;
+      throw new Error("Image response had neither URL nor base64 data");
+    }
+
+    async function generatePair() {
+      const apiKey = document.getElementById("apiKey").value.trim();
+      const prompt = document.getElementById("prompt").value.trim();
+      const model = document.getElementById("model").value;
+      const size = document.getElementById("size").value;
+      const button = document.getElementById("generateBtn");
+
+      if (!apiKey) {
+        alert("Please paste your OpenAI API key.");
+        return;
+      }
+      if (!prompt) {
+        alert("Please enter a prompt.");
+        return;
+      }
+
+      button.disabled = true;
+      setStatus("globalStatus", "Generating images… this can take a few seconds.");
+
+      // Reset outputs
+      document.getElementById("imgMedium").style.display = "none";
+      document.getElementById("imgHigh").style.display = "none";
+      setStatus("mediumPlaceholder", "Requesting medium image…");
+      setStatus("highPlaceholder", "Requesting high image…");
+
+      try {
+        const [mediumUrl, highUrl] = await Promise.all([
+          callImagesApi({ apiKey, prompt, model, size, quality: "medium" }),
+          callImagesApi({ apiKey, prompt, model, size, quality: "high" }),
+        ]);
+
+        const imgMedium = document.getElementById("imgMedium");
+        const imgHigh = document.getElementById("imgHigh");
+
+        imgMedium.src = mediumUrl;
+        imgMedium.style.display = "block";
+        document.getElementById("mediumPlaceholder").style.display = "none";
+
+        imgHigh.src = highUrl;
+        imgHigh.style.display = "block";
+        document.getElementById("highPlaceholder").style.display = "none";
+
+        setStatus("globalStatus", "Done. Compare medium vs high side-by-side above.");
+      } catch (err) {
+        console.error(err);
+        setStatus(
+          "globalStatus",
+          "Error generating images: " + (err && err.message ? err.message : String(err)),
+          true
+        );
+        setStatus("mediumPlaceholder", "Failed to load image.", true);
+        setStatus("highPlaceholder", "Failed to load image.", true);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    document.getElementById("generateBtn").addEventListener("click", (e) => {
+      e.preventDefault();
+      generatePair();
+    });
+  </script>
+</body>
+</html>
+
+
