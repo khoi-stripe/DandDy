@@ -16,6 +16,114 @@
    */
 
   // ========================================
+  // API CLIENT (for authenticated users)
+  // ========================================
+  const API_BASE = (window.DanddyConfig && window.DanddyConfig.API_URL) || 'http://localhost:8000/api';
+
+  function getAuthToken() {
+    return window.AuthService && window.AuthService.getToken ? window.AuthService.getToken() : null;
+  }
+
+  function isAuthenticated() {
+    return window.AuthService && window.AuthService.isAuthenticated ? window.AuthService.isAuthenticated() : false;
+  }
+
+  async function apiRequest(endpoint, options = {}) {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...(options.headers || {}),
+      },
+    });
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(`API error ${response.status}: ${errText}`);
+    }
+
+    if (response.status === 204) return null;
+    return response.json();
+  }
+
+  // Fetch all entries from API
+  async function fetchEntriesFromAPI() {
+    const data = await apiRequest('/prompt-entries');
+    // Map API response to local format
+    return (data || []).map(apiEntryToLocal);
+  }
+
+  // Create entry via API
+  async function createEntryViaAPI(entry) {
+    const payload = localEntryToAPI(entry);
+    const created = await apiRequest('/prompt-entries', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return apiEntryToLocal(created);
+  }
+
+  // Update entry via API
+  async function updateEntryViaAPI(id, entry) {
+    const payload = localEntryToAPI(entry);
+    const updated = await apiRequest(`/prompt-entries/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    return apiEntryToLocal(updated);
+  }
+
+  // Delete entry via API
+  async function deleteEntryViaAPI(id) {
+    await apiRequest(`/prompt-entries/${id}`, { method: 'DELETE' });
+  }
+
+  // Bulk create entries via API
+  async function bulkCreateViaAPI(entries) {
+    const payload = { entries: entries.map(localEntryToAPI) };
+    const created = await apiRequest('/prompt-entries/bulk', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return (created || []).map(apiEntryToLocal);
+  }
+
+  // Delete all entries via API
+  async function deleteAllViaAPI() {
+    await apiRequest('/prompt-entries', { method: 'DELETE' });
+  }
+
+  // Convert API entry to local format
+  function apiEntryToLocal(apiEntry) {
+    return {
+      id: String(apiEntry.id),
+      kind: apiEntry.kind,
+      key: apiEntry.key,
+      description: apiEntry.description || '',
+      styleDescription: apiEntry.style_description || '',
+      createdAt: apiEntry.created_at,
+      updatedAt: apiEntry.updated_at,
+    };
+  }
+
+  // Convert local entry to API format
+  function localEntryToAPI(entry) {
+    return {
+      kind: entry.kind,
+      key: entry.key,
+      description: entry.description || '',
+      style_description: entry.styleDescription || null,
+    };
+  }
+
+  // Track if we're using cloud storage
+  let usingCloud = false;
+
+  // ========================================
   // DEFAULT POSE & CAMERA DATA
   // ========================================
   const DEFAULT_POSES = {
@@ -248,8 +356,39 @@
     return entries;
   }
 
+  /** @returns {Promise<PromptEntry[]>} */
+  async function loadEntries() {
+    // Try API first if authenticated
+    if (isAuthenticated()) {
+      try {
+        const entries = await fetchEntriesFromAPI();
+        usingCloud = true;
+        updateStorageStatus();
+        // Cache in localStorage so builder/manager can read them
+        saveEntriesToLocalStorage(entries);
+        return entries;
+      } catch (e) {
+        console.warn('PromptStyleAdmin: API load failed, falling back to localStorage', e);
+      }
+    }
+
+    // Fall back to localStorage
+    usingCloud = false;
+    updateStorageStatus();
+    return loadEntriesFromLocalStorage();
+  }
+
+  // Sync local cache after cloud operations
+  function syncLocalCache(entries) {
+    saveEntriesToLocalStorage(entries);
+    // Invalidate PortraitPrompt cache so it picks up new entries
+    if (window.PortraitPrompt && typeof PortraitPrompt.invalidateCache === 'function') {
+      PortraitPrompt.invalidateCache();
+    }
+  }
+
   /** @returns {PromptEntry[]} */
-  function loadEntries() {
+  function loadEntriesFromLocalStorage() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return [];
@@ -268,22 +407,22 @@
       });
 
       if (changed) {
-        saveEntries(migrated);
+        saveEntriesToLocalStorage(migrated);
       }
 
       return migrated;
     } catch (e) {
-      console.warn('PromptStyleAdmin: failed to load entries', e);
+      console.warn('PromptStyleAdmin: failed to load entries from localStorage', e);
       return [];
     }
   }
 
   /** @param {PromptEntry[]} entries */
-  function saveEntries(entries) {
+  function saveEntriesToLocalStorage(entries) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(entries || []));
     } catch (e) {
-      console.warn('PromptStyleAdmin: failed to save entries', e);
+      console.warn('PromptStyleAdmin: failed to save entries to localStorage', e);
     }
   }
 
@@ -294,6 +433,22 @@
       '_' +
       Math.random().toString(36).slice(2, 8)
     );
+  }
+
+  function updateStorageStatus() {
+    const statusEl = $('storageStatus');
+    if (!statusEl) return;
+    
+    if (usingCloud) {
+      statusEl.innerHTML = '<span class="status-cloud">☁️ Cloud storage (synced)</span>';
+      statusEl.className = 'storage-status cloud';
+    } else if (isAuthenticated()) {
+      statusEl.innerHTML = '<span class="status-local">⚠️ Using local storage (API unavailable)</span>';
+      statusEl.className = 'storage-status local-fallback';
+    } else {
+      statusEl.innerHTML = '<span class="status-local">💾 Local storage only — <a href="#" onclick="event.preventDefault(); window.location.href=\'/\';">log in</a> to sync</span>';
+      statusEl.className = 'storage-status local';
+    }
   }
 
   function $(id) {
@@ -449,13 +604,13 @@
     if (title) title.textContent = 'New entry';
   }
 
-  function init() {
-    let entries = loadEntries();
+  async function init() {
+    let entries = await loadEntries();
     renderTable(entries);
 
     const form = $('recordForm');
     if (form) {
-      form.addEventListener('submit', (e) => {
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const id = normalize($('entryId').value);
@@ -493,7 +648,23 @@
               nextEntry.description = description;
               nextEntry.styleDescription = '';
             }
-            entries[idx] = nextEntry;
+            
+            // Update via API if using cloud
+            if (usingCloud) {
+              try {
+                const updated = await updateEntryViaAPI(id, nextEntry);
+                entries[idx] = updated;
+                syncLocalCache(entries);
+              } catch (err) {
+                console.error('Failed to update via API:', err);
+                alert('Failed to save to cloud. Changes saved locally.');
+                entries[idx] = nextEntry;
+                saveEntriesToLocalStorage(entries);
+              }
+            } else {
+              entries[idx] = nextEntry;
+              saveEntriesToLocalStorage(entries);
+            }
           }
         } else {
           // Create new
@@ -512,10 +683,25 @@
           } else {
             newEntry.description = description;
           }
-          entries.push(newEntry);
+          
+          // Create via API if using cloud
+          if (usingCloud) {
+            try {
+              const created = await createEntryViaAPI(newEntry);
+              entries.push(created);
+              syncLocalCache(entries);
+            } catch (err) {
+              console.error('Failed to create via API:', err);
+              alert('Failed to save to cloud. Changes saved locally.');
+              entries.push(newEntry);
+              saveEntriesToLocalStorage(entries);
+            }
+          } else {
+            entries.push(newEntry);
+            saveEntriesToLocalStorage(entries);
+          }
         }
 
-        saveEntries(entries);
         renderTable(entries);
         resetForm();
       });
@@ -531,7 +717,7 @@
 
     const loadDefaultsBtn = $('btnLoadDefaults');
     if (loadDefaultsBtn) {
-      loadDefaultsBtn.addEventListener('click', () => {
+      loadDefaultsBtn.addEventListener('click', async () => {
         const existingPoses = entries.filter((e) => e.kind === 'pose').length;
         const existingCameras = entries.filter((e) => e.kind === 'camera').length;
         
@@ -547,8 +733,24 @@
         }
         
         const defaults = generateDefaultEntries();
-        entries = entries.concat(defaults);
-        saveEntries(entries);
+        
+        // Bulk create via API if using cloud
+        if (usingCloud) {
+          try {
+            const created = await bulkCreateViaAPI(defaults);
+            entries = entries.concat(created);
+            syncLocalCache(entries);
+          } catch (err) {
+            console.error('Failed to bulk create via API:', err);
+            alert('Failed to save to cloud. Changes saved locally.');
+            entries = entries.concat(defaults);
+            saveEntriesToLocalStorage(entries);
+          }
+        } else {
+          entries = entries.concat(defaults);
+          saveEntriesToLocalStorage(entries);
+        }
+        
         renderTable(entries);
         
         alert(`Loaded ${defaults.length} default entries (${defaults.filter(e => e.kind === 'pose').length} poses, ${defaults.filter(e => e.kind === 'camera').length} cameras).`);
@@ -557,16 +759,30 @@
 
     const clearAllBtn = $('btnClearAll');
     if (clearAllBtn) {
-      clearAllBtn.addEventListener('click', () => {
+      clearAllBtn.addEventListener('click', async () => {
         if (
           !confirm(
-            'Clear all locally stored portrait prompt records for this browser?',
+            'Clear all portrait prompt entries?',
           )
         ) {
           return;
         }
+        
+        // Delete all via API if using cloud
+        if (usingCloud) {
+          try {
+            await deleteAllViaAPI();
+            syncLocalCache([]);
+          } catch (err) {
+            console.error('Failed to delete all via API:', err);
+            alert('Failed to delete from cloud.');
+            return;
+          }
+        } else {
+          saveEntriesToLocalStorage([]);
+        }
+        
         entries = [];
-        saveEntries(entries);
         renderTable(entries);
         resetForm();
       });
@@ -574,7 +790,7 @@
 
     const tbody = $('recordsTbody');
     if (tbody) {
-      tbody.addEventListener('click', (e) => {
+      tbody.addEventListener('click', async (e) => {
         const target = /** @type {HTMLElement} */ (e.target);
         if (!target) return;
 
@@ -593,8 +809,24 @@
           loadEntryIntoForm(entry);
         } else if (action === 'delete') {
           if (!confirm('Delete this record?')) return;
+          
+          // Delete via API if using cloud
+          if (usingCloud) {
+            try {
+              await deleteEntryViaAPI(id);
+            } catch (err) {
+              console.error('Failed to delete via API:', err);
+              alert('Failed to delete from cloud.');
+              return;
+            }
+          }
+          
           entries = entries.filter((e) => e.id !== id);
-          saveEntries(entries);
+          if (usingCloud) {
+            syncLocalCache(entries);
+          } else {
+            saveEntriesToLocalStorage(entries);
+          }
           renderTable(entries);
           // If we were editing this record, reset the form.
           if ($('entryId').value === id) {

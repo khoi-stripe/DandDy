@@ -23,5 +23,6 @@ class User(Base):
     # Relationships
     characters = relationship("Character", back_populates="owner")
     campaigns_owned = relationship("Campaign", back_populates="dm")
+    prompt_entries = relationship("PromptEntry", back_populates="owner")
 
 

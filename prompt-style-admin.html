@@ -219,6 +219,41 @@
       flex: 1;
       overflow: auto;
     }
+    /* Storage status indicator */
+    .storage-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: #0b111a;
+      border: 1px solid #263238;
+    }
+    .storage-status.cloud {
+      border-color: #26c6da;
+      background: #004f59;
+    }
+    .storage-status.cloud .status-cloud {
+      color: #80deea;
+    }
+    .storage-status.local {
+      border-color: #78909c;
+    }
+    .storage-status.local .status-local {
+      color: #b0bec5;
+    }
+    .storage-status.local a {
+      color: #26c6da;
+      text-decoration: underline;
+    }
+    .storage-status.local-fallback {
+      border-color: #ff9800;
+      background: #3d2800;
+    }
+    .storage-status.local-fallback .status-local {
+      color: #ffcc80;
+    }
   </style>
 </head>
 <body>
@@ -230,9 +265,8 @@
           Manage <code>{race}</code>, <code>{class}</code>, <code>{pose}</code>, <code>{camera}</code>, <code>{scene}</code>, and <code>{style}</code> records for portrait prompts.
         </div>
       </div>
-      <div class="status-pill">
-        <span class="status-dot"></span>
-        Local-only config (stored in this browser)
+      <div id="storageStatus" class="storage-status local">
+        <span class="status-local">💾 Loading...</span>
       </div>
     </header>
 
@@ -358,6 +392,9 @@
     </div>
   </div>
 
+  <!-- Auth dependencies for cloud sync -->
+  <script src="danddy-config.js"></script>
+  <script src="danddy-auth.js"></script>
   <script src="prompt-style-admin.js"></script>
 </body>
 </html>
