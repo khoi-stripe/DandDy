@@ -1317,24 +1317,50 @@ const App = (window.App = {
     portraitEl.style.overflowX = '';
     portraitEl.style.overflowY = '';
 
-    portraitEl.innerHTML = `
-      <div class="portrait-placeholder-content">
-        <div class="portrait-placeholder-cube-container">
-          <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-            <i></i>
-            <i></i>
-            <i></i>
-            <i></i>
-            <i></i>
-            <i></i>
+    const baseMessage = 'Generating AI portrait…';
+    let subtext = 'This usually takes 20–30 seconds.';
+    try {
+      if (
+        window.PortraitUI &&
+        typeof PortraitUI.getImageModelSubtext === 'function'
+      ) {
+        subtext = PortraitUI.getImageModelSubtext();
+      }
+    } catch (e) {
+      // Fall back to default subtext on any error.
+    }
+
+    if (
+      window.PortraitUI &&
+      typeof PortraitUI.renderGeneratingLoader === 'function'
+    ) {
+      PortraitUI.renderGeneratingLoader(portraitEl, {
+        baseMessage,
+        subtext,
+        dotCount: 1,
+        isLoading: true,
+      });
+    } else {
+      // Fallback: simple static text block if shared helper is not available.
+      portraitEl.innerHTML = `
+        <div class="portrait-placeholder-content">
+          <div class="portrait-placeholder-cube-container">
+            <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+            </div>
+          </div>
+          <div class="portrait-placeholder-text">
+            ${baseMessage}<br>
+            ${subtext}
           </div>
         </div>
-        <div class="portrait-placeholder-text">
-          Generating AI portrait…<br>
-          This can take 20–30 seconds.
-        </div>
-      </div>
-    `;
+      `;
+    }
   },
 
   // In guided (co-create) mode, automatically generate a custom AI portrait
@@ -3146,11 +3172,11 @@ const App = (window.App = {
       if (
         typeof window !== 'undefined' &&
         window.PortraitPrompt &&
-        typeof window.PortraitPrompt.buildBasePortraitInstructions === 'function'
+        typeof window.PortraitPrompt.buildCustomPortraitInstructions ===
+          'function'
       ) {
-        // Prefer the structured style/background builder so prompt themes
-        // (including admin-defined styles from the prompt-style admin UI)
-        // are honored even in custom-prompt mode.
+        // Shared helper so builder + manager use the exact same STYLE / Scene
+        // logic (including admin-defined prompt styles) for custom prompts.
         let promptThemeId = null;
         try {
           if (
@@ -3169,37 +3195,12 @@ const App = (window.App = {
           // Non-fatal: fall back to default theme behavior below.
         }
 
-        let styleDescription = '';
-        let backgroundDescription = '';
-
-        try {
-          const sections =
-            window.PortraitPrompt.buildStyleAndBackgroundDescriptions({
-              posePrompt,
-              cameraPrompt,
-              themeId: promptThemeId,
-            }) || {};
-          styleDescription = sections.styleDescription || '';
-          backgroundDescription = sections.backgroundDescription || '';
-        } catch (e) {
-          // Non-fatal – fall through to simple defaults below.
-        }
-
-        if (!styleDescription) {
-          styleDescription =
-            'High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';
-        }
-        if (!backgroundDescription) {
-          backgroundDescription =
-            'Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';
-        }
-
-        renderingInstructions = [
-          `Pose: ${posePrompt}`,
-          cameraPrompt,
-          `STYLE: ${styleDescription}`,
-          `Scene: ${backgroundDescription}`,
-        ];
+        renderingInstructions =
+          window.PortraitPrompt.buildCustomPortraitInstructions({
+            posePrompt,
+            cameraPrompt,
+            themeId: promptThemeId,
+          });
       } else {
         // Fallback if PortraitPrompt is not loaded for some reason.
         renderingInstructions = [

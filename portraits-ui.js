@@ -237,6 +237,115 @@
       return topLines.join('\n');
     },
 
+    /**
+     * Shared helper: return a human-readable subtext for the portrait loader
+     * based on the currently selected image model (DALL·E 3 vs GPT Image 1).
+     *
+     * This is used by both the builder and manager so the cube loader's
+     * timing hint stays consistent across apps.
+     *
+     * @returns {string}
+     */
+    getImageModelSubtext() {
+      let subtext = '(This usually takes 20–30 seconds)';
+      try {
+        let imageModel = 'dall-e-3';
+        if (
+          window.StorageService &&
+          typeof StorageService.getImageModel === 'function'
+        ) {
+          imageModel = StorageService.getImageModel();
+        } else if (
+          typeof CONFIG !== 'undefined' &&
+          CONFIG.DEFAULT_IMAGE_MODEL
+        ) {
+          imageModel = CONFIG.DEFAULT_IMAGE_MODEL;
+        }
+
+        if (imageModel === 'gpt-image-1') {
+          subtext = '(This can take up to a minute)';
+        }
+      } catch (e) {
+        // Fall back to default subtext on any error.
+      }
+      return subtext;
+    },
+
+    /**
+     * Shared portrait "cube" loader for the character sheet portrait area.
+     *
+     * Normalizes the portrait container and ensures that the fast-spinning
+     * cube + status text markup is present. Subsequent calls will *update*
+     * the message / subtext / dot state without re-rendering the whole
+     * container, so it's safe to call from a timer.
+     *
+     * @param {HTMLElement} portraitEl
+     * @param {{ baseMessage?: string, subtext?: string, dotCount?: number, isLoading?: boolean }} options
+     * @returns {HTMLElement|null} the `.portrait-placeholder-text` element
+     */
+    renderGeneratingLoader(portraitEl, options) {
+      if (!portraitEl) return null;
+
+      const opts = options || {};
+      const baseMessage = opts.baseMessage || 'Generating character art';
+      const subtext =
+        opts.subtext || this.getImageModelSubtext() || '(This usually takes 20–30 seconds)';
+      const dotCount = Number.isFinite(opts.dotCount) ? opts.dotCount : 1;
+      const isLoading = opts.isLoading !== false;
+
+      // Normalize container classes so cube styles work consistently.
+      portraitEl.classList.add('ascii-portrait--placeholder');
+      if (isLoading) {
+        portraitEl.classList.add('ascii-portrait--loading');
+      }
+
+      // Ensure the cube + text shell exists once; thereafter only update text.
+      let textEl = portraitEl.querySelector('.portrait-placeholder-text');
+      if (!textEl) {
+        portraitEl.innerHTML = `
+          <div class="portrait-placeholder-content">
+            <div class="portrait-placeholder-cube-container">
+              <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+                <i></i>
+              </div>
+            </div>
+            <div class="portrait-placeholder-text" data-dots="${dotCount}">
+              <span class="portrait-placeholder-message">${baseMessage}</span>
+              <span class="portrait-placeholder-dots">
+                <span class="dot dot-1">.</span>
+                <span class="dot dot-2">.</span>
+                <span class="dot dot-3">.</span>
+              </span>
+              <div class="portrait-placeholder-subtext">
+                ${subtext}
+              </div>
+            </div>
+          </div>
+        `;
+        textEl = portraitEl.querySelector('.portrait-placeholder-text');
+      } else {
+        // Update text + dot state without reconstructing DOM.
+        textEl.setAttribute('data-dots', String(dotCount));
+        const messageEl =
+          textEl.querySelector('.portrait-placeholder-message');
+        if (messageEl) {
+          messageEl.textContent = baseMessage;
+        }
+        const subtextEl =
+          textEl.querySelector('.portrait-placeholder-subtext');
+        if (subtextEl) {
+          subtextEl.textContent = subtext;
+        }
+      }
+
+      return textEl || null;
+    },
+
     // ========================================
     // PUBLIC UI ACTIONS (used by onclick="")
     // ========================================

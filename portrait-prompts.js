@@ -16,7 +16,7 @@
    * theme definitions below, then switching themes from the Settings UI.
    */
 
-  const DEFAULT_THEME_ID = 'classic-ink';
+  const DEFAULT_THEME_ID = 'cinematic-inks';
   const ADMIN_STORAGE_KEY = 'dnd_portrait_prompt_entries_v1';
 
   // In-memory cache of admin-configured variables (race/class/scene/style).
@@ -162,45 +162,9 @@
    * NOTE: This is the main place to freely experiment with wording.
    */
   const THEMES = {
-    'classic-ink': {
-      id: 'classic-ink',
-      label: 'Classic Ink (default)',
-      description:
-        'High-contrast black-and-white ink illustration with bold silhouettes.',
-      buildStyleLines(options) {
-        const lines = [];
-        lines.push(
-          'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
-        );
-        lines.push(
-          'Include some controlled, directional hatching to define form (light mid-tone texture only).',
-        );
-        lines.push(
-          'Background should be simple, entirely black, and free of symbols or text.',
-        );
-        lines.push(
-          'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
-        );
-        lines.push('Aspect ratio 3:4.');
-        return lines;
-      },
-    },
-
-    /**
-     * Example experimental theme.
-     *
-     * You can freely rewrite the style lines here to try different
-     * prompt shapes while still reusing:
-     * - characterDescription
-     * - posePrompt
-     * - cameraPrompt
-     *
-     * Feel free to duplicate this block with a new id/label to
-     * create additional experiments.
-     */
     'cinematic-inks': {
       id: 'cinematic-inks',
-      label: 'Cinematic Inks (experimental)',
+      label: 'Cinematic Inks (default)',
       description:
         'More cinematic lighting and framing while staying in black-and-white ink.',
       buildStyleLines(options) {
@@ -392,6 +356,75 @@
   }
 
   /**
+   * Build a compact list of rendering instructions for custom-portrait flows.
+   *
+   * This is the shared helper used by both the Character Builder and Manager
+   * when the player supplies their own text prompt. It keeps:
+   *
+   * - Pose: {posePrompt}
+   * - {cameraPrompt}
+   * - STYLE: {styleDescription}
+   * - Scene: {backgroundDescription}
+   *
+   * and pulls style/background text from:
+   * - Admin-defined styles in the prompt style editor (per theme)
+   * - Theme defaults in this file
+   *
+   * Callers are responsible for resolving the active theme id (via
+   * StorageService.getPortraitPromptTheme / CONFIG, etc.) and passing it in.
+   *
+   * @param {{ posePrompt?: string, cameraPrompt?: string, themeId?: string }} options
+   * @returns {string[]} array of instruction lines
+   */
+  function buildCustomPortraitInstructions(options) {
+    const opts = options || {};
+    const posePrompt = opts.posePrompt || '';
+    const cameraPrompt = opts.cameraPrompt || '';
+    const themeId = opts.themeId;
+
+    let styleDescription = '';
+    let backgroundDescription = '';
+
+    try {
+      const sections =
+        buildStyleAndBackgroundDescriptions({
+          posePrompt,
+          cameraPrompt,
+          themeId,
+        }) || {};
+      styleDescription = sections.styleDescription || '';
+      backgroundDescription = sections.backgroundDescription || '';
+    } catch (e) {
+      // Non-fatal – fall through to simple defaults below.
+    }
+
+    if (!styleDescription) {
+      styleDescription =
+        'High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';
+    }
+    if (!backgroundDescription) {
+      backgroundDescription =
+        'Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';
+    }
+
+    const lines = [];
+    if (posePrompt) {
+      lines.push(`Pose: ${posePrompt}`);
+    }
+    if (cameraPrompt) {
+      lines.push(cameraPrompt);
+    }
+    if (styleDescription) {
+      lines.push(`STYLE: ${styleDescription}`);
+    }
+    if (backgroundDescription) {
+      lines.push(`Scene: ${backgroundDescription}`);
+    }
+
+    return lines;
+  }
+
+  /**
    * Public API
    */
   const PortraitPrompt = (global.PortraitPrompt = global.PortraitPrompt || {});
@@ -399,6 +432,9 @@
   PortraitPrompt.buildBasePortraitInstructions = buildBasePortraitInstructions;
   PortraitPrompt.buildStyleAndBackgroundDescriptions =
     buildStyleAndBackgroundDescriptions;
+   // Shared helper for builder + manager custom-portrait flows
+  PortraitPrompt.buildCustomPortraitInstructions =
+    buildCustomPortraitInstructions;
   PortraitPrompt.getVariableSnippet = getVariableSnippet;
 
   PortraitPrompt.getDefaultThemeId = function getDefaultThemeId() {

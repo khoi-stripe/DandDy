@@ -77,6 +77,18 @@ const Components = (window.Components = {
       return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
     };
 
+    // Helper to format narrator titles: strip emoji/description and use a clean title.
+    const formatNarratorTitle = (narrator) => {
+      if (!narrator) return '';
+      const base = String(narrator.name || narrator.id || '').trim();
+      if (!base) return '';
+      return base
+        .split(/[-_\s]+/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+    };
+
     // Text speed multiplier: defaults to 1x if not set or invalid.
     const getCurrentTextSpeed = () => {
       if (!StorageService || typeof StorageService.getTextSpeedMultiplier !== 'function') {
@@ -108,16 +120,12 @@ const Components = (window.Components = {
     const currentNarrator =
       narratorsList.find((n) => n.id === currentNarratorId) || narratorsList[0];
     const currentNarratorLabel = currentNarrator
-      ? truncate(
-          `${currentNarrator.emoji} ${currentNarrator.name} - ${currentNarrator.description}`,
-          60,
-        )
+      ? formatNarratorTitle(currentNarrator)
       : 'Choose narrator';
 
     const narratorOptionsMenu = narratorsList
       .map((narrator) => {
-        const optionText = `${narrator.emoji} ${narrator.name} - ${narrator.description}`;
-        const truncatedText = truncate(optionText, 60);
+        const label = formatNarratorTitle(narrator);
         const isSelected = narrator.id === currentNarratorId;
         return `
           <button
@@ -128,7 +136,7 @@ const Components = (window.Components = {
             aria-selected="${isSelected ? 'true' : 'false'}"
           >
             <span class="selector-option-label">
-              ${truncatedText}
+              ${label}
             </span>
           </button>
         `;
@@ -211,10 +219,10 @@ const Components = (window.Components = {
     if (!Array.isArray(promptThemes) || !promptThemes.length) {
       promptThemes = [
         {
-          id: 'classic-ink',
-          label: 'Classic Ink (default)',
+          id: 'cinematic-inks',
+          label: 'Cinematic Inks (default)',
           description:
-            'High-contrast black-and-white ink illustration with bold silhouettes.',
+            'More cinematic lighting and framing while staying in black-and-white ink.',
         },
       ];
     }
@@ -223,9 +231,22 @@ const Components = (window.Components = {
       promptThemes.find((t) => t.id === currentPromptThemeId) ||
       promptThemes[0];
 
+    // Helper to format a theme id/label into Title Case name.
+    const formatThemeName = (theme) => {
+      const rawId = (theme && theme.id) || '';
+      // Prefer id so custom themes don't inherit any legacy "(default)" suffixes.
+      const base = String(rawId || '').trim() || String(theme.label || '');
+      if (!base) return '';
+      return base
+        .split(/[-_\s]+/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+    };
+
     const currentPromptThemeLabel = activePromptTheme
-      ? `${activePromptTheme.label}`
-      : 'Default (Classic Ink)';
+      ? formatThemeName(activePromptTheme)
+      : 'Cinematic Inks';
 
     return `
       <div id="settingsModal" class="modal show" onclick="SettingsModal.close()">
@@ -270,15 +291,14 @@ const Components = (window.Components = {
                     >
                       ${narratorsList
                         .map((narrator) => {
-                          const optionText = `${narrator.emoji} ${narrator.name} - ${narrator.description}`;
-                          const truncatedText = truncate(optionText, 60);
+                          const label = formatNarratorTitle(narrator);
                           return `
-                            <option value="${narrator.id}" ${
-                              narrator.id === currentNarratorId ? 'selected' : ''
-                            }>
-                              ${truncatedText}
-                            </option>
-                          `;
+                          <option value="${narrator.id}" ${
+                            narrator.id === currentNarratorId ? 'selected' : ''
+                          }>
+                            ${label}
+                          </option>
+                        `;
                         })
                         .join('')}
                     </select>
@@ -336,7 +356,9 @@ const Components = (window.Components = {
                         .map(
                           (opt) => `
                           <option value="${opt.value}" ${
-                            opt.value === currentTextSpeedOption.value ? 'selected' : ''
+                            opt.value === currentTextSpeedOption.value
+                              ? 'selected'
+                              : ''
                           }>
                             ${opt.label}
                           </option>
@@ -468,11 +490,7 @@ const Components = (window.Components = {
                           ${promptThemes
                             .map((theme) => {
                               const isSelected = theme.id === activePromptTheme.id;
-                              const optionText =
-                                theme.description && theme.description.trim()
-                                  ? `${theme.label} — ${theme.description}`
-                                  : theme.label;
-                              const truncatedText = truncate(optionText, 80);
+                              const label = formatThemeName(theme);
                               return `
                               <button
                                 class="selector-option${
@@ -484,7 +502,7 @@ const Components = (window.Components = {
                                 aria-selected="${isSelected ? 'true' : 'false'}"
                               >
                                 <span class="selector-option-label">
-                                  ${truncatedText}
+                                  ${label}
                                 </span>
                               </button>
                             `;
@@ -497,15 +515,16 @@ const Components = (window.Components = {
                         class="terminal-select settings-select hidden"
                       >
                         ${promptThemes
-                          .map(
-                            (theme) => `
+                          .map((theme) => {
+                            const label = formatThemeName(theme);
+                            return `
                             <option value="${theme.id}" ${
                               theme.id === activePromptTheme.id ? 'selected' : ''
                             }>
-                              ${theme.label}
+                              ${label}
                             </option>
-                          `,
-                          )
+                          `;
+                          })
                           .join('')}
                       </select>
                     </div>

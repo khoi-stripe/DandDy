@@ -34,10 +34,10 @@
 }
 
 .ascii-portrait {
-  font-size: 7px;
-  /* Slightly condensed vertical spacing so the ASCII block feels denser
-     without crushing readability. */
-  line-height: 1.1;
+  font-size: 5px;
+  /* Slightly increased vertical spacing so the ASCII block is easier
+     to read without feeling too loose. */
+  line-height: 1.2;
   color: var(--terminal-accent);
   text-align: center;
   white-space: pre;

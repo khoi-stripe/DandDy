@@ -328,13 +328,40 @@ const CharacterSheet = (window.CharacterSheet = {
 
   _renderPortrait(character, parsed, context, callbacks) {
     const { onGeneratePortrait, onTogglePortrait } = callbacks;
-    const asciiPortrait =
-      character.portrait?.ascii ||
-      character.customPortraitAscii ||
-      character.asciiPortrait ||
-      null;
-    const originalPortraitUrl =
+
+    // Prefer the active portrait version from history (if any) so the sheet
+    // always matches the grid card + history modal. Fall back to legacy
+    // top-level fields when no history metadata is present.
+    let asciiPortrait = null;
+    let originalPortraitUrl =
       character.portrait?.url || character.originalPortraitUrl || null;
+
+    try {
+      const metadata = character.portraitMetadata;
+      if (
+        metadata &&
+        Array.isArray(metadata.versions) &&
+        metadata.activeVersionId
+      ) {
+        const activeVersion = metadata.versions.find(
+          (v) => v && v.id === metadata.activeVersionId,
+        );
+        if (activeVersion) {
+          if (activeVersion.ascii) {
+            asciiPortrait = activeVersion.ascii;
+          }
+          if (activeVersion.url) {
+            originalPortraitUrl = activeVersion.url;
+          }
+        }
+      }
+    } catch (e) {
+      // Non-fatal; fall back to legacy fields below.
+    }
+
+    if (!asciiPortrait) {
+      asciiPortrait = this.getAsciiPortrait(character);
+    }
 
     // Global portrait view mode (ASCII vs Original). Builder + manager share
     // this preference via StorageService; fall back to config default.
@@ -1552,6 +1579,26 @@ const CharacterSheet = (window.CharacterSheet = {
    */
   getAsciiPortrait(character) {
     if (!character) return null;
+
+    // Prefer the active portrait version from history when available so
+    // manager, builder, and history views all agree on "current" art.
+    try {
+      const metadata = character.portraitMetadata;
+      if (
+        metadata &&
+        Array.isArray(metadata.versions) &&
+        metadata.activeVersionId
+      ) {
+        const activeVersion = metadata.versions.find(
+          (v) => v && v.id === metadata.activeVersionId,
+        );
+        if (activeVersion && activeVersion.ascii) {
+          return activeVersion.ascii;
+        }
+      }
+    } catch (e) {
+      // Non-fatal; fall through to legacy fields.
+    }
 
     const key = `${character.race || ''}|${character.class || ''}`;
 

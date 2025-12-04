@@ -85,5 +85,5 @@ window.CONFIG = {
 
   // Default portrait prompt theme when no explicit preference has been saved yet.
   // This should match one of PortraitPrompt.getThemes().id values.
-  DEFAULT_PORTRAIT_PROMPT_THEME: 'classic-ink',
+  DEFAULT_PORTRAIT_PROMPT_THEME: 'cinematic-inks',
 };

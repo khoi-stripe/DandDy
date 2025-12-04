@@ -1197,46 +1197,60 @@ async function confirmGeneratePortrait() {
            // Fall back to default subtext on any error.
        }
 
-        const dotCount = (portraitElapsed % 3) + 1;
+       const dotCount = (portraitElapsed % 3) + 1;
 
-        // Create the cube + text container once; thereafter only update text + dot state
-        let textEl = portraitEl.querySelector('.portrait-placeholder-text');
-        if (!textEl) {
-           portraitEl.innerHTML = `
-                <div class="portrait-placeholder-content">
-                    <div class="portrait-placeholder-cube-container">
-                        <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-                            <i></i>
-                            <i></i>
-                            <i></i>
-                            <i></i>
-                            <i></i>
-                            <i></i>
+       // Use shared cube loader so builder + manager share the same UI and
+       // image-model timing hint logic.
+       if (
+           window.PortraitUI &&
+           typeof PortraitUI.renderGeneratingLoader === 'function'
+       ) {
+           PortraitUI.renderGeneratingLoader(portraitEl, {
+               baseMessage,
+               subtext,
+               dotCount,
+               isLoading: true,
+           });
+       } else {
+           // Fallback: inline markup if the shared helper is unavailable.
+           let textEl = portraitEl.querySelector('.portrait-placeholder-text');
+           if (!textEl) {
+               portraitEl.innerHTML = `
+                    <div class="portrait-placeholder-content">
+                        <div class="portrait-placeholder-cube-container">
+                            <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
+                                <i></i>
+                                <i></i>
+                                <i></i>
+                                <i></i>
+                                <i></i>
+                                <i></i>
+                            </div>
+                        </div>
+                        <div class="portrait-placeholder-text" data-dots="${dotCount}">
+                            <span class="portrait-placeholder-message">${baseMessage}</span>
+                            <span class="portrait-placeholder-dots">
+                                <span class="dot dot-1">.</span>
+                                <span class="dot dot-2">.</span>
+                                <span class="dot dot-3">.</span>
+                            </span>
+                            <div class="portrait-placeholder-subtext">
+                                ${subtext}
+                            </div>
                         </div>
                     </div>
-                    <div class="portrait-placeholder-text" data-dots="${dotCount}">
-                        <span class="portrait-placeholder-message">${baseMessage}</span>
-                        <span class="portrait-placeholder-dots">
-                            <span class="dot dot-1">.</span>
-                            <span class="dot dot-2">.</span>
-                            <span class="dot dot-3">.</span>
-                        </span>
-                        <div class="portrait-placeholder-subtext">
-                            ${subtext}
-                        </div>
-                    </div>
-                </div>
-            `;
-            textEl = portraitEl.querySelector('.portrait-placeholder-text');
-        } else {
-            textEl.setAttribute('data-dots', String(dotCount));
-            const messageEl = textEl.querySelector('.portrait-placeholder-message');
-            if (messageEl) {
-                messageEl.textContent = baseMessage;
-            }
-        }
+                `;
+                textEl = portraitEl.querySelector('.portrait-placeholder-text');
+           } else {
+               textEl.setAttribute('data-dots', String(dotCount));
+               const messageEl = textEl.querySelector('.portrait-placeholder-message');
+               if (messageEl) {
+                   messageEl.textContent = baseMessage;
+               }
+           }
+       }
 
-        portraitElapsed++;
+       portraitElapsed++;
     };
     
     if (portraitEl) {
@@ -1455,8 +1469,14 @@ async function confirmGeneratePortrait() {
             cameraList[Math.floor(Math.random() * cameraList.length)];
 
         let renderingInstructions;
-        try {
-            // Resolve current portrait prompt theme (same logic as builder).
+        if (
+            typeof window !== 'undefined' &&
+            window.PortraitPrompt &&
+            typeof window.PortraitPrompt.buildCustomPortraitInstructions ===
+                'function'
+        ) {
+            // Shared helper so builder + manager use the exact same STYLE / Scene
+            // logic (including admin-defined prompt styles) for custom prompts.
             let promptThemeId = null;
             try {
                 if (
@@ -1472,72 +1492,24 @@ async function confirmGeneratePortrait() {
                 // Non-fatal: fall back to default theme behavior below.
             }
 
-            // Prefer the structured style/background builder when available so
-            // admin-defined prompt styles (from prompt-style-admin.html) are
-            // respected in both the builder and manager.
-            let styleDescription = '';
-            let backgroundDescription = '';
-            if (
-                typeof window !== 'undefined' &&
-                window.PortraitPrompt &&
-                typeof window.PortraitPrompt.buildStyleAndBackgroundDescriptions ===
-                    'function'
-            ) {
-                try {
-                    const sections =
-                        window.PortraitPrompt.buildStyleAndBackgroundDescriptions({
-                            posePrompt,
-                            cameraPrompt,
-                            themeId: promptThemeId,
-                        }) || {};
-                    styleDescription = sections.styleDescription || '';
-                    backgroundDescription = sections.backgroundDescription || '';
-                } catch (e) {
-                    // Non-fatal – fall through to simple defaults below.
-                }
-            }
-
-            // Sensible defaults when no admin style is configured.
-            if (!styleDescription) {
-                styleDescription =
-                    'High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';
-            }
-            if (!backgroundDescription) {
-                backgroundDescription =
-                    'Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';
-            }
-
+            renderingInstructions =
+                window.PortraitPrompt.buildCustomPortraitInstructions({
+                    posePrompt,
+                    cameraPrompt,
+                    themeId: promptThemeId,
+                });
+        } else {
+            // Fallback if PortraitPrompt is unavailable.
             renderingInstructions = [
+                'Create a high-contrast black-and-white fantasy illustration.',
+                'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
+                'Include some controlled, directional hatching to define form (light mid-tone texture only).',
                 `Pose: ${posePrompt}`,
                 cameraPrompt,
-                `STYLE: ${styleDescription}`,
-                `Scene: ${backgroundDescription}`,
+                'Background should be simple, entirely black, and free of symbols or text.',
+                'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+                'Aspect ratio 3:4.',
             ];
-        } catch (e) {
-            // Fallback if anything above fails or PortraitPrompt is unavailable.
-            if (
-                typeof window !== 'undefined' &&
-                window.PortraitPrompt &&
-                typeof window.PortraitPrompt.buildBasePortraitInstructions ===
-                    'function'
-            ) {
-                renderingInstructions =
-                    window.PortraitPrompt.buildBasePortraitInstructions({
-                        posePrompt,
-                        cameraPrompt,
-                    });
-            } else {
-                renderingInstructions = [
-                    'Create a high-contrast black-and-white fantasy illustration.',
-                    'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
-                    'Include some controlled, directional hatching to define form (light mid-tone texture only).',
-                    `Pose: ${posePrompt}`,
-                    cameraPrompt,
-                    'Background should be simple, entirely black, and free of symbols or text.',
-                    'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
-                    'Aspect ratio 3:4.',
-                ];
-            }
         }
         
         const fullPrompt = [...renderingInstructions, customPrompt].join(' ');

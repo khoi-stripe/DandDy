@@ -451,6 +451,12 @@
   margin-bottom: 0;
 }
 
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .settings-label {
   display: block;
   margin-bottom: var(--spacing-sm);
