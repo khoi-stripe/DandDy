@@ -368,7 +368,7 @@ const StorageService = (window.StorageService = {
     }
     return CharacterStorage.getAll();
   },
-
+  
   /**
    * Save character via shared CharacterStorage facade.
    * Automatically creates or updates based on presence of character.id.
@@ -379,19 +379,19 @@ const StorageService = (window.StorageService = {
       return character;
     }
 
-    if (character.id) {
-      if (DEBUG_BUILDER) {
-        console.log('💾 BUILDER: Updating character via CharacterStorage:', character.id);
-      }
+      if (character.id) {
+        if (DEBUG_BUILDER) {
+          console.log('💾 BUILDER: Updating character via CharacterStorage:', character.id);
+        }
       return CharacterStorage.update(character.id, character);
-    } else {
-      if (DEBUG_BUILDER) {
-        console.log('💾 BUILDER: Creating character via CharacterStorage');
-      }
+      } else {
+        if (DEBUG_BUILDER) {
+          console.log('💾 BUILDER: Creating character via CharacterStorage');
+        }
       return CharacterStorage.add(character);
     }
   },
-
+  
   /**
    * Delete character via shared CharacterStorage facade.
    */

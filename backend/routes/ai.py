@@ -1129,8 +1129,8 @@ async def generate_character_summary(
             e,
             feature_name="character summary",
             safety_message=(
-                "Your character summary request was flagged by OpenAI's safety system. "
-                "Please try slightly different race/class/background details."
-            ),
+                    "Your character summary request was flagged by OpenAI's safety system. "
+                    "Please try slightly different race/class/background details."
+                ),
         )
 

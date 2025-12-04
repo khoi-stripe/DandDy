@@ -18,7 +18,7 @@
   // ========================================
   // API CLIENT (for authenticated users)
   // ========================================
-  const API_BASE = (window.DanddyConfig && window.DanddyConfig.API_URL) || 'http://localhost:8000/api';
+  const API_BASE = (window.DanddyConfig && window.DanddyConfig.API_BASE_URL) || 'http://localhost:8000/api';
 
   function getAuthToken() {
     return window.AuthService && window.AuthService.getToken ? window.AuthService.getToken() : null;
@@ -662,7 +662,7 @@
                 saveEntriesToLocalStorage(entries);
               }
             } else {
-              entries[idx] = nextEntry;
+            entries[idx] = nextEntry;
               saveEntriesToLocalStorage(entries);
             }
           }
@@ -697,7 +697,7 @@
               saveEntriesToLocalStorage(entries);
             }
           } else {
-            entries.push(newEntry);
+          entries.push(newEntry);
             saveEntriesToLocalStorage(entries);
           }
         }
@@ -747,7 +747,7 @@
             saveEntriesToLocalStorage(entries);
           }
         } else {
-          entries = entries.concat(defaults);
+        entries = entries.concat(defaults);
           saveEntriesToLocalStorage(entries);
         }
         

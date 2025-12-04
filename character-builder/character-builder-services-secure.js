@@ -32,9 +32,9 @@ const SecureAIService = (window.SecureAIService = {
   async generateCompletion(prompt, systemPrompt = null, options = {}) {
     if (window.AIService && typeof AIService.generateCompletion === 'function') {
       return AIService.generateCompletion(prompt, systemPrompt);
-    }
+      }
     console.warn('SecureAIService: AIService not available');
-    return null;
+      return null;
   },
 
   async generateNarratorComment(context) {
@@ -42,35 +42,35 @@ const SecureAIService = (window.SecureAIService = {
       return AIService.generateNarratorComment(context);
     }
     // Minimal fallback
-    const fallbacks = [
-      'Interesting choice. ( ._. )',
-      "Well, that tracks.",
-      "Bold move. We'll see how that works out.",
-      'Sure. Why not.',
-    ];
-    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+      const fallbacks = [
+        'Interesting choice. ( ._. )',
+        "Well, that tracks.",
+        "Bold move. We'll see how that works out.",
+        'Sure. Why not.',
+      ];
+      return fallbacks[Math.floor(Math.random() * fallbacks.length)];
   },
 
   async generateNames(race, classType, count = 3) {
     if (window.AIService && typeof AIService.generateNames === 'function') {
       return AIService.generateNames(race, classType, count);
-    }
+      }
     console.warn('SecureAIService: AIService not available');
-    return null;
+      return null;
   },
 
   async generateBackstory(character) {
     if (window.AIService && typeof AIService.generateBackstory === 'function') {
       return AIService.generateBackstory(character);
-    }
+          }
     console.warn('SecureAIService: AIService not available');
-    return null;
+      return null;
   },
 
   async generatePortraitImage(character) {
     if (window.AIService && typeof AIService.generatePortraitImage === 'function') {
       return AIService.generatePortraitImage(character);
-    }
+          }
     console.warn('SecureAIService: AIService not available');
     return null;
   },
