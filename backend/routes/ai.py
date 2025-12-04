@@ -67,6 +67,10 @@ def _push_log_to_loki(labels: dict, log: dict):
     """
     Best-effort push of a single structured log line to Grafana Loki.
     Fails silently so it never breaks the main request path.
+    
+    For Grafana Cloud, set:
+      GRAFANA_LOKI_URL = https://logs-prod-XXX.grafana.net/loki/api/v1/push
+      GRAFANA_LOKI_TOKEN = <user_id>:<api_key>  (Basic Auth format)
     """
     if not (GRAFANA_LOKI_URL and GRAFANA_LOKI_TOKEN):
         return
@@ -81,12 +85,18 @@ def _push_log_to_loki(labels: dict, log: dict):
                 }
             ]
         }
+        
+        # Grafana Cloud uses Basic Auth: base64(user_id:api_key)
+        # Token format should be "user_id:api_key"
+        auth_bytes = base64.b64encode(GRAFANA_LOKI_TOKEN.encode("utf-8")).decode("utf-8")
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {GRAFANA_LOKI_TOKEN}",
+            "Authorization": f"Basic {auth_bytes}",
         }
         # Fire-and-forget; short timeout so we don't block user requests
-        httpx.post(GRAFANA_LOKI_URL, headers=headers, json=payload, timeout=2.0)
+        resp = httpx.post(GRAFANA_LOKI_URL, headers=headers, json=payload, timeout=2.0)
+        if resp.status_code >= 400:
+            print(f"[LOKI ERROR] HTTP {resp.status_code}: {resp.text[:200]}")
     except Exception as e:
         # Keep this minimal to avoid log loops
         print("[LOKI ERROR]", str(e))
@@ -263,8 +273,10 @@ class ImageGenerationRequest(BaseModel):
     """Request for image generation"""
     prompt: str = Field(..., min_length=10, max_length=4000)
     size: str = Field("1024x1024", pattern="^(256x256|512x512|1024x1024|1792x1024|1024x1792)$")
-    # DALL-E 3 accepts: standard, hd (we also tolerate older gpt-image-1 values for compatibility)
-    quality: str = Field("standard", pattern="^(standard|hd|low|medium|high|auto)$")
+    # OpenAI Images API currently documents: low, medium, high, auto.
+    # We continue to tolerate legacy aliases "standard" and "hd" for callers
+    # that haven't been updated yet, but they will be mapped server-side.
+    quality: str = Field("medium", pattern="^(standard|hd|low|medium|high|auto)$")
     # Image model to use. We currently support:
     # - dall-e-3      (default)
     # - gpt-image-1   (GPT Image 1 image model)
@@ -404,8 +416,74 @@ async def get_ai_status():
         "features": {
             "chat": OPENAI_API_KEY is not None,
             "images": OPENAI_API_KEY is not None
+        },
+        "observability": {
+            "loki_configured": bool(GRAFANA_LOKI_URL and GRAFANA_LOKI_TOKEN),
         }
     }
+
+
+@router.post("/observability/test")
+async def test_loki_connection():
+    """
+    Send a test log to Grafana Loki to verify configuration.
+    Returns success/failure status.
+    """
+    if not (GRAFANA_LOKI_URL and GRAFANA_LOKI_TOKEN):
+        return {
+            "success": False,
+            "error": "GRAFANA_LOKI_URL and GRAFANA_LOKI_TOKEN not configured",
+            "hint": "Set these in your .env file. Token format: user_id:api_key"
+        }
+    
+    try:
+        ts_ns = str(int(time.time() * 1_000_000_000))
+        test_log = {
+            "event": "loki.test",
+            "at": datetime.utcnow().isoformat() + "Z",
+            "message": "Test log from DandDy API",
+        }
+        payload = {
+            "streams": [
+                {
+                    "stream": {
+                        "app": "danddy-api",
+                        "source": "test",
+                        "event": "loki.test",
+                    },
+                    "values": [[ts_ns, json.dumps(test_log)]],
+                }
+            ]
+        }
+        
+        auth_bytes = base64.b64encode(GRAFANA_LOKI_TOKEN.encode("utf-8")).decode("utf-8")
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Basic {auth_bytes}",
+        }
+        
+        resp = httpx.post(GRAFANA_LOKI_URL, headers=headers, json=payload, timeout=5.0)
+        
+        if resp.status_code < 300:
+            return {
+                "success": True,
+                "message": "Test log sent to Loki successfully!",
+                "loki_url": GRAFANA_LOKI_URL,
+                "hint": "Check Grafana Explore with query: {app=\"danddy-api\"}"
+            }
+        else:
+            return {
+                "success": False,
+                "error": f"Loki returned HTTP {resp.status_code}",
+                "response": resp.text[:500],
+                "hint": "Check your GRAFANA_LOKI_URL and GRAFANA_LOKI_TOKEN"
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "hint": "Check network connectivity and credentials"
+        }
 
 
 @router.post("/chat/completion")
@@ -483,29 +561,58 @@ async def generate_image(
         if model not in ("dall-e-3", "gpt-image-1"):
             model = "dall-e-3"
 
-        response = _call_openai_with_logging(
-            kind="images.generate",
-            fn=openai.images.generate,
-            model=model,
-            prompt=request.prompt,
-            n=1,
-            size=request.size,
-            # NOTE: Some OpenAI image backends / deployments currently reject the
-            # `quality` parameter entirely with "Unknown parameter: 'quality'".
-            # To keep this endpoint compatible across environments, we do NOT
-            # pass `quality` through, even though our Pydantic model still
-            # accepts it from the client. This makes the backend tolerant of
-            # older or custom OpenAI deployments.
-            # quality=request.quality,
-            #
-            # Likewise, older image endpoints may not support `response_format`.
-            # We rely on the default behavior (URL) and continue to read
-            # `response.data[0].url` below.
-            context={
-                "feature": "image_generation",
-                "client_id": client_id,
-            },
-        )
+        # Normalize quality for the current Images API:
+        # - Official values: low, medium, high, auto
+        # - Legacy aliases: standard → medium, hd → high
+        raw_quality = (request.quality or "medium").lower()
+        if raw_quality == "standard":
+            normalized_quality = "medium"
+        elif raw_quality == "hd":
+            normalized_quality = "high"
+        elif raw_quality in ("low", "medium", "high", "auto"):
+            normalized_quality = raw_quality
+        else:
+            normalized_quality = "medium"
+
+        try:
+            response = _call_openai_with_logging(
+                kind="images.generate",
+                fn=openai.images.generate,
+                model=model,
+                prompt=request.prompt,
+                n=1,
+                size=request.size,
+                quality=normalized_quality,
+                # Likewise, older image endpoints may not support `response_format`.
+                # We rely on the default behavior (URL) and continue to read
+                # `response.data[0].url` below.
+                context={
+                    "feature": "image_generation",
+                    "client_id": client_id,
+                    "quality": normalized_quality,
+                },
+            )
+        except openai.BadRequestError as e:
+            # Some older or custom deployments still reject the `quality` param
+            # entirely. If we detect that specific error, retry without quality
+            # so callers don't have to care about backend version details.
+            msg = str(e).lower()
+            if "unknown parameter" in msg and "quality" in msg:
+                response = _call_openai_with_logging(
+                    kind="images.generate",
+                    fn=openai.images.generate,
+                    model=model,
+                    prompt=request.prompt,
+                    n=1,
+                    size=request.size,
+                    context={
+                        "feature": "image_generation",
+                        "client_id": client_id,
+                        "quality": "omitted_due_to_backend",
+                    },
+                )
+            else:
+                raise
 
         # Defensive handling in case the SDK or response shape changes.
         data = getattr(response, "data", None)
