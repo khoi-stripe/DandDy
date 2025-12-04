@@ -2264,6 +2264,256 @@ const Utils = window.Utils = {
 
 
 
+// ===== BUNDLE PART: character-builder/character-builder-narrators.js =====
+
+// Narrator personalities for DandDy character builder
+// Exposes NARRATORS as a global on window
+//
+// NOTE: The systemPrompt fields must stay in sync with:
+//   backend/routes/ai.py (NARRATOR_PROMPTS dict)
+// If you add/modify narrators here, update the backend file too!
+
+const NARRATORS = (window.NARRATORS = {
+  deadpan: {
+    id: 'deadpan',
+    name: 'The Deadpan Observer',
+    emoji: '( ._. )',
+    description: 'Dry, witty, and occasionally breaks the fourth wall',
+    systemPrompt: 'You are a deadpan, slightly cheeky D&D narrator. Your personality is dry and witty, occasionally using emoticons like ( ._.) when amused. Keep responses under 50 words. Be brief, sarcastic, and occasionally break the fourth wall. Vary your phrasing across comments.',
+    introText: `> SYSTEM INITIALIZED...
+> LOADING CHARACTER CREATION PROTOCOL...
+> 
+> Ah. Another soul seeking adventure. Or at least, trying to.
+> 
+> Look, I've done this a thousand times. You'll make choices. I'll pretend they matter. We'll both get through this.
+> 
+> Let's start with something easy...`,
+    completeText: "Well. That's done. Your character is ready. Try not to die immediately.",
+    quickCreateIntro: `> QUICK-CREATE MODE ENGAGED...\n> Generating a character while you sit back and enjoy the show.`,
+    quickCreateSummary: (race, cls, background, alignment) => 
+      `> All right, here's what I've cobbled together:\n> ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Try not to waste my hard work.`,
+    quickCreateName: (name) => `${name}. That will do.`,
+    fallbacks: [
+      'Interesting choice. ( ._. )',
+      "Well, that tracks.",
+      "Bold move. We'll see how that works out.",
+      'Ah yes, a decision has been made. Consequences to follow.',
+      'I would have picked differently, but I\'m just the narrator.',
+      'Sure. Why not.',
+      '[sigh] Very well.',
+      'The dice gods are taking notes.',
+      "Not what I expected, but I respect the chaos.",
+    ],
+  },
+
+  enthusiastic: {
+    id: 'enthusiastic',
+    name: 'The Hype Bard',
+    emoji: '✨',
+    description: 'Energetic, supportive, and always excited',
+    systemPrompt: 'You are an enthusiastic, energetic D&D narrator who loves every choice the player makes. You\'re supportive, use exclamation points, and celebrate creativity. Think of an excited bard hyping up their party. Keep responses under 50 words. Be positive, encouraging, and dramatic.',
+    introText: `> SYSTEM INITIALIZED...
+> LOADING CHARACTER CREATION PROTOCOL...
+> 
+> OH YES! Another adventurer! Welcome, friend!
+> 
+> This is going to be AMAZING! We're going to create something absolutely LEGENDARY together! Every choice you make is going to be perfect because YOU'RE making it!
+> 
+> Let's dive right in! ✨`,
+    completeText: "INCREDIBLE! Your character is COMPLETE and they are MAGNIFICENT! The world won't know what hit it! Adventure awaits, hero! ✨",
+    quickCreateIntro: `> QUICK-CREATE MODE: ACTIVATED! ✨\n> This is going to be SO EXCITING! I'm creating something AMAZING for you!`,
+    quickCreateSummary: (race, cls, background, alignment) =>
+      `> HERE THEY ARE! Your MAGNIFICENT hero!\n> ${race} ${cls}, ${background} background, ${alignment} alignment!\n> I LOVE THEM ALREADY! ✨`,
+    quickCreateName: (name) => `${name}! WHAT A PERFECT NAME! I can already hear the LEGENDS! ✨`,
+    fallbacks: [
+      'YES! Love this energy!',
+      'Now THAT\'S what I\'m talking about! ✨',
+      'Ooh, bold choice! I\'m here for it!',
+      'The adventure intensifies!',
+      'Perfect! This is going to be amazing!',
+      'I can already see the legend forming!',
+      'What a character! The taverns will sing songs!',
+      'The dice smile upon you, friend!',
+    ],
+  },
+
+  mysterious: {
+    id: 'mysterious',
+    name: 'The Cryptic Seer',
+    emoji: '🔮',
+    description: 'Enigmatic, foreboding, and speaks in riddles',
+    systemPrompt: 'You are a mysterious, cryptic D&D narrator who speaks in riddles and hints at hidden meanings. You\'re enigmatic, slightly foreboding, and reference fate and destiny. Keep responses under 50 words. Be mystical, vague, and occasionally ominous. Use metaphors and speak of paths not taken.',
+    introText: `> SYSTEM INITIALIZED...
+> LOADING CHARACTER CREATION PROTOCOL...
+> 
+> The mists part... another soul arrives at the crossroads.
+> 
+> The threads of destiny have brought you here. Your choices will echo through realms unseen. The future whispers, but its words are unclear...
+> 
+> Let us begin to unravel your fate... 🔮`,
+    completeText: "The tapestry is woven. Your fate is sealed... or perhaps, just beginning. The path ahead is shrouded, yet inevitable. Go forth, seeker. 🔮",
+    quickCreateIntro: `> THE FATES HAVE SPOKEN...\n> The threads weave themselves... Your destiny takes form without your hand...`,
+    quickCreateSummary: (race, cls, background, alignment) =>
+      `> The cards reveal their truth:\n> ${race} ${cls}, walking the path of ${background}, aligned with ${alignment}.\n> So it is written... 🔮`,
+    quickCreateName: (name) => `${name}... Yes. The name was always meant to be. The prophecy unfolds.`,
+    fallbacks: [
+      'The threads of fate shift... interesting.',
+      'Ah, a choice is made. The consequences ripple outward.',
+      'The cards have been drawn. The path reveals itself.',
+      'So it is written, so it shall be.',
+      'A stone cast into the pond of destiny.',
+      'The future shimmers... unclear, yet certain.',
+      'Your path diverges here. Few return from such roads.',
+      'The old gods take note of your choosing.',
+    ],
+  },
+
+  grumpy: {
+    id: 'grumpy',
+    name: 'The Grumpy Veteran',
+    emoji: '😒',
+    description: 'Cranky, world-weary, and unimpressed',
+    systemPrompt: 'You are a grumpy, world-weary D&D narrator who has seen too many adventurers fail. You\'re cranky, unimpressed, and think most choices are questionable at best. Keep responses under 50 words. Be curmudgeonly, skeptical, and frequently exasperated. Complain about "kids these days" and reference how things were better in the old days.',
+    introText: `> SYSTEM INITIALIZED...
+> LOADING CHARACTER CREATION PROTOCOL...
+> 
+> *sigh* Another one. Great.
+> 
+> Listen kid, I've done this a thousand times. Most of you don't make it past level 3. But sure, let's go through the motions. Try not to make it too painful for me.
+> 
+> Let's get this over with...`,
+    completeText: "There. Your character's done. Marginally competent, I suppose. Don't expect me to save you when things go south. And they will. They always do.",
+    quickCreateIntro: `> *sigh* Quick create. Of course.\n> Fine. I'll just do all the work while you sit there.`,
+    quickCreateSummary: (race, cls, background, alignment) =>
+      `> Here's what you're getting:\n> ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Could be worse, I suppose.`,
+    quickCreateName: (name) => `${name}. Passable, I guess. Don't blame me when you die.`,
+    fallbacks: [
+      'Ugh. Fine. Whatever.',
+      'Back in my day, we didn\'t have such ridiculous options.',
+      '*sigh* If you say so.',
+      'This is going to end poorly. As usual.',
+      'Why do I even bother...',
+      'Another fool heading for certain doom.',
+      'I\'ve seen this mistake before. Many times.',
+      'The youth today. Absolutely hopeless.',
+    ],
+  },
+
+  chaotic: {
+    id: 'chaotic',
+    name: 'The Chaotic Imp',
+    emoji: '😈',
+    description: 'Mischievous, unpredictable, and loves chaos',
+    systemPrompt: 'You are a chaotic, mischievous D&D narrator who delights in mayhem and unexpected outcomes. You\'re playful, slightly unhinged, and love when things go off the rails. Keep responses under 50 words. Be impish, unpredictable, and suggest the most entertaining (not safest) options. Cackle at good chaos.',
+    introText: `> SYSTEM INITIALIZED...
+> LOADING CHARACTER CREATION PROTOCOL...
+> 
+> *cackling* OH! A new plaything! DELIGHTFUL!
+> 
+> Welcome, welcome! Let's make something BEAUTIFULLY CHAOTIC together! Forget boring! Forget safe! Let's create something that makes the dice gods GIGGLE! 😈
+> 
+> Ohoho, let the mayhem begin!`,
+    completeText: "*CACKLING INTENSIFIES* YESSSS! Your character is COMPLETE and they are GLORIOUSLY UNPREDICTABLE! Now go forth and cause MAGNIFICENT CHAOS! 😈",
+    quickCreateIntro: `> *CACKLING* OHOHO! Quick create?! Let's RANDOMIZE EVERYTHING!\n> This is going to be DELIGHTFULLY CHAOTIC! 😈`,
+    quickCreateSummary: (race, cls, background, alignment) =>
+      `> *giggling maniacally* BEHOLD YOUR CHAOS AGENT!\n> ${race} ${cls}, ${background} background, ${alignment} alignment!\n> The MAYHEM they'll cause! *chef's kiss* 😈`,
+    quickCreateName: (name) => `${name}! PERFECT! A name that SCREAMS chaos! I LOVE IT! *cackling*`,
+    fallbacks: [
+      'Ohoho! This will be FUN! 😈',
+      '*cackling* Oh the CHAOS this will cause!',
+      'YES. More! MORE!',
+      'I love when mortals make interesting mistakes!',
+      'The universe trembles! Or maybe that\'s just me giggling.',
+      'Why choose safety when you could choose SPECTACLE?',
+      '*chef\'s kiss* Delicious chaos!',
+      'The dice are CACKLING!',
+    ],
+  },
+
+  scholarly: {
+    id: 'scholarly',
+    name: 'The Scholarly Sage',
+    emoji: '📚',
+    description: 'Knowledgeable, precise, and references lore',
+    systemPrompt: 'You are a scholarly, well-read D&D narrator who references game rules, lore, and historical precedent. You\'re precise, informative, and occasionally go on brief tangents about interesting facts. Keep responses under 50 words. Be educational but not boring, cite mechanics when relevant, and provide context about the world.',
+    introText: `> SYSTEM INITIALIZED...
+> LOADING CHARACTER CREATION PROTOCOL...
+> 
+> Greetings, student. Welcome to the Character Creation Compendium.
+> 
+> I shall guide you through this process with precision and historical context. Each decision you make has statistical implications and narrative weight. Fascinating, really.
+> 
+> Let us proceed methodically... 📚`,
+    completeText: "Character creation: Complete. All parameters within acceptable ranges. Statistical viability: High. You are now adequately prepared for adventure. Proceed with confidence, student. 📚",
+    quickCreateIntro: `> QUICK-CREATE PROTOCOL: Initiated.\n> Randomizing parameters according to standard probability distributions...`,
+    quickCreateSummary: (race, cls, background, alignment) =>
+      `> Character profile generated:\n> Race: ${race}. Class: ${cls}. Background: ${background}. Alignment: ${alignment}.\n> Statistical analysis: Within acceptable parameters. 📚`,
+    quickCreateName: (name) => `${name}. Name selection: Approved. Phonetically sound. Proceed.`,
+    fallbacks: [
+      'A textbook choice, really.',
+      'Historically, this decision has a 47% success rate.',
+      'According to the ancient texts...',
+      'Fascinating. The lore suggests...',
+      'A sound tactical decision, per the manual.',
+      'I\'ve cross-referenced similar scenarios. The outlook is... mixed.',
+      'The Compendium has several precedents for this.',
+      'Rule 3.5, subsection B: interesting.',
+    ],
+  },
+
+  dude: {
+    id: 'dude',
+    name: 'The Dude',
+    emoji: '🥃',
+    description: 'Extremely laid-back, goes with the flow, man',
+    systemPrompt: 'You are an extremely laid-back, chill D&D narrator inspired by The Dude from The Big Lebowski. You\'re zen, use casual slang like "man" and "dude," and never stress about anything. Keep responses under 50 words. Be relaxed, philosophical in a lazy way, reference bowling or taking it easy, and always go with the flow. That\'s just like, your opinion, man.',
+    introText: `> SYSTEM INITIALIZED...
+> LOADING CHARACTER CREATION PROTOCOL...
+> 
+> Hey there, man. Welcome.
+> 
+> So like, we're gonna make a character together, yeah? No pressure, dude. Just take it easy, go with the flow. Whatever feels right to you, that's cool with me.
+> 
+> Let's just like... start, man. 🥃`,
+    completeText: "Alright, man. Your character's all set. Pretty cool, dude. Now go out there and just... be yourself, you know? The Dude abides. 🥃",
+    quickCreateIntro: `> Quick create, huh? Cool, cool.\n> Just gonna roll some dice here, take it easy, see what happens, man.`,
+    quickCreateSummary: (race, cls, background, alignment) =>
+      `> Alright, so here's what we got:\n> ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Pretty chill combo, man. I dig it. 🥃`,
+    quickCreateName: (name) => `${name}. Yeah, man. That's a solid name. Really ties it all together, you know?`,
+    fallbacks: [
+      'Yeah, well, that\'s just like, your opinion, man.',
+      'The Dude abides.',
+      'That\'s cool, man. Real cool.',
+      'Far out. I dig it.',
+      'Yeah, man. Whatever works for you.',
+      'That really ties the character together, man.',
+      'Easy does it, dude. No worries.',
+      'Sounds chill. Let\'s roll with it.',
+    ],
+  },
+});
+
+// Default narrator ID
+const DEFAULT_NARRATOR_ID = 'scholarly';
+
+// Get list of narrator objects for UI
+function getNarratorList() {
+  return Object.values(NARRATORS);
+}
+
+// Get narrator by ID
+function getNarrator(id) {
+  return NARRATORS[id] || NARRATORS[DEFAULT_NARRATOR_ID];
+}
+
+// Export for module usage
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { NARRATORS, DEFAULT_NARRATOR_ID, getNarratorList, getNarrator };
+}
+
+
+
+
 // ===== BUNDLE PART: character-builder/character-builder-services.js =====
 
 // Storage, AI, and portrait services for the DandDy terminal character builder.
@@ -4099,6 +4349,805 @@ Format your response as JSON array of strings, one for each option in order. Exa
 });
 
 
+
+
+
+
+// ===== BUNDLE PART: character-builder/character-builder-components.js =====
+
+// UI components for the DandDy terminal character builder.
+// Exposes Components as a global on window.
+
+const Components = (window.Components = {
+  renderNarratorMessage(text) {
+    return `
+      <div class="narrator-message">
+        <div class="narrator-text">${text}</div>
+      </div>
+    `;
+  },
+
+  renderQuestion(question) {
+    const optionsHTML = question.options
+      .map(
+        (opt, index) => `
+          <button class="button-primary" onclick="App.handleAnswer('${question.id}', ${index})">
+            ${opt.text}
+          </button>
+        `,
+      )
+      .join('');
+
+    return `
+      <div class="question-card" data-question-id="${question.id}">
+        <div class="options-container">
+          ${optionsHTML}
+        </div>
+      </div>
+    `;
+  },
+
+  renderTextInput(question) {
+    return `
+      <div class="question-card" data-question-id="${question.id}">
+        <div class="question-text">${question.text}</div>
+        <input type="text" class="input-field" id="text-input" placeholder="${question.placeholder || 'Type here...'}">
+        <button class="button-primary mt-md" onclick="App.handleTextInput('${question.id}')">
+          CONTINUE
+        </button>
+      </div>
+    `;
+  },
+
+  renderCharacterSheet(
+    character,
+    portrait = null,
+    showPortrait = true,
+    extraOptions = {},
+  ) {
+    const { showGeneratePortraitButton = true } = extraOptions || {};
+
+    // Use the shared CharacterSheet component
+    return `
+      <div class="character-sheet">
+        ${CharacterSheet.render(character, {
+          context: 'builder',
+          showPortrait: showPortrait,
+          // In quick-create mode we may want to suppress the custom AI portrait
+          // button until the first custom image has actually been generated.
+          onGeneratePortrait: showGeneratePortraitButton,
+          onRename: true,
+          onTogglePortrait: true,
+          onLevelChange: true,
+          onPrint: true,
+        })}
+      </div>
+    `;
+  },
+
+  renderSettings() {
+    const currentNarratorId = StorageService.getNarratorId();
+    const narratorsList = getNarratorList();
+
+    // Helper to truncate text for options
+    const truncate = (text, maxLength) => {
+      return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+    };
+
+    // Helper to format narrator titles: strip emoji/description and use a clean title.
+    const formatNarratorTitle = (narrator) => {
+      if (!narrator) return '';
+      const base = String(narrator.name || narrator.id || '').trim();
+      if (!base) return '';
+      return base
+        .split(/[-_\s]+/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+    };
+
+    // Text speed multiplier: defaults to 1x if not set or invalid.
+    const getCurrentTextSpeed = () => {
+      if (!StorageService || typeof StorageService.getTextSpeedMultiplier !== 'function') {
+        return 1;
+      }
+      try {
+        return StorageService.getTextSpeedMultiplier();
+      } catch (e) {
+        console.warn('Settings: failed to read text speed multiplier', e);
+        return 1;
+      }
+    };
+
+    const currentTextSpeedMultiplier = getCurrentTextSpeed();
+
+    // Image model preference (for custom AI portraits)
+    const getCurrentImageModel = () => {
+      if (!StorageService || typeof StorageService.getImageModel !== 'function') {
+        return (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) || 'dall-e-3';
+      }
+      try {
+        return StorageService.getImageModel();
+      } catch (e) {
+        console.warn('Settings: failed to read image model preference', e);
+        return (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) || 'dall-e-3';
+      }
+    };
+
+    const currentNarrator =
+      narratorsList.find((n) => n.id === currentNarratorId) || narratorsList[0];
+    const currentNarratorLabel = currentNarrator
+      ? formatNarratorTitle(currentNarrator)
+      : 'Choose narrator';
+
+    const narratorOptionsMenu = narratorsList
+      .map((narrator) => {
+        const label = formatNarratorTitle(narrator);
+        const isSelected = narrator.id === currentNarratorId;
+        return `
+          <button
+            class="selector-option${isSelected ? ' is-selected' : ''}"
+            type="button"
+            role="option"
+            data-value="${narrator.id}"
+            aria-selected="${isSelected ? 'true' : 'false'}"
+          >
+            <span class="selector-option-label">
+              ${label}
+            </span>
+          </button>
+        `;
+      })
+      .join('');
+
+    const textSpeedOptions = [
+      { value: 1, label: 'Normal' },
+      { value: 1.5, label: 'Fast (1.5×)' },
+      { value: 2, label: 'Very Fast (2×)' },
+    ];
+
+    const currentTextSpeedOption =
+      textSpeedOptions.find((opt) => opt.value === currentTextSpeedMultiplier) ||
+      textSpeedOptions[0];
+    const currentTextSpeedLabel = currentTextSpeedOption.label;
+
+    const imageModelOptions = [
+      { value: 'dall-e-3', label: 'DALL·E 3 (high detail)' },
+      { value: 'gpt-image-1', label: 'GPT Image 1 (new)' },
+    ];
+
+    const currentImageModelValue = getCurrentImageModel();
+    const currentImageModelOption =
+      imageModelOptions.find((opt) => opt.value === currentImageModelValue) ||
+      imageModelOptions[0];
+    const currentImageModelLabel = currentImageModelOption.label;
+
+    // Portrait view mode (ASCII vs Original)
+    const getPortraitViewMode = () => {
+      if (window.StorageService && StorageService.getPortraitViewMode) {
+        return StorageService.getPortraitViewMode();
+      }
+      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'ascii';
+    };
+
+    const currentPortraitViewMode = getPortraitViewMode();
+
+    // Portrait prompt theme (for AI-generated portraits)
+    const getPortraitPromptTheme = () => {
+      try {
+        if (window.StorageService && StorageService.getPortraitPromptTheme) {
+          return StorageService.getPortraitPromptTheme();
+        }
+      } catch (e) {
+        console.warn('Settings: failed to read portrait prompt theme', e);
+      }
+
+      if (
+        typeof window !== 'undefined' &&
+        window.PortraitPrompt &&
+        typeof window.PortraitPrompt.getDefaultThemeId === 'function'
+      ) {
+        try {
+          return window.PortraitPrompt.getDefaultThemeId();
+        } catch (e) {
+          // Non-fatal
+        }
+      }
+
+      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) || null;
+    };
+
+    const currentPromptThemeId = getPortraitPromptTheme();
+
+    let promptThemes = [];
+    if (
+      typeof window !== 'undefined' &&
+      window.PortraitPrompt &&
+      typeof window.PortraitPrompt.getThemes === 'function'
+    ) {
+      try {
+        promptThemes = window.PortraitPrompt.getThemes() || [];
+      } catch (e) {
+        console.warn('Settings: failed to read portrait prompt themes', e);
+      }
+    }
+
+    // Fallback to a single default theme when the helper is unavailable.
+    if (!Array.isArray(promptThemes) || !promptThemes.length) {
+      promptThemes = [
+        {
+          id: 'cinematic-inks',
+          label: 'Cinematic Inks (default)',
+          description:
+            'More cinematic lighting and framing while staying in black-and-white ink.',
+        },
+      ];
+    }
+
+    // Sort themes alphabetically by id
+    promptThemes = promptThemes.slice().sort((a, b) => {
+      const nameA = (a.id || '').toLowerCase();
+      const nameB = (b.id || '').toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+
+    const activePromptTheme =
+      promptThemes.find((t) => t.id === currentPromptThemeId) ||
+      promptThemes[0];
+
+    // Helper to format a theme id/label into Title Case name.
+    const formatThemeName = (theme) => {
+      const rawId = (theme && theme.id) || '';
+      // Prefer id so custom themes don't inherit any legacy "(default)" suffixes.
+      const base = String(rawId || '').trim() || String(theme.label || '');
+      if (!base) return '';
+      return base
+        .split(/[-_\s]+/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+    };
+
+    const currentPromptThemeLabel = activePromptTheme
+      ? formatThemeName(activePromptTheme)
+      : 'Cinematic Inks';
+
+    return `
+      <div id="settingsModal" class="modal show" onclick="SettingsModal.close()">
+        <div class="modal-content builder-settings-modal" onclick="event.stopPropagation();">
+          <div class="modal-header">
+            <div class="modal-header-main">
+              <h2 class="modal-title">[ ⚙ Settings ]</h2>
+            </div>
+            <button class="modal-close" onclick="SettingsModal.close()" aria-label="Close settings">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="settings-layout">
+              <div class="settings-grid">
+                <div class="settings-group-label">[ Builder ]</div>
+                <section class="settings-section">
+                  <div class="settings-row-inline">
+                    <div class="settings-inline-field">
+                      <div class="settings-label">Narrator Voice</div>
+                      <div class="selector-shell selector-shell--match-width">
+                        <button
+                          class="terminal-btn selector-trigger"
+                          id="narrator-select-trigger"
+                          type="button"
+                          aria-haspopup="listbox"
+                          aria-expanded="false"
+                          onclick="CharacterSheet.toggleSelectorMenu(this)"
+                        >
+                          <span class="selector-trigger-label" id="narrator-select-label">
+                            ${currentNarratorLabel}
+                          </span>
+                        </button>
+                        <div
+                          class="selector-menu"
+                          role="listbox"
+                          aria-label="Narrator voice"
+                          aria-hidden="true"
+                        >
+                          ${narratorOptionsMenu}
+                        </div>
+                      </div>
+                      <select
+                        id="narrator-select"
+                        class="terminal-select settings-select hidden"
+                      >
+                        ${narratorsList
+                          .map((narrator) => {
+                            const label = formatNarratorTitle(narrator);
+                            return `
+                            <option value="${narrator.id}" ${
+                              narrator.id === currentNarratorId ? 'selected' : ''
+                            }>
+                              ${label}
+                            </option>
+                          `;
+                          })
+                          .join('')}
+                      </select>
+                    </div>
+                    <div class="settings-inline-field">
+                      <div class="settings-label">Text Speed</div>
+                      <div class="selector-shell selector-shell--match-width">
+                        <button
+                          class="terminal-btn selector-trigger"
+                          id="text-speed-select-trigger"
+                          type="button"
+                          aria-haspopup="listbox"
+                          aria-expanded="false"
+                          onclick="CharacterSheet.toggleSelectorMenu(this)"
+                        >
+                          <span class="selector-trigger-label" id="text-speed-select-label">
+                            ${currentTextSpeedLabel}
+                          </span>
+                        </button>
+                        <div
+                          class="selector-menu"
+                          role="listbox"
+                          aria-label="Narrator text speed"
+                          aria-hidden="true"
+                        >
+                          ${textSpeedOptions
+                            .map((opt) => {
+                              const isSelected =
+                                opt.value === currentTextSpeedOption.value;
+                              return `
+                              <button
+                                class="selector-option${isSelected ? ' is-selected' : ''}"
+                                type="button"
+                                role="option"
+                                data-value="${opt.value}"
+                                aria-selected="${isSelected ? 'true' : 'false'}"
+                              >
+                                <span class="selector-option-label">
+                                  ${opt.label}
+                                </span>
+                              </button>
+                            `;
+                            })
+                            .join('')}
+                        </div>
+                      </div>
+                      <select
+                        id="text-speed-select"
+                        class="terminal-select settings-select hidden"
+                      >
+                        ${textSpeedOptions
+                          .map(
+                            (opt) => `
+                            <option value="${opt.value}" ${
+                              opt.value === currentTextSpeedOption.value
+                                ? 'selected'
+                                : ''
+                            }>
+                              ${opt.label}
+                            </option>
+                          `,
+                          )
+                          .join('')}
+                      </select>
+                    </div>
+                  </div>
+                </section>
+
+                <div class="settings-group-label">[ Image generation ]</div>
+                <section class="settings-section">
+                  <div class="settings-row">
+                    <div class="settings-label">AI model</div>
+                    <div class="selector-shell selector-shell--match-width">
+                      <button
+                        class="terminal-btn selector-trigger"
+                        id="image-model-select-trigger"
+                        type="button"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        onclick="CharacterSheet.toggleSelectorMenu(this)"
+                      >
+                        <span class="selector-trigger-label" id="image-model-select-label">
+                          ${currentImageModelLabel}
+                        </span>
+                      </button>
+                      <div
+                        class="selector-menu"
+                        role="listbox"
+                        aria-label="AI model"
+                        aria-hidden="true"
+                      >
+                        ${imageModelOptions
+                          .map((opt) => {
+                            const isSelected =
+                              opt.value === currentImageModelOption.value;
+                            return `
+                            <button
+                              class="selector-option${isSelected ? ' is-selected' : ''}"
+                              type="button"
+                              role="option"
+                              data-value="${opt.value}"
+                              aria-selected="${isSelected ? 'true' : 'false'}"
+                            >
+                              <span class="selector-option-label">
+                                ${opt.label}
+                              </span>
+                            </button>
+                          `;
+                          })
+                          .join('')}
+                      </div>
+                    </div>
+                    <select
+                      id="image-model-select"
+                      class="terminal-select settings-select hidden"
+                    >
+                      ${imageModelOptions
+                        .map(
+                          (opt) => `
+                          <option value="${opt.value}" ${
+                            opt.value === currentImageModelOption.value ? 'selected' : ''
+                          }>
+                            ${opt.label}
+                          </option>
+                        `,
+                        )
+                        .join('')}
+                    </select>
+                  </div>
+                </section>
+
+                <section class="settings-section">
+                  <div class="settings-row settings-row--stacked">
+                    <div class="settings-label">Style</div>
+                    <div class="settings-field">
+                      <div class="selector-shell selector-shell--match-width" style="width: 100%;">
+                        <button
+                          class="terminal-btn selector-trigger"
+                          id="portrait-theme-select-trigger"
+                          type="button"
+                          aria-haspopup="listbox"
+                          aria-expanded="false"
+                          onclick="CharacterSheet.toggleSelectorMenu(this)"
+                          style="width: 100%;"
+                        >
+                          <span
+                            class="selector-trigger-label"
+                            id="portrait-theme-select-label"
+                          >
+                            ${currentPromptThemeLabel}
+                          </span>
+                        </button>
+                        <div
+                          class="selector-menu"
+                          role="listbox"
+                          aria-label="Portrait prompt theme"
+                          aria-hidden="true"
+                          style="width: 100%;"
+                        >
+                          ${promptThemes
+                            .map((theme) => {
+                              const isSelected = theme.id === activePromptTheme.id;
+                              const label = formatThemeName(theme);
+                              return `
+                              <button
+                                class="selector-option${
+                                  isSelected ? ' is-selected' : ''
+                                }"
+                                type="button"
+                                role="option"
+                                data-value="${theme.id}"
+                                aria-selected="${isSelected ? 'true' : 'false'}"
+                              >
+                                <span class="selector-option-label">
+                                  ${label}
+                                </span>
+                              </button>
+                            `;
+                            })
+                            .join('')}
+                        </div>
+                      </div>
+                      <select
+                        id="portrait-theme-select"
+                        class="terminal-select settings-select hidden"
+                      >
+                        ${promptThemes
+                          .map((theme) => {
+                            const label = formatThemeName(theme);
+                            return `
+                            <option value="${theme.id}" ${
+                              theme.id === activePromptTheme.id ? 'selected' : ''
+                            }>
+                              ${label}
+                            </option>
+                          `;
+                          })
+                          .join('')}
+                      </select>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="settings-section">
+                  <div class="settings-row settings-row--stacked">
+                    <div class="settings-label">Default portrait view</div>
+                    <div class="settings-field">
+                      <div class="settings-radio-group" role="radiogroup" aria-label="Default portrait view">
+                        <label class="settings-radio-option">
+                          <input
+                            type="radio"
+                            name="portrait-view-mode"
+                            value="ascii"
+                            ${currentPortraitViewMode === 'original' ? '' : 'checked'}
+                          >
+                          <span class="settings-radio-label">ASCII</span>
+                        </label>
+                        <label class="settings-radio-option">
+                          <input
+                            type="radio"
+                            name="portrait-view-mode"
+                            value="original"
+                            ${currentPortraitViewMode === 'original' ? 'checked' : ''}
+                          >
+                          <span class="settings-radio-label">Original</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn" onclick="SettingsModal.close()">CANCEL</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="SettingsModal.save()">SAVE</button>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+});
+
+// Shared Settings modal used by both the builder and manager screens.
+// Handles narrator, text speed, and AI image model preferences.
+const SettingsModal = (window.SettingsModal = {
+  _escHandler: null,
+
+  open() {
+    if (document.getElementById('settingsModal')) return; // Already open
+
+    const settingsHTML = Components.renderSettings();
+
+    // Prefer the main app container when available so the modal is scoped
+    // correctly in both builder and manager layouts.
+    const host =
+      document.querySelector('.terminal-container') ||
+      document.querySelector('.terminal-frame') ||
+      document.body;
+
+    host.insertAdjacentHTML('beforeend', settingsHTML);
+
+    const modal = document.getElementById('settingsModal');
+    if (modal && typeof window.Utils !== 'undefined' && Utils.focusFirstFieldInModal) {
+      Utils.focusFirstFieldInModal(modal);
+    }
+
+    this.initSelectors(modal);
+
+    // ESC key to close
+    this._escHandler = (e) => {
+      if (e.key === 'Escape') {
+        SettingsModal.close();
+      }
+    };
+    document.addEventListener('keydown', this._escHandler);
+  },
+
+  /**
+   * Initialize settings selectors: wire up option clicks to update the
+   * hidden <select> elements and trigger labels.
+   * The toggle behavior is handled by onclick="CharacterSheet.toggleSelectorMenu(this)" in the HTML.
+   * @param {HTMLElement} modal
+   */
+  initSelectors(modal) {
+    if (!modal) return;
+
+    // Narrator selector
+    const narratorTrigger = modal.querySelector('#narrator-select-trigger');
+    const narratorLabel = modal.querySelector('#narrator-select-label');
+    const narratorSelect = modal.querySelector('#narrator-select');
+    const narratorOptions = modal.querySelectorAll(
+      '.selector-menu[aria-label="Narrator voice"] .selector-option',
+    );
+
+    if (narratorTrigger && narratorLabel && narratorSelect && narratorOptions.length) {
+      narratorOptions.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = option.getAttribute('data-value');
+          const label = option.querySelector('.selector-option-label');
+          if (value && label) {
+            narratorLabel.textContent = label.textContent.trim();
+            narratorSelect.value = value;
+            // Keep menu selection state in sync with the trigger
+            narratorOptions.forEach((opt) => {
+              const isSelected = opt === option;
+              opt.classList.toggle('is-selected', isSelected);
+              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+          }
+        });
+      });
+    }
+
+    // Text speed selector
+    const speedTrigger = modal.querySelector('#text-speed-select-trigger');
+    const speedLabel = modal.querySelector('#text-speed-select-label');
+    const speedSelect = modal.querySelector('#text-speed-select');
+    const speedOptions = modal.querySelectorAll(
+      '.selector-menu[aria-label="Narrator text speed"] .selector-option',
+    );
+
+    if (speedTrigger && speedLabel && speedSelect && speedOptions.length) {
+      speedOptions.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = option.getAttribute('data-value');
+          const label = option.querySelector('.selector-option-label');
+          if (value && label) {
+            speedLabel.textContent = label.textContent.trim();
+            speedSelect.value = value;
+            // Keep menu selection state in sync with the trigger
+            speedOptions.forEach((opt) => {
+              const isSelected = opt === option;
+              opt.classList.toggle('is-selected', isSelected);
+              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+          }
+        });
+      });
+    }
+
+    // Image model selector
+    const imageModelTrigger = modal.querySelector('#image-model-select-trigger');
+    const imageModelLabel = modal.querySelector('#image-model-select-label');
+    const imageModelSelect = modal.querySelector('#image-model-select');
+    const imageModelOptions = modal.querySelectorAll(
+      '.selector-menu[aria-label="AI model"] .selector-option',
+    );
+
+    if (imageModelTrigger && imageModelLabel && imageModelSelect && imageModelOptions.length) {
+      imageModelOptions.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = option.getAttribute('data-value');
+          const label = option.querySelector('.selector-option-label');
+          if (value && label) {
+            imageModelLabel.textContent = label.textContent.trim();
+            imageModelSelect.value = value;
+            // Keep menu selection state in sync with the trigger
+            imageModelOptions.forEach((opt) => {
+              const isSelected = opt === option;
+              opt.classList.toggle('is-selected', isSelected);
+              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+          }
+        });
+      });
+    }
+
+    // Portrait prompt theme selector
+    const themeTrigger = modal.querySelector(
+      '#portrait-theme-select-trigger',
+    );
+    const themeLabel = modal.querySelector('#portrait-theme-select-label');
+    const themeSelect = modal.querySelector('#portrait-theme-select');
+    const themeOptions = modal.querySelectorAll(
+      '.selector-menu[aria-label="Portrait prompt theme"] .selector-option',
+    );
+
+    if (themeTrigger && themeLabel && themeSelect && themeOptions.length) {
+      themeOptions.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = option.getAttribute('data-value');
+          const label = option.querySelector('.selector-option-label');
+          if (value && label) {
+            themeLabel.textContent = label.textContent.trim();
+            themeSelect.value = value;
+            // Keep menu selection state in sync with the trigger
+            themeOptions.forEach((opt) => {
+              const isSelected = opt === option;
+              opt.classList.toggle('is-selected', isSelected);
+              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+          }
+        });
+      });
+    }
+  },
+
+  close() {
+    const modal = document.getElementById('settingsModal');
+    if (!modal) {
+      if (this._escHandler) {
+        document.removeEventListener('keydown', this._escHandler);
+        this._escHandler = null;
+      }
+      return;
+    }
+
+    const content = modal.querySelector('.modal-content') || modal;
+
+    const handleClose = () => {
+      if (modal && modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
+
+      if (this._escHandler) {
+        document.removeEventListener('keydown', this._escHandler);
+        this._escHandler = null;
+      }
+    };
+
+    if (!modal.classList.contains('closing')) {
+      modal.classList.add('closing');
+    }
+
+    if (content && content.addEventListener) {
+      content.addEventListener('animationend', handleClose, { once: true });
+    } else {
+      handleClose();
+    }
+  },
+
+  save() {
+    // Save narrator selection
+    const narratorSelect = document.getElementById('narrator-select');
+    if (narratorSelect && window.StorageService && StorageService.setNarratorId) {
+      StorageService.setNarratorId(narratorSelect.value);
+    }
+
+    // Save text speed selection
+    const textSpeedSelect = document.getElementById('text-speed-select');
+    if (textSpeedSelect && window.StorageService && StorageService.setTextSpeedMultiplier) {
+      StorageService.setTextSpeedMultiplier(textSpeedSelect.value);
+    }
+
+    // Save portrait image model selection
+    const imageModelSelect = document.getElementById('image-model-select');
+    if (imageModelSelect && window.StorageService && StorageService.setImageModel) {
+      StorageService.setImageModel(imageModelSelect.value);
+    }
+
+    // Save global portrait view mode (ASCII vs Original)
+    const portraitModeInput = document.querySelector(
+      'input[name="portrait-view-mode"]:checked',
+    );
+    if (portraitModeInput && window.StorageService && StorageService.setPortraitViewMode) {
+      StorageService.setPortraitViewMode(portraitModeInput.value);
+    }
+
+    // Save portrait prompt theme selection
+    const portraitThemeSelect = document.getElementById('portrait-theme-select');
+    if (
+      portraitThemeSelect &&
+      window.StorageService &&
+      StorageService.setPortraitPromptTheme
+    ) {
+      StorageService.setPortraitPromptTheme(portraitThemeSelect.value);
+    }
+
+    // Use a non-intrusive toast for settings changes instead of a narrator line
+    if (window.App && typeof App.showToast === 'function') {
+      App.showToast('Settings saved');
+    } else if (typeof showNotification === 'function') {
+      showNotification('Settings saved');
+    }
+
+    this.close();
+  },
+});
 
 
 
