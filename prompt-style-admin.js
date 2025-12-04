@@ -358,15 +358,42 @@
 
   /** @returns {Promise<PromptEntry[]>} */
   async function loadEntries() {
+    const localEntries = loadEntriesFromLocalStorage();
+    
     // Try API first if authenticated
     if (isAuthenticated()) {
       try {
-        const entries = await fetchEntriesFromAPI();
+        const cloudEntries = await fetchEntriesFromAPI();
         usingCloud = true;
         updateStorageStatus();
-        // Cache in localStorage so builder/manager can read them
-        saveEntriesToLocalStorage(entries);
-        return entries;
+        
+        // If cloud is empty but local has data, offer to upload local to cloud
+        if (cloudEntries.length === 0 && localEntries.length > 0) {
+          const shouldUpload = confirm(
+            `Cloud storage is empty but you have ${localEntries.length} local entries.\n\n` +
+            `Would you like to upload your local entries to the cloud?\n\n` +
+            `Click OK to upload, or Cancel to start fresh.`
+          );
+          
+          if (shouldUpload) {
+            try {
+              const uploaded = await bulkCreateViaAPI(localEntries);
+              console.log(`Uploaded ${uploaded.length} entries to cloud`);
+              syncLocalCache(uploaded);
+              return uploaded;
+            } catch (err) {
+              console.error('Failed to upload local entries to cloud:', err);
+              alert('Failed to upload. Keeping local entries.');
+              return localEntries;
+            }
+          }
+        }
+        
+        // Cache cloud entries to localStorage (only if cloud has data)
+        if (cloudEntries.length > 0) {
+          saveEntriesToLocalStorage(cloudEntries);
+        }
+        return cloudEntries;
       } catch (e) {
         console.warn('PromptStyleAdmin: API load failed, falling back to localStorage', e);
       }
@@ -375,7 +402,7 @@
     // Fall back to localStorage
     usingCloud = false;
     updateStorageStatus();
-    return loadEntriesFromLocalStorage();
+    return localEntries;
   }
 
   // Sync local cache after cloud operations
