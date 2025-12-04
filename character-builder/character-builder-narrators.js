@@ -1,5 +1,9 @@
 // Narrator personalities for DandDy character builder
 // Exposes NARRATORS as a global on window
+//
+// NOTE: The systemPrompt fields must stay in sync with:
+//   backend/routes/ai.py (NARRATOR_PROMPTS dict)
+// If you add/modify narrators here, update the backend file too!
 
 const NARRATORS = (window.NARRATORS = {
   deadpan: {

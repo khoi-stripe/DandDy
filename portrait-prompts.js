@@ -559,6 +559,88 @@
 
     return baseThemes.concat(customThemes);
   };
+
+  // ========================================
+  // CHARACTER DESCRIPTION DATA
+  // ========================================
+  // Shared race/class/magic description mappings for portrait prompts.
+  // Used by AIService.buildCharacterDescription.
+
+  const RACE_DESCRIPTIONS = {
+    human: 'human with average features',
+    elf: 'elf with pointed ears and graceful features',
+    dwarf: 'dwarf with a thick beard and stocky build',
+    halfling: 'halfling, small and cheerful',
+    dragonborn: 'dragonborn with scaled skin and dragon-like features',
+    gnome: 'gnome, small with clever eyes',
+    'half-elf': 'half-elf with slightly pointed ears',
+    'half-orc': 'half-orc with tusks and powerful build',
+    tiefling: 'tiefling with horns and a tail',
+  };
+
+  const CLASS_DESCRIPTIONS = {
+    fighter: 'wearing heavy armor and holding a sword',
+    wizard: 'in flowing robes holding a staff',
+    rogue: 'in dark leather armor with daggers',
+    cleric: 'in holy vestments with a sacred symbol',
+    ranger: 'with a bow and forest attire',
+    paladin: 'in shining armor with a holy shield',
+    barbarian: 'with wild hair wielding a massive axe',
+    bard: 'with a lute and colorful clothing',
+    druid: 'with nature-themed robes and wooden staff',
+    monk: 'in simple robes in a martial stance',
+    sorcerer: 'with crackling magical energy',
+    warlock: 'with dark robes and eldritch symbols',
+  };
+
+  const MAGIC_SPECIALIZATIONS = {
+    wizard: 'specializing in elemental magic like fire and ice',
+    sorcerer: 'channeling raw elemental arcane power',
+    warlock: 'wielding shadowy eldritch magic',
+    cleric: 'focused on radiant and healing magic',
+    druid: 'calling on primal nature and elemental magic',
+    bard: 'weaving subtle enchantments and support magic through music',
+    paladin: 'enhancing strikes with holy, radiant magic',
+  };
+
+  /**
+   * Get a description for a race.
+   * Falls back to the race name if not found.
+   */
+  PortraitPrompt.getRaceDescription = function getRaceDescription(race) {
+    const key = (race || '').toLowerCase();
+    return RACE_DESCRIPTIONS[key] || race || '';
+  };
+
+  /**
+   * Get a description for a class.
+   * Falls back to the class name if not found.
+   */
+  PortraitPrompt.getClassDescription = function getClassDescription(classType) {
+    const key = (classType || '').toLowerCase();
+    return CLASS_DESCRIPTIONS[key] || classType || '';
+  };
+
+  /**
+   * Get a magic specialization description for a class (if applicable).
+   * Returns null for non-spellcasting classes.
+   */
+  PortraitPrompt.getMagicSpecialization = function getMagicSpecialization(classType) {
+    const key = (classType || '').toLowerCase();
+    return MAGIC_SPECIALIZATIONS[key] || null;
+  };
+
+  /**
+   * Get all description data objects (for testing/debugging).
+   */
+  PortraitPrompt.getDescriptionData = function getDescriptionData() {
+    return {
+      races: RACE_DESCRIPTIONS,
+      classes: CLASS_DESCRIPTIONS,
+      magic: MAGIC_SPECIALIZATIONS,
+    };
+  };
 })(window);
+
 
 

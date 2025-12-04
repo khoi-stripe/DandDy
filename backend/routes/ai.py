@@ -406,6 +406,61 @@ def check_character_summary_cooldown(client_id: str, cooldown_seconds: int = 20)
     _character_summary_last_request[client_id] = now
 
 
+def handle_openai_error(
+    e: Exception,
+    feature_name: str = "request",
+    safety_message: str | None = None,
+) -> None:
+    """
+    Unified error handler for OpenAI API errors.
+    
+    Converts OpenAI exceptions to appropriate HTTPExceptions with user-friendly messages.
+    
+    Args:
+        e: The exception from OpenAI
+        feature_name: Name of the feature for error messages (e.g., "completion", "image", "names")
+        safety_message: Custom message for safety system rejections (uses default if None)
+    
+    Raises:
+        HTTPException with appropriate status code and detail
+    """
+    if isinstance(e, openai.RateLimitError):
+        # Check for Cloudflare-specific rate limiting
+        message = str(e) if e else ""
+        lower_msg = message.lower()
+        
+        if (
+            "error 1015" in lower_msg
+            or "you are being rate limited" in lower_msg
+            or "access denied | api.openai.com used cloudflare" in lower_msg
+        ):
+            raise HTTPException(
+                status_code=429,
+                detail="Service is temporarily rate limited by OpenAI/Cloudflare (Error 1015). Please try again in a few minutes.",
+            )
+        
+        raise HTTPException(
+            status_code=429,
+            detail="OpenAI rate limit exceeded. Please try again later.",
+        )
+    
+    if isinstance(e, openai.BadRequestError):
+        error_message = str(e)
+        if "safety system" in error_message.lower():
+            detail = safety_message or (
+                f"Your {feature_name} was flagged by OpenAI's safety system. "
+                "Please try modifying your request."
+            )
+            raise HTTPException(status_code=400, detail=detail)
+        raise HTTPException(status_code=400, detail=f"Invalid request: {error_message}")
+    
+    if isinstance(e, openai.APIError):
+        raise HTTPException(status_code=502, detail=f"OpenAI API error: {str(e)}")
+    
+    # Generic fallback for unknown exceptions
+    raise HTTPException(status_code=500, detail=f"Failed to generate {feature_name}: {str(e)}")
+
+
 # Routes
 @router.get("/status")
 async def get_ai_status():
@@ -527,21 +582,12 @@ async def chat_completion(
             }
         }
     
-    except openai.RateLimitError as e:
-        raise HTTPException(status_code=429, detail="OpenAI rate limit exceeded. Please try again later.")
-    except openai.BadRequestError as e:
-        # Check if this is a safety system rejection
-        error_message = str(e)
-        if "safety system" in error_message.lower():
-            raise HTTPException(
-                status_code=400, 
-                detail="Your request was flagged by OpenAI's safety system. Please try rephrasing your prompt or selecting different options."
-            )
-        raise HTTPException(status_code=400, detail=f"Invalid request: {error_message}")
-    except openai.APIError as e:
-        raise HTTPException(status_code=502, detail=f"OpenAI API error: {str(e)}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate completion: {str(e)}")
+        handle_openai_error(
+            e,
+            feature_name="completion",
+            safety_message="Your request was flagged by OpenAI's safety system. Please try rephrasing your prompt or selecting different options.",
+        )
 
 
 @router.post("/images/generate")
@@ -736,46 +782,18 @@ async def generate_image(
             "revised_prompt": revised_prompt,
         }
     
-    except openai.RateLimitError as e:
-        # Distinguish between normal OpenAI rate limits and upstream
-        # Cloudflare 1015 HTML responses ("You are being rate limited").
-        message = str(e) if e else ""
-        lower_msg = message.lower()
-
-        if (
-            "error 1015" in lower_msg
-            or "you are being rate limited" in lower_msg
-            or "access denied | api.openai.com used cloudflare" in lower_msg
-        ):
-            # This is not something the user can fix by tweaking prompts; it's
-            # Cloudflare temporarily blocking our server IP. Surface a clear,
-            # user-friendly message and a 429 so the frontend can show a
-            # "try again later" UI rather than a generic failure.
-            raise HTTPException(
-                status_code=429,
-                detail="Image service is temporarily rate limited by OpenAI/Cloudflare (Error 1015). Please try again in a few minutes.",
-            )
-
-        raise HTTPException(
-            status_code=429,
-            detail="OpenAI rate limit exceeded. Please try again later.",
-        )
-    except openai.BadRequestError as e:
-        # Check if this is a safety system rejection
-        error_message = str(e)
-        if "safety system" in error_message.lower():
-            raise HTTPException(
-                status_code=400, 
-                detail="Your image request was flagged by OpenAI's safety system. Please try modifying your character description or portrait prompt."
-            )
-        raise HTTPException(status_code=400, detail=f"Invalid request: {error_message}")
-    except openai.APIError as e:
-        raise HTTPException(status_code=502, detail=f"OpenAI API error: {str(e)}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate image: {str(e)}")
+        handle_openai_error(
+            e,
+            feature_name="image",
+            safety_message="Your image request was flagged by OpenAI's safety system. Please try modifying your character description or portrait prompt.",
+        )
 
 
 # Narrator personality system prompts
+# NOTE: These prompts must stay in sync with:
+#   character-builder/character-builder-narrators.js (NARRATORS[id].systemPrompt)
+# If you add/modify narrators here, update the frontend file too!
 NARRATOR_PROMPTS = {
     'deadpan': 'You are a deadpan, slightly cheeky D&D narrator. Your personality is dry and witty, occasionally using emoticons like ( ._.) when amused. Keep responses under 50 words. Be brief, sarcastic, and occasionally break the fourth wall. Vary your phrasing across comments.',
     
@@ -914,17 +932,12 @@ async def generate_character_names(
             "names": names[:request.count]
         }
     
-    except openai.BadRequestError as e:
-        # Check if this is a safety system rejection
-        error_message = str(e)
-        if "safety system" in error_message.lower():
-            raise HTTPException(
-                status_code=400, 
-                detail="Your name generation request was flagged by OpenAI's safety system. Please try different race/class combinations."
-            )
-        raise HTTPException(status_code=400, detail=f"Invalid request: {error_message}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate names: {str(e)}")
+        handle_openai_error(
+            e,
+            feature_name="names",
+            safety_message="Your name generation request was flagged by OpenAI's safety system. Please try different race/class combinations.",
+        )
 
 
 @router.post("/characters/backstory")
@@ -966,17 +979,12 @@ async def generate_character_backstory(
             "backstory": response.choices[0].message.content.strip()
         }
     
-    except openai.BadRequestError as e:
-        # Check if this is a safety system rejection
-        error_message = str(e)
-        if "safety system" in error_message.lower():
-            raise HTTPException(
-                status_code=400, 
-                detail="Your backstory request was flagged by OpenAI's safety system. Please try modifying your character details or personality traits."
-            )
-        raise HTTPException(status_code=400, detail=f"Invalid request: {error_message}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate backstory: {str(e)}")
+        handle_openai_error(
+            e,
+            feature_name="backstory",
+            safety_message="Your backstory request was flagged by OpenAI's safety system. Please try modifying your character details or personality traits.",
+        )
 
 
 @router.post("/characters/summary")
@@ -1116,19 +1124,13 @@ async def generate_character_summary(
             "backstory_template": backstory_template.strip(),
         }
 
-    except openai.BadRequestError as e:
-        error_message = str(e)
-        if "safety system" in error_message.lower():
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Your character summary request was flagged by OpenAI's safety system. "
-                    "Please try slightly different race/class/background details."
-                ),
-            )
-        raise HTTPException(status_code=400, detail=f"Invalid request: {error_message}")
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to generate character summary: {str(e)}"
+        handle_openai_error(
+            e,
+            feature_name="character summary",
+            safety_message=(
+                "Your character summary request was flagged by OpenAI's safety system. "
+                "Please try slightly different race/class/background details."
+            ),
         )
 

@@ -2,6 +2,20 @@
 // Exposes Utils as a global (window.Utils) so existing inline code can use it.
 
 const Utils = window.Utils = {
+  /**
+   * HTML-escape a value for safe interpolation into template strings.
+   * Converts &, <, >, ", and ' to their corresponding HTML entities.
+   */
+  escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
   // Typewriter effect for text
   async typewriter(element, text, speed = (window.CONFIG && window.CONFIG.TYPEWRITER_SPEED) || 30) {
     element.textContent = '';

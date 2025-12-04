@@ -1615,17 +1615,13 @@ const CharacterSheet = (window.CharacterSheet = {
   // ========================================
 
   /**
-   * Basic HTML-escape helper for safely interpolating text into template
-   * strings. Converts &, <, >, ", and ' to their corresponding entities.
+   * HTML-escape helper. Delegates to the shared Utils implementation.
+   * Kept as a method on CharacterSheet for backwards compatibility.
    */
   escapeHtml(value) {
-    if (value === null || value === undefined) return '';
-    return String(value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    return window.Utils && typeof Utils.escapeHtml === 'function'
+      ? Utils.escapeHtml(value)
+      : (value === null || value === undefined ? '' : String(value));
   },
 
   /**
