@@ -169,7 +169,17 @@
     <!-- Header -->
     <header class="terminal-header">
         <div class="header-content">
-            <div class="terminal-title">[ DandDy v2.0 ]</div>
+            <div class="terminal-title">
+                <span class="terminal-title-text">[ DandDy v2.0 ]</span>
+                <button
+                    id="managerSettingsBtn"
+                    class="manager-settings-link"
+                    type="button"
+                    aria-label="Settings"
+                    title="Settings"
+                    onclick="SettingsModal.open()"
+                >⚙</button>
+            </div>
             <div class="header-actions">
                 <span id="userInfoDisplay">
                     <span id="userStatusIcon" class="user-status-icon" aria-hidden="true"></span>
