@@ -2813,7 +2813,7 @@ const App = (window.App = {
       this.showToast('Prompt copied.');
     } catch (error) {
       console.error('Failed to copy portrait prompt:', error);
-      this.showToast('Could not copy prompt. Copy it manually from the card.');
+      this.showToast('Could not copy prompt. Copy it manually from the card.', 8000);
     }
   },
 
@@ -3611,7 +3611,7 @@ const App = (window.App = {
   },
 
   // Toast used for quick, non-blocking feedback (e.g. "Prompt copied"), anchored to the terminal container.
-  showToast(rawMessage) {
+  showToast(rawMessage, duration = 4000) {
     const message = (rawMessage == null) ? '' : String(rawMessage);
     // Remove any leading glyphs (checkmarks, warning icons, etc.) so builder
     // toasts stay clean and rely only on text + the "×" close button. Also
@@ -3702,11 +3702,11 @@ const App = (window.App = {
       toast.classList.add('show');
       App._toastShowTimeout = null;
 
-      // Keep toast visible for 10 seconds before auto-dismissing
+      // Auto-dismiss after specified duration (default 4s for success messages)
       App._toastTimeout = setTimeout(() => {
         toast.classList.remove('show');
         App._toastTimeout = null;
-      }, 10000);
+      }, duration);
     }, 80);
   },
 

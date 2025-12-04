@@ -1,15 +1,7 @@
 // ========================================
 // KEYBOARD NAVIGATION
 // ========================================
-function escapeHtml(value) {
-    if (value === null || value === undefined) return '';
-    return String(value)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
+// HTML escaping is provided by Utils.escapeHtml from character-builder-utils.js
 const KeyboardNav = {
     currentFocusIndex: 0,
     isActive: true,
@@ -480,8 +472,8 @@ const UI = {
         const raceNameRaw = character.raceData?.name || character.race || '?';
         const classNameRaw = character.classData?.name || character.class || '?';
         const raceClassSentence = toSentenceCase(`${raceNameRaw} ${classNameRaw}`.trim());
-        const raceClass = escapeHtml(raceClassSentence || '?');
-        const name = escapeHtml(character.name || 'Unnamed Character');
+        const raceClass = Utils.escapeHtml(raceClassSentence || '?');
+        const name = Utils.escapeHtml(character.name || 'Unnamed Character');
         
         // Get ASCII portrait for thumbnail using shared logic so the card
         // matches the character sheet view.
@@ -930,7 +922,7 @@ async function renameCharacter(id) {
     const existing = document.getElementById('renameModal');
     if (existing) existing.remove();
 
-    const safeCurrentName = escapeHtml(character.name || '');
+    const safeCurrentName = Utils.escapeHtml(character.name || '');
     const modalHtml = `
       <div id="renameModal" class="modal show">
         <div class="modal-content">
@@ -2139,7 +2131,7 @@ function togglePortraitView(characterId) {
     }
 }
 
-function showNotification(rawMessage) {
+function showNotification(rawMessage, duration = 4000) {
     // Normalize to string so callers can safely pass anything.
     const message = (rawMessage == null) ? '' : String(rawMessage);
 
@@ -2236,11 +2228,11 @@ function showNotification(rawMessage) {
         toast.classList.add('show');
         window._toastShowTimeout = null;
 
-        // Keep toast visible for 10 seconds before auto-dismissing
+        // Auto-dismiss after specified duration (default 4s for success messages)
         window._toastTimeout = setTimeout(() => {
             toast.classList.remove('show');
             window._toastTimeout = null;
-        }, 10000);
+        }, duration);
     }, 80);
 }
 
@@ -2362,7 +2354,7 @@ function showConfirmDialog(message, onConfirm) {
     const existing = document.getElementById('genericConfirmModal');
     if (existing) existing.remove();
 
-    const escapedMessage = escapeHtml(message).replace(/\n/g, '<br>');
+    const escapedMessage = Utils.escapeHtml(message).replace(/\n/g, '<br>');
     const modalHtml = `
       <div id="genericConfirmModal" class="modal show">
         <div class="modal-content">
@@ -2409,7 +2401,7 @@ function showAlertDialog(message) {
     const existing = document.getElementById('genericAlertModal');
     if (existing) existing.remove();
 
-    const escapedMessage = escapeHtml(message).replace(/\n/g, '<br>');
+    const escapedMessage = Utils.escapeHtml(message).replace(/\n/g, '<br>');
     const modalHtml = `
       <div id="genericAlertModal" class="modal show">
         <div class="modal-content">

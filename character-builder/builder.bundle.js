@@ -1590,7 +1590,89 @@
 
     return baseThemes.concat(customThemes);
   };
+
+  // ========================================
+  // CHARACTER DESCRIPTION DATA
+  // ========================================
+  // Shared race/class/magic description mappings for portrait prompts.
+  // Used by AIService.buildCharacterDescription.
+
+  const RACE_DESCRIPTIONS = {
+    human: 'human with average features',
+    elf: 'elf with pointed ears and graceful features',
+    dwarf: 'dwarf with a thick beard and stocky build',
+    halfling: 'halfling, small and cheerful',
+    dragonborn: 'dragonborn with scaled skin and dragon-like features',
+    gnome: 'gnome, small with clever eyes',
+    'half-elf': 'half-elf with slightly pointed ears',
+    'half-orc': 'half-orc with tusks and powerful build',
+    tiefling: 'tiefling with horns and a tail',
+  };
+
+  const CLASS_DESCRIPTIONS = {
+    fighter: 'wearing heavy armor and holding a sword',
+    wizard: 'in flowing robes holding a staff',
+    rogue: 'in dark leather armor with daggers',
+    cleric: 'in holy vestments with a sacred symbol',
+    ranger: 'with a bow and forest attire',
+    paladin: 'in shining armor with a holy shield',
+    barbarian: 'with wild hair wielding a massive axe',
+    bard: 'with a lute and colorful clothing',
+    druid: 'with nature-themed robes and wooden staff',
+    monk: 'in simple robes in a martial stance',
+    sorcerer: 'with crackling magical energy',
+    warlock: 'with dark robes and eldritch symbols',
+  };
+
+  const MAGIC_SPECIALIZATIONS = {
+    wizard: 'specializing in elemental magic like fire and ice',
+    sorcerer: 'channeling raw elemental arcane power',
+    warlock: 'wielding shadowy eldritch magic',
+    cleric: 'focused on radiant and healing magic',
+    druid: 'calling on primal nature and elemental magic',
+    bard: 'weaving subtle enchantments and support magic through music',
+    paladin: 'enhancing strikes with holy, radiant magic',
+  };
+
+  /**
+   * Get a description for a race.
+   * Falls back to the race name if not found.
+   */
+  PortraitPrompt.getRaceDescription = function getRaceDescription(race) {
+    const key = (race || '').toLowerCase();
+    return RACE_DESCRIPTIONS[key] || race || '';
+  };
+
+  /**
+   * Get a description for a class.
+   * Falls back to the class name if not found.
+   */
+  PortraitPrompt.getClassDescription = function getClassDescription(classType) {
+    const key = (classType || '').toLowerCase();
+    return CLASS_DESCRIPTIONS[key] || classType || '';
+  };
+
+  /**
+   * Get a magic specialization description for a class (if applicable).
+   * Returns null for non-spellcasting classes.
+   */
+  PortraitPrompt.getMagicSpecialization = function getMagicSpecialization(classType) {
+    const key = (classType || '').toLowerCase();
+    return MAGIC_SPECIALIZATIONS[key] || null;
+  };
+
+  /**
+   * Get all description data objects (for testing/debugging).
+   */
+  PortraitPrompt.getDescriptionData = function getDescriptionData() {
+    return {
+      races: RACE_DESCRIPTIONS,
+      classes: CLASS_DESCRIPTIONS,
+      magic: MAGIC_SPECIALIZATIONS,
+    };
+  };
 })(window);
+
 
 
 
@@ -1710,6 +1792,150 @@ const PortraitPoseData = (window.PortraitPoseData = {
     return false;
   },
 });
+
+
+
+// ===== BUNDLE PART: character-name-data.js =====
+
+// ========================================
+// SHARED CHARACTER NAME DATA
+// ========================================
+// Fantasy name patterns for D&D races.
+// Used by AIService.generateFallbackNames for offline name generation.
+
+const CharacterNameData = (window.CharacterNameData = {
+  // Name patterns indexed by race
+  patterns: {
+    dwarf: {
+      first: [
+        'Thorin', 'Gimli', 'Balin', 'Dwalin', 'Thrain', 'Dain', 'Bombur',
+        'Bofur', 'Kili', 'Fili', 'Oin', 'Gloin', 'Bruenor', 'Morgran',
+        'Rurik', 'Einkil', 'Barendd', 'Baern', 'Harbek', 'Rumnar',
+      ],
+      last: [
+        'Ironforge', 'Stonehelm', 'Deepdelver', 'Mountainheart', 'Goldseeker',
+        'Ironfoot', 'Hammerhand', 'Oakenshield', 'Battlehammer', 'Fireforge',
+        'Stormdelver', 'Stonebreaker', 'Coppervein', 'Bronzebrow', 'Rockseeker',
+      ],
+    },
+    elf: {
+      first: [
+        'Legolas', 'Galadriel', 'Elrond', 'Arwen', 'Thranduil', 'Celeborn',
+        'Elessar', 'Elendil', 'Finrod', 'Luthien', 'Faelar', 'Aelar',
+        'Mialee', 'Syllin', 'Thia', 'Varis', 'Althaea', 'Enna', 'Nelar',
+      ],
+      last: [
+        'Greenleaf', 'Starweaver', 'Moonwhisper', 'Silverbow', 'Nightbreeze',
+        'Sunshadow', 'Stormwind', 'Brightwood', 'Dawnpetal', 'Evenwood',
+        'Silverfrond', 'Nightstar', 'Willowshade', 'Starfall', 'Moonbrook',
+      ],
+    },
+    human: {
+      first: [
+        'Aragorn', 'Boromir', 'Eowyn', 'Faramir', 'Theodred', 'Eomer',
+        'Eddard', 'Catelyn', 'Jon', 'Sansa', 'Alaric', 'Rowan', 'Serena',
+        'Garrick', 'Lysa', 'Marcus', 'Elena', 'Corin', 'Brynn',
+      ],
+      last: [
+        'Stormborn', 'Blackwood', 'Riverrun', 'Ironwall', 'Longstrider',
+        'Stormblade', 'Brightshield', 'Greywind', 'Highvale', 'Steelguard',
+        'Duskwalker', 'Redcrest', 'Stoneward', 'Ashborne', 'Hawkspear',
+      ],
+    },
+    halfling: {
+      first: [
+        'Bilbo', 'Frodo', 'Sam', 'Merry', 'Pippin', 'Rosie', 'Hamfast',
+        'Belladonna', 'Lobelia', 'Fredegar', 'Milo', 'Daisy', 'Rosa',
+        'Cora', 'Perrin', 'Tansy', 'Dodo', 'Seraphina', 'Odo',
+      ],
+      last: [
+        'Baggins', 'Took', 'Brandybuck', 'Gamgee', 'Goodbody', 'Proudfoot',
+        'Burrows', 'Underhill', 'Greenhill', 'Fairbairn', 'Hilltopple',
+        'Brushgather', 'Tealeaf', 'Thorngage', 'Goodbarrel', 'Hearthcoat',
+      ],
+    },
+    dragonborn: {
+      first: [
+        'Drax', 'Razax', 'Thordak', 'Torinn', 'Balasar', 'Kriv', 'Nadarr',
+        'Heskan', 'Shedinn', 'Ghesh', 'Arjhan', 'Medrash', 'Rhogar',
+        'Tarhun', 'Akra', 'Miirym', 'Sora', 'Vezera', 'Zorvath',
+      ],
+      last: [
+        'Flameheart', 'Ironclaw', 'Stormsinger', 'Ashborn', 'Dragonfall',
+        'Firebreath', 'Scaleborn', 'Wyrmblood', 'Skyscale', 'Embermaw',
+        'Stormscale', 'Brightflame', 'Stoneclaw', 'Cloudsunder', 'Blazewing',
+      ],
+    },
+    gnome: {
+      first: [
+        'Glim', 'Boddynock', 'Dimble', 'Fonkin', 'Seebo', 'Zook', 'Eldon',
+        'Brocc', 'Burgell', 'Jebeddo', 'Alston', 'Bimpnottin', 'Fizzik',
+        'Carlin', 'Nissa', 'Wrenn', 'Tavi', 'Ellyjobell', 'Zanna',
+      ],
+      last: [
+        'Tinkertop', 'Sparklegem', 'Nimblefingers', 'Brightgear', 'Gadgetwhiz',
+        'Fizzlebang', 'Cogsworth', 'Glimmergold', 'Whistlewhirr', 'Gadgetgrind',
+        'Janglecoin', 'Copperbolt', 'Mithrilspanner', 'Quickwidget', 'Proudgear',
+      ],
+    },
+    'half-elf': {
+      first: [
+        'Tanis', 'Raistlin', 'Laurana', 'Gilthanas', 'Tanthalas', 'Silvara',
+        'Eliana', 'Korrin', 'Faelyn', 'Soveliss', 'Ilanis', 'Kael', 'Myla',
+        'Tharos', 'Elira', 'Daeris', 'Rian', 'Caelynn', 'Torren',
+      ],
+      last: [
+        'Half-Elven', 'Moonbrook', 'Starfall', 'Whisperwind', 'Shadowvale',
+        'Dawnbringer', 'Twilightbane', 'Silvermoon', 'Nightbloom', 'Duskwillow',
+        'Starcrest', 'Eveningfall', 'Shadeglade', 'Brightglen', 'Silvershade',
+      ],
+    },
+    'half-orc': {
+      first: [
+        'Grognak', 'Throk', 'Ugak', 'Krod', 'Sharn', 'Dench', 'Grul', 'Drog',
+        'Feng', 'Shump', 'Ghorbash', 'Mazog', 'Uglar', 'Ruk', 'Karash',
+        'Vorag', 'Yagra', 'Shautha', 'Ovak',
+      ],
+      last: [
+        'Ironhide', 'Bonecrusher', 'Skullsplitter', 'Bloodaxe', 'Stonefist',
+        'Grimjaw', 'Warbringer', 'Doomhammer', 'Boulderfist', 'Skullbrand',
+        'Gorefang', 'Bloodfury', 'Ironmaw', 'Steelgrip', 'Rageborn',
+      ],
+    },
+    tiefling: {
+      first: [
+        'Zevlor', 'Raven', 'Damakos', 'Akta', 'Therai', 'Nemeia', 'Kallista',
+        'Leucis', 'Orianna', 'Morthos', 'Azazel', 'Seraphine', 'Xathos',
+        'Riven', 'Lyra', 'Caelum', 'Naeris', 'Vexria', 'Zheren',
+      ],
+      last: [
+        'Hellborn', 'Darkflame', 'Shadowhorn', 'Nightwhisper', 'Embersoul',
+        'Dreadfire', 'Ashenborn', 'Voidwalker', 'Grimshroud', 'Duskwreath',
+        'Soulbrand', 'Cindertongue', 'Nightreign', 'Gloomsigil', 'Shadebinder',
+      ],
+    },
+  },
+
+  /**
+   * Get the name pattern for a race.
+   * Falls back to human names if the race isn't found.
+   * @param {string} race - The character race
+   * @returns {{ first: string[], last: string[] }}
+   */
+  getPattern(race) {
+    const key = (race || '').toLowerCase();
+    return this.patterns[key] || this.patterns.human;
+  },
+
+  /**
+   * Get all available races.
+   * @returns {string[]}
+   */
+  getRaces() {
+    return Object.keys(this.patterns);
+  },
+});
+
 
 
 
@@ -3457,6 +3683,10 @@ window.SPELL_DATA = {
 
 // Narrator personalities for DandDy character builder
 // Exposes NARRATORS as a global on window
+//
+// NOTE: The systemPrompt fields must stay in sync with:
+//   backend/routes/ai.py (NARRATOR_PROMPTS dict)
+// If you add/modify narrators here, update the backend file too!
 
 const NARRATORS = (window.NARRATORS = {
   deadpan: {
@@ -3705,6 +3935,20 @@ if (typeof module !== 'undefined' && module.exports) {
 // Exposes Utils as a global (window.Utils) so existing inline code can use it.
 
 const Utils = window.Utils = {
+  /**
+   * HTML-escape a value for safe interpolation into template strings.
+   * Converts &, <, >, ", and ' to their corresponding HTML entities.
+   */
+  escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
   // Typewriter effect for text
   async typewriter(element, text, speed = (window.CONFIG && window.CONFIG.TYPEWRITER_SPEED) || 30) {
     element.textContent = '';
@@ -4903,167 +5147,53 @@ const StorageService = (window.StorageService = {
     }
   },
 
-  // ==== CHARACTER STORAGE (via shared CharacterStorage facade) ====
+  // ==== CHARACTER STORAGE ====
+  // Delegates to shared CharacterStorage facade (character-storage.js)
+  // which handles cloud/local storage, fallbacks, and timestamp normalization.
 
   /**
-   * Get all characters using the shared CharacterStorage facade.
-   * This keeps builder + manager on the same storage rail.
+   * Get all characters via shared CharacterStorage facade.
    */
   async getCharacters() {
-    if (!window.CharacterStorage || typeof window.CharacterStorage.getAll !== 'function') {
-      console.warn(
-        'StorageService.getCharacters: CharacterStorage facade not available. Falling back to local-only storage.',
-      );
-      return this._getCharactersFromLocalStorage();
+    if (!window.CharacterStorage) {
+      console.warn('StorageService: CharacterStorage not available');
+      return [];
     }
-
-    try {
-      const characters = await window.CharacterStorage.getAll();
-      // Cache in localStorage for offline access (builder may still rely on this)
-      this._cacheCharactersLocally(characters);
-      return characters;
-    } catch (error) {
-      console.error(
-        'StorageService.getCharacters: CharacterStorage.getAll failed, using local fallback:',
-        error,
-      );
-      return this._getCharactersFromLocalStorage();
-    }
+    return CharacterStorage.getAll();
   },
-  
+
   /**
-   * Save character through CharacterStorage facade.
-   * Preserves existing builder expectations (returns saved character).
+   * Save character via shared CharacterStorage facade.
+   * Automatically creates or updates based on presence of character.id.
    */
   async saveCharacter(character) {
     if (!window.CharacterStorage) {
-      console.warn(
-        'StorageService.saveCharacter: CharacterStorage facade not available. Using legacy local-only save.',
-      );
-      return this._saveCharacterToLocalStorage(character);
+      console.warn('StorageService: CharacterStorage not available');
+      return character;
     }
 
-    try {
-      let savedCharacter;
-
-      if (character.id) {
-        if (DEBUG_BUILDER) {
-          console.log('💾 BUILDER: Updating character via CharacterStorage:', character.id);
-        }
-        savedCharacter = await window.CharacterStorage.update(character.id, character);
-      } else {
-        if (DEBUG_BUILDER) {
-          console.log('💾 BUILDER: Creating character via CharacterStorage');
-        }
-        savedCharacter = await window.CharacterStorage.add(character);
+    if (character.id) {
+      if (DEBUG_BUILDER) {
+        console.log('💾 BUILDER: Updating character via CharacterStorage:', character.id);
       }
-
-      // Keep local cache in sync for any builder flows that still read from it
-      this._cacheCharacterLocally(savedCharacter);
-      return savedCharacter;
-    } catch (error) {
-      console.error(
-        'StorageService.saveCharacter: CharacterStorage operation failed, using legacy local-only save:',
-        error,
-      );
-      return this._saveCharacterToLocalStorage(character);
+      return CharacterStorage.update(character.id, character);
+    } else {
+      if (DEBUG_BUILDER) {
+        console.log('💾 BUILDER: Creating character via CharacterStorage');
+      }
+      return CharacterStorage.add(character);
     }
   },
-  
+
   /**
-   * Delete character via CharacterStorage facade.
+   * Delete character via shared CharacterStorage facade.
    */
   async deleteCharacter(id) {
     if (!window.CharacterStorage) {
-      console.warn(
-        'StorageService.deleteCharacter: CharacterStorage facade not available. Using legacy local-only delete.',
-      );
-      this._deleteCharacterFromLocalStorage(id);
-      return true;
+      console.warn('StorageService: CharacterStorage not available');
+      return false;
     }
-
-    try {
-      await window.CharacterStorage.delete(id);
-      this._deleteCharacterFromLocalStorage(id);
-      return true;
-    } catch (error) {
-      console.error(
-        'StorageService.deleteCharacter: CharacterStorage.delete failed, falling back to local-only delete:',
-        error,
-      );
-      this._deleteCharacterFromLocalStorage(id);
-      return true;
-    }
-  },
-  
-  // ==== LOCALSTORAGE HELPERS (private) ====
-  
-  _getCharactersFromLocalStorage() {
-    return (window.DanddyStorage && window.DanddyStorage.readAll())
-      || [];
-  },
-
-  _saveCharacterToLocalStorage(character) {
-    const characters = this._getCharactersFromLocalStorage();
-    
-    // Assign a temporary ID if none exists (for guest mode)
-    if (!character.id) {
-      character.id = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    }
-
-    // Ensure characters have stable timestamps so "Date modified" sorting in
-    // the manager can rely on the character data itself instead of separate
-    // client-side caches.
-    const nowIso = new Date().toISOString();
-    if (!character.createdAt) {
-      character.createdAt = nowIso;
-    }
-    character.updatedAt = nowIso;
-    
-    const index = characters.findIndex((c) => c.id === character.id);
-
-    if (index >= 0) {
-      characters[index] = character;
-    } else {
-      characters.push(character);
-    }
-
-    if (window.DanddyStorage) {
-      window.DanddyStorage.writeAll(characters);
-    } else {
-      localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(characters));
-    }
-    return character;
-  },
-
-  _deleteCharacterFromLocalStorage(id) {
-    if (window.DanddyStorage) {
-      window.DanddyStorage.deleteById(id);
-    } else {
-      const characters = this._getCharactersFromLocalStorage().filter((c) => c.id !== id);
-      localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(characters));
-    }
-  },
-  
-  _cacheCharactersLocally(characters) {
-    if (window.DanddyStorage) {
-      window.DanddyStorage.writeCache(characters);
-    } else {
-      localStorage.setItem(CONFIG.STORAGE_KEY + '_cache', JSON.stringify(characters));
-    }
-  },
-  
-  _cacheCharacterLocally(character) {
-    const cached = this._getCharactersFromLocalStorage();
-    const index = cached.findIndex((c) => c.id === character.id);
-    
-    if (index >= 0) {
-      cached[index] = character;
-    } else {
-      cached.push(character);
-    }
-    
-    this._cacheCharactersLocally(cached);
+    return CharacterStorage.delete(id);
   },
 });
 
@@ -5861,372 +5991,10 @@ const AIService = (window.AIService = {
   },
 
   generateFallbackNames(race, count) {
-    const namePatterns = {
-      dwarf: {
-        first: [
-          'Thorin',
-          'Gimli',
-          'Balin',
-          'Dwalin',
-          'Thrain',
-          'Dain',
-          'Bombur',
-          'Bofur',
-          'Kili',
-          'Fili',
-          'Oin',
-          'Gloin',
-          'Bruenor',
-          'Morgran',
-          'Rurik',
-          'Einkil',
-          'Barendd',
-          'Baern',
-          'Harbek',
-          'Rumnar',
-        ],
-        last: [
-          'Ironforge',
-          'Stonehelm',
-          'Deepdelver',
-          'Mountainheart',
-          'Goldseeker',
-          'Ironfoot',
-          'Hammerhand',
-          'Oakenshield',
-          'Battlehammer',
-          'Fireforge',
-          'Stormdelver',
-          'Stonebreaker',
-          'Coppervein',
-          'Bronzebrow',
-          'Rockseeker',
-        ],
-      },
-      elf: {
-        first: [
-          'Legolas',
-          'Galadriel',
-          'Elrond',
-          'Arwen',
-          'Thranduil',
-          'Celeborn',
-          'Elessar',
-          'Elendil',
-          'Finrod',
-          'Luthien',
-          'Faelar',
-          'Aelar',
-          'Mialee',
-          'Syllin',
-          'Thia',
-          'Varis',
-          'Althaea',
-          'Enna',
-          'Nelar',
-        ],
-        last: [
-          'Greenleaf',
-          'Starweaver',
-          'Moonwhisper',
-          'Silverbow',
-          'Nightbreeze',
-          'Sunshadow',
-          'Stormwind',
-          'Brightwood',
-          'Dawnpetal',
-          'Evenwood',
-          'Silverfrond',
-          'Nightstar',
-          'Willowshade',
-          'Starfall',
-          'Moonbrook',
-        ],
-      },
-      human: {
-        first: [
-          'Aragorn',
-          'Boromir',
-          'Eowyn',
-          'Faramir',
-          'Theodred',
-          'Eomer',
-          'Eddard',
-          'Catelyn',
-          'Jon',
-          'Sansa',
-          'Alaric',
-          'Rowan',
-          'Serena',
-          'Garrick',
-          'Lysa',
-          'Marcus',
-          'Elena',
-          'Corin',
-          'Brynn',
-        ],
-        last: [
-          'Stormborn',
-          'Blackwood',
-          'Riverrun',
-          'Ironwall',
-          'Longstrider',
-          'Stormblade',
-          'Brightshield',
-          'Greywind',
-          'Highvale',
-          'Steelguard',
-          'Duskwalker',
-          'Redcrest',
-          'Stoneward',
-          'Ashborne',
-          'Hawkspear',
-        ],
-      },
-      halfling: {
-        first: [
-          'Bilbo',
-          'Frodo',
-          'Sam',
-          'Merry',
-          'Pippin',
-          'Rosie',
-          'Hamfast',
-          'Belladonna',
-          'Lobelia',
-          'Fredegar',
-          'Milo',
-          'Daisy',
-          'Rosa',
-          'Cora',
-          'Perrin',
-          'Tansy',
-          'Dodo',
-          'Seraphina',
-          'Odo',
-        ],
-        last: [
-          'Baggins',
-          'Took',
-          'Brandybuck',
-          'Gamgee',
-          'Goodbody',
-          'Proudfoot',
-          'Burrows',
-          'Underhill',
-          'Greenhill',
-          'Fairbairn',
-          'Hilltopple',
-          'Brushgather',
-          'Tealeaf',
-          'Thorngage',
-          'Goodbarrel',
-          'Hearthcoat',
-        ],
-      },
-      dragonborn: {
-        first: [
-          'Drax',
-          'Razax',
-          'Thordak',
-          'Torinn',
-          'Balasar',
-          'Kriv',
-          'Nadarr',
-          'Heskan',
-          'Shedinn',
-          'Ghesh',
-          'Arjhan',
-          'Medrash',
-          'Rhogar',
-          'Tarhun',
-          'Akra',
-          'Miirym',
-          'Sora',
-          'Vezera',
-          'Zorvath',
-        ],
-        last: [
-          'Flameheart',
-          'Ironclaw',
-          'Stormsinger',
-          'Ashborn',
-          'Dragonfall',
-          'Firebreath',
-          'Scaleborn',
-          'Wyrmblood',
-          'Skyscale',
-          'Embermaw',
-          'Stormscale',
-          'Brightflame',
-          'Stoneclaw',
-          'Cloudsunder',
-          'Blazewing',
-        ],
-      },
-      gnome: {
-        first: [
-          'Glim',
-          'Boddynock',
-          'Dimble',
-          'Fonkin',
-          'Seebo',
-          'Zook',
-          'Eldon',
-          'Brocc',
-          'Burgell',
-          'Jebeddo',
-          'Alston',
-          'Bimpnottin',
-          'Fizzik',
-          'Carlin',
-          'Nissa',
-          'Wrenn',
-          'Tavi',
-          'Ellyjobell',
-          'Zanna',
-        ],
-        last: [
-          'Tinkertop',
-          'Sparklegem',
-          'Nimblefingers',
-          'Brightgear',
-          'Gadgetwhiz',
-          'Fizzlebang',
-          'Cogsworth',
-          'Glimmergold',
-          'Whistlewhirr',
-          'Gadgetgrind',
-          'Janglecoin',
-          'Copperbolt',
-          'Mithrilspanner',
-          'Quickwidget',
-          'Proudgear',
-        ],
-      },
-      'half-elf': {
-        first: [
-          'Tanis',
-          'Raistlin',
-          'Laurana',
-          'Gilthanas',
-          'Tanthalas',
-          'Silvara',
-          'Eliana',
-          'Korrin',
-          'Faelyn',
-          'Soveliss',
-          'Ilanis',
-          'Kael',
-          'Myla',
-          'Tharos',
-          'Elira',
-          'Daeris',
-          'Rian',
-          'Caelynn',
-          'Torren',
-        ],
-        last: [
-          'Half-Elven',
-          'Moonbrook',
-          'Starfall',
-          'Whisperwind',
-          'Shadowvale',
-          'Dawnbringer',
-          'Twilightbane',
-          'Silvermoon',
-          'Nightbloom',
-          'Duskwillow',
-          'Starcrest',
-          'Eveningfall',
-          'Shadeglade',
-          'Brightglen',
-          'Silvershade',
-        ],
-      },
-      'half-orc': {
-        first: [
-          'Grognak',
-          'Throk',
-          'Ugak',
-          'Krod',
-          'Sharn',
-          'Dench',
-          'Grul',
-          'Drog',
-          'Feng',
-          'Shump',
-          'Ghorbash',
-          'Mazog',
-          'Uglar',
-          'Ruk',
-          'Karash',
-          'Vorag',
-          'Yagra',
-          'Shautha',
-          'Ovak',
-        ],
-        last: [
-          'Ironhide',
-          'Bonecrusher',
-          'Skullsplitter',
-          'Bloodaxe',
-          'Stonefist',
-          'Grimjaw',
-          'Warbringer',
-          'Doomhammer',
-          'Boulderfist',
-          'Skullbrand',
-          'Gorefang',
-          'Bloodfury',
-          'Ironmaw',
-          'Steelgrip',
-          'Rageborn',
-        ],
-      },
-      tiefling: {
-        first: [
-          'Zevlor',
-          'Raven',
-          'Damakos',
-          'Akta',
-          'Therai',
-          'Nemeia',
-          'Kallista',
-          'Leucis',
-          'Orianna',
-          'Morthos',
-          'Azazel',
-          'Seraphine',
-          'Xathos',
-          'Riven',
-          'Lyra',
-          'Caelum',
-          'Naeris',
-          'Vexria',
-          'Zheren',
-        ],
-        last: [
-          'Hellborn',
-          'Darkflame',
-          'Shadowhorn',
-          'Nightwhisper',
-          'Embersoul',
-          'Dreadfire',
-          'Ashenborn',
-          'Voidwalker',
-          'Grimshroud',
-          'Duskwreath',
-          'Soulbrand',
-          'Cindertongue',
-          'Nightreign',
-          'Gloomsigil',
-          'Shadebinder',
-        ],
-      },
-    };
-
-    const pattern = namePatterns[race] || namePatterns.human;
+    // Use shared name data from CharacterNameData module
+    const pattern = window.CharacterNameData
+      ? CharacterNameData.getPattern(race)
+      : { first: ['Hero'], last: ['Unknown'] };
     const result = [];
     const usedLocalCombos = new Set();
 
@@ -6544,54 +6312,25 @@ Format your response as JSON array of strings, one for each option in order. Exa
   buildCharacterDescription(character) {
     const parts = [];
 
-    // Race
+    // Race - use shared description data from PortraitPrompt
     if (character.race) {
-      const raceDescriptions = {
-        human: 'human with average features',
-        elf: 'elf with pointed ears and graceful features',
-        dwarf: 'dwarf with a thick beard and stocky build',
-        halfling: 'halfling, small and cheerful',
-        dragonborn: 'dragonborn with scaled skin and dragon-like features',
-        gnome: 'gnome, small with clever eyes',
-        'half-elf': 'half-elf with slightly pointed ears',
-        'half-orc': 'half-orc with tusks and powerful build',
-        tiefling: 'tiefling with horns and a tail',
-      };
-      parts.push(raceDescriptions[character.race] || character.race);
+      const raceDesc = window.PortraitPrompt
+        ? PortraitPrompt.getRaceDescription(character.race)
+        : character.race;
+      parts.push(raceDesc);
     }
 
-    // Class
+    // Class - use shared description data from PortraitPrompt
     if (character.class) {
-      const classDescriptions = {
-        fighter: 'wearing heavy armor and holding a sword',
-        wizard: 'in flowing robes holding a staff',
-        rogue: 'in dark leather armor with daggers',
-        cleric: 'in holy vestments with a sacred symbol',
-        ranger: 'with a bow and forest attire',
-        paladin: 'in shining armor with a holy shield',
-        barbarian: 'with wild hair wielding a massive axe',
-        bard: 'with a lute and colorful clothing',
-        druid: 'with nature-themed robes and wooden staff',
-        monk: 'in simple robes in a martial stance',
-        sorcerer: 'with crackling magical energy',
-        warlock: 'with dark robes and eldritch symbols',
-      };
-      parts.push(classDescriptions[character.class] || character.class);
+      const classDesc = window.PortraitPrompt
+        ? PortraitPrompt.getClassDescription(character.class)
+        : character.class;
+      parts.push(classDesc);
     }
 
     // Magic specialization (only for spellcasting classes)
-    if (character.class) {
-      const magicSpecializations = {
-        wizard: 'specializing in elemental magic like fire and ice',
-        sorcerer: 'channeling raw elemental arcane power',
-        warlock: 'wielding shadowy eldritch magic',
-        cleric: 'focused on radiant and healing magic',
-        druid: 'calling on primal nature and elemental magic',
-        bard: 'weaving subtle enchantments and support magic through music',
-        paladin: 'enhancing strikes with holy, radiant magic',
-      };
-
-      const magicText = magicSpecializations[character.class];
+    if (character.class && window.PortraitPrompt) {
+      const magicText = PortraitPrompt.getMagicSpecialization(character.class);
       if (magicText) {
         parts.push(magicText);
       }
@@ -8676,17 +8415,13 @@ const CharacterSheet = (window.CharacterSheet = {
   // ========================================
 
   /**
-   * Basic HTML-escape helper for safely interpolating text into template
-   * strings. Converts &, <, >, ", and ' to their corresponding entities.
+   * HTML-escape helper. Delegates to the shared Utils implementation.
+   * Kept as a method on CharacterSheet for backwards compatibility.
    */
   escapeHtml(value) {
-    if (value === null || value === undefined) return '';
-    return String(value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    return window.Utils && typeof Utils.escapeHtml === 'function'
+      ? Utils.escapeHtml(value)
+      : (value === null || value === undefined ? '' : String(value));
   },
 
   /**
@@ -14460,7 +14195,7 @@ const App = (window.App = {
       this.showToast('Prompt copied.');
     } catch (error) {
       console.error('Failed to copy portrait prompt:', error);
-      this.showToast('Could not copy prompt. Copy it manually from the card.');
+      this.showToast('Could not copy prompt. Copy it manually from the card.', 8000);
     }
   },
 
@@ -15258,7 +14993,7 @@ const App = (window.App = {
   },
 
   // Toast used for quick, non-blocking feedback (e.g. "Prompt copied"), anchored to the terminal container.
-  showToast(rawMessage) {
+  showToast(rawMessage, duration = 4000) {
     const message = (rawMessage == null) ? '' : String(rawMessage);
     // Remove any leading glyphs (checkmarks, warning icons, etc.) so builder
     // toasts stay clean and rely only on text + the "×" close button. Also
@@ -15349,11 +15084,11 @@ const App = (window.App = {
       toast.classList.add('show');
       App._toastShowTimeout = null;
 
-      // Keep toast visible for 10 seconds before auto-dismissing
+      // Auto-dismiss after specified duration (default 4s for success messages)
       App._toastTimeout = setTimeout(() => {
         toast.classList.remove('show');
         App._toastTimeout = null;
-      }, 10000);
+      }, duration);
     }, 80);
   },
 
