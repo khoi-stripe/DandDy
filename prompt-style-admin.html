@@ -278,13 +278,20 @@
             <div class="panel-title">Existing entries</div>
             <div class="panel-subtitle">Filter or edit your configured variables.</div>
           </div>
-          <div style="display: flex; gap: 8px;">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button class="btn btn-primary" type="button" id="btnLoadDefaults">
               Load defaults
             </button>
-            <button class="btn btn-secondary" type="button" id="btnClearAll">
+            <button class="btn btn-secondary" type="button" id="btnExport">
+              Export JSON
+            </button>
+            <button class="btn btn-secondary" type="button" id="btnImport">
+              Import JSON
+            </button>
+            <button class="btn btn-danger" type="button" id="btnClearAll">
               Clear all
             </button>
+            <input type="file" id="importFileInput" accept=".json" style="display: none;" />
           </div>
         </div>
 

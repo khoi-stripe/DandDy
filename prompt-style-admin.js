@@ -757,6 +757,121 @@
       });
     }
 
+    // Export to JSON file
+    const exportBtn = $('btnExport');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        if (entries.length === 0) {
+          alert('No entries to export.');
+          return;
+        }
+
+        // Prepare export data (strip internal IDs for portability)
+        const exportData = entries.map(e => ({
+          kind: e.kind,
+          key: e.key,
+          description: e.description || '',
+          styleDescription: e.styleDescription || '',
+        }));
+
+        const json = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `prompt-entries-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        alert(`Exported ${entries.length} entries.`);
+      });
+    }
+
+    // Import from JSON file
+    const importBtn = $('btnImport');
+    const importFileInput = $('importFileInput');
+    if (importBtn && importFileInput) {
+      importBtn.addEventListener('click', () => {
+        importFileInput.click();
+      });
+
+      importFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        try {
+          const text = await file.text();
+          const imported = JSON.parse(text);
+
+          if (!Array.isArray(imported)) {
+            alert('Invalid format: expected an array of entries.');
+            return;
+          }
+
+          // Validate entries
+          const validKinds = ['race', 'class', 'pose', 'camera', 'scene', 'style'];
+          const validEntries = imported.filter(e => 
+            e && typeof e.key === 'string' && e.key.trim() &&
+            validKinds.includes(e.kind)
+          );
+
+          if (validEntries.length === 0) {
+            alert('No valid entries found in the file.');
+            return;
+          }
+
+          const msg = `Import ${validEntries.length} entries?\n\n` +
+            `This will ADD to your existing ${entries.length} entries.\n` +
+            `Duplicates may be created.`;
+          
+          if (!confirm(msg)) {
+            importFileInput.value = '';
+            return;
+          }
+
+          // Prepare entries with timestamps
+          const nowIso = new Date().toISOString();
+          const newEntries = validEntries.map(e => ({
+            id: createId(),
+            kind: e.kind,
+            key: e.key.trim(),
+            description: (e.description || '').trim(),
+            styleDescription: (e.styleDescription || '').trim(),
+            createdAt: nowIso,
+            updatedAt: nowIso,
+          }));
+
+          // Import via API if using cloud
+          if (usingCloud) {
+            try {
+              const created = await bulkCreateViaAPI(newEntries);
+              entries = entries.concat(created);
+              syncLocalCache(entries);
+            } catch (err) {
+              console.error('Failed to import via API:', err);
+              alert('Failed to import to cloud. Changes saved locally.');
+              entries = entries.concat(newEntries);
+              saveEntriesToLocalStorage(entries);
+            }
+          } else {
+            entries = entries.concat(newEntries);
+            saveEntriesToLocalStorage(entries);
+          }
+
+          renderTable(entries);
+          alert(`Imported ${newEntries.length} entries.`);
+        } catch (err) {
+          console.error('Import failed:', err);
+          alert('Failed to import: ' + err.message);
+        } finally {
+          importFileInput.value = '';
+        }
+      });
+    }
+
     const clearAllBtn = $('btnClearAll');
     if (clearAllBtn) {
       clearAllBtn.addEventListener('click', async () => {
