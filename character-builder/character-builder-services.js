@@ -278,6 +278,82 @@ const StorageService = (window.StorageService = {
     }
   },
 
+  // Preferred portrait prompt theme for AI portraits.
+  // Stored per-browser so builder + manager can share the same choice.
+  getPortraitPromptTheme() {
+    try {
+      const raw = localStorage.getItem('dnd_portrait_prompt_theme');
+      const fallback =
+        (CONFIG && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) || null;
+      if (!raw) return fallback;
+      const value = String(raw).trim();
+
+      // If the shared PortraitPrompt helper is available, validate against it
+      // so we gracefully fall back when themes change.
+      if (
+        typeof window !== 'undefined' &&
+        window.PortraitPrompt &&
+        typeof window.PortraitPrompt.getThemes === 'function'
+      ) {
+        try {
+          const themes = window.PortraitPrompt.getThemes();
+          const allowedIds = Array.isArray(themes)
+            ? themes.map((t) => t.id)
+            : [];
+          if (allowedIds.includes(value)) {
+            return value;
+          }
+          return fallback;
+        } catch (e) {
+          // Non-fatal – fall through to returning the raw value.
+        }
+      }
+
+      return value || fallback;
+    } catch (e) {
+      console.warn('StorageService.getPortraitPromptTheme failed, using fallback', e);
+      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) || null;
+    }
+  },
+
+  setPortraitPromptTheme(themeId) {
+    try {
+      const value = String(themeId || '').trim();
+      if (!value) {
+        localStorage.removeItem('dnd_portrait_prompt_theme');
+        return;
+      }
+
+      // If the shared PortraitPrompt helper is available, validate against it.
+      if (
+        typeof window !== 'undefined' &&
+        window.PortraitPrompt &&
+        typeof window.PortraitPrompt.getThemes === 'function'
+      ) {
+        try {
+          const themes = window.PortraitPrompt.getThemes();
+          const allowedIds = Array.isArray(themes)
+            ? themes.map((t) => t.id)
+            : [];
+          if (!allowedIds.includes(value)) {
+            console.warn(
+              'StorageService.setPortraitPromptTheme: ignoring unknown theme id',
+              value,
+            );
+            localStorage.removeItem('dnd_portrait_prompt_theme');
+            return;
+          }
+        } catch (e) {
+          // Non-fatal – if validation fails, still store the value.
+        }
+      }
+
+      localStorage.setItem('dnd_portrait_prompt_theme', value);
+    } catch (e) {
+      console.warn('StorageService.setPortraitPromptTheme failed', e);
+    }
+  },
+
   // ==== CHARACTER STORAGE (via shared CharacterStorage facade) ====
 
   /**
@@ -2015,8 +2091,6 @@ Format your response as JSON array of strings, one for each option in order. Exa
 
   // Build full DALL-E prompt with rendering instructions (not shown to user)
   buildPortraitPrompt(character) {
-    const characterDescription = this.buildCharacterDescription(character);
-
     // Normalize class key for lookups
     const classKey = (character.class || 'default').toLowerCase();
 
@@ -2226,34 +2300,135 @@ Format your response as JSON array of strings, one for each option in order. Exa
     const cameraPrompt =
       cameraList[Math.floor(Math.random() * cameraList.length)];
 
-    let renderingInstructions;
+    // Resolve current portrait prompt theme (if any)
+    let promptThemeId = null;
+    try {
+      if (
+        typeof window !== 'undefined' &&
+        window.StorageService &&
+        typeof window.StorageService.getPortraitPromptTheme === 'function'
+      ) {
+        promptThemeId = window.StorageService.getPortraitPromptTheme();
+      } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) {
+        promptThemeId = CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME;
+      }
+    } catch (e) {
+      // Non-fatal: fall back to default theme behavior below.
+    }
+
+    // Build compact STYLE / Background descriptions from theme (when available)
+    let styleDescription = '';
+    let backgroundDescription = '';
     if (
       typeof window !== 'undefined' &&
       window.PortraitPrompt &&
-      typeof window.PortraitPrompt.buildBasePortraitInstructions === 'function'
+      typeof window.PortraitPrompt.buildStyleAndBackgroundDescriptions ===
+        'function'
     ) {
-      renderingInstructions = window.PortraitPrompt.buildBasePortraitInstructions(
-        {
-          characterDescription,
-          posePrompt,
-          cameraPrompt,
-        },
-      );
-    } else {
-      // Fallback: keep a local copy in case PortraitPrompt is not loaded.
-      renderingInstructions = [
-        `Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,
-        'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
-        'Include some controlled, directional hatching to define form (light mid-tone texture only).',
-        `Pose: ${posePrompt}`,
-        cameraPrompt,
-        'Background should be simple, entirely black, and free of symbols or text.',
-        'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
-        'Aspect ratio 3:4.',
-      ];
+      try {
+        const sections =
+          window.PortraitPrompt.buildStyleAndBackgroundDescriptions({
+            posePrompt,
+            cameraPrompt,
+            themeId: promptThemeId,
+          }) || {};
+        styleDescription = sections.styleDescription || '';
+        backgroundDescription = sections.backgroundDescription || '';
+      } catch (e) {
+        // Non-fatal – fall through to simple defaults below.
+      }
     }
 
-    return renderingInstructions.join(' ');
+    if (!styleDescription) {
+      styleDescription =
+        'High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';
+    }
+    if (!backgroundDescription) {
+      backgroundDescription =
+        'Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';
+    }
+
+    // Build simple header line: {CHARACTER_NAME}: {RACE}, {CLASS}, {BACKGROUND}
+    const name = (character && character.name) || 'Unnamed character';
+
+    const raceId = character && character.race ? String(character.race) : null;
+    const classId =
+      character && character.class ? String(character.class) : null;
+
+    let raceLabel = raceId;
+    let classLabel = classId;
+
+    // Prefer admin-configured snippets for race/class when available.
+    try {
+      if (
+        typeof window !== 'undefined' &&
+        window.PortraitPrompt &&
+        typeof window.PortraitPrompt.getVariableSnippet === 'function'
+      ) {
+        if (raceId) {
+          const customRace =
+            window.PortraitPrompt.getVariableSnippet('race', raceId);
+          if (customRace) raceLabel = customRace;
+        }
+        if (classId) {
+          const customClass =
+            window.PortraitPrompt.getVariableSnippet('class', classId);
+          if (customClass) classLabel = customClass;
+        }
+      }
+    } catch (e) {
+      // Non-fatal – fall back to simple labels.
+    }
+
+    let backgroundLabel = null;
+    if (character && character.background) {
+      backgroundLabel = String(character.background);
+      try {
+        if (
+          typeof DND_DATA !== 'undefined' &&
+          Array.isArray(DND_DATA.backgrounds)
+        ) {
+          const bgObj = DND_DATA.backgrounds.find(
+            (b) => b.id === character.background,
+          );
+          if (bgObj && bgObj.name) {
+            backgroundLabel = String(bgObj.name);
+          }
+        }
+      } catch (e) {
+        // Non-fatal – fall back to raw background value.
+      }
+    }
+
+    const headerParts = [];
+    if (raceLabel) headerParts.push(raceLabel);
+    if (classLabel) headerParts.push(classLabel);
+    if (backgroundLabel) headerParts.push(backgroundLabel);
+
+    const headerSuffix = headerParts.join(', ');
+    const headerLine = headerSuffix
+      ? `${name}: ${headerSuffix}`
+      : `${name}`;
+
+    // Final multi-line prompt template:
+    // {CHARACTER_NAME}: {RACE}, {CLASS}, {BACKGROUND}
+    //
+    // Pose: {POSE_VARIANT}
+    //
+    // Camera: {CAMERA_ANGLE}
+    //
+    // STYLE: {DESCRIPTION}
+    //
+    // Scene: {DESCRIPTION}
+    let prompt = `${headerLine}\n\nPose: ${posePrompt}\n\n${cameraPrompt}`;
+    if (styleDescription) {
+      prompt += `\n\nSTYLE: ${styleDescription}`;
+    }
+    if (backgroundDescription) {
+      prompt += `\n\nScene: ${backgroundDescription}`;
+    }
+
+    return prompt;
   },
 
   // Analyze a rejected prompt to help identify problematic sections

@@ -167,6 +167,66 @@ const Components = (window.Components = {
 
     const currentPortraitViewMode = getPortraitViewMode();
 
+    // Portrait prompt theme (for AI-generated portraits)
+    const getPortraitPromptTheme = () => {
+      try {
+        if (window.StorageService && StorageService.getPortraitPromptTheme) {
+          return StorageService.getPortraitPromptTheme();
+        }
+      } catch (e) {
+        console.warn('Settings: failed to read portrait prompt theme', e);
+      }
+
+      if (
+        typeof window !== 'undefined' &&
+        window.PortraitPrompt &&
+        typeof window.PortraitPrompt.getDefaultThemeId === 'function'
+      ) {
+        try {
+          return window.PortraitPrompt.getDefaultThemeId();
+        } catch (e) {
+          // Non-fatal
+        }
+      }
+
+      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) || null;
+    };
+
+    const currentPromptThemeId = getPortraitPromptTheme();
+
+    let promptThemes = [];
+    if (
+      typeof window !== 'undefined' &&
+      window.PortraitPrompt &&
+      typeof window.PortraitPrompt.getThemes === 'function'
+    ) {
+      try {
+        promptThemes = window.PortraitPrompt.getThemes() || [];
+      } catch (e) {
+        console.warn('Settings: failed to read portrait prompt themes', e);
+      }
+    }
+
+    // Fallback to a single default theme when the helper is unavailable.
+    if (!Array.isArray(promptThemes) || !promptThemes.length) {
+      promptThemes = [
+        {
+          id: 'classic-ink',
+          label: 'Classic Ink (default)',
+          description:
+            'High-contrast black-and-white ink illustration with bold silhouettes.',
+        },
+      ];
+    }
+
+    const activePromptTheme =
+      promptThemes.find((t) => t.id === currentPromptThemeId) ||
+      promptThemes[0];
+
+    const currentPromptThemeLabel = activePromptTheme
+      ? `${activePromptTheme.label}`
+      : 'Default (Classic Ink)';
+
     return `
       <div id="settingsModal" class="modal show" onclick="SettingsModal.close()">
         <div class="modal-content builder-settings-modal" onclick="event.stopPropagation();">
@@ -288,6 +348,34 @@ const Components = (window.Components = {
                 </section>
 
                 <section class="settings-section">
+                  <div class="settings-row settings-row--stacked">
+                    <div class="settings-label">Default portrait view</div>
+                    <div class="settings-field">
+                      <div class="settings-radio-group" role="radiogroup" aria-label="Default portrait view">
+                        <label class="settings-radio-option">
+                          <input
+                            type="radio"
+                            name="portrait-view-mode"
+                            value="ascii"
+                            ${currentPortraitViewMode === 'original' ? '' : 'checked'}
+                          >
+                          <span class="settings-radio-label">ASCII</span>
+                        </label>
+                        <label class="settings-radio-option">
+                          <input
+                            type="radio"
+                            name="portrait-view-mode"
+                            value="original"
+                            ${currentPortraitViewMode === 'original' ? 'checked' : ''}
+                          >
+                          <span class="settings-radio-label">Original</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="settings-section">
                   <div class="settings-row">
                     <div class="settings-label">AI model</div>
                     <div class="selector-shell selector-shell--match-width">
@@ -351,28 +439,75 @@ const Components = (window.Components = {
 
                 <section class="settings-section">
                   <div class="settings-row settings-row--stacked">
-                    <div class="settings-label">Default portrait view</div>
+                    <div class="settings-label">Style</div>
                     <div class="settings-field">
-                      <div class="settings-radio-group" role="radiogroup" aria-label="Default portrait view">
-                        <label class="settings-radio-option">
-                          <input
-                            type="radio"
-                            name="portrait-view-mode"
-                            value="ascii"
-                            ${currentPortraitViewMode === 'original' ? '' : 'checked'}
+                      <div class="selector-shell selector-shell--match-width" style="width: 100%;">
+                        <button
+                          class="terminal-btn selector-trigger"
+                          id="portrait-theme-select-trigger"
+                          type="button"
+                          aria-haspopup="listbox"
+                          aria-expanded="false"
+                          onclick="CharacterSheet.toggleSelectorMenu(this)"
+                          style="width: 100%;"
+                        >
+                          <span
+                            class="selector-trigger-label"
+                            id="portrait-theme-select-label"
                           >
-                          <span class="settings-radio-label">ASCII</span>
-                        </label>
-                        <label class="settings-radio-option">
-                          <input
-                            type="radio"
-                            name="portrait-view-mode"
-                            value="original"
-                            ${currentPortraitViewMode === 'original' ? 'checked' : ''}
-                          >
-                          <span class="settings-radio-label">Original</span>
-                        </label>
+                            ${currentPromptThemeLabel}
+                          </span>
+                        </button>
+                        <div
+                          class="selector-menu"
+                          role="listbox"
+                          aria-label="Portrait prompt theme"
+                          aria-hidden="true"
+                          style="width: 100%;"
+                        >
+                          ${promptThemes
+                            .map((theme) => {
+                              const isSelected = theme.id === activePromptTheme.id;
+                              const optionText =
+                                theme.description && theme.description.trim()
+                                  ? `${theme.label} — ${theme.description}`
+                                  : theme.label;
+                              const truncatedText = truncate(optionText, 80);
+                              return `
+                              <button
+                                class="selector-option${
+                                  isSelected ? ' is-selected' : ''
+                                }"
+                                type="button"
+                                role="option"
+                                data-value="${theme.id}"
+                                aria-selected="${isSelected ? 'true' : 'false'}"
+                              >
+                                <span class="selector-option-label">
+                                  ${truncatedText}
+                                </span>
+                              </button>
+                            `;
+                            })
+                            .join('')}
+                        </div>
                       </div>
+                      <select
+                        id="portrait-theme-select"
+                        class="terminal-select settings-select hidden"
+                      >
+                        ${promptThemes
+                          .map(
+                            (theme) => `
+                            <option value="${theme.id}" ${
+                              theme.id === activePromptTheme.id ? 'selected' : ''
+                            }>
+                              ${theme.label}
+                            </option>
+                          `,
+                          )
+                          .join('')}
+                      </select>
                     </div>
                   </div>
                 </section>
@@ -516,6 +651,36 @@ const SettingsModal = (window.SettingsModal = {
         });
       });
     }
+
+    // Portrait prompt theme selector
+    const themeTrigger = modal.querySelector(
+      '#portrait-theme-select-trigger',
+    );
+    const themeLabel = modal.querySelector('#portrait-theme-select-label');
+    const themeSelect = modal.querySelector('#portrait-theme-select');
+    const themeOptions = modal.querySelectorAll(
+      '.selector-menu[aria-label="Portrait prompt theme"] .selector-option',
+    );
+
+    if (themeTrigger && themeLabel && themeSelect && themeOptions.length) {
+      themeOptions.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = option.getAttribute('data-value');
+          const label = option.querySelector('.selector-option-label');
+          if (value && label) {
+            themeLabel.textContent = label.textContent.trim();
+            themeSelect.value = value;
+            // Keep menu selection state in sync with the trigger
+            themeOptions.forEach((opt) => {
+              const isSelected = opt === option;
+              opt.classList.toggle('is-selected', isSelected);
+              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+          }
+        });
+      });
+    }
   },
 
   close() {
@@ -577,6 +742,16 @@ const SettingsModal = (window.SettingsModal = {
     );
     if (portraitModeInput && window.StorageService && StorageService.setPortraitViewMode) {
       StorageService.setPortraitViewMode(portraitModeInput.value);
+    }
+
+    // Save portrait prompt theme selection
+    const portraitThemeSelect = document.getElementById('portrait-theme-select');
+    if (
+      portraitThemeSelect &&
+      window.StorageService &&
+      StorageService.setPortraitPromptTheme
+    ) {
+      StorageService.setPortraitPromptTheme(portraitThemeSelect.value);
     }
 
     // Use a non-intrusive toast for settings changes instead of a narrator line

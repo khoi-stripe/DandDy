@@ -3148,12 +3148,58 @@ const App = (window.App = {
         window.PortraitPrompt &&
         typeof window.PortraitPrompt.buildBasePortraitInstructions === 'function'
       ) {
-        renderingInstructions = window.PortraitPrompt.buildBasePortraitInstructions(
-          {
-            posePrompt,
-            cameraPrompt,
-          },
-        );
+        // Prefer the structured style/background builder so prompt themes
+        // (including admin-defined styles from the prompt-style admin UI)
+        // are honored even in custom-prompt mode.
+        let promptThemeId = null;
+        try {
+          if (
+            typeof window !== 'undefined' &&
+            window.StorageService &&
+            typeof window.StorageService.getPortraitPromptTheme === 'function'
+          ) {
+            promptThemeId = window.StorageService.getPortraitPromptTheme();
+          } else if (
+            typeof CONFIG !== 'undefined' &&
+            CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME
+          ) {
+            promptThemeId = CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME;
+          }
+        } catch (e) {
+          // Non-fatal: fall back to default theme behavior below.
+        }
+
+        let styleDescription = '';
+        let backgroundDescription = '';
+
+        try {
+          const sections =
+            window.PortraitPrompt.buildStyleAndBackgroundDescriptions({
+              posePrompt,
+              cameraPrompt,
+              themeId: promptThemeId,
+            }) || {};
+          styleDescription = sections.styleDescription || '';
+          backgroundDescription = sections.backgroundDescription || '';
+        } catch (e) {
+          // Non-fatal – fall through to simple defaults below.
+        }
+
+        if (!styleDescription) {
+          styleDescription =
+            'High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';
+        }
+        if (!backgroundDescription) {
+          backgroundDescription =
+            'Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';
+        }
+
+        renderingInstructions = [
+          `Pose: ${posePrompt}`,
+          cameraPrompt,
+          `STYLE: ${styleDescription}`,
+          `Scene: ${backgroundDescription}`,
+        ];
       } else {
         // Fallback if PortraitPrompt is not loaded for some reason.
         renderingInstructions = [

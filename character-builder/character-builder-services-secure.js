@@ -307,41 +307,92 @@ const SecureAIService = (window.SecureAIService = {
 
   // Build full DALL-E prompt with rendering instructions
   buildPortraitPrompt(character) {
-    const characterDescription = this.buildCharacterDescription(character);
+    // Resolve current portrait prompt theme (if any)
+    let promptThemeId = null;
+    try {
+      if (
+        typeof window !== 'undefined' &&
+        window.StorageService &&
+        typeof window.StorageService.getPortraitPromptTheme === 'function'
+      ) {
+        promptThemeId = window.StorageService.getPortraitPromptTheme();
+      } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) {
+        promptThemeId = CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME;
+      }
+    } catch (e) {
+      // Non-fatal: fall back to default theme behavior below.
+    }
 
-    let renderingInstructions;
+    // Build compact STYLE / Background descriptions from theme (when available)
+    let styleDescription = '';
+    let backgroundDescription = '';
     if (
       typeof window !== 'undefined' &&
       window.PortraitPrompt &&
-      typeof window.PortraitPrompt.buildBasePortraitInstructions === 'function'
+      typeof window.PortraitPrompt.buildStyleAndBackgroundDescriptions ===
+        'function'
     ) {
-      // Use shared base instructions but let this secure helper manage pose/camera text.
-      renderingInstructions = window.PortraitPrompt.buildBasePortraitInstructions(
-        {
-          characterDescription,
-        },
-      );
-      renderingInstructions.splice(
-        3,
-        0,
-        'Pose should feel dynamic and expressive.',
-        'Camera angle can vary between frontal, three-quarter, or slightly low-angle heroic views to add variety, while keeping the character clearly readable.',
-      );
-    } else {
-      // Fallback copy if PortraitPrompt is not available.
-      renderingInstructions = [
-        `Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,
-        'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
-        'Include some controlled, directional hatching to define form (light mid-tone texture only).',
-        'Pose should feel dynamic and expressive.',
-        'Camera angle can vary between frontal, three-quarter, or slightly low-angle heroic views to add variety, while keeping the character clearly readable.',
-        'Background should be simple, entirely black, and free of symbols or text.',
-        'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
-        'Aspect ratio 3:4.',
-      ];
+      try {
+        const sections =
+          window.PortraitPrompt.buildStyleAndBackgroundDescriptions({
+            themeId: promptThemeId,
+          }) || {};
+        styleDescription = sections.styleDescription || '';
+        backgroundDescription = sections.backgroundDescription || '';
+      } catch (e) {
+        // Non-fatal – fall through to simple defaults below.
+      }
     }
 
-    return renderingInstructions.join(' ');
+    if (!styleDescription) {
+      styleDescription =
+        'High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';
+    }
+    if (!backgroundDescription) {
+      backgroundDescription =
+        'Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';
+    }
+
+    // Build simple header line: {CHARACTER_NAME}: {RACE}, {CLASS}, {BACKGROUND}
+    const name = (character && character.name) || 'Unnamed character';
+
+    const raceLabel = character && character.race
+      ? String(character.race)
+      : null;
+    const classLabel = character && character.class
+      ? String(character.class)
+      : null;
+
+    let backgroundLabel = null;
+    if (character && character.background) {
+      backgroundLabel = String(character.background);
+    }
+
+    const headerParts = [];
+    if (raceLabel) headerParts.push(raceLabel);
+    if (classLabel) headerParts.push(classLabel);
+    if (backgroundLabel) headerParts.push(backgroundLabel);
+
+    const headerSuffix = headerParts.join(', ');
+    const headerLine = headerSuffix
+      ? `${name}: ${headerSuffix}`
+      : `${name}`;
+
+    // Use simple generic pose/camera text in the secure helper.
+    const poseLine =
+      'Pose: dynamic and expressive, clearly showing the character\'s upper body and face.';
+    const cameraLine =
+      'Camera: three-quarter or slightly low-angle view, keeping the character clearly readable.';
+
+    let prompt = `${headerLine}\n\n${poseLine}\n\n${cameraLine}`;
+    if (styleDescription) {
+      prompt += `\n\nSTYLE: ${styleDescription}`;
+    }
+    if (backgroundDescription) {
+      prompt += `\n\nScene: ${backgroundDescription}`;
+    }
+
+    return prompt;
   },
 });
 

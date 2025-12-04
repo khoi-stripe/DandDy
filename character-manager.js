@@ -1017,10 +1017,43 @@ async function generatePortraitForCharacter(id) {
     // Show prompt modal
     currentPortraitCharacterId = id;
     
-    // Build default prompt using character data
-    const defaultPrompt = window.AIService && window.AIService.buildCharacterDescription
-        ? window.AIService.buildCharacterDescription(character)
-        : `${character.race} ${character.class}`;
+    // Build default prompt:
+    // 1) Prefer the prompt from the *active* portrait version (so edits
+    //    always start from the prompt that actually produced the current art).
+    // 2) Fall back to the same helper as the builder so pose/camera/theme +
+    //    your admin race/class/scene snippets are reflected for new portraits.
+    let defaultPrompt = '';
+    try {
+        let versionPrompt = null;
+        try {
+            const metadata = character.portraitMetadata || {};
+            const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+            if (versions.length) {
+                const activeId = metadata.activeVersionId;
+                let active =
+                    (activeId && versions.find((v) => v && v.id === activeId)) ||
+                    versions[versions.length - 1];
+                if (active && active.prompt) {
+                    versionPrompt = String(active.prompt);
+                }
+            }
+        } catch (e) {
+            // Non-fatal – continue to template fallback below.
+        }
+
+        if (versionPrompt) {
+            defaultPrompt = versionPrompt;
+        } else if (window.AIService && typeof AIService.buildPortraitPrompt === 'function') {
+            defaultPrompt = AIService.buildPortraitPrompt(character);
+        } else if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
+            // Fallback: legacy behavior if buildPortraitPrompt is ever unavailable.
+            defaultPrompt = AIService.buildCharacterDescription(character);
+        } else {
+            defaultPrompt = `${character.race} ${character.class}`;
+        }
+    } catch (e) {
+        defaultPrompt = `${character.race} ${character.class}`;
+    }
     
     document.getElementById('portraitPrompt').value = defaultPrompt;
     const promptModal = document.getElementById('portraitPromptModal');
@@ -1422,29 +1455,89 @@ async function confirmGeneratePortrait() {
             cameraList[Math.floor(Math.random() * cameraList.length)];
 
         let renderingInstructions;
-        if (
-            typeof window !== 'undefined' &&
-            window.PortraitPrompt &&
-            typeof window.PortraitPrompt.buildBasePortraitInstructions === 'function'
-        ) {
-            renderingInstructions = window.PortraitPrompt.buildBasePortraitInstructions(
-                {
-                    posePrompt,
-                    cameraPrompt,
-                },
-            );
-        } else {
-            // Fallback if PortraitPrompt is not available.
+        try {
+            // Resolve current portrait prompt theme (same logic as builder).
+            let promptThemeId = null;
+            try {
+                if (
+                    typeof window !== 'undefined' &&
+                    window.StorageService &&
+                    typeof window.StorageService.getPortraitPromptTheme === 'function'
+                ) {
+                    promptThemeId = window.StorageService.getPortraitPromptTheme();
+                } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) {
+                    promptThemeId = CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME;
+                }
+            } catch (e) {
+                // Non-fatal: fall back to default theme behavior below.
+            }
+
+            // Prefer the structured style/background builder when available so
+            // admin-defined prompt styles (from prompt-style-admin.html) are
+            // respected in both the builder and manager.
+            let styleDescription = '';
+            let backgroundDescription = '';
+            if (
+                typeof window !== 'undefined' &&
+                window.PortraitPrompt &&
+                typeof window.PortraitPrompt.buildStyleAndBackgroundDescriptions ===
+                    'function'
+            ) {
+                try {
+                    const sections =
+                        window.PortraitPrompt.buildStyleAndBackgroundDescriptions({
+                            posePrompt,
+                            cameraPrompt,
+                            themeId: promptThemeId,
+                        }) || {};
+                    styleDescription = sections.styleDescription || '';
+                    backgroundDescription = sections.backgroundDescription || '';
+                } catch (e) {
+                    // Non-fatal – fall through to simple defaults below.
+                }
+            }
+
+            // Sensible defaults when no admin style is configured.
+            if (!styleDescription) {
+                styleDescription =
+                    'High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';
+            }
+            if (!backgroundDescription) {
+                backgroundDescription =
+                    'Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';
+            }
+
             renderingInstructions = [
-                'Create a high-contrast black-and-white fantasy illustration.',
-                'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
-                'Include some controlled, directional hatching to define form (light mid-tone texture only).',
                 `Pose: ${posePrompt}`,
                 cameraPrompt,
-                'Background should be simple, entirely black, and free of symbols or text.',
-                'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
-                'Aspect ratio 3:4.',
+                `STYLE: ${styleDescription}`,
+                `Scene: ${backgroundDescription}`,
             ];
+        } catch (e) {
+            // Fallback if anything above fails or PortraitPrompt is unavailable.
+            if (
+                typeof window !== 'undefined' &&
+                window.PortraitPrompt &&
+                typeof window.PortraitPrompt.buildBasePortraitInstructions ===
+                    'function'
+            ) {
+                renderingInstructions =
+                    window.PortraitPrompt.buildBasePortraitInstructions({
+                        posePrompt,
+                        cameraPrompt,
+                    });
+            } else {
+                renderingInstructions = [
+                    'Create a high-contrast black-and-white fantasy illustration.',
+                    'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
+                    'Include some controlled, directional hatching to define form (light mid-tone texture only).',
+                    `Pose: ${posePrompt}`,
+                    cameraPrompt,
+                    'Background should be simple, entirely black, and free of symbols or text.',
+                    'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
+                    'Aspect ratio 3:4.',
+                ];
+            }
         }
         
         const fullPrompt = [...renderingInstructions, customPrompt].join(' ');
@@ -1704,6 +1797,43 @@ async function confirmGeneratePortrait() {
             showNotification('❌ Portrait generation failed. Check console for details and try again.');
         }
     }
+}
+
+async function surpriseMePortrait() {
+    const portraitCharacterId = currentPortraitCharacterId;
+    if (!portraitCharacterId) {
+        closePortraitPromptModal();
+        return;
+    }
+
+    const character = await CharacterStorage.getById(portraitCharacterId);
+    if (!character) {
+        closePortraitPromptModal();
+        return;
+    }
+
+    // Build a fresh randomized template prompt using the same helper
+    // as the builder, ignoring any existing version prompt.
+    let templatePrompt = '';
+    try {
+        if (window.AIService && typeof AIService.buildPortraitPrompt === 'function') {
+            templatePrompt = AIService.buildPortraitPrompt(character);
+        } else if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
+            templatePrompt = AIService.buildCharacterDescription(character);
+        } else {
+            templatePrompt = `${character.race} ${character.class}`;
+        }
+    } catch (e) {
+        templatePrompt = `${character.race} ${character.class}`;
+    }
+
+    const promptInput = document.getElementById('portraitPrompt');
+    if (promptInput) {
+        promptInput.value = templatePrompt;
+    }
+
+    // Reuse the existing generation pipeline.
+    await confirmGeneratePortrait();
 }
 
 // Animate ASCII portrait character-by-character, line-by-line in the manager

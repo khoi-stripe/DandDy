@@ -12,8 +12,21 @@ import numpy as np
 
 # ASCII character sets (reversed so black=light, white=dense)
 ASCII_CHARS = '  .`\'",;:Il!i><~+_-?][}{1)(|/\\trjxnuvczXYUJCLQ0OZmwqpdbkha*o#MW&8%B@$'
-ASCII_WIDTH = 160
-ASCII_HEIGHT = 80
+
+# We aim for a fixed ASCII "height" in rows so the UI doesn't jump
+# when switching between portraits. Width is then computed from
+# the original image aspect ratio and an approximate character aspect.
+#
+# IMPORTANT: These values are tuned to roughly match how portraits
+# are displayed in the viewers (font-size ≈ 4px, line-height = 1,
+# image max-width ≈ 300px). If you change those in the HTML/CSS,
+# you may want to re-tune these numbers and re-run this script.
+ASCII_HEIGHT = 80  # number of text rows (controls vertical size / UI stability)
+
+# Approximate character width:height ratio for the monospace font in viewers.
+# For many "Courier-like" fonts at small sizes, characters are a bit taller
+# than they are wide; 0.5–0.6 is a reasonable range to experiment with.
+CHAR_WIDTH_OVER_HEIGHT = 0.55
 
 # Directories
 SCRIPT_DIR = Path(__file__).parent
@@ -43,11 +56,40 @@ def floyd_steinberg_dither(pixels, width, height, levels):
     
     return output
 
-def convert_to_ascii(image_path: Path, width: int = ASCII_WIDTH, height: int = ASCII_HEIGHT) -> str:
-    """Convert image to ASCII art with Floyd-Steinberg dithering"""
+def convert_to_ascii(image_path: Path, height: int = ASCII_HEIGHT) -> str:
+    """Convert image to ASCII art with Floyd-Steinberg dithering.
+
+    We keep the ASCII height (rows) fixed for UI stability, and derive
+    the width from the image's aspect ratio so the ASCII art roughly
+    matches the original framing without looking squashed.
+    """
     try:
         # Load image
         img = Image.open(image_path)
+
+        # Compute width based on original aspect ratio and character aspect.
+        # height is in "rows", so we treat each row as having unit height.
+        orig_w, orig_h = img.size
+
+        # Guard against weird images
+        if orig_w <= 0 or orig_h <= 0:
+            raise ValueError(f"Invalid image dimensions: {orig_w}x{orig_h}")
+
+        # For a fixed number of text rows, pick number of columns so that
+        # the on-screen ASCII block (in pixels) has a similar aspect ratio
+        # to the original image:
+        #
+        #   (cols * char_width) / (rows * char_height) ≈ orig_w / orig_h
+        #
+        # With char_width_over_height = char_width / char_height, and
+        # rows == height (in "character units"):
+        #
+        #   cols ≈ (orig_w / orig_h) * height / char_width_over_height
+        #
+        width = int((orig_w / orig_h) * height / CHAR_WIDTH_OVER_HEIGHT)
+
+        # Be safe about extremely narrow/wide images
+        width = max(40, min(width, 260))
         
         # Resize and convert to grayscale
         img = img.resize((width, height), Image.Resampling.LANCZOS)

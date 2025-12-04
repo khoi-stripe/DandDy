@@ -82,4 +82,8 @@ window.CONFIG = {
   // - "ascii": show ASCII portraits by default
   // - "original": prefer original images when available
   DEFAULT_PORTRAIT_VIEW_MODE: 'ascii',
+
+  // Default portrait prompt theme when no explicit preference has been saved yet.
+  // This should match one of PortraitPrompt.getThemes().id values.
+  DEFAULT_PORTRAIT_PROMPT_THEME: 'classic-ink',
 };
