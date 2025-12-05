@@ -1523,6 +1523,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
   buildCharacterDescription(character) {
     const parts = [];
 
+    // Add D&D context header to help LLM understand class names like "Monk" are fantasy classes
+    parts.push('Dungeons & Dragons fantasy character:');
+
     // Race - prefer admin-configured entries, fall back to shared description data
     if (character.race) {
       let raceDesc = null;
@@ -1768,6 +1771,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
       : `${name}`;
 
     // Final multi-line prompt template:
+    // Dungeons & Dragons fantasy character portrait:
     // {CHARACTER_NAME}: {RACE}, {CLASS}, {BACKGROUND}
     //
     // Pose: {POSE_VARIANT}
@@ -1776,7 +1780,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
     //
     // Scene: {DESCRIPTION}
     // Note: Camera temporarily disabled - may interfere with pose
-    let prompt = `${headerLine}\n\nPose: ${posePrompt}`;
+    let prompt = `Dungeons & Dragons fantasy character portrait:\n${headerLine}\n\nPose: ${posePrompt}`;
     if (styleDescription) {
       prompt += `\n\nSTYLE: ${styleDescription}`;
     }

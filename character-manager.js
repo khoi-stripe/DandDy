@@ -1654,7 +1654,7 @@ async function typeManagerPortrait(element, portraitText) {
     element.textContent = '';
 
     let currentText = '';
-    const charsPerFrame = 15; // Batch multiple characters per frame for speed
+    const charsPerFrame = 40; // Batch multiple characters per frame for speed
     let charCount = 0;
 
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
@@ -1698,48 +1698,8 @@ async function typeManagerPortrait(element, portraitText) {
     }
 }
 
-// ========================================
-// SHARED CUBE LOADER MARKUP
-// Reuse the exact same cube + narrator shell used by portrait generation
-// so all loaders (portrait, grid, sheet) share an identical axis and layout.
-// ========================================
-function buildNarratorCubeLine(text) {
-    const cubeMarkup =
-        '<span class="spinner-cube-scene">' +
-        '<span class="spinner-cube-tilt">' +
-        '<span class="spinner-cube">' +
-        '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
-        '</span></span></span>';
-
-    return '<span class="narrator-spinner-shell">' + cubeMarkup + ' ' + text + '</span>';
-}
-
-// Initialize the manager's grid + sheet loading rows to use the shared
-// narrator-style cube loader so they visually match the portrait generator.
-(function initPanelCubeLoaders() {
-    const leftTextEl =
-        document.getElementById('leftPanelLoadingText') ||
-        (document.getElementById('leftPanelLoading') &&
-            document.querySelector('#leftPanelLoading .loading-text'));
-
-    const rightTextEl =
-        document.getElementById('rightPanelLoadingText') ||
-        (document.getElementById('rightPanelLoading') &&
-            document.querySelector('#rightPanelLoading .loading-text'));
-
-    if (leftTextEl) {
-        leftTextEl.innerHTML = buildNarratorCubeLine('Loading characters...');
-    }
-
-    if (rightTextEl) {
-        rightTextEl.innerHTML = buildNarratorCubeLine('Preparing character sheet...');
-    }
-})();
+// Panel loading cubes are now defined directly in index.html using
+// portrait-style cube markup (larger, simpler Y-axis rotation).
 
 // ===== PORTRAIT HISTORY (MANAGER) =====
 // The full portrait history UI is now handled by the shared PortraitUI

@@ -5009,7 +5009,7 @@ const App = (window.App = {
     element.textContent = '';
     
     let currentText = '';
-    const charsPerFrame = 15; // Type multiple characters per frame for speed
+    const charsPerFrame = 40; // Type multiple characters per frame for speed
     let charCount = 0;
     
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {

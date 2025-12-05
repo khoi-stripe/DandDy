@@ -439,6 +439,16 @@
   gap: var(--spacing-sm);
 }
 
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--ui-primary-bg-color) 25%, transparent);
+  background: color-mix(in srgb, var(--ui-primary-bg-color) 5%, transparent);
+}
+
 .settings-group-label {
   color: var(--terminal-fg);
   font-size: var(--font-size-base);

@@ -25,7 +25,7 @@
 
                                                                                                          
 
-                                                             55                                                               
+                                                              55                                                               
 
                                                               44                                                               
 
@@ -150,13 +150,14 @@
                                                             55455454                                                           
 
                                                               445                                                               
+
         </div>
                     </div>
                     <div class="welcome-actions">
                         <button class="terminal-btn terminal-btn-primary" id="welcomeLoginBtn">LOG IN</button>
                         <button class="terminal-btn" id="welcomeRegisterBtn">CREATE ACCOUNT</button>
                         <button class="terminal-btn terminal-btn-secondary" id="welcomeDemoBtn">DEMO MODE</button>
-                        <div class="welcome-version">DandDy v2.0</div>
+                        <div class="welcome-version">DandDy v2.2.1</div>
                     </div>
                 </div>
             </div>
@@ -170,7 +171,7 @@
     <header class="terminal-header">
         <div class="header-content">
             <div class="terminal-title">
-                <span class="terminal-title-text">[ DandDy v2.0 ]</span>
+                <span class="terminal-title-text">[ DandDy v2.2.1 ]</span>
                 <button
                     id="managerSettingsBtn"
                     class="manager-settings-link"
@@ -186,7 +187,7 @@
                     <span id="userStatusText" class="user-status-text"></span>
                 </span>
                 <button id="authBtn" class="terminal-btn terminal-btn-small ui-theme-teal">LOGIN</button>
-                    <button id="newCharacterBtn" class="terminal-btn terminal-btn-primary ui-theme-teal">+ NEW CHARACTER</button>
+                <button id="newCharacterBtn" class="terminal-btn terminal-btn-primary ui-theme-teal">+ NEW CHARACTER</button>
             </div>
         </div>
     </header>
@@ -265,44 +266,22 @@
         <div class="panel-loading-row">
             <!-- Left Panel Loading Indicator (shown while characters load) -->
             <div id="leftPanelLoading" class="loading-indicator" aria-live="polite">
-                <div class="loading-text">
-                    <span class="narrator-spinner-shell">
-                        <span class="spinner-cube-scene">
-                            <span class="spinner-cube-tilt">
-                                <span class="spinner-cube">
-                                    <span class="spinner-cube-face spinner-cube-face-front"></span>
-                                    <span class="spinner-cube-face spinner-cube-face-back"></span>
-                                    <span class="spinner-cube-face spinner-cube-face-right"></span>
-                                    <span class="spinner-cube-face spinner-cube-face-left"></span>
-                                    <span class="spinner-cube-face spinner-cube-face-top"></span>
-                                    <span class="spinner-cube-face spinner-cube-face-bottom"></span>
-                                </span>
-                            </span>
-                        </span>
-                        Loading characters...
-                    </span>
+                <div class="panel-loading-cube-container">
+                    <div class="panel-loading-cube">
+                        <i></i><i></i><i></i><i></i><i></i><i></i>
+                    </div>
                 </div>
+                <div class="panel-loading-text">Loading characters...</div>
             </div>
 
             <!-- Right Panel Loading Indicator (shown while characters load) -->
             <div id="rightPanelLoading" class="loading-indicator" aria-live="polite">
-                <div class="loading-text">
-                    <span class="narrator-spinner-shell">
-                        <span class="spinner-cube-scene">
-                            <span class="spinner-cube-tilt">
-                                <span class="spinner-cube">
-                                    <span class="spinner-cube-face spinner-cube-face-front"></span>
-                                    <span class="spinner-cube-face spinner-cube-face-back"></span>
-                                    <span class="spinner-cube-face spinner-cube-face-right"></span>
-                                    <span class="spinner-cube-face spinner-cube-face-left"></span>
-                                    <span class="spinner-cube-face spinner-cube-face-top"></span>
-                                    <span class="spinner-cube-face spinner-cube-face-bottom"></span>
-                                </span>
-                            </span>
-                        </span>
-                        Preparing character sheet...
-                    </span>
+                <div class="panel-loading-cube-container">
+                    <div class="panel-loading-cube">
+                        <i></i><i></i><i></i><i></i><i></i><i></i>
+                    </div>
                 </div>
+                <div class="panel-loading-text">Preparing character sheet...</div>
             </div>
         </div>
     </div>
@@ -346,33 +325,204 @@
         </div>
     </div>
 
+    <!-- Manager Settings Modal -->
+    <div id="managerSettingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">[ ⚙ Settings ]</h2>
+                <button class="modal-close" onclick="closeManagerSettings()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <p class="terminal-text-small modal-section-label">Portrait AI Model</p>
+                    <p class="terminal-text-small terminal-text-dim">
+                        Choose which OpenAI image model to use when generating custom portraits.
+                    </p>
+                    <select id="manager-image-model-select" class="terminal-select">
+                        <option value="dall-e-3">DALL·E 3 (high detail)</option>
+                        <option value="gpt-image-1">GPT Image 1 (new)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="closeManagerSettings()">CANCEL</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="saveManagerSettings()">SAVE</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Edit Details Modal -->
     <div id="editDetailsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">[ ✎ Edit Character Details ]</h2>
+                <h2 class="modal-title">[ EDIT CHARACTER ]</h2>
                 <button class="modal-close" onclick="closeEditDetailsModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <p class="terminal-text">Adjust campaign-specific details. These edits affect this saved copy only.</p>
+                <p class="terminal-text">Adjust campaign-specific details and table-use stats.</p>
 
-                <p class="terminal-text-small">Character Name</p>
-                <input type="text" id="editName" class="terminal-input" placeholder="Enter character name">
+                <!-- Name / level / alignment -->
+                <div class="modal-section">
+                    <p class="terminal-text-small">Character Name</p>
+                    <input type="text" id="editName" class="terminal-input" placeholder="Enter character name">
 
-                <p class="terminal-text-small modal-section-label">Skill Proficiencies <span class="terminal-text-dim">(one per line)</span></p>
-                <textarea id="editSkills" class="terminal-textarea terminal-input" placeholder="e.g. Perception&#10;Stealth&#10;Investigation"></textarea>
+                    <p class="terminal-text-small modal-section-label">Level</p>
+                    <input
+                        type="number"
+                        id="editLevel"
+                        class="terminal-input"
+                        min="1"
+                        max="20"
+                        inputmode="numeric"
+                        placeholder="1-20"
+                    >
 
-                <p class="terminal-text-small modal-section-label">Class Equipment / Gear <span class="terminal-text-dim">(one item per line)</span></p>
-                <textarea id="editEquipment" class="terminal-textarea terminal-input" placeholder="e.g. Longsword&#10;Chain Mail&#10;Explorer&#39;s Pack"></textarea>
+                    <p class="terminal-text-small modal-section-label">Alignment</p>
+                    <div class="selector-shell selector-shell--match-width">
+                        <button
+                            class="terminal-btn selector-trigger"
+                            id="editAlignment-trigger"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            onclick="CharacterSheet.toggleSelectorMenu(this)"
+                        >
+                            <span class="selector-trigger-label" id="editAlignment-label">
+                                Select Alignment
+                            </span>
+                        </button>
+                        <div
+                            class="selector-menu"
+                            role="listbox"
+                            aria-label="Alignment"
+                            aria-hidden="true"
+                        >
+                            <button class="selector-option" type="button" role="option" data-value="lg" aria-selected="false" onclick="selectAlignment('lg', 'Lawful Good')">
+                                <span class="selector-option-label">Lawful Good</span>
+                            </button>
+                            <button class="selector-option" type="button" role="option" data-value="ng" aria-selected="false" onclick="selectAlignment('ng', 'Neutral Good')">
+                                <span class="selector-option-label">Neutral Good</span>
+                            </button>
+                            <button class="selector-option" type="button" role="option" data-value="cg" aria-selected="false" onclick="selectAlignment('cg', 'Chaotic Good')">
+                                <span class="selector-option-label">Chaotic Good</span>
+                            </button>
+                            <button class="selector-option" type="button" role="option" data-value="ln" aria-selected="false" onclick="selectAlignment('ln', 'Lawful Neutral')">
+                                <span class="selector-option-label">Lawful Neutral</span>
+                            </button>
+                            <button class="selector-option" type="button" role="option" data-value="n" aria-selected="false" onclick="selectAlignment('n', 'True Neutral')">
+                                <span class="selector-option-label">True Neutral</span>
+                            </button>
+                            <button class="selector-option" type="button" role="option" data-value="cn" aria-selected="false" onclick="selectAlignment('cn', 'Chaotic Neutral')">
+                                <span class="selector-option-label">Chaotic Neutral</span>
+                            </button>
+                            <button class="selector-option" type="button" role="option" data-value="le" aria-selected="false" onclick="selectAlignment('le', 'Lawful Evil')">
+                                <span class="selector-option-label">Lawful Evil</span>
+                            </button>
+                            <button class="selector-option" type="button" role="option" data-value="ne" aria-selected="false" onclick="selectAlignment('ne', 'Neutral Evil')">
+                                <span class="selector-option-label">Neutral Evil</span>
+                            </button>
+                            <button class="selector-option" type="button" role="option" data-value="ce" aria-selected="false" onclick="selectAlignment('ce', 'Chaotic Evil')">
+                                <span class="selector-option-label">Chaotic Evil</span>
+                            </button>
+                        </div>
+                    </div>
+                    <select id="editAlignment" class="terminal-select is-hidden">
+                        <option value="">Select Alignment</option>
+                        <option value="lg">Lawful Good</option>
+                        <option value="ng">Neutral Good</option>
+                        <option value="cg">Chaotic Good</option>
+                        <option value="ln">Lawful Neutral</option>
+                        <option value="n">True Neutral</option>
+                        <option value="cn">Chaotic Neutral</option>
+                        <option value="le">Lawful Evil</option>
+                        <option value="ne">Neutral Evil</option>
+                        <option value="ce">Chaotic Evil</option>
+                    </select>
+                </div>
 
-                <p class="terminal-text-small modal-section-label">Tool Proficiencies <span class="terminal-text-dim">(one per line)</span></p>
-                <textarea id="editTools" class="terminal-textarea terminal-input" placeholder="e.g. Thieves&#39; Tools&#10;Disguise Kit"></textarea>
+                <!-- Combat / abilities / skills -->
+                <div class="modal-section">
+                    <p class="terminal-text-small modal-section-label">Combat Stats</p>
+                    <div class="modal-grid-combat">
+                        <label class="terminal-text-small">
+                            HP Max
+                            <input type="number" id="editHpMax" class="terminal-input" min="0" inputmode="numeric">
+                        </label>
+                        <label class="terminal-text-small">
+                            HP Current
+                            <input type="number" id="editHpCurrent" class="terminal-input" min="0" inputmode="numeric">
+                        </label>
+                        <label class="terminal-text-small">
+                            Temp HP
+                            <input type="number" id="editHpTemp" class="terminal-input" min="0" inputmode="numeric">
+                        </label>
+                        <label class="terminal-text-small">
+                            Armor Class
+                            <input type="number" id="editArmorClass" class="terminal-input" min="0" inputmode="numeric">
+                        </label>
+                        <label class="terminal-text-small">
+                            Initiative
+                            <input type="number" id="editInitiative" class="terminal-input" inputmode="numeric">
+                        </label>
+                        <label class="terminal-text-small">
+                            Speed (ft)
+                            <input type="number" id="editSpeed" class="terminal-input" min="0" inputmode="numeric">
+                        </label>
+                        <label class="terminal-text-small">
+                            Prof Bonus
+                            <input type="number" id="editProfBonus" class="terminal-input" inputmode="numeric">
+                        </label>
+                    </div>
 
-                <p class="terminal-text-small modal-section-label">Languages <span class="terminal-text-dim">(one per line)</span></p>
-                <textarea id="editLanguages" class="terminal-textarea terminal-input" placeholder="e.g. Common&#10;Elvish"></textarea>
+                    <p class="terminal-text-small modal-section-label">Ability Scores <span class="terminal-text-dim">(base scores)</span></p>
+                    <div class="modal-grid-abilities">
+                        <label class="terminal-text-small">
+                            STR
+                            <input type="number" id="editStr" class="terminal-input" min="1" max="30" inputmode="numeric">
+                        </label>
+                        <label class="terminal-text-small">
+                            DEX
+                            <input type="number" id="editDex" class="terminal-input" min="1" max="30" inputmode="numeric">
+                        </label>
+                        <label class="terminal-text-small">
+                            CON
+                            <input type="number" id="editCon" class="terminal-input" min="1" max="30" inputmode="numeric">
+                        </label>
+                        <label class="terminal-text-small">
+                            INT
+                            <input type="number" id="editInt" class="terminal-input" min="1" max="30" inputmode="numeric">
+                        </label>
+                        <label class="terminal-text-small">
+                            WIS
+                            <input type="number" id="editWis" class="terminal-input" min="1" max="30" inputmode="numeric">
+                        </label>
+                        <label class="terminal-text-small">
+                            CHA
+                            <input type="number" id="editCha" class="terminal-input" min="1" max="30" inputmode="numeric">
+                        </label>
+                    </div>
 
-                <p class="terminal-text-small modal-section-label">Backstory</p>
-                <textarea id="editBackstory" class="terminal-textarea terminal-input" placeholder="Write your character&#39;s backstory here..."></textarea>
+                    <p class="terminal-text-small modal-section-label">Skill Proficiencies <span class="terminal-text-dim">(one per line)</span></p>
+                    <textarea id="editSkills" class="terminal-textarea terminal-input" placeholder="e.g. Perception&#10;Stealth&#10;Investigation"></textarea>
+                </div>
+
+                <!-- Equipment / tools / languages -->
+                <div class="modal-section">
+                    <p class="terminal-text-small modal-section-label">Class Equipment / Gear <span class="terminal-text-dim">(one item per line)</span></p>
+                    <textarea id="editEquipment" class="terminal-textarea terminal-input" placeholder="e.g. Longsword&#10;Chain Mail&#10;Explorer&#39;s Pack"></textarea>
+
+                    <p class="terminal-text-small modal-section-label">Tool Proficiencies <span class="terminal-text-dim">(one per line)</span></p>
+                    <textarea id="editTools" class="terminal-textarea terminal-input" placeholder="e.g. Thieves&#39; Tools&#10;Disguise Kit"></textarea>
+
+                    <p class="terminal-text-small modal-section-label">Languages <span class="terminal-text-dim">(one per line)</span></p>
+                    <textarea id="editLanguages" class="terminal-textarea terminal-input" placeholder="e.g. Common&#10;Elvish"></textarea>
+                </div>
+
+                <!-- Backstory -->
+                <div class="modal-section">
+                    <p class="terminal-text-small modal-section-label">Backstory</p>
+                    <textarea id="editBackstory" class="terminal-textarea terminal-input" placeholder="Write your character&#39;s backstory here..."></textarea>
+                </div>
             </div>
             <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="closeEditDetailsModal()">CANCEL</button>
@@ -498,12 +648,12 @@
                 <button class="modal-close" onclick="closePortraitPromptModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <p class="terminal-text">Describe your character's appearance. AI will generate a portrait optimized for ASCII art.</p>
+                <p class="terminal-text">Describe your character's appearance.</p>
                 <p class="terminal-text-small terminal-text-dim portrait-modal-subhead">Be descriptive! (e.g., "a stoic dwarf fighter with a braided beard, holding a glowing axe")</p>
                 <textarea id="portraitPrompt" class="terminal-textarea terminal-input" rows="6" placeholder="Enter custom description..."></textarea>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="closePortraitPromptModal()">CANCEL</button>
+                <button class="terminal-btn" onclick="surpriseMePortrait()">SURPRISE ME</button>
                 <button class="terminal-btn terminal-btn-primary" onclick="confirmGeneratePortrait()">GENERATE PORTRAIT</button>
             </div>
         </div>
@@ -517,4 +667,3 @@
     <script src="manager.bundle.js"></script>
 </body>
 </html>
-

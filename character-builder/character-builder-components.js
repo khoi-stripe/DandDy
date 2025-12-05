@@ -267,11 +267,12 @@ const Components = (window.Components = {
           <div class="modal-body">
             <div class="settings-layout">
               <div class="settings-grid">
-                <div class="settings-group-label">[ Builder ]</div>
-                <section class="settings-section">
-                  <div class="settings-row-inline">
-                    <div class="settings-inline-field">
-                      <div class="settings-label">Narrator Voice</div>
+                <div class="settings-group">
+                  <div class="settings-group-label">[ Builder ]</div>
+                  <section class="settings-section">
+                    <div class="settings-row-inline">
+                      <div class="settings-inline-field">
+                        <div class="settings-label">Narrator Voice</div>
                       <div class="selector-shell selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
@@ -372,117 +373,121 @@ const Components = (window.Components = {
                           )
                           .join('')}
                       </select>
-                    </div>
-                  </div>
-                </section>
-
-                <div class="settings-group-label">[ Image generation ]</div>
-                <section class="settings-section">
-                  <div class="settings-row">
-                    <div class="settings-label">AI model</div>
-                    <div class="selector-shell selector-shell--match-width">
-                      <button
-                        class="terminal-btn selector-trigger"
-                        id="image-model-select-trigger"
-                        type="button"
-                        aria-haspopup="listbox"
-                        aria-expanded="false"
-                        onclick="CharacterSheet.toggleSelectorMenu(this)"
-                      >
-                        <span class="selector-trigger-label" id="image-model-select-label">
-                          ${currentImageModelLabel}
-                        </span>
-                      </button>
-                      <div
-                        class="selector-menu"
-                        role="listbox"
-                        aria-label="AI model"
-                        aria-hidden="true"
-                      >
-                        ${imageModelOptions
-                          .map((opt) => {
-                            const isSelected =
-                              opt.value === currentImageModelOption.value;
-                            return `
-                            <button
-                              class="selector-option${isSelected ? ' is-selected' : ''}"
-                              type="button"
-                              role="option"
-                              data-value="${opt.value}"
-                              aria-selected="${isSelected ? 'true' : 'false'}"
-                            >
-                              <span class="selector-option-label">
-                                ${opt.label}
-                              </span>
-                            </button>
-                          `;
-                          })
-                          .join('')}
                       </div>
                     </div>
-                    <select
-                      id="image-model-select"
-                      class="terminal-select settings-select hidden"
-                    >
-                      ${imageModelOptions
-                        .map(
-                          (opt) => `
-                          <option value="${opt.value}" ${
-                            opt.value === currentImageModelOption.value ? 'selected' : ''
-                          }>
-                            ${opt.label}
-                          </option>
-                        `,
-                        )
-                        .join('')}
-                    </select>
-                  </div>
-                </section>
+                  </section>
+                </div>
 
-                <section class="settings-section">
-                  <div class="settings-row settings-row--stacked">
-                    <div class="settings-label">Style</div>
-                    <div class="settings-field">
-                      <div class="selector-shell selector-shell--match-width" style="width: 100%;">
+                <div class="settings-group">
+                  <div class="settings-group-label">[ Image generation ]</div>
+                  <section class="settings-section">
+                    <div class="settings-row settings-row--stacked">
+                      <div class="settings-label">Style</div>
+                      <div class="settings-field">
+                        <div class="selector-shell selector-shell--match-width" style="width: 100%;">
+                          <button
+                            class="terminal-btn selector-trigger"
+                            id="portrait-theme-select-trigger"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            onclick="CharacterSheet.toggleSelectorMenu(this)"
+                            style="width: 100%;"
+                          >
+                            <span
+                              class="selector-trigger-label"
+                              id="portrait-theme-select-label"
+                            >
+                              ${currentPromptThemeLabel}
+                            </span>
+                          </button>
+                          <div
+                            class="selector-menu"
+                            role="listbox"
+                            aria-label="Portrait prompt theme"
+                            aria-hidden="true"
+                            style="width: 100%;"
+                          >
+                            ${promptThemes
+                              .map((theme) => {
+                                const isSelected = theme.id === activePromptTheme.id;
+                                const label = formatThemeName(theme);
+                                return `
+                                <button
+                                  class="selector-option${
+                                    isSelected ? ' is-selected' : ''
+                                  }"
+                                  type="button"
+                                  role="option"
+                                  data-value="${theme.id}"
+                                  aria-selected="${isSelected ? 'true' : 'false'}"
+                                >
+                                  <span class="selector-option-label">
+                                    ${label}
+                                  </span>
+                                </button>
+                              `;
+                              })
+                              .join('')}
+                          </div>
+                        </div>
+                        <select
+                          id="portrait-theme-select"
+                          class="terminal-select settings-select hidden"
+                        >
+                          ${promptThemes
+                            .map((theme) => {
+                              const label = formatThemeName(theme);
+                              return `
+                              <option value="${theme.id}" ${
+                                theme.id === activePromptTheme.id ? 'selected' : ''
+                              }>
+                                ${label}
+                              </option>
+                            `;
+                            })
+                            .join('')}
+                        </select>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="settings-section">
+                    <div class="settings-row">
+                      <div class="settings-label">AI model</div>
+                      <div class="selector-shell selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
-                          id="portrait-theme-select-trigger"
+                          id="image-model-select-trigger"
                           type="button"
                           aria-haspopup="listbox"
                           aria-expanded="false"
                           onclick="CharacterSheet.toggleSelectorMenu(this)"
-                          style="width: 100%;"
                         >
-                          <span
-                            class="selector-trigger-label"
-                            id="portrait-theme-select-label"
-                          >
-                            ${currentPromptThemeLabel}
+                          <span class="selector-trigger-label" id="image-model-select-label">
+                            ${currentImageModelLabel}
                           </span>
                         </button>
                         <div
                           class="selector-menu"
                           role="listbox"
-                          aria-label="Portrait prompt theme"
+                          aria-label="AI model"
                           aria-hidden="true"
-                          style="width: 100%;"
                         >
-                          ${promptThemes
-                            .map((theme) => {
-                              const isSelected = theme.id === activePromptTheme.id;
-                              const label = formatThemeName(theme);
+                          ${imageModelOptions
+                            .map((opt) => {
+                              const isSelected =
+                                opt.value === currentImageModelOption.value;
                               return `
                               <button
-                                class="selector-option${
-                                  isSelected ? ' is-selected' : ''
-                                }"
+                                class="selector-option${isSelected ? ' is-selected' : ''}"
                                 type="button"
                                 role="option"
-                                data-value="${theme.id}"
+                                data-value="${opt.value}"
                                 aria-selected="${isSelected ? 'true' : 'false'}"
                               >
                                 <span class="selector-option-label">
-                                  ${label}
+                                  ${opt.label}
                                 </span>
                               </button>
                             `;
@@ -491,27 +496,25 @@ const Components = (window.Components = {
                         </div>
                       </div>
                       <select
-                        id="portrait-theme-select"
+                        id="image-model-select"
                         class="terminal-select settings-select hidden"
                       >
-                        ${promptThemes
-                          .map((theme) => {
-                            const label = formatThemeName(theme);
-                            return `
-                            <option value="${theme.id}" ${
-                              theme.id === activePromptTheme.id ? 'selected' : ''
+                        ${imageModelOptions
+                          .map(
+                            (opt) => `
+                            <option value="${opt.value}" ${
+                              opt.value === currentImageModelOption.value ? 'selected' : ''
                             }>
-                              ${label}
+                              ${opt.label}
                             </option>
-                          `;
-                          })
+                          `,
+                          )
                           .join('')}
                       </select>
                     </div>
-                  </div>
-                </section>
+                  </section>
 
-                <section class="settings-section">
+                  <section class="settings-section">
                   <div class="settings-row settings-row--stacked">
                     <div class="settings-label">Default portrait view</div>
                     <div class="settings-field">
@@ -538,6 +541,7 @@ const Components = (window.Components = {
                     </div>
                   </div>
                 </section>
+                </div>
               </div>
             </div>
           </div>

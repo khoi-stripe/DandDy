@@ -615,6 +615,16 @@
     min-width: 0;
 }
 
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    border-radius: 6px;
+    border: 1px solid color-mix(in srgb, var(--ui-primary-bg-color) 25%, transparent);
+    background: color-mix(in srgb, var(--ui-primary-bg-color) 5%, transparent);
+}
+
 .settings-group-label {
     color: var(--terminal-fg);
     font-size: var(--font-size-base);
@@ -862,6 +872,7 @@
 
 .loading-indicator {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
@@ -892,33 +903,56 @@
   text-shadow: 0 0 10px var(--terminal-accent);
 }
 
-/* Centered teal cube loaders for sheet + grid */
-.panel-loading-row .loading-text {
-  /* Match cube demo / narrator context so the cube spins on the same axis */
-  font-size: var(--font-size-base);
-  line-height: var(--line-height);
-  white-space: normal;
-  text-align: center;
-
-  /* Match narrator spinner behavior: cube + text on one axis-aligned row */
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35em;
-
-  /* Use sheet teal tokens instead of terminal green */
-  color: var(--sheet-accent);
-  text-shadow: 0 0 10px var(--sheet-accent);
-
-  /* Drive spinner-cube color via the shared UI foreground token */
-  --ui-fg-color: var(--sheet-accent);
+/* Panel loading cube - larger, portrait-style cube */
+.panel-loading-cube-container {
+  perspective: 200px;
+  width: 60px;
+  height: 60px;
+  margin-bottom: var(--spacing-lg);
 }
 
-/* Ensure the cube + text wrapper behaves like the narrator context */
-.panel-loading-row .narrator-spinner-shell {
-  display: inline-flex;
-  align-items: center;
-  white-space: normal;
+.panel-loading-cube {
+  width: 60px;
+  height: 60px;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: panel-loading-cube-spin 8s infinite linear;
+}
+
+.panel-loading-cube i {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 1.5px solid var(--sheet-accent);
+  background: rgba(0, 206, 209, 0.05);
+  box-shadow: 
+    inset 0 0 20px rgba(0, 206, 209, 0.1),
+    0 0 15px rgba(0, 206, 209, 0.2);
+}
+
+/* Cube faces */
+.panel-loading-cube i:nth-child(1) { transform: translateZ(30px); }
+.panel-loading-cube i:nth-child(2) { transform: rotateY(180deg) translateZ(30px); }
+.panel-loading-cube i:nth-child(3) { transform: rotateY(90deg) translateZ(30px); }
+.panel-loading-cube i:nth-child(4) { transform: rotateY(-90deg) translateZ(30px); }
+.panel-loading-cube i:nth-child(5) { transform: rotateX(90deg) translateZ(30px); }
+.panel-loading-cube i:nth-child(6) { transform: rotateX(-90deg) translateZ(30px); }
+
+@keyframes panel-loading-cube-spin {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+.panel-loading-text {
+  color: var(--sheet-accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  text-shadow: 0 0 10px var(--sheet-accent);
 }
 
 /* ===== RESPONSIVE ===== */
