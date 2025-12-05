@@ -6423,6 +6423,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
   buildCharacterDescription(character) {
     const parts = [];
 
+    // Add D&D context header to help LLM understand class names like "Monk" are fantasy classes
+    parts.push('Dungeons & Dragons fantasy character:');
+
     // Race - prefer admin-configured entries, fall back to shared description data
     if (character.race) {
       let raceDesc = null;
@@ -6668,6 +6671,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
       : `${name}`;
 
     // Final multi-line prompt template:
+    // Dungeons & Dragons fantasy character portrait:
     // {CHARACTER_NAME}: {RACE}, {CLASS}, {BACKGROUND}
     //
     // Pose: {POSE_VARIANT}
@@ -6676,7 +6680,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
     //
     // Scene: {DESCRIPTION}
     // Note: Camera temporarily disabled - may interfere with pose
-    let prompt = `${headerLine}\n\nPose: ${posePrompt}`;
+    let prompt = `Dungeons & Dragons fantasy character portrait:\n${headerLine}\n\nPose: ${posePrompt}`;
     if (styleDescription) {
       prompt += `\n\nSTYLE: ${styleDescription}`;
     }
@@ -6777,6 +6781,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
 // State management for the DandDy terminal character builder.
 // Exposes CharacterState and OptionVariationsCache as globals on window.
 
+// Session persistence key (using localStorage for cross-tab and browser restart persistence)
+const SESSION_STORAGE_KEY = 'danddy_builder_session';
+
 // Cache of AI-generated option text variations (per session)
 const OptionVariationsCache = (window.OptionVariationsCache = {
   cache: {},
@@ -6828,6 +6835,7 @@ const CharacterState = (window.CharacterState = {
     step: 0,
     abilityMethod: null,
     answers: {},
+    currentQuestionId: null, // Track current question for session resume
     character: {
       // Stable identity for this character across renames/exports/imports
       // Used by Character Manager to detect "this is the same character"
@@ -6866,6 +6874,9 @@ const CharacterState = (window.CharacterState = {
   },
 
   listeners: [],
+  
+  // Flag to prevent auto-save during restore
+  _restoring: false,
 
   get() {
     return this.current;
@@ -6881,12 +6892,138 @@ const CharacterState = (window.CharacterState = {
     this.notify();
   },
 
+  // Set the current question ID (called by App.showQuestion)
+  setCurrentQuestion(questionId) {
+    this.current.currentQuestionId = questionId;
+    this._saveSession();
+  },
+
   subscribe(listener) {
     this.listeners.push(listener);
   },
 
   notify() {
     this.listeners.forEach((listener) => listener(this.current));
+    // Auto-save to session on every state change (unless restoring)
+    if (!this._restoring) {
+      this._saveSession();
+    }
+  },
+
+  // ===== Session Persistence =====
+
+  // Check if there's an in-progress session to resume
+  hasSession() {
+    try {
+      const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (!raw) return false;
+      const session = JSON.parse(raw);
+      // Consider it a valid session if we have meaningful progress
+      // (past the intro, or have any character data)
+      const hasProgress = session.currentQuestionId && session.currentQuestionId !== 'intro';
+      const hasCharacterData = session.character && (
+        session.character.name ||
+        session.character.race ||
+        session.character.class
+      );
+      return hasProgress || hasCharacterData;
+    } catch {
+      return false;
+    }
+  },
+
+  // Get session metadata for display (without fully loading)
+  getSessionPreview() {
+    try {
+      const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (!raw) return null;
+      const session = JSON.parse(raw);
+      return {
+        characterName: session.character?.name || null,
+        race: session.character?.race || null,
+        class: session.character?.class || null,
+        currentQuestionId: session.currentQuestionId,
+        savedAt: session._savedAt || null,
+      };
+    } catch {
+      return null;
+    }
+  },
+
+  // Save current state to localStorage
+  _saveSession() {
+    try {
+      const toSave = {
+        ...this.current,
+        _savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(toSave));
+    } catch (e) {
+      console.warn('[CharacterState] Failed to save session:', e);
+    }
+  },
+
+  // Restore state from localStorage
+  restoreSession() {
+    try {
+      const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (!raw) return false;
+      
+      const session = JSON.parse(raw);
+      this._restoring = true;
+      this.current = {
+        id: session.id || Date.now().toString(),
+        step: session.step || 0,
+        abilityMethod: session.abilityMethod || null,
+        answers: session.answers || {},
+        currentQuestionId: session.currentQuestionId || null,
+        character: {
+          characterUid: session.character?.characterUid || `danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: session.character?.name || '',
+          race: session.character?.race || '',
+          class: session.character?.class || '',
+          background: session.character?.background || '',
+          alignment: session.character?.alignment || '',
+          baseAbilities: session.character?.baseAbilities || null,
+          abilities: session.character?.abilities || {
+            str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10,
+          },
+          level: session.character?.level || 1,
+          hitPoints: session.character?.hitPoints || 0,
+          personalityTrait: session.character?.personalityTrait || '',
+          backstory: session.character?.backstory || '',
+          skillProficiencies: session.character?.skillProficiencies || [],
+          toolProficiencies: session.character?.toolProficiencies || [],
+          languages: session.character?.languages || [],
+          equipment: session.character?.equipment || [],
+          backgroundFeature: session.character?.backgroundFeature || null,
+          spellcastingAbility: session.character?.spellcastingAbility || null,
+          cantrips: session.character?.cantrips || [],
+          spellsKnown: session.character?.spellsKnown || [],
+          spellsPrepared: session.character?.spellsPrepared || [],
+          spellSlots: session.character?.spellSlots || {},
+          // Preserve portrait data if it exists
+          asciiArt: session.character?.asciiArt || null,
+          portraitUrl: session.character?.portraitUrl || null,
+        },
+      };
+      this._restoring = false;
+      this.notify();
+      return session.currentQuestionId || 'intro';
+    } catch (e) {
+      console.warn('[CharacterState] Failed to restore session:', e);
+      this._restoring = false;
+      return false;
+    }
+  },
+
+  // Clear the saved session (call after save/discard)
+  clearSession() {
+    try {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch (e) {
+      console.warn('[CharacterState] Failed to clear session:', e);
+    }
   },
 
   reset() {
@@ -6895,6 +7032,7 @@ const CharacterState = (window.CharacterState = {
       step: 0,
       abilityMethod: null,
       answers: {},
+      currentQuestionId: null,
       character: {
         // Generate a fresh stable UID for this new character
         characterUid: `danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -6930,6 +7068,8 @@ const CharacterState = (window.CharacterState = {
         spellSlots: {},
       },
     };
+    // Clear session when explicitly resetting
+    this.clearSession();
     this.notify();
   },
 });
@@ -10580,11 +10720,12 @@ const Components = (window.Components = {
           <div class="modal-body">
             <div class="settings-layout">
               <div class="settings-grid">
-                <div class="settings-group-label">[ Builder ]</div>
-                <section class="settings-section">
-                  <div class="settings-row-inline">
-                    <div class="settings-inline-field">
-                      <div class="settings-label">Narrator Voice</div>
+                <div class="settings-group">
+                  <div class="settings-group-label">[ Builder ]</div>
+                  <section class="settings-section">
+                    <div class="settings-row-inline">
+                      <div class="settings-inline-field">
+                        <div class="settings-label">Narrator Voice</div>
                       <div class="selector-shell selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
@@ -10685,117 +10826,121 @@ const Components = (window.Components = {
                           )
                           .join('')}
                       </select>
-                    </div>
-                  </div>
-                </section>
-
-                <div class="settings-group-label">[ Image generation ]</div>
-                <section class="settings-section">
-                  <div class="settings-row">
-                    <div class="settings-label">AI model</div>
-                    <div class="selector-shell selector-shell--match-width">
-                      <button
-                        class="terminal-btn selector-trigger"
-                        id="image-model-select-trigger"
-                        type="button"
-                        aria-haspopup="listbox"
-                        aria-expanded="false"
-                        onclick="CharacterSheet.toggleSelectorMenu(this)"
-                      >
-                        <span class="selector-trigger-label" id="image-model-select-label">
-                          ${currentImageModelLabel}
-                        </span>
-                      </button>
-                      <div
-                        class="selector-menu"
-                        role="listbox"
-                        aria-label="AI model"
-                        aria-hidden="true"
-                      >
-                        ${imageModelOptions
-                          .map((opt) => {
-                            const isSelected =
-                              opt.value === currentImageModelOption.value;
-                            return `
-                            <button
-                              class="selector-option${isSelected ? ' is-selected' : ''}"
-                              type="button"
-                              role="option"
-                              data-value="${opt.value}"
-                              aria-selected="${isSelected ? 'true' : 'false'}"
-                            >
-                              <span class="selector-option-label">
-                                ${opt.label}
-                              </span>
-                            </button>
-                          `;
-                          })
-                          .join('')}
                       </div>
                     </div>
-                    <select
-                      id="image-model-select"
-                      class="terminal-select settings-select hidden"
-                    >
-                      ${imageModelOptions
-                        .map(
-                          (opt) => `
-                          <option value="${opt.value}" ${
-                            opt.value === currentImageModelOption.value ? 'selected' : ''
-                          }>
-                            ${opt.label}
-                          </option>
-                        `,
-                        )
-                        .join('')}
-                    </select>
-                  </div>
-                </section>
+                  </section>
+                </div>
 
-                <section class="settings-section">
-                  <div class="settings-row settings-row--stacked">
-                    <div class="settings-label">Style</div>
-                    <div class="settings-field">
-                      <div class="selector-shell selector-shell--match-width" style="width: 100%;">
+                <div class="settings-group">
+                  <div class="settings-group-label">[ Image generation ]</div>
+                  <section class="settings-section">
+                    <div class="settings-row settings-row--stacked">
+                      <div class="settings-label">Style</div>
+                      <div class="settings-field">
+                        <div class="selector-shell selector-shell--match-width" style="width: 100%;">
+                          <button
+                            class="terminal-btn selector-trigger"
+                            id="portrait-theme-select-trigger"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            onclick="CharacterSheet.toggleSelectorMenu(this)"
+                            style="width: 100%;"
+                          >
+                            <span
+                              class="selector-trigger-label"
+                              id="portrait-theme-select-label"
+                            >
+                              ${currentPromptThemeLabel}
+                            </span>
+                          </button>
+                          <div
+                            class="selector-menu"
+                            role="listbox"
+                            aria-label="Portrait prompt theme"
+                            aria-hidden="true"
+                            style="width: 100%;"
+                          >
+                            ${promptThemes
+                              .map((theme) => {
+                                const isSelected = theme.id === activePromptTheme.id;
+                                const label = formatThemeName(theme);
+                                return `
+                                <button
+                                  class="selector-option${
+                                    isSelected ? ' is-selected' : ''
+                                  }"
+                                  type="button"
+                                  role="option"
+                                  data-value="${theme.id}"
+                                  aria-selected="${isSelected ? 'true' : 'false'}"
+                                >
+                                  <span class="selector-option-label">
+                                    ${label}
+                                  </span>
+                                </button>
+                              `;
+                              })
+                              .join('')}
+                          </div>
+                        </div>
+                        <select
+                          id="portrait-theme-select"
+                          class="terminal-select settings-select hidden"
+                        >
+                          ${promptThemes
+                            .map((theme) => {
+                              const label = formatThemeName(theme);
+                              return `
+                              <option value="${theme.id}" ${
+                                theme.id === activePromptTheme.id ? 'selected' : ''
+                              }>
+                                ${label}
+                              </option>
+                            `;
+                            })
+                            .join('')}
+                        </select>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="settings-section">
+                    <div class="settings-row">
+                      <div class="settings-label">AI model</div>
+                      <div class="selector-shell selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
-                          id="portrait-theme-select-trigger"
+                          id="image-model-select-trigger"
                           type="button"
                           aria-haspopup="listbox"
                           aria-expanded="false"
                           onclick="CharacterSheet.toggleSelectorMenu(this)"
-                          style="width: 100%;"
                         >
-                          <span
-                            class="selector-trigger-label"
-                            id="portrait-theme-select-label"
-                          >
-                            ${currentPromptThemeLabel}
+                          <span class="selector-trigger-label" id="image-model-select-label">
+                            ${currentImageModelLabel}
                           </span>
                         </button>
                         <div
                           class="selector-menu"
                           role="listbox"
-                          aria-label="Portrait prompt theme"
+                          aria-label="AI model"
                           aria-hidden="true"
-                          style="width: 100%;"
                         >
-                          ${promptThemes
-                            .map((theme) => {
-                              const isSelected = theme.id === activePromptTheme.id;
-                              const label = formatThemeName(theme);
+                          ${imageModelOptions
+                            .map((opt) => {
+                              const isSelected =
+                                opt.value === currentImageModelOption.value;
                               return `
                               <button
-                                class="selector-option${
-                                  isSelected ? ' is-selected' : ''
-                                }"
+                                class="selector-option${isSelected ? ' is-selected' : ''}"
                                 type="button"
                                 role="option"
-                                data-value="${theme.id}"
+                                data-value="${opt.value}"
                                 aria-selected="${isSelected ? 'true' : 'false'}"
                               >
                                 <span class="selector-option-label">
-                                  ${label}
+                                  ${opt.label}
                                 </span>
                               </button>
                             `;
@@ -10804,27 +10949,25 @@ const Components = (window.Components = {
                         </div>
                       </div>
                       <select
-                        id="portrait-theme-select"
+                        id="image-model-select"
                         class="terminal-select settings-select hidden"
                       >
-                        ${promptThemes
-                          .map((theme) => {
-                            const label = formatThemeName(theme);
-                            return `
-                            <option value="${theme.id}" ${
-                              theme.id === activePromptTheme.id ? 'selected' : ''
+                        ${imageModelOptions
+                          .map(
+                            (opt) => `
+                            <option value="${opt.value}" ${
+                              opt.value === currentImageModelOption.value ? 'selected' : ''
                             }>
-                              ${label}
+                              ${opt.label}
                             </option>
-                          `;
-                          })
+                          `,
+                          )
                           .join('')}
                       </select>
                     </div>
-                  </div>
-                </section>
+                  </section>
 
-                <section class="settings-section">
+                  <section class="settings-section">
                   <div class="settings-row settings-row--stacked">
                     <div class="settings-label">Default portrait view</div>
                     <div class="settings-field">
@@ -10851,6 +10994,7 @@ const Components = (window.Components = {
                     </div>
                   </div>
                 </section>
+                </div>
               </div>
             </div>
           </div>
@@ -11804,11 +11948,121 @@ const App = (window.App = {
       this.updateCharacterPanel(state.character);
     });
 
-    // Start the flow
+    // Check URL for explicit resume parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceResume = urlParams.get('resume') === 'true';
+    const forceNew = urlParams.get('new') === 'true';
+
+    // Check for existing session to resume
+    if (!forceNew && CharacterState.hasSession()) {
+      const preview = CharacterState.getSessionPreview();
+      
+      if (forceResume) {
+        // URL says resume - do it immediately
+        await this._resumeSession();
+        return;
+      }
+      
+      // Show resume prompt
+      await this._showResumePrompt(preview);
+      return;
+    }
+
+    // Start fresh
+    await this._startNewCharacter();
+  },
+
+  // Resume from saved session
+  async _resumeSession() {
+    console.log('Resuming character builder session...');
+    const resumeQuestionId = CharacterState.restoreSession();
+    OptionVariationsCache.reset(); // Clear variation cache (may regenerate)
+    this._lastPortraitArt = null;
+    
+    // Update character panel with restored data
+    this.updateCharacterPanel(CharacterState.get().character);
+    
+    // Show a brief "resuming" message then continue
+    const narratorPanel = document.getElementById('narrator-panel');
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(messageEl, '> SESSION RESTORED. Let\'s continue where we left off...');
+    Utils.scrollToBottom(true);
+    await Utils.sleep(1000);
+    
+    // Jump to the question we were on
+    await this.showQuestion(resumeQuestionId || 'intro');
+  },
+
+  // Start a brand new character
+  async _startNewCharacter() {
     CharacterState.reset();
-    OptionVariationsCache.reset(); // Reset option variations for new character
-    this._lastPortraitArt = null; // Reset portrait tracking for new character
+    OptionVariationsCache.reset();
+    this._lastPortraitArt = null;
     await this.showQuestion('intro');
+  },
+
+  // Show modal asking user if they want to resume
+  async _showResumePrompt(preview) {
+    const modal = document.getElementById('sessionResumeModal');
+    const timeStampEl = document.getElementById('sessionTimeStamp');
+    const resumeBtn = document.getElementById('sessionResumeBtn');
+    const discardBtn = document.getElementById('sessionDiscardBtn');
+    
+    // Format the time if available
+    let timeNote = '';
+    if (preview.savedAt) {
+      const savedDate = new Date(preview.savedAt);
+      const now = new Date();
+      const diffMs = now - savedDate;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      
+      if (diffMins < 1) {
+        timeNote = 'saved moments ago';
+      } else if (diffMins < 60) {
+        timeNote = `saved ${diffMins}m ago`;
+      } else if (diffHours < 24) {
+        timeNote = `saved ${diffHours}h ago`;
+      } else {
+        timeNote = `saved ${savedDate.toLocaleDateString()}`;
+      }
+    }
+
+    // Update timestamp in header
+    timeStampEl.textContent = timeNote;
+    
+    // Show the modal
+    modal.classList.add('show');
+    
+    // Handle button clicks
+    return new Promise((resolve) => {
+      const handleResume = async () => {
+        cleanup();
+        modal.classList.remove('show');
+        await this._resumeSession();
+        resolve();
+      };
+      
+      const handleDiscard = async () => {
+        cleanup();
+        modal.classList.remove('show');
+        CharacterState.clearSession();
+        await this._startNewCharacter();
+        resolve();
+      };
+      
+      const cleanup = () => {
+        resumeBtn.removeEventListener('click', handleResume);
+        discardBtn.removeEventListener('click', handleDiscard);
+      };
+      
+      resumeBtn.addEventListener('click', handleResume);
+      discardBtn.addEventListener('click', handleDiscard);
+    });
   },
 
   // Show progressive "thinking" messages while waiting for AI
@@ -11868,6 +12122,8 @@ const App = (window.App = {
     }
 
     this.currentQuestion = question;
+    // Track current question for session persistence
+    CharacterState.setCurrentQuestion(questionId);
     const narratorPanel = document.getElementById('narrator-panel');
 
     // Handle different question types
@@ -14611,6 +14867,7 @@ const App = (window.App = {
       // Add rendering instructions to the user's character description
       // (hidden system-level guidance for the image model)
       // Use shared pose + camera data from PortraitPoseData module
+      const character = CharacterState.get().character || {};
       const classKey = (character.class || 'default').toLowerCase();
 
       const { pose: posePrompt, camera: cameraPrompt } =
@@ -14937,6 +15194,9 @@ const App = (window.App = {
       const completeCharacter = this.buildCompleteCharacter(character);
       const saved = await window.StorageService.saveCharacter(completeCharacter);
       CharacterState.updateCharacter(saved);
+
+      // Clear the in-progress session since character is now saved
+      CharacterState.clearSession();
 
       if (showMessage) {
         // Use a short, non-intrusive toast instead of an inline narrator system line.
@@ -16538,7 +16798,7 @@ const App = (window.App = {
     element.textContent = '';
     
     let currentText = '';
-    const charsPerFrame = 15; // Type multiple characters per frame for speed
+    const charsPerFrame = 40; // Type multiple characters per frame for speed
     let charCount = 0;
     
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {

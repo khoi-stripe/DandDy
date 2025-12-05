@@ -4148,6 +4148,9 @@ Format your response as JSON array of strings, one for each option in order. Exa
   buildCharacterDescription(character) {
     const parts = [];
 
+    // Add D&D context header to help LLM understand class names like "Monk" are fantasy classes
+    parts.push('Dungeons & Dragons fantasy character:');
+
     // Race - prefer admin-configured entries, fall back to shared description data
     if (character.race) {
       let raceDesc = null;
@@ -4393,6 +4396,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
       : `${name}`;
 
     // Final multi-line prompt template:
+    // Dungeons & Dragons fantasy character portrait:
     // {CHARACTER_NAME}: {RACE}, {CLASS}, {BACKGROUND}
     //
     // Pose: {POSE_VARIANT}
@@ -4401,7 +4405,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
     //
     // Scene: {DESCRIPTION}
     // Note: Camera temporarily disabled - may interfere with pose
-    let prompt = `${headerLine}\n\nPose: ${posePrompt}`;
+    let prompt = `Dungeons & Dragons fantasy character portrait:\n${headerLine}\n\nPose: ${posePrompt}`;
     if (styleDescription) {
       prompt += `\n\nSTYLE: ${styleDescription}`;
     }
@@ -4768,11 +4772,12 @@ const Components = (window.Components = {
           <div class="modal-body">
             <div class="settings-layout">
               <div class="settings-grid">
-                <div class="settings-group-label">[ Builder ]</div>
-                <section class="settings-section">
-                  <div class="settings-row-inline">
-                    <div class="settings-inline-field">
-                      <div class="settings-label">Narrator Voice</div>
+                <div class="settings-group">
+                  <div class="settings-group-label">[ Builder ]</div>
+                  <section class="settings-section">
+                    <div class="settings-row-inline">
+                      <div class="settings-inline-field">
+                        <div class="settings-label">Narrator Voice</div>
                       <div class="selector-shell selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
@@ -4873,117 +4878,121 @@ const Components = (window.Components = {
                           )
                           .join('')}
                       </select>
-                    </div>
-                  </div>
-                </section>
-
-                <div class="settings-group-label">[ Image generation ]</div>
-                <section class="settings-section">
-                  <div class="settings-row">
-                    <div class="settings-label">AI model</div>
-                    <div class="selector-shell selector-shell--match-width">
-                      <button
-                        class="terminal-btn selector-trigger"
-                        id="image-model-select-trigger"
-                        type="button"
-                        aria-haspopup="listbox"
-                        aria-expanded="false"
-                        onclick="CharacterSheet.toggleSelectorMenu(this)"
-                      >
-                        <span class="selector-trigger-label" id="image-model-select-label">
-                          ${currentImageModelLabel}
-                        </span>
-                      </button>
-                      <div
-                        class="selector-menu"
-                        role="listbox"
-                        aria-label="AI model"
-                        aria-hidden="true"
-                      >
-                        ${imageModelOptions
-                          .map((opt) => {
-                            const isSelected =
-                              opt.value === currentImageModelOption.value;
-                            return `
-                            <button
-                              class="selector-option${isSelected ? ' is-selected' : ''}"
-                              type="button"
-                              role="option"
-                              data-value="${opt.value}"
-                              aria-selected="${isSelected ? 'true' : 'false'}"
-                            >
-                              <span class="selector-option-label">
-                                ${opt.label}
-                              </span>
-                            </button>
-                          `;
-                          })
-                          .join('')}
                       </div>
                     </div>
-                    <select
-                      id="image-model-select"
-                      class="terminal-select settings-select hidden"
-                    >
-                      ${imageModelOptions
-                        .map(
-                          (opt) => `
-                          <option value="${opt.value}" ${
-                            opt.value === currentImageModelOption.value ? 'selected' : ''
-                          }>
-                            ${opt.label}
-                          </option>
-                        `,
-                        )
-                        .join('')}
-                    </select>
-                  </div>
-                </section>
+                  </section>
+                </div>
 
-                <section class="settings-section">
-                  <div class="settings-row settings-row--stacked">
-                    <div class="settings-label">Style</div>
-                    <div class="settings-field">
-                      <div class="selector-shell selector-shell--match-width" style="width: 100%;">
+                <div class="settings-group">
+                  <div class="settings-group-label">[ Image generation ]</div>
+                  <section class="settings-section">
+                    <div class="settings-row settings-row--stacked">
+                      <div class="settings-label">Style</div>
+                      <div class="settings-field">
+                        <div class="selector-shell selector-shell--match-width" style="width: 100%;">
+                          <button
+                            class="terminal-btn selector-trigger"
+                            id="portrait-theme-select-trigger"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            onclick="CharacterSheet.toggleSelectorMenu(this)"
+                            style="width: 100%;"
+                          >
+                            <span
+                              class="selector-trigger-label"
+                              id="portrait-theme-select-label"
+                            >
+                              ${currentPromptThemeLabel}
+                            </span>
+                          </button>
+                          <div
+                            class="selector-menu"
+                            role="listbox"
+                            aria-label="Portrait prompt theme"
+                            aria-hidden="true"
+                            style="width: 100%;"
+                          >
+                            ${promptThemes
+                              .map((theme) => {
+                                const isSelected = theme.id === activePromptTheme.id;
+                                const label = formatThemeName(theme);
+                                return `
+                                <button
+                                  class="selector-option${
+                                    isSelected ? ' is-selected' : ''
+                                  }"
+                                  type="button"
+                                  role="option"
+                                  data-value="${theme.id}"
+                                  aria-selected="${isSelected ? 'true' : 'false'}"
+                                >
+                                  <span class="selector-option-label">
+                                    ${label}
+                                  </span>
+                                </button>
+                              `;
+                              })
+                              .join('')}
+                          </div>
+                        </div>
+                        <select
+                          id="portrait-theme-select"
+                          class="terminal-select settings-select hidden"
+                        >
+                          ${promptThemes
+                            .map((theme) => {
+                              const label = formatThemeName(theme);
+                              return `
+                              <option value="${theme.id}" ${
+                                theme.id === activePromptTheme.id ? 'selected' : ''
+                              }>
+                                ${label}
+                              </option>
+                            `;
+                            })
+                            .join('')}
+                        </select>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="settings-section">
+                    <div class="settings-row">
+                      <div class="settings-label">AI model</div>
+                      <div class="selector-shell selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
-                          id="portrait-theme-select-trigger"
+                          id="image-model-select-trigger"
                           type="button"
                           aria-haspopup="listbox"
                           aria-expanded="false"
                           onclick="CharacterSheet.toggleSelectorMenu(this)"
-                          style="width: 100%;"
                         >
-                          <span
-                            class="selector-trigger-label"
-                            id="portrait-theme-select-label"
-                          >
-                            ${currentPromptThemeLabel}
+                          <span class="selector-trigger-label" id="image-model-select-label">
+                            ${currentImageModelLabel}
                           </span>
                         </button>
                         <div
                           class="selector-menu"
                           role="listbox"
-                          aria-label="Portrait prompt theme"
+                          aria-label="AI model"
                           aria-hidden="true"
-                          style="width: 100%;"
                         >
-                          ${promptThemes
-                            .map((theme) => {
-                              const isSelected = theme.id === activePromptTheme.id;
-                              const label = formatThemeName(theme);
+                          ${imageModelOptions
+                            .map((opt) => {
+                              const isSelected =
+                                opt.value === currentImageModelOption.value;
                               return `
                               <button
-                                class="selector-option${
-                                  isSelected ? ' is-selected' : ''
-                                }"
+                                class="selector-option${isSelected ? ' is-selected' : ''}"
                                 type="button"
                                 role="option"
-                                data-value="${theme.id}"
+                                data-value="${opt.value}"
                                 aria-selected="${isSelected ? 'true' : 'false'}"
                               >
                                 <span class="selector-option-label">
-                                  ${label}
+                                  ${opt.label}
                                 </span>
                               </button>
                             `;
@@ -4992,27 +5001,25 @@ const Components = (window.Components = {
                         </div>
                       </div>
                       <select
-                        id="portrait-theme-select"
+                        id="image-model-select"
                         class="terminal-select settings-select hidden"
                       >
-                        ${promptThemes
-                          .map((theme) => {
-                            const label = formatThemeName(theme);
-                            return `
-                            <option value="${theme.id}" ${
-                              theme.id === activePromptTheme.id ? 'selected' : ''
+                        ${imageModelOptions
+                          .map(
+                            (opt) => `
+                            <option value="${opt.value}" ${
+                              opt.value === currentImageModelOption.value ? 'selected' : ''
                             }>
-                              ${label}
+                              ${opt.label}
                             </option>
-                          `;
-                          })
+                          `,
+                          )
                           .join('')}
                       </select>
                     </div>
-                  </div>
-                </section>
+                  </section>
 
-                <section class="settings-section">
+                  <section class="settings-section">
                   <div class="settings-row settings-row--stacked">
                     <div class="settings-label">Default portrait view</div>
                     <div class="settings-field">
@@ -5039,6 +5046,7 @@ const Components = (window.Components = {
                     </div>
                   </div>
                 </section>
+                </div>
               </div>
             </div>
           </div>
@@ -9885,6 +9893,9 @@ const UI = {
         }
     },
 
+    // Flag to track if we've handled the initial URL character selection
+    _initialUrlCharacterHandled: false,
+
     render() {
         const previousSelectedId =
             typeof AppState !== 'undefined' && AppState
@@ -9909,16 +9920,25 @@ const UI = {
             if (typeof AppState !== 'undefined' && AppState) {
                 AppState.selectedCharacterId = null;
             }
+            clearCharacterFromUrl();
             return;
         }
 
+        // Check URL for character selection (only on first render with characters)
+        let urlCharacterId = null;
+        if (!this._initialUrlCharacterHandled) {
+            urlCharacterId = getCharacterIdFromUrl();
+            this._initialUrlCharacterHandled = true;
+        }
+
         // Ensure we have a valid selected id within the current filtered list.
-        let targetId = previousSelectedId || null;
-        const hasValidPreviousSelection =
+        // Priority: URL param > previous selection > first character
+        let targetId = urlCharacterId || previousSelectedId || null;
+        const hasValidSelection =
             targetId &&
             characters.some((c) => String(c.id) === String(targetId));
 
-        if (!hasValidPreviousSelection) {
+        if (!hasValidSelection) {
             targetId = characters[0] && characters[0].id;
         }
 
@@ -9956,8 +9976,8 @@ const UI = {
         // Only re-render the sheet when the effective selection actually
         // changed (e.g. first load, after delete, or when filters remove the
         // previously selected character).
-        if (targetId && targetId !== previousSelectedId) {
-            viewCharacter(targetId, { skipKeyboardSync: true });
+        if (targetId && (targetId !== previousSelectedId || urlCharacterId)) {
+            viewCharacter(targetId, { skipKeyboardSync: true, updateUrl: !urlCharacterId });
         }
     },
 
@@ -10125,7 +10145,7 @@ function createNewCharacter() {
 }
 
 async function viewCharacter(id, options = {}) {
-    const { fromKeyboard = false, skipKeyboardSync = false } = options;
+    const { fromKeyboard = false, skipKeyboardSync = false, updateUrl = true } = options;
 
     // Record this request so that slower async lookups for previously
     // selected characters can't override the sheet for the most recently
@@ -10159,6 +10179,11 @@ async function viewCharacter(id, options = {}) {
     if (character) {
         UI.showCharacterSheet(character);
         
+        // Update URL with selected character (for sharing/bookmarking)
+        if (updateUrl && id) {
+            updateUrlWithCharacter(id);
+        }
+        
         // Highlight selected card
         document.querySelectorAll('.character-card').forEach(card => {
             card.classList.remove('is-selected');
@@ -10179,6 +10204,32 @@ async function viewCharacter(id, options = {}) {
             }
         }
     }
+}
+
+// Update URL with character ID without triggering page reload
+function updateUrlWithCharacter(characterId) {
+    const url = new URL(window.location.href);
+    if (characterId) {
+        url.searchParams.set('character', characterId);
+    } else {
+        url.searchParams.delete('character');
+    }
+    // Remove 'from' param if present (one-time use)
+    url.searchParams.delete('from');
+    history.replaceState({ characterId }, '', url.toString());
+}
+
+// Get character ID from URL
+function getCharacterIdFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('character');
+}
+
+// Clear character selection from URL
+function clearCharacterFromUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('character');
+    history.replaceState({}, '', url.toString());
 }
 
 let currentEditCharacterId = null;
@@ -11217,7 +11268,7 @@ async function typeManagerPortrait(element, portraitText) {
     element.textContent = '';
 
     let currentText = '';
-    const charsPerFrame = 15; // Batch multiple characters per frame for speed
+    const charsPerFrame = 40; // Batch multiple characters per frame for speed
     let charCount = 0;
 
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
@@ -11261,48 +11312,8 @@ async function typeManagerPortrait(element, portraitText) {
     }
 }
 
-// ========================================
-// SHARED CUBE LOADER MARKUP
-// Reuse the exact same cube + narrator shell used by portrait generation
-// so all loaders (portrait, grid, sheet) share an identical axis and layout.
-// ========================================
-function buildNarratorCubeLine(text) {
-    const cubeMarkup =
-        '<span class="spinner-cube-scene">' +
-        '<span class="spinner-cube-tilt">' +
-        '<span class="spinner-cube">' +
-        '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
-        '</span></span></span>';
-
-    return '<span class="narrator-spinner-shell">' + cubeMarkup + ' ' + text + '</span>';
-}
-
-// Initialize the manager's grid + sheet loading rows to use the shared
-// narrator-style cube loader so they visually match the portrait generator.
-(function initPanelCubeLoaders() {
-    const leftTextEl =
-        document.getElementById('leftPanelLoadingText') ||
-        (document.getElementById('leftPanelLoading') &&
-            document.querySelector('#leftPanelLoading .loading-text'));
-
-    const rightTextEl =
-        document.getElementById('rightPanelLoadingText') ||
-        (document.getElementById('rightPanelLoading') &&
-            document.querySelector('#rightPanelLoading .loading-text'));
-
-    if (leftTextEl) {
-        leftTextEl.innerHTML = buildNarratorCubeLine('Loading characters...');
-    }
-
-    if (rightTextEl) {
-        rightTextEl.innerHTML = buildNarratorCubeLine('Preparing character sheet...');
-    }
-})();
+// Panel loading cubes are now defined directly in index.html using
+// portrait-style cube markup (larger, simpler Y-axis rotation).
 
 // ===== PORTRAIT HISTORY (MANAGER) =====
 // The full portrait history UI is now handled by the shared PortraitUI

@@ -275,11 +275,121 @@ const App = (window.App = {
       this.updateCharacterPanel(state.character);
     });
 
-    // Start the flow
+    // Check URL for explicit resume parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceResume = urlParams.get('resume') === 'true';
+    const forceNew = urlParams.get('new') === 'true';
+
+    // Check for existing session to resume
+    if (!forceNew && CharacterState.hasSession()) {
+      const preview = CharacterState.getSessionPreview();
+      
+      if (forceResume) {
+        // URL says resume - do it immediately
+        await this._resumeSession();
+        return;
+      }
+      
+      // Show resume prompt
+      await this._showResumePrompt(preview);
+      return;
+    }
+
+    // Start fresh
+    await this._startNewCharacter();
+  },
+
+  // Resume from saved session
+  async _resumeSession() {
+    console.log('Resuming character builder session...');
+    const resumeQuestionId = CharacterState.restoreSession();
+    OptionVariationsCache.reset(); // Clear variation cache (may regenerate)
+    this._lastPortraitArt = null;
+    
+    // Update character panel with restored data
+    this.updateCharacterPanel(CharacterState.get().character);
+    
+    // Show a brief "resuming" message then continue
+    const narratorPanel = document.getElementById('narrator-panel');
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderNarratorMessage(''),
+    );
+    const messageEl = narratorPanel.lastElementChild.querySelector('.narrator-text');
+    await Utils.typewriter(messageEl, '> SESSION RESTORED. Let\'s continue where we left off...');
+    Utils.scrollToBottom(true);
+    await Utils.sleep(1000);
+    
+    // Jump to the question we were on
+    await this.showQuestion(resumeQuestionId || 'intro');
+  },
+
+  // Start a brand new character
+  async _startNewCharacter() {
     CharacterState.reset();
-    OptionVariationsCache.reset(); // Reset option variations for new character
-    this._lastPortraitArt = null; // Reset portrait tracking for new character
+    OptionVariationsCache.reset();
+    this._lastPortraitArt = null;
     await this.showQuestion('intro');
+  },
+
+  // Show modal asking user if they want to resume
+  async _showResumePrompt(preview) {
+    const modal = document.getElementById('sessionResumeModal');
+    const timeStampEl = document.getElementById('sessionTimeStamp');
+    const resumeBtn = document.getElementById('sessionResumeBtn');
+    const discardBtn = document.getElementById('sessionDiscardBtn');
+    
+    // Format the time if available
+    let timeNote = '';
+    if (preview.savedAt) {
+      const savedDate = new Date(preview.savedAt);
+      const now = new Date();
+      const diffMs = now - savedDate;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      
+      if (diffMins < 1) {
+        timeNote = 'saved moments ago';
+      } else if (diffMins < 60) {
+        timeNote = `saved ${diffMins}m ago`;
+      } else if (diffHours < 24) {
+        timeNote = `saved ${diffHours}h ago`;
+      } else {
+        timeNote = `saved ${savedDate.toLocaleDateString()}`;
+      }
+    }
+
+    // Update timestamp in header
+    timeStampEl.textContent = timeNote;
+    
+    // Show the modal
+    modal.classList.add('show');
+    
+    // Handle button clicks
+    return new Promise((resolve) => {
+      const handleResume = async () => {
+        cleanup();
+        modal.classList.remove('show');
+        await this._resumeSession();
+        resolve();
+      };
+      
+      const handleDiscard = async () => {
+        cleanup();
+        modal.classList.remove('show');
+        CharacterState.clearSession();
+        await this._startNewCharacter();
+        resolve();
+      };
+      
+      const cleanup = () => {
+        resumeBtn.removeEventListener('click', handleResume);
+        discardBtn.removeEventListener('click', handleDiscard);
+      };
+      
+      resumeBtn.addEventListener('click', handleResume);
+      discardBtn.addEventListener('click', handleDiscard);
+    });
   },
 
   // Show progressive "thinking" messages while waiting for AI
@@ -339,6 +449,8 @@ const App = (window.App = {
     }
 
     this.currentQuestion = question;
+    // Track current question for session persistence
+    CharacterState.setCurrentQuestion(questionId);
     const narratorPanel = document.getElementById('narrator-panel');
 
     // Handle different question types
@@ -3409,6 +3521,9 @@ const App = (window.App = {
       const completeCharacter = this.buildCompleteCharacter(character);
       const saved = await window.StorageService.saveCharacter(completeCharacter);
       CharacterState.updateCharacter(saved);
+
+      // Clear the in-progress session since character is now saved
+      CharacterState.clearSession();
 
       if (showMessage) {
         // Use a short, non-intrusive toast instead of an inline narrator system line.

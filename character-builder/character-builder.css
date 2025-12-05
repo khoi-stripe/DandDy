@@ -1297,4 +1297,29 @@
   }
 }
 
+/* ===== SESSION RESUME MODAL ===== */
+.session-resume-modal {
+  max-width: 480px;
+}
+
+.session-resume-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.session-resume-modal .modal-header .session-time {
+  font-size: 12px;
+  color: var(--modal-accent-dim);
+  margin-left: auto;
+}
+
+.session-resume-modal .modal-body {
+  padding-top: 0;
+}
+
+.session-resume-modal .terminal-text {
+  margin-bottom: 0;
+}
+
 

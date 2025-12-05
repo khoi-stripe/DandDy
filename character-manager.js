@@ -322,6 +322,9 @@ const UI = {
         }
     },
 
+    // Flag to track if we've handled the initial URL character selection
+    _initialUrlCharacterHandled: false,
+
     render() {
         const previousSelectedId =
             typeof AppState !== 'undefined' && AppState
@@ -346,16 +349,25 @@ const UI = {
             if (typeof AppState !== 'undefined' && AppState) {
                 AppState.selectedCharacterId = null;
             }
+            clearCharacterFromUrl();
             return;
         }
 
+        // Check URL for character selection (only on first render with characters)
+        let urlCharacterId = null;
+        if (!this._initialUrlCharacterHandled) {
+            urlCharacterId = getCharacterIdFromUrl();
+            this._initialUrlCharacterHandled = true;
+        }
+
         // Ensure we have a valid selected id within the current filtered list.
-        let targetId = previousSelectedId || null;
-        const hasValidPreviousSelection =
+        // Priority: URL param > previous selection > first character
+        let targetId = urlCharacterId || previousSelectedId || null;
+        const hasValidSelection =
             targetId &&
             characters.some((c) => String(c.id) === String(targetId));
 
-        if (!hasValidPreviousSelection) {
+        if (!hasValidSelection) {
             targetId = characters[0] && characters[0].id;
         }
 
@@ -393,8 +405,8 @@ const UI = {
         // Only re-render the sheet when the effective selection actually
         // changed (e.g. first load, after delete, or when filters remove the
         // previously selected character).
-        if (targetId && targetId !== previousSelectedId) {
-            viewCharacter(targetId, { skipKeyboardSync: true });
+        if (targetId && (targetId !== previousSelectedId || urlCharacterId)) {
+            viewCharacter(targetId, { skipKeyboardSync: true, updateUrl: !urlCharacterId });
         }
     },
 
@@ -562,7 +574,7 @@ function createNewCharacter() {
 }
 
 async function viewCharacter(id, options = {}) {
-    const { fromKeyboard = false, skipKeyboardSync = false } = options;
+    const { fromKeyboard = false, skipKeyboardSync = false, updateUrl = true } = options;
 
     // Record this request so that slower async lookups for previously
     // selected characters can't override the sheet for the most recently
@@ -596,6 +608,11 @@ async function viewCharacter(id, options = {}) {
     if (character) {
         UI.showCharacterSheet(character);
         
+        // Update URL with selected character (for sharing/bookmarking)
+        if (updateUrl && id) {
+            updateUrlWithCharacter(id);
+        }
+        
         // Highlight selected card
         document.querySelectorAll('.character-card').forEach(card => {
             card.classList.remove('is-selected');
@@ -616,6 +633,32 @@ async function viewCharacter(id, options = {}) {
             }
         }
     }
+}
+
+// Update URL with character ID without triggering page reload
+function updateUrlWithCharacter(characterId) {
+    const url = new URL(window.location.href);
+    if (characterId) {
+        url.searchParams.set('character', characterId);
+    } else {
+        url.searchParams.delete('character');
+    }
+    // Remove 'from' param if present (one-time use)
+    url.searchParams.delete('from');
+    history.replaceState({ characterId }, '', url.toString());
+}
+
+// Get character ID from URL
+function getCharacterIdFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('character');
+}
+
+// Clear character selection from URL
+function clearCharacterFromUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('character');
+    history.replaceState({}, '', url.toString());
 }
 
 let currentEditCharacterId = null;
