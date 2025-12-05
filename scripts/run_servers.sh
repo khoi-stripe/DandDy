@@ -73,7 +73,7 @@ echo "  Backend API:        http://127.0.0.1:8000"
 echo "  OpenAPI docs:       http://127.0.0.1:8000/docs"
 echo
 echo "  Character Builder:  http://127.0.0.1:8001/character-builder/index.html"
-echo "  Character Manager:  http://127.0.0.1:8001/character-manager.html"
+echo "  Character Manager:  http://127.0.0.1:8001/index.html"
 echo
 echo "Press Ctrl+C in this terminal to stop both servers."
 echo

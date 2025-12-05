@@ -16633,12 +16633,12 @@ function exitToManager() {
 
         // Character saved successfully, proceed to exit
         window.suppressBeforeunloadWarning();
-        window.location.href = '../character-manager.html?from=builder';
+        window.location.href = '../index.html?from=builder';
       },
       () => {
         // User clicked "DISCARD" (secondary button) - exit without saving
         window.suppressBeforeunloadWarning();
-        window.location.href = '../character-manager.html?from=builder';
+        window.location.href = '../index.html?from=builder';
       },
       {
         primaryLabel: 'SAVE',
@@ -16648,7 +16648,7 @@ function exitToManager() {
   } else {
     // Character is already saved or incomplete; immediately exit
     window.suppressBeforeunloadWarning();
-    window.location.href = '../character-manager.html?from=builder';
+    window.location.href = '../index.html?from=builder';
   }
 }
 

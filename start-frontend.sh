@@ -1,4 +1,4 @@
-#!/bin/bash
+no#!/bin/bash
 # Start the DandDy frontend server on port 8080
 
 cd "$(dirname "$0")"
@@ -20,7 +20,7 @@ echo "🚀 Starting DandDy Frontend on http://localhost:8080"
 echo "📝 Press Ctrl+C to stop"
 echo ""
 echo "📂 Access points:"
-echo "   Character Manager: http://localhost:8080/character-manager.html"
+echo "   Character Manager: http://localhost:8080/index.html"
 echo "   Character Builder: http://localhost:8080/character-builder/index.html"
 echo ""
 

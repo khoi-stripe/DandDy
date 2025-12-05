@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # Base URL used to build password reset links sent via email.
     # For local dev this can point at the dev server; in production it should
     # be overridden to the deployed character manager URL.
-    frontend_reset_base: str = "http://localhost:8080/character-manager.html"
+    frontend_reset_base: str = "http://localhost:8080/index.html"
 
     # Cloudflare R2 (optional, used for storing generated images)
     # These map from env vars like R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, etc.
