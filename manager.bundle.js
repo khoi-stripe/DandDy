@@ -1446,9 +1446,10 @@ window.DANDDY_BACKEND_VERSION = '1.0.0';
       parts.push(`Pose: ${posePrompt}`);
     }
 
-    if (cameraPrompt) {
-      parts.push(cameraPrompt);
-    }
+    // Camera temporarily disabled - may interfere with pose
+    // if (cameraPrompt) {
+    //   parts.push(cameraPrompt);
+    // }
 
     return parts;
   }
@@ -1597,9 +1598,10 @@ window.DANDDY_BACKEND_VERSION = '1.0.0';
     if (posePrompt) {
       lines.push(`Pose: ${posePrompt}`);
     }
-    if (cameraPrompt) {
-      lines.push(cameraPrompt);
-    }
+    // Camera temporarily disabled - may interfere with pose
+    // if (cameraPrompt) {
+    //   lines.push(cameraPrompt);
+    // }
     if (styleDescription) {
       lines.push(`STYLE: ${styleDescription}`);
     }
@@ -2145,7 +2147,7 @@ window.CONFIG = {
   // Default portrait view mode when no explicit preference has been saved yet.
   // - "ascii": show ASCII portraits by default
   // - "original": prefer original images when available
-  DEFAULT_PORTRAIT_VIEW_MODE: 'ascii',
+  DEFAULT_PORTRAIT_VIEW_MODE: 'original',
 
   // Default portrait prompt theme when no explicit preference has been saved yet.
   // This should match one of PortraitPrompt.getThemes().id values.
@@ -4146,23 +4148,48 @@ Format your response as JSON array of strings, one for each option in order. Exa
   buildCharacterDescription(character) {
     const parts = [];
 
-    // Race - use shared description data from PortraitPrompt
+    // Race - prefer admin-configured entries, fall back to shared description data
     if (character.race) {
-      const raceDesc = window.PortraitPrompt
-        ? PortraitPrompt.getRaceDescription(character.race)
-        : character.race;
+      let raceDesc = null;
+      // Try admin entries first
+      try {
+        if (window.PortraitPrompt && typeof PortraitPrompt.getVariableSnippet === 'function') {
+          raceDesc = PortraitPrompt.getVariableSnippet('race', character.race);
+        }
+      } catch (e) {
+        // Non-fatal
+      }
+      // Fall back to hardcoded descriptions
+      if (!raceDesc) {
+        raceDesc = window.PortraitPrompt
+          ? PortraitPrompt.getRaceDescription(character.race)
+          : character.race;
+      }
       parts.push(raceDesc);
     }
 
-    // Class - use shared description data from PortraitPrompt
+    // Class - prefer admin-configured entries, fall back to shared description data
     if (character.class) {
-      const classDesc = window.PortraitPrompt
-        ? PortraitPrompt.getClassDescription(character.class)
-        : character.class;
+      let classDesc = null;
+      // Try admin entries first
+      try {
+        if (window.PortraitPrompt && typeof PortraitPrompt.getVariableSnippet === 'function') {
+          classDesc = PortraitPrompt.getVariableSnippet('class', character.class);
+        }
+      } catch (e) {
+        // Non-fatal
+      }
+      // Fall back to hardcoded descriptions
+      if (!classDesc) {
+        classDesc = window.PortraitPrompt
+          ? PortraitPrompt.getClassDescription(character.class)
+          : character.class;
+      }
       parts.push(classDesc);
     }
 
     // Magic specialization (only for spellcasting classes)
+    // Note: This is still from hardcoded data - could be moved to admin in future
     if (character.class && window.PortraitPrompt) {
       const magicText = PortraitPrompt.getMagicSpecialization(character.class);
       if (magicText) {
@@ -4370,12 +4397,11 @@ Format your response as JSON array of strings, one for each option in order. Exa
     //
     // Pose: {POSE_VARIANT}
     //
-    // Camera: {CAMERA_ANGLE}
-    //
     // STYLE: {DESCRIPTION}
     //
     // Scene: {DESCRIPTION}
-    let prompt = `${headerLine}\n\nPose: ${posePrompt}\n\n${cameraPrompt}`;
+    // Note: Camera temporarily disabled - may interfere with pose
+    let prompt = `${headerLine}\n\nPose: ${posePrompt}`;
     if (styleDescription) {
       prompt += `\n\nSTYLE: ${styleDescription}`;
     }
@@ -8649,8 +8675,11 @@ if (DEBUG_CLOUD) {
       }
 
       // Ensure the cube + text shell exists once; thereafter only update text.
+      // Check for the --generating class on the cube to know if loader is rendered,
+      // not just .portrait-placeholder-text which exists in the waiting placeholder too.
+      const hasLoader = portraitEl.querySelector('.portrait-placeholder-cube--generating');
       let textEl = portraitEl.querySelector('.portrait-placeholder-text');
-      if (!textEl) {
+      if (!hasLoader) {
         portraitEl.innerHTML = `
           <div class="portrait-placeholder-content">
             <div class="portrait-placeholder-cube-container">
@@ -10836,12 +10865,13 @@ async function confirmGeneratePortrait() {
                 });
         } else {
             // Fallback if PortraitPrompt is unavailable.
+            // Note: Camera temporarily disabled - may interfere with pose
             renderingInstructions = [
                 'Create a high-contrast black-and-white fantasy illustration.',
                 'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
                 'Include some controlled, directional hatching to define form (light mid-tone texture only).',
                 `Pose: ${posePrompt}`,
-                cameraPrompt,
+                // cameraPrompt,
                 'Background should be simple, entirely black, and free of symbols or text.',
                 'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
                 'Aspect ratio 3:4.',
