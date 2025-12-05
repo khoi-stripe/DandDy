@@ -246,7 +246,7 @@ const StorageService = (window.StorageService = {
     try {
       const raw = localStorage.getItem('dnd_portrait_view_mode');
       const fallback =
-        (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'ascii';
+        (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'original';
       if (!raw) return fallback;
       const value = String(raw).trim().toLowerCase();
       const allowed = ['ascii', 'original'];
@@ -256,7 +256,7 @@ const StorageService = (window.StorageService = {
         'StorageService.getPortraitViewMode failed, using fallback',
         e,
       );
-      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'ascii';
+      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'original';
     }
   },
 

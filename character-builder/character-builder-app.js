@@ -3014,7 +3014,7 @@ const App = (window.App = {
       const container = portraitEl.closest('.portrait-container');
       const toggleBtn = document.getElementById('toggle-portrait-btn');
 
-      let portraitViewMode = 'ascii';
+      let portraitViewMode = 'original';
       try {
         if (window.StorageService && StorageService.getPortraitViewMode) {
           portraitViewMode = StorageService.getPortraitViewMode();

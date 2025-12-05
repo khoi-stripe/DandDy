@@ -2871,7 +2871,7 @@ const StorageService = (window.StorageService = {
     try {
       const raw = localStorage.getItem('dnd_portrait_view_mode');
       const fallback =
-        (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'ascii';
+        (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'original';
       if (!raw) return fallback;
       const value = String(raw).trim().toLowerCase();
       const allowed = ['ascii', 'original'];
@@ -2881,7 +2881,7 @@ const StorageService = (window.StorageService = {
         'StorageService.getPortraitViewMode failed, using fallback',
         e,
       );
-      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'ascii';
+      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'original';
     }
   },
 
@@ -4671,7 +4671,7 @@ const Components = (window.Components = {
       if (window.StorageService && StorageService.getPortraitViewMode) {
         return StorageService.getPortraitViewMode();
       }
-      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'ascii';
+      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'original';
     };
 
     const currentPortraitViewMode = getPortraitViewMode();
@@ -5487,7 +5487,7 @@ const CharacterSheet = (window.CharacterSheet = {
     // Read the global portrait view mode so the overflow toggle label/icon
     // matches the actual default view (ASCII vs Original). This mirrors the
     // logic used in _renderPortrait so builder + manager stay in sync.
-    let portraitViewMode = 'ascii';
+    let portraitViewMode = 'original';
     try {
       if (window.StorageService && StorageService.getPortraitViewMode) {
         portraitViewMode = StorageService.getPortraitViewMode();
@@ -5643,7 +5643,7 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Global portrait view mode (ASCII vs Original). Builder + manager share
     // this preference via StorageService; fall back to config default.
-    let portraitViewMode = 'ascii';
+    let portraitViewMode = 'original';
     try {
       if (window.StorageService && StorageService.getPortraitViewMode) {
         portraitViewMode = StorageService.getPortraitViewMode();
@@ -10682,7 +10682,7 @@ async function confirmGeneratePortrait() {
         const toggleBtn = document.getElementById(`toggle-portrait-btn-${portraitCharacterId}`);
 
         // Read the persisted portrait view preference, falling back to config.
-        let portraitViewMode = 'ascii';
+        let portraitViewMode = 'original';
         try {
             if (window.StorageService && StorageService.getPortraitViewMode) {
                 portraitViewMode = StorageService.getPortraitViewMode();

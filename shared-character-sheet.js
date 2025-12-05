@@ -187,7 +187,7 @@ const CharacterSheet = (window.CharacterSheet = {
     // Read the global portrait view mode so the overflow toggle label/icon
     // matches the actual default view (ASCII vs Original). This mirrors the
     // logic used in _renderPortrait so builder + manager stay in sync.
-    let portraitViewMode = 'ascii';
+    let portraitViewMode = 'original';
     try {
       if (window.StorageService && StorageService.getPortraitViewMode) {
         portraitViewMode = StorageService.getPortraitViewMode();
@@ -343,7 +343,7 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Global portrait view mode (ASCII vs Original). Builder + manager share
     // this preference via StorageService; fall back to config default.
-    let portraitViewMode = 'ascii';
+    let portraitViewMode = 'original';
     try {
       if (window.StorageService && StorageService.getPortraitViewMode) {
         portraitViewMode = StorageService.getPortraitViewMode();

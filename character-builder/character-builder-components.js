@@ -170,7 +170,7 @@ const Components = (window.Components = {
       if (window.StorageService && StorageService.getPortraitViewMode) {
         return StorageService.getPortraitViewMode();
       }
-      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'ascii';
+      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'original';
     };
 
     const currentPortraitViewMode = getPortraitViewMode();

@@ -1119,7 +1119,7 @@ async function confirmGeneratePortrait() {
         const toggleBtn = document.getElementById(`toggle-portrait-btn-${portraitCharacterId}`);
 
         // Read the persisted portrait view preference, falling back to config.
-        let portraitViewMode = 'ascii';
+        let portraitViewMode = 'original';
         try {
             if (window.StorageService && StorageService.getPortraitViewMode) {
                 portraitViewMode = StorageService.getPortraitViewMode();
