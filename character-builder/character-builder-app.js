@@ -2928,7 +2928,7 @@ const App = (window.App = {
             >${defaultPrompt}</textarea>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" onclick="App.closePromptModal(false)">CANCEL</button>
+            <button class="terminal-btn" onclick="App.surpriseMePortrait()">SURPRISE ME</button>
             <button class="terminal-btn terminal-btn-primary" onclick="App.confirmPromptModal()">GENERATE PORTRAIT</button>
           </div>
         </div>
@@ -3265,6 +3265,40 @@ const App = (window.App = {
         ),
       });
     }
+  },
+
+  // "Surprise Me" - generate a fresh randomized prompt and immediately generate portrait
+  async surpriseMePortrait() {
+    const state = CharacterState.get();
+    const character = state && state.character ? state.character : {};
+
+    if (!character.race || !character.class) {
+      this.showSystemMessage('Select a race and class first.');
+      return;
+    }
+
+    // Build a fresh randomized template prompt using the same helper as auto-generation
+    let templatePrompt = '';
+    try {
+      if (window.AIService && typeof AIService.buildPortraitPrompt === 'function') {
+        templatePrompt = AIService.buildPortraitPrompt(character);
+      } else if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
+        templatePrompt = AIService.buildCharacterDescription(character);
+      } else {
+        templatePrompt = `${character.race} ${character.class}`;
+      }
+    } catch (e) {
+      templatePrompt = `${character.race} ${character.class}`;
+    }
+
+    // Update the prompt input field so user can see what was generated
+    const promptInput = document.getElementById('custom-prompt');
+    if (promptInput) {
+      promptInput.value = templatePrompt;
+    }
+
+    // Immediately trigger generation with the new prompt
+    await this.confirmPromptModal();
   },
 
   togglePortraitView() {
