@@ -1722,6 +1722,15 @@ Format your response as JSON array of strings, one for each option in order. Exa
     const headerParts = [];
     if (raceLabel) headerParts.push(raceLabel);
     if (classLabel) headerParts.push(classLabel);
+    
+    // Add magic specialization for spellcasting classes
+    if (classId && window.PortraitPrompt && typeof PortraitPrompt.getMagicSpecialization === 'function') {
+      const magicText = PortraitPrompt.getMagicSpecialization(classId);
+      if (magicText) {
+        headerParts.push(magicText);
+      }
+    }
+    
     if (backgroundLabel) headerParts.push(backgroundLabel);
 
     const headerSuffix = headerParts.join(', ');

@@ -5161,7 +5161,7 @@ const StorageService = (window.StorageService = {
     }
     return CharacterStorage.getAll();
   },
-
+  
   /**
    * Save character via shared CharacterStorage facade.
    * Automatically creates or updates based on presence of character.id.
@@ -5172,19 +5172,19 @@ const StorageService = (window.StorageService = {
       return character;
     }
 
-    if (character.id) {
-      if (DEBUG_BUILDER) {
-        console.log('💾 BUILDER: Updating character via CharacterStorage:', character.id);
-      }
+      if (character.id) {
+        if (DEBUG_BUILDER) {
+          console.log('💾 BUILDER: Updating character via CharacterStorage:', character.id);
+        }
       return CharacterStorage.update(character.id, character);
-    } else {
-      if (DEBUG_BUILDER) {
-        console.log('💾 BUILDER: Creating character via CharacterStorage');
-      }
+      } else {
+        if (DEBUG_BUILDER) {
+          console.log('💾 BUILDER: Creating character via CharacterStorage');
+        }
       return CharacterStorage.add(character);
     }
   },
-
+  
   /**
    * Delete character via shared CharacterStorage facade.
    */
@@ -6515,6 +6515,15 @@ Format your response as JSON array of strings, one for each option in order. Exa
     const headerParts = [];
     if (raceLabel) headerParts.push(raceLabel);
     if (classLabel) headerParts.push(classLabel);
+    
+    // Add magic specialization for spellcasting classes
+    if (classId && window.PortraitPrompt && typeof PortraitPrompt.getMagicSpecialization === 'function') {
+      const magicText = PortraitPrompt.getMagicSpecialization(classId);
+      if (magicText) {
+        headerParts.push(magicText);
+      }
+    }
+    
     if (backgroundLabel) headerParts.push(backgroundLabel);
 
     const headerSuffix = headerParts.join(', ');
