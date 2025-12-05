@@ -6228,25 +6228,23 @@ Format your response as JSON array of strings, one for each option in order. Exa
       console.log('  Model:', model);
       console.log('  Note: Image generation takes 20-30s (longer than text AI)...');
       
-      // Build request body - quality parameter only applies to DALL-E models
-      const requestBody = {
-        prompt: prompt,
-        size: '1024x1024',
-        model: model,
-      };
-      
-      // DALL-E models use 'standard'/'hd', gpt-image-1 doesn't use quality param
-      if (model.startsWith('dall-e')) {
-        requestBody.quality = 'standard';
-      }
-      
-      const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      }, 70000); // 70 seconds for image generation (DALL-E can be very slow, plus R2 upload)
+        // Quality setting differs by model:
+        // - DALL-E: 'standard' or 'hd'
+        // - GPT Image 1: 'low', 'medium', 'high'
+        const quality = model.startsWith('dall-e') ? 'standard' : 'medium';
+
+        const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: prompt,
+            size: '1024x1024',
+            quality: quality,
+            model: model,
+          }),
+        }, 70000); // 70 seconds for image generation (DALL-E can be very slow, plus R2 upload)
 
       if (!response.ok) {
         const errorData = await response.json();
