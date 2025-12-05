@@ -21,12 +21,136 @@
 
   // In-memory cache of admin-configured variables (race/class/scene/style).
   let adminCache = null;
+  // Track if we've already tried to sync from API this session
+  let apiSyncAttempted = false;
 
   function normalize(str) {
     return (str || '').toString().trim();
   }
 
+  // ========================================
+  // API SYNC (for authenticated users)
+  // ========================================
+  
+  function getApiBase() {
+    return (global.DanddyConfig && global.DanddyConfig.API_BASE_URL) || 'http://localhost:8000/api';
+  }
+
+  function getAuthToken() {
+    return global.AuthService && global.AuthService.getToken ? global.AuthService.getToken() : null;
+  }
+
+  function isAuthenticated() {
+    return global.AuthService && global.AuthService.isAuthenticated ? global.AuthService.isAuthenticated() : false;
+  }
+
+  /**
+   * Parse an array of entry objects (from API or localStorage) into
+   * the structured adminCache format.
+   */
+  function parseEntriesToCache(entries) {
+    const races = {};
+    const classes = {};
+    const scenes = {};
+    const poses = {};
+    const cameras = {};
+    const styles = {};
+
+    (entries || []).forEach((entry) => {
+      if (!entry || !entry.kind || !entry.key) return;
+      const kind = normalize(entry.kind).toLowerCase();
+      const key = normalize(entry.key).toLowerCase();
+      if (!key) return;
+
+      if (kind === 'race') {
+        const desc = normalize(entry.description);
+        if (desc) {
+          if (!Array.isArray(races[key])) races[key] = [];
+          races[key].push(desc);
+        }
+      } else if (kind === 'class') {
+        const desc = normalize(entry.description);
+        if (desc) {
+          if (!Array.isArray(classes[key])) classes[key] = [];
+          classes[key].push(desc);
+        }
+      } else if (kind === 'scene' || kind === 'background') {
+        const desc = normalize(entry.description);
+        if (desc) {
+          if (!Array.isArray(scenes[key])) scenes[key] = [];
+          scenes[key].push(desc);
+        }
+      } else if (kind === 'pose') {
+        const desc = normalize(entry.description);
+        if (desc) {
+          if (!Array.isArray(poses[key])) poses[key] = [];
+          poses[key].push(desc);
+        }
+      } else if (kind === 'camera') {
+        const desc = normalize(entry.description);
+        if (desc) {
+          if (!Array.isArray(cameras[key])) cameras[key] = [];
+          cameras[key].push(desc);
+        }
+      } else if (kind === 'style') {
+        // Handle both API format (style_description) and local format (styleDescription)
+        const styleDesc = normalize(entry.style_description || entry.styleDescription || entry.description);
+        const sceneDesc = normalize(entry.background_description || entry.backgroundDescription);
+        if (!styles[key]) {
+          styles[key] = {};
+        }
+        if (styleDesc) styles[key].styleDescription = styleDesc;
+        if (sceneDesc) styles[key].sceneDescription = sceneDesc;
+      }
+    });
+
+    return { races, classes, scenes, styles, poses, cameras };
+  }
+
+  /**
+   * Fetch prompt entries directly from the API (for authenticated users).
+   * Stores result in memory cache - no localStorage needed.
+   * Returns a promise that resolves when sync is complete.
+   */
+  async function syncFromAPI() {
+    if (apiSyncAttempted) return; // Only try once per session
+    apiSyncAttempted = true;
+
+    if (!isAuthenticated()) return;
+
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${getApiBase()}/prompt-entries`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.warn('PortraitPrompt: API fetch failed with status', response.status);
+        return;
+      }
+
+      const apiEntries = await response.json();
+      if (!Array.isArray(apiEntries)) {
+        console.warn('PortraitPrompt: API returned non-array');
+        return;
+      }
+
+      // Parse API entries directly into memory cache (skip localStorage)
+      adminCache = parseEntriesToCache(apiEntries);
+      
+      console.log('PortraitPrompt: Loaded', apiEntries.length, 'entries from API (cloud)');
+    } catch (e) {
+      console.warn('PortraitPrompt: API fetch error', e);
+    }
+  }
+
   function loadAdminCache() {
+    // If we already have a cache (from API or previous load), use it
     if (adminCache) return adminCache;
 
     const empty = {
@@ -34,10 +158,11 @@
       classes: {},
       scenes: {},
       styles: {},
-      poses: {},   // pose variants by class
-      cameras: {}, // camera angle variants by class
+      poses: {},
+      cameras: {},
     };
 
+    // For non-authenticated users, fall back to localStorage
     try {
       const raw = global.localStorage
         ? global.localStorage.getItem(ADMIN_STORAGE_KEY)
@@ -51,75 +176,11 @@
         adminCache = empty;
         return adminCache;
       }
-
-      /** @type {{[key: string]: string[]}} */
-      const races = {};
-      /** @type {{[key: string]: string[]}} */
-      const classes = {};
-      /** @type {{[key: string]: string[]}} */
-      const scenes = {};
-      /** @type {{[key: string]: string[]}} */
-      const poses = {};
-      /** @type {{[key: string]: string[]}} */
-      const cameras = {};
-      /** @type {{[key: string]: { styleDescription?: string, sceneDescription?: string }}} */
-      const styles = {};
-
-      parsed.forEach((entry) => {
-        if (!entry || !entry.kind || !entry.key) return;
-        const kind = normalize(entry.kind).toLowerCase();
-        const key = normalize(entry.key).toLowerCase();
-        if (!key) return;
-
-        if (kind === 'race') {
-          const desc = normalize(entry.description);
-          if (desc) {
-            if (!Array.isArray(races[key])) races[key] = [];
-            races[key].push(desc);
-          }
-        } else if (kind === 'class') {
-          const desc = normalize(entry.description);
-          if (desc) {
-            if (!Array.isArray(classes[key])) classes[key] = [];
-            classes[key].push(desc);
-          }
-        } else if (kind === 'scene' || kind === 'background') {
-          // "background" is kept for backwards compatibility with older
-          // entries; treat it as a scene variable.
-          const desc = normalize(entry.description);
-          if (desc) {
-            if (!Array.isArray(scenes[key])) scenes[key] = [];
-            scenes[key].push(desc);
-          }
-        } else if (kind === 'pose') {
-          // Pose variants keyed by class (e.g. "fighter", "wizard", "default")
-          const desc = normalize(entry.description);
-          if (desc) {
-            if (!Array.isArray(poses[key])) poses[key] = [];
-            poses[key].push(desc);
-          }
-        } else if (kind === 'camera') {
-          // Camera angle variants keyed by class
-          const desc = normalize(entry.description);
-          if (desc) {
-            if (!Array.isArray(cameras[key])) cameras[key] = [];
-            cameras[key].push(desc);
-          }
-        } else if (kind === 'style') {
-          const styleDesc = normalize(entry.styleDescription || entry.description);
-          const sceneDesc = normalize(entry.backgroundDescription);
-          if (!styles[key]) {
-            styles[key] = {};
-          }
-          if (styleDesc) styles[key].styleDescription = styleDesc;
-          if (sceneDesc) styles[key].sceneDescription = sceneDesc;
-        }
-      });
-
-      adminCache = { races, classes, scenes, styles, poses, cameras };
+      
+      // Parse localStorage entries into cache
+      adminCache = parseEntriesToCache(parsed);
       return adminCache;
     } catch (e) {
-      // Non-fatal: if anything goes wrong, fall back to empty cache.
       adminCache = empty;
       return adminCache;
     }
@@ -215,6 +276,7 @@
     if (!entry) return null;
     return {
       styleDescription: entry.styleDescription || '',
+      sceneDescription: entry.sceneDescription || '',
     };
   }
 
@@ -337,9 +399,10 @@
       parts.push(`Pose: ${posePrompt}`);
     }
 
-    if (cameraPrompt) {
-      parts.push(cameraPrompt);
-    }
+    // Camera temporarily disabled - may interfere with pose
+    // if (cameraPrompt) {
+    //   parts.push(cameraPrompt);
+    // }
 
     return parts;
   }
@@ -361,17 +424,24 @@
     if (overrides && overrides.styleDescription) {
       styleDescription = overrides.styleDescription;
     }
+    // Use sceneDescription from style overrides if present.
+    if (overrides && overrides.sceneDescription) {
+      backgroundDescription = overrides.sceneDescription;
+    }
 
-    // 2) If no admin-provided scene description, try a randomized scene snippet
-    // keyed by the current theme.
+    // 2) If no admin-provided scene description, try a randomized scene snippet.
+    // First try theme-specific key, then fall back to "default" key.
     if (backgroundDescription == null) {
-      const sceneSnippet = getVariableSnippet('scene', themeId);
+      let sceneSnippet = getVariableSnippet('scene', themeId);
+      if (!sceneSnippet) {
+        sceneSnippet = getVariableSnippet('scene', 'default');
+      }
       if (sceneSnippet) {
         backgroundDescription = sceneSnippet;
       }
     }
 
-    // 3) Fall back to theme-defined style lines when no override present.
+    // 3) Fall back to theme-defined style lines only when no admin entries exist.
     if (!styleDescription || backgroundDescription == null) {
       const theme = getThemeById(themeId);
 
@@ -481,9 +551,10 @@
     if (posePrompt) {
       lines.push(`Pose: ${posePrompt}`);
     }
-    if (cameraPrompt) {
-      lines.push(cameraPrompt);
-    }
+    // Camera temporarily disabled - may interfere with pose
+    // if (cameraPrompt) {
+    //   lines.push(cameraPrompt);
+    // }
     if (styleDescription) {
       lines.push(`STYLE: ${styleDescription}`);
     }
@@ -514,6 +585,15 @@
   // Force reload of admin cache (useful after admin UI changes)
   PortraitPrompt.invalidateCache = function invalidateCache() {
     adminCache = null;
+  };
+
+  // Sync entries from API to localStorage (for authenticated users)
+  // Call this during app init to ensure cloud data is available locally
+  PortraitPrompt.syncFromAPI = syncFromAPI;
+
+  // Allow resetting the sync flag (useful for testing or re-auth)
+  PortraitPrompt.resetAPISync = function resetAPISync() {
+    apiSyncAttempted = false;
   };
 
   PortraitPrompt.getDefaultThemeId = function getDefaultThemeId() {
@@ -640,6 +720,33 @@
       magic: MAGIC_SPECIALIZATIONS,
     };
   };
+
+  // ========================================
+  // AUTO-SYNC ON PAGE LOAD
+  // ========================================
+  // When the page loads and user is authenticated, sync entries from API
+  // to localStorage so they're available for prompt generation.
+  function initAutoSync() {
+    // Wait a moment for AuthService to initialize
+    setTimeout(async () => {
+      if (isAuthenticated()) {
+        try {
+          await syncFromAPI();
+        } catch (e) {
+          console.warn('PortraitPrompt: Auto-sync failed', e);
+        }
+      }
+    }, 500);
+  }
+
+  // Run auto-sync when DOM is ready
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initAutoSync);
+    } else {
+      initAutoSync();
+    }
+  }
 })(window);
 
 

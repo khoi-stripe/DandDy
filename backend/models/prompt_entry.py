@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Index, Enum
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Index, Enum, Boolean
 from sqlalchemy.orm import relationship
 import enum
 from datetime import datetime
@@ -18,12 +18,15 @@ class PromptEntry(Base):
     """
     User-defined portrait prompt entries (race descriptions, poses, camera angles, etc.)
     that sync across devices for authenticated users.
+    
+    Entries can be marked as `is_global=True` by admins, making them visible to all users.
     """
     __tablename__ = "prompt_entries"
     __table_args__ = (
         Index("idx_prompt_entries_owner_id", "owner_id"),
         Index("idx_prompt_entries_kind", "kind"),
         Index("idx_prompt_entries_key", "key"),
+        Index("idx_prompt_entries_is_global", "is_global"),
     )
 
     id = Column(Integer, primary_key=True, index=True)
@@ -38,6 +41,12 @@ class PromptEntry(Base):
 
     # Optional style-specific description (for style entries)
     style_description = Column(String, nullable=True)
+    
+    # Optional background/scene description (for style entries)
+    background_description = Column(String, nullable=True)
+    
+    # If true, this entry is visible to ALL users (admin-published)
+    is_global = Column(Boolean, default=False, nullable=False)
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

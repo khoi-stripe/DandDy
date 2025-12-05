@@ -1523,23 +1523,48 @@ Format your response as JSON array of strings, one for each option in order. Exa
   buildCharacterDescription(character) {
     const parts = [];
 
-    // Race - use shared description data from PortraitPrompt
+    // Race - prefer admin-configured entries, fall back to shared description data
     if (character.race) {
-      const raceDesc = window.PortraitPrompt
-        ? PortraitPrompt.getRaceDescription(character.race)
-        : character.race;
+      let raceDesc = null;
+      // Try admin entries first
+      try {
+        if (window.PortraitPrompt && typeof PortraitPrompt.getVariableSnippet === 'function') {
+          raceDesc = PortraitPrompt.getVariableSnippet('race', character.race);
+        }
+      } catch (e) {
+        // Non-fatal
+      }
+      // Fall back to hardcoded descriptions
+      if (!raceDesc) {
+        raceDesc = window.PortraitPrompt
+          ? PortraitPrompt.getRaceDescription(character.race)
+          : character.race;
+      }
       parts.push(raceDesc);
     }
 
-    // Class - use shared description data from PortraitPrompt
+    // Class - prefer admin-configured entries, fall back to shared description data
     if (character.class) {
-      const classDesc = window.PortraitPrompt
-        ? PortraitPrompt.getClassDescription(character.class)
-        : character.class;
+      let classDesc = null;
+      // Try admin entries first
+      try {
+        if (window.PortraitPrompt && typeof PortraitPrompt.getVariableSnippet === 'function') {
+          classDesc = PortraitPrompt.getVariableSnippet('class', character.class);
+        }
+      } catch (e) {
+        // Non-fatal
+      }
+      // Fall back to hardcoded descriptions
+      if (!classDesc) {
+        classDesc = window.PortraitPrompt
+          ? PortraitPrompt.getClassDescription(character.class)
+          : character.class;
+      }
       parts.push(classDesc);
     }
 
     // Magic specialization (only for spellcasting classes)
+    // Note: This is still from hardcoded data - could be moved to admin in future
     if (character.class && window.PortraitPrompt) {
       const magicText = PortraitPrompt.getMagicSpecialization(character.class);
       if (magicText) {
@@ -1747,12 +1772,11 @@ Format your response as JSON array of strings, one for each option in order. Exa
     //
     // Pose: {POSE_VARIANT}
     //
-    // Camera: {CAMERA_ANGLE}
-    //
     // STYLE: {DESCRIPTION}
     //
     // Scene: {DESCRIPTION}
-    let prompt = `${headerLine}\n\nPose: ${posePrompt}\n\n${cameraPrompt}`;
+    // Note: Camera temporarily disabled - may interfere with pose
+    let prompt = `${headerLine}\n\nPose: ${posePrompt}`;
     if (styleDescription) {
       prompt += `\n\nSTYLE: ${styleDescription}`;
     }

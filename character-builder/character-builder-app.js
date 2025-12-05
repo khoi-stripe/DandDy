@@ -1429,8 +1429,11 @@ const App = (window.App = {
         });
       } else {
         // Fallback: update dot state manually if shared helper unavailable.
+        // Check for the generating-specific class to know if loader is already rendered.
+        let cubeEl = portraitEl.querySelector('.portrait-placeholder-cube--generating');
         let textEl = portraitEl.querySelector('.portrait-placeholder-text');
-        if (!textEl) {
+        if (!cubeEl) {
+          // Loader not yet rendered - replace the placeholder with loader HTML
           portraitEl.innerHTML = `
             <div class="portrait-placeholder-content">
               <div class="portrait-placeholder-cube-container">
@@ -1457,7 +1460,8 @@ const App = (window.App = {
             </div>
           `;
           textEl = portraitEl.querySelector('.portrait-placeholder-text');
-        } else {
+        } else if (textEl) {
+          // Loader already rendered - just update dot count
           textEl.setAttribute('data-dots', String(dotCount));
         }
       }
@@ -3123,24 +3127,26 @@ const App = (window.App = {
           });
       } else {
         // Fallback if PortraitPrompt is not loaded for some reason.
+        // Note: Camera temporarily disabled - may interfere with pose
         renderingInstructions = [
           'Create a high-contrast black-and-white fantasy illustration.',
           'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
           'Include some controlled, directional hatching to define form (light mid-tone texture only).',
           `Pose: ${posePrompt}`,
-          cameraPrompt,
+          // cameraPrompt,
           'Background should be simple, entirely black, and free of symbols or text.',
           'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
           'Aspect ratio 3:4.',
         ];
       }
       
-      // Combine rendering instructions with the custom character description.
+      // Combine character description with rendering instructions.
+      // Character info comes first, then style/pose/camera instructions.
       // The backend has a 4000 character limit on prompts, so we need to truncate
       // if necessary. Prioritize keeping the character description (customPrompt)
       // and trim style instructions if we exceed the limit.
       const MAX_PROMPT_LENGTH = 3900; // Leave some margin below the 4000 limit
-      let fullPrompt = [...renderingInstructions, customPrompt].join(' ');
+      let fullPrompt = [customPrompt, ...renderingInstructions].join(' ');
       
       if (fullPrompt.length > MAX_PROMPT_LENGTH) {
         console.warn(`Portrait prompt exceeds ${MAX_PROMPT_LENGTH} chars (${fullPrompt.length}), truncating...`);
@@ -3277,12 +3283,13 @@ const App = (window.App = {
       return;
     }
 
-    // Build a fresh randomized template prompt using the same helper as auto-generation
+    // Build a fresh randomized character description for the user to edit.
+    // NOTE: Use buildCharacterDescription (not buildPortraitPrompt) so that
+    // rendering instructions (Pose/Camera/STYLE/Scene) are only added once
+    // by confirmPromptModal, avoiding duplication in the final prompt.
     let templatePrompt = '';
     try {
-      if (window.AIService && typeof AIService.buildPortraitPrompt === 'function') {
-        templatePrompt = AIService.buildPortraitPrompt(character);
-      } else if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
+      if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
         templatePrompt = AIService.buildCharacterDescription(character);
       } else {
         templatePrompt = `${character.race} ${character.class}`;
@@ -4100,7 +4107,19 @@ const App = (window.App = {
         return;
       }
 
-      const portraitEl = document.getElementById('character-portrait');
+      // Wait for DOM to update before trying to render the loader.
+      // The character sheet may not exist yet if state changes are still pending.
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+      let portraitEl = document.getElementById('character-portrait');
+
+      // Retry a few times if the element doesn't exist yet (DOM may still be updating)
+      if (!portraitEl) {
+        for (let i = 0; i < 5 && !portraitEl; i++) {
+          await Utils.sleep(100);
+          portraitEl = document.getElementById('character-portrait');
+        }
+      }
 
       // Show a loading state in the portrait panel while the AI image
       // is being generated and converted to ASCII. Use the placeholder container
@@ -4385,6 +4404,12 @@ const App = (window.App = {
     Utils.scrollToBottom(true);
 
     // Start generating AI portrait in background now (runs while backstory displays)
+    // IMPORTANT: Render the loader immediately (synchronously) before starting async generation
+    // to avoid race conditions where state updates overwrite the loader.
+    const portraitEl = document.getElementById('character-portrait');
+    if (portraitEl) {
+      this._renderPortraitGeneratingLoader(portraitEl);
+    }
     this._quickCreatePortraitGeneration = this._generateQuickCreatePortrait();
 
     // Show thinking message for backstory (just displaying, no API call needed)
@@ -4771,7 +4796,10 @@ const App = (window.App = {
         const isGenerating =
           !!this._quickCreatePortraitGeneration || !!this._guidedPortraitGenerating;
         const portraitNode = document.getElementById('character-portrait');
-        const currentPortraitHTML = isGenerating && portraitNode
+        // Only capture HTML if it's actually the loader (has the --generating class on the cube)
+        const hasLoaderRendered = portraitNode && 
+          portraitNode.querySelector('.portrait-placeholder-cube--generating');
+        const currentPortraitHTML = isGenerating && hasLoaderRendered
           ? portraitNode.innerHTML
           : null;
         
@@ -4787,13 +4815,18 @@ const App = (window.App = {
         const portraitEl = document.getElementById('character-portrait');
         const originalPortraitEl = document.getElementById('original-portrait');
         
-        // Restore the generating state if we captured it. We also need to
-        // re-apply the loading class so the cube keeps its correct geometry
-        // after the sheet re-renders (otherwise the container may revert to
-        // the placeholder/layout styles and distort the cube on subsequent
-        // generations).
-        if (isGenerating && currentPortraitHTML && portraitEl) {
-          portraitEl.innerHTML = currentPortraitHTML;
+        // Restore the generating state if we captured it, OR render it fresh
+        // if we're generating but don't have captured HTML (first render after
+        // generation started). This ensures the loader shows even if the sheet
+        // is rendered for the first time after portrait generation began.
+        if (isGenerating && portraitEl) {
+          if (currentPortraitHTML) {
+            // Restore previously captured loader HTML
+            portraitEl.innerHTML = currentPortraitHTML;
+          } else {
+            // First render after generation started - render loader fresh
+            this._renderPortraitGeneratingLoader(portraitEl);
+          }
           // Keep both placeholder + loading classes in sync with the initial
           // loader render so the cube geometry doesn't get distorted after
           // a sheet re-render.

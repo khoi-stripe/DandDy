@@ -1,8 +1,9 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from database.database import get_db
-from models.user import User
+from models.user import User, UserRole
 from models.prompt_entry import PromptEntry, EntryKind
 from schemas.prompt_entry import (
     PromptEntryCreate,
@@ -15,19 +16,29 @@ from utils.auth import get_current_active_user
 router = APIRouter(prefix="/prompt-entries", tags=["prompt-entries"])
 
 
+def is_admin(user: User) -> bool:
+    """Check if user has admin privileges."""
+    return user.role == UserRole.ADMIN
+
+
 @router.post("/", response_model=PromptEntryResponse, status_code=status.HTTP_201_CREATED)
 def create_prompt_entry(
     entry_data: PromptEntryCreate,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Create a new prompt entry."""
+    """Create a new prompt entry. Only admins can set is_global=True."""
+    # Only admins can create global entries
+    entry_is_global = entry_data.is_global and is_admin(current_user)
+    
     new_entry = PromptEntry(
         owner_id=current_user.id,
         kind=EntryKind(entry_data.kind.value),
         key=entry_data.key,
         description=entry_data.description,
         style_description=entry_data.style_description,
+        background_description=entry_data.background_description,
+        is_global=entry_is_global,
     )
 
     db.add(new_entry)
@@ -43,16 +54,22 @@ def bulk_create_prompt_entries(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Create multiple prompt entries at once (for import)."""
+    """Create multiple prompt entries at once (for import). Only admins can set is_global=True."""
     created_entries = []
+    user_is_admin = is_admin(current_user)
 
     for entry_data in bulk_data.entries:
+        # Only admins can create global entries
+        entry_is_global = entry_data.is_global and user_is_admin
+        
         new_entry = PromptEntry(
             owner_id=current_user.id,
             kind=EntryKind(entry_data.kind.value),
             key=entry_data.key,
             description=entry_data.description,
             style_description=entry_data.style_description,
+            background_description=entry_data.background_description,
+            is_global=entry_is_global,
         )
         db.add(new_entry)
         created_entries.append(new_entry)
@@ -72,8 +89,17 @@ def get_prompt_entries(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Get all prompt entries for the current user, optionally filtered by kind."""
-    query = db.query(PromptEntry).filter(PromptEntry.owner_id == current_user.id)
+    """
+    Get prompt entries for the current user.
+    Returns: user's own entries + all global entries (admin-published).
+    """
+    # Get user's own entries OR global entries
+    query = db.query(PromptEntry).filter(
+        or_(
+            PromptEntry.owner_id == current_user.id,
+            PromptEntry.is_global == True
+        )
+    )
 
     if kind:
         try:
@@ -94,7 +120,7 @@ def get_prompt_entry(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Get a specific prompt entry."""
+    """Get a specific prompt entry. Users can view global entries or their own."""
     entry = db.query(PromptEntry).filter(PromptEntry.id == entry_id).first()
 
     if not entry:
@@ -103,7 +129,8 @@ def get_prompt_entry(
             detail="Prompt entry not found",
         )
 
-    if entry.owner_id != current_user.id:
+    # Allow access if: user owns it OR it's global
+    if entry.owner_id != current_user.id and not entry.is_global:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to access this entry",
@@ -119,7 +146,7 @@ def update_prompt_entry(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Update a prompt entry."""
+    """Update a prompt entry. Only the owner can update (even for global entries)."""
     entry = db.query(PromptEntry).filter(PromptEntry.id == entry_id).first()
 
     if not entry:
@@ -139,6 +166,9 @@ def update_prompt_entry(
     for field, value in update_data.items():
         if field == "kind" and value is not None:
             value = EntryKind(value.value)
+        # Only admins can change is_global
+        if field == "is_global" and not is_admin(current_user):
+            continue  # Skip this field for non-admins
         setattr(entry, field, value)
 
     db.commit()
@@ -153,7 +183,7 @@ def delete_prompt_entry(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
-    """Delete a prompt entry."""
+    """Delete a prompt entry. Only the owner can delete."""
     entry = db.query(PromptEntry).filter(PromptEntry.id == entry_id).first()
 
     if not entry:

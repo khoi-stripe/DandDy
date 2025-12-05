@@ -84,7 +84,7 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     # Return token so user is automatically logged in after registration
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
-        data={"sub": str(new_user.id)}, expires_delta=access_token_expires
+        data={"sub": str(new_user.id), "role": new_user.role.value}, expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
@@ -113,7 +113,7 @@ def login_for_access_token(
 
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
-        data={"sub": str(user.id)}, expires_delta=access_token_expires
+        data={"sub": str(user.id), "role": user.role.value}, expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
@@ -132,7 +132,7 @@ def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
 
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
-        data={"sub": str(user.id)}, expires_delta=access_token_expires
+        data={"sub": str(user.id), "role": user.role.value}, expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
@@ -204,7 +204,7 @@ def reset_password(data: PasswordResetConfirm, db: Session = Depends(get_db)):
     # Issue a new access token
     access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
-        data={"sub": str(user.id)}, expires_delta=access_token_expires
+        data={"sub": str(user.id), "role": user.role.value}, expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}

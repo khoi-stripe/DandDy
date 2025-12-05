@@ -300,8 +300,11 @@
       }
 
       // Ensure the cube + text shell exists once; thereafter only update text.
+      // Check for the --generating class on the cube to know if loader is rendered,
+      // not just .portrait-placeholder-text which exists in the waiting placeholder too.
+      const hasLoader = portraitEl.querySelector('.portrait-placeholder-cube--generating');
       let textEl = portraitEl.querySelector('.portrait-placeholder-text');
-      if (!textEl) {
+      if (!hasLoader) {
         portraitEl.innerHTML = `
           <div class="portrait-placeholder-content">
             <div class="portrait-placeholder-cube-container">

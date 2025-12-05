@@ -105,6 +105,8 @@
       key: apiEntry.key,
       description: apiEntry.description || '',
       styleDescription: apiEntry.style_description || '',
+      backgroundDescription: apiEntry.background_description || '',
+      isGlobal: apiEntry.is_global || false,
       createdAt: apiEntry.created_at,
       updatedAt: apiEntry.updated_at,
     };
@@ -117,11 +119,16 @@
       key: entry.key,
       description: entry.description || '',
       style_description: entry.styleDescription || null,
+      background_description: entry.backgroundDescription || null,
+      is_global: entry.isGlobal || false,
     };
   }
 
   // Track if we're using cloud storage
   let usingCloud = false;
+  
+  // Track if current user is admin (can publish global entries)
+  let isUserAdmin = false;
 
   // ========================================
   // DEFAULT POSE & CAMERA DATA
@@ -314,8 +321,25 @@
     ],
   };
 
+  const DEFAULT_SCENES = {
+    'cinematic-inks': [
+      'Keep the background abstract and mostly dark so the character silhouette and face read instantly.',
+      'Pure black background with no texture or gradient, allowing subtle rim lighting on the subject.',
+      'Deep black void behind the character, with faint atmospheric haze near the edges of the figure.',
+      'Solid black backdrop with the character emerging from darkness, lit by soft directional light.',
+      'Entirely black background, focus on the character silhouette with dramatic negative space.',
+    ],
+    default: [
+      'Simple, entirely black background, free of symbols or text, keeping focus on the character silhouette.',
+      'Abstract dark background with the character clearly separated from the space behind.',
+      'Minimal black backdrop with subtle atmospheric depth near the figure.',
+      'Pure black void, letting the character dominate the composition.',
+      'Dark, featureless background that emphasizes the subject through contrast.',
+    ],
+  };
+
   /**
-   * Generate default pose/camera entries for loading into storage.
+   * Generate default pose/camera/scene entries for loading into storage.
    * @returns {PromptEntry[]}
    */
   function generateDefaultEntries() {
@@ -346,6 +370,21 @@
           kind: 'camera',
           key: classKey,
           description: camera,
+          isDefault: true,
+          createdAt: nowIso,
+          updatedAt: nowIso,
+        });
+      });
+    });
+
+    // Generate scene entries
+    Object.keys(DEFAULT_SCENES).forEach((sceneKey) => {
+      DEFAULT_SCENES[sceneKey].forEach((scene) => {
+        entries.push({
+          id: `default_scene_${sceneKey}_${idCounter++}`,
+          kind: 'scene',
+          key: sceneKey,
+          description: scene,
           isDefault: true,
           createdAt: nowIso,
           updatedAt: nowIso,
@@ -526,11 +565,12 @@
       const tr = document.createElement('tr');
       tr.dataset.id = entry.id;
       const defaultBadge = entry.isDefault ? '<span class="tag-default">default</span>' : '';
+      const globalBadge = entry.isGlobal ? '<span class="tag-default" style="background:#1b5e20;border-color:#4caf50;color:#a5d6a7;">global</span>' : '';
       const descText = entry.kind === 'style' ? (entry.styleDescription || '') : (entry.description || '');
       // Truncate long descriptions for display
       const truncatedDesc = descText.length > 80 ? descText.slice(0, 77) + '...' : descText;
       tr.innerHTML = `
-        <td>${entry.kind}${defaultBadge}</td>
+        <td>${entry.kind}${defaultBadge}${globalBadge}</td>
         <td>${entry.key || ''}</td>
         <td title="${descText.replace(/"/g, '&quot;')}">${truncatedDesc}</td>
         <td>
@@ -550,6 +590,8 @@
 
     const descriptionField = $('descriptionField');
     const styleDescriptionField = $('styleDescriptionField');
+    const backgroundDescriptionField = $('backgroundDescriptionField');
+    const isGlobalField = $('isGlobalField');
     const keyInput = $('keyInput');
     const keyHint = $('keyHint');
     const descriptionInput = $('descriptionInput');
@@ -561,6 +603,13 @@
     }
     if (styleDescriptionField) {
       styleDescriptionField.style.display = styleFieldsVisible ? 'block' : 'none';
+    }
+    if (backgroundDescriptionField) {
+      backgroundDescriptionField.style.display = styleFieldsVisible ? 'block' : 'none';
+    }
+    // Only show isGlobal checkbox for admins
+    if (isGlobalField) {
+      isGlobalField.style.display = isUserAdmin ? 'block' : 'none';
     }
 
     // Update placeholder and hints based on kind
@@ -615,6 +664,8 @@
     $('keyInput').value = entry.key || '';
     $('descriptionInput').value = entry.description || '';
     $('styleDescriptionInput').value = entry.styleDescription || '';
+    $('backgroundDescriptionInput').value = entry.backgroundDescription || '';
+    $('isGlobalInput').checked = entry.isGlobal || false;
     syncFormVisibility();
     const title = $('formTitle');
     if (title) title.textContent = 'Edit entry';
@@ -626,14 +677,35 @@
     $('keyInput').value = '';
     $('descriptionInput').value = '';
     $('styleDescriptionInput').value = '';
+    $('backgroundDescriptionInput').value = '';
+    $('isGlobalInput').checked = false;
     syncFormVisibility();
     const title = $('formTitle');
     if (title) title.textContent = 'New entry';
   }
 
   async function init() {
+    // Check if current user is an admin
+    try {
+      if (isAuthenticated()) {
+        const token = getAuthToken();
+        if (token) {
+          // Decode JWT to get user role (payload is base64-encoded JSON)
+          const payload = token.split('.')[1];
+          const decoded = JSON.parse(atob(payload));
+          isUserAdmin = decoded.role === 'admin';
+          console.log('User role:', decoded.role, 'isAdmin:', isUserAdmin);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to check admin status:', e);
+    }
+    
     let entries = await loadEntries();
     renderTable(entries);
+    
+    // Update form visibility based on admin status
+    syncFormVisibility();
 
     const form = $('recordForm');
     if (form) {
@@ -649,6 +721,10 @@
         const styleDescription = normalize(
           $('styleDescriptionInput').value,
         );
+        const backgroundDescription = normalize(
+          $('backgroundDescriptionInput').value,
+        );
+        const isGlobal = $('isGlobalInput').checked && isUserAdmin;
 
         if (!key) {
           alert('Key is required.');
@@ -667,13 +743,16 @@
               kind,
               key,
               updatedAt: nowIso,
+              isGlobal: isUserAdmin ? isGlobal : prev.isGlobal,
             };
             if (kind === 'style') {
               nextEntry.styleDescription = styleDescription;
+              nextEntry.backgroundDescription = backgroundDescription;
               nextEntry.description = '';
             } else {
               nextEntry.description = description;
               nextEntry.styleDescription = '';
+              nextEntry.backgroundDescription = '';
             }
             
             // Update via API if using cloud
@@ -702,11 +781,14 @@
             key,
             description: '',
             styleDescription: '',
+            backgroundDescription: '',
+            isGlobal: isGlobal,
             createdAt: nowIso,
             updatedAt: nowIso,
           };
           if (kind === 'style') {
             newEntry.styleDescription = styleDescription;
+            newEntry.backgroundDescription = backgroundDescription;
           } else {
             newEntry.description = description;
           }
@@ -747,11 +829,12 @@
       loadDefaultsBtn.addEventListener('click', async () => {
         const existingPoses = entries.filter((e) => e.kind === 'pose').length;
         const existingCameras = entries.filter((e) => e.kind === 'camera').length;
+        const existingScenes = entries.filter((e) => e.kind === 'scene').length;
         
-        let msg = 'Load all default pose and camera entries?\n\n';
-        msg += 'This will add 130 entries (65 poses + 65 cameras) for all 12 classes plus "default".\n\n';
-        if (existingPoses > 0 || existingCameras > 0) {
-          msg += `You currently have ${existingPoses} pose and ${existingCameras} camera entries.\n`;
+        let msg = 'Load all default pose, camera, and scene entries?\n\n';
+        msg += 'This will add 140 entries (65 poses + 65 cameras + 10 scenes).\n\n';
+        if (existingPoses > 0 || existingCameras > 0 || existingScenes > 0) {
+          msg += `You currently have ${existingPoses} pose, ${existingCameras} camera, and ${existingScenes} scene entries.\n`;
           msg += 'Existing entries will be preserved; duplicates will be added.';
         }
         
@@ -780,7 +863,7 @@
         
         renderTable(entries);
         
-        alert(`Loaded ${defaults.length} default entries (${defaults.filter(e => e.kind === 'pose').length} poses, ${defaults.filter(e => e.kind === 'camera').length} cameras).`);
+        alert(`Loaded ${defaults.length} default entries (${defaults.filter(e => e.kind === 'pose').length} poses, ${defaults.filter(e => e.kind === 'camera').length} cameras, ${defaults.filter(e => e.kind === 'scene').length} scenes).`);
       });
     }
 

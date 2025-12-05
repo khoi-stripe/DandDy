@@ -386,6 +386,23 @@
             ></textarea>
           </div>
 
+          <div class="field" id="backgroundDescriptionField">
+            <label for="backgroundDescriptionInput">Scene/Background description (for style entries)</label>
+            <textarea
+              id="backgroundDescriptionInput"
+              placeholder='e.g. "Abstract dark background with subtle atmospheric fog and rim lighting."'
+            ></textarea>
+            <div class="hint">Used for <code>Scene:</code> section in style-based prompts.</div>
+          </div>
+
+          <div class="field" id="isGlobalField" style="display: none;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+              <input type="checkbox" id="isGlobalInput" style="width: auto;" />
+              <span>Publish globally (visible to all users)</span>
+            </label>
+            <div class="hint">Only admins can enable this. Global entries are shared with all users.</div>
+          </div>
+
           <div class="btn-row">
             <button class="btn btn-secondary" type="button" id="btnResetForm">
               Reset

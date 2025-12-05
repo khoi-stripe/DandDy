@@ -109,6 +109,30 @@ def ensure_timestamp_columns():
 
         conn.commit()
 
+
+def ensure_prompt_entry_columns():
+    """
+    Lightweight migration helper for prompt_entries table:
+    - Adds background_description column for style entries (scene description)
+    - Adds is_global column for admin-published entries
+    """
+    inspector = inspect(engine)
+    if not inspector.has_table("prompt_entries"):
+        return
+
+    existing_cols = {col["name"] for col in inspector.get_columns("prompt_entries")}
+
+    with engine.connect() as conn:
+        if "background_description" not in existing_cols:
+            conn.execute(text("ALTER TABLE prompt_entries ADD COLUMN background_description VARCHAR"))
+
+        if "is_global" not in existing_cols:
+            conn.execute(text("ALTER TABLE prompt_entries ADD COLUMN is_global BOOLEAN DEFAULT FALSE"))
+            # Backfill existing rows to have is_global = false
+            conn.execute(text("UPDATE prompt_entries SET is_global = FALSE WHERE is_global IS NULL"))
+
+        conn.commit()
+
 def get_db():
     db = SessionLocal()
     try:

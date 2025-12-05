@@ -1302,24 +1302,26 @@ async function confirmGeneratePortrait() {
                 });
         } else {
             // Fallback if PortraitPrompt is unavailable.
+            // Note: Camera temporarily disabled - may interfere with pose
             renderingInstructions = [
                 'Create a high-contrast black-and-white fantasy illustration.',
                 'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
                 'Include some controlled, directional hatching to define form (light mid-tone texture only).',
                 `Pose: ${posePrompt}`,
-                cameraPrompt,
+                // cameraPrompt,
                 'Background should be simple, entirely black, and free of symbols or text.',
                 'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
                 'Aspect ratio 3:4.',
             ];
         }
         
-        // Combine rendering instructions with the custom character description.
+        // Combine character description with rendering instructions.
+        // Character info comes first, then style/pose/camera instructions.
         // The backend has a 4000 character limit on prompts, so we need to truncate
         // if necessary. Prioritize keeping the character description (customPrompt)
         // and trim style instructions if we exceed the limit.
         const MAX_PROMPT_LENGTH = 3900; // Leave some margin below the 4000 limit
-        let fullPrompt = [...renderingInstructions, customPrompt].join(' ');
+        let fullPrompt = [customPrompt, ...renderingInstructions].join(' ');
         
         if (fullPrompt.length > MAX_PROMPT_LENGTH) {
             console.warn(`Portrait prompt exceeds ${MAX_PROMPT_LENGTH} chars (${fullPrompt.length}), truncating...`);
@@ -1609,13 +1611,13 @@ async function surpriseMePortrait() {
         return;
     }
 
-    // Build a fresh randomized template prompt using the same helper
-    // as the builder, ignoring any existing version prompt.
+    // Build a fresh randomized character description for the user to edit.
+    // NOTE: Use buildCharacterDescription (not buildPortraitPrompt) so that
+    // rendering instructions (Pose/Camera/STYLE/Scene) are only added once
+    // by confirmGeneratePortrait, avoiding duplication in the final prompt.
     let templatePrompt = '';
     try {
-        if (window.AIService && typeof AIService.buildPortraitPrompt === 'function') {
-            templatePrompt = AIService.buildPortraitPrompt(character);
-        } else if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
+        if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
             templatePrompt = AIService.buildCharacterDescription(character);
         } else {
             templatePrompt = `${character.race} ${character.class}`;
