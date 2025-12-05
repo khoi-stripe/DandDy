@@ -3082,6 +3082,7 @@ const App = (window.App = {
       // Add rendering instructions to the user's character description
       // (hidden system-level guidance for the image model)
       // Use shared pose + camera data from PortraitPoseData module
+      const character = CharacterState.get().character || {};
       const classKey = (character.class || 'default').toLowerCase();
 
       const { pose: posePrompt, camera: cameraPrompt } =
