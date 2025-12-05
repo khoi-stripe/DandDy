@@ -3961,8 +3961,8 @@ Format your response as JSON array of strings, one for each option in order. Exa
         body: JSON.stringify({
           prompt: prompt,
           size: '1024x1024',
-          // Default to "medium" to keep quality good while reducing cost/latency.
-          quality: 'medium',
+          // Use 'standard' quality (DALL-E only accepts 'standard' or 'hd')
+          quality: 'standard',
           model: model,
         }),
       }, 70000); // 70 seconds for image generation (DALL-E can be very slow, plus R2 upload)
