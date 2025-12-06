@@ -362,178 +362,148 @@
     <div id="editDetailsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">[ EDIT CHARACTER ]</h2>
+                <h2 class="modal-title">[ ✎ Edit Character ]</h2>
                 <button class="modal-close" onclick="closeEditDetailsModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <p class="terminal-text">Adjust campaign-specific details and table-use stats.</p>
+                <div class="settings-layout">
+                    <div class="settings-grid">
+                        <!-- Identity -->
+                        <div class="settings-group">
+                            <div class="settings-group-label">[ Identity ]</div>
+                            <section class="settings-section">
+                                <div class="settings-row settings-row--stacked mb-lg">
+                                    <div class="settings-label">Character name</div>
+                                    <input type="text" id="editName" class="terminal-input" placeholder="Enter character name">
+                                </div>
+                                <div class="settings-row-inline">
+                                    <div class="settings-inline-field">
+                                        <div class="settings-label">Level</div>
+                                        <input type="number" id="editLevel" class="terminal-input" min="1" max="20" inputmode="numeric" placeholder="1-20">
+                                    </div>
+                                    <div class="settings-inline-field">
+                                        <div class="settings-label">Alignment</div>
+                                        <div class="selector-shell selector-shell--match-width">
+                                            <button class="terminal-btn selector-trigger" id="editAlignment-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" onclick="CharacterSheet.toggleSelectorMenu(this)">
+                                                <span class="selector-trigger-label" id="editAlignment-label">Select Alignment</span>
+                                            </button>
+                                            <div class="selector-menu" role="listbox" aria-label="Alignment" aria-hidden="true">
+                                                <button class="selector-option" type="button" role="option" data-value="lg" aria-selected="false" onclick="selectAlignment('lg', 'Lawful Good')"><span class="selector-option-label">Lawful Good</span></button>
+                                                <button class="selector-option" type="button" role="option" data-value="ng" aria-selected="false" onclick="selectAlignment('ng', 'Neutral Good')"><span class="selector-option-label">Neutral Good</span></button>
+                                                <button class="selector-option" type="button" role="option" data-value="cg" aria-selected="false" onclick="selectAlignment('cg', 'Chaotic Good')"><span class="selector-option-label">Chaotic Good</span></button>
+                                                <button class="selector-option" type="button" role="option" data-value="ln" aria-selected="false" onclick="selectAlignment('ln', 'Lawful Neutral')"><span class="selector-option-label">Lawful Neutral</span></button>
+                                                <button class="selector-option" type="button" role="option" data-value="n" aria-selected="false" onclick="selectAlignment('n', 'True Neutral')"><span class="selector-option-label">True Neutral</span></button>
+                                                <button class="selector-option" type="button" role="option" data-value="cn" aria-selected="false" onclick="selectAlignment('cn', 'Chaotic Neutral')"><span class="selector-option-label">Chaotic Neutral</span></button>
+                                                <button class="selector-option" type="button" role="option" data-value="le" aria-selected="false" onclick="selectAlignment('le', 'Lawful Evil')"><span class="selector-option-label">Lawful Evil</span></button>
+                                                <button class="selector-option" type="button" role="option" data-value="ne" aria-selected="false" onclick="selectAlignment('ne', 'Neutral Evil')"><span class="selector-option-label">Neutral Evil</span></button>
+                                                <button class="selector-option" type="button" role="option" data-value="ce" aria-selected="false" onclick="selectAlignment('ce', 'Chaotic Evil')"><span class="selector-option-label">Chaotic Evil</span></button>
+                                            </div>
+                                        </div>
+                                        <select id="editAlignment" class="terminal-select is-hidden">
+                                            <option value="">Select Alignment</option>
+                                            <option value="lg">Lawful Good</option>
+                                            <option value="ng">Neutral Good</option>
+                                            <option value="cg">Chaotic Good</option>
+                                            <option value="ln">Lawful Neutral</option>
+                                            <option value="n">True Neutral</option>
+                                            <option value="cn">Chaotic Neutral</option>
+                                            <option value="le">Lawful Evil</option>
+                                            <option value="ne">Neutral Evil</option>
+                                            <option value="ce">Chaotic Evil</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
 
-                <!-- Name / level / alignment -->
-                <div class="modal-section">
-                    <p class="terminal-text-small">Character Name</p>
-                    <input type="text" id="editName" class="terminal-input" placeholder="Enter character name">
+                        <!-- Combat Stats -->
+                        <div class="settings-group">
+                            <div class="settings-group-label">[ Combat ]</div>
+                            <section class="settings-section">
+                                <div class="settings-row settings-row--stacked mb-lg">
+                                    <div class="settings-label">Hit points</div>
+                                    <div class="modal-grid-combat-hp">
+                                        <label class="terminal-text-small">HP Max<input type="number" id="editHpMax" class="terminal-input" min="0" inputmode="numeric"></label>
+                                        <label class="terminal-text-small">Current<input type="number" id="editHpCurrent" class="terminal-input" min="0" inputmode="numeric"></label>
+                                        <label class="terminal-text-small">Temp<input type="number" id="editHpTemp" class="terminal-input" min="0" inputmode="numeric"></label>
+                                    </div>
+                                </div>
+                                <div class="settings-row settings-row--stacked">
+                                    <div class="settings-label">Defense & movement</div>
+                                    <div class="modal-grid-combat-def">
+                                        <label class="terminal-text-small">AC<input type="number" id="editArmorClass" class="terminal-input" min="0" inputmode="numeric"></label>
+                                        <label class="terminal-text-small">Initiative<input type="number" id="editInitiative" class="terminal-input" inputmode="numeric"></label>
+                                        <label class="terminal-text-small">Speed<input type="number" id="editSpeed" class="terminal-input" min="0" inputmode="numeric"></label>
+                                        <label class="terminal-text-small">Prof bonus<input type="number" id="editProfBonus" class="terminal-input" inputmode="numeric"></label>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
 
-                    <p class="terminal-text-small modal-section-label">Level</p>
-                    <input
-                        type="number"
-                        id="editLevel"
-                        class="terminal-input"
-                        min="1"
-                        max="20"
-                        inputmode="numeric"
-                        placeholder="1-20"
-                    >
+                        <!-- Ability Scores -->
+                        <div class="settings-group">
+                            <div class="settings-group-label">[ Abilities ]</div>
+                            <section class="settings-section">
+                                <div class="settings-row settings-row--stacked">
+                                    <div class="settings-label">Ability scores <span class="terminal-text-dim">(base)</span></div>
+                                    <div class="modal-grid-abilities">
+                                        <label class="terminal-text-small">STR<input type="number" id="editStr" class="terminal-input" min="1" max="30" inputmode="numeric"></label>
+                                        <label class="terminal-text-small">DEX<input type="number" id="editDex" class="terminal-input" min="1" max="30" inputmode="numeric"></label>
+                                        <label class="terminal-text-small">CON<input type="number" id="editCon" class="terminal-input" min="1" max="30" inputmode="numeric"></label>
+                                        <label class="terminal-text-small">INT<input type="number" id="editInt" class="terminal-input" min="1" max="30" inputmode="numeric"></label>
+                                        <label class="terminal-text-small">WIS<input type="number" id="editWis" class="terminal-input" min="1" max="30" inputmode="numeric"></label>
+                                        <label class="terminal-text-small">CHA<input type="number" id="editCha" class="terminal-input" min="1" max="30" inputmode="numeric"></label>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
 
-                    <p class="terminal-text-small modal-section-label">Alignment</p>
-                    <div class="selector-shell selector-shell--match-width">
-                        <button
-                            class="terminal-btn selector-trigger"
-                            id="editAlignment-trigger"
-                            type="button"
-                            aria-haspopup="listbox"
-                            aria-expanded="false"
-                            onclick="CharacterSheet.toggleSelectorMenu(this)"
-                        >
-                            <span class="selector-trigger-label" id="editAlignment-label">
-                                Select Alignment
-                            </span>
-                        </button>
-                        <div
-                            class="selector-menu"
-                            role="listbox"
-                            aria-label="Alignment"
-                            aria-hidden="true"
-                        >
-                            <button class="selector-option" type="button" role="option" data-value="lg" aria-selected="false" onclick="selectAlignment('lg', 'Lawful Good')">
-                                <span class="selector-option-label">Lawful Good</span>
-                            </button>
-                            <button class="selector-option" type="button" role="option" data-value="ng" aria-selected="false" onclick="selectAlignment('ng', 'Neutral Good')">
-                                <span class="selector-option-label">Neutral Good</span>
-                            </button>
-                            <button class="selector-option" type="button" role="option" data-value="cg" aria-selected="false" onclick="selectAlignment('cg', 'Chaotic Good')">
-                                <span class="selector-option-label">Chaotic Good</span>
-                            </button>
-                            <button class="selector-option" type="button" role="option" data-value="ln" aria-selected="false" onclick="selectAlignment('ln', 'Lawful Neutral')">
-                                <span class="selector-option-label">Lawful Neutral</span>
-                            </button>
-                            <button class="selector-option" type="button" role="option" data-value="n" aria-selected="false" onclick="selectAlignment('n', 'True Neutral')">
-                                <span class="selector-option-label">True Neutral</span>
-                            </button>
-                            <button class="selector-option" type="button" role="option" data-value="cn" aria-selected="false" onclick="selectAlignment('cn', 'Chaotic Neutral')">
-                                <span class="selector-option-label">Chaotic Neutral</span>
-                            </button>
-                            <button class="selector-option" type="button" role="option" data-value="le" aria-selected="false" onclick="selectAlignment('le', 'Lawful Evil')">
-                                <span class="selector-option-label">Lawful Evil</span>
-                            </button>
-                            <button class="selector-option" type="button" role="option" data-value="ne" aria-selected="false" onclick="selectAlignment('ne', 'Neutral Evil')">
-                                <span class="selector-option-label">Neutral Evil</span>
-                            </button>
-                            <button class="selector-option" type="button" role="option" data-value="ce" aria-selected="false" onclick="selectAlignment('ce', 'Chaotic Evil')">
-                                <span class="selector-option-label">Chaotic Evil</span>
-                            </button>
+                        <!-- Skills -->
+                        <div class="settings-group">
+                            <div class="settings-group-label">[ Proficiencies ]</div>
+                            <section class="settings-section">
+                                <div class="settings-row settings-row--stacked mb-lg">
+                                    <div class="settings-label">Skill proficiencies <span class="terminal-text-dim">(one per line)</span></div>
+                                    <textarea id="editSkills" class="terminal-textarea terminal-input" placeholder="e.g. Perception&#10;Stealth&#10;Investigation"></textarea>
+                                </div>
+                                <div class="settings-row settings-row--stacked mb-lg">
+                                    <div class="settings-label">Tool proficiencies <span class="terminal-text-dim">(one per line)</span></div>
+                                    <textarea id="editTools" class="terminal-textarea terminal-input" placeholder="e.g. Thieves' Tools&#10;Disguise Kit"></textarea>
+                                </div>
+                                <div class="settings-row settings-row--stacked">
+                                    <div class="settings-label">Languages <span class="terminal-text-dim">(one per line)</span></div>
+                                    <textarea id="editLanguages" class="terminal-textarea terminal-input" placeholder="e.g. Common&#10;Elvish"></textarea>
+                                </div>
+                            </section>
+                        </div>
+
+                        <!-- Equipment -->
+                        <div class="settings-group">
+                            <div class="settings-group-label">[ Equipment ]</div>
+                            <section class="settings-section">
+                                <div class="settings-row settings-row--stacked">
+                                    <div class="settings-label">Gear & items <span class="terminal-text-dim">(one per line)</span></div>
+                                    <textarea id="editEquipment" class="terminal-textarea terminal-input" placeholder="e.g. Longsword&#10;Chain Mail&#10;Explorer's Pack"></textarea>
+                                </div>
+                            </section>
+                        </div>
+
+                        <!-- Backstory -->
+                        <div class="settings-group">
+                            <div class="settings-group-label">[ Backstory ]</div>
+                            <section class="settings-section">
+                                <div class="settings-row settings-row--stacked">
+                                    <div class="settings-label">Character backstory</div>
+                                    <textarea id="editBackstory" class="terminal-textarea terminal-input" placeholder="Write your character's backstory here..."></textarea>
+                                </div>
+                            </section>
                         </div>
                     </div>
-                    <select id="editAlignment" class="terminal-select is-hidden">
-                        <option value="">Select Alignment</option>
-                        <option value="lg">Lawful Good</option>
-                        <option value="ng">Neutral Good</option>
-                        <option value="cg">Chaotic Good</option>
-                        <option value="ln">Lawful Neutral</option>
-                        <option value="n">True Neutral</option>
-                        <option value="cn">Chaotic Neutral</option>
-                        <option value="le">Lawful Evil</option>
-                        <option value="ne">Neutral Evil</option>
-                        <option value="ce">Chaotic Evil</option>
-                    </select>
-                </div>
-
-                <!-- Combat / abilities / skills -->
-                <div class="modal-section">
-                    <p class="terminal-text-small modal-section-label">Combat Stats</p>
-                    <div class="modal-grid-combat">
-                        <label class="terminal-text-small">
-                            HP Max
-                            <input type="number" id="editHpMax" class="terminal-input" min="0" inputmode="numeric">
-                        </label>
-                        <label class="terminal-text-small">
-                            HP Current
-                            <input type="number" id="editHpCurrent" class="terminal-input" min="0" inputmode="numeric">
-                        </label>
-                        <label class="terminal-text-small">
-                            Temp HP
-                            <input type="number" id="editHpTemp" class="terminal-input" min="0" inputmode="numeric">
-                        </label>
-                        <label class="terminal-text-small">
-                            Armor Class
-                            <input type="number" id="editArmorClass" class="terminal-input" min="0" inputmode="numeric">
-                        </label>
-                        <label class="terminal-text-small">
-                            Initiative
-                            <input type="number" id="editInitiative" class="terminal-input" inputmode="numeric">
-                        </label>
-                        <label class="terminal-text-small">
-                            Speed (ft)
-                            <input type="number" id="editSpeed" class="terminal-input" min="0" inputmode="numeric">
-                        </label>
-                        <label class="terminal-text-small">
-                            Prof Bonus
-                            <input type="number" id="editProfBonus" class="terminal-input" inputmode="numeric">
-                        </label>
-                    </div>
-
-                    <p class="terminal-text-small modal-section-label">Ability Scores <span class="terminal-text-dim">(base scores)</span></p>
-                    <div class="modal-grid-abilities">
-                        <label class="terminal-text-small">
-                            STR
-                            <input type="number" id="editStr" class="terminal-input" min="1" max="30" inputmode="numeric">
-                        </label>
-                        <label class="terminal-text-small">
-                            DEX
-                            <input type="number" id="editDex" class="terminal-input" min="1" max="30" inputmode="numeric">
-                        </label>
-                        <label class="terminal-text-small">
-                            CON
-                            <input type="number" id="editCon" class="terminal-input" min="1" max="30" inputmode="numeric">
-                        </label>
-                        <label class="terminal-text-small">
-                            INT
-                            <input type="number" id="editInt" class="terminal-input" min="1" max="30" inputmode="numeric">
-                        </label>
-                        <label class="terminal-text-small">
-                            WIS
-                            <input type="number" id="editWis" class="terminal-input" min="1" max="30" inputmode="numeric">
-                        </label>
-                        <label class="terminal-text-small">
-                            CHA
-                            <input type="number" id="editCha" class="terminal-input" min="1" max="30" inputmode="numeric">
-                        </label>
-                    </div>
-
-                    <p class="terminal-text-small modal-section-label">Skill Proficiencies <span class="terminal-text-dim">(one per line)</span></p>
-                    <textarea id="editSkills" class="terminal-textarea terminal-input" placeholder="e.g. Perception&#10;Stealth&#10;Investigation"></textarea>
-                </div>
-
-                <!-- Equipment / tools / languages -->
-                <div class="modal-section">
-                    <p class="terminal-text-small modal-section-label">Class Equipment / Gear <span class="terminal-text-dim">(one item per line)</span></p>
-                    <textarea id="editEquipment" class="terminal-textarea terminal-input" placeholder="e.g. Longsword&#10;Chain Mail&#10;Explorer&#39;s Pack"></textarea>
-
-                    <p class="terminal-text-small modal-section-label">Tool Proficiencies <span class="terminal-text-dim">(one per line)</span></p>
-                    <textarea id="editTools" class="terminal-textarea terminal-input" placeholder="e.g. Thieves&#39; Tools&#10;Disguise Kit"></textarea>
-
-                    <p class="terminal-text-small modal-section-label">Languages <span class="terminal-text-dim">(one per line)</span></p>
-                    <textarea id="editLanguages" class="terminal-textarea terminal-input" placeholder="e.g. Common&#10;Elvish"></textarea>
-                </div>
-
-                <!-- Backstory -->
-                <div class="modal-section">
-                    <p class="terminal-text-small modal-section-label">Backstory</p>
-                    <textarea id="editBackstory" class="terminal-textarea terminal-input" placeholder="Write your character&#39;s backstory here..."></textarea>
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="closeEditDetailsModal()">CANCEL</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="saveEditDetails()">SAVE CHANGES</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="saveEditDetails()">SAVE</button>
             </div>
         </div>
     </div>
@@ -655,9 +625,7 @@
                 <button class="modal-close" onclick="closePortraitPromptModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <p class="terminal-text">Describe your character's appearance.</p>
-                <p class="terminal-text-small terminal-text-dim portrait-modal-subhead">Be descriptive! (e.g., "a stoic dwarf fighter with a braided beard, holding a glowing axe")</p>
-                <textarea id="portraitPrompt" class="terminal-textarea terminal-input" rows="6" placeholder="Enter custom description..."></textarea>
+                <textarea id="portraitPrompt" class="terminal-textarea terminal-input" rows="12" placeholder="Enter custom description..."></textarea>
             </div>
             <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="surpriseMePortrait()">SURPRISE ME</button>

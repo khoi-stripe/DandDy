@@ -445,7 +445,6 @@
   gap: var(--spacing-sm);
   padding: var(--spacing-md);
   border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--ui-primary-bg-color) 25%, transparent);
   background: color-mix(in srgb, var(--ui-primary-bg-color) 5%, transparent);
 }
 
@@ -497,7 +496,6 @@
   display: block;
   margin-bottom: var(--spacing-sm);
   color: var(--context-accent);
-  text-transform: uppercase;
 }
 
 .settings-radio-label {
@@ -695,6 +693,7 @@
 .mb-sm { margin-bottom: var(--spacing-sm); }
 .mb-md { margin-bottom: var(--spacing-md); }
 .mb-lg { margin-bottom: var(--spacing-lg); }
+.mb-xl { margin-bottom: var(--spacing-xl); }
 
 .text-small {
   font-size: var(--font-size-small);

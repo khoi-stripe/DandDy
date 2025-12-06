@@ -381,7 +381,7 @@ const Components = (window.Components = {
                 <div class="settings-group">
                   <div class="settings-group-label">[ Image generation ]</div>
                   <section class="settings-section">
-                    <div class="settings-row settings-row--stacked">
+                    <div class="settings-row settings-row--stacked mb-lg">
                       <div class="settings-label">Style</div>
                       <div class="settings-field">
                         <div class="selector-shell selector-shell--match-width" style="width: 100%;">
@@ -450,10 +450,7 @@ const Components = (window.Components = {
                         </select>
                       </div>
                     </div>
-                  </section>
-
-                  <section class="settings-section">
-                    <div class="settings-row">
+                    <div class="settings-row mb-lg">
                       <div class="settings-label">AI model</div>
                       <div class="selector-shell selector-shell--match-width">
                         <button
@@ -512,35 +509,32 @@ const Components = (window.Components = {
                           .join('')}
                       </select>
                     </div>
-                  </section>
-
-                  <section class="settings-section">
-                  <div class="settings-row settings-row--stacked">
-                    <div class="settings-label">Default portrait view</div>
-                    <div class="settings-field">
-                      <div class="settings-radio-group" role="radiogroup" aria-label="Default portrait view">
-                        <label class="settings-radio-option">
-                          <input
-                            type="radio"
-                            name="portrait-view-mode"
-                            value="ascii"
-                            ${currentPortraitViewMode === 'original' ? '' : 'checked'}
-                          >
-                          <span class="settings-radio-label">ASCII</span>
-                        </label>
-                        <label class="settings-radio-option">
-                          <input
-                            type="radio"
-                            name="portrait-view-mode"
-                            value="original"
-                            ${currentPortraitViewMode === 'original' ? 'checked' : ''}
-                          >
-                          <span class="settings-radio-label">Original</span>
-                        </label>
+                    <div class="settings-row settings-row--stacked">
+                      <div class="settings-label">Default portrait view</div>
+                      <div class="settings-field">
+                        <div class="settings-radio-group" role="radiogroup" aria-label="Default portrait view">
+                          <label class="settings-radio-option">
+                            <input
+                              type="radio"
+                              name="portrait-view-mode"
+                              value="ascii"
+                              ${currentPortraitViewMode === 'original' ? '' : 'checked'}
+                            >
+                            <span class="settings-radio-label">ASCII</span>
+                          </label>
+                          <label class="settings-radio-option">
+                            <input
+                              type="radio"
+                              name="portrait-view-mode"
+                              value="original"
+                              ${currentPortraitViewMode === 'original' ? 'checked' : ''}
+                            >
+                            <span class="settings-radio-label">Original</span>
+                          </label>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </section>
+                  </section>
                 </div>
               </div>
             </div>

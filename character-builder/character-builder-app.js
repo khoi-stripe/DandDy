@@ -3019,16 +3019,10 @@ const App = (window.App = {
             <button class="modal-close" onclick="App.closePromptModal(false)">&times;</button>
           </div>
           <div class="modal-body">
-            <p class="terminal-text">
-              Describe your character's appearance. AI will generate a portrait optimized for ASCII art.
-            </p>
-            <p class="terminal-text-small terminal-text-dim portrait-modal-subhead">
-              Be descriptive! (e.g., "a stoic dwarf fighter with a braided beard, holding a glowing axe")
-            </p>
             <textarea
               class="terminal-textarea terminal-input"
               id="custom-prompt"
-              rows="6"
+              rows="12"
             >${defaultPrompt}</textarea>
           </div>
           <div class="modal-footer modal-footer-end">
