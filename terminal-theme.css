@@ -241,7 +241,11 @@ body {
   background-position: 0 0;
   color: var(--terminal-fg);
   overflow-x: hidden;
-  padding: 64px;
+  /* Use safe-area-insets to avoid iPhone Dynamic Island/notch and home indicator */
+  padding: max(64px, env(safe-area-inset-top, 64px))
+           max(64px, env(safe-area-inset-right, 64px))
+           max(64px, env(safe-area-inset-bottom, 64px))
+           max(64px, env(safe-area-inset-left, 64px));
   min-height: 100vh;
   /* Create a stacking context so the glow pseudo-element can sit behind content */
   position: relative;
@@ -1907,13 +1911,18 @@ body.selector-menu-open .splash-art {
 /* ===== RESPONSIVE BASE ===== */
 @media (max-width: 768px) {
   body {
-    padding: var(--spacing-md);
+    /* Use safe-area-insets to avoid iPhone Dynamic Island/notch and home indicator */
+    padding: max(var(--spacing-md), env(safe-area-inset-top, var(--spacing-md)))
+             max(var(--spacing-md), env(safe-area-inset-right, var(--spacing-md)))
+             max(var(--spacing-md), env(safe-area-inset-bottom, var(--spacing-md)))
+             max(var(--spacing-md), env(safe-area-inset-left, var(--spacing-md)));
   }
   
   .terminal-frame,
   .terminal-container {
     border-radius: 8px;
-    height: calc(100vh - 32px);
+    /* Account for safe area insets in height calculation */
+    height: calc(100vh - max(32px, env(safe-area-inset-top, 0px)) - max(0px, env(safe-area-inset-bottom, 0px)));
   }
   
   .terminal-header {
