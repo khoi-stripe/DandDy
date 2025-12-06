@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/@fontsource/google-sans-code@5.2.1/index.min.css" rel="stylesheet">
     <link rel="stylesheet" href="terminal-theme.css?v=20251206c">
     <link rel="stylesheet" href="portraits.css?v=20251206c">
-    <link rel="stylesheet" href="character-manager.css?v=20251206h">
+    <link rel="stylesheet" href="character-manager.css?v=20251206l">
 </head>
 <body>
     <div class="terminal-frame">
@@ -208,13 +208,23 @@
     <div class="split-layout">
         <!-- Left Panel: Character List -->
         <div class="left-panel" id="character-list-panel">
+            <!-- Mobile Back Bar (shown when viewing character sheet on mobile) -->
+            <div class="mobile-back-bar" id="mobileBackBar">
+                <a href="#" class="mobile-back-link" onclick="closeMobileSheet(); return false;">
+                    ← All characters
+                </a>
+            </div>
+            
+            <!-- Mobile Sheet Container (character sheet shown here on mobile) -->
+            <div class="mobile-sheet-container character-sheet" id="mobileSheetContainer">
+                <!-- Character sheet content cloned here on mobile -->
+            </div>
+            
             <!-- Controls Section -->
             <div class="controls-section">
                 <!-- Session in progress notice -->
                 <div id="sessionNotice" class="session-notice is-hidden">
-                    <span class="session-notice-icon">✎</span>
-                    <span class="session-notice-text">You have a character in progress</span>
-                    <span class="session-notice-time" id="sessionNoticeTime"></span>
+                    <span class="session-notice-text"><span class="session-notice-icon">✎</span> You have a character in progress <span class="session-notice-time" id="sessionNoticeTime"></span></span>
                     <span class="session-notice-actions">
                         <a href="character-builder/index.html?resume=true" class="session-notice-action">Resume</a>
                         <button type="button" class="session-notice-action" onclick="discardBuilderSession()">Discard</button>
@@ -276,7 +286,7 @@
             </div>
         </div>
 
-        <!-- Right Panel: Character Sheet -->
+        <!-- Right Panel: Character Sheet (hidden on mobile) -->
         <div class="right-panel" id="character-sheet-panel">
             <div class="sheet-placeholder"></div>
             <div id="characterSheet" class="character-sheet is-hidden">
@@ -307,6 +317,7 @@
             </div>
         </div>
     </div>
+
 
     <!-- Import Modal -->
     <div id="importModal" class="modal">

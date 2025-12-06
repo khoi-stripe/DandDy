@@ -83,6 +83,7 @@
     background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l), 0.1);
     font-size: var(--font-size-small);
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--spacing-sm);
     color: var(--sheet-accent);
@@ -93,6 +94,7 @@
 }
 
 .session-notice-text {
+    flex: 1;
     color: var(--sheet-accent);
 }
 
@@ -101,7 +103,6 @@
 }
 
 .session-notice-actions {
-    margin-left: auto;
     display: flex;
     gap: var(--spacing-md);
 }
@@ -767,8 +768,19 @@
     display: inline-flex;
     align-items: center;
     gap: 0;
-    /* Visually dim the account label so it doesn't compete with CTAs */
+    /* Hidden by default, slides out on logout button hover */
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-width 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
+    padding-right: 0;
+}
+
+/* Reveal email on logout button hover */
+.header-actions:has(#authBtn:hover) #userInfoDisplay {
+    max-width: 300px;
     opacity: 0.7;
+    padding-right: var(--spacing-sm);
 }
 
 .user-status-icon {
@@ -1032,6 +1044,77 @@
 }
 
 /* ===== RESPONSIVE ===== */
+
+/* Tablet breakpoint: compact cards (art only) */
+@media (max-width: 1024px) {
+    /* Hide card info area, show only portrait art */
+    .character-card .card-details {
+        display: none;
+    }
+    
+    /* Adjust card aspect ratio for art-only display */
+    .character-card {
+        aspect-ratio: 3 / 4;
+    }
+    
+    /* Increase grid columns for more cards per row at this breakpoint */
+    .character-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--spacing-sm);
+    }
+    
+    /* Hide the sort button text, show abbreviated version */
+    .search-sort-btn {
+        width: auto;
+        min-width: 100px;
+    }
+    
+    /* New character card in empty state - show centered "+" on compact view */
+    .new-character-card {
+        position: relative;
+    }
+    
+    .new-character-card .card-details {
+        display: flex;
+        background: transparent;
+        position: absolute;
+        inset: 0;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .new-character-card .card-name {
+        font-size: var(--font-size-large);
+        color: var(--terminal-dim);
+    }
+    
+    /* Hide inline Edit button - it moves to overflow menu */
+    .character-sheet .sheet-edit-btn {
+        display: none !important;
+    }
+    
+    /* Hide user email in header */
+    #userInfoDisplay {
+        display: none;
+    }
+    
+    /* Session notice: wrap actions below message */
+    .session-notice-text {
+        flex: 1 1 100%;
+    }
+    
+    .session-notice-actions {
+        padding-left: 1.2em; /* indent to align with text after icon */
+    }
+}
+
+/* On wider viewports, hide the Edit option in overflow menu (inline button is visible) */
+@media (min-width: 1025px) {
+    #sheet-edit-overflow {
+        display: none;
+    }
+}
+
 @media (max-width: 768px) {
     .header-content {
         gap: var(--spacing-sm);
@@ -1042,25 +1125,101 @@
         overflow-y: auto;
     }
     
-    .left-panel,
-    .right-panel {
-        flex: none;
+    /* Hide right panel entirely on mobile - character sheet shown via modal */
+    .left-panel {
+        flex: 1;
         border-right: none;
-        border-bottom: 1px solid var(--terminal-border);
+        border-bottom: none;
         padding: var(--spacing-md);
         overflow-y: auto;
     }
     
+    /* Adjust controls section for mobile */
+    .controls-section {
+        padding: 16px;
+        margin: 0 calc(-1 * var(--spacing-md)) 0 calc(-1 * var(--spacing-md));
+    }
+    
+    /* Remove top padding from left panel on mobile */
+    .left-panel {
+        padding-top: 0;
+    }
+    
+    /* Remove bottom margin on search bar */
+    .search-bar {
+        margin-bottom: 0;
+    }
+    
     .right-panel {
-        border-bottom: none;
+        display: none !important;
+    }
+    
+    /* Hide the right-side loading indicator on mobile */
+    .panel-loading-row {
+        grid-template-columns: 1fr;
+    }
+    
+    #rightPanelLoading {
+        display: none;
     }
     
     .terminal-select {
         width: 100%;
     }
     
+    /* Reset to full card display - more room in single-column layout */
     .character-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacing-md);
+    }
+    
+    .character-card .card-details {
+        display: block;
+    }
+    
+    .character-card {
+        aspect-ratio: 3 / 4;
+    }
+    
+    .card-thumbnail {
+        font-size: 2.2px;
+    }
+    
+    /* On mobile, no cards should appear selected (no glow/highlight) */
+    .character-card.is-selected {
+        border-color: var(--terminal-dim) !important;
+        background-color: var(--terminal-bg) !important;
+        box-shadow: none !important;
+        animation: none !important;
+    }
+    
+    .character-card.is-selected .card-thumbnail {
+        color: var(--terminal-dim) !important;
+    }
+    
+    .character-card.is-selected .card-name,
+    .character-card.is-selected .card-info {
+        color: var(--terminal-dim) !important;
+    }
+    
+    .character-card.is-selected .card-details {
+        background-color: transparent !important;
+        color: var(--terminal-dim) !important;
+    }
+    
+    /* Reset new-character-card to default layout */
+    .new-character-card {
+        position: static;
+    }
+    
+    .new-character-card .card-details {
+        display: block;
+        position: static;
+        background: transparent;
+    }
+    
+    .new-character-card .card-name {
+        font-size: var(--font-size-small);
     }
     
     .header-actions {
@@ -1083,11 +1242,6 @@
         flex-wrap: wrap;
     }
     
-    .card-thumbnail {
-        font-size: 1.5px;
-        transform: scale(1.45);
-    }
-    
     .ascii-portrait {
         font-size: 4px;
     }
@@ -1097,6 +1251,86 @@
         flex-direction: column;
         gap: var(--spacing-md);
     }
+}
+
+/* ========================================
+   MOBILE CHARACTER SHEET VIEW
+   On mobile, we swap the grid for the character sheet
+   ======================================== */
+
+/* Mobile back button - shown at top of left panel when viewing a character */
+.mobile-back-bar {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-back-bar {
+        display: none;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: 0 0 8px 0;
+        border-bottom: 1px solid var(--sheet-accent-dim);
+        background: var(--terminal-bg);
+    }
+    
+    /* Show back bar when viewing character sheet on mobile */
+    .left-panel.is-viewing-sheet .mobile-back-bar {
+        display: flex;
+    }
+    
+    /* Hide grid and controls when viewing sheet */
+    .left-panel.is-viewing-sheet .controls-section,
+    .left-panel.is-viewing-sheet .character-grid,
+    .left-panel.is-viewing-sheet .empty-state,
+    .left-panel.is-viewing-sheet .character-count {
+        display: none !important;
+    }
+    
+    /* Show the inline character sheet on mobile */
+    .left-panel.is-viewing-sheet .mobile-sheet-container {
+        display: block;
+    }
+}
+
+.mobile-back-link {
+    color: var(--sheet-accent-dim);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-small);
+    text-decoration: underline;
+    transition: color var(--transition-speed);
+}
+
+.mobile-back-link:hover {
+    color: var(--sheet-accent);
+}
+
+/* Container for character sheet on mobile (inside left panel) */
+.mobile-sheet-container {
+    display: none;
+    padding: var(--spacing-md);
+}
+
+/* When viewing sheet on mobile, apply teal UI theme to the left panel */
+.left-panel.is-viewing-sheet {
+    --ui-primary-color: var(--sheet-accent);
+    --ui-primary-color-dim: var(--sheet-accent-dim);
+    --ui-primary-bg-color: var(--sheet-accent);
+    --ui-border-color: var(--sheet-accent-dim);
+    --ui-hover-color: var(--sheet-accent);
+    --context-accent: var(--sheet-accent);
+    --context-accent-dim: var(--sheet-accent-dim);
+    --context-hover: var(--sheet-accent);
+    /* Terminal button colors */
+    --terminal-border: var(--sheet-accent);
+    --terminal-accent: var(--sheet-accent);
+}
+
+
+/* Use teal scrollbar theme when viewing sheet */
+.left-panel.is-viewing-sheet {
+    --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
+    --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
+    --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
 /* ========================================

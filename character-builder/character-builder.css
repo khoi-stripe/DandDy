@@ -587,7 +587,7 @@
   color: var(--context-accent-dim);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .settings-layout {
     gap: var(--spacing-sm);
   }

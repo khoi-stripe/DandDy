@@ -5567,12 +5567,23 @@ const CharacterSheet = (window.CharacterSheet = {
       });
     }
 
+    // Manager-only: Add Edit to overflow menu (visible only on narrow viewports via CSS)
+    if (context === 'manager' && onEdit && editFn) {
+      headerActions.unshift({
+        icon: '✎',
+        label: 'Edit character',
+        onclick: editFn,
+        id: 'sheet-edit-overflow',
+      });
+    }
+
     // Append Delete last so it always appears at the bottom of the listbox
     if (deleteAction) {
       headerActions.push(deleteAction);
     }
 
     // Manager-only inline Edit button (to the left of the overflow menu)
+    // Hidden on narrow viewports where it moves into the overflow menu
     const editButtonHtml =
       context === 'manager' && onEdit && editFn
         ? `
@@ -9931,6 +9942,32 @@ const KeyboardNav = {
     isActive: true,
     mode: 'cards', // 'cards' or 'form'
 
+    /**
+     * Dynamically calculate the number of columns in the grid
+     * by measuring actual card positions.
+     */
+    getGridColumns() {
+        const cards = this.getCharacterCards();
+        if (cards.length < 2) return 1;
+        
+        // Compare the top position of the first two cards
+        // If they're the same, they're in the same row
+        const firstTop = cards[0].getBoundingClientRect().top;
+        let columnsInFirstRow = 1;
+        
+        for (let i = 1; i < cards.length; i++) {
+            const cardTop = cards[i].getBoundingClientRect().top;
+            // Allow small tolerance for rounding errors
+            if (Math.abs(cardTop - firstTop) < 5) {
+                columnsInFirstRow++;
+            } else {
+                break;
+            }
+        }
+        
+        return columnsInFirstRow;
+    },
+
     getCharacterCards() {
         return Array.from(document.querySelectorAll('.character-card'));
     },
@@ -10000,8 +10037,9 @@ const KeyboardNav = {
         const cards = this.getCharacterCards();
         if (cards.length === 0) return;
 
-        // Move up by 3 (grid columns)
-        this.currentFocusIndex = Math.max(0, this.currentFocusIndex - 3);
+        // Move up by the actual number of grid columns
+        const columns = this.getGridColumns();
+        this.currentFocusIndex = Math.max(0, this.currentFocusIndex - columns);
         this.updateFocus();
     },
 
@@ -10010,8 +10048,9 @@ const KeyboardNav = {
         const cards = this.getCharacterCards();
         if (cards.length === 0) return;
 
-        // Move down by 3 (grid columns)
-        this.currentFocusIndex = Math.min(cards.length - 1, this.currentFocusIndex + 3);
+        // Move down by the actual number of grid columns
+        const columns = this.getGridColumns();
+        this.currentFocusIndex = Math.min(cards.length - 1, this.currentFocusIndex + columns);
         this.updateFocus();
     },
 
@@ -10399,6 +10438,110 @@ const AppState = {
 let latestViewCharacterRequestId = 0;
 
 // ========================================
+// MOBILE VIEW HANDLING
+// ========================================
+const MOBILE_BREAKPOINT = 768;
+
+const MobileView = {
+    /** Check if we're currently at mobile viewport width */
+    isMobile() {
+        return window.innerWidth <= MOBILE_BREAKPOINT;
+    },
+
+    /** Track the previous viewport state to detect transitions */
+    _wasMobile: null,
+
+    /** Initialize resize listener for viewport transitions */
+    init() {
+        this._wasMobile = this.isMobile();
+        window.addEventListener('resize', () => this.handleResize());
+    },
+
+    /** Handle viewport resize transitions */
+    handleResize() {
+        const isMobileNow = this.isMobile();
+        
+        // No change in viewport category
+        if (isMobileNow === this._wasMobile) return;
+        
+        const wasDesktop = this._wasMobile === false;
+        const isNowMobile = isMobileNow === true;
+        const wasModalOpen = this.isOpen();
+        
+        this._wasMobile = isMobileNow;
+        
+        if (wasDesktop && isNowMobile) {
+            // Desktop → Mobile: if we had a selection, open the modal
+            if (AppState.selectedCharacterId) {
+                this.open(AppState.selectedCharacterId);
+            }
+        } else if (!isMobileNow) {
+            // Mobile → Desktop: close modal, ensure a character is selected
+            if (wasModalOpen) {
+                this.close();
+            }
+            // If nothing is selected, auto-select the first character
+            if (!AppState.selectedCharacterId && AppState.filteredCharacters.length > 0) {
+                const firstChar = AppState.filteredCharacters[0];
+                viewCharacter(firstChar.id, { skipKeyboardSync: false, updateUrl: true });
+            }
+        }
+    },
+
+    /** Check if mobile sheet view is open */
+    isOpen() {
+        const leftPanel = document.getElementById('character-list-panel');
+        return leftPanel && leftPanel.classList.contains('is-viewing-sheet');
+    },
+
+    /** Open the mobile sheet view for a character (swaps grid for sheet) */
+    open(characterId) {
+        const leftPanel = document.getElementById('character-list-panel');
+        const container = document.getElementById('mobileSheetContainer');
+        
+        if (!leftPanel || !container) return;
+        
+        // Clone the character sheet content into the container
+        const sourceSheet = document.getElementById('characterSheet');
+        if (sourceSheet) {
+            container.innerHTML = sourceSheet.innerHTML;
+        }
+        
+        // Swap to sheet view
+        leftPanel.classList.add('is-viewing-sheet');
+        
+        // Scroll to top
+        leftPanel.scrollTop = 0;
+    },
+
+    /** Close the mobile sheet view (returns to grid) */
+    close() {
+        const leftPanel = document.getElementById('character-list-panel');
+        if (!leftPanel) return;
+        
+        leftPanel.classList.remove('is-viewing-sheet');
+        
+        // Clear selection state on mobile when going back
+        if (typeof AppState !== 'undefined' && AppState) {
+            AppState.selectedCharacterId = null;
+        }
+        
+        // Remove is-selected from all cards
+        document.querySelectorAll('.character-card').forEach(card => {
+            card.classList.remove('is-selected');
+        });
+        
+        // Clear URL param
+        clearCharacterFromUrl();
+    }
+};
+
+/** Global function to close mobile sheet (called from HTML onclick) */
+function closeMobileSheet() {
+    MobileView.close();
+}
+
+// ========================================
 // UI RENDERING
 // ========================================
 const UI = {
@@ -10463,15 +10606,19 @@ const UI = {
             this._initialUrlCharacterHandled = true;
         }
 
+        const isMobile = typeof MobileView !== 'undefined' && MobileView.isMobile();
+
         // Ensure we have a valid selected id within the current filtered list.
-        // Priority: URL param > previous selection > first character
+        // Priority: URL param > previous selection > first character (desktop only)
         let targetId = urlCharacterId || previousSelectedId || null;
         const hasValidSelection =
             targetId &&
             characters.some((c) => String(c.id) === String(targetId));
 
         if (!hasValidSelection) {
-            targetId = characters[0] && characters[0].id;
+            // On mobile, don't auto-select the first character (user must tap)
+            // On desktop, always have something selected
+            targetId = isMobile ? null : (characters[0] && characters[0].id);
         }
 
         if (typeof AppState !== 'undefined' && AppState) {
@@ -10480,36 +10627,51 @@ const UI = {
 
         // Sync the card highlight and keyboard focus with the selected id.
         const grid = document.getElementById('characterGrid');
-        if (grid && targetId) {
+        if (grid) {
             const cards = Array.from(grid.querySelectorAll('.character-card'));
             cards.forEach((card) => card.classList.remove('is-selected'));
 
-            const selectedCard = grid.querySelector(`[data-id="${targetId}"]`);
-            if (selectedCard) {
-                selectedCard.classList.add('is-selected');
+            if (targetId) {
+                const selectedCard = grid.querySelector(`[data-id="${targetId}"]`);
+                if (selectedCard) {
+                    selectedCard.classList.add('is-selected');
 
-                if (
-                    typeof KeyboardNav !== 'undefined' &&
-                    KeyboardNav &&
-                    typeof KeyboardNav.getCharacterCards === 'function'
-                ) {
-                    const allCards = KeyboardNav.getCharacterCards();
-                    const cardIndex = allCards.indexOf(selectedCard);
-                    if (cardIndex !== -1) {
-                        KeyboardNav.currentFocusIndex = cardIndex;
-                        // Keep keyboard focus visuals in sync without
-                        // re-triggering a sheet update.
-                        KeyboardNav.updateFocus(true);
+                    if (
+                        typeof KeyboardNav !== 'undefined' &&
+                        KeyboardNav &&
+                        typeof KeyboardNav.getCharacterCards === 'function'
+                    ) {
+                        const allCards = KeyboardNav.getCharacterCards();
+                        const cardIndex = allCards.indexOf(selectedCard);
+                        if (cardIndex !== -1) {
+                            KeyboardNav.currentFocusIndex = cardIndex;
+                            // Keep keyboard focus visuals in sync without
+                            // re-triggering a sheet update.
+                            KeyboardNav.updateFocus(true);
+                        }
                     }
                 }
             }
         }
 
-        // Only re-render the sheet when the effective selection actually
-        // changed (e.g. first load, after delete, or when filters remove the
-        // previously selected character).
+        // Handle sheet rendering based on viewport
         if (targetId && (targetId !== previousSelectedId || urlCharacterId)) {
-            viewCharacter(targetId, { skipKeyboardSync: true, updateUrl: !urlCharacterId });
+            if (isMobile) {
+                // On mobile with URL character, render sheet then open modal
+                // Use openMobileModal: false here since we handle modal opening manually
+                viewCharacter(targetId, { skipKeyboardSync: true, updateUrl: false, openMobileModal: false });
+                if (urlCharacterId) {
+                    // Small delay to ensure sheet is rendered before cloning to modal
+                    setTimeout(() => MobileView.open(targetId), 50);
+                }
+            } else {
+                // Desktop: render sheet in right panel as usual
+                viewCharacter(targetId, { skipKeyboardSync: true, updateUrl: !urlCharacterId, openMobileModal: false });
+            }
+        } else if (!targetId && !isMobile) {
+            // Desktop with no selection and no characters - show placeholder
+            if (placeholder) placeholder.classList.remove('is-hidden');
+            if (sheetEl) sheetEl.classList.add('is-hidden');
         }
     },
 
@@ -10626,7 +10788,11 @@ const UI = {
             clearSearchBtn.disabled = total === 0;
         }
 
-        if (total === filtered) {
+        // Use compact placeholder on narrow viewports (≤1024px)
+        const isCompact = window.innerWidth <= 1024;
+        if (isCompact) {
+            searchInput.placeholder = 'Search';
+        } else if (total === filtered) {
             searchInput.placeholder = `Search ${total} character${total !== 1 ? 's' : ''}`;
         } else {
             searchInput.placeholder = `Search ${filtered} of ${total} character${total !== 1 ? 's' : ''}`;
@@ -10677,7 +10843,12 @@ function createNewCharacter() {
 }
 
 async function viewCharacter(id, options = {}) {
-    const { fromKeyboard = false, skipKeyboardSync = false, updateUrl = true } = options;
+    const { 
+        fromKeyboard = false, 
+        skipKeyboardSync = false, 
+        updateUrl = true,
+        openMobileModal = true  // Whether to open modal on mobile (true for user clicks)
+    } = options;
 
     // Record this request so that slower async lookups for previously
     // selected characters can't override the sheet for the most recently
@@ -10734,6 +10905,13 @@ async function viewCharacter(id, options = {}) {
                     KeyboardNav.updateFocus(true); // true => don't update sheet again
                 }
             }
+        }
+
+        // On mobile, open the character sheet view after rendering
+        const isMobile = typeof MobileView !== 'undefined' && MobileView.isMobile();
+        if (isMobile && openMobileModal) {
+            // Small delay to ensure the sheet is fully rendered before cloning
+            setTimeout(() => MobileView.open(id), 50);
         }
     }
 }
@@ -13437,6 +13615,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize modal behaviors (backdrop click, dirty checking)
     ModalManager.init();
     
+    // Initialize mobile view handling (resize transitions)
+    MobileView.init();
+    
     // Show panel loading spinners as early as possible so the shell never feels empty
     // while we verify auth state and fetch characters.
     if (typeof UI !== 'undefined' && UI && typeof UI.setLoadingState === 'function') {
@@ -13722,6 +13903,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         updateClearSearchVisibility();
     }
+
+    // Update search placeholder on viewport resize (debounced)
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            UI.updateCount();
+        }, 100);
+    });
 
     // Sort dropdown behavior - now uses standard CharacterSheet.toggleSelectorMenu()
     if (sortToggleBtn && sortDropdown) {
