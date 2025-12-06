@@ -10966,31 +10966,10 @@ function populatePortraitStyleDropdown(activeStyle) {
         ];
     }
 
-    // Also try to get any custom styles from admin storage
-    try {
-        const adminStorageKey = 'dnd_portrait_prompt_entries_v1';
-        const raw = localStorage.getItem(adminStorageKey);
-        if (raw) {
-            const entries = JSON.parse(raw);
-            if (Array.isArray(entries)) {
-                const styleEntries = entries.filter(e => e && e.kind && e.kind.toLowerCase() === 'style');
-                const existingIds = themes.map(t => t.id);
-                
-                styleEntries.forEach(entry => {
-                    const key = (entry.key || '').toLowerCase();
-                    if (key && !existingIds.includes(key)) {
-                        themes.push({
-                            id: key,
-                            label: entry.key
-                        });
-                        existingIds.push(key);
-                    }
-                });
-            }
-        }
-    } catch (e) {
-        // Non-fatal - custom styles won't be shown
-    }
+    // NOTE: Custom styles from admin storage are already included via PortraitPrompt.getThemes()
+    // which properly handles API sync for authenticated users (including global vs user-owned filtering).
+    // We no longer read localStorage directly here to avoid showing non-global styles
+    // that may have been cached by another user on the same browser.
 
     // Sort themes alphabetically by id
     themes = themes.slice().sort((a, b) => {
