@@ -298,34 +298,44 @@
     /* Modal */
     .modal-overlay {
       position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.8);
-      display: none;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: none !important;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
+      z-index: 9999;
     }
 
     .modal-overlay.show {
-      display: flex;
+      display: flex !important;
     }
 
     .modal {
-      background: var(--terminal-bg);
-      border: 2px solid #ff4444;
-      padding: 24px;
-      max-width: 400px;
+      background: #0d1117 !important;
+      border: 2px solid #ff4444 !important;
+      padding: 24px !important;
+      min-width: 320px;
+      max-width: 450px;
+      border-radius: 4px;
+      box-shadow: 0 4px 30px rgba(255, 68, 68, 0.4);
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
 
     .modal h3 {
-      color: #ff4444;
+      color: #ff4444 !important;
       margin: 0 0 16px 0;
+      font-size: 16px;
     }
 
     .modal p {
-      color: var(--terminal-dim);
+      color: #c9d1d9 !important;
       margin: 0 0 20px 0;
-      line-height: 1.5;
+      line-height: 1.6;
       white-space: pre-line;
     }
 
@@ -333,6 +343,26 @@
       display: flex;
       gap: 12px;
       justify-content: flex-end;
+    }
+    
+    .modal .btn {
+      background: #21262d !important;
+      border: 1px solid #30363d !important;
+      color: #c9d1d9 !important;
+    }
+    
+    .modal .btn:hover {
+      background: #30363d !important;
+    }
+    
+    .modal .btn-danger {
+      background: #da3633 !important;
+      border-color: #da3633 !important;
+      color: #ffffff !important;
+    }
+    
+    .modal .btn-danger:hover {
+      background: #ff4444 !important;
     }
   </style>
 </head>
@@ -409,7 +439,7 @@
       <p id="deleteMessage">Are you sure you want to delete these characters? This action cannot be undone.</p>
       <div class="modal-actions">
         <button class="btn" onclick="closeDeleteModal()">Cancel</button>
-        <button class="btn btn-danger" onclick="executeDelete()">Delete</button>
+        <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
       </div>
     </div>
   </div>
@@ -781,11 +811,15 @@
     }
 
     async function executeDelete() {
-      closeDeleteModal();
-      
       const idsToDelete = [...selectedIds];
       let deleted = 0;
       let failed = 0;
+
+      // Close modal first
+      closeDeleteModal();
+      
+      // Show loading state
+      showTableStatus(`Deleting ${idsToDelete.length} character(s)...`, true);
 
       for (const id of idsToDelete) {
         try {
@@ -794,7 +828,7 @@
             headers: { 'Authorization': `Bearer ${token}` }
           });
 
-          if (response.ok) {
+          if (response.ok || response.status === 204) {
             deleted++;
           } else {
             failed++;
@@ -804,7 +838,12 @@
         }
       }
 
-      alert(`Deleted: ${deleted}, Failed: ${failed}`);
+      if (failed > 0) {
+        alert(`Deleted: ${deleted}, Failed: ${failed}`);
+      } else {
+        alert(`Successfully deleted ${deleted} character(s)`);
+      }
+      
       loadCharacters();
     }
 
@@ -829,6 +868,21 @@
 
     // Init
     updateSortIndicators();
+    
+    // Attach delete button handler
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      executeDelete();
+    });
+    
+    // Close modal when clicking overlay (but not the modal content)
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+      if (e.target.id === 'deleteModal') {
+        closeDeleteModal();
+      }
+    });
+    
     if (token) {
       const storedEmail = localStorage.getItem('admin_email');
       showAuthStatus(`Logged in as ${storedEmail || 'user'}`, true);
@@ -841,4 +895,5 @@
   </script>
 </body>
 </html>
+
 

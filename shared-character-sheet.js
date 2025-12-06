@@ -265,12 +265,23 @@ const CharacterSheet = (window.CharacterSheet = {
       });
     }
 
+    // Manager-only: Add Edit to overflow menu (visible only on narrow viewports via CSS)
+    if (context === 'manager' && onEdit && editFn) {
+      headerActions.unshift({
+        icon: '✎',
+        label: 'Edit character',
+        onclick: editFn,
+        id: 'sheet-edit-overflow',
+      });
+    }
+
     // Append Delete last so it always appears at the bottom of the listbox
     if (deleteAction) {
       headerActions.push(deleteAction);
     }
 
     // Manager-only inline Edit button (to the left of the overflow menu)
+    // Hidden on narrow viewports where it moves into the overflow menu
     const editButtonHtml =
       context === 'manager' && onEdit && editFn
         ? `
