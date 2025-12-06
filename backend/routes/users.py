@@ -12,13 +12,13 @@ from utils.auth import get_current_active_user, get_password_hash
 router = APIRouter(prefix="/users", tags=["users"])
 
 
-def require_dm(current_user: User = Depends(get_current_active_user)) -> User:
+def require_dm_or_admin(current_user: User = Depends(get_current_active_user)) -> User:
     """
-    Restrict access to Dungeon Masters (DMs).
+    Restrict access to Dungeon Masters (DMs) or Admins.
 
     This keeps user management actions limited to elevated accounts.
     """
-    if current_user.role != UserRole.DM:
+    if current_user.role not in (UserRole.DM, UserRole.ADMIN):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to manage users.",
@@ -29,7 +29,7 @@ def require_dm(current_user: User = Depends(get_current_active_user)) -> User:
 @router.get("/", response_model=List[UserResponse])
 def list_users(
     db: Session = Depends(get_db),
-    _: User = Depends(require_dm),
+    _: User = Depends(require_dm_or_admin),
 ) -> List[User]:
     """
     List all users.
@@ -43,7 +43,7 @@ def list_users(
 def create_user(
     user_data: UserCreate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_dm),
+    _: User = Depends(require_dm_or_admin),
 ) -> User:
     """
     Create a new user as an admin/DM.
@@ -77,7 +77,7 @@ def create_user(
 def get_user_detail(
     user_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_dm),
+    _: User = Depends(require_dm_or_admin),
 ) -> User:
     """
     Get a single user's details.
@@ -96,7 +96,7 @@ def update_user(
     user_id: int,
     update_data: UserUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_dm),
+    _: User = Depends(require_dm_or_admin),
 ) -> User:
     """Update a user's basic information.
 
@@ -138,7 +138,7 @@ def update_user(
 def delete_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_dm: User = Depends(require_dm),
+    current_user: User = Depends(require_dm_or_admin),
 ) -> None:
     """
     Delete a user.
@@ -152,7 +152,7 @@ def delete_user(
             detail="User not found",
         )
 
-    if user.id == current_dm.id:
+    if user.id == current_user.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot delete your own account from the admin dashboard.",

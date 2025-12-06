@@ -417,7 +417,7 @@
   <script src="../danddy-config.js"></script>
   <script>
     // Config - toggle between local and production backend
-    const USE_LOCAL_BACKEND = true; // Set to false to use production
+    const USE_LOCAL_BACKEND = false; // Set to true for local testing
     const API_BASE = USE_LOCAL_BACKEND 
       ? 'http://localhost:8000'
       : (window.DanddyConfig?.BACKEND_ORIGIN || 'https://danddy-api.onrender.com');
@@ -429,6 +429,7 @@
     let selectedIds = new Set();
     let sortColumn = 'created_at';
     let sortDirection = 'desc';
+    let usersMap = {}; // Map of user_id -> user info (email, etc.)
 
     // Auth
     async function login() {
@@ -493,6 +494,32 @@
       el.className = 'auth-status' + (success ? ' success' : '');
     }
 
+    // Load Users (for email mapping)
+    async function loadUsers() {
+      try {
+        const response = await fetch(`${API_BASE}/api/users/`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const users = await response.json();
+          usersMap = {};
+          users.forEach(u => {
+            usersMap[u.id] = u;
+          });
+        }
+      } catch (err) {
+        console.warn('Could not load users:', err);
+      }
+    }
+
+    // Get user display name (email or fallback to ID)
+    function getUserDisplay(userId) {
+      if (usersMap[userId]) {
+        return usersMap[userId].email;
+      }
+      return `User ${userId}`;
+    }
+
     // Load Characters
     async function loadCharacters() {
       if (!token) {
@@ -503,6 +530,9 @@
       showTableStatus('Loading...', true);
 
       try {
+        // Load users first for email mapping
+        await loadUsers();
+        
         const response = await fetch(`${API_BASE}/api/characters/all`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -555,7 +585,7 @@
             <div class="char-meta">${escapeHtml(char.race || '?')} ${escapeHtml(char.character_class || '?')}</div>
           </td>
           <td>${char.level || 1}</td>
-          <td class="char-meta">${char.user_id || 'N/A'}</td>
+          <td class="char-meta">${escapeHtml(getUserDisplay(char.user_id || char.owner_id))}</td>
           <td class="char-meta">${formatDate(char.created_at)}</td>
           <td class="char-id">${char.id}</td>
         </tr>
@@ -671,8 +701,13 @@
       const select = document.getElementById('userFilter');
       const currentValue = select.value;
       
-      // Get unique user IDs and sort them
-      const userIds = [...new Set(characters.map(c => c.user_id || c.owner_id))].filter(Boolean).sort((a, b) => a - b);
+      // Get unique user IDs and sort by email
+      const userIds = [...new Set(characters.map(c => c.user_id || c.owner_id))].filter(Boolean);
+      userIds.sort((a, b) => {
+        const emailA = getUserDisplay(a).toLowerCase();
+        const emailB = getUserDisplay(b).toLowerCase();
+        return emailA.localeCompare(emailB);
+      });
       
       // Count characters per user
       const userCounts = {};
@@ -682,7 +717,7 @@
       });
       
       select.innerHTML = `<option value="">All Users (${characters.length})</option>` +
-        userIds.map(uid => `<option value="${uid}">User ${uid} (${userCounts[uid]})</option>`).join('');
+        userIds.map(uid => `<option value="${uid}">${escapeHtml(getUserDisplay(uid))} (${userCounts[uid]})</option>`).join('');
       
       // Restore selection if still valid
       if (currentValue && userIds.includes(Number(currentValue))) {
@@ -727,12 +762,13 @@
       // Get unique user IDs of selected characters for safety warning
       const selectedChars = characters.filter(c => selectedIds.has(c.id));
       const affectedUsers = [...new Set(selectedChars.map(c => c.user_id || c.owner_id))];
+      const affectedEmails = affectedUsers.map(uid => getUserDisplay(uid));
       
       let message = `Are you sure you want to delete ${selectedIds.size} character(s)?`;
-      if (affectedUsers.length === 1) {
-        message += ` (User ${affectedUsers[0]})`;
-      } else if (affectedUsers.length > 1) {
-        message += ` (Users: ${affectedUsers.join(', ')})`;
+      if (affectedEmails.length === 1) {
+        message += `\nOwner: ${affectedEmails[0]}`;
+      } else if (affectedEmails.length > 1) {
+        message += `\nOwners: ${affectedEmails.join(', ')}`;
       }
       message += '\n\nThis action cannot be undone.';
       
