@@ -3525,7 +3525,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const headerTitleText = document.querySelector('.terminal-title-text');
         const welcomeVersion = document.querySelector('.welcome-version');
         if (headerTitleText) {
-            headerTitleText.textContent = `[ DandDy v${version} ]`;
+            headerTitleText.textContent = `DandDy v${version}`;
         }
         if (welcomeVersion) {
             welcomeVersion.textContent = `DandDy v${version}`;

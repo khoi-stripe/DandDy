@@ -318,7 +318,12 @@ body::before {
   letter-spacing: 0.03em;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.title-bracket {
+  color: var(--terminal-accent);
+  font-weight: bold;
 }
 
 /* ===== TITLE CUBE SPINNER (slow teal cube in header) ===== */

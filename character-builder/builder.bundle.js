@@ -12509,8 +12509,8 @@ const App = (window.App = {
     if (isCharacterComplete) {
       await this.showQuestion('complete');
     } else {
-      // Jump to the question we were on
-      await this.showQuestion(resumeQuestionId || 'intro');
+    // Jump to the question we were on
+    await this.showQuestion(resumeQuestionId || 'intro');
     }
   },
 
