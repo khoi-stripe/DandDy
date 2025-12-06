@@ -505,13 +505,15 @@
 
 .welcome-body {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--spacing-lg);
     align-items: center;
     justify-content: center;
 }
 
 .welcome-modal .splash-content {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
+    min-width: min(400px, 100%);
     max-height: 60vh;
     overflow: auto;
 }
@@ -525,6 +527,7 @@
     flex-direction: column;
     gap: var(--spacing-sm);
     min-width: 220px;
+    flex: 0 1 auto;
 }
 
 .welcome-actions .terminal-btn {
@@ -1250,6 +1253,22 @@
     .settings-row-inline {
         flex-direction: column;
         gap: var(--spacing-md);
+    }
+    
+    /* ===== WELCOME MODAL RESPONSIVE ===== */
+    /* Shrink ASCII art on mobile */
+    .welcome-modal .splash-content {
+        max-height: 45vh;
+    }
+    
+    .welcome-modal .splash-art {
+        font-size: 2px;
+        letter-spacing: 1px;
+    }
+    
+    .welcome-actions {
+        width: 100%;
+        min-width: unset;
     }
 }
 
