@@ -376,7 +376,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title">[ ✎ Edit Character ]</h2>
-                <button class="modal-close" onclick="closeEditDetailsModal()">&times;</button>
+                <button class="modal-close" onclick="ModalManager.requestClose('editDetailsModal')">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="settings-layout">
@@ -515,7 +515,7 @@
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="closeEditDetailsModal()">CANCEL</button>
+                <button class="terminal-btn" onclick="ModalManager.requestClose('editDetailsModal')">CANCEL</button>
                 <button class="terminal-btn terminal-btn-primary" onclick="saveEditDetails()">SAVE</button>
             </div>
         </div>
@@ -635,7 +635,7 @@
         <div class="modal-content portrait-customize-modal">
             <div class="modal-header">
                 <h2 class="modal-title">[ ★ Customize AI Portrait ]</h2>
-                <button class="modal-close" onclick="closePortraitPromptModal()">&times;</button>
+                <button class="modal-close" onclick="ModalManager.requestClose('portraitPromptModal')">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="portrait-style-row">

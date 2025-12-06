@@ -1099,3 +1099,41 @@
         gap: var(--spacing-md);
     }
 }
+
+/* ========================================
+   MODAL DISCARD CONFIRMATION OVERLAY
+   ======================================== */
+.modal-discard-confirm {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.9);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 4px;
+}
+
+.modal-discard-confirm.show {
+    display: flex;
+}
+
+.modal-discard-content {
+    text-align: center;
+    padding: var(--spacing-xl);
+}
+
+.modal-discard-content .terminal-text {
+    color: var(--modal-accent);
+    margin-bottom: var(--spacing-sm);
+}
+
+.modal-discard-content .terminal-text-small {
+    margin-bottom: var(--spacing-lg);
+}
+
+.modal-discard-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+}

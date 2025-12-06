@@ -164,6 +164,185 @@ const KeyboardNav = {
 };
 
 // ========================================
+// MODAL MANAGER (Universal modal behaviors)
+// ========================================
+const ModalManager = {
+    // Track original form values for dirty checking
+    _formSnapshots: new Map(),
+    
+    // Modals that have forms which can be dirty
+    FORM_MODALS: ['editDetailsModal', 'portraitPromptModal'],
+    
+    /**
+     * Initialize modal behaviors (call once on page load)
+     */
+    init() {
+        // Backdrop click to close
+        document.addEventListener('click', (e) => {
+            const modal = e.target.closest('.modal.show');
+            if (!modal) return;
+            
+            // Only close if clicking the backdrop (the .modal itself, not .modal-content)
+            if (e.target === modal) {
+                this.requestClose(modal.id);
+            }
+        });
+    },
+    
+    /**
+     * Snapshot form values when a modal opens (for dirty checking)
+     */
+    snapshotForm(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        
+        const inputs = modal.querySelectorAll('input, textarea, select');
+        const snapshot = {};
+        inputs.forEach(input => {
+            if (input.id) {
+                snapshot[input.id] = input.value;
+            }
+        });
+        this._formSnapshots.set(modalId, snapshot);
+    },
+    
+    /**
+     * Check if a modal's form has unsaved changes
+     */
+    isDirty(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return false;
+        
+        const snapshot = this._formSnapshots.get(modalId);
+        if (!snapshot) return false;
+        
+        const inputs = modal.querySelectorAll('input, textarea, select');
+        for (const input of inputs) {
+            if (input.id && snapshot[input.id] !== undefined) {
+                if (input.value !== snapshot[input.id]) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    },
+    
+    /**
+     * Clear form snapshot
+     */
+    clearSnapshot(modalId) {
+        this._formSnapshots.delete(modalId);
+    },
+    
+    /**
+     * Request to close a modal - shows confirmation if dirty
+     */
+    requestClose(modalId) {
+        // Check if this is a form modal that might have unsaved changes
+        if (this.FORM_MODALS.includes(modalId) && this.isDirty(modalId)) {
+            this.showDiscardConfirmation(modalId);
+            return;
+        }
+        
+        // Not dirty or not a form modal - close immediately
+        this.closeModal(modalId);
+    },
+    
+    /**
+     * Show discard confirmation dialog
+     */
+    showDiscardConfirmation(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+        
+        // Create confirmation overlay inside the modal
+        let overlay = modal.querySelector('.modal-discard-confirm');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.className = 'modal-discard-confirm';
+            overlay.innerHTML = `
+                <div class="modal-discard-content">
+                    <p class="terminal-text">You have unsaved changes.</p>
+                    <p class="terminal-text-small terminal-text-dim">Discard changes and close?</p>
+                    <div class="modal-discard-actions">
+                        <button class="terminal-btn modal-discard-cancel">Keep editing</button>
+                        <button class="terminal-btn modal-discard-confirm-btn">Discard</button>
+                    </div>
+                </div>
+            `;
+            modal.querySelector('.modal-content').appendChild(overlay);
+        }
+        
+        overlay.classList.add('show');
+        
+        // Focus the cancel button
+        const cancelBtn = overlay.querySelector('.modal-discard-cancel');
+        if (cancelBtn) cancelBtn.focus();
+        
+        // Handle button clicks
+        const handleCancel = () => {
+            overlay.classList.remove('show');
+            cleanup();
+        };
+        
+        const handleDiscard = () => {
+            overlay.classList.remove('show');
+            cleanup();
+            this.closeModal(modalId, true); // force close
+        };
+        
+        const cleanup = () => {
+            cancelBtn?.removeEventListener('click', handleCancel);
+            overlay.querySelector('.modal-discard-confirm-btn')?.removeEventListener('click', handleDiscard);
+        };
+        
+        cancelBtn?.addEventListener('click', handleCancel);
+        overlay.querySelector('.modal-discard-confirm-btn')?.addEventListener('click', handleDiscard);
+    },
+    
+    /**
+     * Actually close the modal (bypasses dirty check)
+     */
+    closeModal(modalId, force = false) {
+        this.clearSnapshot(modalId);
+        
+        // Call the appropriate close function
+        switch (modalId) {
+            case 'importModal':
+                closeImportModal();
+                break;
+            case 'duplicateModal':
+                closeDuplicateModal();
+                break;
+            case 'editDetailsModal':
+                closeEditDetailsModal();
+                break;
+            case 'authModal':
+                cancelAuthFlow();
+                break;
+            case 'migrationModal':
+                closeMigrationModal();
+                break;
+            case 'passwordResetModal':
+                closePasswordResetModal();
+                break;
+            case 'portraitPromptModal':
+                closePortraitPromptModal();
+                break;
+            case 'managerSettingsModal':
+                closeManagerSettings();
+                break;
+            default:
+                // Generic close for unknown modals
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    animateModalClose(modal, { removeOnClose: false });
+                }
+        }
+    }
+};
+
+// ========================================
 // HYBRID STORAGE SERVICE (Cloud + Local)
 // ========================================
 // Shared implementation now lives in character-storage.js and exposes
@@ -763,6 +942,9 @@ async function editCharacter(id) {
     if (modal) {
         modal.classList.add('show');
         
+        // Snapshot form values for dirty checking (after a tick to let values settle)
+        setTimeout(() => ModalManager.snapshotForm('editDetailsModal'), 50);
+        
         // Update alignment selector after modal is visible (needs to be deferred)
         const savedAlignmentValue = alignmentValue; // Capture in closure
         setTimeout(() => {
@@ -1271,6 +1453,8 @@ async function generatePortraitForCharacter(id) {
         if (typeof focusFirstFieldInModal === 'function') {
             focusFirstFieldInModal(promptModal);
         }
+        // Snapshot form values for dirty checking
+        setTimeout(() => ModalManager.snapshotForm('portraitPromptModal'), 50);
     }
 }
 
@@ -3203,26 +3387,23 @@ async function handlePasswordResetConfirm() {
     }
 }
 
-function handleLogout() {
-    showConfirmDialog('Log out? Your characters will remain in the cloud and can be accessed after logging back in.', async () => {
-        window.AuthService.logout();
-        updateAuthUI();
-        showNotification('✓ Logged out');
-        
-        // Reload with local storage
-        await AppState.loadCharacters();
-        UI.render();
-        
-        // Clear the dismissed flag so welcome modal appears on explicit logout
-        sessionStorage.removeItem('welcomeSplashDismissed');
-        
-        // Show welcome modal (splash screen) after logout
-        const welcomeModal = document.getElementById('welcomeModal');
-        if (welcomeModal) {
-            welcomeModal.classList.add('show');
-            // Don't auto-focus any button - let the user choose
-        }
-    });
+async function handleLogout() {
+    window.AuthService.logout();
+    updateAuthUI();
+    showNotification('✓ Logged out');
+    
+    // Reload with local storage
+    await AppState.loadCharacters();
+    UI.render();
+    
+    // Clear the dismissed flag so welcome modal appears on explicit logout
+    sessionStorage.removeItem('welcomeSplashDismissed');
+    
+    // Show welcome modal (splash screen) after logout
+    const welcomeModal = document.getElementById('welcomeModal');
+    if (welcomeModal) {
+        welcomeModal.classList.add('show');
+    }
 }
 
 function updateAuthUI() {
@@ -3329,6 +3510,9 @@ async function startMigration() {
 // ========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize modal behaviors (backdrop click, dirty checking)
+    ModalManager.init();
+    
     // Show panel loading spinners as early as possible so the shell never feels empty
     // while we verify auth state and fetch characters.
     if (typeof UI !== 'undefined' && UI && typeof UI.setLoadingState === 'function') {
@@ -3803,24 +3987,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (openModal) {
             const modalId = openModal.id;
 
-            // ESC closes whichever modal is active
+            // ESC closes whichever modal is active (with dirty check for form modals)
             if (e.key === 'Escape') {
                 e.preventDefault();
-                if (modalId === 'importModal') {
-                    closeImportModal();
-                } else if (modalId === 'duplicateModal') {
-                    closeDuplicateModal();
-                } else if (modalId === 'editDetailsModal') {
-                    closeEditDetailsModal();
-                } else if (modalId === 'authModal') {
-                    cancelAuthFlow();
-                } else if (modalId === 'migrationModal') {
-                    closeMigrationModal();
-                } else if (modalId === 'passwordResetModal') {
-                    closePasswordResetModal();
-                } else if (modalId === 'portraitPromptModal') {
-                    closePortraitPromptModal();
+                
+                // Check if discard confirmation is showing - if so, close it
+                const discardOverlay = openModal.querySelector('.modal-discard-confirm.show');
+                if (discardOverlay) {
+                    discardOverlay.classList.remove('show');
+                    return;
                 }
+                
+                // Use ModalManager for universal close behavior (handles dirty check)
+                ModalManager.requestClose(modalId);
                 return;
             }
 
