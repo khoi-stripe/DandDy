@@ -35,6 +35,22 @@ def get_characters(
     characters = db.query(Character).filter(Character.owner_id == current_user.id).all()
     return characters
 
+
+@router.get("/all", response_model=List[CharacterResponse])
+def get_all_characters(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Admin-only endpoint to view all characters in the system."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    
+    characters = db.query(Character).all()
+    return characters
+
 @router.get("/{character_id}", response_model=CharacterResponse)
 def get_character(
     character_id: int,
@@ -111,8 +127,8 @@ def delete_character(
             detail="Character not found"
         )
     
-    # Only owner can delete their character
-    if character.owner_id != current_user.id:
+    # Owner can delete their own character, admin can delete any
+    if character.owner_id != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this character"

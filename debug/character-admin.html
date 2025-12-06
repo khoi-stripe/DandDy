@@ -88,24 +88,37 @@
       color: var(--sheet-accent);
     }
 
-    /* Search */
-    .search-box {
+    /* Search & Filters */
+    .search-box, .filter-select {
       background: var(--terminal-bg);
       border: 1px solid var(--terminal-border);
       color: var(--terminal-fg);
       padding: 8px 12px;
       font-family: var(--font-mono);
       font-size: 12px;
-      width: 250px;
     }
 
-    .search-box:focus {
+    .search-box {
+      width: 200px;
+    }
+
+    .filter-select {
+      min-width: 150px;
+      cursor: pointer;
+    }
+
+    .search-box:focus, .filter-select:focus {
       outline: none;
       border-color: var(--sheet-accent);
     }
 
     .search-box::placeholder {
       color: var(--terminal-dim);
+    }
+
+    .filter-select option {
+      background: var(--terminal-bg);
+      color: var(--terminal-fg);
     }
 
     /* Table */
@@ -137,6 +150,33 @@
       position: sticky;
       top: 0;
       z-index: 1;
+    }
+
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s ease;
+    }
+
+    th.sortable:hover {
+      background: rgba(38, 189, 192, 0.15);
+    }
+
+    th.sortable::after {
+      content: '';
+      display: inline-block;
+      margin-left: 6px;
+      opacity: 0.3;
+    }
+
+    th.sortable.asc::after {
+      content: '▲';
+      opacity: 1;
+    }
+
+    th.sortable.desc::after {
+      content: '▼';
+      opacity: 1;
     }
 
     tr:hover {
@@ -286,6 +326,7 @@
       color: var(--terminal-dim);
       margin: 0 0 20px 0;
       line-height: 1.5;
+      white-space: pre-line;
     }
 
     .modal-actions {
@@ -326,7 +367,10 @@
 
   <!-- Controls -->
   <div class="controls">
-    <input type="text" class="search-box" id="searchBox" placeholder="Search characters..." oninput="filterCharacters()">
+    <input type="text" class="search-box" id="searchBox" placeholder="Search..." oninput="filterCharacters()">
+    <select class="filter-select" id="userFilter" onchange="filterCharacters()">
+      <option value="">All Users</option>
+    </select>
     <button class="btn" onclick="selectAll()">Select All</button>
     <button class="btn" onclick="selectNone()">Select None</button>
     <button class="btn btn-danger" id="deleteBtn" onclick="confirmDelete()" disabled>Delete Selected (0)</button>
@@ -342,12 +386,12 @@
           <th class="checkbox-cell">
             <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
           </th>
-          <th>Name</th>
-          <th>Race / Class</th>
-          <th>Level</th>
-          <th>Owner</th>
-          <th>Created</th>
-          <th>ID</th>
+          <th class="sortable" data-sort="name" onclick="sortBy('name')">Name</th>
+          <th class="sortable" data-sort="race" onclick="sortBy('race')">Race / Class</th>
+          <th class="sortable" data-sort="level" onclick="sortBy('level')">Level</th>
+          <th class="sortable" data-sort="user_id" onclick="sortBy('user_id')">Owner</th>
+          <th class="sortable" data-sort="created_at" onclick="sortBy('created_at')">Created</th>
+          <th class="sortable" data-sort="id" onclick="sortBy('id')">ID</th>
         </tr>
       </thead>
       <tbody id="characterTable">
@@ -370,15 +414,21 @@
     </div>
   </div>
 
+  <script src="../danddy-config.js"></script>
   <script>
-    // Config
-    const API_BASE = 'https://danddy-backend.onrender.com';
+    // Config - toggle between local and production backend
+    const USE_LOCAL_BACKEND = true; // Set to false to use production
+    const API_BASE = USE_LOCAL_BACKEND 
+      ? 'http://localhost:8000'
+      : (window.DanddyConfig?.BACKEND_ORIGIN || 'https://danddy-api.onrender.com');
 
     // State
     let token = localStorage.getItem('admin_token') || null;
     let characters = [];
     let filteredCharacters = [];
     let selectedIds = new Set();
+    let sortColumn = 'created_at';
+    let sortDirection = 'desc';
 
     // Auth
     async function login() {
@@ -397,7 +447,7 @@
 
         console.log('Attempting login to:', API_BASE);
         
-        const response = await fetch(`${API_BASE}/auth/token`, {
+        const response = await fetch(`${API_BASE}/api/auth/token`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: formData
@@ -412,6 +462,7 @@
         const data = await response.json();
         token = data.access_token;
         localStorage.setItem('admin_token', token);
+        localStorage.setItem('admin_email', email);
         showAuthStatus(`Logged in as ${email}`, true);
         loadCharacters();
       } catch (err) {
@@ -427,6 +478,7 @@
     function logout() {
       token = null;
       localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_email');
       characters = [];
       filteredCharacters = [];
       selectedIds.clear();
@@ -451,13 +503,17 @@
       showTableStatus('Loading...', true);
 
       try {
-        const response = await fetch(`${API_BASE}/characters/`, {
+        const response = await fetch(`${API_BASE}/api/characters/all`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (response.status === 401) {
           logout();
           throw new Error('Session expired');
+        }
+
+        if (response.status === 403) {
+          throw new Error('Admin access required. Your account does not have admin privileges.');
         }
 
         if (!response.ok) {
@@ -468,6 +524,9 @@
         filteredCharacters = [...characters];
         selectedIds.clear();
         document.getElementById('totalCount').textContent = `${characters.length} total characters`;
+        populateUserFilter();
+        applySort();
+        updateSortIndicators();
         renderTable();
         updateControls();
       } catch (err) {
@@ -556,21 +615,107 @@
         filteredCharacters.length > 0 && selectedIds.size === filteredCharacters.length;
     }
 
-    // Search
+    // Sorting
+    function sortBy(column) {
+      if (sortColumn === column) {
+        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortColumn = column;
+        sortDirection = 'asc';
+      }
+      applySort();
+      updateSortIndicators();
+      renderTable();
+    }
+
+    function applySort() {
+      filteredCharacters.sort((a, b) => {
+        let aVal = a[sortColumn];
+        let bVal = b[sortColumn];
+        
+        // Handle null/undefined
+        if (aVal == null) aVal = '';
+        if (bVal == null) bVal = '';
+        
+        // Special handling for different types
+        if (sortColumn === 'level' || sortColumn === 'id' || sortColumn === 'user_id') {
+          aVal = Number(aVal) || 0;
+          bVal = Number(bVal) || 0;
+        } else if (sortColumn === 'created_at') {
+          aVal = new Date(aVal).getTime() || 0;
+          bVal = new Date(bVal).getTime() || 0;
+        } else {
+          aVal = String(aVal).toLowerCase();
+          bVal = String(bVal).toLowerCase();
+        }
+        
+        let result = 0;
+        if (aVal < bVal) result = -1;
+        if (aVal > bVal) result = 1;
+        
+        return sortDirection === 'asc' ? result : -result;
+      });
+    }
+
+    function updateSortIndicators() {
+      document.querySelectorAll('th.sortable').forEach(th => {
+        th.classList.remove('asc', 'desc');
+        if (th.dataset.sort === sortColumn) {
+          th.classList.add(sortDirection);
+        }
+      });
+    }
+
+    // User Filter
+    function populateUserFilter() {
+      const select = document.getElementById('userFilter');
+      const currentValue = select.value;
+      
+      // Get unique user IDs and sort them
+      const userIds = [...new Set(characters.map(c => c.user_id || c.owner_id))].filter(Boolean).sort((a, b) => a - b);
+      
+      // Count characters per user
+      const userCounts = {};
+      characters.forEach(c => {
+        const uid = c.user_id || c.owner_id;
+        userCounts[uid] = (userCounts[uid] || 0) + 1;
+      });
+      
+      select.innerHTML = `<option value="">All Users (${characters.length})</option>` +
+        userIds.map(uid => `<option value="${uid}">User ${uid} (${userCounts[uid]})</option>`).join('');
+      
+      // Restore selection if still valid
+      if (currentValue && userIds.includes(Number(currentValue))) {
+        select.value = currentValue;
+      }
+    }
+
+    // Search & Filter
     function filterCharacters() {
       const query = document.getElementById('searchBox').value.toLowerCase();
+      const userFilter = document.getElementById('userFilter').value;
       
-      if (!query) {
-        filteredCharacters = [...characters];
-      } else {
-        filteredCharacters = characters.filter(c => 
-          (c.name || '').toLowerCase().includes(query) ||
-          (c.race || '').toLowerCase().includes(query) ||
-          (c.character_class || '').toLowerCase().includes(query) ||
-          String(c.id).includes(query)
-        );
-      }
+      filteredCharacters = characters.filter(c => {
+        // User filter
+        if (userFilter) {
+          const charUserId = c.user_id || c.owner_id;
+          if (String(charUserId) !== userFilter) return false;
+        }
+        
+        // Text search
+        if (query) {
+          const matchesQuery = 
+            (c.name || '').toLowerCase().includes(query) ||
+            (c.race || '').toLowerCase().includes(query) ||
+            (c.character_class || '').toLowerCase().includes(query) ||
+            String(c.id).includes(query);
+          if (!matchesQuery) return false;
+        }
+        
+        return true;
+      });
       
+      applySort();
       renderTable();
       updateControls();
     }
@@ -579,8 +724,19 @@
     function confirmDelete() {
       if (selectedIds.size === 0) return;
       
-      document.getElementById('deleteMessage').textContent = 
-        `Are you sure you want to delete ${selectedIds.size} character(s)? This action cannot be undone.`;
+      // Get unique user IDs of selected characters for safety warning
+      const selectedChars = characters.filter(c => selectedIds.has(c.id));
+      const affectedUsers = [...new Set(selectedChars.map(c => c.user_id || c.owner_id))];
+      
+      let message = `Are you sure you want to delete ${selectedIds.size} character(s)?`;
+      if (affectedUsers.length === 1) {
+        message += ` (User ${affectedUsers[0]})`;
+      } else if (affectedUsers.length > 1) {
+        message += ` (Users: ${affectedUsers.join(', ')})`;
+      }
+      message += '\n\nThis action cannot be undone.';
+      
+      document.getElementById('deleteMessage').textContent = message;
       document.getElementById('deleteModal').classList.add('show');
     }
 
@@ -597,7 +753,7 @@
 
       for (const id of idsToDelete) {
         try {
-          const response = await fetch(`${API_BASE}/characters/${id}`, {
+          const response = await fetch(`${API_BASE}/api/characters/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -636,8 +792,14 @@
     }
 
     // Init
+    updateSortIndicators();
     if (token) {
-      showAuthStatus('Logged in (token from storage)', true);
+      const storedEmail = localStorage.getItem('admin_email');
+      showAuthStatus(`Logged in as ${storedEmail || 'user'}`, true);
+      // Pre-fill the email field for convenience
+      if (storedEmail) {
+        document.getElementById('authEmail').value = storedEmail;
+      }
       loadCharacters();
     }
   </script>
