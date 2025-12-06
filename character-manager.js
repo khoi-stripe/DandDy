@@ -1021,6 +1021,182 @@ async function renameCharacter(id) {
 }
 
 let currentPortraitCharacterId = null;
+let currentPortraitStyle = null;
+
+/**
+ * Convert a theme id/label to sentence case.
+ * e.g., "cinematic-inks" -> "Cinematic inks"
+ *       "my-custom-style" -> "My custom style"
+ */
+function formatStyleLabel(idOrLabel) {
+    if (!idOrLabel) return '';
+    
+    // Remove "Custom: " prefix if present
+    let cleaned = String(idOrLabel).replace(/^Custom:\s*/i, '');
+    
+    // Remove " (default)" suffix
+    cleaned = cleaned.replace(/\s*\(default\)\s*$/i, '');
+    
+    // Replace dashes/underscores with spaces
+    cleaned = cleaned.replace(/[-_]/g, ' ');
+    
+    // Sentence case: capitalize first letter, lowercase the rest
+    if (cleaned.length > 0) {
+        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+    }
+    
+    return cleaned;
+}
+
+/**
+ * Populate the style listbox menu in the portrait prompt modal.
+ * Uses the same selector pattern as the settings modal.
+ * Returns the currently selected/default style ID.
+ */
+function populatePortraitStyleDropdown(activeStyle) {
+    const menu = document.getElementById('portraitStyleMenu');
+    const label = document.getElementById('portraitStyleLabel');
+    if (!menu) return null;
+
+    // Clear existing options
+    menu.innerHTML = '';
+
+    // Get available themes from PortraitPrompt
+    let themes = [];
+    let defaultThemeId = 'cinematic-inks';
+    
+    try {
+        if (window.PortraitPrompt) {
+            if (typeof PortraitPrompt.getThemes === 'function') {
+                themes = PortraitPrompt.getThemes() || [];
+            }
+            if (typeof PortraitPrompt.getDefaultThemeId === 'function') {
+                defaultThemeId = PortraitPrompt.getDefaultThemeId() || defaultThemeId;
+            }
+        }
+    } catch (e) {
+        console.warn('populatePortraitStyleDropdown: Error getting themes', e);
+    }
+
+    // Always ensure at least the default theme is available
+    if (!themes.length) {
+        themes = [
+            { id: 'cinematic-inks', label: 'Cinematic Inks (default)' }
+        ];
+    }
+
+    // Also try to get any custom styles from admin storage
+    try {
+        const adminStorageKey = 'dnd_portrait_prompt_entries_v1';
+        const raw = localStorage.getItem(adminStorageKey);
+        if (raw) {
+            const entries = JSON.parse(raw);
+            if (Array.isArray(entries)) {
+                const styleEntries = entries.filter(e => e && e.kind && e.kind.toLowerCase() === 'style');
+                const existingIds = themes.map(t => t.id);
+                
+                styleEntries.forEach(entry => {
+                    const key = (entry.key || '').toLowerCase();
+                    if (key && !existingIds.includes(key)) {
+                        themes.push({
+                            id: key,
+                            label: entry.key
+                        });
+                        existingIds.push(key);
+                    }
+                });
+            }
+        }
+    } catch (e) {
+        // Non-fatal - custom styles won't be shown
+    }
+
+    // Sort themes alphabetically by id
+    themes = themes.slice().sort((a, b) => {
+        const nameA = (a.id || '').toLowerCase();
+        const nameB = (b.id || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+    });
+
+    // Determine selected value
+    const selectedStyle = activeStyle || defaultThemeId;
+    let selectedLabel = formatStyleLabel(defaultThemeId);
+
+    // Populate menu with options (same pattern as settings modal)
+    themes.forEach((theme) => {
+        const formattedLabel = formatStyleLabel(theme.id);
+        const isSelected = theme.id === selectedStyle;
+        
+        if (isSelected) {
+            selectedLabel = formattedLabel;
+        }
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'selector-option' + (isSelected ? ' is-selected' : '');
+        button.setAttribute('role', 'option');
+        button.setAttribute('data-value', theme.id);
+        button.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        button.innerHTML = `<span class="selector-option-label">${formattedLabel}</span>`;
+        menu.appendChild(button);
+    });
+
+    // Update trigger label
+    if (label) {
+        label.textContent = selectedLabel;
+    }
+
+    currentPortraitStyle = selectedStyle;
+    
+    // Wire up option clicks (same pattern as SettingsModal.initSelectors)
+    initPortraitStyleSelector();
+    
+    return selectedStyle;
+}
+
+/**
+ * Initialize the portrait style selector click handlers.
+ * Uses the same pattern as SettingsModal.initSelectors.
+ */
+function initPortraitStyleSelector() {
+    const menu = document.getElementById('portraitStyleMenu');
+    const label = document.getElementById('portraitStyleLabel');
+    const trigger = document.getElementById('portraitStyleTrigger');
+    
+    if (!menu) return;
+    
+    const options = menu.querySelectorAll('.selector-option');
+    
+    options.forEach((option) => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const value = option.getAttribute('data-value');
+            const optionLabel = option.querySelector('.selector-option-label');
+            
+            if (value && optionLabel) {
+                // Update trigger label
+                if (label) {
+                    label.textContent = optionLabel.textContent.trim();
+                }
+                
+                // Update current style
+                currentPortraitStyle = value;
+                
+                // Update visual selection state
+                options.forEach((opt) => {
+                    const isSelected = opt.getAttribute('data-value') === value;
+                    opt.classList.toggle('is-selected', isSelected);
+                    opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+                });
+                
+                // Close the menu using the standard toggle
+                if (trigger && window.CharacterSheet && typeof CharacterSheet.toggleSelectorMenu === 'function') {
+                    CharacterSheet.toggleSelectorMenu(trigger);
+                }
+            }
+        });
+    });
+}
 
 async function generatePortraitForCharacter(id) {
     const character = await CharacterStorage.getById(id);
@@ -1058,6 +1234,8 @@ async function generatePortraitForCharacter(id) {
     // 2) Fall back to the same helper as the builder so pose/camera/theme +
     //    your admin race/class/scene snippets are reflected for new portraits.
     let defaultPrompt = '';
+    let activeStyle = null;
+    
     try {
         let versionPrompt = null;
         try {
@@ -1070,6 +1248,10 @@ async function generatePortraitForCharacter(id) {
                     versions[versions.length - 1];
                 if (active && active.prompt) {
                     versionPrompt = String(active.prompt);
+                }
+                // Get the style from the active version if available
+                if (active && active.style) {
+                    activeStyle = active.style;
                 }
             }
         } catch (e) {
@@ -1090,6 +1272,19 @@ async function generatePortraitForCharacter(id) {
         defaultPrompt = `${character.race} ${character.class}`;
     }
     
+    // Populate style dropdown before setting the prompt
+    // Use active style from portrait version, or fall back to user's saved preference
+    if (!activeStyle) {
+        try {
+            if (window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
+                activeStyle = StorageService.getPortraitPromptTheme();
+            }
+        } catch (e) {
+            // Non-fatal
+        }
+    }
+    populatePortraitStyleDropdown(activeStyle);
+    
     document.getElementById('portraitPrompt').value = defaultPrompt;
     const promptModal = document.getElementById('portraitPromptModal');
     if (promptModal) {
@@ -1101,11 +1296,18 @@ async function generatePortraitForCharacter(id) {
 }
 
 function closePortraitPromptModal() {
+    // Close the style menu if open (using standard selector toggle)
+    const trigger = document.getElementById('portraitStyleTrigger');
+    if (trigger && trigger.classList.contains('is-open') && window.CharacterSheet) {
+        CharacterSheet.toggleSelectorMenu(trigger);
+    }
+    
     const modal = document.getElementById('portraitPromptModal');
     if (!modal) {
         const promptInput = document.getElementById('portraitPrompt');
         if (promptInput) promptInput.value = '';
         currentPortraitCharacterId = null;
+        currentPortraitStyle = null;
         return;
     }
 
@@ -1113,6 +1315,7 @@ function closePortraitPromptModal() {
         const promptInput = document.getElementById('portraitPrompt');
         if (promptInput) promptInput.value = '';
         currentPortraitCharacterId = null;
+        currentPortraitStyle = null;
     };
 
     animateModalClose(modal, {
@@ -1122,9 +1325,10 @@ function closePortraitPromptModal() {
 }
 
 async function confirmGeneratePortrait() {
-    // Capture the current character ID in a local variable so it's not lost
-    // when we close the modal (which resets currentPortraitCharacterId to null).
+    // Capture the current character ID and style in local variables so they're not lost
+    // when we close the modal (which resets currentPortraitCharacterId and currentPortraitStyle to null).
     const portraitCharacterId = currentPortraitCharacterId;
+    const selectedStyle = currentPortraitStyle;
     
     if (!portraitCharacterId) {
         closePortraitPromptModal();
@@ -1322,20 +1526,8 @@ async function confirmGeneratePortrait() {
         ) {
             // Shared helper so builder + manager use the exact same STYLE / Scene
             // logic (including admin-defined prompt styles) for custom prompts.
-            let promptThemeId = null;
-            try {
-                if (
-                    typeof window !== 'undefined' &&
-                    window.StorageService &&
-                    typeof window.StorageService.getPortraitPromptTheme === 'function'
-                ) {
-                    promptThemeId = window.StorageService.getPortraitPromptTheme();
-                } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) {
-                    promptThemeId = CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME;
-                }
-            } catch (e) {
-                // Non-fatal: fall back to default theme behavior below.
-            }
+            // Use the style selected in the modal dropdown (captured before closing).
+            const promptThemeId = selectedStyle || null;
 
             renderingInstructions =
                 window.PortraitPrompt.buildCustomPortraitInstructions({
@@ -1407,6 +1599,9 @@ async function confirmGeneratePortrait() {
         console.log('  window.PortraitHistory exists:', !!window.PortraitHistory);
         console.log('  addVersion is function:', typeof window.PortraitHistory?.addVersion === 'function');
 
+        // Use the style selected in the modal dropdown for tagging
+        const managerStyle = selectedStyle || null;
+
         let updatedMetadata;
         if (window.PortraitHistory && typeof window.PortraitHistory.addVersion === 'function') {
             const existingMetadata = character.portraitMetadata || {};
@@ -1437,6 +1632,7 @@ async function confirmGeneratePortrait() {
                         {
                             source: 'original-ai',
                             prompt: null,
+                            style: null,
                         },
                     );
 
@@ -1453,7 +1649,8 @@ async function confirmGeneratePortrait() {
                 result.imageUrl,
                 {
                     source: 'custom-ai',
-                    prompt: customPrompt,
+                    prompt: fullPrompt,
+                    style: managerStyle,
                 },
             );
             console.log('%c🎨 PORTRAIT HISTORY UPDATED', 'color: #0f0; font-weight: bold');

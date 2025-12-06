@@ -7329,7 +7329,7 @@ const PortraitHistory = (window.PortraitHistory = {
    * @param {Object} character
    * @param {string} asciiArt
    * @param {string|null} imageUrl
-   * @param {Object} extra - { source, prompt }
+   * @param {Object} extra - { source, prompt, style }
    */
   addVersion(character, asciiArt, imageUrl, extra = {}) {
     if (!character) {
@@ -7352,6 +7352,7 @@ const PortraitHistory = (window.PortraitHistory = {
       url: imageUrl || null,
       source: extra.source || 'custom-ai',
       prompt: extra.prompt || null,
+      style: extra.style || null,
     };
 
     const versions = [version, ...existingVersions].slice(0, this.MAX_VERSIONS);
@@ -8901,7 +8902,7 @@ if (DEBUG_CLOUD) {
       }
     },
 
-    async copyPrompt(characterId, versionId) {
+    async viewPrompt(characterId, versionId) {
       const CharacterStorage = window.CharacterStorage;
       if (!CharacterStorage || typeof CharacterStorage.getById !== 'function') {
         return;
@@ -8921,36 +8922,111 @@ if (DEBUG_CLOUD) {
         return;
       }
 
-      const promptText = version.prompt;
+      const modal = document.getElementById('portraitHistoryModal');
+      if (!modal) return;
 
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(promptText);
-        } else {
-          // Fallback for older browsers: use a temporary textarea
-          const textarea = document.createElement('textarea');
-          textarea.value = promptText;
-          textarea.setAttribute('readonly', '');
-          textarea.style.position = 'absolute';
-          textarea.style.left = '-9999px';
-          document.body.appendChild(textarea);
-          textarea.select();
+      const modalBody = modal.querySelector('.modal-body');
+      const modalTitle = modal.querySelector('.modal-title');
+      const modalFooter = modal.querySelector('.modal-footer');
+      if (!modalBody) return;
+
+      // Store original content to restore on back
+      const modalHeader = modal.querySelector('.modal-header');
+      const originalBodyHtml = modalBody.innerHTML;
+      const originalHeaderHtml = modalHeader ? modalHeader.innerHTML : '';
+      const originalFooterHtml = modalFooter ? modalFooter.innerHTML : '';
+      const originalVersions = state.context?.versions || [];
+
+      // Build style label for header - format to sentence case
+      const rawStyle = version.style || 'default';
+      const formatStyleLabel = (str) => {
+        if (!str) return 'Default';
+        // Replace dashes/underscores with spaces
+        let cleaned = str.replace(/[-_]/g, ' ');
+        // Sentence case: capitalize first letter, lowercase the rest
+        if (cleaned.length > 0) {
+          cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+        }
+        return cleaned;
+      };
+      const styleLabel = formatStyleLabel(rawStyle);
+
+      // Escape prompt text for safe display
+      const escapedPrompt = (version.prompt || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      const promptHeaderHtml = `
+        <h2 class="modal-title">[ Portrait Prompt ]</h2>
+        <span class="portrait-prompt-style-label">Style: ${styleLabel}</span>
+        <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
+      `;
+
+      const promptBodyHtml = `
+        <pre class="terminal-text portrait-prompt-display">${escapedPrompt}</pre>
+      `;
+
+      const promptFooterHtml = `
+        <button class="terminal-btn" id="portrait-prompt-back">BACK</button>
+        <button class="terminal-btn" id="portrait-prompt-copy">COPY PROMPT</button>
+      `;
+
+      // Transform modal to prompt view
+      this._animateModalContentResize('portraitHistoryModal', () => {
+        if (modalHeader) modalHeader.innerHTML = promptHeaderHtml;
+        modalBody.innerHTML = promptBodyHtml;
+        if (modalFooter) modalFooter.innerHTML = promptFooterHtml;
+      });
+
+      const backBtn = document.getElementById('portrait-prompt-back');
+      const copyBtn = document.getElementById('portrait-prompt-copy');
+
+      const goBack = () => {
+        this._animateModalContentResize('portraitHistoryModal', () => {
+          if (modalHeader) modalHeader.innerHTML = originalHeaderHtml;
+          modalBody.innerHTML = originalBodyHtml;
+          if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+        });
+
+        // Re-populate ASCII previews after restoring
+        if (Array.isArray(originalVersions) && originalVersions.length > 0) {
+          this._populateAsciiPreviews(originalVersions);
+        }
+
+        this._initKeyboardFocus();
+      };
+
+      if (backBtn) {
+        backBtn.onclick = goBack;
+      }
+
+      if (copyBtn) {
+        copyBtn.onclick = async () => {
           try {
-            document.execCommand('copy');
-          } finally {
-            document.body.removeChild(textarea);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(version.prompt);
+            } else {
+              const textarea = document.createElement('textarea');
+              textarea.value = version.prompt;
+              textarea.setAttribute('readonly', '');
+              textarea.style.position = 'absolute';
+              textarea.style.left = '-9999px';
+              document.body.appendChild(textarea);
+              textarea.select();
+              try {
+                document.execCommand('copy');
+              } finally {
+                document.body.removeChild(textarea);
+              }
+            }
+            if (typeof window.showNotification === 'function') {
+              window.showNotification('Prompt copied to clipboard.');
+            }
+          } catch (error) {
+            console.error('PortraitUI.viewPrompt: failed to copy prompt', error);
+            if (typeof window.showNotification === 'function') {
+              window.showNotification('Could not copy prompt.');
+            }
           }
-        }
-        if (typeof window.showNotification === 'function') {
-          window.showNotification('Portrait prompt copied to clipboard.');
-        }
-      } catch (error) {
-        console.error('PortraitUI.copyPrompt: failed to copy prompt', error);
-        if (typeof window.showNotification === 'function') {
-          window.showNotification(
-            'Could not copy prompt. Please copy it manually from the card.',
-          );
-        }
+        };
       }
     },
 
@@ -8960,90 +9036,282 @@ if (DEBUG_CLOUD) {
         return;
       }
 
-      const confirmDialog = window.showConfirmDialog;
-      if (typeof confirmDialog !== 'function') {
-        console.warn(
-          'PortraitUI.deleteVersion: showConfirmDialog is not available',
-        );
+      const modal = document.getElementById('portraitHistoryModal');
+      if (!modal) return;
+
+      const modalBody = modal.querySelector('.modal-body');
+      const modalTitle = modal.querySelector('.modal-title');
+      const modalFooter = modal.querySelector('.modal-footer');
+      if (!modalBody) return;
+
+      // Store original content to restore on cancel
+      const originalBodyHtml = modalBody.innerHTML;
+      const originalTitle = modalTitle ? modalTitle.textContent : '';
+      const originalFooterHtml = modalFooter ? modalFooter.innerHTML : '';
+      const originalVersions = state.context?.versions || [];
+
+      // If this is the only portrait, show "create new" prompt instead of delete confirmation
+      if (originalVersions.length === 1) {
+        const createNewBodyHtml = `
+          <p class="terminal-text">
+            To delete this portrait, create a new one first.
+          </p>
+        `;
+
+        const createNewFooterHtml = `
+          <button class="terminal-btn" id="portrait-delete-cancel">CANCEL</button>
+          <button class="terminal-btn terminal-btn-primary" id="portrait-create-new">CREATE NEW</button>
+        `;
+
+        this._animateModalContentResize('portraitHistoryModal', () => {
+          if (modalTitle) modalTitle.textContent = '[ Create a New Portrait? ]';
+          modalBody.innerHTML = createNewBodyHtml;
+          if (modalFooter) modalFooter.innerHTML = createNewFooterHtml;
+        });
+
+        const cancelBtn = document.getElementById('portrait-delete-cancel');
+        const createNewBtn = document.getElementById('portrait-create-new');
+
+        if (cancelBtn) {
+          cancelBtn.onclick = () => {
+            this._animateModalContentResize('portraitHistoryModal', () => {
+              if (modalTitle) modalTitle.textContent = originalTitle;
+              modalBody.innerHTML = originalBodyHtml;
+              if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+            });
+
+            // Re-populate ASCII previews after restoring
+            if (Array.isArray(originalVersions) && originalVersions.length > 0) {
+              this._populateAsciiPreviews(originalVersions);
+            }
+
+            this._initKeyboardFocus();
+          };
+        }
+
+        if (createNewBtn) {
+          createNewBtn.onclick = () => {
+            this.closeHistory();
+            // Trigger portrait generation for this character in the manager context
+            if (typeof window.generatePortraitForCharacter === 'function') {
+              window.generatePortraitForCharacter(characterId);
+            }
+          };
+        }
+
         return;
       }
 
-      const onConfirm = async () => {
-        const character = await CharacterStorage.getById(characterId);
-        if (!character) return;
+      // Build the confirmation view using standard modal structure
+      const confirmationBodyHtml = `
+        <p class="terminal-text">
+          Delete this saved portrait version? This cannot be undone.
+        </p>
+      `;
 
-        const metadata = character.portraitMetadata || {};
-        const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
-        if (!versions.length) {
-          this.closeHistory();
-          return;
+      const confirmationFooterHtml = `
+        <button class="terminal-btn" id="portrait-delete-cancel">NO</button>
+        <button class="terminal-btn terminal-btn-primary" id="portrait-delete-confirm">YES</button>
+      `;
+
+      // Transform modal to confirmation view
+      this._animateModalContentResize('portraitHistoryModal', () => {
+        if (modalTitle) modalTitle.textContent = '[ Confirm Delete ]';
+        modalBody.innerHTML = confirmationBodyHtml;
+        if (modalFooter) modalFooter.innerHTML = confirmationFooterHtml;
+      });
+
+      // Handle cancel - restore original content
+      const cancelBtn = document.getElementById('portrait-delete-cancel');
+      const confirmBtn = document.getElementById('portrait-delete-confirm');
+
+      const restoreOriginal = () => {
+        this._animateModalContentResize('portraitHistoryModal', () => {
+          if (modalTitle) modalTitle.textContent = originalTitle;
+          modalBody.innerHTML = originalBodyHtml;
+          if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+        });
+
+        // Re-populate ASCII previews after restoring
+        if (Array.isArray(originalVersions) && originalVersions.length > 0) {
+          this._populateAsciiPreviews(originalVersions);
         }
 
-        const remaining = versions.filter((v) => v.id !== versionId);
-        const deletedWasActive = metadata.activeVersionId === versionId;
-
-        const updatedMetadata = {
-          ...metadata,
-          versions: remaining,
-          activeVersionId: deletedWasActive
-            ? remaining[0]?.id || null
-            : metadata.activeVersionId,
-        };
-
-        const updates = {
-          portraitMetadata: updatedMetadata,
-        };
-
-        if (deletedWasActive) {
-          if (remaining[0]) {
-            updates.originalPortraitUrl =
-              remaining[0].url || character.originalPortraitUrl || null;
-            updates.customPortraitAscii =
-              remaining[0].ascii || character.customPortraitAscii || '';
-            updates.portrait = {
-              ...(character.portrait || {}),
-              url:
-                remaining[0].url ||
-                (character.portrait && character.portrait.url) ||
-                null,
-              ascii:
-                remaining[0].ascii ||
-                (character.portrait && character.portrait.ascii) ||
-                '',
-            };
-          } else {
-            // No remaining custom versions – clear custom portrait so we fall back to pre-generated ASCII.
-            updates.originalPortraitUrl = null;
-            updates.customPortraitAscii = '';
-            updates.portrait = {
-              ...(character.portrait || {}),
-              url: null,
-              ascii: character.asciiPortrait || '',
-            };
-          }
-        }
-
-        await CharacterStorage.update(characterId, updates);
-        if (window.AppState && typeof AppState.loadCharacters === 'function') {
-          await AppState.loadCharacters();
-        }
-        if (window.UI && typeof UI.render === 'function') {
-          UI.render();
-        }
-        if (typeof window.viewCharacter === 'function') {
-          window.viewCharacter(characterId);
-        }
-
-        this.closeHistory();
-        if (remaining.length) {
-          this.openManagerHistory(characterId);
-        }
+        this._initKeyboardFocus();
       };
 
-      confirmDialog(
-        'Delete this saved portrait version? This cannot be undone.',
-        onConfirm,
-      );
+      if (cancelBtn) {
+        cancelBtn.onclick = restoreOriginal;
+      }
+
+      if (confirmBtn) {
+        confirmBtn.onclick = async () => {
+          const character = await CharacterStorage.getById(characterId);
+          if (!character) return;
+
+          const metadata = character.portraitMetadata || {};
+          const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+          if (!versions.length) {
+            this.closeHistory();
+            return;
+          }
+
+          const remaining = versions.filter((v) => v.id !== versionId);
+          const deletedWasActive = metadata.activeVersionId === versionId;
+
+          const updatedMetadata = {
+            ...metadata,
+            versions: remaining,
+            activeVersionId: deletedWasActive
+              ? remaining[0]?.id || null
+              : metadata.activeVersionId,
+          };
+
+          const updates = {
+            portraitMetadata: updatedMetadata,
+          };
+
+          if (deletedWasActive) {
+            if (remaining[0]) {
+              updates.originalPortraitUrl =
+                remaining[0].url || character.originalPortraitUrl || null;
+              updates.customPortraitAscii =
+                remaining[0].ascii || character.customPortraitAscii || '';
+              updates.portrait = {
+                ...(character.portrait || {}),
+                url:
+                  remaining[0].url ||
+                  (character.portrait && character.portrait.url) ||
+                  null,
+                ascii:
+                  remaining[0].ascii ||
+                  (character.portrait && character.portrait.ascii) ||
+                  '',
+              };
+            } else {
+              // No remaining custom versions – clear custom portrait so we fall back to pre-generated ASCII.
+              updates.originalPortraitUrl = null;
+              updates.customPortraitAscii = '';
+              updates.portrait = {
+                ...(character.portrait || {}),
+                url: null,
+                ascii: character.asciiPortrait || '',
+              };
+            }
+          }
+
+          await CharacterStorage.update(characterId, updates);
+          if (window.AppState && typeof AppState.loadCharacters === 'function') {
+            await AppState.loadCharacters();
+          }
+          if (window.UI && typeof UI.render === 'function') {
+            UI.render();
+          }
+          if (typeof window.viewCharacter === 'function') {
+            window.viewCharacter(characterId);
+          }
+
+          // If no remaining versions, close the modal entirely
+          if (!remaining.length) {
+            this.closeHistory();
+            return;
+          }
+
+          // Rebuild and show the updated history view
+          const updatedCharacter = await CharacterStorage.getById(characterId);
+          if (!updatedCharacter) {
+            this.closeHistory();
+            return;
+          }
+
+          const normalized =
+            window.PortraitHistory &&
+            typeof PortraitHistory.normalizeForDisplay === 'function'
+              ? PortraitHistory.normalizeForDisplay(updatedCharacter)
+              : (() => {
+                  const fallbackMetadata = updatedCharacter.portraitMetadata || {};
+                  const fallbackRaw = Array.isArray(fallbackMetadata.versions)
+                    ? fallbackMetadata.versions
+                    : [];
+                  return {
+                    metadata: fallbackMetadata,
+                    versions: fallbackRaw,
+                    hasVersions: fallbackRaw.length > 0,
+                    hasCustomPortraitWithoutHistory: !fallbackRaw.length,
+                  };
+                })();
+
+          // Update state context with new versions
+          state.context = {
+            ...state.context,
+            metadata: normalized.metadata,
+            versions: normalized.versions,
+            hasCustomPortraitWithoutHistory: normalized.hasCustomPortraitWithoutHistory,
+          };
+
+          const listHtml = this._buildHistoryCardsHtml(
+            'manager',
+            characterId,
+            normalized.metadata,
+            normalized.versions,
+            normalized.hasCustomPortraitWithoutHistory,
+          );
+
+          // Build updated body content
+          const updatedBodyHtml = `
+            <p class="terminal-text-small terminal-text-dim">
+              View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
+            </p>
+            <div class="portrait-history-carousel">
+              ${
+                normalized.versions.length > 1
+                  ? `<button
+                      type="button"
+                      class="portrait-history-nav portrait-history-nav-left"
+                      aria-label="Previous portrait"
+                      aria-controls="portraitHistoryList"
+                      onclick="event.stopPropagation(); PortraitUI.moveFocus(-1);"
+                    >
+                      <span aria-hidden="true">‹</span>
+                    </button>`
+                  : ''
+              }
+              <div
+                id="portraitHistoryList"
+                class="portrait-history-card-row${
+                  normalized.versions.length === 1 ? ' is-single' : ''
+                }"
+              >
+                ${listHtml}
+              </div>
+              ${
+                normalized.versions.length > 1
+                  ? `<button
+                      type="button"
+                      class="portrait-history-nav portrait-history-nav-right"
+                      aria-label="Next portrait"
+                      aria-controls="portraitHistoryList"
+                      onclick="event.stopPropagation(); PortraitUI.moveFocus(1);"
+                    >
+                      <span aria-hidden="true">›</span>
+                    </button>`
+                  : ''
+              }
+            </div>
+          `;
+
+          // Transform back to history view with updated content
+          this._animateModalContentResize('portraitHistoryModal', () => {
+            if (modalTitle) modalTitle.textContent = originalTitle;
+            modalBody.innerHTML = updatedBodyHtml;
+            if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+          });
+
+          // Re-populate ASCII previews and reset focus
+          this._populateAsciiPreviews(normalized.versions);
+          this._initKeyboardFocus();
+        };
+      }
     },
 
     // ========================================
@@ -9129,11 +9397,11 @@ if (DEBUG_CLOUD) {
                 class="selector-option"
                 type="button"
                 role="menuitem"
-                onclick="event.stopPropagation(); PortraitUI.copyPrompt('${characterId}', '${v.id}')"
-                title="Copy this portrait's prompt to your clipboard"
+                onclick="event.stopPropagation(); PortraitUI.viewPrompt('${characterId}', '${v.id}')"
+                title="View this portrait's prompt"
               >
                 <span class="selector-option-icon">✎</span>
-                <span class="selector-option-label">Copy prompt</span>
+                <span class="selector-option-label">View prompt</span>
               </button>
             `);
           }
@@ -9193,6 +9461,54 @@ if (DEBUG_CLOUD) {
           `;
         })
         .join('');
+    },
+
+    // Smoothly animate a modal's content height when its body is "reloaded"
+    // (e.g., after deleting a portrait history entry or showing confirmation).
+    // Uses a simple FLIP pattern: measure -> update -> animate height from old to new.
+    _animateModalContentResize(modalId, updateFn) {
+      const modal = document.getElementById(modalId);
+      if (!modal || typeof updateFn !== 'function') {
+        if (typeof updateFn === 'function') {
+          updateFn();
+        }
+        return;
+      }
+
+      const content = modal.querySelector('.modal-content');
+      if (!content) {
+        updateFn();
+        return;
+      }
+
+      const startHeight = content.offsetHeight;
+
+      // Apply DOM updates synchronously so we can measure the new height.
+      updateFn();
+
+      const endHeight = content.offsetHeight;
+
+      if (!startHeight || !endHeight || startHeight === endHeight) {
+        return;
+      }
+
+      // Lock the current height, then animate to the new height.
+      content.style.height = `${startHeight}px`;
+      // Force reflow so the browser registers the starting height.
+      // eslint-disable-next-line no-unused-expressions
+      content.offsetHeight;
+
+      content.style.transition =
+        'height 220ms cubic-bezier(0.2, 0.8, 0.2, 1.05)';
+      content.style.height = `${endHeight}px`;
+
+      const cleanup = () => {
+        content.style.height = '';
+        content.style.transition = '';
+        content.removeEventListener('transitionend', cleanup);
+      };
+
+      content.addEventListener('transitionend', cleanup);
     },
 
     _populateAsciiPreviews(versions) {
@@ -10586,6 +10902,182 @@ async function renameCharacter(id) {
 }
 
 let currentPortraitCharacterId = null;
+let currentPortraitStyle = null;
+
+/**
+ * Convert a theme id/label to sentence case.
+ * e.g., "cinematic-inks" -> "Cinematic inks"
+ *       "my-custom-style" -> "My custom style"
+ */
+function formatStyleLabel(idOrLabel) {
+    if (!idOrLabel) return '';
+    
+    // Remove "Custom: " prefix if present
+    let cleaned = String(idOrLabel).replace(/^Custom:\s*/i, '');
+    
+    // Remove " (default)" suffix
+    cleaned = cleaned.replace(/\s*\(default\)\s*$/i, '');
+    
+    // Replace dashes/underscores with spaces
+    cleaned = cleaned.replace(/[-_]/g, ' ');
+    
+    // Sentence case: capitalize first letter, lowercase the rest
+    if (cleaned.length > 0) {
+        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+    }
+    
+    return cleaned;
+}
+
+/**
+ * Populate the style listbox menu in the portrait prompt modal.
+ * Uses the same selector pattern as the settings modal.
+ * Returns the currently selected/default style ID.
+ */
+function populatePortraitStyleDropdown(activeStyle) {
+    const menu = document.getElementById('portraitStyleMenu');
+    const label = document.getElementById('portraitStyleLabel');
+    if (!menu) return null;
+
+    // Clear existing options
+    menu.innerHTML = '';
+
+    // Get available themes from PortraitPrompt
+    let themes = [];
+    let defaultThemeId = 'cinematic-inks';
+    
+    try {
+        if (window.PortraitPrompt) {
+            if (typeof PortraitPrompt.getThemes === 'function') {
+                themes = PortraitPrompt.getThemes() || [];
+            }
+            if (typeof PortraitPrompt.getDefaultThemeId === 'function') {
+                defaultThemeId = PortraitPrompt.getDefaultThemeId() || defaultThemeId;
+            }
+        }
+    } catch (e) {
+        console.warn('populatePortraitStyleDropdown: Error getting themes', e);
+    }
+
+    // Always ensure at least the default theme is available
+    if (!themes.length) {
+        themes = [
+            { id: 'cinematic-inks', label: 'Cinematic Inks (default)' }
+        ];
+    }
+
+    // Also try to get any custom styles from admin storage
+    try {
+        const adminStorageKey = 'dnd_portrait_prompt_entries_v1';
+        const raw = localStorage.getItem(adminStorageKey);
+        if (raw) {
+            const entries = JSON.parse(raw);
+            if (Array.isArray(entries)) {
+                const styleEntries = entries.filter(e => e && e.kind && e.kind.toLowerCase() === 'style');
+                const existingIds = themes.map(t => t.id);
+                
+                styleEntries.forEach(entry => {
+                    const key = (entry.key || '').toLowerCase();
+                    if (key && !existingIds.includes(key)) {
+                        themes.push({
+                            id: key,
+                            label: entry.key
+                        });
+                        existingIds.push(key);
+                    }
+                });
+            }
+        }
+    } catch (e) {
+        // Non-fatal - custom styles won't be shown
+    }
+
+    // Sort themes alphabetically by id
+    themes = themes.slice().sort((a, b) => {
+        const nameA = (a.id || '').toLowerCase();
+        const nameB = (b.id || '').toLowerCase();
+        return nameA.localeCompare(nameB);
+    });
+
+    // Determine selected value
+    const selectedStyle = activeStyle || defaultThemeId;
+    let selectedLabel = formatStyleLabel(defaultThemeId);
+
+    // Populate menu with options (same pattern as settings modal)
+    themes.forEach((theme) => {
+        const formattedLabel = formatStyleLabel(theme.id);
+        const isSelected = theme.id === selectedStyle;
+        
+        if (isSelected) {
+            selectedLabel = formattedLabel;
+        }
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'selector-option' + (isSelected ? ' is-selected' : '');
+        button.setAttribute('role', 'option');
+        button.setAttribute('data-value', theme.id);
+        button.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        button.innerHTML = `<span class="selector-option-label">${formattedLabel}</span>`;
+        menu.appendChild(button);
+    });
+
+    // Update trigger label
+    if (label) {
+        label.textContent = selectedLabel;
+    }
+
+    currentPortraitStyle = selectedStyle;
+    
+    // Wire up option clicks (same pattern as SettingsModal.initSelectors)
+    initPortraitStyleSelector();
+    
+    return selectedStyle;
+}
+
+/**
+ * Initialize the portrait style selector click handlers.
+ * Uses the same pattern as SettingsModal.initSelectors.
+ */
+function initPortraitStyleSelector() {
+    const menu = document.getElementById('portraitStyleMenu');
+    const label = document.getElementById('portraitStyleLabel');
+    const trigger = document.getElementById('portraitStyleTrigger');
+    
+    if (!menu) return;
+    
+    const options = menu.querySelectorAll('.selector-option');
+    
+    options.forEach((option) => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const value = option.getAttribute('data-value');
+            const optionLabel = option.querySelector('.selector-option-label');
+            
+            if (value && optionLabel) {
+                // Update trigger label
+                if (label) {
+                    label.textContent = optionLabel.textContent.trim();
+                }
+                
+                // Update current style
+                currentPortraitStyle = value;
+                
+                // Update visual selection state
+                options.forEach((opt) => {
+                    const isSelected = opt.getAttribute('data-value') === value;
+                    opt.classList.toggle('is-selected', isSelected);
+                    opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+                });
+                
+                // Close the menu using the standard toggle
+                if (trigger && window.CharacterSheet && typeof CharacterSheet.toggleSelectorMenu === 'function') {
+                    CharacterSheet.toggleSelectorMenu(trigger);
+                }
+            }
+        });
+    });
+}
 
 async function generatePortraitForCharacter(id) {
     const character = await CharacterStorage.getById(id);
@@ -10623,6 +11115,8 @@ async function generatePortraitForCharacter(id) {
     // 2) Fall back to the same helper as the builder so pose/camera/theme +
     //    your admin race/class/scene snippets are reflected for new portraits.
     let defaultPrompt = '';
+    let activeStyle = null;
+    
     try {
         let versionPrompt = null;
         try {
@@ -10635,6 +11129,10 @@ async function generatePortraitForCharacter(id) {
                     versions[versions.length - 1];
                 if (active && active.prompt) {
                     versionPrompt = String(active.prompt);
+                }
+                // Get the style from the active version if available
+                if (active && active.style) {
+                    activeStyle = active.style;
                 }
             }
         } catch (e) {
@@ -10655,6 +11153,19 @@ async function generatePortraitForCharacter(id) {
         defaultPrompt = `${character.race} ${character.class}`;
     }
     
+    // Populate style dropdown before setting the prompt
+    // Use active style from portrait version, or fall back to user's saved preference
+    if (!activeStyle) {
+        try {
+            if (window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
+                activeStyle = StorageService.getPortraitPromptTheme();
+            }
+        } catch (e) {
+            // Non-fatal
+        }
+    }
+    populatePortraitStyleDropdown(activeStyle);
+    
     document.getElementById('portraitPrompt').value = defaultPrompt;
     const promptModal = document.getElementById('portraitPromptModal');
     if (promptModal) {
@@ -10666,11 +11177,18 @@ async function generatePortraitForCharacter(id) {
 }
 
 function closePortraitPromptModal() {
+    // Close the style menu if open (using standard selector toggle)
+    const trigger = document.getElementById('portraitStyleTrigger');
+    if (trigger && trigger.classList.contains('is-open') && window.CharacterSheet) {
+        CharacterSheet.toggleSelectorMenu(trigger);
+    }
+    
     const modal = document.getElementById('portraitPromptModal');
     if (!modal) {
         const promptInput = document.getElementById('portraitPrompt');
         if (promptInput) promptInput.value = '';
         currentPortraitCharacterId = null;
+        currentPortraitStyle = null;
         return;
     }
 
@@ -10678,6 +11196,7 @@ function closePortraitPromptModal() {
         const promptInput = document.getElementById('portraitPrompt');
         if (promptInput) promptInput.value = '';
         currentPortraitCharacterId = null;
+        currentPortraitStyle = null;
     };
 
     animateModalClose(modal, {
@@ -10687,9 +11206,10 @@ function closePortraitPromptModal() {
 }
 
 async function confirmGeneratePortrait() {
-    // Capture the current character ID in a local variable so it's not lost
-    // when we close the modal (which resets currentPortraitCharacterId to null).
+    // Capture the current character ID and style in local variables so they're not lost
+    // when we close the modal (which resets currentPortraitCharacterId and currentPortraitStyle to null).
     const portraitCharacterId = currentPortraitCharacterId;
+    const selectedStyle = currentPortraitStyle;
     
     if (!portraitCharacterId) {
         closePortraitPromptModal();
@@ -10887,20 +11407,8 @@ async function confirmGeneratePortrait() {
         ) {
             // Shared helper so builder + manager use the exact same STYLE / Scene
             // logic (including admin-defined prompt styles) for custom prompts.
-            let promptThemeId = null;
-            try {
-                if (
-                    typeof window !== 'undefined' &&
-                    window.StorageService &&
-                    typeof window.StorageService.getPortraitPromptTheme === 'function'
-                ) {
-                    promptThemeId = window.StorageService.getPortraitPromptTheme();
-                } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) {
-                    promptThemeId = CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME;
-                }
-            } catch (e) {
-                // Non-fatal: fall back to default theme behavior below.
-            }
+            // Use the style selected in the modal dropdown (captured before closing).
+            const promptThemeId = selectedStyle || null;
 
             renderingInstructions =
                 window.PortraitPrompt.buildCustomPortraitInstructions({
@@ -10972,6 +11480,9 @@ async function confirmGeneratePortrait() {
         console.log('  window.PortraitHistory exists:', !!window.PortraitHistory);
         console.log('  addVersion is function:', typeof window.PortraitHistory?.addVersion === 'function');
 
+        // Use the style selected in the modal dropdown for tagging
+        const managerStyle = selectedStyle || null;
+
         let updatedMetadata;
         if (window.PortraitHistory && typeof window.PortraitHistory.addVersion === 'function') {
             const existingMetadata = character.portraitMetadata || {};
@@ -11002,6 +11513,7 @@ async function confirmGeneratePortrait() {
                         {
                             source: 'original-ai',
                             prompt: null,
+                            style: null,
                         },
                     );
 
@@ -11018,7 +11530,8 @@ async function confirmGeneratePortrait() {
                 result.imageUrl,
                 {
                     source: 'custom-ai',
-                    prompt: customPrompt,
+                    prompt: fullPrompt,
+                    style: managerStyle,
                 },
             );
             console.log('%c🎨 PORTRAIT HISTORY UPDATED', 'color: #0f0; font-weight: bold');

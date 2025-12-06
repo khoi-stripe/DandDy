@@ -9111,7 +9111,7 @@ const PortraitHistory = (window.PortraitHistory = {
    * @param {Object} character
    * @param {string} asciiArt
    * @param {string|null} imageUrl
-   * @param {Object} extra - { source, prompt }
+   * @param {Object} extra - { source, prompt, style }
    */
   addVersion(character, asciiArt, imageUrl, extra = {}) {
     if (!character) {
@@ -9134,6 +9134,7 @@ const PortraitHistory = (window.PortraitHistory = {
       url: imageUrl || null,
       source: extra.source || 'custom-ai',
       prompt: extra.prompt || null,
+      style: extra.style || null,
     };
 
     const versions = [version, ...existingVersions].slice(0, this.MAX_VERSIONS);
@@ -9789,7 +9790,7 @@ const PortraitHistory = (window.PortraitHistory = {
       }
     },
 
-    async copyPrompt(characterId, versionId) {
+    async viewPrompt(characterId, versionId) {
       const CharacterStorage = window.CharacterStorage;
       if (!CharacterStorage || typeof CharacterStorage.getById !== 'function') {
         return;
@@ -9809,36 +9810,111 @@ const PortraitHistory = (window.PortraitHistory = {
         return;
       }
 
-      const promptText = version.prompt;
+      const modal = document.getElementById('portraitHistoryModal');
+      if (!modal) return;
 
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(promptText);
-        } else {
-          // Fallback for older browsers: use a temporary textarea
-          const textarea = document.createElement('textarea');
-          textarea.value = promptText;
-          textarea.setAttribute('readonly', '');
-          textarea.style.position = 'absolute';
-          textarea.style.left = '-9999px';
-          document.body.appendChild(textarea);
-          textarea.select();
+      const modalBody = modal.querySelector('.modal-body');
+      const modalTitle = modal.querySelector('.modal-title');
+      const modalFooter = modal.querySelector('.modal-footer');
+      if (!modalBody) return;
+
+      // Store original content to restore on back
+      const modalHeader = modal.querySelector('.modal-header');
+      const originalBodyHtml = modalBody.innerHTML;
+      const originalHeaderHtml = modalHeader ? modalHeader.innerHTML : '';
+      const originalFooterHtml = modalFooter ? modalFooter.innerHTML : '';
+      const originalVersions = state.context?.versions || [];
+
+      // Build style label for header - format to sentence case
+      const rawStyle = version.style || 'default';
+      const formatStyleLabel = (str) => {
+        if (!str) return 'Default';
+        // Replace dashes/underscores with spaces
+        let cleaned = str.replace(/[-_]/g, ' ');
+        // Sentence case: capitalize first letter, lowercase the rest
+        if (cleaned.length > 0) {
+          cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+        }
+        return cleaned;
+      };
+      const styleLabel = formatStyleLabel(rawStyle);
+
+      // Escape prompt text for safe display
+      const escapedPrompt = (version.prompt || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      const promptHeaderHtml = `
+        <h2 class="modal-title">[ Portrait Prompt ]</h2>
+        <span class="portrait-prompt-style-label">Style: ${styleLabel}</span>
+        <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
+      `;
+
+      const promptBodyHtml = `
+        <pre class="terminal-text portrait-prompt-display">${escapedPrompt}</pre>
+      `;
+
+      const promptFooterHtml = `
+        <button class="terminal-btn" id="portrait-prompt-back">BACK</button>
+        <button class="terminal-btn" id="portrait-prompt-copy">COPY PROMPT</button>
+      `;
+
+      // Transform modal to prompt view
+      this._animateModalContentResize('portraitHistoryModal', () => {
+        if (modalHeader) modalHeader.innerHTML = promptHeaderHtml;
+        modalBody.innerHTML = promptBodyHtml;
+        if (modalFooter) modalFooter.innerHTML = promptFooterHtml;
+      });
+
+      const backBtn = document.getElementById('portrait-prompt-back');
+      const copyBtn = document.getElementById('portrait-prompt-copy');
+
+      const goBack = () => {
+        this._animateModalContentResize('portraitHistoryModal', () => {
+          if (modalHeader) modalHeader.innerHTML = originalHeaderHtml;
+          modalBody.innerHTML = originalBodyHtml;
+          if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+        });
+
+        // Re-populate ASCII previews after restoring
+        if (Array.isArray(originalVersions) && originalVersions.length > 0) {
+          this._populateAsciiPreviews(originalVersions);
+        }
+
+        this._initKeyboardFocus();
+      };
+
+      if (backBtn) {
+        backBtn.onclick = goBack;
+      }
+
+      if (copyBtn) {
+        copyBtn.onclick = async () => {
           try {
-            document.execCommand('copy');
-          } finally {
-            document.body.removeChild(textarea);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(version.prompt);
+            } else {
+              const textarea = document.createElement('textarea');
+              textarea.value = version.prompt;
+              textarea.setAttribute('readonly', '');
+              textarea.style.position = 'absolute';
+              textarea.style.left = '-9999px';
+              document.body.appendChild(textarea);
+              textarea.select();
+              try {
+                document.execCommand('copy');
+              } finally {
+                document.body.removeChild(textarea);
+              }
+            }
+            if (typeof window.showNotification === 'function') {
+              window.showNotification('Prompt copied to clipboard.');
+            }
+          } catch (error) {
+            console.error('PortraitUI.viewPrompt: failed to copy prompt', error);
+            if (typeof window.showNotification === 'function') {
+              window.showNotification('Could not copy prompt.');
+            }
           }
-        }
-        if (typeof window.showNotification === 'function') {
-          window.showNotification('Portrait prompt copied to clipboard.');
-        }
-      } catch (error) {
-        console.error('PortraitUI.copyPrompt: failed to copy prompt', error);
-        if (typeof window.showNotification === 'function') {
-          window.showNotification(
-            'Could not copy prompt. Please copy it manually from the card.',
-          );
-        }
+        };
       }
     },
 
@@ -9848,90 +9924,282 @@ const PortraitHistory = (window.PortraitHistory = {
         return;
       }
 
-      const confirmDialog = window.showConfirmDialog;
-      if (typeof confirmDialog !== 'function') {
-        console.warn(
-          'PortraitUI.deleteVersion: showConfirmDialog is not available',
-        );
+      const modal = document.getElementById('portraitHistoryModal');
+      if (!modal) return;
+
+      const modalBody = modal.querySelector('.modal-body');
+      const modalTitle = modal.querySelector('.modal-title');
+      const modalFooter = modal.querySelector('.modal-footer');
+      if (!modalBody) return;
+
+      // Store original content to restore on cancel
+      const originalBodyHtml = modalBody.innerHTML;
+      const originalTitle = modalTitle ? modalTitle.textContent : '';
+      const originalFooterHtml = modalFooter ? modalFooter.innerHTML : '';
+      const originalVersions = state.context?.versions || [];
+
+      // If this is the only portrait, show "create new" prompt instead of delete confirmation
+      if (originalVersions.length === 1) {
+        const createNewBodyHtml = `
+          <p class="terminal-text">
+            To delete this portrait, create a new one first.
+          </p>
+        `;
+
+        const createNewFooterHtml = `
+          <button class="terminal-btn" id="portrait-delete-cancel">CANCEL</button>
+          <button class="terminal-btn terminal-btn-primary" id="portrait-create-new">CREATE NEW</button>
+        `;
+
+        this._animateModalContentResize('portraitHistoryModal', () => {
+          if (modalTitle) modalTitle.textContent = '[ Create a New Portrait? ]';
+          modalBody.innerHTML = createNewBodyHtml;
+          if (modalFooter) modalFooter.innerHTML = createNewFooterHtml;
+        });
+
+        const cancelBtn = document.getElementById('portrait-delete-cancel');
+        const createNewBtn = document.getElementById('portrait-create-new');
+
+        if (cancelBtn) {
+          cancelBtn.onclick = () => {
+            this._animateModalContentResize('portraitHistoryModal', () => {
+              if (modalTitle) modalTitle.textContent = originalTitle;
+              modalBody.innerHTML = originalBodyHtml;
+              if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+            });
+
+            // Re-populate ASCII previews after restoring
+            if (Array.isArray(originalVersions) && originalVersions.length > 0) {
+              this._populateAsciiPreviews(originalVersions);
+            }
+
+            this._initKeyboardFocus();
+          };
+        }
+
+        if (createNewBtn) {
+          createNewBtn.onclick = () => {
+            this.closeHistory();
+            // Trigger portrait generation for this character in the manager context
+            if (typeof window.generatePortraitForCharacter === 'function') {
+              window.generatePortraitForCharacter(characterId);
+            }
+          };
+        }
+
         return;
       }
 
-      const onConfirm = async () => {
-        const character = await CharacterStorage.getById(characterId);
-        if (!character) return;
+      // Build the confirmation view using standard modal structure
+      const confirmationBodyHtml = `
+        <p class="terminal-text">
+          Delete this saved portrait version? This cannot be undone.
+        </p>
+      `;
 
-        const metadata = character.portraitMetadata || {};
-        const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
-        if (!versions.length) {
-          this.closeHistory();
-          return;
+      const confirmationFooterHtml = `
+        <button class="terminal-btn" id="portrait-delete-cancel">NO</button>
+        <button class="terminal-btn terminal-btn-primary" id="portrait-delete-confirm">YES</button>
+      `;
+
+      // Transform modal to confirmation view
+      this._animateModalContentResize('portraitHistoryModal', () => {
+        if (modalTitle) modalTitle.textContent = '[ Confirm Delete ]';
+        modalBody.innerHTML = confirmationBodyHtml;
+        if (modalFooter) modalFooter.innerHTML = confirmationFooterHtml;
+      });
+
+      // Handle cancel - restore original content
+      const cancelBtn = document.getElementById('portrait-delete-cancel');
+      const confirmBtn = document.getElementById('portrait-delete-confirm');
+
+      const restoreOriginal = () => {
+        this._animateModalContentResize('portraitHistoryModal', () => {
+          if (modalTitle) modalTitle.textContent = originalTitle;
+          modalBody.innerHTML = originalBodyHtml;
+          if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+        });
+
+        // Re-populate ASCII previews after restoring
+        if (Array.isArray(originalVersions) && originalVersions.length > 0) {
+          this._populateAsciiPreviews(originalVersions);
         }
 
-        const remaining = versions.filter((v) => v.id !== versionId);
-        const deletedWasActive = metadata.activeVersionId === versionId;
-
-        const updatedMetadata = {
-          ...metadata,
-          versions: remaining,
-          activeVersionId: deletedWasActive
-            ? remaining[0]?.id || null
-            : metadata.activeVersionId,
-        };
-
-        const updates = {
-          portraitMetadata: updatedMetadata,
-        };
-
-        if (deletedWasActive) {
-          if (remaining[0]) {
-            updates.originalPortraitUrl =
-              remaining[0].url || character.originalPortraitUrl || null;
-            updates.customPortraitAscii =
-              remaining[0].ascii || character.customPortraitAscii || '';
-            updates.portrait = {
-              ...(character.portrait || {}),
-              url:
-                remaining[0].url ||
-                (character.portrait && character.portrait.url) ||
-                null,
-              ascii:
-                remaining[0].ascii ||
-                (character.portrait && character.portrait.ascii) ||
-                '',
-            };
-          } else {
-            // No remaining custom versions – clear custom portrait so we fall back to pre-generated ASCII.
-            updates.originalPortraitUrl = null;
-            updates.customPortraitAscii = '';
-            updates.portrait = {
-              ...(character.portrait || {}),
-              url: null,
-              ascii: character.asciiPortrait || '',
-            };
-          }
-        }
-
-        await CharacterStorage.update(characterId, updates);
-        if (window.AppState && typeof AppState.loadCharacters === 'function') {
-          await AppState.loadCharacters();
-        }
-        if (window.UI && typeof UI.render === 'function') {
-          UI.render();
-        }
-        if (typeof window.viewCharacter === 'function') {
-          window.viewCharacter(characterId);
-        }
-
-        this.closeHistory();
-        if (remaining.length) {
-          this.openManagerHistory(characterId);
-        }
+        this._initKeyboardFocus();
       };
 
-      confirmDialog(
-        'Delete this saved portrait version? This cannot be undone.',
-        onConfirm,
-      );
+      if (cancelBtn) {
+        cancelBtn.onclick = restoreOriginal;
+      }
+
+      if (confirmBtn) {
+        confirmBtn.onclick = async () => {
+          const character = await CharacterStorage.getById(characterId);
+          if (!character) return;
+
+          const metadata = character.portraitMetadata || {};
+          const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+          if (!versions.length) {
+            this.closeHistory();
+            return;
+          }
+
+          const remaining = versions.filter((v) => v.id !== versionId);
+          const deletedWasActive = metadata.activeVersionId === versionId;
+
+          const updatedMetadata = {
+            ...metadata,
+            versions: remaining,
+            activeVersionId: deletedWasActive
+              ? remaining[0]?.id || null
+              : metadata.activeVersionId,
+          };
+
+          const updates = {
+            portraitMetadata: updatedMetadata,
+          };
+
+          if (deletedWasActive) {
+            if (remaining[0]) {
+              updates.originalPortraitUrl =
+                remaining[0].url || character.originalPortraitUrl || null;
+              updates.customPortraitAscii =
+                remaining[0].ascii || character.customPortraitAscii || '';
+              updates.portrait = {
+                ...(character.portrait || {}),
+                url:
+                  remaining[0].url ||
+                  (character.portrait && character.portrait.url) ||
+                  null,
+                ascii:
+                  remaining[0].ascii ||
+                  (character.portrait && character.portrait.ascii) ||
+                  '',
+              };
+            } else {
+              // No remaining custom versions – clear custom portrait so we fall back to pre-generated ASCII.
+              updates.originalPortraitUrl = null;
+              updates.customPortraitAscii = '';
+              updates.portrait = {
+                ...(character.portrait || {}),
+                url: null,
+                ascii: character.asciiPortrait || '',
+              };
+            }
+          }
+
+          await CharacterStorage.update(characterId, updates);
+          if (window.AppState && typeof AppState.loadCharacters === 'function') {
+            await AppState.loadCharacters();
+          }
+          if (window.UI && typeof UI.render === 'function') {
+            UI.render();
+          }
+          if (typeof window.viewCharacter === 'function') {
+            window.viewCharacter(characterId);
+          }
+
+          // If no remaining versions, close the modal entirely
+          if (!remaining.length) {
+            this.closeHistory();
+            return;
+          }
+
+          // Rebuild and show the updated history view
+          const updatedCharacter = await CharacterStorage.getById(characterId);
+          if (!updatedCharacter) {
+            this.closeHistory();
+            return;
+          }
+
+          const normalized =
+            window.PortraitHistory &&
+            typeof PortraitHistory.normalizeForDisplay === 'function'
+              ? PortraitHistory.normalizeForDisplay(updatedCharacter)
+              : (() => {
+                  const fallbackMetadata = updatedCharacter.portraitMetadata || {};
+                  const fallbackRaw = Array.isArray(fallbackMetadata.versions)
+                    ? fallbackMetadata.versions
+                    : [];
+                  return {
+                    metadata: fallbackMetadata,
+                    versions: fallbackRaw,
+                    hasVersions: fallbackRaw.length > 0,
+                    hasCustomPortraitWithoutHistory: !fallbackRaw.length,
+                  };
+                })();
+
+          // Update state context with new versions
+          state.context = {
+            ...state.context,
+            metadata: normalized.metadata,
+            versions: normalized.versions,
+            hasCustomPortraitWithoutHistory: normalized.hasCustomPortraitWithoutHistory,
+          };
+
+          const listHtml = this._buildHistoryCardsHtml(
+            'manager',
+            characterId,
+            normalized.metadata,
+            normalized.versions,
+            normalized.hasCustomPortraitWithoutHistory,
+          );
+
+          // Build updated body content
+          const updatedBodyHtml = `
+            <p class="terminal-text-small terminal-text-dim">
+              View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
+            </p>
+            <div class="portrait-history-carousel">
+              ${
+                normalized.versions.length > 1
+                  ? `<button
+                      type="button"
+                      class="portrait-history-nav portrait-history-nav-left"
+                      aria-label="Previous portrait"
+                      aria-controls="portraitHistoryList"
+                      onclick="event.stopPropagation(); PortraitUI.moveFocus(-1);"
+                    >
+                      <span aria-hidden="true">‹</span>
+                    </button>`
+                  : ''
+              }
+              <div
+                id="portraitHistoryList"
+                class="portrait-history-card-row${
+                  normalized.versions.length === 1 ? ' is-single' : ''
+                }"
+              >
+                ${listHtml}
+              </div>
+              ${
+                normalized.versions.length > 1
+                  ? `<button
+                      type="button"
+                      class="portrait-history-nav portrait-history-nav-right"
+                      aria-label="Next portrait"
+                      aria-controls="portraitHistoryList"
+                      onclick="event.stopPropagation(); PortraitUI.moveFocus(1);"
+                    >
+                      <span aria-hidden="true">›</span>
+                    </button>`
+                  : ''
+              }
+            </div>
+          `;
+
+          // Transform back to history view with updated content
+          this._animateModalContentResize('portraitHistoryModal', () => {
+            if (modalTitle) modalTitle.textContent = originalTitle;
+            modalBody.innerHTML = updatedBodyHtml;
+            if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+          });
+
+          // Re-populate ASCII previews and reset focus
+          this._populateAsciiPreviews(normalized.versions);
+          this._initKeyboardFocus();
+        };
+      }
     },
 
     // ========================================
@@ -10017,11 +10285,11 @@ const PortraitHistory = (window.PortraitHistory = {
                 class="selector-option"
                 type="button"
                 role="menuitem"
-                onclick="event.stopPropagation(); PortraitUI.copyPrompt('${characterId}', '${v.id}')"
-                title="Copy this portrait's prompt to your clipboard"
+                onclick="event.stopPropagation(); PortraitUI.viewPrompt('${characterId}', '${v.id}')"
+                title="View this portrait's prompt"
               >
                 <span class="selector-option-icon">✎</span>
-                <span class="selector-option-label">Copy prompt</span>
+                <span class="selector-option-label">View prompt</span>
               </button>
             `);
           }
@@ -10081,6 +10349,54 @@ const PortraitHistory = (window.PortraitHistory = {
           `;
         })
         .join('');
+    },
+
+    // Smoothly animate a modal's content height when its body is "reloaded"
+    // (e.g., after deleting a portrait history entry or showing confirmation).
+    // Uses a simple FLIP pattern: measure -> update -> animate height from old to new.
+    _animateModalContentResize(modalId, updateFn) {
+      const modal = document.getElementById(modalId);
+      if (!modal || typeof updateFn !== 'function') {
+        if (typeof updateFn === 'function') {
+          updateFn();
+        }
+        return;
+      }
+
+      const content = modal.querySelector('.modal-content');
+      if (!content) {
+        updateFn();
+        return;
+      }
+
+      const startHeight = content.offsetHeight;
+
+      // Apply DOM updates synchronously so we can measure the new height.
+      updateFn();
+
+      const endHeight = content.offsetHeight;
+
+      if (!startHeight || !endHeight || startHeight === endHeight) {
+        return;
+      }
+
+      // Lock the current height, then animate to the new height.
+      content.style.height = `${startHeight}px`;
+      // Force reflow so the browser registers the starting height.
+      // eslint-disable-next-line no-unused-expressions
+      content.offsetHeight;
+
+      content.style.transition =
+        'height 220ms cubic-bezier(0.2, 0.8, 0.2, 1.05)';
+      content.style.height = `${endHeight}px`;
+
+      const cleanup = () => {
+        content.style.height = '';
+        content.style.transition = '';
+        content.removeEventListener('transitionend', cleanup);
+      };
+
+      content.addEventListener('transitionend', cleanup);
     },
 
     _populateAsciiPreviews(versions) {
@@ -13311,6 +13627,17 @@ const App = (window.App = {
 
       if (result && result.asciiArt) {
         const currentCount = character.customPortraitCount || 0;
+
+        // Get the current style theme for tagging
+        let guidedStyle = null;
+        try {
+          if (window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
+            guidedStyle = StorageService.getPortraitPromptTheme();
+          }
+        } catch (e) {
+          // Non-fatal
+        }
+
         const updatedMetadata =
           window.PortraitHistory && typeof PortraitHistory.addVersion === 'function'
             ? PortraitHistory.addVersion(
@@ -13320,9 +13647,10 @@ const App = (window.App = {
                 {
                   source: 'guided-auto',
                   prompt:
-                    (AIService.buildCharacterDescription &&
-                      AIService.buildCharacterDescription(character)) ||
+                    (AIService.buildPortraitPrompt &&
+                      AIService.buildPortraitPrompt(character)) ||
                     null,
+                  style: guidedStyle,
                 },
               )
             : character.portraitMetadata || {};
@@ -13965,6 +14293,78 @@ const App = (window.App = {
               }
             </div>`;
 
+            // Overflow menu for per-version actions (View, Prompt, Delete)
+            const actionItems = [];
+
+            if (hasImage) {
+              actionItems.push(`
+                <button
+                  class="selector-option"
+                  type="button"
+                  role="menuitem"
+                  onclick="event.stopPropagation(); App.togglePortraitHistoryView('${v.id}')"
+                  data-toggle-version-id="${v.id}"
+                >
+                  <span class="selector-option-icon">◉</span>
+                  <span class="selector-option-label">View original</span>
+                </button>
+              `);
+            }
+
+            if (hasPrompt) {
+              actionItems.push(`
+                <button
+                  class="selector-option"
+                  type="button"
+                  role="menuitem"
+                  onclick="event.stopPropagation(); App.viewPortraitPrompt('${v.id}')"
+                  title="View this portrait's prompt"
+                >
+                  <span class="selector-option-icon">✎</span>
+                  <span class="selector-option-label">View prompt</span>
+                </button>
+              `);
+            }
+
+            actionItems.push(`
+              <button
+                class="selector-option portrait-history-delete-option"
+                type="button"
+                role="menuitem"
+                onclick="event.stopPropagation(); App.deletePortraitVersion('${v.id}')"
+                title="Delete this portrait version"
+                aria-label="Delete portrait version"
+              >
+                <span class="selector-option-icon">×</span>
+                <span class="selector-option-label">Delete version</span>
+              </button>
+            `);
+
+            const actionsMenu =
+              actionItems.length > 0
+                ? `
+                <div class="portrait-history-actions selector-shell">
+                  <button
+                    class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-label="More portrait actions"
+                    onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"
+                  >
+                    <span class="sheet-actions-icon" aria-hidden="true">
+                      <span class="sheet-actions-dot dot-1"></span>
+                      <span class="sheet-actions-dot dot-2"></span>
+                      <span class="sheet-actions-dot dot-3"></span>
+                    </span>
+                  </button>
+                  <div class="selector-menu portrait-history-menu" role="menu" aria-hidden="true">
+                    ${actionItems.join('')}
+                  </div>
+                </div>
+              `
+                : '';
+
             return `
             <div class="character-card portrait-history-card${
               isActive ? ' is-selected' : ''
@@ -13972,28 +14372,12 @@ const App = (window.App = {
               v.id
             }')">
               ${thumbHtml}
-              <div class="card-details">
-                <div class="card-name">${title}</div>
-                <div class="card-info">${infoText || '&nbsp;'}</div>
-              </div>
-              <div class="portrait-history-actions">
-                ${
-                  hasImage
-                    ? `<button class="terminal-btn terminal-btn-small" data-toggle-version-id="${v.id}" onclick="App.togglePortraitHistoryView('${v.id}')">
-                  View Original
-                </button>`
-                    : ''
-                }
-                ${
-                  hasPrompt
-                    ? `<button class="terminal-btn terminal-btn-small" onclick="App.copyPortraitHistoryPrompt('${v.id}')" title="Copy this portrait's prompt to your clipboard">
-                  Prompt
-                </button>`
-                    : ''
-                }
-                <button class="terminal-btn terminal-btn-small portrait-history-delete-btn" onclick="App.deletePortraitVersion('${v.id}')" title="Delete this portrait version" aria-label="Delete portrait version">
-                  Del
-                </button>
+              <div class="card-details portrait-history-details">
+                <div class="portrait-history-meta">
+                  <div class="card-name">${title}</div>
+                  <div class="card-info">${infoText || '&nbsp;'}</div>
+                </div>
+                ${actionsMenu}
               </div>
             </div>
           `;
@@ -14453,85 +14837,114 @@ const App = (window.App = {
       return;
     }
 
-    const onConfirm = async () => {
-      const remaining = versions.filter((v) => v.id !== versionId);
-      const deletedWasActive = metadata.activeVersionId === versionId;
+    const modal = document.getElementById('portraitHistoryModal');
+    if (!modal) return;
 
-      const updatedMetadata = {
-        ...metadata,
-        versions: remaining,
-        activeVersionId: deletedWasActive
-          ? remaining[0]?.id || null
-          : metadata.activeVersionId,
-      };
+    const modalBody = modal.querySelector('.modal-body');
+    const modalTitle = modal.querySelector('.modal-title');
+    const modalFooter = modal.querySelector('.modal-footer');
+    if (!modalBody) return;
 
-      const updates = {
-        portraitMetadata: updatedMetadata,
-      };
+    // Store original content to restore on cancel
+    const originalBodyHtml = modalBody.innerHTML;
+    const originalTitle = modalTitle ? modalTitle.textContent : '';
+    const originalFooterHtml = modalFooter ? modalFooter.innerHTML : '';
 
-      if (deletedWasActive) {
-        if (remaining[0]) {
-          updates.originalPortraitUrl =
-            remaining[0].url || character.originalPortraitUrl || null;
-          updates.customPortraitAscii =
-            remaining[0].ascii || character.customPortraitAscii || '';
-        } else {
-          // No remaining custom versions – clear custom portrait so we fall back to template/pre-generated art
-          updates.originalPortraitUrl = null;
-          updates.customPortraitAscii = '';
-        }
-      }
+    // If this is the only portrait, show "create new" prompt instead of delete confirmation
+    if (versions.length === 1) {
+      const createNewBodyHtml = `
+        <p class="terminal-text">
+          To delete this portrait, create a new one first.
+        </p>
+      `;
 
-      CharacterState.updateCharacter(updates);
-      await this.persistIfAlreadySaved();
-
-      const modal = document.getElementById('portraitHistoryModal');
-
-      // If the modal was closed manually or there are no remaining versions,
-      // fall back to the original behavior and close completely.
-      if (!remaining.length || !modal) {
-        this.closePortraitHistory();
-        return;
-      }
-
-      // Rebuild normalized metadata from the latest state so the builder
-      // stays in sync with any shared helpers.
-      const latestState = CharacterState.get();
-      const latestCharacter = latestState.character || {};
-      const latestNormalized =
-        window.PortraitHistory &&
-        typeof PortraitHistory.normalizeForDisplay === 'function'
-          ? PortraitHistory.normalizeForDisplay(latestCharacter)
-          : (() => {
-              const fallbackMetadata = latestCharacter.portraitMetadata || {};
-              const fallbackRaw = Array.isArray(fallbackMetadata.versions)
-                ? fallbackMetadata.versions
-                : [];
-              return {
-                metadata: fallbackMetadata,
-                versions: fallbackRaw,
-                hasVersions: fallbackRaw.length > 0,
-                hasCustomPortraitWithoutHistory: !fallbackRaw.length,
-              };
-            })();
+      const createNewFooterHtml = `
+        <button class="terminal-btn" id="portrait-delete-cancel">CANCEL</button>
+        <button class="terminal-btn terminal-btn-primary" id="portrait-create-new">CREATE NEW</button>
+      `;
 
       this._animateModalContentResize('portraitHistoryModal', () => {
-        const modalBody = modal.querySelector('.modal-body');
-        if (!modalBody) return;
-        modalBody.innerHTML = this._buildPortraitHistoryBody(latestNormalized);
+        if (modalTitle) modalTitle.textContent = '[ Create a New Portrait? ]';
+        modalBody.innerHTML = createNewBodyHtml;
+        if (modalFooter) modalFooter.innerHTML = createNewFooterHtml;
       });
 
-      // Re-run ASCII thumbnail population & focus wiring for the updated list
-      const nextVersions = Array.isArray(latestNormalized.versions)
-        ? latestNormalized.versions
-        : [];
+      const cancelBtn = document.getElementById('portrait-delete-cancel');
+      const createNewBtn = document.getElementById('portrait-create-new');
+
+      if (cancelBtn) {
+        cancelBtn.onclick = () => {
+          this._animateModalContentResize('portraitHistoryModal', () => {
+            if (modalTitle) modalTitle.textContent = originalTitle;
+            modalBody.innerHTML = originalBodyHtml;
+            if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+          });
+
+          // Re-populate ASCII previews after restoring
+          if (Array.isArray(versions) && versions.length > 0 &&
+              window.PortraitHistory &&
+              typeof PortraitHistory.batchPopulateAsciiPreviews === 'function') {
+            PortraitHistory.batchPopulateAsciiPreviews(versions, (ascii) =>
+              this.cropAsciiForThumbnail(ascii),
+            );
+          }
+
+          const cards = this.getPortraitHistoryCards();
+          if (cards.length > 0) {
+            this._portraitHistoryFocusIndex = 0;
+            this.updatePortraitHistoryFocus();
+          }
+        };
+      }
+
+      if (createNewBtn) {
+        createNewBtn.onclick = () => {
+          this.closePortraitHistory();
+          this.generateCustomAIPortrait();
+        };
+      }
+
+      return;
+    }
+
+    // Build the confirmation view using standard modal structure
+    const confirmationBodyHtml = `
+      <p class="terminal-text">
+        Delete this saved portrait version? This cannot be undone.
+      </p>
+    `;
+
+    const confirmationFooterHtml = `
+      <button class="terminal-btn" id="portrait-delete-cancel">NO</button>
+      <button class="terminal-btn terminal-btn-primary" id="portrait-delete-confirm">YES</button>
+    `;
+
+    // Transform modal to confirmation view
+    this._animateModalContentResize('portraitHistoryModal', () => {
+      if (modalTitle) modalTitle.textContent = '[ Confirm Delete ]';
+      modalBody.innerHTML = confirmationBodyHtml;
+      if (modalFooter) modalFooter.innerHTML = confirmationFooterHtml;
+    });
+
+    // Handle cancel - restore original content
+    const cancelBtn = document.getElementById('portrait-delete-cancel');
+    const confirmBtn = document.getElementById('portrait-delete-confirm');
+
+    const restoreOriginal = () => {
+      this._animateModalContentResize('portraitHistoryModal', () => {
+        if (modalTitle) modalTitle.textContent = originalTitle;
+        modalBody.innerHTML = originalBodyHtml;
+        if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+      });
+
+      // Re-populate ASCII previews after restoring
       if (
-        Array.isArray(nextVersions) &&
-        nextVersions.length > 0 &&
+        Array.isArray(versions) &&
+        versions.length > 0 &&
         window.PortraitHistory &&
         typeof PortraitHistory.batchPopulateAsciiPreviews === 'function'
       ) {
-        PortraitHistory.batchPopulateAsciiPreviews(nextVersions, (ascii) =>
+        PortraitHistory.batchPopulateAsciiPreviews(versions, (ascii) =>
           this.cropAsciiForThumbnail(ascii),
         );
       }
@@ -14543,13 +14956,101 @@ const App = (window.App = {
       }
     };
 
-    this.showConfirmationOverlay(
-      'Delete this saved portrait version? This cannot be undone.',
-      onConfirm,
-    );
+    if (cancelBtn) {
+      cancelBtn.onclick = restoreOriginal;
+    }
+
+    if (confirmBtn) {
+      confirmBtn.onclick = async () => {
+        const remaining = versions.filter((v) => v.id !== versionId);
+        const deletedWasActive = metadata.activeVersionId === versionId;
+
+        const updatedMetadata = {
+          ...metadata,
+          versions: remaining,
+          activeVersionId: deletedWasActive
+            ? remaining[0]?.id || null
+            : metadata.activeVersionId,
+        };
+
+        const updates = {
+          portraitMetadata: updatedMetadata,
+        };
+
+        if (deletedWasActive) {
+          if (remaining[0]) {
+            updates.originalPortraitUrl =
+              remaining[0].url || character.originalPortraitUrl || null;
+            updates.customPortraitAscii =
+              remaining[0].ascii || character.customPortraitAscii || '';
+          } else {
+            // No remaining custom versions – clear custom portrait so we fall back to template/pre-generated art
+            updates.originalPortraitUrl = null;
+            updates.customPortraitAscii = '';
+          }
+        }
+
+        CharacterState.updateCharacter(updates);
+        await this.persistIfAlreadySaved();
+
+        // If no remaining versions, close the modal entirely
+        if (!remaining.length) {
+          this.closePortraitHistory();
+          return;
+        }
+
+        // Rebuild normalized metadata from the latest state
+        const latestState = CharacterState.get();
+        const latestCharacter = latestState.character || {};
+        const latestNormalized =
+          window.PortraitHistory &&
+          typeof PortraitHistory.normalizeForDisplay === 'function'
+            ? PortraitHistory.normalizeForDisplay(latestCharacter)
+            : (() => {
+                const fallbackMetadata = latestCharacter.portraitMetadata || {};
+                const fallbackRaw = Array.isArray(fallbackMetadata.versions)
+                  ? fallbackMetadata.versions
+                  : [];
+                return {
+                  metadata: fallbackMetadata,
+                  versions: fallbackRaw,
+                  hasVersions: fallbackRaw.length > 0,
+                  hasCustomPortraitWithoutHistory: !fallbackRaw.length,
+                };
+              })();
+
+        // Transform back to history view with updated content
+        this._animateModalContentResize('portraitHistoryModal', () => {
+          if (modalTitle) modalTitle.textContent = originalTitle;
+          modalBody.innerHTML = this._buildPortraitHistoryBody(latestNormalized);
+          if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+        });
+
+        // Re-run ASCII thumbnail population & focus wiring for the updated list
+        const nextVersions = Array.isArray(latestNormalized.versions)
+          ? latestNormalized.versions
+          : [];
+        if (
+          Array.isArray(nextVersions) &&
+          nextVersions.length > 0 &&
+          window.PortraitHistory &&
+          typeof PortraitHistory.batchPopulateAsciiPreviews === 'function'
+        ) {
+          PortraitHistory.batchPopulateAsciiPreviews(nextVersions, (ascii) =>
+            this.cropAsciiForThumbnail(ascii),
+          );
+        }
+
+        const cards = this.getPortraitHistoryCards();
+        if (cards.length > 0) {
+          this._portraitHistoryFocusIndex = 0;
+          this.updatePortraitHistoryFocus();
+        }
+      };
+    }
   },
 
-  async copyPortraitHistoryPrompt(versionId) {
+  viewPortraitPrompt(versionId) {
     const state = CharacterState.get();
     const character = state.character || {};
     const metadata = character.portraitMetadata || {};
@@ -14561,30 +15062,114 @@ const App = (window.App = {
       return;
     }
 
-    const promptText = version.prompt;
+    const modal = document.getElementById('portraitHistoryModal');
+    if (!modal) return;
 
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(promptText);
-      } else {
-        // Fallback for older browsers: use a temporary textarea
-        const textarea = document.createElement('textarea');
-        textarea.value = promptText;
-        textarea.setAttribute('readonly', '');
-        textarea.style.position = 'absolute';
-        textarea.style.left = '-9999px';
-        document.body.appendChild(textarea);
-        textarea.select();
-        try {
-          document.execCommand('copy');
-        } finally {
-          document.body.removeChild(textarea);
-        }
+    const modalBody = modal.querySelector('.modal-body');
+    const modalTitle = modal.querySelector('.modal-title');
+    const modalFooter = modal.querySelector('.modal-footer');
+    if (!modalBody) return;
+
+    // Store original content to restore on back
+    const modalHeader = modal.querySelector('.modal-header');
+    const originalBodyHtml = modalBody.innerHTML;
+    const originalHeaderHtml = modalHeader ? modalHeader.innerHTML : '';
+    const originalFooterHtml = modalFooter ? modalFooter.innerHTML : '';
+
+    // Build style label for header - format to sentence case
+    const rawStyle = version.style || 'default';
+    const formatStyleLabel = (str) => {
+      if (!str) return 'Default';
+      // Replace dashes/underscores with spaces
+      let cleaned = str.replace(/[-_]/g, ' ');
+      // Sentence case: capitalize first letter, lowercase the rest
+      if (cleaned.length > 0) {
+        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
       }
-      this.showToast('Prompt copied.');
-    } catch (error) {
-      console.error('Failed to copy portrait prompt:', error);
-      this.showToast('Could not copy prompt. Copy it manually from the card.', 8000);
+      return cleaned;
+    };
+    const styleLabel = formatStyleLabel(rawStyle);
+
+    // Escape prompt text for safe display
+    const escapedPrompt = (version.prompt || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    const promptHeaderHtml = `
+      <h2 class="modal-title">[ Portrait Prompt ]</h2>
+      <span class="portrait-prompt-style-label">Style: ${styleLabel}</span>
+      <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>
+    `;
+
+    const promptBodyHtml = `
+      <pre class="terminal-text portrait-prompt-display">${escapedPrompt}</pre>
+    `;
+
+    const promptFooterHtml = `
+      <button class="terminal-btn" id="portrait-prompt-back">BACK</button>
+      <button class="terminal-btn" id="portrait-prompt-copy">COPY PROMPT</button>
+    `;
+
+    // Transform modal to prompt view
+    this._animateModalContentResize('portraitHistoryModal', () => {
+      if (modalHeader) modalHeader.innerHTML = promptHeaderHtml;
+      modalBody.innerHTML = promptBodyHtml;
+      if (modalFooter) modalFooter.innerHTML = promptFooterHtml;
+    });
+
+    const backBtn = document.getElementById('portrait-prompt-back');
+    const copyBtn = document.getElementById('portrait-prompt-copy');
+
+    const goBack = () => {
+      this._animateModalContentResize('portraitHistoryModal', () => {
+        if (modalHeader) modalHeader.innerHTML = originalHeaderHtml;
+        modalBody.innerHTML = originalBodyHtml;
+        if (modalFooter) modalFooter.innerHTML = originalFooterHtml;
+      });
+
+      // Re-populate ASCII previews after restoring
+      if (Array.isArray(versions) && versions.length > 0 &&
+          window.PortraitHistory &&
+          typeof PortraitHistory.batchPopulateAsciiPreviews === 'function') {
+        PortraitHistory.batchPopulateAsciiPreviews(versions, (ascii) =>
+          this.cropAsciiForThumbnail(ascii),
+        );
+      }
+
+      const cards = this.getPortraitHistoryCards();
+      if (cards.length > 0) {
+        this._portraitHistoryFocusIndex = 0;
+        this.updatePortraitHistoryFocus();
+      }
+    };
+
+    if (backBtn) {
+      backBtn.onclick = goBack;
+    }
+
+    if (copyBtn) {
+      copyBtn.onclick = async () => {
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(version.prompt);
+          } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = version.prompt;
+            textarea.setAttribute('readonly', '');
+            textarea.style.position = 'absolute';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+              document.execCommand('copy');
+            } finally {
+              document.body.removeChild(textarea);
+            }
+          }
+          this.showToast('Prompt copied.');
+        } catch (error) {
+          console.error('Failed to copy portrait prompt:', error);
+          this.showToast('Could not copy prompt.', 5000);
+        }
+      };
     }
   },
 
@@ -14938,6 +15523,17 @@ const App = (window.App = {
       // Also increment the custom portrait counter and append to portrait history
       const current = CharacterState.get().character;
       const currentCount = current.customPortraitCount || 0;
+
+      // Get the current style theme for tagging
+      let currentStyle = null;
+      try {
+        if (window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
+          currentStyle = StorageService.getPortraitPromptTheme();
+        }
+      } catch (e) {
+        // Non-fatal
+      }
+
       const updatedMetadata = window.PortraitHistory
         ? window.PortraitHistory.addVersion(
             current,
@@ -14945,7 +15541,8 @@ const App = (window.App = {
             result.imageUrl,
             {
               source: 'custom-ai',
-              prompt: customPrompt,
+              prompt: fullPrompt,
+              style: currentStyle,
             },
           )
         : current.portraitMetadata || {};
@@ -15897,6 +16494,17 @@ const App = (window.App = {
 
       if (result && result.asciiArt) {
         const currentCount = currentChar.customPortraitCount || 0;
+
+        // Get the current style theme for tagging
+        let quickStyle = null;
+        try {
+          if (window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
+            quickStyle = StorageService.getPortraitPromptTheme();
+          }
+        } catch (e) {
+          // Non-fatal
+        }
+
         const updatedMetadata = window.PortraitHistory
           ? window.PortraitHistory.addVersion(
               currentChar,
@@ -15905,9 +16513,10 @@ const App = (window.App = {
               {
                 source: 'quick-ai',
                 prompt:
-                  (AIService.buildCharacterDescription &&
-                    AIService.buildCharacterDescription(currentChar)) ||
+                  (AIService.buildPortraitPrompt &&
+                    AIService.buildPortraitPrompt(currentChar)) ||
                   null,
+                style: quickStyle,
               },
             )
           : currentChar.portraitMetadata || {};

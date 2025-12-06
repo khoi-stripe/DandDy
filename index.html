@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DandDy Character Manager</title>
     <link href="https://cdn.jsdelivr.net/npm/@fontsource/google-sans-code@5.2.1/index.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="terminal-theme.css">
-    <link rel="stylesheet" href="portraits.css">
-    <link rel="stylesheet" href="character-manager.css">
+    <link rel="stylesheet" href="terminal-theme.css?v=20251206c">
+    <link rel="stylesheet" href="portraits.css?v=20251206c">
+    <link rel="stylesheet" href="character-manager.css?v=20251206c">
 </head>
 <body>
     <div class="terminal-frame">
@@ -619,13 +619,31 @@
     
     <!-- Portrait Prompt Modal (hidden by default) -->
     <div id="portraitPromptModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content portrait-customize-modal">
             <div class="modal-header">
                 <h2 class="modal-title">[ ★ Customize AI Portrait ]</h2>
                 <button class="modal-close" onclick="closePortraitPromptModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <textarea id="portraitPrompt" class="terminal-textarea terminal-input" rows="12" placeholder="Enter custom description..."></textarea>
+                <div class="portrait-style-row">
+                    <div class="portrait-style-label">Style</div>
+                    <div class="selector-shell portrait-style-selector" id="portraitStyleShell">
+                        <button 
+                            type="button"
+                            class="terminal-btn selector-trigger"
+                            id="portraitStyleTrigger"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            onclick="CharacterSheet.toggleSelectorMenu(this)"
+                        >
+                            <span class="selector-trigger-label" id="portraitStyleLabel">Cinematic inks</span>
+                        </button>
+                        <div class="selector-menu portrait-style-menu" id="portraitStyleMenu" role="listbox" aria-label="Portrait style" aria-hidden="true">
+                            <!-- Options populated by JS -->
+                        </div>
+                    </div>
+                </div>
+                <textarea id="portraitPrompt" class="terminal-textarea portrait-prompt-textarea" placeholder="Enter custom description..."></textarea>
             </div>
             <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="surpriseMePortrait()">SURPRISE ME</button>

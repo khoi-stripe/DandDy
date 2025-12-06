@@ -494,6 +494,12 @@
   z-index: 999;
 }
 
+/* Portrait history overflow menus - scrollable with max height */
+.portrait-history-menu.selector-menu {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
 /* Carousel arrow buttons for portrait history
    - Absolutely positioned over the scrollable row
    - Keyboard-focusable buttons for accessibility
@@ -672,5 +678,112 @@
       0 0 28px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.3),
       0 10px 22px rgba(0, 0, 0, 0.6);
   }
+}
+
+/* ===== PORTRAIT PROMPT DISPLAY ===== */
+.portrait-prompt-display {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--modal-accent);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--modal-accent-dim);
+  padding: var(--spacing-md);
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Style label in prompt modal header - positioned between title and close button */
+.portrait-prompt-style-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--modal-accent-dim);
+  flex: 1;
+  text-align: right;
+  margin-right: var(--spacing-md);
+  white-space: nowrap;
+}
+
+/* ===== CUSTOMIZE PORTRAIT MODAL ===== */
+/* Match dimensions and styling to view prompt modal */
+.portrait-customize-modal {
+  max-width: 700px;
+}
+
+/* Style selector in header - positioned between title and close button */
+.portrait-style-selector {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex: 1;
+  justify-content: flex-end;
+  margin-right: var(--spacing-md);
+}
+
+.portrait-style-selector label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--modal-accent-dim);
+  white-space: nowrap;
+}
+
+/* Portrait style selector row - label + selector inline */
+.portrait-style-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.portrait-style-label {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--modal-accent-dim);
+  flex-shrink: 0;
+}
+
+/* Portrait style selector - uses standard listbox pattern */
+.portrait-style-selector.selector-shell {
+  position: relative;
+  flex: 1;
+  max-width: 280px;
+}
+
+/* Menu positioned within modal, scrollable if content overflows */
+.portrait-style-menu.selector-menu {
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* Textarea styled to match portrait-prompt-display */
+.portrait-prompt-textarea {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--modal-accent);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--modal-accent-dim);
+  padding: var(--spacing-md);
+  margin: 0;
+  width: 100%;
+  min-height: 300px;
+  max-height: 400px;
+  resize: vertical;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.portrait-prompt-textarea::placeholder {
+  color: var(--modal-accent-dim);
+}
+
+.portrait-prompt-textarea:focus {
+  border-color: var(--modal-accent);
+  box-shadow: 0 0 5px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5);
+  outline: none;
 }
 
