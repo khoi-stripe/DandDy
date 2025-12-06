@@ -1,0 +1,52 @@
+[
+  {
+    "kind": "style",
+    "key": "classic-ink",
+    "description": "Traditional 1980s RPG sourcebook style with clean linework",
+    "styleDescription": "Render in classic black-and-white ink illustration style, reminiscent of 1980s fantasy RPG sourcebooks. Use clean, confident linework with clear contours and minimal crosshatching. Employ stippling and simple parallel hatching for shading rather than gradients. Keep the composition straightforward with the character as the clear focal point.",
+    "backgroundDescription": "Background should be minimal or absent, letting the character design speak for itself."
+  },
+  {
+    "kind": "style",
+    "key": "dark-fantasy",
+    "description": "Gritty, moody style with heavy shadows and a darker atmosphere",
+    "styleDescription": "Render in a dark, gritty black-and-white style with heavy use of black areas and deep shadows. Create a brooding, ominous atmosphere with dramatic chiaroscuro lighting. Use scratchy, aggressive linework and heavy crosshatching to build texture and grime. The character should emerge from darkness, with only key features catching harsh light. Overall mood: dark fantasy horror, weathered and battle-scarred, suggesting a harsh world.",
+    "backgroundDescription": "Dark, oppressive background with deep shadows and minimal detail, suggesting a grim and dangerous world."
+  },
+  {
+    "kind": "style",
+    "key": "comic-book",
+    "description": "Bold, dynamic style inspired by comic book and graphic novel art",
+    "styleDescription": "Render in bold black-and-white comic book style with strong, confident ink lines. Use dramatic foreshortening and dynamic angles to create energy and movement. Apply high-contrast areas of solid black and white with minimal gray tones. Include speed lines or motion blur effects where appropriate for action poses. Overall mood: heroic and action-packed, like a splash page from a fantasy comic.",
+    "backgroundDescription": "Dynamic background with action lines, speed effects, or dramatic environmental elements that enhance the sense of motion and energy."
+  },
+  {
+    "kind": "style",
+    "key": "pen-and-wash",
+    "description": "Delicate ink linework with soft gray washes for a painterly feel",
+    "styleDescription": "Render in pen and ink wash style, combining fine linework with soft gray watercolor-like washes. Use delicate, flowing lines for contours with loose, expressive strokes. Apply graduated gray washes to create depth and atmosphere without harsh contrast. Let some areas remain loose and sketchy while key features are more defined. Overall mood: elegant and ethereal, like an illustrated fairy tale or art nouveau piece.",
+    "backgroundDescription": "Soft, atmospheric background with gentle gray washes suggesting environment without sharp detail, creating dreamy depth."
+  },
+  {
+    "kind": "style",
+    "key": "woodcut",
+    "description": "Bold, carved style reminiscent of medieval woodblock prints",
+    "styleDescription": "Render in a bold woodcut print style with thick, carved-looking black lines. Use parallel line patterns and stark black-and-white areas without gradients. Create texture through directional hatching that follows the form, like carved wood grain. Keep shapes simplified and graphic with strong silhouettes. Overall mood: medieval and folkloric, like an illuminated manuscript or early printed book illustration.",
+    "backgroundDescription": "Simple, graphic background with bold black shapes or decorative border elements in the woodcut tradition."
+  },
+  {
+    "kind": "style",
+    "key": "manga",
+    "description": "Japanese manga-inspired style with expressive features and screen tones",
+    "styleDescription": "Render in black-and-white manga style with clean, precise linework and expressive features. Use screen tone patterns (dot gradients) for shading instead of crosshatching. Emphasize dynamic poses with flowing hair, fabric, and action lines. Keep facial features stylized with larger eyes and expressive anatomy. Overall mood: dramatic and stylized Japanese fantasy illustration, suitable for a light novel.",
+    "backgroundDescription": "Clean background with screen tone gradients, speed lines, or dramatic effects typical of manga illustration."
+  },
+  {
+    "kind": "style",
+    "key": "sketch",
+    "description": "Loose, gestural style that captures energy and spontaneity",
+    "styleDescription": "Render as a loose, energetic pencil or charcoal sketch with visible construction lines. Use gestural, overlapping strokes that convey movement and life. Keep the drawing raw and unfinished-looking, with some areas more refined than others. Allow smudging and soft edges to create atmospheric depth. Overall mood: spontaneous concept art, like a master artist's sketchbook study.",
+    "backgroundDescription": "Loose, undefined background with gestural marks and atmospheric smudging, suggesting environment without detail."
+  }
+]
+

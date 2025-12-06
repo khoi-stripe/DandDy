@@ -1345,7 +1345,7 @@ window.DANDDY_BACKEND_VERSION = '1.0.0';
       id: 'cinematic-inks',
       label: 'Cinematic Inks (default)',
       description:
-        'More cinematic lighting and framing while staying in black-and-white ink.',
+        'Dramatic black-and-white ink with cinematic lighting and framing.',
       buildStyleLines(options) {
         const lines = [];
         lines.push(
@@ -1362,6 +1362,188 @@ window.DANDDY_BACKEND_VERSION = '1.0.0';
         );
         lines.push(
           'Overall mood: cinematic fantasy portrait, serious and iconic, suitable for a character sheet.',
+        );
+        lines.push('Aspect ratio 3:4.');
+        return lines;
+      },
+    },
+    'classic-ink': {
+      id: 'classic-ink',
+      label: 'Classic Ink',
+      description:
+        'Traditional black-and-white ink style reminiscent of classic fantasy RPG art.',
+      buildStyleLines(options) {
+        const lines = [];
+        lines.push(
+          'Render in classic black-and-white ink illustration style, reminiscent of 1980s fantasy RPG sourcebooks.',
+        );
+        lines.push(
+          'Use clean, confident linework with clear contours and minimal crosshatching.',
+        );
+        lines.push(
+          'Employ stippling and simple parallel hatching for shading rather than gradients.',
+        );
+        lines.push(
+          'Keep the composition straightforward with the character as the clear focal point.',
+        );
+        lines.push(
+          'Background should be minimal or absent, letting the character design speak for itself.',
+        );
+        lines.push('Aspect ratio 3:4.');
+        return lines;
+      },
+    },
+    'dark-fantasy': {
+      id: 'dark-fantasy',
+      label: 'Dark Fantasy',
+      description:
+        'Gritty, moody style with heavy shadows and a darker atmosphere.',
+      buildStyleLines(options) {
+        const lines = [];
+        lines.push(
+          'Render in a dark, gritty black-and-white style with heavy use of black areas and deep shadows.',
+        );
+        lines.push(
+          'Create a brooding, ominous atmosphere with dramatic chiaroscuro lighting.',
+        );
+        lines.push(
+          'Use scratchy, aggressive linework and heavy crosshatching to build texture and grime.',
+        );
+        lines.push(
+          'The character should emerge from darkness, with only key features catching harsh light.',
+        );
+        lines.push(
+          'Overall mood: dark fantasy horror, weathered and battle-scarred, suggesting a harsh world.',
+        );
+        lines.push('Aspect ratio 3:4.');
+        return lines;
+      },
+    },
+    'comic-book': {
+      id: 'comic-book',
+      label: 'Comic Book',
+      description:
+        'Bold, dynamic style inspired by comic book and graphic novel art.',
+      buildStyleLines(options) {
+        const lines = [];
+        lines.push(
+          'Render in bold black-and-white comic book style with strong, confident ink lines.',
+        );
+        lines.push(
+          'Use dramatic foreshortening and dynamic angles to create energy and movement.',
+        );
+        lines.push(
+          'Apply high-contrast areas of solid black and white with minimal gray tones.',
+        );
+        lines.push(
+          'Include speed lines or motion blur effects where appropriate for action poses.',
+        );
+        lines.push(
+          'Overall mood: heroic and action-packed, like a splash page from a fantasy comic.',
+        );
+        lines.push('Aspect ratio 3:4.');
+        return lines;
+      },
+    },
+    'pen-and-wash': {
+      id: 'pen-and-wash',
+      label: 'Pen & Wash',
+      description:
+        'Delicate ink linework with soft gray washes for a painterly feel.',
+      buildStyleLines(options) {
+        const lines = [];
+        lines.push(
+          'Render in pen and ink wash style, combining fine linework with soft gray watercolor-like washes.',
+        );
+        lines.push(
+          'Use delicate, flowing lines for contours with loose, expressive strokes.',
+        );
+        lines.push(
+          'Apply graduated gray washes to create depth and atmosphere without harsh contrast.',
+        );
+        lines.push(
+          'Let some areas remain loose and sketchy while key features are more defined.',
+        );
+        lines.push(
+          'Overall mood: elegant and ethereal, like an illustrated fairy tale or art nouveau piece.',
+        );
+        lines.push('Aspect ratio 3:4.');
+        return lines;
+      },
+    },
+    'woodcut': {
+      id: 'woodcut',
+      label: 'Woodcut',
+      description:
+        'Bold, carved style reminiscent of medieval woodblock prints.',
+      buildStyleLines(options) {
+        const lines = [];
+        lines.push(
+          'Render in a bold woodcut print style with thick, carved-looking black lines.',
+        );
+        lines.push(
+          'Use parallel line patterns and stark black-and-white areas without gradients.',
+        );
+        lines.push(
+          'Create texture through directional hatching that follows the form, like carved wood grain.',
+        );
+        lines.push(
+          'Keep shapes simplified and graphic with strong silhouettes.',
+        );
+        lines.push(
+          'Overall mood: medieval and folkloric, like an illuminated manuscript or early printed book illustration.',
+        );
+        lines.push('Aspect ratio 3:4.');
+        return lines;
+      },
+    },
+    'manga': {
+      id: 'manga',
+      label: 'Manga',
+      description:
+        'Japanese manga-inspired style with expressive features and screen tones.',
+      buildStyleLines(options) {
+        const lines = [];
+        lines.push(
+          'Render in black-and-white manga style with clean, precise linework and expressive features.',
+        );
+        lines.push(
+          'Use screen tone patterns (dot gradients) for shading instead of crosshatching.',
+        );
+        lines.push(
+          'Emphasize dynamic poses with flowing hair, fabric, and action lines.',
+        );
+        lines.push(
+          'Keep facial features stylized with larger eyes and expressive anatomy.',
+        );
+        lines.push(
+          'Overall mood: dramatic and stylized Japanese fantasy illustration, suitable for a light novel.',
+        );
+        lines.push('Aspect ratio 3:4.');
+        return lines;
+      },
+    },
+    'sketch': {
+      id: 'sketch',
+      label: 'Rough Sketch',
+      description:
+        'Loose, gestural style that captures energy and spontaneity.',
+      buildStyleLines(options) {
+        const lines = [];
+        lines.push(
+          'Render as a loose, energetic pencil or charcoal sketch with visible construction lines.',
+        );
+        lines.push(
+          'Use gestural, overlapping strokes that convey movement and life.',
+        );
+        lines.push(
+          'Keep the drawing raw and unfinished-looking, with some areas more refined than others.',
+        );
+        lines.push(
+          'Allow smudging and soft edges to create atmospheric depth.',
+        );
+        lines.push(
+          'Overall mood: spontaneous concept art, like a master artist\'s sketchbook study.',
         );
         lines.push('Aspect ratio 3:4.');
         return lines;
@@ -12051,6 +12233,86 @@ function markUserChanges() {
 }
 
 // ========================================
+// SESSION IN PROGRESS NOTICE
+// ========================================
+
+const BUILDER_SESSION_KEY = 'danddy_builder_session';
+let sessionNoticeDismissed = false;
+
+// Check if there's a builder session in progress
+function hasBuilderSession() {
+    try {
+        const raw = localStorage.getItem(BUILDER_SESSION_KEY);
+        if (!raw) return false;
+        const session = JSON.parse(raw);
+        // Consider it a valid session if we have meaningful progress
+        const hasProgress = session.currentQuestionId && session.currentQuestionId !== 'intro';
+        const hasCharacterData = session.character && (
+            session.character.name ||
+            session.character.race ||
+            session.character.class
+        );
+        return hasProgress || hasCharacterData;
+    } catch {
+        return false;
+    }
+}
+
+// Get session preview for display
+function getBuilderSessionPreview() {
+    try {
+        const raw = localStorage.getItem(BUILDER_SESSION_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch {
+        return null;
+    }
+}
+
+// Format time ago string
+function formatTimeAgo(dateString) {
+    if (!dateString) return '';
+    const savedDate = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - savedDate;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return savedDate.toLocaleDateString();
+}
+
+// Show the session notice if there's a session in progress
+function maybeShowSessionNotice() {
+    if (sessionNoticeDismissed) return;
+    if (!hasBuilderSession()) return;
+    
+    const sessionNotice = document.getElementById('sessionNotice');
+    const sessionNoticeTime = document.getElementById('sessionNoticeTime');
+    
+    if (sessionNotice) {
+        const session = getBuilderSessionPreview();
+        if (session && session._savedAt) {
+            sessionNoticeTime.textContent = `· ${formatTimeAgo(session._savedAt)}`;
+        }
+        sessionNotice.classList.remove('is-hidden');
+    }
+}
+
+// Dismiss the session notice (per-session only)
+function dismissSessionNotice() {
+    const sessionNotice = document.getElementById('sessionNotice');
+    if (sessionNotice) {
+        sessionNotice.classList.add('is-hidden');
+        sessionNoticeDismissed = true;
+    }
+}
+
+// ========================================
 // SPLASH SCREEN (manager uses welcome modal instead of a full-page splash)
 // ========================================
 
@@ -12704,6 +12966,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const fromBuilder = urlParams.get('from') === 'builder';
     const splashDismissed = sessionStorage.getItem('welcomeSplashDismissed') === 'true';
+
+    // Show session notice if there's a builder session in progress
+    // (but not if returning from builder - they just left intentionally)
+    if (!fromBuilder) {
+        maybeShowSessionNotice();
+    }
 
     // Show guest notice banner if returning from builder after saving while not logged in
     if (fromBuilder && !isAuthenticated) {

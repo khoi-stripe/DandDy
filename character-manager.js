@@ -2480,6 +2480,86 @@ function markUserChanges() {
 }
 
 // ========================================
+// SESSION IN PROGRESS NOTICE
+// ========================================
+
+const BUILDER_SESSION_KEY = 'danddy_builder_session';
+let sessionNoticeDismissed = false;
+
+// Check if there's a builder session in progress
+function hasBuilderSession() {
+    try {
+        const raw = localStorage.getItem(BUILDER_SESSION_KEY);
+        if (!raw) return false;
+        const session = JSON.parse(raw);
+        // Consider it a valid session if we have meaningful progress
+        const hasProgress = session.currentQuestionId && session.currentQuestionId !== 'intro';
+        const hasCharacterData = session.character && (
+            session.character.name ||
+            session.character.race ||
+            session.character.class
+        );
+        return hasProgress || hasCharacterData;
+    } catch {
+        return false;
+    }
+}
+
+// Get session preview for display
+function getBuilderSessionPreview() {
+    try {
+        const raw = localStorage.getItem(BUILDER_SESSION_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch {
+        return null;
+    }
+}
+
+// Format time ago string
+function formatTimeAgo(dateString) {
+    if (!dateString) return '';
+    const savedDate = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - savedDate;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return savedDate.toLocaleDateString();
+}
+
+// Show the session notice if there's a session in progress
+function maybeShowSessionNotice() {
+    if (sessionNoticeDismissed) return;
+    if (!hasBuilderSession()) return;
+    
+    const sessionNotice = document.getElementById('sessionNotice');
+    const sessionNoticeTime = document.getElementById('sessionNoticeTime');
+    
+    if (sessionNotice) {
+        const session = getBuilderSessionPreview();
+        if (session && session._savedAt) {
+            sessionNoticeTime.textContent = `· ${formatTimeAgo(session._savedAt)}`;
+        }
+        sessionNotice.classList.remove('is-hidden');
+    }
+}
+
+// Dismiss the session notice (per-session only)
+function dismissSessionNotice() {
+    const sessionNotice = document.getElementById('sessionNotice');
+    if (sessionNotice) {
+        sessionNotice.classList.add('is-hidden');
+        sessionNoticeDismissed = true;
+    }
+}
+
+// ========================================
 // SPLASH SCREEN (manager uses welcome modal instead of a full-page splash)
 // ========================================
 
@@ -3133,6 +3213,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const fromBuilder = urlParams.get('from') === 'builder';
     const splashDismissed = sessionStorage.getItem('welcomeSplashDismissed') === 'true';
+
+    // Show session notice if there's a builder session in progress
+    // (but not if returning from builder - they just left intentionally)
+    if (!fromBuilder) {
+        maybeShowSessionNotice();
+    }
 
     // Show guest notice banner if returning from builder after saving while not logged in
     if (fromBuilder && !isAuthenticated) {

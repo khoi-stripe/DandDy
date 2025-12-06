@@ -198,6 +198,13 @@
         <div class="left-panel" id="character-list-panel">
             <!-- Controls Section -->
             <div class="controls-section">
+                <!-- Session in progress notice -->
+                <div id="sessionNotice" class="session-notice is-hidden">
+                    <span class="session-notice-icon">✎</span>
+                    <span class="session-notice-text">You have a <a href="character-builder/index.html?resume=true" class="session-notice-link">character in progress</a></span>
+                    <span class="session-notice-time" id="sessionNoticeTime"></span>
+                    <button class="modal-close session-notice-close" onclick="dismissSessionNotice()">&times;</button>
+                </div>
                 <!-- Guest mode notice (shown only when not logged in) -->
                 <div id="guestNotice" class="guest-notice is-hidden">
                     <span class="guest-notice-icon">⚠</span>
@@ -664,6 +671,6 @@
     </div><!-- /terminal-frame -->
     
     <!-- Concatenated manager bundle (see scripts/simple_bundle.py) -->
-    <script src="manager.bundle.js?v=20251205a"></script>
+    <script src="manager.bundle.js?v=20251205b"></script>
 </body>
 </html>

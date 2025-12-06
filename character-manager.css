@@ -75,6 +75,49 @@
     margin: 0 calc(-1 * var(--spacing-xl)) var(--spacing-md) calc(-1 * var(--spacing-xl));
 }
 
+/* Session in progress notice */
+.session-notice {
+    margin: 0 0 var(--spacing-md) 0;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--sheet-accent);
+    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l), 0.1);
+    font-size: var(--font-size-small);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--sheet-accent);
+}
+
+.session-notice-icon {
+    color: var(--sheet-accent);
+}
+
+.session-notice-text {
+    color: var(--sheet-accent);
+}
+
+.session-notice-link {
+    color: var(--sheet-accent);
+    text-decoration: underline;
+}
+
+.session-notice-link:hover {
+    text-shadow: 0 0 5px var(--sheet-accent);
+}
+
+.session-notice-time {
+    color: var(--sheet-accent-dim);
+    margin-left: auto;
+}
+
+.session-notice-close {
+    color: var(--sheet-accent-dim);
+}
+
+.session-notice-close:hover {
+    color: var(--sheet-accent);
+}
+
 .guest-notice {
     margin: 0 0 24px 0;
     padding: var(--spacing-sm) var(--spacing-md);

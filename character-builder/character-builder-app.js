@@ -1660,18 +1660,6 @@ const App = (window.App = {
               )
             : character.portraitMetadata || {};
 
-        // After a fresh custom portrait is generated in the builder, prefer
-        // showing the ASCII art first so the new artwork is immediately
-        // visible, regardless of the global default portrait view mode.
-        if (window.StorageService && StorageService.setPortraitViewMode) {
-          try {
-            StorageService.setPortraitViewMode('ascii');
-          } catch (e) {
-            // Non-fatal: keep generating even if preference write fails
-            console.warn('Failed to set portrait view mode to ASCII after guided AI portrait', e);
-          }
-        }
-
         CharacterState.updateCharacter({
           originalPortraitUrl: result.imageUrl || null,
           customPortraitAscii: result.asciiArt,
@@ -4262,16 +4250,6 @@ const App = (window.App = {
               },
             )
           : currentChar.portraitMetadata || {};
-
-        // When a quick-create portrait finishes, immediately prefer ASCII view
-        // so players see the freshly generated text art instead of the PNG.
-        if (window.StorageService && StorageService.setPortraitViewMode) {
-          try {
-            StorageService.setPortraitViewMode('ascii');
-          } catch (e) {
-            console.warn('Failed to set portrait view mode to ASCII after quick AI portrait', e);
-          }
-        }
 
         CharacterState.updateCharacter({
           originalPortraitUrl: result.imageUrl || null,
