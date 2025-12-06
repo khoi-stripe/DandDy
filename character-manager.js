@@ -1557,15 +1557,16 @@ async function generatePortraitForCharacter(id) {
     currentPortraitCharacterId = id;
     
     // Build default prompt:
-    // 1) Prefer the prompt from the *active* portrait version (so edits
-    //    always start from the prompt that actually produced the current art).
-    // 2) Fall back to the same helper as the builder so pose/camera/theme +
-    //    your admin race/class/scene snippets are reflected for new portraits.
+    // Show only the CHARACTER DESCRIPTION in the modal (not the full prompt with
+    // style instructions). This matches the builder behavior and prevents
+    // style/pose/scene instructions from compounding on each regeneration.
+    // The rendering instructions (Pose/STYLE/Scene) are added fresh when the
+    // user clicks "Generate" based on their selected style dropdown.
     let defaultPrompt = '';
     let activeStyle = null;
     
     try {
-        let versionPrompt = null;
+        // Get the style from the active portrait version (if any)
         try {
             const metadata = character.portraitMetadata || {};
             const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
@@ -1574,24 +1575,18 @@ async function generatePortraitForCharacter(id) {
                 let active =
                     (activeId && versions.find((v) => v && v.id === activeId)) ||
                     versions[versions.length - 1];
-                if (active && active.prompt) {
-                    versionPrompt = String(active.prompt);
-                }
                 // Get the style from the active version if available
                 if (active && active.style) {
                     activeStyle = active.style;
                 }
             }
         } catch (e) {
-            // Non-fatal – continue to template fallback below.
+            // Non-fatal – continue to fallback below.
         }
 
-        if (versionPrompt) {
-            defaultPrompt = versionPrompt;
-        } else if (window.AIService && typeof AIService.buildPortraitPrompt === 'function') {
-            defaultPrompt = AIService.buildPortraitPrompt(character);
-        } else if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
-            // Fallback: legacy behavior if buildPortraitPrompt is ever unavailable.
+        // Always use just the character description (no style/pose/scene instructions)
+        // This prevents style instructions from compounding on each regeneration.
+        if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
             defaultPrompt = AIService.buildCharacterDescription(character);
         } else {
             defaultPrompt = `${character.race} ${character.class}`;

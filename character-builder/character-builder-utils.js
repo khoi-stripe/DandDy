@@ -49,7 +49,7 @@ const Utils = window.Utils = {
         ? this.stripEmojis(sourceText)
         : sourceText;
 
-    // Allow skipping by pressing any key
+    // Allow skipping by pressing any key or clicking/tapping
     const skipHandler = (e) => {
       // Only skip if not typing in an input field
       if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
@@ -58,6 +58,8 @@ const Utils = window.Utils = {
     };
 
     window.addEventListener('keydown', skipHandler, { once: true });
+    window.addEventListener('click', skipHandler, { once: true });
+    window.addEventListener('touchstart', skipHandler, { once: true, passive: true });
 
     // Type out character by character, or skip if interrupted
     for (let i = 0; i < safeText.length; i++) {
@@ -72,6 +74,8 @@ const Utils = window.Utils = {
 
     // Clean up
     window.removeEventListener('keydown', skipHandler);
+    window.removeEventListener('click', skipHandler);
+    window.removeEventListener('touchstart', skipHandler);
     element.classList.remove('is-typing');
   },
 

@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DandDy Dev Tools</title>
+  <link href="https://cdn.jsdelivr.net/npm/@fontsource/google-sans-code@5.2.1/index.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="terminal-theme.css">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #000;
+      color: var(--terminal-fg);
+      font-family: "Google Sans Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    /* Subtle grid pattern background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: 
+        linear-gradient(90deg, hsla(120, 100%, 50%, 0.02) 1px, transparent 1px),
+        linear-gradient(hsla(120, 100%, 50%, 0.02) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .header {
+      margin-bottom: 40px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--terminal-dim);
+    }
+
+    .header-row {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .title {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .title::before {
+      content: '>';
+      color: var(--terminal-dim);
+      animation: blink 1.2s step-end infinite;
+    }
+
+    @keyframes blink {
+      50% { opacity: 0.3; }
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--terminal-dim);
+      margin-top: 8px;
+    }
+
+    .back-link {
+      font-size: 13px;
+      color: var(--terminal-accent);
+      text-decoration: none;
+      margin-left: auto;
+      transition: color 0.15s;
+    }
+
+    .back-link:hover {
+      color: var(--terminal-fg);
+    }
+
+    /* Category sections */
+    .category {
+      margin-bottom: 40px;
+    }
+
+    .category-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .category-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--terminal-dim);
+      border-radius: 4px;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .category-icon.admin { border-color: var(--modal-accent); color: var(--modal-accent); }
+    .category-icon.debug { border-color: var(--terminal-fg); color: var(--terminal-fg); }
+    .category-icon.test { border-color: var(--terminal-accent); color: var(--terminal-accent); }
+    .category-icon.viewer { border-color: var(--sheet-accent); color: var(--sheet-accent); }
+    .category-icon.demo { border-color: #c678dd; color: #c678dd; }
+
+    .category-title {
+      font-size: 16px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 0;
+    }
+
+    .category-count {
+      font-size: 11px;
+      color: var(--terminal-dim);
+      margin-left: auto;
+    }
+
+    /* Link grid */
+    .link-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+    }
+
+    .link-card {
+      display: flex;
+      flex-direction: column;
+      background: rgba(0, 255, 0, 0.02);
+      border: 1px solid rgba(0, 255, 0, 0.15);
+      border-radius: 6px;
+      padding: 14px 16px;
+      text-decoration: none;
+      transition: all 0.18s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .link-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--terminal-dim);
+      transition: background 0.18s;
+    }
+
+    .link-card:hover {
+      background: rgba(0, 255, 0, 0.05);
+      border-color: var(--terminal-fg);
+      transform: translateX(4px);
+    }
+
+    .link-card:hover::before {
+      background: var(--terminal-fg);
+    }
+
+    /* Category-specific hover colors */
+    .category.admin .link-card:hover { border-color: var(--modal-accent); }
+    .category.admin .link-card:hover::before { background: var(--modal-accent); }
+    .category.test .link-card:hover { border-color: var(--terminal-accent); }
+    .category.test .link-card:hover::before { background: var(--terminal-accent); }
+    .category.viewer .link-card:hover { border-color: var(--sheet-accent); }
+    .category.viewer .link-card:hover::before { background: var(--sheet-accent); }
+    .category.demo .link-card:hover { border-color: #c678dd; }
+    .category.demo .link-card:hover::before { background: #c678dd; }
+
+    .link-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--terminal-fg);
+      margin-bottom: 4px;
+    }
+
+    .link-path {
+      font-size: 11px;
+      color: var(--terminal-dim);
+      word-break: break-all;
+    }
+
+    .link-desc {
+      font-size: 12px;
+      color: var(--terminal-accent-dim);
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(0, 255, 0, 0.15);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-text {
+      font-size: 12px;
+      color: var(--terminal-dim);
+    }
+
+    .main-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .main-link {
+      font-size: 13px;
+      color: var(--terminal-fg);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .main-link:hover {
+      color: var(--terminal-accent);
+    }
+
+    /* Quick stats */
+    .stats {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 600;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--terminal-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px 16px;
+      }
+      
+      .title {
+        font-size: 22px;
+      }
+      
+      .link-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .header-row {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .back-link {
+        margin-left: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-row">
+        <h1 class="title">DandDy Dev Tools</h1>
+        <a href="index.html" class="back-link">← Back to App</a>
+      </div>
+      <p class="subtitle">Admin panels, debug utilities, and test pages for development</p>
+    </header>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-value">2</span>
+        <span class="stat-label">Admin</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">14</span>
+        <span class="stat-label">Debug</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">10</span>
+        <span class="stat-label">Test</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">4</span>
+        <span class="stat-label">Viewers/Demos</span>
+      </div>
+    </div>
+
+    <!-- Admin Pages -->
+    <section class="category admin">
+      <div class="category-header">
+        <div class="category-icon admin">⚙</div>
+        <h2 class="category-title">Admin Panels</h2>
+        <span class="category-count">2 pages</span>
+      </div>
+      <div class="link-grid">
+        <a href="prompt-style-admin.html" class="link-card">
+          <span class="link-name">Portrait Prompt Config</span>
+          <span class="link-path">prompt-style-admin.html</span>
+          <span class="link-desc">Manage AI portrait generation prompts and style templates</span>
+        </a>
+        <a href="debug/character-admin.html" class="link-card">
+          <span class="link-name">Character Admin</span>
+          <span class="link-path">debug/character-admin.html</span>
+          <span class="link-desc">Character data management and inspection tools</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Debug Pages -->
+    <section class="category debug">
+      <div class="category-header">
+        <div class="category-icon debug">🔧</div>
+        <h2 class="category-title">Debug Utilities</h2>
+        <span class="category-count">14 pages</span>
+      </div>
+      <div class="link-grid">
+        <a href="debug/debug-storage.html" class="link-card">
+          <span class="link-name">Storage Inspector</span>
+          <span class="link-path">debug/debug-storage.html</span>
+          <span class="link-desc">View and manage localStorage data</span>
+        </a>
+        <a href="debug/clear_storage.html" class="link-card">
+          <span class="link-name">Clear Storage</span>
+          <span class="link-path">debug/clear_storage.html</span>
+          <span class="link-desc">Reset localStorage and clear cached data</span>
+        </a>
+        <a href="debug/DEBUG_SPELL_STORAGE.html" class="link-card">
+          <span class="link-name">Spell Storage Debug</span>
+          <span class="link-path">debug/DEBUG_SPELL_STORAGE.html</span>
+          <span class="link-desc">Debug spell data storage and retrieval</span>
+        </a>
+        <a href="debug/debug-sort-order.html" class="link-card">
+          <span class="link-name">Sort Order Debug</span>
+          <span class="link-path">debug/debug-sort-order.html</span>
+          <span class="link-desc">Test and debug sorting algorithms</span>
+        </a>
+        <a href="debug/animation-lab.html" class="link-card">
+          <span class="link-name">Animation Lab</span>
+          <span class="link-path">debug/animation-lab.html</span>
+          <span class="link-desc">Experiment with CSS animations</span>
+        </a>
+        <a href="debug/cube-control.html" class="link-card">
+          <span class="link-name">Cube Control</span>
+          <span class="link-path">debug/cube-control.html</span>
+          <span class="link-desc">3D cube manipulation testing</span>
+        </a>
+        <a href="debug/compare-cubes.html" class="link-card">
+          <span class="link-name">Compare Cubes</span>
+          <span class="link-path">debug/compare-cubes.html</span>
+          <span class="link-desc">Side-by-side cube comparison</span>
+        </a>
+        <a href="debug/icosahedron-only.html" class="link-card">
+          <span class="link-name">Icosahedron</span>
+          <span class="link-path">debug/icosahedron-only.html</span>
+          <span class="link-desc">D20 icosahedron rendering</span>
+        </a>
+        <a href="debug/isometric-wireframe-cube.html" class="link-card">
+          <span class="link-name">Isometric Wireframe</span>
+          <span class="link-path">debug/isometric-wireframe-cube.html</span>
+          <span class="link-desc">Isometric cube wireframe testing</span>
+        </a>
+        <a href="debug/polyhedron-showcase.html" class="link-card">
+          <span class="link-name">Polyhedron Showcase</span>
+          <span class="link-path">debug/polyhedron-showcase.html</span>
+          <span class="link-desc">Display all dice polyhedrons</span>
+        </a>
+        <a href="debug/selector-animation.html" class="link-card">
+          <span class="link-name">Selector Animation</span>
+          <span class="link-path">debug/selector-animation.html</span>
+          <span class="link-desc">Selection UI animations</span>
+        </a>
+        <a href="debug/overflow-button.html" class="link-card">
+          <span class="link-name">Overflow Button</span>
+          <span class="link-path">debug/overflow-button.html</span>
+          <span class="link-desc">Overflow menu button testing</span>
+        </a>
+        <a href="debug/overflow-corner-lab.html" class="link-card">
+          <span class="link-name">Overflow Corner Lab</span>
+          <span class="link-path">debug/overflow-corner-lab.html</span>
+          <span class="link-desc">Corner overflow UI experiments</span>
+        </a>
+        <a href="debug/theme-demo.html" class="link-card">
+          <span class="link-name">Theme Demo</span>
+          <span class="link-path">debug/theme-demo.html</span>
+          <span class="link-desc">Preview theme colors and variables</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Test Pages -->
+    <section class="category test">
+      <div class="category-header">
+        <div class="category-icon test">🧪</div>
+        <h2 class="category-title">Test Pages</h2>
+        <span class="category-count">10 pages</span>
+      </div>
+      <div class="link-grid">
+        <a href="debug/test-cloud-storage.html" class="link-card">
+          <span class="link-name">Cloud Storage Test</span>
+          <span class="link-path">debug/test-cloud-storage.html</span>
+          <span class="link-desc">Test cloud sync functionality</span>
+        </a>
+        <a href="debug/test-production-login.html" class="link-card">
+          <span class="link-name">Production Login Test</span>
+          <span class="link-path">debug/test-production-login.html</span>
+          <span class="link-desc">Test authentication flow</span>
+        </a>
+        <a href="debug/test-shared-sheet.html" class="link-card">
+          <span class="link-name">Shared Sheet Test</span>
+          <span class="link-path">debug/test-shared-sheet.html</span>
+          <span class="link-desc">Test character sheet sharing</span>
+        </a>
+        <a href="debug/test-portrait-loader.html" class="link-card">
+          <span class="link-name">Portrait Loader Test</span>
+          <span class="link-path">debug/test-portrait-loader.html</span>
+          <span class="link-desc">Test portrait image loading</span>
+        </a>
+        <a href="debug/test-ascii-import.html" class="link-card">
+          <span class="link-name">ASCII Import Test</span>
+          <span class="link-path">debug/test-ascii-import.html</span>
+          <span class="link-desc">Test ASCII art import</span>
+        </a>
+        <a href="debug/test-cube-spinner.html" class="link-card">
+          <span class="link-name">Cube Spinner Test</span>
+          <span class="link-path">debug/test-cube-spinner.html</span>
+          <span class="link-desc">Test dice cube animation</span>
+        </a>
+        <a href="character-builder/test-portrait-modal.html" class="link-card">
+          <span class="link-name">Portrait Modal Test</span>
+          <span class="link-path">character-builder/test-portrait-modal.html</span>
+          <span class="link-desc">Test portrait selection modal</span>
+        </a>
+        <a href="character-builder/ascii-test.html" class="link-card">
+          <span class="link-name">ASCII Art Test</span>
+          <span class="link-path">character-builder/ascii-test.html</span>
+          <span class="link-desc">Test ASCII art rendering</span>
+        </a>
+        <a href="quality-test.html" class="link-card">
+          <span class="link-name">Quality Test</span>
+          <span class="link-path">quality-test.html</span>
+          <span class="link-desc">Quality assurance tests</span>
+        </a>
+        <a href="scripts/test_encoding_demo.html" class="link-card">
+          <span class="link-name">Encoding Demo</span>
+          <span class="link-path">scripts/test_encoding_demo.html</span>
+          <span class="link-desc">Test character encoding</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- Viewer Pages -->
+    <section class="category viewer">
+      <div class="category-header">
+        <div class="category-icon viewer">👁</div>
+        <h2 class="category-title">Viewers & Demos</h2>
+        <span class="category-count">4 pages</span>
+      </div>
+      <div class="link-grid">
+        <a href="generated_portraits/viewer.html" class="link-card">
+          <span class="link-name">Portrait Viewer</span>
+          <span class="link-path">generated_portraits/viewer.html</span>
+          <span class="link-desc">Browse generated portrait gallery</span>
+        </a>
+        <a href="generated_portraits/simple-viewer.html" class="link-card">
+          <span class="link-name">Simple Portrait Viewer</span>
+          <span class="link-path">generated_portraits/simple-viewer.html</span>
+          <span class="link-desc">Minimal portrait viewer</span>
+        </a>
+        <a href="character-builder/view-portraits.html" class="link-card">
+          <span class="link-name">Character Portraits</span>
+          <span class="link-path">character-builder/view-portraits.html</span>
+          <span class="link-desc">View character portrait options</span>
+        </a>
+        <a href="web-simple/demo.html" class="link-card">
+          <span class="link-name">Web Simple Demo</span>
+          <span class="link-path">web-simple/demo.html</span>
+          <span class="link-desc">Simplified web interface demo</span>
+        </a>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span class="footer-text">DandDy Development Tools</span>
+      <div class="main-links">
+        <a href="index.html" class="main-link">Character Manager</a>
+        <a href="character-builder/index.html" class="main-link">Character Builder</a>
+        <a href="generated_portraits/index.html" class="main-link">Portrait Gallery</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
+
+

@@ -154,8 +154,10 @@
   color: var(--sheet-accent);
 }
 
-/* 80px spinning cube for placeholder */
+/* Spinning cube for placeholder - uses CSS variables for responsive sizing */
 .portrait-placeholder-cube-container {
+  --portrait-cube-size: 80px;
+  --portrait-cube-depth: calc(var(--portrait-cube-size) / 2);
   perspective: 200px;
   display: flex;
   align-items: center;
@@ -168,8 +170,8 @@
 }
 
 .portrait-placeholder-cube {
-  width: 80px;
-  height: 80px;
+  width: var(--portrait-cube-size);
+  height: var(--portrait-cube-size);
   position: relative;
   transform-style: preserve-3d;
   animation: portrait-cube-spin 24s infinite linear;
@@ -198,12 +200,26 @@
 }
 
 /* Cube faces */
-.portrait-placeholder-cube i:nth-child(1) { transform: translateZ(40px); }
-.portrait-placeholder-cube i:nth-child(2) { transform: rotateY(180deg) translateZ(40px); }
-.portrait-placeholder-cube i:nth-child(3) { transform: rotateY(90deg) translateZ(40px); }
-.portrait-placeholder-cube i:nth-child(4) { transform: rotateY(-90deg) translateZ(40px); }
-.portrait-placeholder-cube i:nth-child(5) { transform: rotateX(90deg) translateZ(40px); }
-.portrait-placeholder-cube i:nth-child(6) { transform: rotateX(-90deg) translateZ(40px); }
+.portrait-placeholder-cube i:nth-child(1) { transform: translateZ(var(--portrait-cube-depth)); }
+.portrait-placeholder-cube i:nth-child(2) { transform: rotateY(180deg) translateZ(var(--portrait-cube-depth)); }
+.portrait-placeholder-cube i:nth-child(3) { transform: rotateY(90deg) translateZ(var(--portrait-cube-depth)); }
+.portrait-placeholder-cube i:nth-child(4) { transform: rotateY(-90deg) translateZ(var(--portrait-cube-depth)); }
+.portrait-placeholder-cube i:nth-child(5) { transform: rotateX(90deg) translateZ(var(--portrait-cube-depth)); }
+.portrait-placeholder-cube i:nth-child(6) { transform: rotateX(-90deg) translateZ(var(--portrait-cube-depth)); }
+
+/* Responsive: shrink cube on tablet */
+@media (max-width: 1024px) {
+  .portrait-placeholder-cube-container {
+    --portrait-cube-size: 60px;
+  }
+}
+
+/* Responsive: shrink cube on mobile */
+@media (max-width: 768px) {
+  .portrait-placeholder-cube-container {
+    --portrait-cube-size: 50px;
+  }
+}
 
 @keyframes portrait-cube-spin {
   from {
