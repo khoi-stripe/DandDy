@@ -615,8 +615,9 @@
     padding: 0;
     cursor: pointer;
     color: var(--sheet-accent-dim);
-    font-size: 1.15rem;
+    font-size: 1.4rem;
     line-height: 1;
+    transition: color 0.2s ease, text-shadow 0.2s ease;
 }
 
 .manager-settings-link:hover {
@@ -883,12 +884,11 @@
 .character-card.is-selected {
     border-color: var(--terminal-border) !important;
     background-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.08);
-    /* Breathing glow borrowed from toast timing, but slower + more organic,
-       plus a subtle drop shadow to ground the card. */
+    /* Breathing glow - soft diffuse glow, plus drop shadow to ground the card. */
     box-shadow:
-        0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.5),
-        0 0 14px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.45),
-        0 0 28px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.3),
+        0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.4),
+        0 0 12px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.3),
+        0 0 28px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.15),
         0 10px 22px rgba(0, 0, 0, 0.6);
     animation: card-glow 4.6s ease-in-out 0.3s infinite;
 }
@@ -917,12 +917,11 @@
 .character-card.is-selected.is-keyboard-focused {
     border-color: var(--terminal-border) !important;
     background-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.14);
-    /* Maintain the same glow intensity while hovered/focused so it feels stable,
-       and keep the grounding drop shadow. */
+    /* Slightly intensified glow on hover/focus, keep the grounding drop shadow. */
     box-shadow:
         0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.5),
-        0 0 18px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.7),
-        0 0 34px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.4),
+        0 0 16px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.4),
+        0 0 35px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.2),
         0 10px 24px rgba(0, 0, 0, 0.7) !important;
 }
 
@@ -1134,6 +1133,6 @@
 
 .modal-discard-actions {
     display: flex;
-    gap: var(--spacing-md);
+    gap: var(--spacing-sm);
     justify-content: center;
 }

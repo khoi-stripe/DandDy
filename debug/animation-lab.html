@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Animation Lab - DandDy</title>
+  <link rel="stylesheet" href="../terminal-theme.css">
+  <style>
+    :root {
+      --lab-ease-bounce: cubic-bezier(0.2, 0.8, 0.2, 1.05);
+      --lab-duration: 350ms;
+    }
+
+    body {
+      background: var(--terminal-bg);
+      color: var(--terminal-fg);
+      font-family: var(--font-mono);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      color: var(--sheet-accent);
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--terminal-dim);
+      margin-bottom: 32px;
+    }
+
+    .lab-grid {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 32px;
+      max-width: 1200px;
+    }
+
+    /* Control Panel */
+    .control-panel {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--terminal-border);
+      padding: 20px;
+      position: sticky;
+      top: 20px;
+      height: fit-content;
+    }
+
+    .control-panel h2 {
+      color: var(--sheet-accent);
+      font-size: 14px;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .control-group {
+      margin-bottom: 20px;
+    }
+
+    .control-group label {
+      display: block;
+      color: var(--terminal-dim);
+      font-size: 11px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .control-group input[type="text"],
+    .control-group input[type="number"],
+    .control-group select {
+      width: 100%;
+      background: var(--terminal-bg);
+      border: 1px solid var(--terminal-border);
+      color: var(--terminal-fg);
+      padding: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+
+    .control-group input:focus,
+    .control-group select:focus {
+      outline: none;
+      border-color: var(--sheet-accent);
+    }
+
+    .preset-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .preset-btn {
+      background: transparent;
+      border: 1px solid var(--terminal-dim);
+      color: var(--terminal-dim);
+      padding: 4px 8px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      border-color: var(--sheet-accent);
+      color: var(--sheet-accent);
+    }
+
+    .preset-btn.active {
+      background: var(--sheet-accent);
+      border-color: var(--sheet-accent);
+      color: var(--terminal-bg);
+    }
+
+    .current-values {
+      background: var(--terminal-bg);
+      border: 1px solid var(--terminal-dim);
+      padding: 12px;
+      margin-top: 20px;
+      font-size: 11px;
+    }
+
+    .current-values code {
+      color: var(--sheet-accent);
+    }
+
+    /* Preview Area */
+    .preview-area {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .preview-section {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--terminal-border);
+      padding: 20px;
+    }
+
+    .preview-section h3 {
+      color: var(--sheet-accent);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .preview-trigger {
+      background: transparent;
+      border: 1px solid var(--terminal-fg);
+      color: var(--terminal-fg);
+      padding: 10px 20px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    .preview-trigger:hover {
+      background: var(--terminal-fg);
+      color: var(--terminal-bg);
+    }
+
+    /* Demo Modal */
+    .demo-modal-container {
+      position: relative;
+      height: 300px;
+      background: rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      margin-top: 16px;
+    }
+
+    .demo-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0);
+      transition: background var(--lab-duration) var(--lab-ease-bounce);
+    }
+
+    .demo-modal-backdrop.show {
+      background: rgba(0, 0, 0, 0.6);
+    }
+
+    .demo-modal {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scaleY(0);
+      background: var(--terminal-bg);
+      border: 2px solid var(--sheet-accent);
+      padding: 24px;
+      min-width: 200px;
+      text-align: center;
+      opacity: 0;
+      transition: 
+        transform var(--lab-duration) var(--lab-ease-bounce),
+        opacity var(--lab-duration) var(--lab-ease-bounce);
+    }
+
+    .demo-modal.show {
+      transform: translate(-50%, -50%) scaleY(1);
+      opacity: 1;
+    }
+
+    /* Demo Toast */
+    .demo-toast-container {
+      position: relative;
+      height: 150px;
+      background: rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      margin-top: 16px;
+    }
+
+    .demo-toast {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(calc(100% + 32px));
+      background: var(--terminal-bg);
+      border: 1px solid var(--sheet-accent);
+      padding: 12px 20px;
+      opacity: 0;
+      transition: 
+        transform var(--lab-duration) var(--lab-ease-bounce),
+        opacity var(--lab-duration) var(--lab-ease-bounce);
+    }
+
+    .demo-toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Demo Dropdown */
+    .demo-dropdown-container {
+      position: relative;
+      margin-top: 16px;
+    }
+
+    .demo-dropdown-trigger {
+      background: var(--terminal-bg);
+      border: 1px solid var(--terminal-border);
+      color: var(--terminal-fg);
+      padding: 10px 16px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 200px;
+    }
+
+    .demo-dropdown-trigger .caret {
+      transition: transform var(--lab-duration) var(--lab-ease-bounce);
+    }
+
+    .demo-dropdown-trigger.is-open .caret {
+      transform: rotate(180deg);
+    }
+
+    .demo-dropdown-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 200px;
+      background: var(--terminal-bg);
+      border: 1px solid var(--sheet-accent);
+      transform: scaleY(0);
+      transform-origin: top;
+      opacity: 0;
+      transition: 
+        transform var(--lab-duration) var(--lab-ease-bounce),
+        opacity calc(var(--lab-duration) * 0.4) ease-out;
+    }
+
+    .demo-dropdown-menu.is-open {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+
+    .demo-dropdown-menu .option {
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    .demo-dropdown-menu .option:hover {
+      background: rgba(38, 189, 192, 0.1);
+    }
+
+    /* Demo Box (generic transform) */
+    .demo-box-container {
+      margin-top: 16px;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .demo-box {
+      width: 80px;
+      height: 80px;
+      background: var(--sheet-accent-dim);
+      border: 2px solid var(--sheet-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      text-transform: uppercase;
+      transition: transform var(--lab-duration) var(--lab-ease-bounce);
+    }
+
+    .demo-box.rotate:hover {
+      transform: rotate(90deg);
+    }
+
+    .demo-box.scale:hover {
+      transform: scale(1.2);
+    }
+
+    .demo-box.translate:hover {
+      transform: translateY(-20px);
+    }
+
+    /* Bezier Visualizer */
+    .bezier-preview {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--terminal-bg);
+      border: 1px solid var(--terminal-dim);
+    }
+
+    .bezier-canvas {
+      width: 100%;
+      height: 150px;
+      position: relative;
+      border: 1px solid var(--terminal-dim);
+      margin-bottom: 12px;
+    }
+
+    .bezier-canvas canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .bezier-ball {
+      position: absolute;
+      left: 0;
+      bottom: 10px;
+      width: 16px;
+      height: 16px;
+      background: var(--sheet-accent);
+      border-radius: 50%;
+      transform: translateX(-50%);
+    }
+
+    .bezier-ball.animate {
+      animation: bezier-move var(--lab-duration) var(--lab-ease-bounce) forwards;
+    }
+
+    @keyframes bezier-move {
+      from { left: 10%; }
+      to { left: 90%; }
+    }
+  </style>
+</head>
+<body>
+  <h1>⚗️ Animation Lab</h1>
+  <p class="subtitle">Tweak easing curves and preview animations in real-time</p>
+
+  <div class="lab-grid">
+    <!-- Control Panel -->
+    <div class="control-panel">
+      <h2>Controls</h2>
+
+      <div class="control-group">
+        <label>Easing Preset</label>
+        <div class="preset-buttons">
+          <button class="preset-btn active" data-ease="cubic-bezier(0.2, 0.8, 0.2, 1.05)">Bounce (current)</button>
+          <button class="preset-btn" data-ease="ease">ease</button>
+          <button class="preset-btn" data-ease="ease-in">ease-in</button>
+          <button class="preset-btn" data-ease="ease-out">ease-out</button>
+          <button class="preset-btn" data-ease="ease-in-out">ease-in-out</button>
+          <button class="preset-btn" data-ease="linear">linear</button>
+          <button class="preset-btn" data-ease="cubic-bezier(0.68, -0.55, 0.27, 1.55)">Bouncy</button>
+          <button class="preset-btn" data-ease="cubic-bezier(0.34, 1.56, 0.64, 1)">Overshoot</button>
+          <button class="preset-btn" data-ease="cubic-bezier(0.22, 0.7, 0.3, 1.02)">Toast (old)</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>Custom Cubic Bezier</label>
+        <input type="text" id="customEase" placeholder="0.2, 0.8, 0.2, 1.05">
+        <button class="preset-btn" style="margin-top: 8px; width: 100%;" onclick="applyCustomEase()">Apply Custom</button>
+      </div>
+
+      <div class="control-group">
+        <label>Duration (ms)</label>
+        <input type="number" id="duration" value="350" min="50" max="2000" step="50">
+      </div>
+
+      <div class="current-values">
+        <div><strong>Current Easing:</strong></div>
+        <code id="currentEase">cubic-bezier(0.2, 0.8, 0.2, 1.05)</code>
+        <div style="margin-top: 8px;"><strong>Duration:</strong> <code id="currentDuration">350ms</code></div>
+      </div>
+
+      <div class="bezier-preview">
+        <div class="bezier-canvas">
+          <canvas id="bezierCanvas"></canvas>
+          <div class="bezier-ball" id="bezierBall"></div>
+        </div>
+        <button class="preset-btn" style="width: 100%;" onclick="playBezierBall()">▶ Play Animation</button>
+      </div>
+    </div>
+
+    <!-- Preview Area -->
+    <div class="preview-area">
+      
+      <!-- Modal Preview -->
+      <div class="preview-section">
+        <h3>Modal</h3>
+        <button class="preview-trigger" onclick="toggleDemoModal()">Toggle Modal</button>
+        <div class="demo-modal-container">
+          <div class="demo-modal-backdrop" id="demoModalBackdrop"></div>
+          <div class="demo-modal" id="demoModal">
+            <div style="color: var(--sheet-accent); margin-bottom: 8px;">Modal Title</div>
+            <div style="color: var(--terminal-dim); font-size: 12px;">Content goes here</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toast Preview -->
+      <div class="preview-section">
+        <h3>Toast</h3>
+        <button class="preview-trigger" onclick="toggleDemoToast()">Toggle Toast</button>
+        <div class="demo-toast-container">
+          <div class="demo-toast" id="demoToast">
+            ✓ Character saved successfully!
+          </div>
+        </div>
+      </div>
+
+      <!-- Dropdown Preview -->
+      <div class="preview-section">
+        <h3>Dropdown / Selector</h3>
+        <div class="demo-dropdown-container">
+          <button class="demo-dropdown-trigger" id="demoDropdownTrigger" onclick="toggleDemoDropdown()">
+            <span>Select option</span>
+            <span class="caret">▼</span>
+          </button>
+          <div class="demo-dropdown-menu" id="demoDropdownMenu">
+            <div class="option">Option 1</div>
+            <div class="option">Option 2</div>
+            <div class="option">Option 3</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generic Transforms -->
+      <div class="preview-section">
+        <h3>Transform Previews (hover)</h3>
+        <div class="demo-box-container">
+          <div class="demo-box rotate">Rotate</div>
+          <div class="demo-box scale">Scale</div>
+          <div class="demo-box translate">Translate</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // State
+    let currentEase = 'cubic-bezier(0.2, 0.8, 0.2, 1.05)';
+    let currentDuration = 350;
+
+    // Update CSS variables
+    function updateVariables() {
+      document.documentElement.style.setProperty('--lab-ease-bounce', currentEase);
+      document.documentElement.style.setProperty('--lab-duration', currentDuration + 'ms');
+      document.getElementById('currentEase').textContent = currentEase;
+      document.getElementById('currentDuration').textContent = currentDuration + 'ms';
+      drawBezierCurve();
+    }
+
+    // Preset buttons
+    document.querySelectorAll('.preset-btn[data-ease]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.preset-btn[data-ease]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentEase = btn.dataset.ease;
+        updateVariables();
+      });
+    });
+
+    // Duration input
+    document.getElementById('duration').addEventListener('input', (e) => {
+      currentDuration = parseInt(e.target.value) || 350;
+      updateVariables();
+    });
+
+    // Custom ease
+    function applyCustomEase() {
+      const val = document.getElementById('customEase').value.trim();
+      if (val) {
+        currentEase = `cubic-bezier(${val})`;
+        document.querySelectorAll('.preset-btn[data-ease]').forEach(b => b.classList.remove('active'));
+        updateVariables();
+      }
+    }
+
+    // Demo toggles
+    function toggleDemoModal() {
+      document.getElementById('demoModal').classList.toggle('show');
+      document.getElementById('demoModalBackdrop').classList.toggle('show');
+    }
+
+    function toggleDemoToast() {
+      document.getElementById('demoToast').classList.toggle('show');
+    }
+
+    function toggleDemoDropdown() {
+      document.getElementById('demoDropdownTrigger').classList.toggle('is-open');
+      document.getElementById('demoDropdownMenu').classList.toggle('is-open');
+    }
+
+    // Bezier ball animation
+    function playBezierBall() {
+      const ball = document.getElementById('bezierBall');
+      ball.classList.remove('animate');
+      // Trigger reflow
+      void ball.offsetWidth;
+      ball.classList.add('animate');
+    }
+
+    // Draw bezier curve on canvas
+    function drawBezierCurve() {
+      const canvas = document.getElementById('bezierCanvas');
+      const ctx = canvas.getContext('2d');
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * 2;
+      canvas.height = rect.height * 2;
+      ctx.scale(2, 2);
+
+      const w = rect.width;
+      const h = rect.height;
+      const pad = 20;
+
+      // Clear
+      ctx.clearRect(0, 0, w, h);
+
+      // Grid
+      ctx.strokeStyle = 'rgba(38, 189, 192, 0.2)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad, pad);
+      ctx.lineTo(pad, h - pad);
+      ctx.lineTo(w - pad, h - pad);
+      ctx.stroke();
+
+      // Parse bezier values
+      const match = currentEase.match(/cubic-bezier\(([\d.\-,\s]+)\)/);
+      if (!match) {
+        // Draw linear line for non-cubic-bezier
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(pad, h - pad);
+        ctx.lineTo(w - pad, pad);
+        ctx.stroke();
+        return;
+      }
+
+      const vals = match[1].split(',').map(v => parseFloat(v.trim()));
+      const [x1, y1, x2, y2] = vals;
+
+      // Scale to canvas
+      const sx = (x) => pad + x * (w - 2 * pad);
+      const sy = (y) => (h - pad) - y * (h - 2 * pad);
+
+      // Draw control points
+      ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
+      ctx.beginPath();
+      ctx.arc(sx(x1), sy(y1), 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(sx(x2), sy(y2), 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Control point lines
+      ctx.strokeStyle = 'rgba(0, 255, 0, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(sx(0), sy(0));
+      ctx.lineTo(sx(x1), sy(y1));
+      ctx.moveTo(sx(1), sy(1));
+      ctx.lineTo(sx(x2), sy(y2));
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Draw bezier curve
+      ctx.strokeStyle = 'rgba(38, 189, 192, 1)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(sx(0), sy(0));
+      ctx.bezierCurveTo(sx(x1), sy(y1), sx(x2), sy(y2), sx(1), sy(1));
+      ctx.stroke();
+
+      // Start/end points
+      ctx.fillStyle = 'rgba(38, 189, 192, 1)';
+      ctx.beginPath();
+      ctx.arc(sx(0), sy(0), 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(sx(1), sy(1), 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Initial draw
+    updateVariables();
+    window.addEventListener('resize', drawBezierCurve);
+  </script>
+</body>
+</html>
+

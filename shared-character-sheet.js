@@ -582,16 +582,6 @@ const CharacterSheet = (window.CharacterSheet = {
       const m = openShell._detachedMenu || openShell.querySelector('.selector-menu');
       if (!btn || !m) return;
 
-      // Restore menu to original parent if it was moved (any modal)
-      if (m._originalParent) {
-        m.classList.remove('portrait-history-menu-detached');
-        m.classList.remove('portrait-history-menu-detached--teal');
-        m.classList.remove('selector-menu-detached');
-        m._originalParent.appendChild(m);
-        delete m._originalParent;
-        delete openShell._detachedMenu;
-      }
-
       // If focus is currently inside the menu we're about to hide, move it
       // back to the trigger first so that no focused element is inside an
       // aria-hidden subtree. This prevents warnings like:
@@ -605,6 +595,7 @@ const CharacterSheet = (window.CharacterSheet = {
         // Non-fatal; if anything goes wrong, continue closing the shell.
       }
 
+      // Trigger close animation first
       btn.classList.remove('is-open');
       m.classList.remove('is-open');
       m.setAttribute('aria-hidden', 'true');
@@ -613,6 +604,31 @@ const CharacterSheet = (window.CharacterSheet = {
       
       // Unlock scroll when menu closes
       CharacterSheet._updateScrollLock(false);
+
+      // Restore menu to original parent AFTER the close animation completes
+      // to prevent visual jumping. The CSS transition is ~200ms.
+      if (m._originalParent) {
+        const originalParent = m._originalParent;
+        const detachedMenu = openShell._detachedMenu;
+        // Clear references immediately to prevent double-restore
+        delete m._originalParent;
+        delete openShell._detachedMenu;
+
+        setTimeout(() => {
+          m.classList.remove('portrait-history-menu-detached');
+          m.classList.remove('portrait-history-menu-detached--teal');
+          m.classList.remove('selector-menu-detached');
+          // Clear inline styles that were set for fixed positioning
+          m.style.position = '';
+          m.style.top = '';
+          m.style.left = '';
+          m.style.width = '';
+          m.style.minWidth = '';
+          m.style.maxWidth = '';
+          m.style.maxHeight = '';
+          originalParent.appendChild(m);
+        }, 200);
+      }
     };
 
     // Close all other open menus first (only one menu open at a time)

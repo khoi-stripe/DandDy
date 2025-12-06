@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from database.database import engine, Base, ensure_timestamp_columns, ensure_prompt_entry_columns
+from database.database import engine, Base, ensure_timestamp_columns
 from routes import auth, characters, campaigns, ai, users, prompt_entries
 import os
 from dotenv import load_dotenv
@@ -12,7 +12,6 @@ load_dotenv()
 # Create database tables and run lightweight migrations
 Base.metadata.create_all(bind=engine)
 ensure_timestamp_columns()
-ensure_prompt_entry_columns()
 
 app = FastAPI(
     title="DandDy API",
@@ -29,7 +28,7 @@ if os.getenv("PRODUCTION"):
     allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()] if allowed_origins_str else []
     
     # Also allow localhost:8080 (standard frontend port) if not already included
-    localhost_origins = ["s http://localhost:8080", "http://127.0.0.1:8080"]
+    localhost_origins = ["http://localhost:8080", "http://127.0.0.1:8080"]
     for origin in localhost_origins:
         if origin not in allowed_origins:
             allowed_origins.append(origin)

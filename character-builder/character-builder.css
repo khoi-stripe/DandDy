@@ -42,8 +42,9 @@
   padding: 0;
   cursor: pointer;
   color: var(--sheet-accent-dim);
-  font-size: 1.15rem; /* Slightly larger than body text */
+  font-size: 1.4rem;
   line-height: 1;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
 }
 
 .builder-settings-link:hover {
@@ -182,6 +183,11 @@
 .input-field:focus {
   outline: none;
   border-color: var(--terminal-fg);
+}
+
+.input-field::placeholder {
+  color: var(--terminal-dim);
+  opacity: 0.7;
 }
 
 /* Name Input Container */
