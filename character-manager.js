@@ -2735,6 +2735,19 @@ function dismissSessionNotice() {
     }
 }
 
+// Discard the builder session entirely (clears localStorage)
+function discardBuilderSession() {
+    try {
+        localStorage.removeItem('danddy_builder_session');
+        const sessionNotice = document.getElementById('sessionNotice');
+        if (sessionNotice) {
+            sessionNotice.classList.add('is-hidden');
+        }
+    } catch (e) {
+        console.error('Failed to discard builder session:', e);
+    }
+}
+
 // ========================================
 // SPLASH SCREEN (manager uses welcome modal instead of a full-page splash)
 // ========================================

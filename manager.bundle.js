@@ -5308,6 +5308,27 @@ const SettingsModal = (window.SettingsModal = {
 
 const CharacterSheet = (window.CharacterSheet = {
   /**
+   * Manages scroll locking when selector menus are open.
+   * Uses a CSS class for robust scroll prevention.
+   * @param {boolean} lock - true to lock, false to unlock
+   */
+  _updateScrollLock(lock) {
+    if (lock) {
+      // Lock: add class to body which triggers CSS rules
+      document.body.classList.add('selector-menu-open');
+    } else {
+      // Unlock: only remove if no menus are still open
+      // Small delay to let the menu close animation start
+      setTimeout(() => {
+        const stillOpen = document.querySelectorAll('.selector-shell.is-open');
+        if (stillOpen.length === 0) {
+          document.body.classList.remove('selector-menu-open');
+        }
+      }, 0);
+    }
+  },
+
+  /**
    * Main render function for character sheets
    * @param {Object} character - Character data object
    * @param {Object} options - Configuration options
@@ -5891,6 +5912,9 @@ const CharacterSheet = (window.CharacterSheet = {
       m.setAttribute('aria-hidden', 'true');
       btn.setAttribute('aria-expanded', 'false');
       openShell.classList.remove('is-open');
+      
+      // Unlock scroll when menu closes
+      CharacterSheet._updateScrollLock(false);
     };
 
     // Close all other open menus first (only one menu open at a time)
@@ -6286,6 +6310,9 @@ const CharacterSheet = (window.CharacterSheet = {
         menu.classList.add('is-open');
         menu.setAttribute('aria-hidden', 'false');
         triggerEl.setAttribute('aria-expanded', 'true');
+        
+        // Lock scroll when menu opens
+        CharacterSheet._updateScrollLock(true);
 
         // Focus the currently selected option for immediate keyboard navigation.
         // This prefers any option with aria-selected="true" (e.g. alignment/sort),
@@ -12613,6 +12640,19 @@ function dismissSessionNotice() {
     if (sessionNotice) {
         sessionNotice.classList.add('is-hidden');
         sessionNoticeDismissed = true;
+    }
+}
+
+// Discard the builder session entirely (clears localStorage)
+function discardBuilderSession() {
+    try {
+        localStorage.removeItem('danddy_builder_session');
+        const sessionNotice = document.getElementById('sessionNotice');
+        if (sessionNotice) {
+            sessionNotice.classList.add('is-hidden');
+        }
+    } catch (e) {
+        console.error('Failed to discard builder session:', e);
     }
 }
 

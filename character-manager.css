@@ -96,26 +96,30 @@
     color: var(--sheet-accent);
 }
 
-.session-notice-link {
-    color: var(--sheet-accent);
-    text-decoration: underline;
-}
-
-.session-notice-link:hover {
-    text-shadow: 0 0 5px var(--sheet-accent);
-}
-
 .session-notice-time {
     color: var(--sheet-accent-dim);
+}
+
+.session-notice-actions {
     margin-left: auto;
+    display: flex;
+    gap: var(--spacing-md);
 }
 
-.session-notice-close {
-    color: var(--sheet-accent-dim);
-}
-
-.session-notice-close:hover {
+.session-notice-action {
+    background: none;
+    border: none;
     color: var(--sheet-accent);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-small);
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0;
+    transition: text-shadow 0.2s ease;
+}
+
+.session-notice-action:hover {
+    text-shadow: 0 0 5px var(--sheet-accent);
 }
 
 .guest-notice {
@@ -1017,7 +1021,7 @@
     transform: rotateY(0deg);
   }
   to {
-    transform: rotateY(360deg);
+    transform: rotateY(-360deg);
   }
 }
 

@@ -171,6 +171,16 @@
     <header class="terminal-header">
         <div class="header-content">
             <div class="terminal-title">
+                <div class="title-cube-spinner">
+                    <div class="title-cube">
+                        <div class="title-cube-face"></div>
+                        <div class="title-cube-face"></div>
+                        <div class="title-cube-face"></div>
+                        <div class="title-cube-face"></div>
+                        <div class="title-cube-face"></div>
+                        <div class="title-cube-face"></div>
+                    </div>
+                </div>
                 <span class="terminal-title-text">[ DandDy v2.2.1 ]</span>
                 <button
                     id="managerSettingsBtn"
@@ -201,9 +211,12 @@
                 <!-- Session in progress notice -->
                 <div id="sessionNotice" class="session-notice is-hidden">
                     <span class="session-notice-icon">✎</span>
-                    <span class="session-notice-text">You have a <a href="character-builder/index.html?resume=true" class="session-notice-link">character in progress</a></span>
+                    <span class="session-notice-text">You have a character in progress</span>
                     <span class="session-notice-time" id="sessionNoticeTime"></span>
-                    <button class="modal-close session-notice-close" onclick="dismissSessionNotice()">&times;</button>
+                    <span class="session-notice-actions">
+                        <a href="character-builder/index.html?resume=true" class="session-notice-action">Resume</a>
+                        <button type="button" class="session-notice-action" onclick="discardBuilderSession()">Discard</button>
+                    </span>
                 </div>
                 <!-- Guest mode notice (shown only when not logged in) -->
                 <div id="guestNotice" class="guest-notice is-hidden">
