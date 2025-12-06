@@ -7002,9 +7002,13 @@ const CharacterState = (window.CharacterState = {
           spellsKnown: session.character?.spellsKnown || [],
           spellsPrepared: session.character?.spellsPrepared || [],
           spellSlots: session.character?.spellSlots || {},
-          // Preserve portrait data if it exists
-          asciiArt: session.character?.asciiArt || null,
-          portraitUrl: session.character?.portraitUrl || null,
+          // Portrait data - restore all portrait-related fields
+          customPortraitAscii: session.character?.customPortraitAscii || null,
+          originalPortraitUrl: session.character?.originalPortraitUrl || null,
+          customPortraitCount: session.character?.customPortraitCount || 0,
+          portraitMetadata: session.character?.portraitMetadata || null,
+          asciiPortrait: session.character?.asciiPortrait || null,
+          asciiPortraitKey: session.character?.asciiPortraitKey || null,
         },
       };
       this._restoring = false;
@@ -7666,16 +7670,6 @@ const CharacterSheet = (window.CharacterSheet = {
       const m = openShell._detachedMenu || openShell.querySelector('.selector-menu');
       if (!btn || !m) return;
 
-      // Restore menu to original parent if it was moved (any modal)
-      if (m._originalParent) {
-        m.classList.remove('portrait-history-menu-detached');
-        m.classList.remove('portrait-history-menu-detached--teal');
-        m.classList.remove('selector-menu-detached');
-        m._originalParent.appendChild(m);
-        delete m._originalParent;
-        delete openShell._detachedMenu;
-      }
-
       // If focus is currently inside the menu we're about to hide, move it
       // back to the trigger first so that no focused element is inside an
       // aria-hidden subtree. This prevents warnings like:
@@ -7689,6 +7683,7 @@ const CharacterSheet = (window.CharacterSheet = {
         // Non-fatal; if anything goes wrong, continue closing the shell.
       }
 
+      // Trigger close animation first
       btn.classList.remove('is-open');
       m.classList.remove('is-open');
       m.setAttribute('aria-hidden', 'true');
@@ -7697,6 +7692,31 @@ const CharacterSheet = (window.CharacterSheet = {
       
       // Unlock scroll when menu closes
       CharacterSheet._updateScrollLock(false);
+
+      // Restore menu to original parent AFTER the close animation completes
+      // to prevent visual jumping. The CSS transition is ~200ms.
+      if (m._originalParent) {
+        const originalParent = m._originalParent;
+        const detachedMenu = openShell._detachedMenu;
+        // Clear references immediately to prevent double-restore
+        delete m._originalParent;
+        delete openShell._detachedMenu;
+
+        setTimeout(() => {
+          m.classList.remove('portrait-history-menu-detached');
+          m.classList.remove('portrait-history-menu-detached--teal');
+          m.classList.remove('selector-menu-detached');
+          // Clear inline styles that were set for fixed positioning
+          m.style.position = '';
+          m.style.top = '';
+          m.style.left = '';
+          m.style.width = '';
+          m.style.minWidth = '';
+          m.style.maxWidth = '';
+          m.style.maxHeight = '';
+          originalParent.appendChild(m);
+        }, 200);
+      }
     };
 
     // Close all other open menus first (only one menu open at a time)
@@ -12269,6 +12289,155 @@ const KeyboardNav = (window.KeyboardNav = {
 
 // ===== APP LOGIC =====
 
+// Track current portrait style selected in modal (module-level like manager)
+let currentBuilderPortraitStyle = null;
+
+/**
+ * Format style ID to display label (sentence case, no dashes/underscores)
+ */
+function formatStyleLabelBuilder(idOrLabel) {
+  if (!idOrLabel) return '';
+  
+  // Remove "Custom: " prefix if present
+  let cleaned = String(idOrLabel).replace(/^Custom:\s*/i, '');
+  
+  // Remove " (default)" suffix
+  cleaned = cleaned.replace(/\s*\(default\)\s*$/i, '');
+  
+  // Replace dashes/underscores with spaces
+  cleaned = cleaned.replace(/[-_]/g, ' ');
+  
+  // Sentence case: capitalize first letter, lowercase the rest
+  if (cleaned.length > 0) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+  }
+  
+  return cleaned;
+}
+
+/**
+ * Populate the style listbox menu in the portrait prompt modal.
+ * Uses the same selector pattern as the settings modal and manager.
+ */
+function populateBuilderPortraitStyleDropdown(activeStyle) {
+  const menu = document.getElementById('builderPortraitStyleMenu');
+  const label = document.getElementById('builderPortraitStyleLabel');
+  if (!menu) return null;
+
+  // Clear existing options
+  menu.innerHTML = '';
+
+  // Get available themes from PortraitPrompt
+  let themes = [];
+  let defaultThemeId = 'cinematic-inks';
+  
+  try {
+    if (window.PortraitPrompt) {
+      if (typeof PortraitPrompt.getThemes === 'function') {
+        themes = PortraitPrompt.getThemes() || [];
+      }
+      if (typeof PortraitPrompt.getDefaultThemeId === 'function') {
+        defaultThemeId = PortraitPrompt.getDefaultThemeId() || defaultThemeId;
+      }
+    }
+  } catch (e) {
+    console.warn('populateBuilderPortraitStyleDropdown: Error getting themes', e);
+  }
+
+  // Always ensure at least the default theme is available
+  if (!themes.length) {
+    themes = [
+      { id: 'cinematic-inks', label: 'Cinematic Inks (default)' }
+    ];
+  }
+
+  // Sort themes alphabetically by id
+  themes = themes.slice().sort((a, b) => {
+    const nameA = (a.id || '').toLowerCase();
+    const nameB = (b.id || '').toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
+
+  // Determine selected value
+  const selectedStyle = activeStyle || defaultThemeId;
+  let selectedLabel = formatStyleLabelBuilder(defaultThemeId);
+
+  // Populate menu with options (same pattern as settings modal)
+  themes.forEach((theme) => {
+    const formattedLabel = formatStyleLabelBuilder(theme.id);
+    const isSelected = theme.id === selectedStyle;
+    
+    if (isSelected) {
+      selectedLabel = formattedLabel;
+    }
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'selector-option' + (isSelected ? ' is-selected' : '');
+    button.setAttribute('role', 'option');
+    button.setAttribute('data-value', theme.id);
+    button.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+    button.innerHTML = `<span class="selector-option-label">${formattedLabel}</span>`;
+    menu.appendChild(button);
+  });
+
+  // Update trigger label
+  if (label) {
+    label.textContent = selectedLabel;
+  }
+
+  currentBuilderPortraitStyle = selectedStyle;
+  
+  // Wire up option clicks
+  initBuilderPortraitStyleSelector();
+  
+  return selectedStyle;
+}
+
+/**
+ * Initialize the portrait style selector click handlers.
+ * Uses the same pattern as manager.
+ */
+function initBuilderPortraitStyleSelector() {
+  const menu = document.getElementById('builderPortraitStyleMenu');
+  const label = document.getElementById('builderPortraitStyleLabel');
+  const trigger = document.getElementById('builderPortraitStyleTrigger');
+  
+  if (!menu) return;
+  
+  const options = menu.querySelectorAll('.selector-option');
+  
+  options.forEach((option) => {
+    option.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const value = option.getAttribute('data-value');
+      const optionLabel = option.querySelector('.selector-option-label');
+      
+      if (value && optionLabel) {
+        // Update trigger label
+        if (label) {
+          label.textContent = optionLabel.textContent.trim();
+        }
+        
+        // Update current style
+        currentBuilderPortraitStyle = value;
+        
+        // Update visual selection state
+        options.forEach((opt) => {
+          const isSelected = opt.getAttribute('data-value') === value;
+          opt.classList.toggle('is-selected', isSelected);
+          opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        });
+        
+        // Close the menu using the standard toggle
+        if (trigger && window.CharacterSheet && typeof CharacterSheet.toggleSelectorMenu === 'function') {
+          CharacterSheet.toggleSelectorMenu(trigger);
+        }
+      }
+    });
+  });
+}
+
 const App = (window.App = {
   currentQuestion: null,
   _lastRenderedCharacter: null,
@@ -12317,7 +12486,8 @@ const App = (window.App = {
     this._lastPortraitArt = null;
     
     // Update character panel with restored data
-    this.updateCharacterPanel(CharacterState.get().character);
+    const character = CharacterState.get().character;
+    this.updateCharacterPanel(character);
     
     // Show a brief "resuming" message then continue
     const narratorPanel = document.getElementById('narrator-panel');
@@ -12330,8 +12500,18 @@ const App = (window.App = {
     Utils.scrollToBottom(true);
     await Utils.sleep(1000);
     
-    // Jump to the question we were on
-    await this.showQuestion(resumeQuestionId || 'intro');
+    // Check if character is complete (has all required fields)
+    // If so, jump straight to the completion screen regardless of currentQuestionId
+    const isCharacterComplete = character.name && character.race && 
+                                 character.class && character.background && 
+                                 character.alignment;
+    
+    if (isCharacterComplete) {
+      await this.showQuestion('complete');
+    } else {
+      // Jump to the question we were on
+      await this.showQuestion(resumeQuestionId || 'intro');
+    }
   },
 
   // Start a brand new character
@@ -15290,18 +15470,60 @@ const App = (window.App = {
     const defaultPrompt = AIService.buildCharacterDescription
       ? AIService.buildCharacterDescription(character)
       : ''; // backwards compat if renamed
+    
+    // Get active style from portrait version or user's saved preference
+    let activeStyle = null;
+    try {
+      // Check if character has an active portrait version with a style
+      const metadata = character.portraitMetadata || {};
+      const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
+      if (versions.length) {
+        const activeId = metadata.activeVersionId;
+        let active =
+          (activeId && versions.find((v) => v && v.id === activeId)) ||
+          versions[versions.length - 1];
+        if (active && active.style) {
+          activeStyle = active.style;
+        }
+      }
+      // Fall back to user's saved preference
+      if (!activeStyle && window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
+        activeStyle = StorageService.getPortraitPromptTheme();
+      }
+    } catch (e) {
+      // Non-fatal
+    }
+
     const modalHTML = `
       <div id="promptModal" class="modal show" onclick="App.closePromptModal(false)">
-        <div class="modal-content" onclick="event.stopPropagation();">
+        <div class="modal-content portrait-customize-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
             <h2 class="modal-title">[ ★ Customize AI Portrait ]</h2>
             <button class="modal-close" onclick="App.closePromptModal(false)">&times;</button>
           </div>
           <div class="modal-body">
+            <div class="portrait-style-row">
+              <div class="portrait-style-label">Style</div>
+              <div class="selector-shell portrait-style-selector" id="builderPortraitStyleShell">
+                <button 
+                  type="button"
+                  class="terminal-btn selector-trigger"
+                  id="builderPortraitStyleTrigger"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  onclick="CharacterSheet.toggleSelectorMenu(this)"
+                >
+                  <span class="selector-trigger-label" id="builderPortraitStyleLabel">Cinematic inks</span>
+                </button>
+                <div class="selector-menu portrait-style-menu" id="builderPortraitStyleMenu" role="listbox" aria-label="Portrait style" aria-hidden="true">
+                  <!-- Options populated by JS -->
+                </div>
+              </div>
+            </div>
             <textarea
-              class="terminal-textarea terminal-input"
+              class="terminal-textarea portrait-prompt-textarea"
               id="custom-prompt"
-              rows="12"
+              placeholder="Enter custom description..."
             >${defaultPrompt}</textarea>
           </div>
           <div class="modal-footer modal-footer-end">
@@ -15313,6 +15535,9 @@ const App = (window.App = {
     `;
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', modalHTML);
+
+    // Populate the style dropdown
+    populateBuilderPortraitStyleDropdown(activeStyle);
 
     const modal = document.getElementById('promptModal');
     if (modal && Utils.focusFirstFieldInModal) {
@@ -15327,8 +15552,18 @@ const App = (window.App = {
   },
 
   closePromptModal(regenerate = false) {
+    // Close the style menu if open (using standard selector toggle)
+    const trigger = document.getElementById('builderPortraitStyleTrigger');
+    if (trigger && trigger.classList.contains('is-open') && window.CharacterSheet) {
+      CharacterSheet.toggleSelectorMenu(trigger);
+    }
+    
     const modal = document.getElementById('promptModal');
-    if (!modal) return;
+    if (!modal) {
+      // Reset style state even if modal is gone
+      currentBuilderPortraitStyle = null;
+      return;
+    }
 
     // If the modal is already in the process of closing, don't re-run animation.
     if (modal.classList.contains('closing')) return;
@@ -15348,6 +15583,9 @@ const App = (window.App = {
         document.removeEventListener('keydown', this._promptModalEscHandler);
         this._promptModalEscHandler = null;
       }
+      
+      // Reset the style selection state
+      currentBuilderPortraitStyle = null;
 
       if (regenerate) {
         // Trigger portrait regeneration if confirmed
@@ -15368,6 +15606,9 @@ const App = (window.App = {
   async confirmPromptModal() {
     const customPromptInput = document.getElementById('custom-prompt');
     const customPrompt = customPromptInput.value.trim();
+    
+    // Capture the selected style before closing the modal (which resets it)
+    const selectedStyle = currentBuilderPortraitStyle;
 
     if (!customPrompt) {
       this.showSystemMessage('Portrait prompt cannot be empty.');
@@ -15473,31 +15714,12 @@ const App = (window.App = {
         typeof window.PortraitPrompt.buildCustomPortraitInstructions ===
           'function'
       ) {
-        // Shared helper so builder + manager use the exact same STYLE / Scene
-        // logic (including admin-defined prompt styles) for custom prompts.
-        let promptThemeId = null;
-        try {
-          if (
-            typeof window !== 'undefined' &&
-            window.StorageService &&
-            typeof window.StorageService.getPortraitPromptTheme === 'function'
-          ) {
-            promptThemeId = window.StorageService.getPortraitPromptTheme();
-          } else if (
-            typeof CONFIG !== 'undefined' &&
-            CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME
-          ) {
-            promptThemeId = CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME;
-          }
-        } catch (e) {
-          // Non-fatal: fall back to default theme behavior below.
-        }
-
+        // Use the style selected from the modal dropdown
         renderingInstructions =
           window.PortraitPrompt.buildCustomPortraitInstructions({
             posePrompt,
             cameraPrompt,
-            themeId: promptThemeId,
+            themeId: selectedStyle,
           });
       } else {
         // Fallback if PortraitPrompt is not loaded for some reason.
@@ -15551,16 +15773,6 @@ const App = (window.App = {
       const current = CharacterState.get().character;
       const currentCount = current.customPortraitCount || 0;
 
-      // Get the current style theme for tagging
-      let currentStyle = null;
-      try {
-        if (window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
-          currentStyle = StorageService.getPortraitPromptTheme();
-        }
-      } catch (e) {
-        // Non-fatal
-      }
-
       const updatedMetadata = window.PortraitHistory
         ? window.PortraitHistory.addVersion(
             current,
@@ -15569,7 +15781,7 @@ const App = (window.App = {
             {
               source: 'custom-ai',
               prompt: fullPrompt,
-              style: currentStyle,
+              style: selectedStyle,
             },
           )
         : current.portraitMetadata || {};

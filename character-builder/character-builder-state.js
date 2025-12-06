@@ -222,9 +222,13 @@ const CharacterState = (window.CharacterState = {
           spellsKnown: session.character?.spellsKnown || [],
           spellsPrepared: session.character?.spellsPrepared || [],
           spellSlots: session.character?.spellSlots || {},
-          // Preserve portrait data if it exists
-          asciiArt: session.character?.asciiArt || null,
-          portraitUrl: session.character?.portraitUrl || null,
+          // Portrait data - restore all portrait-related fields
+          customPortraitAscii: session.character?.customPortraitAscii || null,
+          originalPortraitUrl: session.character?.originalPortraitUrl || null,
+          customPortraitCount: session.character?.customPortraitCount || 0,
+          portraitMetadata: session.character?.portraitMetadata || null,
+          asciiPortrait: session.character?.asciiPortrait || null,
+          asciiPortraitKey: session.character?.asciiPortraitKey || null,
         },
       };
       this._restoring = false;
