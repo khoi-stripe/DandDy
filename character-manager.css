@@ -365,9 +365,8 @@
     overflow: hidden;
     display: flex;
     align-items: flex-start;
-    justify-content: center;
+    justify-content: flex-start;
     background-color: rgba(0, 0, 0, 0.3);
-    text-align: center;
     padding: 0;
     flex: 1 1 auto;
     /* Prevent text selection on ASCII art */
@@ -1094,23 +1093,16 @@
 
 /* ===== RESPONSIVE ===== */
 
-/* Tablet breakpoint: compact cards (art only) */
+/* Tablet breakpoint: 2-column grid with card details */
 @media (max-width: 1024px) {
-    /* Hide card info area, show only portrait art
-       EXCEPT portrait history cards which always show details */
-    .character-card:not(.portrait-history-card) .card-details {
-        display: none;
+    /* Switch to 2 columns with card details visible */
+    .character-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-md);
     }
     
-    /* Adjust card aspect ratio for art-only display */
     .character-card {
         aspect-ratio: 3 / 4;
-    }
-    
-    /* Increase grid columns for more cards per row at this breakpoint */
-    .character-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: var(--spacing-sm);
     }
     
     /* Hide the sort button text, show abbreviated version */
@@ -1217,22 +1209,9 @@
         width: 100%;
     }
     
-    /* Reset to full card display - more room in single-column layout */
-    .character-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: var(--spacing-md);
-    }
-    
-    .character-card .card-details {
-        display: block;
-    }
-    
-    .character-card {
-        aspect-ratio: 3 / 4;
-    }
-    
+    /* Bump up thumbnail font size on mobile for better readability */
     .card-thumbnail {
-        font-size: 2.2px;
+        font-size: 2.8px;
     }
     
     /* On mobile, no cards should appear selected (no glow/highlight)

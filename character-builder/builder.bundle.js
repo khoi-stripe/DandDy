@@ -7391,7 +7391,7 @@ const CharacterSheet = (window.CharacterSheet = {
     const headerMenu =
       headerActions.length > 0
         ? `
-        <div class="sheet-title-buttons selector-shell">
+        <div class="sheet-title-buttons selector-shell selector-shell--actions">
           <button
             class="terminal-btn-small selector-trigger sheet-actions-trigger"
             type="button"
@@ -8141,14 +8141,20 @@ const CharacterSheet = (window.CharacterSheet = {
         // Lock scroll when menu opens
         CharacterSheet._updateScrollLock(true);
 
-        // Focus the currently selected option for immediate keyboard navigation.
-        // This prefers any option with aria-selected="true" (e.g. alignment/sort),
-        // and falls back to the first option when none is marked selected.
-        const selectedOption =
-          menu.querySelector('.selector-option[aria-selected="true"]') ||
-          menu.querySelector('.selector-option');
-        if (selectedOption) {
-          selectedOption.focus();
+        // Focus behavior differs by menu type:
+        // - Listbox (--listbox): Focus the selected option for keyboard nav
+        // - Actions (--actions): No focus, just show the menu
+        const isActionsMenu = shell.classList.contains('selector-shell--actions');
+        
+        if (!isActionsMenu) {
+          // Listbox: focus the selected option (or first if none selected)
+          const selectedOption =
+            menu.querySelector('.selector-option[aria-selected="true"]') ||
+            menu.querySelector('.selector-option.is-selected') ||
+            menu.querySelector('.selector-option');
+          if (selectedOption) {
+            selectedOption.focus();
+          }
         }
       } else {
         closeShell(shell);
@@ -10413,7 +10419,7 @@ const PortraitHistory = (window.PortraitHistory = {
           const actionsMenu =
             actionItems.length > 0
               ? `
-              <div class="portrait-history-actions selector-shell">
+              <div class="portrait-history-actions selector-shell selector-shell--actions">
                 <button
                   class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
                   type="button"
@@ -11144,7 +11150,7 @@ const Components = (window.Components = {
                     <div class="settings-row-inline">
                       <div class="settings-inline-field">
                         <div class="settings-label">Narrator Voice</div>
-                      <div class="selector-shell selector-shell--match-width">
+                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
                           id="narrator-select-trigger"
@@ -11186,7 +11192,7 @@ const Components = (window.Components = {
                     </div>
                     <div class="settings-inline-field">
                       <div class="settings-label">Text Speed</div>
-                      <div class="selector-shell selector-shell--match-width">
+                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
                           id="text-speed-select-trigger"
@@ -11255,7 +11261,7 @@ const Components = (window.Components = {
                     <div class="settings-row settings-row--stacked mb-lg">
                       <div class="settings-label">Style</div>
                       <div class="settings-field">
-                        <div class="selector-shell selector-shell--match-width">
+                        <div class="selector-shell selector-shell--listbox selector-shell--match-width">
                           <button
                             class="terminal-btn selector-trigger"
                             id="portrait-theme-select-trigger"
@@ -11321,7 +11327,7 @@ const Components = (window.Components = {
                     </div>
                     <div class="settings-row mb-lg">
                       <div class="settings-label">AI model</div>
-                      <div class="selector-shell selector-shell--match-width">
+                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
                           id="image-model-select-trigger"
@@ -13040,7 +13046,7 @@ const App = (window.App = {
         <div class="options-container ability-method-container">
           <label class="settings-label ability-method-label">Ability generation method:</label>
           <div class="ability-method-controls">
-            <div class="ability-method-trigger-wrap selector-shell">
+            <div class="ability-method-trigger-wrap selector-shell selector-shell--listbox">
               <button
                 class="button-primary ability-method-trigger selector-trigger"
                 id="ability-method-trigger"
@@ -14606,7 +14612,7 @@ const App = (window.App = {
             const actionsMenu =
               actionItems.length > 0
                 ? `
-                <div class="portrait-history-actions selector-shell">
+                <div class="portrait-history-actions selector-shell selector-shell--actions">
                   <button
                     class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
                     type="button"
@@ -15560,7 +15566,7 @@ const App = (window.App = {
           <div class="modal-body">
             <div class="portrait-style-row">
               <div class="portrait-style-label">Style</div>
-              <div class="selector-shell portrait-style-selector" id="builderPortraitStyleShell">
+              <div class="selector-shell selector-shell--listbox portrait-style-selector" id="builderPortraitStyleShell">
                 <button 
                   type="button"
                   class="terminal-btn selector-trigger"

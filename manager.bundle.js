@@ -1032,7 +1032,7 @@
 
 // Global version information for DandDy apps
 // Bump this in one place whenever you cut a new release.
-window.DANDDY_VERSION = '2.3.0';
+window.DANDDY_VERSION = '2.3.1';
 window.DANDDY_BACKEND_VERSION = '1.0.0';
 
 
@@ -4783,7 +4783,7 @@ const Components = (window.Components = {
                     <div class="settings-row-inline">
                       <div class="settings-inline-field">
                         <div class="settings-label">Narrator Voice</div>
-                      <div class="selector-shell selector-shell--match-width">
+                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
                           id="narrator-select-trigger"
@@ -4825,7 +4825,7 @@ const Components = (window.Components = {
                     </div>
                     <div class="settings-inline-field">
                       <div class="settings-label">Text Speed</div>
-                      <div class="selector-shell selector-shell--match-width">
+                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
                           id="text-speed-select-trigger"
@@ -4894,7 +4894,7 @@ const Components = (window.Components = {
                     <div class="settings-row settings-row--stacked mb-lg">
                       <div class="settings-label">Style</div>
                       <div class="settings-field">
-                        <div class="selector-shell selector-shell--match-width">
+                        <div class="selector-shell selector-shell--listbox selector-shell--match-width">
                           <button
                             class="terminal-btn selector-trigger"
                             id="portrait-theme-select-trigger"
@@ -4960,7 +4960,7 @@ const Components = (window.Components = {
                     </div>
                     <div class="settings-row mb-lg">
                       <div class="settings-label">AI model</div>
-                      <div class="selector-shell selector-shell--match-width">
+                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
                           id="image-model-select-trigger"
@@ -5603,7 +5603,7 @@ const CharacterSheet = (window.CharacterSheet = {
     const headerMenu =
       headerActions.length > 0
         ? `
-        <div class="sheet-title-buttons selector-shell">
+        <div class="sheet-title-buttons selector-shell selector-shell--actions">
           <button
             class="terminal-btn-small selector-trigger sheet-actions-trigger"
             type="button"
@@ -6353,14 +6353,20 @@ const CharacterSheet = (window.CharacterSheet = {
         // Lock scroll when menu opens
         CharacterSheet._updateScrollLock(true);
 
-        // Focus the currently selected option for immediate keyboard navigation.
-        // This prefers any option with aria-selected="true" (e.g. alignment/sort),
-        // and falls back to the first option when none is marked selected.
-        const selectedOption =
-          menu.querySelector('.selector-option[aria-selected="true"]') ||
-          menu.querySelector('.selector-option');
-        if (selectedOption) {
-          selectedOption.focus();
+        // Focus behavior differs by menu type:
+        // - Listbox (--listbox): Focus the selected option for keyboard nav
+        // - Actions (--actions): No focus, just show the menu
+        const isActionsMenu = shell.classList.contains('selector-shell--actions');
+        
+        if (!isActionsMenu) {
+          // Listbox: focus the selected option (or first if none selected)
+          const selectedOption =
+            menu.querySelector('.selector-option[aria-selected="true"]') ||
+            menu.querySelector('.selector-option.is-selected') ||
+            menu.querySelector('.selector-option');
+          if (selectedOption) {
+            selectedOption.focus();
+          }
         }
       } else {
         closeShell(shell);
@@ -9519,7 +9525,7 @@ if (DEBUG_CLOUD) {
           const actionsMenu =
             actionItems.length > 0
               ? `
-              <div class="portrait-history-actions selector-shell">
+              <div class="portrait-history-actions selector-shell selector-shell--actions">
                 <button
                   class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
                   type="button"
@@ -10496,11 +10502,13 @@ const MobileView = {
     /** Swipe tracking state */
     _touchStartX: 0,
     _touchStartY: 0,
-    _touchEndX: 0,
-    _touchEndY: 0,
+    _touchCurrentX: 0,
+    _touchCurrentY: 0,
     _isSwiping: false,
+    _swipeDirection: null, // 'horizontal', 'vertical', or null (undetermined)
     _pointerId: null,
-    _minSwipeDistance: 50,
+    _minSwipeDistance: 50,      // Min distance to trigger navigation
+    _directionLockThreshold: 10, // Threshold to determine swipe direction intent
 
     /** Initialize resize listener for viewport transitions */
     init() {
@@ -10543,37 +10551,77 @@ const MobileView = {
         if (!leftPanel) return;
         
         // Use pointer events for better compatibility with Chrome DevTools simulator
+        // pointerdown - start tracking
         leftPanel.addEventListener('pointerdown', (e) => {
             if (e.pointerType === 'touch' || e.pointerType === 'pen' || this.isMobile()) {
-                this._touchStartX = e.screenX;
-                this._touchStartY = e.screenY;
+                this._touchStartX = e.clientX;
+                this._touchStartY = e.clientY;
+                this._touchCurrentX = e.clientX;
+                this._touchCurrentY = e.clientY;
                 this._isSwiping = true;
+                this._swipeDirection = null; // Reset direction lock
                 this._pointerId = e.pointerId;
-                // Capture pointer to prevent cancellation during swipe
-                try {
-                    e.target.setPointerCapture(e.pointerId);
-                } catch (err) {}
             }
         }, { passive: true });
         
+        // pointermove - track movement and determine direction intent
+        leftPanel.addEventListener('pointermove', (e) => {
+            if (!this._isSwiping) return;
+            if (!this.isOpen()) return; // Only handle when viewing a sheet
+            
+            this._touchCurrentX = e.clientX;
+            this._touchCurrentY = e.clientY;
+            
+            const deltaX = this._touchCurrentX - this._touchStartX;
+            const deltaY = this._touchCurrentY - this._touchStartY;
+            const absX = Math.abs(deltaX);
+            const absY = Math.abs(deltaY);
+            
+            // Determine direction if not yet locked and movement exceeds threshold
+            if (this._swipeDirection === null && (absX > this._directionLockThreshold || absY > this._directionLockThreshold)) {
+                // Use a ratio to determine intent: horizontal if X movement is at least 1.5x Y movement
+                if (absX > absY * 1.5) {
+                    this._swipeDirection = 'horizontal';
+                    // Add class to indicate horizontal swipe in progress (prevents scroll)
+                    leftPanel.classList.add('is-swiping-horizontal');
+                } else if (absY > absX * 1.5) {
+                    this._swipeDirection = 'vertical';
+                }
+                // If neither is dominant yet, wait for more movement
+            }
+            
+            // If locked to horizontal, prevent default to stop vertical scrolling
+            if (this._swipeDirection === 'horizontal') {
+                e.preventDefault();
+            }
+        }, { passive: false }); // passive: false so we can preventDefault
+        
+        // pointerup - complete the gesture
         leftPanel.addEventListener('pointerup', (e) => {
             if (this._isSwiping) {
-                this._touchEndX = e.screenX;
-                this._touchEndY = e.screenY;
+                this._touchCurrentX = e.clientX;
+                this._touchCurrentY = e.clientY;
                 this._isSwiping = false;
-                // Release pointer capture
-                try {
-                    if (this._pointerId !== null) {
-                        e.target.releasePointerCapture(this._pointerId);
-                    }
-                } catch (err) {}
+                leftPanel.classList.remove('is-swiping-horizontal');
                 this._pointerId = null;
                 this.handleSwipe();
             }
         }, { passive: true });
         
+        // pointercancel - abort the gesture
         leftPanel.addEventListener('pointercancel', () => {
             this._isSwiping = false;
+            this._swipeDirection = null;
+            leftPanel.classList.remove('is-swiping-horizontal');
+        }, { passive: true });
+        
+        // Also handle pointerleave to clean up if finger leaves the element
+        leftPanel.addEventListener('pointerleave', (e) => {
+            // Only cancel if we haven't locked direction yet
+            if (this._isSwiping && this._swipeDirection === null) {
+                this._isSwiping = false;
+                leftPanel.classList.remove('is-swiping-horizontal');
+            }
         }, { passive: true });
     },
     
@@ -10582,12 +10630,19 @@ const MobileView = {
         // Only handle swipes when viewing a character sheet on mobile
         if (!this.isOpen()) return;
         
-        const deltaX = this._touchEndX - this._touchStartX;
-        const deltaY = this._touchEndY - this._touchStartY;
+        // Only process if we determined this was a horizontal swipe
+        if (this._swipeDirection !== 'horizontal') {
+            this._swipeDirection = null;
+            return;
+        }
         
-        // Ensure horizontal swipe is dominant (not vertical scrolling)
+        const deltaX = this._touchCurrentX - this._touchStartX;
+        
+        // Reset direction for next gesture
+        this._swipeDirection = null;
+        
+        // Check if swipe distance meets minimum threshold
         if (Math.abs(deltaX) < this._minSwipeDistance) return;
-        if (Math.abs(deltaY) > Math.abs(deltaX)) return;
         
         if (deltaX > 0) {
             // Swipe right → go to previous character
