@@ -1937,7 +1937,7 @@ body.selector-menu-open .splash-art {
 
   .toast-notification {
     /* Use viewport width so toast isn't constrained by container padding */
-    width: calc(100vw - 48px);
+    width: calc(100vw - 64px);
     max-width: 480px;
   }
 }
