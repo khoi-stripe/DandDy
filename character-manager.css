@@ -1432,6 +1432,12 @@
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
+/* During active horizontal swipe, prevent all scrolling */
+.left-panel.is-swiping-horizontal {
+    touch-action: none !important;
+    overflow: hidden !important;
+}
+
 /* ========================================
    MODAL DISCARD CONFIRMATION OVERLAY
    ======================================== */
