@@ -1096,8 +1096,9 @@
 
 /* Tablet breakpoint: compact cards (art only) */
 @media (max-width: 1024px) {
-    /* Hide card info area, show only portrait art */
-    .character-card .card-details {
+    /* Hide card info area, show only portrait art
+       EXCEPT portrait history cards which always show details */
+    .character-card:not(.portrait-history-card) .card-details {
         display: none;
     }
     
@@ -1234,29 +1235,30 @@
         font-size: 2.2px;
     }
     
-    /* On mobile, no cards should appear selected (no glow/highlight) */
-    .character-card.is-selected {
+    /* On mobile, no cards should appear selected (no glow/highlight)
+       EXCEPT portrait history cards which need selection styling in the modal */
+    .character-card.is-selected:not(.portrait-history-card) {
         border-color: var(--terminal-dim) !important;
         background-color: var(--terminal-bg) !important;
         box-shadow: none !important;
         animation: none !important;
     }
     
-    .character-card.is-selected .card-thumbnail {
+    .character-card.is-selected:not(.portrait-history-card) .card-thumbnail {
         color: var(--terminal-dim) !important;
     }
     
     /* Reset image thumbnail opacity on mobile (no special hover/selection effects) */
-    .character-card.is-selected .card-thumbnail--image img {
+    .character-card.is-selected:not(.portrait-history-card) .card-thumbnail--image img {
         opacity: 0.85 !important;
     }
     
-    .character-card.is-selected .card-name,
-    .character-card.is-selected .card-info {
+    .character-card.is-selected:not(.portrait-history-card) .card-name,
+    .character-card.is-selected:not(.portrait-history-card) .card-info {
         color: var(--terminal-dim) !important;
     }
     
-    .character-card.is-selected .card-details {
+    .character-card.is-selected:not(.portrait-history-card) .card-details {
         background-color: transparent !important;
         color: var(--terminal-dim) !important;
     }
@@ -1466,4 +1468,112 @@
     display: flex;
     gap: var(--spacing-sm);
     justify-content: center;
+}
+
+/* ========================================
+   MOBILE HEADER OVERFLOW MENU
+   Collapsible navigation when scrolling on mobile
+   ======================================== */
+
+/* Hide overflow menu by default (shown only on mobile when scrolled) */
+.header-overflow {
+    display: none;
+}
+
+/* Overflow menu styling - use teal theme */
+.header-overflow-trigger {
+    border-color: var(--sheet-accent-dim);
+    color: var(--sheet-accent-dim);
+}
+
+.header-overflow-trigger:hover,
+.header-overflow-trigger.is-open {
+    border-color: var(--sheet-accent);
+    color: var(--sheet-accent);
+    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
+}
+
+/* Teal-themed overflow dots */
+.header-overflow-trigger .sheet-actions-dot {
+    background-color: var(--sheet-accent-dim);
+}
+
+.header-overflow-trigger:hover .sheet-actions-dot,
+.header-overflow-trigger.is-open .sheet-actions-dot {
+    background-color: var(--sheet-accent);
+}
+
+/* Override the X morph color when open */
+.header-overflow-trigger.is-open .sheet-actions-dot.dot-2,
+.header-overflow-trigger.is-open .sheet-actions-dot.dot-2::after {
+    background-color: var(--sheet-accent);
+}
+
+.header-overflow-menu {
+    right: 0;
+    left: auto;
+    min-width: 160px;
+    /* Apply teal theme to overflow menu */
+    --ui-border-color: var(--sheet-accent-dim);
+    --ui-primary-color: var(--sheet-accent);
+    --ui-primary-color-dim: var(--sheet-accent-dim);
+    --ui-dim-color: var(--sheet-accent-dim);
+    --context-accent: var(--sheet-accent);
+    --context-accent-dim: var(--sheet-accent-dim);
+    border-color: var(--sheet-accent-dim);
+}
+
+.header-overflow-menu .selector-option {
+    color: var(--sheet-accent-dim);
+}
+
+.header-overflow-menu .selector-option:hover,
+.header-overflow-menu .selector-option:focus {
+    color: var(--sheet-accent);
+    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
+}
+
+.header-overflow-menu .selector-option-icon {
+    color: var(--sheet-accent);
+}
+
+@media (max-width: 768px) {
+    /* Animate header collapse from bottom up */
+    .terminal-header {
+        position: relative;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+        max-height: 120px; /* Enough for expanded state with wrapped buttons */
+    }
+    
+    /* Header content wraps: title row on top, actions row below */
+    .header-content {
+        flex-wrap: wrap;
+    }
+    
+    /* Hide overflow menu by default */
+    .header-overflow {
+        display: none;
+        position: absolute;
+        right: var(--spacing-sm);
+        top: var(--spacing-sm);
+        z-index: 10;
+    }
+    
+    /* Scrolled state: collapse header to just title row height */
+    .terminal-header.is-scrolled {
+        max-height: 48px;
+    }
+    
+    /* Show overflow button when scrolled (positioned absolutely over collapsed header) */
+    .terminal-header.is-scrolled .header-overflow {
+        display: inline-block;
+    }
+    
+    /* Hide action buttons text when collapsed (they're clipped by overflow:hidden) */
+    .terminal-header.is-scrolled .header-actions {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.15s ease-out;
+    }
 }

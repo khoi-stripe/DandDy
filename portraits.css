@@ -401,12 +401,40 @@
 .portrait-history-modal .card-thumbnail img {
   object-fit: cover; /* Scale & crop to fill card thumbnail */
   display: block;
+  /* Hidden until loaded, then fades in */
+  opacity: 0;
+  transition: opacity 0.15s ease-in;
 }
 
-/* When viewing original image in history card, tint background teal
-   and apply multiply blend mode for consistent ink-on-paper effect. */
+/* Override is-hidden for portrait history images so they can still load.
+   Use opacity:0 instead of display:none to allow image loading while hidden. */
+.portrait-history-modal .card-thumbnail img.is-hidden {
+  display: block !important;
+  opacity: 0 !important;
+}
+
+/* When image is loaded AND visible (not is-hidden), show it */
+.portrait-history-modal .card-thumbnail img.is-loaded:not(.is-hidden) {
+  opacity: 0.85;
+}
+
+/* On hover/selection, slightly increase opacity for clearer view */
+.portrait-history-modal .character-card:hover .card-thumbnail img.is-loaded,
+.portrait-history-modal .character-card.is-selected .card-thumbnail img.is-loaded,
+.portrait-history-modal .character-card.is-keyboard-focused .card-thumbnail img.is-loaded {
+  opacity: 0.95;
+}
+
+/* When viewing original image in history card, tint background yellow
+   (matching the modal theme) and apply multiply blend mode for ink-on-paper effect.
+   Background only shows once image has loaded to prevent flash. */
 .portrait-history-modal .card-thumbnail--original-mode {
-  background: var(--panel-teal);
+  background-color: transparent;
+  transition: background-color 0.12s ease-in 0.08s;
+}
+
+.portrait-history-modal .card-thumbnail--original-mode:has(img.is-loaded) {
+  background: var(--modal-accent);
 }
 
 .portrait-history-modal .card-thumbnail--original-mode img {
@@ -837,5 +865,51 @@
   border-color: var(--modal-accent);
   box-shadow: 0 0 5px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5);
   outline: none;
+}
+
+/* ===== PORTRAIT HISTORY MODAL - MOBILE RESPONSIVE ===== */
+
+/* Mobile: Make portrait history cards larger and fit better vertically */
+@media (max-width: 768px) {
+  /* Cards should be wider on mobile so they're not too tall.
+     Show ~1.5 cards at a time to hint at horizontal scrolling. */
+  .portrait-history-modal .portrait-history-card {
+    flex: 0 0 70%;
+    max-width: 70%;
+  }
+  
+  /* Reduce horizontal padding on the card row to maximize card space */
+  .portrait-history-card-row {
+    padding-inline: 32px;
+  }
+  
+  /* Ensure modal body can accommodate card height + padding */
+  .portrait-history-modal .modal-body {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+  }
+  
+  /* Move nav buttons closer to edges on mobile */
+  .portrait-history-nav-left {
+    left: 2px;
+  }
+  
+  .portrait-history-nav-right {
+    right: 2px;
+  }
+}
+
+/* Smaller mobile devices: single card view */
+@media (max-width: 480px) {
+  .portrait-history-modal .portrait-history-card {
+    flex: 0 0 85%;
+    max-width: 85%;
+  }
+  
+  .portrait-history-card-row {
+    padding-inline: 24px;
+    padding-block: var(--spacing-md) var(--spacing-lg);
+  }
 }
 

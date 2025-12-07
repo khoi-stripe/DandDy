@@ -1018,7 +1018,7 @@
               <div class="ascii-portrait portrait-history-preview${asciiHiddenClass}" data-version-id="${v.id}"></div>
               ${
                 hasImage
-                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image${imageHiddenClass}" data-version-id="${v.id}">`
+                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image${imageHiddenClass}" data-version-id="${v.id}" onload="this.classList.add('is-loaded')">`
                   : ''
               }
             </div>`;
