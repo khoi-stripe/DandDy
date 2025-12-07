@@ -14,15 +14,41 @@
 }
 
 /* When viewing the original image in the sheet, tint the container teal
-   and let the PNG multiply against it for a subtle ink-on-paper effect. */
+   and let the PNG multiply against it for a subtle ink-on-paper effect.
+   Only show the teal background once the image has loaded to prevent flash. */
 .portrait-container--original-mode {
-  background: var(--panel-teal);
   /* Inset 1px black outline to mask any faint edges on the image */
   box-shadow: inset 0 0 0 1px #000000;
+  background: transparent;
+  /* Background fades in after a delay, letting the image appear first */
+  transition: background-color 0.12s ease-in 0.08s;
+  /* Fixed aspect ratio prevents layout shift while image loads */
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
 }
 
+/* Only apply teal background when the image is loaded (prevents flash on character switch) */
+.portrait-container--original-mode:has(.original-portrait.is-loaded) {
+  background: var(--panel-teal);
+}
+
+/* Hide image while loading to prevent teal background flash when switching characters.
+   The image fades in first, then the background follows.
+   Position absolute to fill the fixed-size container without affecting layout. */
 .portrait-container--original-mode .original-portrait {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   mix-blend-mode: multiply;
+  opacity: 0;
+  transition: opacity 0.1s ease-in;
+}
+
+.portrait-container--original-mode .original-portrait.is-loaded {
+  opacity: 1;
 }
 
 .portrait-actions {
@@ -375,6 +401,16 @@
 .portrait-history-modal .card-thumbnail img {
   object-fit: cover; /* Scale & crop to fill card thumbnail */
   display: block;
+}
+
+/* When viewing original image in history card, tint background teal
+   and apply multiply blend mode for consistent ink-on-paper effect. */
+.portrait-history-modal .card-thumbnail--original-mode {
+  background: var(--panel-teal);
+}
+
+.portrait-history-modal .card-thumbnail--original-mode img {
+  mix-blend-mode: multiply;
 }
 
 .portrait-history-modal .card-details {

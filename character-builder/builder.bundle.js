@@ -7512,7 +7512,7 @@ const CharacterSheet = (window.CharacterSheet = {
           ` : ''}
         </div>
         ${originalPortraitUrl
-          ? `<img id="${originalPortraitId}" class="original-portrait${showOriginalByDefault ? '' : ' is-hidden'}" src="${originalPortraitUrl}" alt="Character portrait">`
+          ? `<img id="${originalPortraitId}" class="original-portrait${showOriginalByDefault ? '' : ' is-hidden'}" src="${originalPortraitUrl}" alt="Character portrait" onload="this.classList.add('is-loaded')">`
           : ''}
       </div>
     `;
@@ -9754,6 +9754,8 @@ const PortraitHistory = (window.PortraitHistory = {
       const btn = document.querySelector(
         `button[data-toggle-version-id="${versionId}"]`,
       );
+      // Get the card thumbnail container for original mode styling
+      const thumbContainer = asciiEl ? asciiEl.closest('.card-thumbnail') : null;
 
       if (!imgEl || !asciiEl) return;
 
@@ -9763,6 +9765,9 @@ const PortraitHistory = (window.PortraitHistory = {
         // Switch to original image
         asciiEl.classList.add('is-hidden');
         imgEl.classList.remove('is-hidden');
+        if (thumbContainer) {
+          thumbContainer.classList.add('card-thumbnail--original-mode');
+        }
         if (btn) {
           const label = btn.querySelector('.selector-option-label');
           if (label) {
@@ -9775,6 +9780,9 @@ const PortraitHistory = (window.PortraitHistory = {
         // Switch back to ASCII art
         imgEl.classList.add('is-hidden');
         asciiEl.classList.remove('is-hidden');
+        if (thumbContainer) {
+          thumbContainer.classList.remove('card-thumbnail--original-mode');
+        }
         if (btn) {
           const label = btn.querySelector('.selector-option-label');
           if (label) {
@@ -10297,6 +10305,19 @@ const PortraitHistory = (window.PortraitHistory = {
             </p>`;
       }
 
+      // Check global portrait view mode (ASCII vs Original) to determine default display
+      let portraitViewMode = 'ascii';
+      try {
+        if (window.StorageService && StorageService.getPortraitViewMode) {
+          portraitViewMode = StorageService.getPortraitViewMode();
+        } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+          portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+        }
+      } catch (e) {
+        // Non-fatal: keep default
+      }
+      const showOriginalByDefault = portraitViewMode === 'original';
+
       return versions
         .map((v) => {
           const isActive = metadata.activeVersionId === v.id;
@@ -10313,12 +10334,19 @@ const PortraitHistory = (window.PortraitHistory = {
           const hasImage = !!v.url;
           const hasPrompt = !!v.prompt;
 
+          // Apply visibility based on global portrait view mode:
+          // If 'original' mode and we have an image, show image by default (hide ASCII)
+          // Otherwise show ASCII by default (hide image)
+          const shouldShowOriginal = showOriginalByDefault && hasImage;
+          const asciiHiddenClass = shouldShowOriginal ? ' is-hidden' : '';
+          const imageHiddenClass = shouldShowOriginal ? '' : ' is-hidden';
+
           const thumbHtml = `
-            <div class="card-thumbnail">
-              <div class="ascii-portrait portrait-history-preview" data-version-id="${v.id}"></div>
+            <div class="card-thumbnail${shouldShowOriginal ? ' card-thumbnail--original-mode' : ''}">
+              <div class="ascii-portrait portrait-history-preview${asciiHiddenClass}" data-version-id="${v.id}"></div>
               ${
                 hasImage
-                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image is-hidden" data-version-id="${v.id}">`
+                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image${imageHiddenClass}" data-version-id="${v.id}">`
                   : ''
               }
             </div>`;
@@ -10326,7 +10354,9 @@ const PortraitHistory = (window.PortraitHistory = {
           // Overflow menu for per-version actions (View, Prompt, Delete)
           const actionItems = [];
 
+          // Toggle button label depends on current default view
           if (hasImage) {
+            const toggleLabel = shouldShowOriginal ? 'View ASCII' : 'View original';
             actionItems.push(`
               <button
                 class="selector-option"
@@ -10336,7 +10366,7 @@ const PortraitHistory = (window.PortraitHistory = {
                 data-toggle-version-id="${v.id}"
               >
                 <span class="selector-option-icon">◉</span>
-                <span class="selector-option-label">View original</span>
+                <span class="selector-option-label">${toggleLabel}</span>
               </button>
             `);
           }
@@ -13485,7 +13515,10 @@ const App = (window.App = {
     const nameForTemplate = state.character.name || 'This character';
 
     if (!backstory && template && typeof template === 'string') {
-      backstory = template.replace(/{{\s*NAME\s*}}/g, nameForTemplate);
+      backstory = template
+        .replace(/{{\s*NAME\s*}}/g, nameForTemplate)
+        .replace(/{{\s*RACE\s*}}/g, state.character.race || 'adventurer')
+        .replace(/{{\s*CLASS\s*}}/g, state.character.class || 'hero');
       CharacterState.updateCharacter({ backstory });
     }
 
@@ -13647,10 +13680,10 @@ const App = (window.App = {
       'beforeend',
       `
       <div class="question-card mt-lg" data-question-id="${question.id}">
-        <button class="button-primary completion-save-btn" onclick="App.saveCharacter()">
+        <button class="button-primary completion-save-btn" id="completion-save-btn" onclick="App.saveCharacter()">
           > SAVE CHARACTER
         </button>
-        <button class="button-primary" onclick="App.startNew()">
+        <button class="button-primary" id="completion-new-btn" onclick="App.startNew()">
           > CREATE ANOTHER CHARACTER
         </button>
       </div>`,
@@ -16028,6 +16061,12 @@ const App = (window.App = {
       if (showMessage) {
         // Use a short, non-intrusive toast instead of an inline narrator system line.
         this.showToast('Character saved');
+      }
+
+      // Focus the "Create Another Character" button for keyboard navigation
+      const newBtn = document.getElementById('completion-new-btn');
+      if (newBtn) {
+        newBtn.focus();
       }
 
       // Show reminder to log in if in guest mode (only once per session)

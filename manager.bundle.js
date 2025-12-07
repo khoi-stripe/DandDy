@@ -2209,7 +2209,7 @@ const Utils = window.Utils = {
         ? this.stripEmojis(sourceText)
         : sourceText;
 
-    // Allow skipping by pressing any key
+    // Allow skipping by pressing any key or clicking/tapping
     const skipHandler = (e) => {
       // Only skip if not typing in an input field
       if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
@@ -2218,6 +2218,8 @@ const Utils = window.Utils = {
     };
 
     window.addEventListener('keydown', skipHandler, { once: true });
+    window.addEventListener('click', skipHandler, { once: true });
+    window.addEventListener('touchstart', skipHandler, { once: true, passive: true });
 
     // Type out character by character, or skip if interrupted
     for (let i = 0; i < safeText.length; i++) {
@@ -2232,6 +2234,8 @@ const Utils = window.Utils = {
 
     // Clean up
     window.removeEventListener('keydown', skipHandler);
+    window.removeEventListener('click', skipHandler);
+    window.removeEventListener('touchstart', skipHandler);
     element.classList.remove('is-typing');
   },
 
@@ -5722,7 +5726,7 @@ const CharacterSheet = (window.CharacterSheet = {
           ` : ''}
         </div>
         ${originalPortraitUrl
-          ? `<img id="${originalPortraitId}" class="original-portrait${showOriginalByDefault ? '' : ' is-hidden'}" src="${originalPortraitUrl}" alt="Character portrait">`
+          ? `<img id="${originalPortraitId}" class="original-portrait${showOriginalByDefault ? '' : ' is-hidden'}" src="${originalPortraitUrl}" alt="Character portrait" onload="this.classList.add('is-loaded')">`
           : ''}
       </div>
     `;
@@ -8858,6 +8862,8 @@ if (DEBUG_CLOUD) {
       const btn = document.querySelector(
         `button[data-toggle-version-id="${versionId}"]`,
       );
+      // Get the card thumbnail container for original mode styling
+      const thumbContainer = asciiEl ? asciiEl.closest('.card-thumbnail') : null;
 
       if (!imgEl || !asciiEl) return;
 
@@ -8867,6 +8873,9 @@ if (DEBUG_CLOUD) {
         // Switch to original image
         asciiEl.classList.add('is-hidden');
         imgEl.classList.remove('is-hidden');
+        if (thumbContainer) {
+          thumbContainer.classList.add('card-thumbnail--original-mode');
+        }
         if (btn) {
           const label = btn.querySelector('.selector-option-label');
           if (label) {
@@ -8879,6 +8888,9 @@ if (DEBUG_CLOUD) {
         // Switch back to ASCII art
         imgEl.classList.add('is-hidden');
         asciiEl.classList.remove('is-hidden');
+        if (thumbContainer) {
+          thumbContainer.classList.remove('card-thumbnail--original-mode');
+        }
         if (btn) {
           const label = btn.querySelector('.selector-option-label');
           if (label) {
@@ -9401,6 +9413,19 @@ if (DEBUG_CLOUD) {
             </p>`;
       }
 
+      // Check global portrait view mode (ASCII vs Original) to determine default display
+      let portraitViewMode = 'ascii';
+      try {
+        if (window.StorageService && StorageService.getPortraitViewMode) {
+          portraitViewMode = StorageService.getPortraitViewMode();
+        } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+          portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+        }
+      } catch (e) {
+        // Non-fatal: keep default
+      }
+      const showOriginalByDefault = portraitViewMode === 'original';
+
       return versions
         .map((v) => {
           const isActive = metadata.activeVersionId === v.id;
@@ -9417,12 +9442,19 @@ if (DEBUG_CLOUD) {
           const hasImage = !!v.url;
           const hasPrompt = !!v.prompt;
 
+          // Apply visibility based on global portrait view mode:
+          // If 'original' mode and we have an image, show image by default (hide ASCII)
+          // Otherwise show ASCII by default (hide image)
+          const shouldShowOriginal = showOriginalByDefault && hasImage;
+          const asciiHiddenClass = shouldShowOriginal ? ' is-hidden' : '';
+          const imageHiddenClass = shouldShowOriginal ? '' : ' is-hidden';
+
           const thumbHtml = `
-            <div class="card-thumbnail">
-              <div class="ascii-portrait portrait-history-preview" data-version-id="${v.id}"></div>
+            <div class="card-thumbnail${shouldShowOriginal ? ' card-thumbnail--original-mode' : ''}">
+              <div class="ascii-portrait portrait-history-preview${asciiHiddenClass}" data-version-id="${v.id}"></div>
               ${
                 hasImage
-                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image is-hidden" data-version-id="${v.id}">`
+                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image${imageHiddenClass}" data-version-id="${v.id}">`
                   : ''
               }
             </div>`;
@@ -9430,7 +9462,9 @@ if (DEBUG_CLOUD) {
           // Overflow menu for per-version actions (View, Prompt, Delete)
           const actionItems = [];
 
+          // Toggle button label depends on current default view
           if (hasImage) {
+            const toggleLabel = shouldShowOriginal ? 'View ASCII' : 'View original';
             actionItems.push(`
               <button
                 class="selector-option"
@@ -9440,7 +9474,7 @@ if (DEBUG_CLOUD) {
                 data-toggle-version-id="${v.id}"
               >
                 <span class="selector-option-icon">◉</span>
-                <span class="selector-option-label">View original</span>
+                <span class="selector-option-label">${toggleLabel}</span>
               </button>
             `);
           }
@@ -10706,18 +10740,33 @@ const UI = {
         emptyState.classList.remove('show');
         grid.innerHTML = characters.map(char => this.renderCharacterCard(char)).join('');
         
-        // Populate ASCII thumbnails after rendering
+        // Check portrait view mode preference
+        let portraitViewMode = 'original';
+        try {
+            if (window.StorageService && StorageService.getPortraitViewMode) {
+                portraitViewMode = StorageService.getPortraitViewMode();
+            } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+                portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+            }
+        } catch (e) {
+            // Non-fatal: keep default
+        }
+        
+        // Populate ASCII thumbnails after rendering (only when not showing original images)
         characters.forEach(char => {
+            const thumbnailEl = document.getElementById(`card-thumb-${char.id}`);
+            if (!thumbnailEl) return;
+            
+            // Skip if this is an image thumbnail (already rendered in HTML)
+            if (thumbnailEl.classList.contains('card-thumbnail--image')) return;
+            
             // Use the same portrait selection logic as the character sheet so
             // cards and detail views stay in sync.
             const asciiPortrait = window.CharacterSheet
                 ? window.CharacterSheet.getAsciiPortrait(char)
                 : (char.customPortraitAscii || char.portrait?.ascii || char.asciiPortrait || null);
             if (asciiPortrait) {
-                const thumbnailEl = document.getElementById(`card-thumb-${char.id}`);
-                if (thumbnailEl) {
-                    thumbnailEl.textContent = this.cropAsciiForThumbnail(asciiPortrait);
-                }
+                thumbnailEl.textContent = this.cropAsciiForThumbnail(asciiPortrait);
             }
         });
         
@@ -10757,13 +10806,45 @@ const UI = {
         const asciiPortrait = window.CharacterSheet
             ? window.CharacterSheet.getAsciiPortrait(character)
             : (character.customPortraitAscii || character.portrait?.ascii || character.asciiPortrait || null);
-        const hasPortrait = asciiPortrait && asciiPortrait.length > 0;
+        const hasAsciiPortrait = asciiPortrait && asciiPortrait.length > 0;
+        
+        // Get original portrait URL
+        const originalPortraitUrl = window.CharacterSheet
+            ? window.CharacterSheet.getOriginalPortraitUrl(character)
+            : (character.originalPortraitUrl || character.portrait?.url || null);
+        
+        // Check portrait view mode preference
+        let portraitViewMode = 'original';
+        try {
+            if (window.StorageService && StorageService.getPortraitViewMode) {
+                portraitViewMode = StorageService.getPortraitViewMode();
+            } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+                portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+            }
+        } catch (e) {
+            // Non-fatal: keep default
+        }
+        
+        // Determine which thumbnail to show
+        const showOriginalImage = portraitViewMode === 'original' && !!originalPortraitUrl;
+        const hasPortrait = hasAsciiPortrait || !!originalPortraitUrl;
+        
+        let thumbnailHtml = '';
+        if (hasPortrait) {
+            if (showOriginalImage) {
+                // Show original image
+                thumbnailHtml = `<div class="card-thumbnail card-thumbnail--image" id="card-thumb-${character.id}">
+                    <img src="${Utils.escapeHtml(originalPortraitUrl)}" alt="${name}" loading="lazy" />
+                </div>`;
+            } else if (hasAsciiPortrait) {
+                // Show ASCII art (content will be populated after render)
+                thumbnailHtml = `<div class="card-thumbnail" id="card-thumb-${character.id}"></div>`;
+            }
+        }
 
         return `
             <div class="character-card" data-id="${character.id}" onclick="viewCharacter('${character.id}')">
-                ${hasPortrait ? `
-                    <div class="card-thumbnail" id="card-thumb-${character.id}"></div>
-                ` : ''}
+                ${thumbnailHtml}
                 <div class="card-details">
                     <div class="card-name">${name}</div>
                     <div class="card-info">
@@ -11491,6 +11572,7 @@ async function generatePortraitForCharacter(id) {
     // Show prompt modal
     currentPortraitCharacterId = id;
     
+    // Build default prompt:
     // Show only the CHARACTER DESCRIPTION in the modal (not the full prompt with
     // style instructions). This matches the builder behavior and prevents
     // style/pose/scene instructions from compounding on each regeneration.

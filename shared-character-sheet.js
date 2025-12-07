@@ -420,7 +420,7 @@ const CharacterSheet = (window.CharacterSheet = {
           ` : ''}
         </div>
         ${originalPortraitUrl
-          ? `<img id="${originalPortraitId}" class="original-portrait${showOriginalByDefault ? '' : ' is-hidden'}" src="${originalPortraitUrl}" alt="Character portrait">`
+          ? `<img id="${originalPortraitId}" class="original-portrait${showOriginalByDefault ? '' : ' is-hidden'}" src="${originalPortraitUrl}" alt="Character portrait" onload="this.classList.add('is-loaded')">`
           : ''}
       </div>
     `;
