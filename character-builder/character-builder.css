@@ -1236,13 +1236,22 @@
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
+  /* Lock the entire page - no scrolling on html or body */
+  html {
+    overflow: hidden;
+    height: 100%;
+    height: 100dvh;
+  }
+  
   body {
     padding: var(--spacing-md);
-    /* Prevent body scroll bounce on iOS */
+    /* Prevent all body scrolling on mobile - both vertical and horizontal */
     overflow: hidden;
     /* Use dvh (dynamic viewport height) to account for mobile browser chrome */
     height: 100vh;
     height: 100dvh;
+    /* Prevent overscroll/bounce effects */
+    overscroll-behavior: none;
   }
   
   .terminal-container {
@@ -1252,9 +1261,11 @@
     height: calc(100dvh - 32px);
     /* Also account for safe area insets on notched devices */
     height: calc(100dvh - max(32px, env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px)));
-    /* Disable vertical scrolling on terminal window - panels handle their own scroll */
+    /* Disable all scrolling on terminal window - panels handle their own scroll */
     overflow: hidden;
     flex-shrink: 0;
+    /* Prevent overscroll effects */
+    overscroll-behavior: none;
   }
   
   .split-layout {
@@ -1263,25 +1274,33 @@
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    /* Prevent overscroll effects */
+    overscroll-behavior: none;
   }
   
   .left-panel {
     border-right: none;
     border-bottom: 1px solid var(--terminal-border);
     max-height: none;
-    /* Enable smooth momentum scrolling on iOS */
+    /* Enable smooth momentum scrolling on iOS, vertical only */
     overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     min-height: 0;
     flex: 1;
+    /* Contain scroll to prevent page bounce */
+    overscroll-behavior: contain;
   }
   
   .right-panel {
     max-height: none;
     overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     min-height: 0;
     flex: 1;
+    /* Contain scroll to prevent page bounce */
+    overscroll-behavior: contain;
   }
   
   .auth-container {

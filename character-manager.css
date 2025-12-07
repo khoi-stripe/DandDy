@@ -1169,6 +1169,8 @@
         min-height: 0;
         /* Split layout itself doesn't scroll - child panels do */
         overflow: hidden;
+        /* Prevent overscroll effects */
+        overscroll-behavior: none;
     }
     
     /* Hide right panel entirely on mobile - character sheet shown via modal */
@@ -1177,11 +1179,14 @@
         border-right: none;
         border-bottom: none;
         padding: var(--spacing-md);
-        /* Enable smooth momentum scrolling on iOS */
+        /* Enable smooth momentum scrolling on iOS, vertical only */
         overflow-y: auto;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
         /* Ensure panel doesn't grow beyond container */
         min-height: 0;
+        /* Contain scroll to prevent page bounce */
+        overscroll-behavior: contain;
     }
     
     /* Adjust controls section for mobile */

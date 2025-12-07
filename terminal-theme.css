@@ -1932,18 +1932,27 @@ body.selector-menu-open .splash-art {
 
 /* ===== RESPONSIVE BASE ===== */
 @media (max-width: 768px) {
+  /* Lock the entire page - no scrolling on html or body */
+  html {
+    overflow: hidden;
+    height: 100%;
+    height: 100dvh;
+  }
+  
   body {
     /* Use safe-area-insets to avoid iPhone Dynamic Island/notch and home indicator */
     padding: max(var(--spacing-md), env(safe-area-inset-top, var(--spacing-md)))
              max(var(--spacing-md), env(safe-area-inset-right, var(--spacing-md)))
              max(var(--spacing-md), env(safe-area-inset-bottom, var(--spacing-md)))
              max(var(--spacing-md), env(safe-area-inset-left, var(--spacing-md)));
-    /* Prevent body scroll bounce on iOS */
+    /* Prevent all body scrolling on mobile - both vertical and horizontal */
     overflow: hidden;
     /* Use dvh (dynamic viewport height) to account for mobile browser chrome.
        Falls back to vh for older browsers. */
     height: 100vh;
     height: 100dvh;
+    /* Prevent overscroll/bounce effects */
+    overscroll-behavior: none;
   }
   
   .terminal-frame,
@@ -1956,11 +1965,13 @@ body.selector-menu-open .splash-art {
     height: calc(100dvh - 32px);
     /* Also account for safe area insets on notched devices */
     height: calc(100dvh - max(32px, env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px)));
-    /* Disable vertical scrolling on the terminal window itself.
+    /* Disable all scrolling on the terminal window itself.
        Inner content (split-layout panels) handles its own scrolling. */
     overflow: hidden;
     /* Prevent any flexbox growth that could push past the viewport */
     flex-shrink: 0;
+    /* Prevent overscroll effects */
+    overscroll-behavior: none;
   }
   
   .terminal-header {
@@ -2008,13 +2019,18 @@ body.selector-menu-open .splash-art {
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    /* Prevent overscroll effects */
+    overscroll-behavior: none;
   }
   
-  /* Panels inside split layout can scroll their content */
+  /* Panels inside split layout can scroll vertically only */
   .left-panel,
   .right-panel {
     overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
+    /* Contain scroll to prevent page bounce */
+    overscroll-behavior: contain;
   }
 }
 
