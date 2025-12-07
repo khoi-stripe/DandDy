@@ -384,7 +384,7 @@ const Components = (window.Components = {
                     <div class="settings-row settings-row--stacked mb-lg">
                       <div class="settings-label">Style</div>
                       <div class="settings-field">
-                        <div class="selector-shell selector-shell--match-width" style="width: 100%;">
+                        <div class="selector-shell selector-shell--match-width">
                           <button
                             class="terminal-btn selector-trigger"
                             id="portrait-theme-select-trigger"
@@ -392,7 +392,6 @@ const Components = (window.Components = {
                             aria-haspopup="listbox"
                             aria-expanded="false"
                             onclick="CharacterSheet.toggleSelectorMenu(this)"
-                            style="width: 100%;"
                           >
                             <span
                               class="selector-trigger-label"
@@ -406,7 +405,6 @@ const Components = (window.Components = {
                             role="listbox"
                             aria-label="Portrait prompt theme"
                             aria-hidden="true"
-                            style="width: 100%;"
                           >
                             ${promptThemes
                               .map((theme) => {
