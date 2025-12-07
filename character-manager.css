@@ -377,6 +377,52 @@
     -ms-user-select: none;
 }
 
+/* Original image thumbnail variant */
+.card-thumbnail--image {
+    /* Reset ASCII-specific styles */
+    font-size: inherit;
+    line-height: inherit;
+    font-family: inherit;
+    white-space: normal;
+    color: inherit;
+    text-align: left;
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
+    /* Teal background hidden until image loads (prevents flash) */
+    background-color: transparent;
+    transition: background-color 0.12s ease-in 0.08s;
+}
+
+/* Only show teal background once image has loaded */
+.card-thumbnail--image:has(img.is-loaded) {
+    background-color: var(--terminal-fg);
+}
+
+.card-thumbnail--image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    display: block;
+    /* Multiply blend with teal background for terminal aesthetic */
+    mix-blend-mode: multiply;
+    /* Hidden until loaded, then fades in */
+    opacity: 0;
+    transition: opacity 0.1s ease-in;
+}
+
+.card-thumbnail--image img.is-loaded {
+    opacity: 0.85;
+}
+
+/* On hover/selection, slightly increase opacity for clearer view */
+.character-card:hover .card-thumbnail--image img.is-loaded,
+.character-card.is-selected .card-thumbnail--image img.is-loaded,
+.character-card.is-keyboard-focused .card-thumbnail--image img.is-loaded {
+    opacity: 0.95;
+}
+
 .card-details {
     padding: var(--spacing-md);
 }
@@ -1198,6 +1244,11 @@
     
     .character-card.is-selected .card-thumbnail {
         color: var(--terminal-dim) !important;
+    }
+    
+    /* Reset image thumbnail opacity on mobile (no special hover/selection effects) */
+    .character-card.is-selected .card-thumbnail--image img {
+        opacity: 0.85 !important;
     }
     
     .character-card.is-selected .card-name,

@@ -771,18 +771,33 @@ const UI = {
         emptyState.classList.remove('show');
         grid.innerHTML = characters.map(char => this.renderCharacterCard(char)).join('');
         
-        // Populate ASCII thumbnails after rendering
+        // Check portrait view mode preference
+        let portraitViewMode = 'original';
+        try {
+            if (window.StorageService && StorageService.getPortraitViewMode) {
+                portraitViewMode = StorageService.getPortraitViewMode();
+            } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+                portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+            }
+        } catch (e) {
+            // Non-fatal: keep default
+        }
+        
+        // Populate ASCII thumbnails after rendering (only when not showing original images)
         characters.forEach(char => {
+            const thumbnailEl = document.getElementById(`card-thumb-${char.id}`);
+            if (!thumbnailEl) return;
+            
+            // Skip if this is an image thumbnail (already rendered in HTML)
+            if (thumbnailEl.classList.contains('card-thumbnail--image')) return;
+            
             // Use the same portrait selection logic as the character sheet so
             // cards and detail views stay in sync.
             const asciiPortrait = window.CharacterSheet
                 ? window.CharacterSheet.getAsciiPortrait(char)
                 : (char.customPortraitAscii || char.portrait?.ascii || char.asciiPortrait || null);
             if (asciiPortrait) {
-                const thumbnailEl = document.getElementById(`card-thumb-${char.id}`);
-                if (thumbnailEl) {
-                    thumbnailEl.textContent = this.cropAsciiForThumbnail(asciiPortrait);
-                }
+                thumbnailEl.textContent = this.cropAsciiForThumbnail(asciiPortrait);
             }
         });
         
@@ -822,13 +837,45 @@ const UI = {
         const asciiPortrait = window.CharacterSheet
             ? window.CharacterSheet.getAsciiPortrait(character)
             : (character.customPortraitAscii || character.portrait?.ascii || character.asciiPortrait || null);
-        const hasPortrait = asciiPortrait && asciiPortrait.length > 0;
+        const hasAsciiPortrait = asciiPortrait && asciiPortrait.length > 0;
+        
+        // Get original portrait URL
+        const originalPortraitUrl = window.CharacterSheet
+            ? window.CharacterSheet.getOriginalPortraitUrl(character)
+            : (character.originalPortraitUrl || character.portrait?.url || null);
+        
+        // Check portrait view mode preference
+        let portraitViewMode = 'original';
+        try {
+            if (window.StorageService && StorageService.getPortraitViewMode) {
+                portraitViewMode = StorageService.getPortraitViewMode();
+            } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+                portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+            }
+        } catch (e) {
+            // Non-fatal: keep default
+        }
+        
+        // Determine which thumbnail to show
+        const showOriginalImage = portraitViewMode === 'original' && !!originalPortraitUrl;
+        const hasPortrait = hasAsciiPortrait || !!originalPortraitUrl;
+        
+        let thumbnailHtml = '';
+        if (hasPortrait) {
+            if (showOriginalImage) {
+                // Show original image (onload adds is-loaded class for fade-in effect)
+                thumbnailHtml = `<div class="card-thumbnail card-thumbnail--image" id="card-thumb-${character.id}">
+                    <img src="${Utils.escapeHtml(originalPortraitUrl)}" alt="${name}" loading="lazy" onload="this.classList.add('is-loaded')" />
+                </div>`;
+            } else if (hasAsciiPortrait) {
+                // Show ASCII art (content will be populated after render)
+                thumbnailHtml = `<div class="card-thumbnail" id="card-thumb-${character.id}"></div>`;
+            }
+        }
 
         return `
             <div class="character-card" data-id="${character.id}" onclick="viewCharacter('${character.id}')">
-                ${hasPortrait ? `
-                    <div class="card-thumbnail" id="card-thumb-${character.id}"></div>
-                ` : ''}
+                ${thumbnailHtml}
                 <div class="card-details">
                     <div class="card-name">${name}</div>
                     <div class="card-info">
