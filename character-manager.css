@@ -1338,7 +1338,7 @@
         display: none;
         align-items: center;
         gap: var(--spacing-md);
-        padding: 16px var(--spacing-md);
+        padding: 16px 0;
         border-bottom: 1px solid var(--sheet-accent-dim);
         background: #000;
         position: sticky;
