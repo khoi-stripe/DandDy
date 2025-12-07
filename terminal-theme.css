@@ -357,13 +357,13 @@ body::before {
   position: absolute;
   width: var(--title-cube-size);
   height: var(--title-cube-size);
-  border: 0.5px solid var(--terminal-fg);
+  /* Static teal color (no color cycling) */
+  border: 0.5px solid hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
   box-sizing: border-box;
-  background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.05);
+  background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.05);
   box-shadow:
-    inset 0 0 12px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.35),
-    0 0 8px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.3);
-  animation: title-cube-color-cycle 18s ease-in-out infinite;
+    inset 0 0 12px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.35),
+    0 0 8px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.3);
 }
 
 .title-cube-face:nth-child(1) { transform: translateZ(var(--title-cube-depth)); }
@@ -378,24 +378,6 @@ body::before {
   to { transform: rotateX(0deg) rotateY(-360deg); }
 }
 
-@keyframes title-cube-color-cycle {
-  0%, 100% {
-    /* Green */
-    border-color: hsl(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright));
-    background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.05);
-    box-shadow:
-      inset 0 0 12px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.35),
-      0 0 8px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.3);
-  }
-  50% {
-    /* Teal */
-    border-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
-    background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.05);
-    box-shadow:
-      inset 0 0 12px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.35),
-      0 0 8px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.3);
-  }
-}
 
 .terminal-footer {
   padding: var(--spacing-sm);
