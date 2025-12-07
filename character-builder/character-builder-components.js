@@ -515,19 +515,19 @@ const Components = (window.Components = {
                             <input
                               type="radio"
                               name="portrait-view-mode"
-                              value="ascii"
-                              ${currentPortraitViewMode === 'original' ? '' : 'checked'}
+                              value="original"
+                              ${currentPortraitViewMode === 'original' ? 'checked' : ''}
                             >
-                            <span class="settings-radio-label">ASCII</span>
+                            <span class="settings-radio-label">Image</span>
                           </label>
                           <label class="settings-radio-option">
                             <input
                               type="radio"
                               name="portrait-view-mode"
-                              value="original"
-                              ${currentPortraitViewMode === 'original' ? 'checked' : ''}
+                              value="ascii"
+                              ${currentPortraitViewMode === 'original' ? '' : 'checked'}
                             >
-                            <span class="settings-radio-label">Original</span>
+                            <span class="settings-radio-label">ASCII</span>
                           </label>
                         </div>
                       </div>
