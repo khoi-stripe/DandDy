@@ -11245,7 +11245,7 @@ const Components = (window.Components = {
                     <div class="settings-row settings-row--stacked mb-lg">
                       <div class="settings-label">Style</div>
                       <div class="settings-field">
-                        <div class="selector-shell selector-shell--match-width" style="width: 100%;">
+                        <div class="selector-shell selector-shell--match-width">
                           <button
                             class="terminal-btn selector-trigger"
                             id="portrait-theme-select-trigger"
@@ -11253,7 +11253,6 @@ const Components = (window.Components = {
                             aria-haspopup="listbox"
                             aria-expanded="false"
                             onclick="CharacterSheet.toggleSelectorMenu(this)"
-                            style="width: 100%;"
                           >
                             <span
                               class="selector-trigger-label"
@@ -11267,7 +11266,6 @@ const Components = (window.Components = {
                             role="listbox"
                             aria-label="Portrait prompt theme"
                             aria-hidden="true"
-                            style="width: 100%;"
                           >
                             ${promptThemes
                               .map((theme) => {
@@ -17747,7 +17745,7 @@ function exitToManager() {
     App.showConfirmationOverlay(
       'You have unsaved changes. What would you like to do?',
       async () => {
-        // User clicked "SAVE" (primary button) - attempt to save; if save fails, we stay in the builder
+        // User clicked "SAVE" - attempt to save; if save fails, we stay in the builder
         await App.saveCharacter(true);
 
         // Re-check that we now have an ID before exiting
@@ -17764,13 +17762,15 @@ function exitToManager() {
         window.location.href = '../index.html?from=builder';
       },
       () => {
-        // User clicked "DISCARD" (secondary button) - exit without saving
+        // User clicked "DISCARD" - exit without saving
         window.suppressBeforeunloadWarning();
         window.location.href = '../index.html?from=builder';
       },
       {
         primaryLabel: 'SAVE',
-        secondaryLabel: 'DISCARD'
+        secondaryLabel: 'DISCARD',
+        primaryClass: 'terminal-btn',
+        secondaryClass: 'terminal-btn'
       }
     );
   } else {

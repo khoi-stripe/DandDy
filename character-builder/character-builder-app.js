@@ -1440,7 +1440,10 @@ const App = (window.App = {
     const nameForTemplate = state.character.name || 'This character';
 
     if (!backstory && template && typeof template === 'string') {
-      backstory = template.replace(/{{\s*NAME\s*}}/g, nameForTemplate);
+      backstory = template
+        .replace(/{{\s*NAME\s*}}/g, nameForTemplate)
+        .replace(/{{\s*RACE\s*}}/g, state.character.race || 'adventurer')
+        .replace(/{{\s*CLASS\s*}}/g, state.character.class || 'hero');
       CharacterState.updateCharacter({ backstory });
     }
 
@@ -1602,10 +1605,10 @@ const App = (window.App = {
       'beforeend',
       `
       <div class="question-card mt-lg" data-question-id="${question.id}">
-        <button class="button-primary completion-save-btn" onclick="App.saveCharacter()">
+        <button class="button-primary completion-save-btn" id="completion-save-btn" onclick="App.saveCharacter()">
           > SAVE CHARACTER
         </button>
-        <button class="button-primary" onclick="App.startNew()">
+        <button class="button-primary" id="completion-new-btn" onclick="App.startNew()">
           > CREATE ANOTHER CHARACTER
         </button>
       </div>`,
@@ -3985,6 +3988,12 @@ const App = (window.App = {
         this.showToast('Character saved');
       }
 
+      // Focus the "Create Another Character" button for keyboard navigation
+      const newBtn = document.getElementById('completion-new-btn');
+      if (newBtn) {
+        newBtn.focus();
+      }
+
       // Show reminder to log in if in guest mode (only once per session)
       if (!this._guestSaveNoticeShown && window.AuthService && !window.AuthService.isAuthenticated()) {
         this._guestSaveNoticeShown = true;
@@ -5663,7 +5672,7 @@ function exitToManager() {
     App.showConfirmationOverlay(
       'You have unsaved changes. What would you like to do?',
       async () => {
-        // User clicked "SAVE" (primary button) - attempt to save; if save fails, we stay in the builder
+        // User clicked "SAVE" - attempt to save; if save fails, we stay in the builder
         await App.saveCharacter(true);
 
         // Re-check that we now have an ID before exiting
@@ -5680,13 +5689,15 @@ function exitToManager() {
         window.location.href = '../index.html?from=builder';
       },
       () => {
-        // User clicked "DISCARD" (secondary button) - exit without saving
+        // User clicked "DISCARD" - exit without saving
         window.suppressBeforeunloadWarning();
         window.location.href = '../index.html?from=builder';
       },
       {
         primaryLabel: 'SAVE',
-        secondaryLabel: 'DISCARD'
+        secondaryLabel: 'DISCARD',
+        primaryClass: 'terminal-btn',
+        secondaryClass: 'terminal-btn'
       }
     );
   } else {
