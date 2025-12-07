@@ -7,6 +7,7 @@
   const isLocalEnvironment =
     location.hostname === 'localhost' ||
     location.hostname === '127.0.0.1' ||
+    location.hostname.startsWith('192.168.') ||
     location.protocol === 'file:';
 
   // Single source of truth for backend origin & API base URL.

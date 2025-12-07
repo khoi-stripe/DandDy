@@ -11,6 +11,7 @@
   const isLocalEnvironment =
     location.hostname === 'localhost' ||
     location.hostname === '127.0.0.1' ||
+    location.hostname.startsWith('192.168.') ||
     location.protocol === 'file:';
 
   // Single source of truth for backend origin & API base URL.
@@ -4893,7 +4894,7 @@ const Components = (window.Components = {
                     <div class="settings-row settings-row--stacked mb-lg">
                       <div class="settings-label">Style</div>
                       <div class="settings-field">
-                        <div class="selector-shell selector-shell--match-width" style="width: 100%;">
+                        <div class="selector-shell selector-shell--match-width">
                           <button
                             class="terminal-btn selector-trigger"
                             id="portrait-theme-select-trigger"
@@ -4901,7 +4902,6 @@ const Components = (window.Components = {
                             aria-haspopup="listbox"
                             aria-expanded="false"
                             onclick="CharacterSheet.toggleSelectorMenu(this)"
-                            style="width: 100%;"
                           >
                             <span
                               class="selector-trigger-label"
@@ -4915,7 +4915,6 @@ const Components = (window.Components = {
                             role="listbox"
                             aria-label="Portrait prompt theme"
                             aria-hidden="true"
-                            style="width: 100%;"
                           >
                             ${promptThemes
                               .map((theme) => {
@@ -5026,19 +5025,19 @@ const Components = (window.Components = {
                             <input
                               type="radio"
                               name="portrait-view-mode"
-                              value="ascii"
-                              ${currentPortraitViewMode === 'original' ? '' : 'checked'}
+                              value="original"
+                              ${currentPortraitViewMode === 'original' ? 'checked' : ''}
                             >
-                            <span class="settings-radio-label">ASCII</span>
+                            <span class="settings-radio-label">Image</span>
                           </label>
                           <label class="settings-radio-option">
                             <input
                               type="radio"
                               name="portrait-view-mode"
-                              value="original"
-                              ${currentPortraitViewMode === 'original' ? 'checked' : ''}
+                              value="ascii"
+                              ${currentPortraitViewMode === 'original' ? '' : 'checked'}
                             >
-                            <span class="settings-radio-label">Original</span>
+                            <span class="settings-radio-label">ASCII</span>
                           </label>
                         </div>
                       </div>
@@ -10484,11 +10483,135 @@ const MobileView = {
 
     /** Track the previous viewport state to detect transitions */
     _wasMobile: null,
+    
+    /** Swipe tracking state */
+    _touchStartX: 0,
+    _touchStartY: 0,
+    _touchEndX: 0,
+    _touchEndY: 0,
+    _isSwiping: false,
+    _pointerId: null,
+    _minSwipeDistance: 50,
 
     /** Initialize resize listener for viewport transitions */
     init() {
         this._wasMobile = this.isMobile();
         window.addEventListener('resize', () => this.handleResize());
+        this.initSwipeHandlers();
+    },
+    
+    /** Initialize swipe gesture handlers for mobile navigation */
+    initSwipeHandlers() {
+        const leftPanel = document.getElementById('character-list-panel');
+        if (!leftPanel) return;
+        
+        // Use pointer events for better compatibility with Chrome DevTools simulator
+        leftPanel.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'touch' || e.pointerType === 'pen' || this.isMobile()) {
+                this._touchStartX = e.screenX;
+                this._touchStartY = e.screenY;
+                this._isSwiping = true;
+                this._pointerId = e.pointerId;
+                // Capture pointer to prevent cancellation during swipe
+                try {
+                    e.target.setPointerCapture(e.pointerId);
+                } catch (err) {}
+            }
+        }, { passive: true });
+        
+        leftPanel.addEventListener('pointerup', (e) => {
+            if (this._isSwiping) {
+                this._touchEndX = e.screenX;
+                this._touchEndY = e.screenY;
+                this._isSwiping = false;
+                // Release pointer capture
+                try {
+                    if (this._pointerId !== null) {
+                        e.target.releasePointerCapture(this._pointerId);
+                    }
+                } catch (err) {}
+                this._pointerId = null;
+                this.handleSwipe();
+            }
+        }, { passive: true });
+        
+        leftPanel.addEventListener('pointercancel', () => {
+            this._isSwiping = false;
+        }, { passive: true });
+    },
+    
+    /** Handle swipe gesture detection */
+    handleSwipe() {
+        // Only handle swipes when viewing a character sheet on mobile
+        if (!this.isOpen()) return;
+        
+        const deltaX = this._touchEndX - this._touchStartX;
+        const deltaY = this._touchEndY - this._touchStartY;
+        
+        // Ensure horizontal swipe is dominant (not vertical scrolling)
+        if (Math.abs(deltaX) < this._minSwipeDistance) return;
+        if (Math.abs(deltaY) > Math.abs(deltaX)) return;
+        
+        if (deltaX > 0) {
+            // Swipe right → go to previous character
+            this.navigateToPreviousCharacter();
+        } else {
+            // Swipe left → go to next character
+            this.navigateToNextCharacter();
+        }
+    },
+    
+    /** Navigate to the next character in the grid (carousel) */
+    navigateToNextCharacter() {
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) return;
+        
+        const currentId = AppState.selectedCharacterId;
+        const currentIndex = characters.findIndex(c => c.id === currentId);
+        
+        // Carousel: wrap to first if at end
+        const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % characters.length;
+        const nextCharacter = characters[nextIndex];
+        
+        if (nextCharacter) {
+            this.showSwipeLoader();
+            viewCharacter(nextCharacter.id, { skipKeyboardSync: false, updateUrl: true });
+        }
+    },
+    
+    /** Navigate to the previous character in the grid (carousel) */
+    navigateToPreviousCharacter() {
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) return;
+        
+        const currentId = AppState.selectedCharacterId;
+        const currentIndex = characters.findIndex(c => c.id === currentId);
+        
+        // Carousel: wrap to last if at beginning
+        const prevIndex = currentIndex <= 0 ? characters.length - 1 : currentIndex - 1;
+        const prevCharacter = characters[prevIndex];
+        
+        if (prevCharacter) {
+            this.showSwipeLoader();
+            viewCharacter(prevCharacter.id, { skipKeyboardSync: false, updateUrl: true });
+        }
+    },
+    
+    /** Flag to track if we're in a swipe loading transition */
+    _isSwipeLoading: false,
+    
+    /** Show the swipe loading overlay */
+    showSwipeLoader() {
+        this._isSwipeLoading = true;
+    },
+    
+    /** Hide the swipe loading overlay */
+    hideSwipeLoader() {
+        this._isSwipeLoading = false;
+        const loader = document.querySelector('.mobile-swipe-loader');
+        if (loader) {
+            loader.remove();
+        }
     },
 
     /** Handle viewport resize transitions */
@@ -10535,10 +10658,18 @@ const MobileView = {
         
         if (!leftPanel || !container) return;
         
+        // Check if we're in a swipe transition (loader was shown)
+        const isSwipeTransition = this._isSwipeLoading;
+        
         // Clone the character sheet content into the container
         const sourceSheet = document.getElementById('characterSheet');
         if (sourceSheet) {
             container.innerHTML = sourceSheet.innerHTML;
+        }
+        
+        // If this was a swipe transition, re-add the loader overlay
+        if (isSwipeTransition) {
+            this.addSwipeLoaderToContainer(container);
         }
         
         // Swap to sheet view
@@ -10546,6 +10677,70 @@ const MobileView = {
         
         // Scroll to top
         leftPanel.scrollTop = 0;
+        
+        // Wait for portrait image to load before hiding the loader
+        if (isSwipeTransition) {
+            this.waitForPortraitLoad(container);
+        }
+    },
+    
+    /** Add the swipe loader overlay to the portrait container */
+    addSwipeLoaderToContainer(container) {
+        // Find the portrait container within the sheet
+        const portraitContainer = container.querySelector('.portrait-container');
+        if (!portraitContainer) return;
+        
+        const loader = document.createElement('div');
+        loader.className = 'mobile-swipe-loader is-visible';
+        loader.innerHTML = `
+            <div class="panel-loading-cube-container">
+                <div class="panel-loading-cube">
+                    <i></i><i></i><i></i><i></i><i></i><i></i>
+                </div>
+            </div>
+        `;
+        portraitContainer.appendChild(loader);
+    },
+    
+    /** Wait for portrait image to load, then hide the swipe loader */
+    waitForPortraitLoad(container) {
+        // Find all portrait images in the container (original and/or ascii)
+        const images = container.querySelectorAll('img.original-portrait, .ascii-portrait img');
+        
+        if (images.length === 0) {
+            // No images found - hide immediately
+            this.hideSwipeLoader();
+            return;
+        }
+        
+        // Track how many images need to load
+        let pendingCount = 0;
+        let loadedOrErrored = 0;
+        
+        const checkComplete = () => {
+            loadedOrErrored++;
+            if (loadedOrErrored >= pendingCount) {
+                this.hideSwipeLoader();
+            }
+        };
+        
+        images.forEach(img => {
+            if (!img.complete) {
+                pendingCount++;
+                img.addEventListener('load', checkComplete, { once: true });
+                img.addEventListener('error', checkComplete, { once: true });
+            }
+        });
+        
+        if (pendingCount === 0) {
+            // All images already loaded - hide immediately
+            this.hideSwipeLoader();
+        } else {
+            // Fallback timeout in case something goes wrong (5 seconds)
+            setTimeout(() => {
+                this.hideSwipeLoader();
+            }, 5000);
+        }
     },
 
     /** Close the mobile sheet view (returns to grid) */

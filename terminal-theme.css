@@ -494,7 +494,7 @@ body::before {
   opacity: 0;
   /* Allow interaction so the close button is clickable */
   pointer-events: auto;
-  max-width: min(480px, 100% - 32px);
+  max-width: min(480px, calc(100% - 16px));
   /* Reserve space on the right for the dismiss button so text never sits under it */
   padding-right: 48px;
 
@@ -1933,6 +1933,12 @@ body.selector-menu-open .splash-art {
   .splash-text {
     align-items: center;
     text-align: center;
+  }
+
+  .toast-notification {
+    /* Use viewport width so toast isn't constrained by container padding */
+    width: calc(100vw - 32px);
+    max-width: 480px;
   }
 }
 

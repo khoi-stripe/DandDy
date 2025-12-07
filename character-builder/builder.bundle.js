@@ -11,6 +11,7 @@
   const isLocalEnvironment =
     location.hostname === 'localhost' ||
     location.hostname === '127.0.0.1' ||
+    location.hostname.startsWith('192.168.') ||
     location.protocol === 'file:';
 
   // Single source of truth for backend origin & API base URL.
@@ -11376,19 +11377,19 @@ const Components = (window.Components = {
                             <input
                               type="radio"
                               name="portrait-view-mode"
-                              value="ascii"
-                              ${currentPortraitViewMode === 'original' ? '' : 'checked'}
+                              value="original"
+                              ${currentPortraitViewMode === 'original' ? 'checked' : ''}
                             >
-                            <span class="settings-radio-label">ASCII</span>
+                            <span class="settings-radio-label">Image</span>
                           </label>
                           <label class="settings-radio-option">
                             <input
                               type="radio"
                               name="portrait-view-mode"
-                              value="original"
-                              ${currentPortraitViewMode === 'original' ? 'checked' : ''}
+                              value="ascii"
+                              ${currentPortraitViewMode === 'original' ? '' : 'checked'}
                             >
-                            <span class="settings-radio-label">Original</span>
+                            <span class="settings-radio-label">ASCII</span>
                           </label>
                         </div>
                       </div>

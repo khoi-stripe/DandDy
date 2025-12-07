@@ -426,6 +426,8 @@
       const btn = document.querySelector(
         `button[data-toggle-version-id="${versionId}"]`,
       );
+      // Get the card thumbnail container for original mode styling
+      const thumbContainer = asciiEl ? asciiEl.closest('.card-thumbnail') : null;
 
       if (!imgEl || !asciiEl) return;
 
@@ -435,6 +437,9 @@
         // Switch to original image
         asciiEl.classList.add('is-hidden');
         imgEl.classList.remove('is-hidden');
+        if (thumbContainer) {
+          thumbContainer.classList.add('card-thumbnail--original-mode');
+        }
         if (btn) {
           const label = btn.querySelector('.selector-option-label');
           if (label) {
@@ -447,6 +452,9 @@
         // Switch back to ASCII art
         imgEl.classList.add('is-hidden');
         asciiEl.classList.remove('is-hidden');
+        if (thumbContainer) {
+          thumbContainer.classList.remove('card-thumbnail--original-mode');
+        }
         if (btn) {
           const label = btn.querySelector('.selector-option-label');
           if (label) {
@@ -969,6 +977,19 @@
             </p>`;
       }
 
+      // Check global portrait view mode (ASCII vs Original) to determine default display
+      let portraitViewMode = 'ascii';
+      try {
+        if (window.StorageService && StorageService.getPortraitViewMode) {
+          portraitViewMode = StorageService.getPortraitViewMode();
+        } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+          portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+        }
+      } catch (e) {
+        // Non-fatal: keep default
+      }
+      const showOriginalByDefault = portraitViewMode === 'original';
+
       return versions
         .map((v) => {
           const isActive = metadata.activeVersionId === v.id;
@@ -985,12 +1006,19 @@
           const hasImage = !!v.url;
           const hasPrompt = !!v.prompt;
 
+          // Apply visibility based on global portrait view mode:
+          // If 'original' mode and we have an image, show image by default (hide ASCII)
+          // Otherwise show ASCII by default (hide image)
+          const shouldShowOriginal = showOriginalByDefault && hasImage;
+          const asciiHiddenClass = shouldShowOriginal ? ' is-hidden' : '';
+          const imageHiddenClass = shouldShowOriginal ? '' : ' is-hidden';
+
           const thumbHtml = `
-            <div class="card-thumbnail">
-              <div class="ascii-portrait portrait-history-preview" data-version-id="${v.id}"></div>
+            <div class="card-thumbnail${shouldShowOriginal ? ' card-thumbnail--original-mode' : ''}">
+              <div class="ascii-portrait portrait-history-preview${asciiHiddenClass}" data-version-id="${v.id}"></div>
               ${
                 hasImage
-                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image is-hidden" data-version-id="${v.id}">`
+                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image${imageHiddenClass}" data-version-id="${v.id}">`
                   : ''
               }
             </div>`;
@@ -998,7 +1026,9 @@
           // Overflow menu for per-version actions (View, Prompt, Delete)
           const actionItems = [];
 
+          // Toggle button label depends on current default view
           if (hasImage) {
+            const toggleLabel = shouldShowOriginal ? 'View ASCII' : 'View original';
             actionItems.push(`
               <button
                 class="selector-option"
@@ -1008,7 +1038,7 @@
                 data-toggle-version-id="${v.id}"
               >
                 <span class="selector-option-icon">◉</span>
-                <span class="selector-option-label">View original</span>
+                <span class="selector-option-label">${toggleLabel}</span>
               </button>
             `);
           }
