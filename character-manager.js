@@ -737,10 +737,14 @@ const MobileView = {
         this._wasMobile = isMobileNow;
         
         if (wasDesktop && isNowMobile) {
-            // Desktop → Mobile: if we had a selection, open the modal
-            if (AppState.selectedCharacterId) {
-                this.open(AppState.selectedCharacterId);
+            // Desktop → Mobile: deselect all cards (user must tap to view)
+            if (typeof AppState !== 'undefined' && AppState) {
+                AppState.selectedCharacterId = null;
             }
+            document.querySelectorAll('.character-card').forEach(card => {
+                card.classList.remove('is-selected');
+            });
+            clearCharacterFromUrl();
         } else if (!isMobileNow) {
             // Mobile → Desktop: close modal, ensure a character is selected
             if (wasModalOpen) {

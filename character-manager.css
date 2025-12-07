@@ -171,9 +171,10 @@
 }
 
 /* Placeholder copy (e.g., "Search all 15 characters") should also use
-   the dim terminal green token so it matches the input text color. */
+   a dim color so it's clearly secondary to actual input text. */
 .search-input-wrapper .terminal-input::placeholder {
     color: var(--terminal-dim);
+    opacity: 0.6;
     /* Keep placeholder the same size as the input/button text */
     font-size: var(--font-size-small);
 }

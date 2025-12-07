@@ -1007,6 +1007,12 @@ body::before {
   box-shadow: 0 0 5px hsla(var(--theme-cyan-h), var(--theme-cyan-s), var(--theme-cyan-l-bright), 0.5);
 }
 
+.terminal-input::placeholder,
+.terminal-textarea::placeholder {
+  color: var(--terminal-dim);
+  opacity: 0.6;
+}
+
 .terminal-select {
   cursor: pointer;
   width: auto;
