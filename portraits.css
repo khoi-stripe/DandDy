@@ -445,6 +445,15 @@
   padding: var(--spacing-md);
 }
 
+/* Ensure portrait history details uses flex layout for inline meta + overflow */
+.portrait-history-modal .card-details.portrait-history-details {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+}
+
 .portrait-history-modal .card-name {
   color: var(--modal-accent-dim);
   font-size: 12px;
@@ -545,8 +554,11 @@
 /* Layout for date + overflow inside a single footer band */
 .portrait-history-details {
   display: flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: space-between;
   gap: var(--spacing-sm);
+  flex-wrap: nowrap;
 }
 
 .portrait-history-meta {
@@ -554,12 +566,10 @@
   min-width: 0;
 }
 
-/* Add breathing room around history card actions */
+/* Overflow button pinned to the right */
 .portrait-history-actions {
+  flex: 0 0 auto;
   margin-left: auto;
-  display: inline-flex;
-  justify-content: flex-end;
-  align-items: center;
 }
 
 /* Extra spacing between helper text and history cards in the modal */
@@ -776,15 +786,50 @@
   overflow-y: auto;
 }
 
-/* Style label in prompt modal header - positioned between title and close button */
+/* Modal header layout for portrait prompt view:
+   - Allow flex wrap so style label can move below title when space is tight
+   - Title and close button stay on first row
+   - Style label flows to second row when needed */
+.modal-header:has(.portrait-prompt-style-label) {
+  flex-wrap: wrap;
+  row-gap: var(--spacing-xs);
+}
+
+/* Title takes only the space it needs, allowing close button to stay beside it */
+.modal-header:has(.portrait-prompt-style-label) .modal-title {
+  flex: 0 1 auto;
+  margin-right: auto;
+}
+
+/* Close button stays pinned to the right on the first row */
+.modal-header:has(.portrait-prompt-style-label) .modal-close {
+  flex: 0 0 auto;
+  order: 2;
+}
+
+/* Style label in prompt modal header:
+   - Normally sits between title and close button
+   - On narrow viewports, wraps to its own row below the title */
 .portrait-prompt-style-label {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--modal-accent-dim);
-  flex: 1;
+  white-space: nowrap;
+  order: 1;
+  /* When there's room, position between title and close button */
+  flex: 1 1 auto;
   text-align: right;
   margin-right: var(--spacing-md);
-  white-space: nowrap;
+}
+
+/* When space is tight, style label wraps below the title */
+@media (max-width: 600px) {
+  .portrait-prompt-style-label {
+    flex-basis: 100%;
+    text-align: left;
+    margin-right: 0;
+    order: 3;
+  }
 }
 
 /* ===== CUSTOMIZE PORTRAIT MODAL ===== */
