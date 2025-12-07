@@ -1238,24 +1238,50 @@
 @media (max-width: 768px) {
   body {
     padding: var(--spacing-md);
+    /* Prevent body scroll bounce on iOS */
+    overflow: hidden;
+    /* Use dvh (dynamic viewport height) to account for mobile browser chrome */
+    height: 100vh;
+    height: 100dvh;
   }
   
   .terminal-container {
+    /* Use dvh units for proper mobile browser chrome handling.
+       Falls back to vh for older browsers. */
     height: calc(100vh - 32px);
+    height: calc(100dvh - 32px);
+    /* Also account for safe area insets on notched devices */
+    height: calc(100dvh - max(32px, env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px)));
+    /* Disable vertical scrolling on terminal window - panels handle their own scroll */
+    overflow: hidden;
+    flex-shrink: 0;
   }
   
   .split-layout {
     flex-direction: column;
+    /* Split layout fills available space but doesn't exceed it */
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
   }
   
   .left-panel {
     border-right: none;
     border-bottom: 1px solid var(--terminal-border);
     max-height: none;
+    /* Enable smooth momentum scrolling on iOS */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+    flex: 1;
   }
   
   .right-panel {
     max-height: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+    flex: 1;
   }
   
   .auth-container {

@@ -171,10 +171,9 @@
 }
 
 /* Placeholder copy (e.g., "Search all 15 characters") should also use
-   a dim color so it's clearly secondary to actual input text. */
+   the dim terminal green token so it matches the input text color. */
 .search-input-wrapper .terminal-input::placeholder {
     color: var(--terminal-dim);
-    opacity: 0.6;
     /* Keep placeholder the same size as the input/button text */
     font-size: var(--font-size-small);
 }
@@ -1165,7 +1164,11 @@
     
     .split-layout {
         flex-direction: column;
-        overflow-y: auto;
+        /* Let split-layout fill available space but not exceed it */
+        flex: 1;
+        min-height: 0;
+        /* Split layout itself doesn't scroll - child panels do */
+        overflow: hidden;
     }
     
     /* Hide right panel entirely on mobile - character sheet shown via modal */
@@ -1174,7 +1177,11 @@
         border-right: none;
         border-bottom: none;
         padding: var(--spacing-md);
+        /* Enable smooth momentum scrolling on iOS */
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        /* Ensure panel doesn't grow beyond container */
+        min-height: 0;
     }
     
     /* Adjust controls section for mobile */

@@ -1010,7 +1010,6 @@ body::before {
 .terminal-input::placeholder,
 .terminal-textarea::placeholder {
   color: var(--terminal-dim);
-  opacity: 0.6;
 }
 
 .terminal-select {
@@ -1939,17 +1938,35 @@ body.selector-menu-open .splash-art {
              max(var(--spacing-md), env(safe-area-inset-right, var(--spacing-md)))
              max(var(--spacing-md), env(safe-area-inset-bottom, var(--spacing-md)))
              max(var(--spacing-md), env(safe-area-inset-left, var(--spacing-md)));
+    /* Prevent body scroll bounce on iOS */
+    overflow: hidden;
+    /* Use dvh (dynamic viewport height) to account for mobile browser chrome.
+       Falls back to vh for older browsers. */
+    height: 100vh;
+    height: 100dvh;
   }
   
   .terminal-frame,
   .terminal-container {
     border-radius: 8px;
-    /* Account for safe area insets in height calculation */
-    height: calc(100vh - max(32px, env(safe-area-inset-top, 0px)) - max(0px, env(safe-area-inset-bottom, 0px)));
+    /* Use dvh units to properly account for mobile browser chrome (URL bar, etc.).
+       The dvh unit dynamically adjusts when the browser chrome appears/disappears.
+       Calculate height based on viewport minus body padding (md = 16px * 2 = 32px). */
+    height: calc(100vh - 32px);
+    height: calc(100dvh - 32px);
+    /* Also account for safe area insets on notched devices */
+    height: calc(100dvh - max(32px, env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px)));
+    /* Disable vertical scrolling on the terminal window itself.
+       Inner content (split-layout panels) handles its own scrolling. */
+    overflow: hidden;
+    /* Prevent any flexbox growth that could push past the viewport */
+    flex-shrink: 0;
   }
   
   .terminal-header {
     padding: var(--spacing-sm);
+    /* Header should never shrink */
+    flex-shrink: 0;
   }
   
   .terminal-title {
@@ -1964,11 +1981,15 @@ body.selector-menu-open .splash-art {
     flex-direction: column;
     gap: var(--spacing-xl);
     padding: var(--spacing-lg);
+    /* Allow splash content to scroll if needed */
+    overflow-y: auto;
+    min-height: 0;
   }
   
   .splash-art {
     font-size: 2px;
     max-height: 40vh;
+    max-height: 40dvh;
   }
   
   .splash-text {
@@ -1980,6 +2001,20 @@ body.selector-menu-open .splash-art {
     /* Use viewport width so toast isn't constrained by container padding */
     width: calc(100vw - 64px);
     max-width: 480px;
+  }
+  
+  /* Ensure split layout fills available space and handles overflow properly */
+  .split-layout {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  
+  /* Panels inside split layout can scroll their content */
+  .left-panel,
+  .right-panel {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
