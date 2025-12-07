@@ -420,26 +420,56 @@ tail -f frontend.log   # Frontend errors
 
 ## UI Component Patterns
 
-### Selector Menus (Dropdowns/Listboxes)
+### Selector Menus (Two Types)
 
-**All selector menus use `CharacterSheet.toggleSelectorMenu()`** from `shared-character-sheet.js`. This function handles:
+**All menus use `CharacterSheet.toggleSelectorMenu()`** from `shared-character-sheet.js`. This function handles:
 - Positioning (viewport-aware, opens above/below based on space)
 - Modal support (detaches to `<body>` to escape CSS transforms and overflow)
 - Height constraints (auto-sizes to available space with scrolling)
 - Theming (applies correct colors when detached from modal context)
 - Accessibility (keyboard nav, focus management, ARIA)
+- **Type-aware focus**: Actions menus have no preselection; listbox menus focus selected option
 
-**Canonical markup:**
+#### Menu Types
+
+| Type | Modifier | Purpose | ARIA Roles | State |
+|------|----------|---------|------------|-------|
+| **Actions** | `selector-shell--actions` | Commands/actions (edit, delete, share) | `menu` / `menuitem` | Stateless |
+| **Listbox** | `selector-shell--listbox` | Choose from options (sort, theme) | `listbox` / `option` | Tracks `.is-selected` |
+
+#### Actions Menu (stateless)
 ```html
-<div class="selector-shell">
+<div class="selector-shell selector-shell--actions">
+  <button class="terminal-btn-small selector-trigger overflow-trigger"
+          onclick="CharacterSheet.toggleSelectorMenu(this)"
+          aria-haspopup="menu" aria-expanded="false" aria-label="More actions">
+    <span class="sheet-actions-icon">⋮</span>
+  </button>
+  <div class="selector-menu" role="menu" aria-hidden="true">
+    <button class="selector-option" role="menuitem" onclick="...">
+      <span class="selector-option-icon">✎</span>
+      <span class="selector-option-label">Edit</span>
+    </button>
+  </div>
+</div>
+```
+
+#### Listbox Menu (stateful)
+```html
+<div class="selector-shell selector-shell--listbox">
   <button class="terminal-btn selector-trigger"
           onclick="CharacterSheet.toggleSelectorMenu(this)"
           aria-haspopup="listbox" aria-expanded="false">
     <span class="selector-trigger-label">Selected Value</span>
   </button>
   <div class="selector-menu" role="listbox" aria-hidden="true">
-    <button class="selector-option" role="option" data-value="...">
-      <span class="selector-option-label">Option Text</span>
+    <button class="selector-option is-selected" role="option" 
+            aria-selected="true" data-value="option1">
+      <span class="selector-option-label">Option 1</span>
+    </button>
+    <button class="selector-option" role="option" 
+            aria-selected="false" data-value="option2">
+      <span class="selector-option-label">Option 2</span>
     </button>
   </div>
 </div>

@@ -957,7 +957,7 @@ const App = (window.App = {
         <div class="options-container ability-method-container">
           <label class="settings-label ability-method-label">Ability generation method:</label>
           <div class="ability-method-controls">
-            <div class="ability-method-trigger-wrap selector-shell">
+            <div class="ability-method-trigger-wrap selector-shell selector-shell--listbox">
               <button
                 class="button-primary ability-method-trigger selector-trigger"
                 id="ability-method-trigger"
@@ -2523,7 +2523,7 @@ const App = (window.App = {
             const actionsMenu =
               actionItems.length > 0
                 ? `
-                <div class="portrait-history-actions selector-shell">
+                <div class="portrait-history-actions selector-shell selector-shell--actions">
                   <button
                     class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
                     type="button"
@@ -3477,7 +3477,7 @@ const App = (window.App = {
           <div class="modal-body">
             <div class="portrait-style-row">
               <div class="portrait-style-label">Style</div>
-              <div class="selector-shell portrait-style-selector" id="builderPortraitStyleShell">
+              <div class="selector-shell selector-shell--listbox portrait-style-selector" id="builderPortraitStyleShell">
                 <button 
                   type="button"
                   class="terminal-btn selector-trigger"

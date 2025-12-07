@@ -10745,12 +10745,26 @@ const MobileView = {
     
     /** Wait for portrait image to load, then hide the swipe loader */
     waitForPortraitLoad(container) {
+        // Minimum time to show loader for visual feedback (prevents flicker)
+        const MIN_LOADER_DURATION = 150;
+        const loaderStartTime = Date.now();
+        
+        const hideWithMinDuration = () => {
+            const elapsed = Date.now() - loaderStartTime;
+            const remaining = MIN_LOADER_DURATION - elapsed;
+            if (remaining > 0) {
+                setTimeout(() => this.hideSwipeLoader(), remaining);
+            } else {
+                this.hideSwipeLoader();
+            }
+        };
+        
         // Find all portrait images in the container (original and/or ascii)
         const images = container.querySelectorAll('img.original-portrait, .ascii-portrait img');
         
         if (images.length === 0) {
-            // No images found - hide immediately
-            this.hideSwipeLoader();
+            // No images found - hide after minimum duration
+            hideWithMinDuration();
             return;
         }
         
@@ -10761,7 +10775,7 @@ const MobileView = {
         const checkComplete = () => {
             loadedOrErrored++;
             if (loadedOrErrored >= pendingCount) {
-                this.hideSwipeLoader();
+                hideWithMinDuration();
             }
         };
         
@@ -10774,8 +10788,8 @@ const MobileView = {
         });
         
         if (pendingCount === 0) {
-            // All images already loaded - hide immediately
-            this.hideSwipeLoader();
+            // All images already loaded (cached) - hide after minimum duration
+            hideWithMinDuration();
         } else {
             // Fallback timeout in case something goes wrong (5 seconds)
             setTimeout(() => {

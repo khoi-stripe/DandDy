@@ -79,7 +79,7 @@ const OverflowButton = (window.OverflowButton = {
     const shellIdAttr = shellId ? ` id="${shellId}"` : '';
 
     return `
-      <div class="selector-shell"${shellIdAttr}>
+      <div class="selector-shell selector-shell--actions"${shellIdAttr}>
         ${this.renderTrigger({ ariaLabel, buttonClasses })}
         ${this.renderMenu({ actions, menuClasses })}
       </div>

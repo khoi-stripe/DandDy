@@ -1296,6 +1296,41 @@ body.selector-menu-open .splash-art {
   flex: 1;
 }
 
+/* ==========================================================================
+   SELECTOR SHELL TYPE MODIFIERS
+   --------------------------------------------------------------------------
+   Two menu types share the same base styles but differ in behavior:
+   
+   --actions  : Stateless action menu (role="menu" / role="menuitem")
+                No preselected state, fires commands on click
+                
+   --listbox  : Stateful selector (role="listbox" / role="option")  
+                Always has a selected option, updates trigger label
+   ========================================================================== */
+
+/* Listbox: show checkmark/indicator for selected option */
+.selector-shell--listbox .selector-option.is-selected {
+  background-color: color-mix(in srgb, var(--ui-primary-bg-color) 12%, transparent);
+}
+
+.selector-shell--listbox .selector-option.is-selected::before {
+  content: '›';
+  position: absolute;
+  left: 4px;
+  color: var(--ui-fg-color);
+  font-weight: bold;
+}
+
+.selector-shell--listbox .selector-option {
+  position: relative;
+  padding-left: 16px;
+}
+
+/* Actions: no selection indicator, uniform padding */
+.selector-shell--actions .selector-option {
+  padding-left: 12px;
+}
+
 /* Selector menus moved to document.body (for modals) need explicit theme tokens
    since they lose inheritance from their modal ancestor when detached. */
 .selector-menu-detached {

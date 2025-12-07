@@ -1075,7 +1075,7 @@
           const actionsMenu =
             actionItems.length > 0
               ? `
-              <div class="portrait-history-actions selector-shell">
+              <div class="portrait-history-actions selector-shell selector-shell--actions">
                 <button
                   class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
                   type="button"

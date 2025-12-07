@@ -273,7 +273,7 @@ const Components = (window.Components = {
                     <div class="settings-row-inline">
                       <div class="settings-inline-field">
                         <div class="settings-label">Narrator Voice</div>
-                      <div class="selector-shell selector-shell--match-width">
+                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
                           id="narrator-select-trigger"
@@ -315,7 +315,7 @@ const Components = (window.Components = {
                     </div>
                     <div class="settings-inline-field">
                       <div class="settings-label">Text Speed</div>
-                      <div class="selector-shell selector-shell--match-width">
+                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
                           id="text-speed-select-trigger"
@@ -384,7 +384,7 @@ const Components = (window.Components = {
                     <div class="settings-row settings-row--stacked mb-lg">
                       <div class="settings-label">Style</div>
                       <div class="settings-field">
-                        <div class="selector-shell selector-shell--match-width">
+                        <div class="selector-shell selector-shell--listbox selector-shell--match-width">
                           <button
                             class="terminal-btn selector-trigger"
                             id="portrait-theme-select-trigger"
@@ -450,7 +450,7 @@ const Components = (window.Components = {
                     </div>
                     <div class="settings-row mb-lg">
                       <div class="settings-label">AI model</div>
-                      <div class="selector-shell selector-shell--match-width">
+                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
                         <button
                           class="terminal-btn selector-trigger"
                           id="image-model-select-trigger"

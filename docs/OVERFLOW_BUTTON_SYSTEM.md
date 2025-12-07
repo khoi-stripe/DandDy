@@ -22,10 +22,19 @@ The overflow button (three dots → X animation) is a reusable UI component used
   - Keyboard (Escape) support
   - Click-outside-to-close behavior
 
-#### 3. **Canonical Markup Pattern**
+#### 3. **Menu Type System**
+
+Two menu types share the same base styles but differ in behavior:
+
+| Type | Modifier | Purpose | ARIA Roles | Focus on Open |
+|------|----------|---------|------------|---------------|
+| **Actions** | `selector-shell--actions` | Commands (edit, delete, share) | `menu` / `menuitem` | None |
+| **Listbox** | `selector-shell--listbox` | Selections (sort, theme) | `listbox` / `option` | Selected option |
+
+#### 4. **Canonical Markup Pattern (Actions Menu)**
 
 ```html
-<div class="selector-shell">
+<div class="selector-shell selector-shell--actions">
   <button
     class="terminal-btn-small selector-trigger overflow-trigger"
     type="button"
@@ -46,6 +55,32 @@ The overflow button (three dots → X animation) is a reusable UI component used
       <span class="selector-option-label">Action Name</span>
     </button>
     <!-- More options... -->
+  </div>
+</div>
+```
+
+#### 5. **Canonical Markup Pattern (Listbox Menu)**
+
+```html
+<div class="selector-shell selector-shell--listbox">
+  <button
+    class="terminal-btn selector-trigger"
+    type="button"
+    aria-haspopup="listbox"
+    aria-expanded="false"
+    onclick="CharacterSheet.toggleSelectorMenu(this)"
+  >
+    <span class="selector-trigger-label">Selected Value</span>
+  </button>
+  <div class="selector-menu" role="listbox" aria-hidden="true">
+    <button class="selector-option is-selected" role="option" 
+            aria-selected="true" data-value="opt1">
+      <span class="selector-option-label">Option 1</span>
+    </button>
+    <button class="selector-option" role="option" 
+            aria-selected="false" data-value="opt2">
+      <span class="selector-option-label">Option 2</span>
+    </button>
   </div>
 </div>
 ```

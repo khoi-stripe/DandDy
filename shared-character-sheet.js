@@ -298,7 +298,7 @@ const CharacterSheet = (window.CharacterSheet = {
     const headerMenu =
       headerActions.length > 0
         ? `
-        <div class="sheet-title-buttons selector-shell">
+        <div class="sheet-title-buttons selector-shell selector-shell--actions">
           <button
             class="terminal-btn-small selector-trigger sheet-actions-trigger"
             type="button"
@@ -1048,14 +1048,20 @@ const CharacterSheet = (window.CharacterSheet = {
         // Lock scroll when menu opens
         CharacterSheet._updateScrollLock(true);
 
-        // Focus the currently selected option for immediate keyboard navigation.
-        // This prefers any option with aria-selected="true" (e.g. alignment/sort),
-        // and falls back to the first option when none is marked selected.
-        const selectedOption =
-          menu.querySelector('.selector-option[aria-selected="true"]') ||
-          menu.querySelector('.selector-option');
-        if (selectedOption) {
-          selectedOption.focus();
+        // Focus behavior differs by menu type:
+        // - Listbox (--listbox): Focus the selected option for keyboard nav
+        // - Actions (--actions): No focus, just show the menu
+        const isActionsMenu = shell.classList.contains('selector-shell--actions');
+        
+        if (!isActionsMenu) {
+          // Listbox: focus the selected option (or first if none selected)
+          const selectedOption =
+            menu.querySelector('.selector-option[aria-selected="true"]') ||
+            menu.querySelector('.selector-option.is-selected') ||
+            menu.querySelector('.selector-option');
+          if (selectedOption) {
+            selectedOption.focus();
+          }
         }
       } else {
         closeShell(shell);

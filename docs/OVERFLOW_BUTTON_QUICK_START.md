@@ -31,9 +31,12 @@ element.innerHTML = html;
 
 ## 📝 Option 2: Manual HTML
 
+> **Note**: Overflow buttons are **action menus** (stateless). Use `selector-shell--actions` modifier.
+> For stateful selection (sort, theme pickers), use `selector-shell--listbox` instead.
+
 ### Copy-Paste Template
 ```html
-<div class="selector-shell">
+<div class="selector-shell selector-shell--actions">
   <button
     class="terminal-btn-small selector-trigger overflow-trigger"
     type="button"
@@ -136,10 +139,11 @@ Colors are automatically inherited when inside `.character-sheet` container.
 
 Before deploying your overflow button:
 
+- [ ] Uses correct modifier: `selector-shell--actions` (for commands) or `selector-shell--listbox` (for selections)
 - [ ] Includes all 3 dots (`dot-1`, `dot-2`, `dot-3`)
 - [ ] Uses `onclick="CharacterSheet.toggleSelectorMenu(this)"`
-- [ ] Has `aria-haspopup="menu"` and `aria-expanded="false"`
-- [ ] Each option has `role="menuitem"`
+- [ ] Has correct ARIA: `aria-haspopup="menu"` for actions, `aria-haspopup="listbox"` for selections
+- [ ] Options have correct role: `role="menuitem"` for actions, `role="option"` for listbox
 - [ ] Uses standard class names (not custom variants)
 - [ ] Tested at viewport edges
 - [ ] Tested with Escape key
