@@ -6004,10 +6004,11 @@ const CharacterSheet = (window.CharacterSheet = {
           //
           // RULE: Always use fixed positioning so menus can escape overflow
           // containers (e.g. terminal-container with overflow:hidden).
-          // EXCEPTION: Search/sort bar uses absolute positioning so the
-          // dropdown stays anchored to its button during page scroll.
+          // EXCEPTION: Search/sort bar and header overflow use absolute positioning
+          // so the dropdown stays anchored to its button during page scroll.
           const inSearchActions = !!triggerEl.closest('.search-actions');
-          const useFixedPositioning = !inSearchActions;
+          const inHeaderOverflow = !!triggerEl.closest('.header-overflow');
+          const useFixedPositioning = !inSearchActions && !inHeaderOverflow;
 
           // Measure menu size without affecting final animation. Temporarily
           // neutralize transforms so we get the *full* height instead of the
@@ -6299,10 +6300,18 @@ const CharacterSheet = (window.CharacterSheet = {
             menu.style.top = `${top}px`;
             menu.style.bottom = 'auto';
 
-            // Horizontal: align left edge of menu with left edge of trigger.
-            const left = triggerRect.left - shellRect.left;
-            menu.style.left = `${left}px`;
-            menu.style.right = 'auto';
+            // Horizontal positioning for absolute menus
+            if (inHeaderOverflow) {
+              // Header overflow: right-align menu with trigger (opens leftward)
+              const right = shellRect.right - triggerRect.right;
+              menu.style.left = 'auto';
+              menu.style.right = `${right}px`;
+            } else {
+              // Default: align left edge of menu with left edge of trigger.
+              const left = triggerRect.left - shellRect.left;
+              menu.style.left = `${left}px`;
+              menu.style.right = 'auto';
+            }
 
             // Cap height so long menus scroll instead of clipping.
             let availableHeight = hostBottom - topViewport;
@@ -9453,7 +9462,7 @@ if (DEBUG_CLOUD) {
               <div class="ascii-portrait portrait-history-preview${asciiHiddenClass}" data-version-id="${v.id}"></div>
               ${
                 hasImage
-                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image${imageHiddenClass}" data-version-id="${v.id}">`
+                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image${imageHiddenClass}" data-version-id="${v.id}" onload="this.classList.add('is-loaded')">`
                   : ''
               }
             </div>`;
@@ -10498,6 +10507,34 @@ const MobileView = {
         this._wasMobile = this.isMobile();
         window.addEventListener('resize', () => this.handleResize());
         this.initSwipeHandlers();
+        this.initScrollHandler();
+    },
+    
+    /** Track scroll state for header collapse */
+    _lastScrollTop: 0,
+    _scrollThreshold: 20,
+    
+    /** Initialize scroll handler for mobile header collapse */
+    initScrollHandler() {
+        const leftPanel = document.getElementById('character-list-panel');
+        if (!leftPanel) return;
+        
+        leftPanel.addEventListener('scroll', () => {
+            if (!this.isMobile()) return;
+            
+            const scrollTop = leftPanel.scrollTop;
+            const header = document.querySelector('.terminal-header');
+            if (!header) return;
+            
+            // Add/remove scrolled class based on scroll position
+            if (scrollTop > this._scrollThreshold) {
+                header.classList.add('is-scrolled');
+            } else {
+                header.classList.remove('is-scrolled');
+            }
+            
+            this._lastScrollTop = scrollTop;
+        }, { passive: true });
     },
     
     /** Initialize swipe gesture handlers for mobile navigation */
@@ -10637,6 +10674,10 @@ const MobileView = {
             if (wasModalOpen) {
                 this.close();
             }
+            // Clear scroll state on header when going to desktop
+            const header = document.querySelector('.terminal-header');
+            if (header) header.classList.remove('is-scrolled');
+            
             // If nothing is selected, auto-select the first character
             if (!AppState.selectedCharacterId && AppState.filteredCharacters.length > 0) {
                 const firstChar = AppState.filteredCharacters[0];
@@ -13786,6 +13827,10 @@ function updateAuthUI() {
     const userStatusText = document.getElementById('userStatusText');
     const guestNotice = document.getElementById('guestNotice');
     
+    // Overflow menu elements
+    const overflowAuthIcon = document.getElementById('overflowAuthIcon');
+    const overflowAuthLabel = document.getElementById('overflowAuthLabel');
+    
     // If the header shell isn't present (e.g., in some embedded contexts),
     // safely bail out.
     if (!authBtn || !userInfoDisplay || !userStatusIcon || !userStatusText) {
@@ -13798,6 +13843,10 @@ function updateAuthUI() {
         userStatusText.textContent = user ? user.email : 'Logged In';
         authBtn.textContent = 'LOGOUT';
         authBtn.onclick = handleLogout;
+        
+        // Update overflow menu
+        if (overflowAuthIcon) overflowAuthIcon.textContent = '←';
+        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Logout';
 
         // Hide guest notice when logged in
         if (guestNotice) {
@@ -13811,6 +13860,10 @@ function updateAuthUI() {
             authOpenedFromWelcome = false;
             showAuthModal();
         };
+        
+        // Update overflow menu
+        if (overflowAuthIcon) overflowAuthIcon.textContent = '→';
+        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Login';
 
         // Don't show guest notice by default - only when user makes changes
         // (handled by maybeShowGuestNotice() function)

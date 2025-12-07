@@ -530,6 +530,34 @@ const MobileView = {
         this._wasMobile = this.isMobile();
         window.addEventListener('resize', () => this.handleResize());
         this.initSwipeHandlers();
+        this.initScrollHandler();
+    },
+    
+    /** Track scroll state for header collapse */
+    _lastScrollTop: 0,
+    _scrollThreshold: 20,
+    
+    /** Initialize scroll handler for mobile header collapse */
+    initScrollHandler() {
+        const leftPanel = document.getElementById('character-list-panel');
+        if (!leftPanel) return;
+        
+        leftPanel.addEventListener('scroll', () => {
+            if (!this.isMobile()) return;
+            
+            const scrollTop = leftPanel.scrollTop;
+            const header = document.querySelector('.terminal-header');
+            if (!header) return;
+            
+            // Add/remove scrolled class based on scroll position
+            if (scrollTop > this._scrollThreshold) {
+                header.classList.add('is-scrolled');
+            } else {
+                header.classList.remove('is-scrolled');
+            }
+            
+            this._lastScrollTop = scrollTop;
+        }, { passive: true });
     },
     
     /** Initialize swipe gesture handlers for mobile navigation */
@@ -669,6 +697,10 @@ const MobileView = {
             if (wasModalOpen) {
                 this.close();
             }
+            // Clear scroll state on header when going to desktop
+            const header = document.querySelector('.terminal-header');
+            if (header) header.classList.remove('is-scrolled');
+            
             // If nothing is selected, auto-select the first character
             if (!AppState.selectedCharacterId && AppState.filteredCharacters.length > 0) {
                 const firstChar = AppState.filteredCharacters[0];
@@ -3818,6 +3850,10 @@ function updateAuthUI() {
     const userStatusText = document.getElementById('userStatusText');
     const guestNotice = document.getElementById('guestNotice');
     
+    // Overflow menu elements
+    const overflowAuthIcon = document.getElementById('overflowAuthIcon');
+    const overflowAuthLabel = document.getElementById('overflowAuthLabel');
+    
     // If the header shell isn't present (e.g., in some embedded contexts),
     // safely bail out.
     if (!authBtn || !userInfoDisplay || !userStatusIcon || !userStatusText) {
@@ -3830,6 +3866,10 @@ function updateAuthUI() {
         userStatusText.textContent = user ? user.email : 'Logged In';
         authBtn.textContent = 'LOGOUT';
         authBtn.onclick = handleLogout;
+        
+        // Update overflow menu
+        if (overflowAuthIcon) overflowAuthIcon.textContent = '←';
+        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Logout';
 
         // Hide guest notice when logged in
         if (guestNotice) {
@@ -3843,6 +3883,10 @@ function updateAuthUI() {
             authOpenedFromWelcome = false;
             showAuthModal();
         };
+        
+        // Update overflow menu
+        if (overflowAuthIcon) overflowAuthIcon.textContent = '→';
+        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Login';
 
         // Don't show guest notice by default - only when user makes changes
         // (handled by maybeShowGuestNotice() function)

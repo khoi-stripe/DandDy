@@ -7792,10 +7792,11 @@ const CharacterSheet = (window.CharacterSheet = {
           //
           // RULE: Always use fixed positioning so menus can escape overflow
           // containers (e.g. terminal-container with overflow:hidden).
-          // EXCEPTION: Search/sort bar uses absolute positioning so the
-          // dropdown stays anchored to its button during page scroll.
+          // EXCEPTION: Search/sort bar and header overflow use absolute positioning
+          // so the dropdown stays anchored to its button during page scroll.
           const inSearchActions = !!triggerEl.closest('.search-actions');
-          const useFixedPositioning = !inSearchActions;
+          const inHeaderOverflow = !!triggerEl.closest('.header-overflow');
+          const useFixedPositioning = !inSearchActions && !inHeaderOverflow;
 
           // Measure menu size without affecting final animation. Temporarily
           // neutralize transforms so we get the *full* height instead of the
@@ -8087,10 +8088,18 @@ const CharacterSheet = (window.CharacterSheet = {
             menu.style.top = `${top}px`;
             menu.style.bottom = 'auto';
 
-            // Horizontal: align left edge of menu with left edge of trigger.
-            const left = triggerRect.left - shellRect.left;
-            menu.style.left = `${left}px`;
-            menu.style.right = 'auto';
+            // Horizontal positioning for absolute menus
+            if (inHeaderOverflow) {
+              // Header overflow: right-align menu with trigger (opens leftward)
+              const right = shellRect.right - triggerRect.right;
+              menu.style.left = 'auto';
+              menu.style.right = `${right}px`;
+            } else {
+              // Default: align left edge of menu with left edge of trigger.
+              const left = triggerRect.left - shellRect.left;
+              menu.style.left = `${left}px`;
+              menu.style.right = 'auto';
+            }
 
             // Cap height so long menus scroll instead of clipping.
             let availableHeight = hostBottom - topViewport;
@@ -10347,7 +10356,7 @@ const PortraitHistory = (window.PortraitHistory = {
               <div class="ascii-portrait portrait-history-preview${asciiHiddenClass}" data-version-id="${v.id}"></div>
               ${
                 hasImage
-                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image${imageHiddenClass}" data-version-id="${v.id}">`
+                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image${imageHiddenClass}" data-version-id="${v.id}" onload="this.classList.add('is-loaded')">`
                   : ''
               }
             </div>`;
