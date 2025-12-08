@@ -10666,6 +10666,46 @@ const MobileView = {
         window.addEventListener('resize', () => this.handleResize());
         this.initSwipeHandlers();
         this.initScrollHandler();
+        this.initDragHandle();
+    },
+    
+    /** Initialize drag handle for pull-down-to-close gesture */
+    initDragHandle() {
+        const dragHandle = document.getElementById('mobileDragHandle');
+        if (!dragHandle) return;
+        
+        let startY = 0;
+        let currentY = 0;
+        let isDragging = false;
+        
+        dragHandle.addEventListener('touchstart', (e) => {
+            if (!this.isOpen()) return;
+            isDragging = true;
+            startY = e.touches[0].clientY;
+            currentY = startY;
+            e.preventDefault(); // Prevent any scrolling
+        }, { passive: false });
+        
+        dragHandle.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            currentY = e.touches[0].clientY;
+            e.preventDefault(); // Prevent any scrolling
+        }, { passive: false });
+        
+        dragHandle.addEventListener('touchend', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            const deltaY = currentY - startY;
+            // If pulled down more than 60px, close the sheet
+            if (deltaY > 60) {
+                this.close();
+            }
+        }, { passive: true });
+        
+        dragHandle.addEventListener('touchcancel', () => {
+            isDragging = false;
+        }, { passive: true });
     },
     
     /** Track scroll state for header collapse */
