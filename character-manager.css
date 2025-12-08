@@ -1646,3 +1646,204 @@
         pointer-events: auto;
     }
 }
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+@media print {
+    /* Hide the body::before glow pseudo-element */
+    body::before {
+        display: none !important;
+        content: none !important;
+    }
+
+    /* Reset all backgrounds to white for print */
+    body,
+    html,
+    .terminal-frame,
+    .main-content,
+    .split-layout,
+    .left-panel,
+    .right-panel,
+    #character-sheet-panel {
+        background: #fff !important;
+        background-color: #fff !important;
+        background-image: none !important;
+    }
+
+    /* CRITICAL: Remove ALL height constraints and overflow clipping */
+    html,
+    body,
+    .terminal-frame,
+    .main-content,
+    .split-layout,
+    .right-panel,
+    #character-sheet-panel,
+    #characterSheet,
+    .character-sheet {
+        display: block !important;
+        position: static !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        width: 100% !important;
+        overflow: visible !important;
+        overflow-x: visible !important;
+        overflow-y: visible !important;
+    }
+
+    /* Hide left panel (character list) in print */
+    .left-panel,
+    #character-list-panel {
+        display: none !important;
+    }
+
+    /* Show right panel as block, full width */
+    .right-panel,
+    #character-sheet-panel {
+        display: block !important;
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        flex: none !important;
+    }
+
+    /* CRITICAL: Ensure character sheet is visible (override .is-hidden) */
+    #characterSheet,
+    .character-sheet {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    /* Ensure all sheet sections and content are visible */
+    .character-sheet .sheet-section,
+    .character-sheet .sheet-header,
+    .character-sheet .sheet-content,
+    .character-sheet .sheet-subsection,
+    .character-sheet .sheet-subsection-title,
+    .character-sheet .stat-grid,
+    .character-sheet .ability-grid,
+    .character-sheet .stat-box,
+    .character-sheet .ability-box,
+    .character-sheet .spell-list-item,
+    .character-sheet .spell-list-description,
+    .character-sheet .spellcasting-ability-note,
+    .character-sheet .stat-line,
+    .character-sheet .text-dim,
+    .character-sheet div,
+    .character-sheet ul,
+    .character-sheet li {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        color: #000 !important;
+    }
+
+    /* Reset grids to proper display */
+    .character-sheet .stat-grid,
+    .character-sheet .ability-grid {
+        display: grid !important;
+    }
+    
+    /* Reset flex containers */
+    .character-sheet .stat-line,
+    .character-sheet .sheet-header {
+        display: flex !important;
+    }
+
+    /* Fix portrait container for print - remove fixed aspect ratio */
+    .portrait-container,
+    .portrait-container--original-mode {
+        position: static !important;
+        aspect-ratio: auto !important;
+        height: auto !important;
+        width: auto !important;
+        max-width: 300px !important;
+        margin: 0 auto var(--spacing-md) auto !important;
+    }
+
+    /* Portrait image should be static and sized properly */
+    .portrait-container .original-portrait,
+    .portrait-container--original-mode .original-portrait {
+        position: static !important;
+        width: 100% !important;
+        height: auto !important;
+        max-width: 300px !important;
+        opacity: 1 !important;
+    }
+
+    /* Hide sheet placeholder */
+    .sheet-placeholder {
+        display: none !important;
+    }
+
+    /* Hide mobile sheet container (desktop print only) */
+    .mobile-sheet-container,
+    .mobile-back-bar {
+        display: none !important;
+    }
+
+    /* Hide controls section */
+    .controls-section {
+        display: none !important;
+    }
+
+    /* Hide character grid */
+    .character-grid,
+    #characterGrid {
+        display: none !important;
+    }
+
+    /* Hide empty state */
+    .empty-state,
+    #emptyState {
+        display: none !important;
+    }
+
+    /* Hide loading indicators */
+    .loading-indicator,
+    .panel-loading-row {
+        display: none !important;
+    }
+
+    /* Hide placeholder portrait (cube loading animation) */
+    .ascii-portrait--placeholder {
+        display: none !important;
+    }
+
+    /* Hide portrait actions in print */
+    .portrait-actions {
+        display: none !important;
+    }
+
+    /* Allow content to flow across multiple pages */
+    * {
+        max-height: none !important;
+    }
+
+    /* Allow sections to break across pages if needed */
+    .character-sheet .sheet-section {
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+    }
+
+    /* But try to avoid breaking inside individual stat/ability boxes */
+    .character-sheet .stat-box,
+    .character-sheet .ability-box {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    /* Ensure spell lists and other long content can break */
+    .character-sheet .spell-list,
+    .character-sheet .sheet-content ul,
+    .character-sheet .sheet-content ol {
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+    }
+}

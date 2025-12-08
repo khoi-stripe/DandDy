@@ -334,96 +334,73 @@
   font-size: var(--font-size-small);
 }
 
-/* Print styles */
+/* Print styles - Builder-specific additions to terminal-theme.css print rules */
 @media print {
-  body {
-    background: #ffffff;
-    color: #000000;
-    padding: 32px 16px 16px 16px;
-    overflow: visible;
-  }
-
-  .terminal-header,
-  .terminal-footer,
-  #narrator-panel {
+  /* Hide the body::before glow pseudo-element */
+  body::before {
     display: none !important;
+    content: none !important;
   }
 
-  .terminal-container {
-    display: block;
-    border: none;
-    padding: 0;
-    height: auto;
-    max-width: 100%;
-    box-shadow: none;
-    overflow: visible;
-  }
-
+  /* Reset all backgrounds to white for print */
+  body,
+  .terminal-container,
+  #main-content,
   .split-layout,
-  .left-panel,
-  .right-panel {
-    display: block;
-    min-height: 0;
-    height: auto;
-    overflow: visible;
-  }
-
+  .right-panel,
   #character-panel {
-    width: 100%;
-    overflow: visible;
+    background: #fff !important;
+    background-color: #fff !important;
+    background-image: none !important;
   }
 
-  .character-sheet {
-    border: none;
-    color: #000000;
-    page-break-inside: auto;
-  }
-
-  .sheet-title-header {
-    border-bottom-color: #000000;
-  }
-
-  .sheet-title {
-    color: #000000;
-  }
-
-  .ascii-portrait {
+  /* Force all containers to block layout for proper print flow */
+  .terminal-container,
+  #main-content,
+  .split-layout {
     display: block !important;
-    background: #000000 !important;
-    color: #ffffff !important;
-    padding: 16px !important;
-    border: 2px solid #000000 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
+    position: static !important;
+    height: auto !important;
+    width: 100% !important;
+    overflow: visible !important;
   }
 
-  .original-portrait {
+  /* Ensure main content is visible (override .is-hidden if present) */
+  #main-content {
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Hide splash content in print */
+  .splash-content,
+  #splash-content {
     display: none !important;
   }
 
-  .portrait-container {
-    background: transparent;
-    padding: 0;
-  }
-
-  .generate-ai-btn,
-  .generate-ai-btn-secondary,
-  .button-secondary,
-  .sheet-print-btn,
-  #toggle-portrait-btn {
+  /* Hide narrator panel (builder-specific element) */
+  #narrator-panel,
+  .left-panel {
     display: none !important;
   }
 
-  .sheet-header,
-  .sheet-header-title,
-  .sheet-content,
-  .stat-label,
-  .stat-value,
-  .text-dim {
-    color: #000000 !important;
-    border-color: #000000;
+  /* Show right panel as block */
+  .right-panel,
+  #character-panel {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
+  /* Ensure character sheet is visible */
+  .character-sheet {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+  }
+
+  /* Show print logo in top-right corner */
   .print-logo {
     display: block;
     position: absolute;
@@ -432,6 +409,18 @@
     width: 120px;
     height: auto;
     z-index: 9999;
+  }
+
+  /* Hide portrait action buttons */
+  .generate-ai-btn,
+  .generate-ai-btn-secondary,
+  #toggle-portrait-btn {
+    display: none !important;
+  }
+
+  /* Hide placeholder portrait (cube loading animation) */
+  .ascii-portrait--placeholder {
+    display: none !important;
   }
 }
 
@@ -1377,5 +1366,6 @@
 .session-resume-modal .terminal-text {
   margin-bottom: 0;
 }
+
 
 
