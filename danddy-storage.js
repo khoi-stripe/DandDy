@@ -24,10 +24,12 @@
     },
 
     // Append or replace a single character by id.
+    // Uses String comparison to handle type mismatches (IDs may be numeric or string)
     upsert(character) {
       if (!character) return;
       const chars = this.readAll();
-      const idx = chars.findIndex((c) => c.id === character.id);
+      const idStr = String(character.id);
+      const idx = chars.findIndex((c) => c && String(c.id) === idStr);
       if (idx >= 0) {
         chars[idx] = character;
       } else {
@@ -37,8 +39,10 @@
     },
 
     // Delete a character by id.
+    // Uses String comparison to handle type mismatches (IDs may be numeric or string)
     deleteById(id) {
-      const chars = this.readAll().filter((c) => c.id !== id);
+      const idStr = String(id);
+      const chars = this.readAll().filter((c) => !c || String(c.id) !== idStr);
       this.writeAll(chars);
     },
 

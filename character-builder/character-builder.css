@@ -195,7 +195,7 @@
 
 .input-field::placeholder {
   color: var(--terminal-dim);
-  opacity: 0.7;
+  opacity: 0.5;
 }
 
 /* Name Input Container */
@@ -835,6 +835,7 @@
 
 .terminal-input::placeholder {
   color: var(--terminal-dim);
+  opacity: 0.5;
 }
 
 .password-input-wrapper {

@@ -1010,6 +1010,7 @@ body::before {
 .terminal-input::placeholder,
 .terminal-textarea::placeholder {
   color: var(--terminal-dim);
+  opacity: 0.5;
 }
 
 .terminal-select {
@@ -1754,6 +1755,7 @@ body.selector-menu-open .splash-art {
 .modal .terminal-input::placeholder,
 .modal .terminal-textarea::placeholder {
   color: var(--modal-accent-dim);
+  opacity: 0.5;
 }
 
 .modal .terminal-input:focus,

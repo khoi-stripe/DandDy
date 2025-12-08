@@ -304,7 +304,9 @@
 
     _getLocalById(id) {
       const characters = this._getLocalAll();
-      return characters.find((char) => char.id === id);
+      // Use String comparison to handle type mismatches (IDs may be numeric or string)
+      const idStr = String(id);
+      return characters.find((char) => char && String(char.id) === idStr);
     },
 
     _localSaveAll(characters) {
@@ -347,7 +349,9 @@
     _localUpdate(id, updates, options = {}) {
       const { silent = false } = options;
       const characters = this._getLocalAll();
-      const index = characters.findIndex((char) => char.id === id);
+      // Use String comparison to handle type mismatches (IDs may be numeric or string)
+      const idStr = String(id);
+      const index = characters.findIndex((char) => char && String(char.id) === idStr);
       if (index === -1) return null;
 
       const prev = characters[index];
@@ -368,7 +372,9 @@
         console.log('🗑️ LOCAL.DELETE: Deleting character with ID:', id);
       }
       const characters = this._getLocalAll();
-      const filtered = characters.filter((char) => char.id !== id);
+      // Use String comparison to handle type mismatches (IDs may be numeric or string)
+      const idStr = String(id);
+      const filtered = characters.filter((char) => !char || String(char.id) !== idStr);
       this._localSaveAll(filtered);
       return filtered.length < characters.length;
     },

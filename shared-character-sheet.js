@@ -1863,9 +1863,15 @@ const CharacterSheet = (window.CharacterSheet = {
     const portraitEl = document.getElementById(portraitId);
     const asciiPortrait = this.getAsciiPortrait(character);
 
+    // Store character ID on the portrait element for async validation
+    // This prevents race conditions where async operations complete after
+    // the user has selected a different character
+    if (portraitEl && character.id) {
+      portraitEl.setAttribute('data-character-id', character.id);
+    }
+
     if (portraitEl && asciiPortrait) {
-      portraitEl.textContent = asciiPortrait;
-      this._centerPortraitScrollSafely(portraitEl);
+      this.setPortraitContent(portraitEl, asciiPortrait);
     }
 
     // Attempt a transparent upgrade to the best available pre-generated
@@ -1875,27 +1881,31 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   /**
+   * Set ASCII art content on a portrait element, wrapping in a <pre> for
+   * proper centering via CSS flexbox. The parent .ascii-portrait uses
+   * display:flex + justify-content:center, and the inner <pre> holds the
+   * preformatted text.
+   * @param {HTMLElement} portraitEl
+   * @param {string} asciiArt
+   */
+  setPortraitContent(portraitEl, asciiArt) {
+    if (!portraitEl) return;
+    // Clear existing content and insert wrapped <pre>
+    portraitEl.innerHTML = '';
+    const pre = document.createElement('pre');
+    pre.textContent = asciiArt;
+    portraitEl.appendChild(pre);
+  },
+
+  /**
    * Safely center the horizontal scroll position of a portrait element.
    * Extracted so we can reuse it after async portrait upgrades.
    * @param {HTMLElement} portraitEl
    * @private
+   * @deprecated CSS flexbox now handles centering; this is kept for backwards compat
    */
   _centerPortraitScrollSafely(portraitEl) {
-    if (!portraitEl) return;
-    try {
-      // When the sheet is narrower than the portrait, center the visible
-      // viewport horizontally so the "image" doesn't appear pinned left.
-      const scrollableWidth = portraitEl.scrollWidth - portraitEl.clientWidth;
-      if (scrollableWidth > 0) {
-        portraitEl.scrollLeft = scrollableWidth / 2;
-      }
-    } catch (e) {
-      // Non-fatal: if anything goes wrong, leave default scroll position
-      console.warn(
-        'CharacterSheet._centerPortraitScrollSafely: scroll centering failed',
-        e,
-      );
-    }
+    // CSS flexbox now handles centering - this is a no-op for backwards compat
   },
 
   /**
@@ -2044,6 +2054,26 @@ const CharacterSheet = (window.CharacterSheet = {
       return;
     }
 
+    // Validate that the portrait element still belongs to this character.
+    // This prevents race conditions where the user selected a different card
+    // while the async portrait file fetch was in progress.
+    if (portraitEl && character.id) {
+      const elementCharacterId = portraitEl.getAttribute('data-character-id');
+      if (elementCharacterId && elementCharacterId !== character.id) {
+        // The DOM element now belongs to a different character; abort update
+        return;
+      }
+    }
+
+    // In manager context, also check if the selected character has changed
+    // This provides an additional safety check beyond the DOM attribute
+    if (context === 'manager' && window.AppState && character.id) {
+      if (AppState.selectedCharacterId && AppState.selectedCharacterId !== character.id) {
+        // User has selected a different character; abort update
+        return;
+      }
+    }
+
     character.asciiPortrait = ascii;
     character.asciiPortraitKey = key;
 
@@ -2077,8 +2107,7 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Refresh the visible portrait
     if (portraitEl) {
-      portraitEl.textContent = ascii;
-      this._centerPortraitScrollSafely(portraitEl);
+      this.setPortraitContent(portraitEl, ascii);
     }
   },
 });
@@ -2208,10 +2237,17 @@ const PortraitHistory = (window.PortraitHistory = {
           try {
             const cropped =
               typeof cropFn === 'function' ? cropFn(v.ascii) : v.ascii;
-            el.textContent = cropped;
+            // Use <pre> wrapper for proper CSS flex centering
+            el.innerHTML = '';
+            const pre = document.createElement('pre');
+            pre.textContent = cropped;
+            el.appendChild(pre);
           } catch (e) {
             // Non-fatal: fall back to raw ASCII if cropping fails.
-            el.textContent = v.ascii;
+            el.innerHTML = '';
+            const pre = document.createElement('pre');
+            pre.textContent = v.ascii;
+            el.appendChild(pre);
           }
         }
 

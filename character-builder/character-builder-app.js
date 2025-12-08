@@ -2893,16 +2893,18 @@ const App = (window.App = {
     // Split into lines
     const lines = asciiArt.split('\n');
 
-    // CROP FROM BOTTOM: Keep the top portion, discard bottom
-    // This ensures faces/heads are visible in the thumbnail
+    // VERTICAL: Crop from bottom only (keep top pinned for faces/heads)
     const totalLines = lines.length;
-    const startLine = 0; // Always start from the top (keep heads/faces)
-    const endLine = Math.min(totalLines, heightLines); // Crop bottom if needed
+    const startLine = 0;
+    const endLine = Math.min(totalLines, heightLines);
 
-    // Get lines from top
-    const topLines = lines
-      .slice(startLine, endLine)
-      .map((line) => line.slice(0, widthChars));
+    // HORIZONTAL: Crop equally from both sides to stay centered
+    const topLines = lines.slice(startLine, endLine).map((line) => {
+      if (line.length <= widthChars) return line;
+      const excess = line.length - widthChars;
+      const cropLeft = Math.floor(excess / 2);
+      return line.slice(cropLeft, cropLeft + widthChars);
+    });
 
     return topLines.join('\n');
   },
@@ -5435,13 +5437,8 @@ const App = (window.App = {
             });
           } else {
             // Just set it immediately if it hasn't changed
-            portraitEl.textContent = portraitArt;
-            // Match manager behavior: center the ASCII portrait horizontally
-            if (
-              window.CharacterSheet &&
-              typeof CharacterSheet._centerPortraitScrollSafely === 'function'
-            ) {
-              CharacterSheet._centerPortraitScrollSafely(portraitEl);
+            if (window.CharacterSheet && typeof CharacterSheet.setPortraitContent === 'function') {
+              CharacterSheet.setPortraitContent(portraitEl, portraitArt);
             }
           }
         }
@@ -5505,9 +5502,8 @@ const App = (window.App = {
             }
           } else {
             // Just set it immediately if it hasn't changed
-            portraitEl.textContent = portraitArt;
-            if (window.CharacterSheet && typeof CharacterSheet._centerPortraitScrollSafely === 'function') {
-              CharacterSheet._centerPortraitScrollSafely(portraitEl);
+            if (window.CharacterSheet && typeof CharacterSheet.setPortraitContent === 'function') {
+              CharacterSheet.setPortraitContent(portraitEl, portraitArt);
             }
           }
         }
@@ -5562,9 +5558,8 @@ const App = (window.App = {
             }
           } else {
             // Just set it immediately if it hasn't changed
-            portraitEl.textContent = fallbackArt;
-            if (window.CharacterSheet && typeof CharacterSheet._centerPortraitScrollSafely === 'function') {
-              CharacterSheet._centerPortraitScrollSafely(portraitEl);
+            if (window.CharacterSheet && typeof CharacterSheet.setPortraitContent === 'function') {
+              CharacterSheet.setPortraitContent(portraitEl, fallbackArt);
             }
           }
         }
@@ -5588,7 +5583,10 @@ const App = (window.App = {
   // Animate ASCII portrait character-by-character, line-by-line
   async typePortrait(element, portraitText) {
     const lines = portraitText.split('\n');
-    element.textContent = '';
+    // Use a <pre> child element for proper CSS flex centering
+    element.innerHTML = '';
+    const pre = document.createElement('pre');
+    element.appendChild(pre);
     
     let currentText = '';
     const charsPerFrame = 40; // Type multiple characters per frame for speed
@@ -5604,18 +5602,8 @@ const App = (window.App = {
 
         // Update DOM every N characters
         if (charCount >= charsPerFrame) {
-          element.textContent = currentText;
+          pre.textContent = currentText;
           charCount = 0;
-
-          // Keep the portrait visually centered in its frame *while* it types
-          // so there's no final "jump" when the animation completes.
-          if (
-            window.CharacterSheet &&
-            typeof CharacterSheet._centerPortraitScrollSafely === 'function'
-          ) {
-            CharacterSheet._centerPortraitScrollSafely(element);
-          }
-
           await new Promise(resolve => requestAnimationFrame(resolve));
         }
       }
@@ -5627,13 +5615,7 @@ const App = (window.App = {
     }
     
     // Final update to ensure all text is shown
-    element.textContent = currentText;
-
-    // After animation completes, center the portrait horizontally to match
-    // the Character Manager viewer behavior.
-    if (window.CharacterSheet && typeof CharacterSheet._centerPortraitScrollSafely === 'function') {
-      CharacterSheet._centerPortraitScrollSafely(element);
-    }
+    pre.textContent = currentText;
   },
 
 });

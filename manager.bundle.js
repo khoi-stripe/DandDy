@@ -981,10 +981,12 @@
     },
 
     // Append or replace a single character by id.
+    // Uses String comparison to handle type mismatches (IDs may be numeric or string)
     upsert(character) {
       if (!character) return;
       const chars = this.readAll();
-      const idx = chars.findIndex((c) => c.id === character.id);
+      const idStr = String(character.id);
+      const idx = chars.findIndex((c) => c && String(c.id) === idStr);
       if (idx >= 0) {
         chars[idx] = character;
       } else {
@@ -994,8 +996,10 @@
     },
 
     // Delete a character by id.
+    // Uses String comparison to handle type mismatches (IDs may be numeric or string)
     deleteById(id) {
-      const chars = this.readAll().filter((c) => c.id !== id);
+      const idStr = String(id);
+      const chars = this.readAll().filter((c) => !c || String(c.id) !== idStr);
       this.writeAll(chars);
     },
 
@@ -7168,9 +7172,15 @@ const CharacterSheet = (window.CharacterSheet = {
     const portraitEl = document.getElementById(portraitId);
     const asciiPortrait = this.getAsciiPortrait(character);
 
+    // Store character ID on the portrait element for async validation
+    // This prevents race conditions where async operations complete after
+    // the user has selected a different character
+    if (portraitEl && character.id) {
+      portraitEl.setAttribute('data-character-id', character.id);
+    }
+
     if (portraitEl && asciiPortrait) {
-      portraitEl.textContent = asciiPortrait;
-      this._centerPortraitScrollSafely(portraitEl);
+      this.setPortraitContent(portraitEl, asciiPortrait);
     }
 
     // Attempt a transparent upgrade to the best available pre-generated
@@ -7180,27 +7190,31 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   /**
+   * Set ASCII art content on a portrait element, wrapping in a <pre> for
+   * proper centering via CSS flexbox. The parent .ascii-portrait uses
+   * display:flex + justify-content:center, and the inner <pre> holds the
+   * preformatted text.
+   * @param {HTMLElement} portraitEl
+   * @param {string} asciiArt
+   */
+  setPortraitContent(portraitEl, asciiArt) {
+    if (!portraitEl) return;
+    // Clear existing content and insert wrapped <pre>
+    portraitEl.innerHTML = '';
+    const pre = document.createElement('pre');
+    pre.textContent = asciiArt;
+    portraitEl.appendChild(pre);
+  },
+
+  /**
    * Safely center the horizontal scroll position of a portrait element.
    * Extracted so we can reuse it after async portrait upgrades.
    * @param {HTMLElement} portraitEl
    * @private
+   * @deprecated CSS flexbox now handles centering; this is kept for backwards compat
    */
   _centerPortraitScrollSafely(portraitEl) {
-    if (!portraitEl) return;
-    try {
-      // When the sheet is narrower than the portrait, center the visible
-      // viewport horizontally so the "image" doesn't appear pinned left.
-      const scrollableWidth = portraitEl.scrollWidth - portraitEl.clientWidth;
-      if (scrollableWidth > 0) {
-        portraitEl.scrollLeft = scrollableWidth / 2;
-      }
-    } catch (e) {
-      // Non-fatal: if anything goes wrong, leave default scroll position
-      console.warn(
-        'CharacterSheet._centerPortraitScrollSafely: scroll centering failed',
-        e,
-      );
-    }
+    // CSS flexbox now handles centering - this is a no-op for backwards compat
   },
 
   /**
@@ -7349,6 +7363,26 @@ const CharacterSheet = (window.CharacterSheet = {
       return;
     }
 
+    // Validate that the portrait element still belongs to this character.
+    // This prevents race conditions where the user selected a different card
+    // while the async portrait file fetch was in progress.
+    if (portraitEl && character.id) {
+      const elementCharacterId = portraitEl.getAttribute('data-character-id');
+      if (elementCharacterId && elementCharacterId !== character.id) {
+        // The DOM element now belongs to a different character; abort update
+        return;
+      }
+    }
+
+    // In manager context, also check if the selected character has changed
+    // This provides an additional safety check beyond the DOM attribute
+    if (context === 'manager' && window.AppState && character.id) {
+      if (AppState.selectedCharacterId && AppState.selectedCharacterId !== character.id) {
+        // User has selected a different character; abort update
+        return;
+      }
+    }
+
     character.asciiPortrait = ascii;
     character.asciiPortraitKey = key;
 
@@ -7382,8 +7416,7 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Refresh the visible portrait
     if (portraitEl) {
-      portraitEl.textContent = ascii;
-      this._centerPortraitScrollSafely(portraitEl);
+      this.setPortraitContent(portraitEl, ascii);
     }
   },
 });
@@ -7513,10 +7546,17 @@ const PortraitHistory = (window.PortraitHistory = {
           try {
             const cropped =
               typeof cropFn === 'function' ? cropFn(v.ascii) : v.ascii;
-            el.textContent = cropped;
+            // Use <pre> wrapper for proper CSS flex centering
+            el.innerHTML = '';
+            const pre = document.createElement('pre');
+            pre.textContent = cropped;
+            el.appendChild(pre);
           } catch (e) {
             // Non-fatal: fall back to raw ASCII if cropping fails.
-            el.textContent = v.ascii;
+            el.innerHTML = '';
+            const pre = document.createElement('pre');
+            pre.textContent = v.ascii;
+            el.appendChild(pre);
           }
         }
 
@@ -8324,7 +8364,9 @@ if (DEBUG_CLOUD) {
 
     _getLocalById(id) {
       const characters = this._getLocalAll();
-      return characters.find((char) => char.id === id);
+      // Use String comparison to handle type mismatches (IDs may be numeric or string)
+      const idStr = String(id);
+      return characters.find((char) => char && String(char.id) === idStr);
     },
 
     _localSaveAll(characters) {
@@ -8367,7 +8409,9 @@ if (DEBUG_CLOUD) {
     _localUpdate(id, updates, options = {}) {
       const { silent = false } = options;
       const characters = this._getLocalAll();
-      const index = characters.findIndex((char) => char.id === id);
+      // Use String comparison to handle type mismatches (IDs may be numeric or string)
+      const idStr = String(id);
+      const index = characters.findIndex((char) => char && String(char.id) === idStr);
       if (index === -1) return null;
 
       const prev = characters[index];
@@ -8388,7 +8432,9 @@ if (DEBUG_CLOUD) {
         console.log('🗑️ LOCAL.DELETE: Deleting character with ID:', id);
       }
       const characters = this._getLocalAll();
-      const filtered = characters.filter((char) => char.id !== id);
+      // Use String comparison to handle type mismatches (IDs may be numeric or string)
+      const idStr = String(id);
+      const filtered = characters.filter((char) => !char || String(char.id) !== idStr);
       this._localSaveAll(filtered);
       return filtered.length < characters.length;
     },
@@ -8678,12 +8724,16 @@ if (DEBUG_CLOUD) {
 
       const lines = asciiArt.split('\n');
       const totalLines = lines.length;
-      const startLine = 0; // Always start from the top (keep heads/faces)
+      const startLine = 0; // Keep top pinned (faces/heads)
       const endLine = Math.min(totalLines, heightLines);
 
-      const topLines = lines
-        .slice(startLine, endLine)
-        .map((line) => line.slice(0, widthChars));
+      // HORIZONTAL: Crop equally from both sides to stay centered
+      const topLines = lines.slice(startLine, endLine).map((line) => {
+        if (line.length <= widthChars) return line;
+        const excess = line.length - widthChars;
+        const cropLeft = Math.floor(excess / 2);
+        return line.slice(cropLeft, cropLeft + widthChars);
+      });
 
       return topLines.join('\n');
     },
@@ -8989,7 +9039,20 @@ if (DEBUG_CLOUD) {
         return;
       }
 
-      const character = await CharacterStorage.getById(characterId);
+      // Prefer AppState cache to ensure we show the most up-to-date data
+      let character = null;
+      try {
+        if (window.AppState && Array.isArray(AppState.characters)) {
+          character = AppState.characters.find(
+            (c) => c && (c.id === characterId || String(c.id) === String(characterId)),
+          ) || null;
+        }
+      } catch (e) {
+        // Non-fatal – fall back to storage lookup below.
+      }
+      if (!character) {
+        character = await CharacterStorage.getById(characterId);
+      }
       if (!character) return;
 
       const metadata = character.portraitMetadata || {};
@@ -9227,7 +9290,20 @@ if (DEBUG_CLOUD) {
 
       if (confirmBtn) {
         confirmBtn.onclick = async () => {
-          const character = await CharacterStorage.getById(characterId);
+          // Prefer AppState cache to ensure we have the most up-to-date data
+          let character = null;
+          try {
+            if (window.AppState && Array.isArray(AppState.characters)) {
+              character = AppState.characters.find(
+                (c) => c && (c.id === characterId || String(c.id) === String(characterId)),
+              ) || null;
+            }
+          } catch (e) {
+            // Non-fatal – fall back to storage lookup below.
+          }
+          if (!character) {
+            character = await CharacterStorage.getById(characterId);
+          }
           if (!character) return;
 
           const metadata = character.portraitMetadata || {};
@@ -9634,7 +9710,11 @@ if (DEBUG_CLOUD) {
           `.portrait-history-preview.ascii-portrait[data-version-id="${v.id}"]`,
         );
         if (el && v.ascii) {
-          el.textContent = this.cropAsciiForThumbnail(v.ascii);
+          // Use <pre> wrapper for proper CSS flex centering
+          el.innerHTML = '';
+          const pre = document.createElement('pre');
+          pre.textContent = this.cropAsciiForThumbnail(v.ascii);
+          el.appendChild(pre);
         }
 
         const promptEl = document.querySelector(
@@ -9783,7 +9863,24 @@ if (DEBUG_CLOUD) {
         return;
       }
 
-      const character = await CharacterStorage.getById(characterId);
+      // Prefer the in-memory AppState cache to avoid stale data from storage.
+      // The AppState may contain recent edits that haven't been persisted yet,
+      // and using storage directly could cause those edits to be lost.
+      let character = null;
+      try {
+        if (window.AppState && Array.isArray(AppState.characters)) {
+          character = AppState.characters.find(
+            (c) => c && (c.id === characterId || String(c.id) === String(characterId)),
+          ) || null;
+        }
+      } catch (e) {
+        // Non-fatal – fall back to storage lookup below.
+      }
+
+      // Fallback to storage if not found in AppState cache
+      if (!character) {
+        character = await CharacterStorage.getById(characterId);
+      }
       if (!character) return;
 
       const metadata = character.portraitMetadata || {};
@@ -9831,12 +9928,14 @@ if (DEBUG_CLOUD) {
 
         // Update ASCII art if we have a visible container and ASCII content.
         if (asciiEl && version.ascii) {
-          asciiEl.textContent = version.ascii;
-          if (
-            window.CharacterSheet &&
-            typeof CharacterSheet._centerPortraitScrollSafely === 'function'
-          ) {
-            CharacterSheet._centerPortraitScrollSafely(asciiEl);
+          if (window.CharacterSheet && typeof CharacterSheet.setPortraitContent === 'function') {
+            CharacterSheet.setPortraitContent(asciiEl, version.ascii);
+          } else {
+            // Fallback: use <pre> wrapper for proper CSS flex centering
+            asciiEl.innerHTML = '';
+            const pre = document.createElement('pre');
+            pre.textContent = version.ascii;
+            asciiEl.appendChild(pre);
           }
         }
 
@@ -9869,16 +9968,60 @@ if (DEBUG_CLOUD) {
 
         // Also update the grid card thumbnail (if it exists) so the list view
         // immediately reflects the selected portrait version.
+        // Respect the user's portrait view mode preference (original vs ASCII).
         const thumbEl = document.getElementById(`card-thumb-${characterId}`);
-        if (thumbEl && version.ascii) {
+        if (thumbEl) {
           try {
-            if (window.UI && typeof UI.cropAsciiForThumbnail === 'function') {
-              thumbEl.textContent = UI.cropAsciiForThumbnail(version.ascii);
-            } else {
-              // Fallback: simple top-crop similar to CharacterSheet behavior
-              const lines = version.ascii.split('\n');
-              const topLines = lines.slice(0, 80).map((line) => line.slice(0, 160));
-              thumbEl.textContent = topLines.join('\n');
+            // Check the user's portrait view mode preference
+            let portraitViewMode = 'original';
+            try {
+              if (window.StorageService && StorageService.getPortraitViewMode) {
+                portraitViewMode = StorageService.getPortraitViewMode();
+              } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+                portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+              }
+            } catch (e) {
+              // Non-fatal: keep default
+            }
+
+            const showOriginalImage = portraitViewMode === 'original' && !!version.url;
+
+            if (showOriginalImage) {
+              // Update to show the original image
+              // Check if thumbnail already has an img element
+              let imgEl = thumbEl.querySelector('img');
+              if (imgEl) {
+                // Just update the src
+                imgEl.src = version.url;
+              } else {
+                // Need to switch from ASCII to image mode
+                thumbEl.innerHTML = '';
+                thumbEl.classList.add('card-thumbnail--image');
+                imgEl = document.createElement('img');
+                imgEl.src = version.url;
+                imgEl.alt = 'Character portrait';
+                imgEl.loading = 'lazy';
+                imgEl.onload = function() { this.classList.add('is-loaded'); };
+                thumbEl.appendChild(imgEl);
+              }
+            } else if (version.ascii) {
+              // Update to show ASCII art
+              let croppedArt;
+              if (window.UI && typeof UI.cropAsciiForThumbnail === 'function') {
+                croppedArt = UI.cropAsciiForThumbnail(version.ascii);
+              } else {
+                // Fallback: simple top-crop similar to CharacterSheet behavior
+                const lines = version.ascii.split('\n');
+                const topLines = lines.slice(0, 80).map((line) => line.slice(0, 160));
+                croppedArt = topLines.join('\n');
+              }
+              // Remove image mode class if present
+              thumbEl.classList.remove('card-thumbnail--image');
+              // Use <pre> wrapper for proper CSS flex centering
+              thumbEl.innerHTML = '';
+              const pre = document.createElement('pre');
+              pre.textContent = croppedArt;
+              thumbEl.appendChild(pre);
             }
           } catch (thumbError) {
             console.error(
@@ -9936,13 +10079,16 @@ if (DEBUG_CLOUD) {
       // the grid or sheet *does* re-render from state, it uses this new
       // portrait version. We rely on our direct DOM patch above to keep the
       // currently visible sheet/card in sync right away.
+      // Use String() comparison to handle type mismatches (cloud IDs may be
+      // numeric, but characterId from onclick is always a string).
       try {
         const nextCharacter = { ...character, ...updates };
+        const idStr = String(characterId);
 
         if (window.AppState) {
           if (Array.isArray(AppState.characters)) {
             const idx = AppState.characters.findIndex(
-              (c) => c && c.id === characterId,
+              (c) => c && String(c.id) === idStr,
             );
             if (idx !== -1) {
               AppState.characters[idx] = nextCharacter;
@@ -9950,7 +10096,7 @@ if (DEBUG_CLOUD) {
           }
           if (Array.isArray(AppState.filteredCharacters)) {
             const fIdx = AppState.filteredCharacters.findIndex(
-              (c) => c && c.id === characterId,
+              (c) => c && String(c.id) === idStr,
             );
             if (fIdx !== -1) {
               AppState.filteredCharacters[fIdx] = nextCharacter;
@@ -10522,8 +10668,6 @@ const MobileView = {
     /** Track scroll state for header collapse */
     _lastScrollTop: 0,
     _scrollThreshold: 20,
-    _headerExpandedHeight: null,
-    _headerCollapsedHeight: null,
     
     /** Initialize scroll handler for mobile header collapse */
     initScrollHandler() {
@@ -10533,92 +10677,33 @@ const MobileView = {
         const header = document.querySelector('.terminal-header');
         if (!header) return;
         
-        // Measure header heights after DOM is fully painted
-        // Use double-rAF to ensure layout is complete
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                this._measureHeaderHeights();
-            });
-        });
+        // Clear any stale scrolled state on init
+        if (!this.isMobile()) {
+            header.classList.remove('is-scrolled');
+        }
         
-        // Re-measure on resize
-        window.addEventListener('resize', () => this._measureHeaderHeights());
+        // Handle resize: clear scrolled state when switching to desktop
+        window.addEventListener('resize', () => {
+            if (!this.isMobile()) {
+                header.classList.remove('is-scrolled');
+            }
+        });
         
         leftPanel.addEventListener('scroll', () => {
             if (!this.isMobile()) return;
             
             const scrollTop = leftPanel.scrollTop;
             
-            // Add/remove scrolled class and set heights based on scroll position
+            // Add/remove scrolled class based on scroll position
+            // CSS handles the max-height transition
             if (scrollTop > this._scrollThreshold) {
-                if (!header.classList.contains('is-scrolled')) {
-                    console.log('[Header collapse] Collapsing to:', this._headerCollapsedHeight);
-                    header.classList.add('is-scrolled');
-                    if (this._headerCollapsedHeight) {
-                        header.style.setProperty('--header-height', this._headerCollapsedHeight + 'px');
-                    }
-                }
+                header.classList.add('is-scrolled');
             } else {
-                if (header.classList.contains('is-scrolled')) {
-                    console.log('[Header collapse] Expanding to:', this._headerExpandedHeight);
-                    header.classList.remove('is-scrolled');
-                    if (this._headerExpandedHeight) {
-                        header.style.setProperty('--header-height', this._headerExpandedHeight + 'px');
-                    }
-                }
+                header.classList.remove('is-scrolled');
             }
             
             this._lastScrollTop = scrollTop;
         }, { passive: true });
-    },
-    
-    /** Measure header heights for collapse animation */
-    _measureHeaderHeights() {
-        const header = document.querySelector('.terminal-header');
-        const title = header?.querySelector('.terminal-title');
-        if (!header || !title) return;
-        
-        // On desktop, clear any inline styles and scrolled state
-        if (!this.isMobile()) {
-            header.classList.remove('is-scrolled');
-            header.style.removeProperty('--header-height');
-            return;
-        }
-        
-        // Temporarily remove height constraint and scrolled state to measure natural height
-        const wasScrolled = header.classList.contains('is-scrolled');
-        header.classList.remove('is-scrolled');
-        header.style.removeProperty('--header-height');
-        
-        // Force reflow to get accurate measurements
-        void header.offsetHeight;
-        
-        // Measure expanded (full) height
-        this._headerExpandedHeight = header.offsetHeight;
-        
-        // Calculate collapsed height: title height + padding (top + small bottom margin)
-        const headerStyles = getComputedStyle(header);
-        const paddingTop = parseFloat(headerStyles.paddingTop) || 8;
-        const paddingBottom = 8; // Minimal bottom padding when collapsed
-        this._headerCollapsedHeight = title.offsetHeight + paddingTop + paddingBottom;
-        
-        console.log('[Header collapse] Measured heights:', {
-            expanded: this._headerExpandedHeight,
-            collapsed: this._headerCollapsedHeight,
-            titleHeight: title.offsetHeight,
-            paddingTop
-        });
-        
-        // Set initial height explicitly via CSS custom property
-        // This is crucial - transitions only work between explicit values
-        const targetHeight = wasScrolled 
-            ? this._headerCollapsedHeight 
-            : this._headerExpandedHeight;
-        header.style.setProperty('--header-height', targetHeight + 'px');
-            
-        if (wasScrolled) {
-            header.classList.add('is-scrolled');
-        }
     },
     
     /** Initialize swipe gesture handlers for mobile navigation */
@@ -11080,8 +11165,16 @@ const UI = {
                 // Use openMobileModal: false here since we handle modal opening manually
                 viewCharacter(targetId, { skipKeyboardSync: true, updateUrl: false, openMobileModal: false });
                 if (urlCharacterId) {
-                    // Small delay to ensure sheet is rendered before cloning to modal
-                    setTimeout(() => MobileView.open(targetId), 50);
+                    // Use double requestAnimationFrame to ensure DOM has painted
+                    // before cloning. This is more reliable than a fixed timeout.
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            // Verify this is still the selected character
+                            if (AppState.selectedCharacterId === targetId) {
+                                MobileView.open(targetId);
+                            }
+                        });
+                    });
                 }
             } else {
                 // Desktop: render sheet in right panel as usual
@@ -11151,7 +11244,11 @@ const UI = {
                 ? window.CharacterSheet.getAsciiPortrait(char)
                 : (char.customPortraitAscii || char.portrait?.ascii || char.asciiPortrait || null);
             if (asciiPortrait) {
-                thumbnailEl.textContent = this.cropAsciiForThumbnail(asciiPortrait);
+                // Use <pre> wrapper for proper CSS flex centering
+                thumbnailEl.innerHTML = '';
+                const pre = document.createElement('pre');
+                pre.textContent = this.cropAsciiForThumbnail(asciiPortrait);
+                thumbnailEl.appendChild(pre);
             }
         });
         
@@ -11164,16 +11261,18 @@ const UI = {
         // Split into lines
         const lines = asciiArt.split('\n');
         
-        // CROP FROM BOTTOM: Keep the top portion, discard bottom
-        // This ensures faces/heads are visible in the thumbnail
+        // VERTICAL: Crop from bottom only (keep top pinned for faces/heads)
         const totalLines = lines.length;
-        const startLine = 0;  // Always start from the top (keep heads/faces)
-        const endLine = Math.min(totalLines, heightLines);  // Crop bottom if needed
+        const startLine = 0;
+        const endLine = Math.min(totalLines, heightLines);
         
-        // Get lines from top
-        const topLines = lines
-            .slice(startLine, endLine)
-            .map(line => line.slice(0, widthChars));
+        // HORIZONTAL: Crop equally from both sides to stay centered
+        const topLines = lines.slice(startLine, endLine).map(line => {
+            if (line.length <= widthChars) return line;
+            const excess = line.length - widthChars;
+            const cropLeft = Math.floor(excess / 2);
+            return line.slice(cropLeft, cropLeft + widthChars);
+        });
         
         return topLines.join('\n');
     },
@@ -11326,11 +11425,14 @@ async function viewCharacter(id, options = {}) {
     }
 
     // Prefer the already-loaded characters from AppState to avoid extra storage/API calls
+    // Use String() comparison to handle type mismatches (cloud IDs may be numeric,
+    // but onclick handlers pass string IDs)
     let character = null;
     if (typeof AppState !== 'undefined' && AppState && Array.isArray(AppState.filteredCharacters)) {
+        const idStr = String(id);
         character =
-            AppState.filteredCharacters.find(c => c.id === id) ||
-            AppState.characters.find(c => c.id === id) ||
+            AppState.filteredCharacters.find(c => c && String(c.id) === idStr) ||
+            AppState.characters.find(c => c && String(c.id) === idStr) ||
             null;
     }
 
@@ -11376,8 +11478,19 @@ async function viewCharacter(id, options = {}) {
         // On mobile, open the character sheet view after rendering
         const isMobile = typeof MobileView !== 'undefined' && MobileView.isMobile();
         if (isMobile && openMobileModal) {
-            // Small delay to ensure the sheet is fully rendered before cloning
-            setTimeout(() => MobileView.open(id), 50);
+            // Use double requestAnimationFrame to ensure the DOM has painted
+            // before cloning. This is more reliable than a fixed timeout as it
+            // waits for the browser's actual rendering cycle to complete.
+            // First rAF schedules for next frame, second ensures paint occurred.
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    // Verify this is still the selected character before opening
+                    // (prevents race condition if user tapped another card quickly)
+                    if (AppState.selectedCharacterId === id) {
+                        MobileView.open(id);
+                    }
+                });
+            });
         }
     }
 }
@@ -12456,17 +12569,60 @@ async function confirmGeneratePortrait() {
 
             // Also update the character card thumbnail (if it exists) so the
             // grid immediately reflects the newly generated portrait.
+            // Respect the user's portrait view mode preference (original vs ASCII).
             const thumbEl = document.getElementById(`card-thumb-${portraitCharacterId}`);
-            if (thumbEl && portraitArt) {
+            if (thumbEl) {
                 try {
-                    if (window.UI && typeof UI.cropAsciiForThumbnail === 'function') {
-                        thumbEl.textContent = UI.cropAsciiForThumbnail(portraitArt);
-                    } else {
-                        const lines = portraitArt.split('\n');
-                        const topLines = lines
-                            .slice(0, 80)
-                            .map(line => line.slice(0, 160));
-                        thumbEl.textContent = topLines.join('\n');
+                    // Check the user's portrait view mode preference
+                    let thumbViewMode = 'original';
+                    try {
+                        if (window.StorageService && StorageService.getPortraitViewMode) {
+                            thumbViewMode = StorageService.getPortraitViewMode();
+                        } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+                            thumbViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+                        }
+                    } catch (e) {
+                        // Non-fatal: keep default
+                    }
+
+                    const showOriginalImage = thumbViewMode === 'original' && !!result.imageUrl;
+
+                    if (showOriginalImage) {
+                        // Update to show the original image
+                        let thumbImgEl = thumbEl.querySelector('img');
+                        if (thumbImgEl) {
+                            // Just update the src
+                            thumbImgEl.src = result.imageUrl;
+                        } else {
+                            // Need to switch from ASCII to image mode
+                            thumbEl.innerHTML = '';
+                            thumbEl.classList.add('card-thumbnail--image');
+                            thumbImgEl = document.createElement('img');
+                            thumbImgEl.src = result.imageUrl;
+                            thumbImgEl.alt = 'Character portrait';
+                            thumbImgEl.loading = 'lazy';
+                            thumbImgEl.onload = function() { this.classList.add('is-loaded'); };
+                            thumbEl.appendChild(thumbImgEl);
+                        }
+                    } else if (portraitArt) {
+                        // Update to show ASCII art
+                        let croppedArt;
+                        if (window.UI && typeof UI.cropAsciiForThumbnail === 'function') {
+                            croppedArt = UI.cropAsciiForThumbnail(portraitArt);
+                        } else {
+                            const lines = portraitArt.split('\n');
+                            const topLines = lines
+                                .slice(0, 80)
+                                .map(line => line.slice(0, 160));
+                            croppedArt = topLines.join('\n');
+                        }
+                        // Remove image mode class if present
+                        thumbEl.classList.remove('card-thumbnail--image');
+                        // Use <pre> wrapper for proper CSS flex centering
+                        thumbEl.innerHTML = '';
+                        const pre = document.createElement('pre');
+                        pre.textContent = croppedArt;
+                        thumbEl.appendChild(pre);
                     }
                 } catch (thumbError) {
                     console.error('Portrait thumbnail update failed', thumbError);
@@ -12478,13 +12634,16 @@ async function confirmGeneratePortrait() {
 
         // Keep AppState in sync for any future renders/navigations so that if
         // the grid or sheet re-renders later, it uses this new portrait.
+        // Use String() comparison to handle type mismatches (cloud IDs may be
+        // numeric, but portraitCharacterId from onclick is always a string).
         try {
             const nextCharacter = { ...character, ...updates };
+            const idStr = String(portraitCharacterId);
 
             if (window.AppState) {
                 if (Array.isArray(AppState.characters)) {
                     const idx = AppState.characters.findIndex(
-                        c => c && c.id === portraitCharacterId,
+                        c => c && String(c.id) === idStr,
                     );
                     if (idx !== -1) {
                         AppState.characters[idx] = nextCharacter;
@@ -12492,7 +12651,7 @@ async function confirmGeneratePortrait() {
                 }
                 if (Array.isArray(AppState.filteredCharacters)) {
                     const fIdx = AppState.filteredCharacters.findIndex(
-                        c => c && c.id === portraitCharacterId,
+                        c => c && String(c.id) === idStr,
                     );
                     if (fIdx !== -1) {
                         AppState.filteredCharacters[fIdx] = nextCharacter;
@@ -12527,10 +12686,10 @@ async function confirmGeneratePortrait() {
         // Restore previous portrait first
         if (portraitEl) {
             const asciiPortrait = window.CharacterSheet.getAsciiPortrait(character);
-            if (asciiPortrait) {
-                portraitEl.textContent = asciiPortrait;
-            } else {
-                portraitEl.textContent = '[ NO PORTRAIT ]';
+            if (asciiPortrait && window.CharacterSheet) {
+                CharacterSheet.setPortraitContent(portraitEl, asciiPortrait);
+            } else if (window.CharacterSheet) {
+                CharacterSheet.setPortraitContent(portraitEl, '[ NO PORTRAIT ]');
             }
         }
         
@@ -12617,7 +12776,10 @@ async function typeManagerPortrait(element, portraitText) {
     element.style.overflowY = '';
 
     const lines = portraitText.split('\n');
-    element.textContent = '';
+    // Use a <pre> child element for proper CSS flex centering
+    element.innerHTML = '';
+    const pre = document.createElement('pre');
+    element.appendChild(pre);
 
     let currentText = '';
     const charsPerFrame = 40; // Batch multiple characters per frame for speed
@@ -12631,18 +12793,8 @@ async function typeManagerPortrait(element, portraitText) {
             charCount++;
 
             if (charCount >= charsPerFrame) {
-                element.textContent = currentText;
+                pre.textContent = currentText;
                 charCount = 0;
-
-                // Keep the portrait visually centered in its frame during the
-                // typewriter animation so there's no sudden jump at the end.
-                if (
-                    window.CharacterSheet &&
-                    typeof CharacterSheet._centerPortraitScrollSafely === 'function'
-                ) {
-                    CharacterSheet._centerPortraitScrollSafely(element);
-                }
-
                 await new Promise(resolve => requestAnimationFrame(resolve));
             }
         }
@@ -12653,15 +12805,7 @@ async function typeManagerPortrait(element, portraitText) {
     }
 
     // Final flush to ensure all text is visible
-    element.textContent = currentText;
-
-    // Match builder + manager behavior: center the portrait horizontally.
-    if (
-        window.CharacterSheet &&
-        typeof CharacterSheet._centerPortraitScrollSafely === 'function'
-    ) {
-        CharacterSheet._centerPortraitScrollSafely(element);
-    }
+    pre.textContent = currentText;
 }
 
 // Panel loading cubes are now defined directly in index.html using

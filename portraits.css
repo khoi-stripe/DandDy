@@ -17,8 +17,6 @@
    and let the PNG multiply against it for a subtle ink-on-paper effect.
    Only show the teal background once the image has loaded to prevent flash. */
 .portrait-container--original-mode {
-  /* Inset 1px black outline to mask any faint edges on the image */
-  box-shadow: inset 0 0 0 1px #000000;
   background: transparent;
   /* Background fades in after a delay, letting the image appear first */
   transition: background-color 0.12s ease-in 0.08s;
@@ -42,6 +40,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: top center;
   mix-blend-mode: multiply;
   opacity: 0;
   transition: opacity 0.1s ease-in;
@@ -65,14 +64,13 @@
      to read without feeling too loose. */
   line-height: 1.2;
   color: var(--terminal-accent);
-  text-align: center;
-  white-space: pre;
   font-family: var(--font-mono);
-  /* Treat the portrait area as a fixed frame:
-     - center the ASCII horizontally
-     - crop anything that overflows instead of adding scrollbars */
-  overflow-x: hidden;
-  overflow-y: hidden;
+  /* Use flexbox to center the inner content horizontally while keeping
+     it pinned to the top. Overflow clips equally from both sides. */
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: hidden;
   width: 100%;
   max-width: 100%;
   /* Prevent text selection on ASCII art */
@@ -80,6 +78,17 @@
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+}
+
+/* Inner element that holds the actual ASCII text - centered by parent flex */
+.ascii-portrait > pre {
+  white-space: pre;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  flex-shrink: 0;
+  /* Ensure pre takes only content width, not container width */
+  width: max-content;
 }
 
 /* Loading state for portrait area (used while AI portrait is being generated).
@@ -895,6 +904,7 @@
 
 .portrait-prompt-textarea::placeholder {
   color: var(--modal-accent-dim);
+  opacity: 0.5;
 }
 
 .portrait-prompt-textarea:focus {
