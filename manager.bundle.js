@@ -3068,7 +3068,8 @@ const AsciiArtService = (window.AsciiArtService = {
 
     // Try race-class combo first
     if (classLower) {
-      const path = `generated_portraits/ascii/${raceLower}-${classLower}.txt`;
+      // Use ../ prefix since character-builder is in a subdirectory
+      const path = `../generated_portraits/ascii/${raceLower}-${classLower}.txt`;
       if (DEBUG_BUILDER) console.log(`📂 Trying to load: ${path}`);
       try {
         const response = await fetch(path);
@@ -3084,7 +3085,7 @@ const AsciiArtService = (window.AsciiArtService = {
     }
 
     // Fallback to race-only
-    const path = `generated_portraits/ascii/${raceLower}.txt`;
+    const path = `../generated_portraits/ascii/${raceLower}.txt`;
     if (DEBUG_BUILDER) console.log(`📂 Trying fallback: ${path}`);
     try {
       const response = await fetch(path);
@@ -3121,7 +3122,7 @@ const AsciiArtService = (window.AsciiArtService = {
 
     // Fallback: relative path for environments where PNGs are served locally.
     // This keeps older static setups working if images are present on disk.
-    return `../web/generated_portraits/images/${fileName}`;
+    return `../generated_portraits/images/${fileName}`;
   },
 
   // Load portrait (pre-generated or fallback to template)
@@ -4774,7 +4775,7 @@ const Components = (window.Components = {
         <div class="modal-content builder-settings-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
             <div class="modal-header-main">
-              <h2 class="modal-title">[ ⚙︎ Settings ]</h2>
+              <h2 class="modal-title">⚙︎ Settings</h2>
             </div>
             <button class="modal-close" onclick="SettingsModal.close()" aria-label="Close settings">&times;</button>
           </div>
@@ -8640,7 +8641,7 @@ if (DEBUG_CLOUD) {
         <div id="portraitHistoryModal" class="modal show" onclick="PortraitUI.closeHistory()">
           <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
             <div class="modal-header">
-              <h2 class="modal-title">[ Portrait History ]</h2>
+              <h2 class="modal-title">Portrait History</h2>
               <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
             </div>
             <div class="modal-body">
@@ -9099,7 +9100,7 @@ if (DEBUG_CLOUD) {
       const escapedPrompt = (version.prompt || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
       const promptHeaderHtml = `
-        <h2 class="modal-title">[ Portrait Prompt ]</h2>
+        <h2 class="modal-title">Portrait Prompt</h2>
         <span class="portrait-prompt-style-label">Style: ${styleLabel}</span>
         <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
       `;
@@ -9208,7 +9209,7 @@ if (DEBUG_CLOUD) {
         `;
 
         this._animateModalContentResize('portraitHistoryModal', () => {
-          if (modalTitle) modalTitle.textContent = '[ Create a New Portrait? ]';
+          if (modalTitle) modalTitle.textContent = 'Create a New Portrait?';
           modalBody.innerHTML = createNewBodyHtml;
           if (modalFooter) modalFooter.innerHTML = createNewFooterHtml;
         });
@@ -9260,7 +9261,7 @@ if (DEBUG_CLOUD) {
 
       // Transform modal to confirmation view
       this._animateModalContentResize('portraitHistoryModal', () => {
-        if (modalTitle) modalTitle.textContent = '[ Confirm Delete ]';
+        if (modalTitle) modalTitle.textContent = 'Confirm Delete';
         modalBody.innerHTML = confirmationBodyHtml;
         if (modalFooter) modalFooter.innerHTML = confirmationFooterHtml;
       });
@@ -11847,7 +11848,7 @@ async function renameCharacter(id) {
       <div id="renameModal" class="modal show">
         <div class="modal-content">
           <div class="modal-header">
-            <h2 class="modal-title">[ RENAME CHARACTER ]</h2>
+            <h2 class="modal-title">RENAME CHARACTER</h2>
             <button class="modal-close" onclick="closeRenameModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -13451,7 +13452,7 @@ function showConfirmDialog(message, onConfirm) {
       <div id="genericConfirmModal" class="modal show">
         <div class="modal-content">
           <div class="modal-header">
-            <h2 class="modal-title">[ CONFIRM ]</h2>
+            <h2 class="modal-title">CONFIRM</h2>
             <button class="modal-close" onclick="closeGenericConfirmModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -13498,7 +13499,7 @@ function showAlertDialog(message) {
       <div id="genericAlertModal" class="modal show">
         <div class="modal-content">
           <div class="modal-header">
-            <h2 class="modal-title">[ NOTICE ]</h2>
+            <h2 class="modal-title">NOTICE</h2>
             <button class="modal-close" onclick="closeGenericAlertModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -13757,7 +13758,7 @@ function closeAuthModal() {
 function showLoginForm() {
     document.getElementById('loginForm').classList.remove('is-hidden');
     document.getElementById('registerForm').classList.add('is-hidden');
-    document.getElementById('authModalTitle').textContent = '[ LOGIN ]';
+    document.getElementById('authModalTitle').textContent = 'LOGIN';
     document.getElementById('loginBtn').classList.remove('is-hidden');
     document.getElementById('registerBtn').classList.add('is-hidden');
     document.getElementById('authError').classList.add('is-hidden');
@@ -13771,7 +13772,7 @@ function showLoginForm() {
 function showRegisterForm() {
     document.getElementById('loginForm').classList.add('is-hidden');
     document.getElementById('registerForm').classList.remove('is-hidden');
-    document.getElementById('authModalTitle').textContent = '[ REGISTER ]';
+    document.getElementById('authModalTitle').textContent = 'REGISTER';
     document.getElementById('loginBtn').classList.add('is-hidden');
     document.getElementById('registerBtn').classList.remove('is-hidden');
     document.getElementById('authError').classList.add('is-hidden');
