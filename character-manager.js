@@ -525,7 +525,9 @@ const MobileView = {
     _swipeDirection: null, // 'horizontal', 'vertical', or null (undetermined)
     _pointerId: null,
     _minSwipeDistance: 50,      // Min distance to trigger navigation
+    _minSwipeDownDistance: 80,  // Min distance to trigger pull-down-to-close
     _directionLockThreshold: 10, // Threshold to determine swipe direction intent
+    _scrollTopAtStart: 0,       // Track scroll position when swipe starts
 
     /** Initialize resize listener for viewport transitions */
     init() {
@@ -592,6 +594,9 @@ const MobileView = {
                 this._isSwiping = true;
                 this._swipeDirection = null; // Reset direction lock
                 this._pointerId = e.pointerId;
+                // Track scroll position at start to detect pull-down-to-close gesture
+                const container = document.getElementById('mobileSheetContainer');
+                this._scrollTopAtStart = container ? container.scrollTop : 0;
             }
         }, { passive: true });
         
@@ -661,13 +666,28 @@ const MobileView = {
         // Only handle swipes when viewing a character sheet on mobile
         if (!this.isOpen()) return;
         
-        // Only process if we determined this was a horizontal swipe
+        const deltaX = this._touchCurrentX - this._touchStartX;
+        const deltaY = this._touchCurrentY - this._touchStartY;
+        
+        // Handle vertical swipe (pull-down-to-close)
+        if (this._swipeDirection === 'vertical') {
+            this._swipeDirection = null;
+            
+            // Only close if:
+            // 1. Sheet was at the top when swipe started (scrollTop ≤ 5 for tolerance)
+            // 2. Swipe is downward (positive deltaY)
+            // 3. Swipe distance exceeds threshold
+            if (this._scrollTopAtStart <= 5 && deltaY > this._minSwipeDownDistance) {
+                this.close();
+            }
+            return;
+        }
+        
+        // Handle horizontal swipe (navigate between characters)
         if (this._swipeDirection !== 'horizontal') {
             this._swipeDirection = null;
             return;
         }
-        
-        const deltaX = this._touchCurrentX - this._touchStartX;
         
         // Reset direction for next gesture
         this._swipeDirection = null;
