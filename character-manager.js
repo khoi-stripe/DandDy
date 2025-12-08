@@ -2738,6 +2738,13 @@ async function deleteCharacter(id) {
     showConfirmDialog(`Delete ${character.name}?\n\nThis cannot be undone.`, async () => {
         await CharacterStorage.delete(id);
         await AppState.loadCharacters();
+        
+        // On mobile, close the sheet view first so we return to the grid
+        // before re-rendering. This ensures the user sees the updated grid.
+        if (typeof MobileView !== 'undefined' && MobileView.isMobile() && MobileView.isOpen()) {
+            MobileView.close();
+        }
+        
         UI.render();
         showNotification('Character deleted');
     });
