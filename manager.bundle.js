@@ -6270,8 +6270,8 @@ const CharacterSheet = (window.CharacterSheet = {
             menu.style.left = `${targetLeft}px`;
             menu.style.right = 'auto';
             // Ensure the menu appears above modals and other content.
-            // Use higher z-index when inside any modal to appear above modal backdrop.
-            menu.style.zIndex = inModal ? '1100' : '1000';
+            // Modal overlay is z-index: 10000, so detached menus need to be above that.
+            menu.style.zIndex = inModal ? '10001' : '1000';
           } else {
             // ===== Local absolute positioning (search/sort bar only) =====
             // The search bar needs absolute positioning so dropdown stays
@@ -6341,7 +6341,8 @@ const CharacterSheet = (window.CharacterSheet = {
           menu.style.right = 'auto';
           menu.style.maxHeight = '';
           menu.style.overflowY = '';
-          menu.style.zIndex = inModal ? '1100' : '1000';
+          // Modal overlay is z-index: 10000, so detached menus need to be above that.
+          menu.style.zIndex = inModal ? '10001' : '1000';
         }
 
         shell.classList.add('is-open');
@@ -10521,28 +10522,103 @@ const MobileView = {
     /** Track scroll state for header collapse */
     _lastScrollTop: 0,
     _scrollThreshold: 20,
+    _headerExpandedHeight: null,
+    _headerCollapsedHeight: null,
     
     /** Initialize scroll handler for mobile header collapse */
     initScrollHandler() {
         const leftPanel = document.getElementById('character-list-panel');
         if (!leftPanel) return;
         
+        const header = document.querySelector('.terminal-header');
+        if (!header) return;
+        
+        // Measure header heights after DOM is fully painted
+        // Use double-rAF to ensure layout is complete
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                this._measureHeaderHeights();
+            });
+        });
+        
+        // Re-measure on resize
+        window.addEventListener('resize', () => this._measureHeaderHeights());
+        
         leftPanel.addEventListener('scroll', () => {
             if (!this.isMobile()) return;
             
             const scrollTop = leftPanel.scrollTop;
-            const header = document.querySelector('.terminal-header');
-            if (!header) return;
             
-            // Add/remove scrolled class based on scroll position
+            // Add/remove scrolled class and set heights based on scroll position
             if (scrollTop > this._scrollThreshold) {
-                header.classList.add('is-scrolled');
+                if (!header.classList.contains('is-scrolled')) {
+                    console.log('[Header collapse] Collapsing to:', this._headerCollapsedHeight);
+                    header.classList.add('is-scrolled');
+                    if (this._headerCollapsedHeight) {
+                        header.style.setProperty('--header-height', this._headerCollapsedHeight + 'px');
+                    }
+                }
             } else {
-                header.classList.remove('is-scrolled');
+                if (header.classList.contains('is-scrolled')) {
+                    console.log('[Header collapse] Expanding to:', this._headerExpandedHeight);
+                    header.classList.remove('is-scrolled');
+                    if (this._headerExpandedHeight) {
+                        header.style.setProperty('--header-height', this._headerExpandedHeight + 'px');
+                    }
+                }
             }
             
             this._lastScrollTop = scrollTop;
         }, { passive: true });
+    },
+    
+    /** Measure header heights for collapse animation */
+    _measureHeaderHeights() {
+        const header = document.querySelector('.terminal-header');
+        const title = header?.querySelector('.terminal-title');
+        if (!header || !title) return;
+        
+        // On desktop, clear any inline styles and scrolled state
+        if (!this.isMobile()) {
+            header.classList.remove('is-scrolled');
+            header.style.removeProperty('--header-height');
+            return;
+        }
+        
+        // Temporarily remove height constraint and scrolled state to measure natural height
+        const wasScrolled = header.classList.contains('is-scrolled');
+        header.classList.remove('is-scrolled');
+        header.style.removeProperty('--header-height');
+        
+        // Force reflow to get accurate measurements
+        void header.offsetHeight;
+        
+        // Measure expanded (full) height
+        this._headerExpandedHeight = header.offsetHeight;
+        
+        // Calculate collapsed height: title height + padding (top + small bottom margin)
+        const headerStyles = getComputedStyle(header);
+        const paddingTop = parseFloat(headerStyles.paddingTop) || 8;
+        const paddingBottom = 8; // Minimal bottom padding when collapsed
+        this._headerCollapsedHeight = title.offsetHeight + paddingTop + paddingBottom;
+        
+        console.log('[Header collapse] Measured heights:', {
+            expanded: this._headerExpandedHeight,
+            collapsed: this._headerCollapsedHeight,
+            titleHeight: title.offsetHeight,
+            paddingTop
+        });
+        
+        // Set initial height explicitly via CSS custom property
+        // This is crucial - transitions only work between explicit values
+        const targetHeight = wasScrolled 
+            ? this._headerCollapsedHeight 
+            : this._headerExpandedHeight;
+        header.style.setProperty('--header-height', targetHeight + 'px');
+            
+        if (wasScrolled) {
+            header.classList.add('is-scrolled');
+        }
     },
     
     /** Initialize swipe gesture handlers for mobile navigation */

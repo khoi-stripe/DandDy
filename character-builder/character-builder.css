@@ -45,6 +45,11 @@
   font-size: 1.4rem;
   line-height: 1;
   transition: color 0.2s ease, text-shadow 0.2s ease;
+  /* Center the gear icon visually */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-1px);
 }
 
 .builder-settings-link:hover {

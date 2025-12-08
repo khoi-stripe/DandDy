@@ -667,6 +667,11 @@
     font-size: 1.4rem;
     line-height: 1;
     transition: color 0.2s ease, text-shadow 0.2s ease;
+    /* Center the gear icon visually */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(-1px);
 }
 
 .manager-settings-link:hover {
@@ -1542,47 +1547,63 @@
 }
 
 @media (max-width: 768px) {
-    /* Position header for absolute children */
+    /* ===== HEADER COLLAPSE: "Curtain from below" effect =====
+       On scroll, the header shrinks in height from the bottom up.
+       - Title and buttons are pinned in place (absolute)
+       - Settings icon fades out
+       - Overflow button fades in  
+       - Header clips buttons as it shrinks */
+    
     .terminal-header {
         position: relative;
+        /* Clip content that extends beyond the header height */
+        overflow: hidden;
+        /* Expanded height - enough for title row + button row + gaps */
+        height: 88px;
+        /* Smooth transition with bounce easing (matches modals/toasts) */
+        transition: height 0.4s var(--ease-bounce);
     }
     
-    /* Overflow button: positioned absolutely, hidden by default */
+    /* Pin content at top - stays in place as header shrinks */
+    .terminal-header .header-content {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: var(--spacing-sm);
+    }
+    
+    /* Overflow button: positioned absolutely in top-right, hidden by default */
     .header-overflow {
-        display: inline-block; /* Override base display: none */
+        display: inline-block;
         position: absolute;
         right: var(--spacing-sm);
         top: var(--spacing-sm);
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.2s ease-out;
-        z-index: 9999;
+        transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 10;
+    }
+    
+    /* Settings cog: add transition for smooth fade */
+    .terminal-header .manager-settings-link {
+        transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     /* ===== SCROLLED STATE ===== */
     
-    /* Hide action buttons */
-    .terminal-header.is-scrolled .header-action-btn {
-        display: none;
+    /* Collapse header to title row only */
+    .terminal-header.is-scrolled {
+        height: 41px;
     }
     
-    /* Hide user info */
-    .terminal-header.is-scrolled #userInfoDisplay {
-        display: none;
-    }
-    
-    /* Hide settings cog (moved to overflow menu) */
+    /* Settings cog fades out */
     .terminal-header.is-scrolled .manager-settings-link {
-        display: none;
+        opacity: 0;
+        pointer-events: none;
     }
     
-    /* Collapse actions row but keep overflow visible */
-    .terminal-header.is-scrolled .header-actions {
-        width: 0;
-        overflow: visible;
-    }
-    
-    /* Show overflow button - pinned right, inline with title */
+    /* Show overflow button */
     .terminal-header.is-scrolled .header-overflow {
         opacity: 1;
         pointer-events: auto;

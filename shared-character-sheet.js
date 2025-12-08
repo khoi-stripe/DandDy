@@ -965,8 +965,8 @@ const CharacterSheet = (window.CharacterSheet = {
             menu.style.left = `${targetLeft}px`;
             menu.style.right = 'auto';
             // Ensure the menu appears above modals and other content.
-            // Use higher z-index when inside any modal to appear above modal backdrop.
-            menu.style.zIndex = inModal ? '1100' : '1000';
+            // Modal overlay is z-index: 10000, so detached menus need to be above that.
+            menu.style.zIndex = inModal ? '10001' : '1000';
           } else {
             // ===== Local absolute positioning (search/sort bar only) =====
             // The search bar needs absolute positioning so dropdown stays
@@ -1036,7 +1036,8 @@ const CharacterSheet = (window.CharacterSheet = {
           menu.style.right = 'auto';
           menu.style.maxHeight = '';
           menu.style.overflowY = '';
-          menu.style.zIndex = inModal ? '1100' : '1000';
+          // Modal overlay is z-index: 10000, so detached menus need to be above that.
+          menu.style.zIndex = inModal ? '10001' : '1000';
         }
 
         shell.classList.add('is-open');

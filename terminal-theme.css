@@ -1339,6 +1339,9 @@ body.selector-menu-open .splash-art {
 /* Selector menus moved to document.body (for modals) need explicit theme tokens
    since they lose inheritance from their modal ancestor when detached. */
 .selector-menu-detached {
+  /* Must be above the modal overlay (z-index: 10000) so the menu is visible */
+  z-index: 10001;
+  
   /* Use the modal's yellow theme when detached */
   --ui-border-color: hsl(
     var(--theme-yellow-h),
@@ -1591,7 +1594,7 @@ body.selector-menu-open .splash-art {
   position: absolute;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.8);
-  z-index: 1000;
+  z-index: 10000;
   /* Keep background dimmed but sharp — no blur */
   backdrop-filter: none;
   /* Modal-specific UI tokens (yellow theme) */

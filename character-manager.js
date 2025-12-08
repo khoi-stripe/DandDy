@@ -544,14 +544,28 @@ const MobileView = {
         const leftPanel = document.getElementById('character-list-panel');
         if (!leftPanel) return;
         
+        const header = document.querySelector('.terminal-header');
+        if (!header) return;
+        
+        // Clear any stale scrolled state on init
+        if (!this.isMobile()) {
+            header.classList.remove('is-scrolled');
+        }
+        
+        // Handle resize: clear scrolled state when switching to desktop
+        window.addEventListener('resize', () => {
+            if (!this.isMobile()) {
+                header.classList.remove('is-scrolled');
+            }
+        });
+        
         leftPanel.addEventListener('scroll', () => {
             if (!this.isMobile()) return;
             
             const scrollTop = leftPanel.scrollTop;
-            const header = document.querySelector('.terminal-header');
-            if (!header) return;
             
             // Add/remove scrolled class based on scroll position
+            // CSS handles the max-height transition
             if (scrollTop > this._scrollThreshold) {
                 header.classList.add('is-scrolled');
             } else {

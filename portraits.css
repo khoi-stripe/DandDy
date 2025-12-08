@@ -696,6 +696,9 @@
    AND must re-declare all base selector-menu styles since they lose inheritance
    when detached from the modal DOM tree. */
 .portrait-history-menu-detached {
+  /* Must be above the modal overlay (z-index: 10000) so the menu is visible */
+  z-index: 10001;
+  
   /* Default to the modal's yellow theme when detached so they match the
      non-teal portrait history UI. */
   --ui-border-color: hsl(
