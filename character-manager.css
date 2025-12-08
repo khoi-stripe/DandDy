@@ -1846,4 +1846,12 @@
         page-break-inside: auto !important;
         break-inside: auto !important;
     }
+
+    /* Make all images black and white for print */
+    img,
+    .original-portrait,
+    .portrait-container img {
+        filter: grayscale(100%) !important;
+        -webkit-filter: grayscale(100%) !important;
+    }
 }
