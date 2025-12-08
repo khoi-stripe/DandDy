@@ -1556,12 +1556,20 @@
     
     .terminal-header {
         position: relative;
-        /* Clip content that extends beyond the header height */
+        /* Clip content that extends beyond the header height during shrink animation.
+           When a selector menu is open, overflow must be visible so the dropdown can escape. */
         overflow: hidden;
         /* Expanded height - enough for title row + button row + gaps */
         height: 88px;
         /* Smooth transition with bounce easing (matches modals/toasts) */
         transition: height 0.4s var(--ease-bounce);
+        /* Ensure header stays above mobile sheet content (mobile-back-bar is z-index: 100) */
+        z-index: 200;
+    }
+    
+    /* Allow overflow menu to extend beyond header when open */
+    .terminal-header:has(.selector-menu.is-open) {
+        overflow: visible;
     }
     
     /* Pin content at top - stays in place as header shrinks */
@@ -1590,6 +1598,12 @@
         transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
+    /* Header action buttons (Login/Logout, New Character): add transition for smooth fade */
+    .terminal-header .header-action-btn {
+        transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                    visibility 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
     /* ===== SCROLLED STATE ===== */
     
     /* Collapse header to title row only */
@@ -1600,6 +1614,13 @@
     /* Settings cog fades out */
     .terminal-header.is-scrolled .manager-settings-link {
         opacity: 0;
+        pointer-events: none;
+    }
+    
+    /* Header action buttons fade out - they move to overflow menu */
+    .terminal-header.is-scrolled .header-action-btn {
+        opacity: 0;
+        visibility: hidden;
         pointer-events: none;
     }
     
