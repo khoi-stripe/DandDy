@@ -10653,6 +10653,7 @@ const MobileView = {
     _touchCurrentY: 0,
     _isSwiping: false,
     _swipeDirection: null, // 'horizontal', 'vertical', or null (undetermined)
+    _isPullDownGesture: false, // Track if this is a valid pull-down-to-close gesture
     _pointerId: null,
     _minSwipeDistance: 50,      // Min distance to trigger navigation
     _minSwipeDownDistance: 80,  // Min distance to trigger pull-down-to-close
@@ -10725,8 +10726,8 @@ const MobileView = {
                 this._swipeDirection = null; // Reset direction lock
                 this._pointerId = e.pointerId;
                 // Track scroll position at start to detect pull-down-to-close gesture
-                const container = document.getElementById('mobileSheetContainer');
-                this._scrollTopAtStart = container ? container.scrollTop : 0;
+                // Use leftPanel since that's the scrolling container on mobile
+                this._scrollTopAtStart = leftPanel.scrollTop;
             }
         }, { passive: true });
         
@@ -10752,12 +10753,17 @@ const MobileView = {
                     leftPanel.classList.add('is-swiping-horizontal');
                 } else if (absY > absX * 1.5) {
                     this._swipeDirection = 'vertical';
+                    // Check if this is a pull-down gesture at scroll top
+                    if (this._scrollTopAtStart <= 5 && deltaY > 0) {
+                        this._isPullDownGesture = true;
+                        leftPanel.classList.add('is-swiping-vertical');
+                    }
                 }
                 // If neither is dominant yet, wait for more movement
             }
             
-            // If locked to horizontal, prevent default to stop vertical scrolling
-            if (this._swipeDirection === 'horizontal') {
+            // Prevent default scrolling for horizontal swipes and pull-down-to-close
+            if (this._swipeDirection === 'horizontal' || this._isPullDownGesture) {
                 e.preventDefault();
             }
         }, { passive: false }); // passive: false so we can preventDefault
@@ -10769,8 +10775,10 @@ const MobileView = {
                 this._touchCurrentY = e.clientY;
                 this._isSwiping = false;
                 leftPanel.classList.remove('is-swiping-horizontal');
+                leftPanel.classList.remove('is-swiping-vertical');
                 this._pointerId = null;
                 this.handleSwipe();
+                this._isPullDownGesture = false;
             }
         }, { passive: true });
         
@@ -10778,7 +10786,9 @@ const MobileView = {
         leftPanel.addEventListener('pointercancel', () => {
             this._isSwiping = false;
             this._swipeDirection = null;
+            this._isPullDownGesture = false;
             leftPanel.classList.remove('is-swiping-horizontal');
+            leftPanel.classList.remove('is-swiping-vertical');
         }, { passive: true });
         
         // Also handle pointerleave to clean up if finger leaves the element
@@ -10786,7 +10796,9 @@ const MobileView = {
             // Only cancel if we haven't locked direction yet
             if (this._isSwiping && this._swipeDirection === null) {
                 this._isSwiping = false;
+                this._isPullDownGesture = false;
                 leftPanel.classList.remove('is-swiping-horizontal');
+                leftPanel.classList.remove('is-swiping-vertical');
             }
         }, { passive: true });
     },
@@ -10799,17 +10811,10 @@ const MobileView = {
         const deltaX = this._touchCurrentX - this._touchStartX;
         const deltaY = this._touchCurrentY - this._touchStartY;
         
-        // Handle vertical swipe (pull-down-to-close)
-        if (this._swipeDirection === 'vertical') {
+        // Handle pull-down-to-close gesture
+        if (this._isPullDownGesture && deltaY > this._minSwipeDownDistance) {
             this._swipeDirection = null;
-            
-            // Only close if:
-            // 1. Sheet was at the top when swipe started (scrollTop ≤ 5 for tolerance)
-            // 2. Swipe is downward (positive deltaY)
-            // 3. Swipe distance exceeds threshold
-            if (this._scrollTopAtStart <= 5 && deltaY > this._minSwipeDownDistance) {
-                this.close();
-            }
+            this.close();
             return;
         }
         
