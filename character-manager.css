@@ -1380,37 +1380,6 @@
     }
 }
 
-/* Drag handle for pull-down-to-close gesture */
-.mobile-drag-handle {
-    display: none;
-    width: 100%;
-    padding: 8px 0 4px;
-    cursor: grab;
-    touch-action: none; /* Critical: prevents browser from handling touch on this element */
-}
-
-@media (max-width: 768px) {
-    .left-panel.is-viewing-sheet .mobile-drag-handle {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-}
-
-.mobile-drag-handle-bar {
-    width: 36px;
-    height: 4px;
-    background: var(--sheet-accent-dim);
-    border-radius: 2px;
-    opacity: 0.6;
-    transition: opacity 0.2s, background 0.2s;
-}
-
-.mobile-drag-handle:active .mobile-drag-handle-bar {
-    opacity: 1;
-    background: var(--sheet-accent);
-}
-
 .mobile-back-link {
     color: var(--sheet-accent-dim);
     font-family: var(--font-mono);

@@ -10653,12 +10653,9 @@ const MobileView = {
     _touchCurrentY: 0,
     _isSwiping: false,
     _swipeDirection: null, // 'horizontal', 'vertical', or null (undetermined)
-    _isPullDownGesture: false, // Track if this is a valid pull-down-to-close gesture
     _pointerId: null,
     _minSwipeDistance: 50,      // Min distance to trigger navigation
-    _minSwipeDownDistance: 80,  // Min distance to trigger pull-down-to-close
     _directionLockThreshold: 10, // Threshold to determine swipe direction intent
-    _scrollTopAtStart: 0,       // Track scroll position when swipe starts
 
     /** Initialize resize listener for viewport transitions */
     init() {
@@ -10666,46 +10663,6 @@ const MobileView = {
         window.addEventListener('resize', () => this.handleResize());
         this.initSwipeHandlers();
         this.initScrollHandler();
-        this.initDragHandle();
-    },
-    
-    /** Initialize drag handle for pull-down-to-close gesture */
-    initDragHandle() {
-        const dragHandle = document.getElementById('mobileDragHandle');
-        if (!dragHandle) return;
-        
-        let startY = 0;
-        let currentY = 0;
-        let isDragging = false;
-        
-        dragHandle.addEventListener('touchstart', (e) => {
-            if (!this.isOpen()) return;
-            isDragging = true;
-            startY = e.touches[0].clientY;
-            currentY = startY;
-            e.preventDefault(); // Prevent any scrolling
-        }, { passive: false });
-        
-        dragHandle.addEventListener('touchmove', (e) => {
-            if (!isDragging) return;
-            currentY = e.touches[0].clientY;
-            e.preventDefault(); // Prevent any scrolling
-        }, { passive: false });
-        
-        dragHandle.addEventListener('touchend', (e) => {
-            if (!isDragging) return;
-            isDragging = false;
-            
-            const deltaY = currentY - startY;
-            // If pulled down more than 60px, close the sheet
-            if (deltaY > 60) {
-                this.close();
-            }
-        }, { passive: true });
-        
-        dragHandle.addEventListener('touchcancel', () => {
-            isDragging = false;
-        }, { passive: true });
     },
     
     /** Track scroll state for header collapse */
@@ -10765,9 +10722,6 @@ const MobileView = {
                 this._isSwiping = true;
                 this._swipeDirection = null; // Reset direction lock
                 this._pointerId = e.pointerId;
-                // Track scroll position at start to detect pull-down-to-close gesture
-                // Use leftPanel since that's the scrolling container on mobile
-                this._scrollTopAtStart = leftPanel.scrollTop;
             }
         }, { passive: true });
         
@@ -10793,17 +10747,12 @@ const MobileView = {
                     leftPanel.classList.add('is-swiping-horizontal');
                 } else if (absY > absX * 1.5) {
                     this._swipeDirection = 'vertical';
-                    // Check if this is a pull-down gesture at scroll top
-                    if (this._scrollTopAtStart <= 5 && deltaY > 0) {
-                        this._isPullDownGesture = true;
-                        leftPanel.classList.add('is-swiping-vertical');
-                    }
                 }
                 // If neither is dominant yet, wait for more movement
             }
             
-            // Prevent default scrolling for horizontal swipes and pull-down-to-close
-            if (this._swipeDirection === 'horizontal' || this._isPullDownGesture) {
+            // If locked to horizontal, prevent default to stop vertical scrolling
+            if (this._swipeDirection === 'horizontal') {
                 e.preventDefault();
             }
         }, { passive: false }); // passive: false so we can preventDefault
@@ -10815,10 +10764,8 @@ const MobileView = {
                 this._touchCurrentY = e.clientY;
                 this._isSwiping = false;
                 leftPanel.classList.remove('is-swiping-horizontal');
-                leftPanel.classList.remove('is-swiping-vertical');
                 this._pointerId = null;
                 this.handleSwipe();
-                this._isPullDownGesture = false;
             }
         }, { passive: true });
         
@@ -10826,9 +10773,7 @@ const MobileView = {
         leftPanel.addEventListener('pointercancel', () => {
             this._isSwiping = false;
             this._swipeDirection = null;
-            this._isPullDownGesture = false;
             leftPanel.classList.remove('is-swiping-horizontal');
-            leftPanel.classList.remove('is-swiping-vertical');
         }, { passive: true });
         
         // Also handle pointerleave to clean up if finger leaves the element
@@ -10836,9 +10781,7 @@ const MobileView = {
             // Only cancel if we haven't locked direction yet
             if (this._isSwiping && this._swipeDirection === null) {
                 this._isSwiping = false;
-                this._isPullDownGesture = false;
                 leftPanel.classList.remove('is-swiping-horizontal');
-                leftPanel.classList.remove('is-swiping-vertical');
             }
         }, { passive: true });
     },
@@ -10848,21 +10791,13 @@ const MobileView = {
         // Only handle swipes when viewing a character sheet on mobile
         if (!this.isOpen()) return;
         
-        const deltaX = this._touchCurrentX - this._touchStartX;
-        const deltaY = this._touchCurrentY - this._touchStartY;
-        
-        // Handle pull-down-to-close gesture
-        if (this._isPullDownGesture && deltaY > this._minSwipeDownDistance) {
-            this._swipeDirection = null;
-            this.close();
-            return;
-        }
-        
-        // Handle horizontal swipe (navigate between characters)
+        // Only process if we determined this was a horizontal swipe
         if (this._swipeDirection !== 'horizontal') {
             this._swipeDirection = null;
             return;
         }
+        
+        const deltaX = this._touchCurrentX - this._touchStartX;
         
         // Reset direction for next gesture
         this._swipeDirection = null;
