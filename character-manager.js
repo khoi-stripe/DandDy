@@ -751,25 +751,39 @@ const MobileView = {
         this._wasMobile = isMobileNow;
         
         if (wasDesktop && isNowMobile) {
-            // Desktop → Mobile: deselect all cards (user must tap to view)
-            if (typeof AppState !== 'undefined' && AppState) {
-                AppState.selectedCharacterId = null;
+            // Desktop → Mobile: preserve selected character and open mobile sheet
+            const selectedId = AppState?.selectedCharacterId;
+            if (selectedId) {
+                // Use double requestAnimationFrame to ensure DOM/CSS is fully settled after resize
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        // Verify selection is still valid
+                        if (AppState.selectedCharacterId === selectedId) {
+                            // Re-trigger viewCharacter which handles mobile opening properly
+                            viewCharacter(selectedId, { skipKeyboardSync: true, updateUrl: false });
+                        }
+                    });
+                });
             }
-            document.querySelectorAll('.character-card').forEach(card => {
-                card.classList.remove('is-selected');
-            });
-            clearCharacterFromUrl();
+            // If no character was selected on desktop, do nothing - user can tap to view
         } else if (!isMobileNow) {
-            // Mobile → Desktop: close modal, ensure a character is selected
+            // Mobile → Desktop: close modal view but preserve selected character
+            const selectedId = AppState?.selectedCharacterId;
+            
             if (wasModalOpen) {
-                this.close();
+                // Close the modal view without clearing selection (don't use this.close())
+                const leftPanel = document.getElementById('character-list-panel');
+                if (leftPanel) {
+                    leftPanel.classList.remove('is-viewing-sheet');
+                }
             }
             // Clear scroll state on header when going to desktop
             const header = document.querySelector('.terminal-header');
             if (header) header.classList.remove('is-scrolled');
             
             // If nothing is selected, auto-select the first character
-            if (!AppState.selectedCharacterId && AppState.filteredCharacters.length > 0) {
+            // Otherwise keep the current selection from mobile
+            if (!selectedId && AppState.filteredCharacters.length > 0) {
                 const firstChar = AppState.filteredCharacters[0];
                 viewCharacter(firstChar.id, { skipKeyboardSync: false, updateUrl: true });
             }

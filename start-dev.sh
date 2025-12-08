@@ -13,13 +13,26 @@ cleanup() {
     echo "🛑 Shutting down servers..."
     kill $BACKEND_PID 2>/dev/null
     kill $FRONTEND_PID 2>/dev/null
+    kill $WATCHER_PID 2>/dev/null
     exit 0
 }
 
 trap cleanup SIGINT SIGTERM
 
+# Rebuild bundles first to ensure they're up to date
+echo "📦 Building JavaScript bundles..."
+python3 scripts/simple_bundle.py
+echo ""
+
+# Start bundle watcher in background
+echo "👀 Starting bundle watcher..."
+python3 scripts/watch_bundle.py > watcher.log 2>&1 &
+WATCHER_PID=$!
+echo "✅ Bundle watcher running (auto-rebuilds on file changes)"
+echo ""
+
 # Start backend in background
-echo "📦 Starting Backend API (port 8000)..."
+echo "🔧 Starting Backend API (port 8000)..."
 ./start-backend.sh > backend.log 2>&1 &
 BACKEND_PID=$!
 
@@ -62,10 +75,11 @@ echo ""
 echo "📝 Logs:"
 echo "   Backend:  tail -f backend.log"
 echo "   Frontend: tail -f frontend.log"
+echo "   Bundles:  tail -f watcher.log"
 echo ""
 echo "Press Ctrl+C to stop all servers"
 echo "=========================================="
 
 # Wait for user to stop
-wait $BACKEND_PID $FRONTEND_PID
+wait $BACKEND_PID $FRONTEND_PID $WATCHER_PID
 
