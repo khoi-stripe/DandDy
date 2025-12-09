@@ -2628,6 +2628,22 @@ async function confirmGeneratePortrait() {
                 }
             }
 
+            // Capture the model and quality that were used for generation
+            let generationModel = 'dall-e-3';
+            let generationQuality = null;
+            try {
+                if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+                    generationModel = StorageService.getImageModel();
+                } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_IMAGE_MODEL) {
+                    generationModel = CONFIG.DEFAULT_IMAGE_MODEL;
+                }
+                if (window.StorageService && typeof StorageService.getImageQuality === 'function') {
+                    generationQuality = StorageService.getImageQuality(generationModel);
+                }
+            } catch (e) {
+                // Non-fatal: use defaults
+            }
+
             updatedMetadata = window.PortraitHistory.addVersion(
                 baseCharacterForHistory,
                 result.asciiArt,
@@ -2636,6 +2652,8 @@ async function confirmGeneratePortrait() {
                     source: 'custom-ai',
                     prompt: fullPrompt,
                     style: managerStyle,
+                    model: generationModel,
+                    quality: generationQuality,
                 },
             );
             console.log('%c🎨 PORTRAIT HISTORY UPDATED', 'color: #0f0; font-weight: bold');

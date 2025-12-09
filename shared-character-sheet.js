@@ -2475,7 +2475,7 @@ const PortraitHistory = (window.PortraitHistory = {
    * @param {Object} character
    * @param {string} asciiArt
    * @param {string|null} imageUrl
-   * @param {Object} extra - { source, prompt, style }
+   * @param {Object} extra - { source, prompt, style, model, quality }
    */
   addVersion(character, asciiArt, imageUrl, extra = {}) {
     if (!character) {
@@ -2499,6 +2499,8 @@ const PortraitHistory = (window.PortraitHistory = {
       source: extra.source || 'custom-ai',
       prompt: extra.prompt || null,
       style: extra.style || null,
+      model: extra.model || null,
+      quality: extra.quality || null,
     };
 
     const versions = [version, ...existingVersions].slice(0, this.MAX_VERSIONS);

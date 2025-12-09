@@ -1824,6 +1824,22 @@ const App = (window.App = {
           // Non-fatal
         }
 
+        // Capture the model and quality that were used for generation
+        let generationModel = 'dall-e-3';
+        let generationQuality = null;
+        try {
+          if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+            generationModel = StorageService.getImageModel();
+          } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_IMAGE_MODEL) {
+            generationModel = CONFIG.DEFAULT_IMAGE_MODEL;
+          }
+          if (window.StorageService && typeof StorageService.getImageQuality === 'function') {
+            generationQuality = StorageService.getImageQuality(generationModel);
+          }
+        } catch (e) {
+          // Non-fatal: use defaults
+        }
+
         const updatedMetadata =
           window.PortraitHistory && typeof PortraitHistory.addVersion === 'function'
             ? PortraitHistory.addVersion(
@@ -1837,6 +1853,8 @@ const App = (window.App = {
                       AIService.buildPortraitPrompt(character)) ||
                     null,
                   style: guidedStyle,
+                  model: generationModel,
+                  quality: generationQuality,
                 },
               )
             : character.portraitMetadata || {};
@@ -2497,20 +2515,19 @@ const App = (window.App = {
               `);
             }
 
-            if (hasPrompt) {
-              actionItems.push(`
-                <button
-                  class="selector-option"
-                  type="button"
-                  role="menuitem"
-                  onclick="event.stopPropagation(); App.viewPortraitPrompt('${v.id}')"
-                  title="View this portrait's prompt"
-                >
-                  <span class="selector-option-icon">✎</span>
-                  <span class="selector-option-label">View prompt</span>
-                </button>
-              `);
-            }
+            // Always show Image Info - displays date, style, model, and prompt (if available)
+            actionItems.push(`
+              <button
+                class="selector-option"
+                type="button"
+                role="menuitem"
+                onclick="event.stopPropagation(); App.viewPortraitImageInfo('${v.id}')"
+                title="View image generation details"
+              >
+                <span class="selector-option-icon">ℹ</span>
+                <span class="selector-option-label">Image info</span>
+              </button>
+            `);
 
             actionItems.push(`
               <button
@@ -3238,15 +3255,15 @@ const App = (window.App = {
     }
   },
 
-  viewPortraitPrompt(versionId) {
+  viewPortraitImageInfo(versionId) {
     const state = CharacterState.get();
     const character = state.character || {};
     const metadata = character.portraitMetadata || {};
     const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
     const version = versions.find((v) => v.id === versionId);
 
-    if (!version || !version.prompt) {
-      this.showToast('No saved prompt for this portrait.');
+    if (!version) {
+      this.showToast('No info available for this portrait.');
       return;
     }
 
@@ -3264,10 +3281,9 @@ const App = (window.App = {
     const originalHeaderHtml = modalHeader ? modalHeader.innerHTML : '';
     const originalFooterHtml = modalFooter ? modalFooter.innerHTML : '';
 
-    // Build style label for header - format to title case
-    const rawStyle = version.style || 'default';
-    const formatStyleLabel = (str) => {
-      if (!str) return 'Default';
+    // Helper to format labels to title case
+    const formatLabel = (str) => {
+      if (!str) return null;
       // Replace dashes/underscores with spaces
       let cleaned = str.replace(/[-_]/g, ' ');
       // Title case: capitalize first letter of each word
@@ -3278,35 +3294,137 @@ const App = (window.App = {
       }
       return cleaned;
     };
-    const styleLabel = formatStyleLabel(rawStyle);
+
+    // Format model name for display
+    const formatModelName = (model) => {
+      if (!model) return null;
+      const modelNames = {
+        'dall-e-3': 'DALL·E 3',
+        'gpt-image-1': 'GPT Image 1',
+        'flux-1.1-pro': 'Flux 1.1 Pro',
+        'flux-schnell': 'Flux Schnell',
+      };
+      return modelNames[model] || formatLabel(model);
+    };
+
+    // Format quality for display
+    const formatQuality = (quality) => {
+      if (!quality) return null;
+      const qualityNames = {
+        'standard': 'Standard',
+        'medium': 'Medium',
+        'high': 'High',
+        'hd': 'HD',
+      };
+      return qualityNames[quality] || formatLabel(quality);
+    };
+
+    // Format date/time for display
+    const formatDateTime = (isoString) => {
+      if (!isoString) return null;
+      try {
+        const date = new Date(isoString);
+        return date.toLocaleString(undefined, {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      } catch (e) {
+        return isoString;
+      }
+    };
+
+    const styleLabel = formatLabel(version.style) || 'Default';
+    const modelLabel = formatModelName(version.model);
+    const qualityLabel = formatQuality(version.quality);
+    const dateTimeLabel = formatDateTime(version.createdAt);
 
     // Escape prompt text for safe display
     const escapedPrompt = (version.prompt || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    const promptHeaderHtml = `
-      <h2 class="modal-title">Portrait Prompt</h2>
-      <span class="portrait-prompt-style-label">Style: ${styleLabel}</span>
+    const infoHeaderHtml = `
+      <h2 class="modal-title">Image Info</h2>
       <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>
     `;
 
-    const promptBodyHtml = `
-      <pre class="terminal-text portrait-prompt-display">${escapedPrompt}</pre>
+    // Build the info sections
+    let infoSections = '';
+
+    // Date/Time
+    if (dateTimeLabel) {
+      infoSections += `
+        <div class="image-info-row">
+          <span class="image-info-label">Created</span>
+          <span class="image-info-value">${dateTimeLabel}</span>
+        </div>
+      `;
+    }
+
+    // Style
+    infoSections += `
+      <div class="image-info-row">
+        <span class="image-info-label">Style</span>
+        <span class="image-info-value">${styleLabel}</span>
+      </div>
     `;
 
-    const promptFooterHtml = `
-      <button class="terminal-btn" id="portrait-prompt-back">BACK</button>
-      <button class="terminal-btn" id="portrait-prompt-copy">COPY PROMPT</button>
+    // Model and Quality
+    if (modelLabel) {
+      let modelDisplay = modelLabel;
+      if (qualityLabel) {
+        modelDisplay = modelDisplay + ' (' + qualityLabel + ')';
+      }
+      infoSections += `
+        <div class="image-info-row">
+          <span class="image-info-label">Model</span>
+          <span class="image-info-value">${modelDisplay}</span>
+        </div>
+      `;
+    }
+
+    // Prompt section
+    let promptSection = '';
+    if (escapedPrompt) {
+      promptSection = `
+        <div class="image-info-prompt-section">
+          <div class="image-info-prompt-label">Prompt</div>
+          <pre class="terminal-text portrait-prompt-display">${escapedPrompt}</pre>
+        </div>
+      `;
+    } else {
+      promptSection = `
+        <div class="image-info-prompt-section">
+          <div class="image-info-prompt-label">Prompt</div>
+          <p class="terminal-text-dim">No prompt saved for this portrait.</p>
+        </div>
+      `;
+    }
+
+    const infoBodyHtml = `
+      <div class="image-info-container">
+        <div class="image-info-metadata">
+          ${infoSections}
+        </div>
+        ${promptSection}
+      </div>
     `;
 
-    // Transform modal to prompt view
+    const infoFooterHtml = `
+      <button class="terminal-btn" id="portrait-info-back">BACK</button>
+      ${escapedPrompt ? '<button class="terminal-btn" id="portrait-info-copy">COPY PROMPT</button>' : ''}
+    `;
+
+    // Transform modal to info view
     this._animateModalContentResize('portraitHistoryModal', () => {
-      if (modalHeader) modalHeader.innerHTML = promptHeaderHtml;
-      modalBody.innerHTML = promptBodyHtml;
-      if (modalFooter) modalFooter.innerHTML = promptFooterHtml;
+      if (modalHeader) modalHeader.innerHTML = infoHeaderHtml;
+      modalBody.innerHTML = infoBodyHtml;
+      if (modalFooter) modalFooter.innerHTML = infoFooterHtml;
     });
 
-    const backBtn = document.getElementById('portrait-prompt-back');
-    const copyBtn = document.getElementById('portrait-prompt-copy');
+    const backBtn = document.getElementById('portrait-info-back');
+    const copyBtn = document.getElementById('portrait-info-copy');
 
     const goBack = () => {
       this._animateModalContentResize('portraitHistoryModal', () => {
@@ -3361,6 +3479,11 @@ const App = (window.App = {
         }
       };
     }
+  },
+
+  // Legacy alias for backwards compatibility
+  viewPortraitPrompt(versionId) {
+    return this.viewPortraitImageInfo(versionId);
   },
 
   async generateCustomAIPortrait() {
@@ -3784,6 +3907,22 @@ const App = (window.App = {
       const current = CharacterState.get().character;
       const currentCount = current.customPortraitCount || 0;
 
+      // Capture the model and quality that were used for generation
+      let generationModel = 'dall-e-3';
+      let generationQuality = null;
+      try {
+        if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+          generationModel = StorageService.getImageModel();
+        } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_IMAGE_MODEL) {
+          generationModel = CONFIG.DEFAULT_IMAGE_MODEL;
+        }
+        if (window.StorageService && typeof StorageService.getImageQuality === 'function') {
+          generationQuality = StorageService.getImageQuality(generationModel);
+        }
+      } catch (e) {
+        // Non-fatal: use defaults
+      }
+
       const updatedMetadata = window.PortraitHistory
         ? window.PortraitHistory.addVersion(
             current,
@@ -3793,6 +3932,8 @@ const App = (window.App = {
               source: 'custom-ai',
               prompt: fullPrompt,
               style: selectedStyle,
+              model: generationModel,
+              quality: generationQuality,
             },
           )
         : current.portraitMetadata || {};
@@ -4771,6 +4912,22 @@ const App = (window.App = {
           // Non-fatal
         }
 
+        // Capture the model and quality that were used for generation
+        let generationModel = 'dall-e-3';
+        let generationQuality = null;
+        try {
+          if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+            generationModel = StorageService.getImageModel();
+          } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_IMAGE_MODEL) {
+            generationModel = CONFIG.DEFAULT_IMAGE_MODEL;
+          }
+          if (window.StorageService && typeof StorageService.getImageQuality === 'function') {
+            generationQuality = StorageService.getImageQuality(generationModel);
+          }
+        } catch (e) {
+          // Non-fatal: use defaults
+        }
+
         const updatedMetadata = window.PortraitHistory
           ? window.PortraitHistory.addVersion(
               currentChar,
@@ -4783,6 +4940,8 @@ const App = (window.App = {
                     AIService.buildPortraitPrompt(currentChar)) ||
                   null,
                 style: quickStyle,
+                model: generationModel,
+                quality: generationQuality,
               },
             )
           : currentChar.portraitMetadata || {};
