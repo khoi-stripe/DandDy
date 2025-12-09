@@ -3801,9 +3801,7 @@ function showLevelChangeDialog(oldLevel, newLevel) {
             <button class="modal-close" id="levelChangeClose">&times;</button>
           </div>
           <div class="modal-body">
-            <p class="terminal-text">
-              You're changing from <strong>Level&nbsp;${oldLevel}</strong> to <strong>Level&nbsp;${newLevel}</strong>&nbsp;(${Math.abs(levelDiff)}&nbsp;${levelText}&nbsp;${direction}).
-            </p>
+            <p class="terminal-text level-change-text">You're changing from<strong>Level\u00A0${oldLevel}</strong>to<strong>Level\u00A0${newLevel}</strong>\u00A0(${Math.abs(levelDiff)}\u00A0${levelText}\u00A0${direction}).</p>
             <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">
               Would you like to automatically recalculate stats&nbsp;(HP,&nbsp;Proficiency Bonus)&nbsp;for the new level, or update them manually?
             </p>

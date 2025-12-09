@@ -1808,6 +1808,18 @@ body.selector-menu-open .splash-art {
   font-weight: bold;
 }
 
+/* Level change dialog text - ensure proper wrapping on mobile */
+.level-change-text {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
+/* Add spacing around strong tags since minifier strips HTML spaces */
+.level-change-text strong {
+  margin: 0 0.25em;
+}
+
 .terminal-text-small {
   font-size: var(--font-size-small);
 }
