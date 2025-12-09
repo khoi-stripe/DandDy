@@ -136,6 +136,24 @@ def ensure_prompt_entry_columns():
 
         conn.commit()
 
+
+def ensure_sex_column():
+    """
+    Lightweight migration helper for characters table:
+    - Adds sex column for character biological sex (male/female)
+    """
+    inspector = inspect(engine)
+    if not inspector.has_table("characters"):
+        return
+
+    existing_cols = {col["name"] for col in inspector.get_columns("characters")}
+
+    with engine.connect() as conn:
+        if "sex" not in existing_cols:
+            conn.execute(text("ALTER TABLE characters ADD COLUMN sex VARCHAR"))
+
+        conn.commit()
+
 def get_db():
     db = SessionLocal()
     try:

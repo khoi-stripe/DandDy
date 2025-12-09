@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from database.database import engine, Base, ensure_timestamp_columns
+from database.database import engine, Base, ensure_timestamp_columns, ensure_prompt_entry_columns, ensure_sex_column
 from routes import auth, characters, campaigns, ai, users, prompt_entries
 import os
 from dotenv import load_dotenv
@@ -12,6 +12,8 @@ load_dotenv()
 # Create database tables and run lightweight migrations
 Base.metadata.create_all(bind=engine)
 ensure_timestamp_columns()
+ensure_prompt_entry_columns()
+ensure_sex_column()
 
 app = FastAPI(
     title="DandDy API",
