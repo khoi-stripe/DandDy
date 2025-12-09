@@ -228,7 +228,8 @@ const Components = (window.Components = {
       (opt) => opt.value === currentQualityValue,
     ) || currentQualityOptions[0];
     const currentQualityLabel = currentQualityOption?.label || '';
-    const hasQualityOptions = currentQualityOptions.length > 0;
+    // Only show quality options to admin users
+    const hasQualityOptions = currentQualityOptions.length > 0 && isUserAdmin;
 
     // Portrait view mode (ASCII vs Original)
     const getPortraitViewMode = () => {
@@ -797,13 +798,28 @@ const SettingsModal = (window.SettingsModal = {
 
       const options = modelQualityOptionsMap[modelValue] || [];
 
-      if (!options.length) {
-        // Hide quality selector if model has no quality options
+      // Check if current user is admin (decode JWT)
+      let isAdmin = false;
+      try {
+        if (window.AuthService && typeof AuthService.isAuthenticated === 'function' && AuthService.isAuthenticated()) {
+          const token = AuthService.getToken ? AuthService.getToken() : null;
+          if (token) {
+            const payload = token.split('.')[1];
+            const decoded = JSON.parse(atob(payload));
+            isAdmin = decoded.role === 'admin';
+          }
+        }
+      } catch (e) {
+        // Silent fail - user is not admin
+      }
+
+      if (!options.length || !isAdmin) {
+        // Hide quality selector if model has no quality options or user is not admin
         if (qualityContainer) qualityContainer.classList.add('hidden');
         return;
       }
 
-      // Show quality selector
+      // Show quality selector (admin only)
       if (qualityContainer) qualityContainer.classList.remove('hidden');
 
       // Get saved quality for this model, or default to first option

@@ -320,6 +320,32 @@
         return lines;
       },
     },
+    'classic-high-fantasy': {
+      id: 'classic-high-fantasy',
+      label: 'Classic High-Fantasy',
+      description:
+        'Vibrant, colorful fantasy art inspired by classic book covers and RPG illustrations.',
+      buildStyleLines(options) {
+        const lines = [];
+        lines.push(
+          'Render in rich, vibrant colors with a painterly quality reminiscent of classic fantasy book covers.',
+        );
+        lines.push(
+          'Use warm, golden lighting with dramatic highlights and deep, saturated shadows.',
+        );
+        lines.push(
+          'Create an epic, heroic atmosphere with attention to fine details in armor, weapons, and magical effects.',
+        );
+        lines.push(
+          'Background should suggest a fantastical setting - ancient ruins, mystical forests, or dramatic skies.',
+        );
+        lines.push(
+          'Overall mood: classic high-fantasy illustration, grand and adventurous, like a Dungeons & Dragons cover.',
+        );
+        lines.push('Aspect ratio 3:4.');
+        return lines;
+      },
+    },
   };
 
   /**

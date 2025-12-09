@@ -50,7 +50,7 @@ return null;}
 function getCameraVariants(classKey){const cache=loadAdminCache();const k=normalize(classKey).toLowerCase();if(!k)return null;const variants=cache.cameras[k];if(Array.isArray(variants)&&variants.length){return variants;}
 return null;}
 function getStyleOverrides(themeId){const cache=loadAdminCache();const k=normalize(themeId);if(!k)return null;const entry=cache.styles[k];if(!entry)return null;return{styleDescription:entry.styleDescription||'',sceneDescription:entry.sceneDescription||'',};}
-const THEMES={'cinematic-inks':{id:'cinematic-inks',label:'Cinematic Inks (default)',description:'More cinematic lighting and framing while staying in black-and-white ink.',buildStyleLines(options){const lines=[];lines.push('Render in dramatic black-and-white ink with deep shadows and sharp rim lighting.',);lines.push('Treat the illustration like a film still: strong focal point, clear subject separation, and layered depth.',);lines.push('Use a limited range of mid-tone hatching to suggest volume without muddying the forms.',);lines.push('Keep the background abstract and mostly dark so the character silhouette and face read instantly.',);lines.push('Overall mood: cinematic fantasy portrait, serious and iconic, suitable for a character sheet.',);lines.push('Aspect ratio 3:4.');return lines;},},};function getThemeById(themeId){if(themeId&&THEMES[themeId]){return THEMES[themeId];}
+const THEMES={'cinematic-inks':{id:'cinematic-inks',label:'Cinematic Inks (default)',description:'More cinematic lighting and framing while staying in black-and-white ink.',buildStyleLines(options){const lines=[];lines.push('Render in dramatic black-and-white ink with deep shadows and sharp rim lighting.',);lines.push('Treat the illustration like a film still: strong focal point, clear subject separation, and layered depth.',);lines.push('Use a limited range of mid-tone hatching to suggest volume without muddying the forms.',);lines.push('Keep the background abstract and mostly dark so the character silhouette and face read instantly.',);lines.push('Overall mood: cinematic fantasy portrait, serious and iconic, suitable for a character sheet.',);lines.push('Aspect ratio 3:4.');return lines;},},'classic-high-fantasy':{id:'classic-high-fantasy',label:'Classic High-Fantasy',description:'Vibrant, colorful fantasy art inspired by classic book covers and RPG illustrations.',buildStyleLines(options){const lines=[];lines.push('Render in rich, vibrant colors with a painterly quality reminiscent of classic fantasy book covers.',);lines.push('Use warm, golden lighting with dramatic highlights and deep, saturated shadows.',);lines.push('Create an epic, heroic atmosphere with attention to fine details in armor, weapons, and magical effects.',);lines.push('Background should suggest a fantastical setting - ancient ruins, mystical forests, or dramatic skies.',);lines.push('Overall mood: classic high-fantasy illustration, grand and adventurous, like a Dungeons & Dragons cover.',);lines.push('Aspect ratio 3:4.');return lines;},},};function getThemeById(themeId){if(themeId&&THEMES[themeId]){return THEMES[themeId];}
 return THEMES[DEFAULT_THEME_ID];}
 function buildBasePortraitInstructions(options){const{characterDescription,posePrompt,cameraPrompt,themeId,}=options||{};const parts=[];if(characterDescription){parts.push(`Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,);}else{parts.push('Create a high-contrast black-and-white fantasy illustration.');}
 const theme=getThemeById(themeId);if(theme&&typeof theme.buildStyleLines==='function'){try{const styleLines=theme.buildStyleLines({characterDescription,posePrompt,cameraPrompt,});if(Array.isArray(styleLines)){styleLines.forEach((line)=>{if(line&&typeof line==='string'){parts.push(line);}});}}catch(e){const fallback=THEMES[DEFAULT_THEME_ID];if(fallback&&typeof fallback.buildStyleLines==='function'){const fallbackLines=fallback.buildStyleLines({characterDescription,posePrompt,cameraPrompt,});if(Array.isArray(fallbackLines)){fallbackLines.forEach((line)=>{if(line&&typeof line==='string'){parts.push(line);}});}}}}
@@ -3973,7 +3973,8 @@ aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-la
       (opt) => opt.value === currentQualityValue,
     ) || currentQualityOptions[0];
     const currentQualityLabel = currentQualityOption?.label || '';
-    const hasQualityOptions = currentQualityOptions.length > 0;
+    // Only show quality options to admin users
+    const hasQualityOptions = currentQualityOptions.length > 0 && isUserAdmin;
 
     // Portrait view mode (ASCII vs Original)
     const getPortraitViewMode = () => {
@@ -4345,13 +4346,28 @@ const SettingsModal = (window.SettingsModal = {
 
       const options = modelQualityOptionsMap[modelValue] || [];
 
-      if (!options.length) {
-        // Hide quality selector if model has no quality options
+      // Check if current user is admin (decode JWT)
+      let isAdmin = false;
+      try {
+        if (window.AuthService && typeof AuthService.isAuthenticated === 'function' && AuthService.isAuthenticated()) {
+          const token = AuthService.getToken ? AuthService.getToken() : null;
+          if (token) {
+            const payload = token.split('.')[1];
+            const decoded = JSON.parse(atob(payload));
+            isAdmin = decoded.role === 'admin';
+          }
+        }
+      } catch (e) {
+        // Silent fail - user is not admin
+      }
+
+      if (!options.length || !isAdmin) {
+        // Hide quality selector if model has no quality options or user is not admin
         if (qualityContainer) qualityContainer.classList.add('hidden');
         return;
       }
 
-      // Show quality selector
+      // Show quality selector (admin only)
       if (qualityContainer) qualityContainer.classList.remove('hidden');
 
       // Get saved quality for this model, or default to first option
