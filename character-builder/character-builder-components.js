@@ -515,7 +515,7 @@ const Components = (window.Components = {
                       </div>
                     </div>
                     <div class="settings-row-inline mb-lg">
-                      <div class="settings-inline-field settings-inline-field--grow">
+                      <div class="settings-inline-field">
                         <div class="settings-label">AI model</div>
                         <div class="selector-shell selector-shell--listbox selector-shell--match-width">
                           <button
