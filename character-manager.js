@@ -3761,7 +3761,7 @@ function showLevelChangeDialog(oldLevel, newLevel) {
               You're changing from <strong>Level&nbsp;${oldLevel}</strong> to <strong>Level&nbsp;${newLevel}</strong>&nbsp;(${Math.abs(levelDiff)}&nbsp;${levelText}&nbsp;${direction}).
             </p>
             <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">
-              Would you like to automatically recalculate stats (HP, Proficiency Bonus) for the new level, or update them manually?
+              Would you like to automatically recalculate stats&nbsp;(HP,&nbsp;Proficiency Bonus)&nbsp;for the new level, or update them manually?
             </p>
           </div>
           <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">
@@ -3782,6 +3782,11 @@ function showLevelChangeDialog(oldLevel, newLevel) {
                 if (result === 'cancel') {
                     // Animate back to original content
                     animateModalContentSwap(modalContent, originalContent, () => {
+                        // Restore the level value the user had entered (not the original)
+                        const levelInput = document.getElementById('editLevel');
+                        if (levelInput) {
+                            levelInput.value = newLevel;
+                        }
                         resolve(result);
                     });
                 } else if (result === 'auto') {
@@ -3801,13 +3806,16 @@ function showLevelChangeDialog(oldLevel, newLevel) {
                     `;
                     
                     animateModalContentSwap(modalContent, loadingHtml, () => {
-                        // Show loader for a moment, then resolve
+                        // Show loader for a moment, then restore original content and resolve
                         setTimeout(() => {
+                            // Restore original form content so it's ready for next edit
+                            modalContent.innerHTML = originalContent;
                             resolve(result);
                         }, 500);
                     });
                 } else {
-                    // Resolve immediately for manual
+                    // Restore original form content for manual, then resolve
+                    modalContent.innerHTML = originalContent;
                     resolve(result);
                 }
             };
