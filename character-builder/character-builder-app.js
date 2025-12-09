@@ -263,7 +263,7 @@ const KeyboardNav = (window.KeyboardNav = {
 let currentBuilderPortraitStyle = null;
 
 /**
- * Format style ID to display label (sentence case, no dashes/underscores)
+ * Format style ID to display label (title case, no dashes/underscores)
  */
 function formatStyleLabelBuilder(idOrLabel) {
   if (!idOrLabel) return '';
@@ -277,9 +277,11 @@ function formatStyleLabelBuilder(idOrLabel) {
   // Replace dashes/underscores with spaces
   cleaned = cleaned.replace(/[-_]/g, ' ');
   
-  // Sentence case: capitalize first letter, lowercase the rest
+  // Title case: capitalize first letter of each word
   if (cleaned.length > 0) {
-    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+    cleaned = cleaned.split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
   }
   
   return cleaned;
@@ -2676,7 +2678,7 @@ const App = (window.App = {
       <div id="portraitHistoryModal" class="modal show" onclick="App.closePortraitHistory()">
         <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">[ Portrait History ]</h2>
+            <h2 class="modal-title">Portrait History</h2>
             <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>
           </div>
           <div class="modal-body">
@@ -3046,7 +3048,7 @@ const App = (window.App = {
       `;
 
       this._animateModalContentResize('portraitHistoryModal', () => {
-        if (modalTitle) modalTitle.textContent = '[ Create a New Portrait? ]';
+        if (modalTitle) modalTitle.textContent = 'Create a New Portrait?';
         modalBody.innerHTML = createNewBodyHtml;
         if (modalFooter) modalFooter.innerHTML = createNewFooterHtml;
       });
@@ -3103,7 +3105,7 @@ const App = (window.App = {
 
     // Transform modal to confirmation view
     this._animateModalContentResize('portraitHistoryModal', () => {
-      if (modalTitle) modalTitle.textContent = '[ Confirm Delete ]';
+      if (modalTitle) modalTitle.textContent = 'Confirm Delete';
       modalBody.innerHTML = confirmationBodyHtml;
       if (modalFooter) modalFooter.innerHTML = confirmationFooterHtml;
     });
@@ -3258,15 +3260,17 @@ const App = (window.App = {
     const originalHeaderHtml = modalHeader ? modalHeader.innerHTML : '';
     const originalFooterHtml = modalFooter ? modalFooter.innerHTML : '';
 
-    // Build style label for header - format to sentence case
+    // Build style label for header - format to title case
     const rawStyle = version.style || 'default';
     const formatStyleLabel = (str) => {
       if (!str) return 'Default';
       // Replace dashes/underscores with spaces
       let cleaned = str.replace(/[-_]/g, ' ');
-      // Sentence case: capitalize first letter, lowercase the rest
+      // Title case: capitalize first letter of each word
       if (cleaned.length > 0) {
-        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+        cleaned = cleaned.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
       }
       return cleaned;
     };
@@ -3276,7 +3280,7 @@ const App = (window.App = {
     const escapedPrompt = (version.prompt || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
     const promptHeaderHtml = `
-      <h2 class="modal-title">[ Portrait Prompt ]</h2>
+      <h2 class="modal-title">Portrait Prompt</h2>
       <span class="portrait-prompt-style-label">Style: ${styleLabel}</span>
       <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>
     `;
@@ -3428,7 +3432,16 @@ const App = (window.App = {
       // fall back to race-only, and only as a last resort use a simple
       // text template. It also updates CharacterState with asciiPortrait and
       // originalPortraitUrl when successful.
-      await AsciiArtService.generateAIPortrait(character);
+      const fallbackArt = await AsciiArtService.generateAIPortrait(character);
+
+      // In guided/quick mode, updateCharacterPanel only shows customPortraitAscii,
+      // not asciiPortrait. So we also set customPortraitAscii here to ensure the
+      // fallback portrait actually displays in those modes.
+      if (fallbackArt && window.CharacterState) {
+        CharacterState.updateCharacter({
+          customPortraitAscii: fallbackArt,
+        });
+      }
 
       // Clear last-portrait cache so the pre-generated art will animate in.
       this._lastPortraitArt = null;
@@ -3473,7 +3486,7 @@ const App = (window.App = {
       <div id="promptModal" class="modal show" onclick="App.closePromptModal(false)">
         <div class="modal-content portrait-customize-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">[ ★ Customize AI Portrait ]</h2>
+            <h2 class="modal-title">★ Customize AI Portrait</h2>
             <button class="modal-close" onclick="App.closePromptModal(false)">&times;</button>
           </div>
           <div class="modal-body">
@@ -4351,7 +4364,7 @@ const App = (window.App = {
       <div id="levelModal" class="modal show" onclick="App.closeLevelModal()">
         <div class="modal-content" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">[ Change Character Level ]</h2>
+            <h2 class="modal-title">Change Character Level</h2>
             <button class="modal-close" onclick="App.closeLevelModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -4554,7 +4567,7 @@ const App = (window.App = {
       <div id="nameModal" class="modal show" onclick="App.closeNameModal()">
         <div class="modal-content" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">[ Change Character Name ]</h2>
+            <h2 class="modal-title">Change Character Name</h2>
             <button class="modal-close" onclick="App.closeNameModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -5149,7 +5162,7 @@ const App = (window.App = {
       <div id="confirmationModal" class="modal show confirmation-overlay">
         <div class="modal-content" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">[ Confirm ]</h2>
+            <h2 class="modal-title">Confirm</h2>
           </div>
           <div class="modal-body">
             <p class="terminal-text">

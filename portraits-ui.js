@@ -143,7 +143,7 @@
         <div id="portraitHistoryModal" class="modal show" onclick="PortraitUI.closeHistory()">
           <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
             <div class="modal-header">
-              <h2 class="modal-title">[ Portrait History ]</h2>
+              <h2 class="modal-title">Portrait History</h2>
               <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
             </div>
             <div class="modal-body">
@@ -584,15 +584,17 @@
       const originalFooterHtml = modalFooter ? modalFooter.innerHTML : '';
       const originalVersions = state.context?.versions || [];
 
-      // Build style label for header - format to sentence case
+      // Build style label for header - format to title case
       const rawStyle = version.style || 'default';
       const formatStyleLabel = (str) => {
         if (!str) return 'Default';
         // Replace dashes/underscores with spaces
         let cleaned = str.replace(/[-_]/g, ' ');
-        // Sentence case: capitalize first letter, lowercase the rest
+        // Title case: capitalize first letter of each word
         if (cleaned.length > 0) {
-          cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+          cleaned = cleaned.split(' ').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          ).join(' ');
         }
         return cleaned;
       };
@@ -602,7 +604,7 @@
       const escapedPrompt = (version.prompt || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
       const promptHeaderHtml = `
-        <h2 class="modal-title">[ Portrait Prompt ]</h2>
+        <h2 class="modal-title">Portrait Prompt</h2>
         <span class="portrait-prompt-style-label">Style: ${styleLabel}</span>
         <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
       `;
@@ -711,7 +713,7 @@
         `;
 
         this._animateModalContentResize('portraitHistoryModal', () => {
-          if (modalTitle) modalTitle.textContent = '[ Create a New Portrait? ]';
+          if (modalTitle) modalTitle.textContent = 'Create a New Portrait?';
           modalBody.innerHTML = createNewBodyHtml;
           if (modalFooter) modalFooter.innerHTML = createNewFooterHtml;
         });
@@ -763,7 +765,7 @@
 
       // Transform modal to confirmation view
       this._animateModalContentResize('portraitHistoryModal', () => {
-        if (modalTitle) modalTitle.textContent = '[ Confirm Delete ]';
+        if (modalTitle) modalTitle.textContent = 'Confirm Delete';
         modalBody.innerHTML = confirmationBodyHtml;
         if (modalFooter) modalFooter.innerHTML = confirmationFooterHtml;
       });

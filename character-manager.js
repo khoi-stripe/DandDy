@@ -1717,7 +1717,7 @@ async function renameCharacter(id) {
       <div id="renameModal" class="modal show">
         <div class="modal-content">
           <div class="modal-header">
-            <h2 class="modal-title">[ RENAME CHARACTER ]</h2>
+            <h2 class="modal-title">RENAME CHARACTER</h2>
             <button class="modal-close" onclick="closeRenameModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -1771,9 +1771,9 @@ let currentPortraitCharacterId = null;
 let currentPortraitStyle = null;
 
 /**
- * Convert a theme id/label to sentence case.
- * e.g., "cinematic-inks" -> "Cinematic inks"
- *       "my-custom-style" -> "My custom style"
+ * Convert a theme id/label to title case.
+ * e.g., "cinematic-inks" -> "Cinematic Inks"
+ *       "my-custom-style" -> "My Custom Style"
  */
 function formatStyleLabel(idOrLabel) {
     if (!idOrLabel) return '';
@@ -1787,9 +1787,11 @@ function formatStyleLabel(idOrLabel) {
     // Replace dashes/underscores with spaces
     cleaned = cleaned.replace(/[-_]/g, ' ');
     
-    // Sentence case: capitalize first letter, lowercase the rest
+    // Title case: capitalize first letter of each word
     if (cleaned.length > 0) {
-        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+        cleaned = cleaned.split(' ').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
     }
     
     return cleaned;
@@ -3321,7 +3323,7 @@ function showConfirmDialog(message, onConfirm) {
       <div id="genericConfirmModal" class="modal show">
         <div class="modal-content">
           <div class="modal-header">
-            <h2 class="modal-title">[ CONFIRM ]</h2>
+            <h2 class="modal-title">CONFIRM</h2>
             <button class="modal-close" onclick="closeGenericConfirmModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -3368,7 +3370,7 @@ function showAlertDialog(message) {
       <div id="genericAlertModal" class="modal show">
         <div class="modal-content">
           <div class="modal-header">
-            <h2 class="modal-title">[ NOTICE ]</h2>
+            <h2 class="modal-title">NOTICE</h2>
             <button class="modal-close" onclick="closeGenericAlertModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -3627,7 +3629,7 @@ function closeAuthModal() {
 function showLoginForm() {
     document.getElementById('loginForm').classList.remove('is-hidden');
     document.getElementById('registerForm').classList.add('is-hidden');
-    document.getElementById('authModalTitle').textContent = '[ LOGIN ]';
+    document.getElementById('authModalTitle').textContent = 'LOGIN';
     document.getElementById('loginBtn').classList.remove('is-hidden');
     document.getElementById('registerBtn').classList.add('is-hidden');
     document.getElementById('authError').classList.add('is-hidden');
@@ -3641,7 +3643,7 @@ function showLoginForm() {
 function showRegisterForm() {
     document.getElementById('loginForm').classList.add('is-hidden');
     document.getElementById('registerForm').classList.remove('is-hidden');
-    document.getElementById('authModalTitle').textContent = '[ REGISTER ]';
+    document.getElementById('authModalTitle').textContent = 'REGISTER';
     document.getElementById('loginBtn').classList.add('is-hidden');
     document.getElementById('registerBtn').classList.remove('is-hidden');
     document.getElementById('authError').classList.add('is-hidden');

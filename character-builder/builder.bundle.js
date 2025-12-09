@@ -9976,15 +9976,17 @@ const PortraitHistory = (window.PortraitHistory = {
       const originalFooterHtml = modalFooter ? modalFooter.innerHTML : '';
       const originalVersions = state.context?.versions || [];
 
-      // Build style label for header - format to sentence case
+      // Build style label for header - format to title case
       const rawStyle = version.style || 'default';
       const formatStyleLabel = (str) => {
         if (!str) return 'Default';
         // Replace dashes/underscores with spaces
         let cleaned = str.replace(/[-_]/g, ' ');
-        // Sentence case: capitalize first letter, lowercase the rest
+        // Title case: capitalize first letter of each word
         if (cleaned.length > 0) {
-          cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+          cleaned = cleaned.split(' ').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          ).join(' ');
         }
         return cleaned;
       };
@@ -12500,7 +12502,7 @@ const KeyboardNav = (window.KeyboardNav = {
 let currentBuilderPortraitStyle = null;
 
 /**
- * Format style ID to display label (sentence case, no dashes/underscores)
+ * Format style ID to display label (title case, no dashes/underscores)
  */
 function formatStyleLabelBuilder(idOrLabel) {
   if (!idOrLabel) return '';
@@ -12514,9 +12516,11 @@ function formatStyleLabelBuilder(idOrLabel) {
   // Replace dashes/underscores with spaces
   cleaned = cleaned.replace(/[-_]/g, ' ');
   
-  // Sentence case: capitalize first letter, lowercase the rest
+  // Title case: capitalize first letter of each word
   if (cleaned.length > 0) {
-    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+    cleaned = cleaned.split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
   }
   
   return cleaned;
@@ -15495,15 +15499,17 @@ const App = (window.App = {
     const originalHeaderHtml = modalHeader ? modalHeader.innerHTML : '';
     const originalFooterHtml = modalFooter ? modalFooter.innerHTML : '';
 
-    // Build style label for header - format to sentence case
+    // Build style label for header - format to title case
     const rawStyle = version.style || 'default';
     const formatStyleLabel = (str) => {
       if (!str) return 'Default';
       // Replace dashes/underscores with spaces
       let cleaned = str.replace(/[-_]/g, ' ');
-      // Sentence case: capitalize first letter, lowercase the rest
+      // Title case: capitalize first letter of each word
       if (cleaned.length > 0) {
-        cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
+        cleaned = cleaned.split(' ').map(word => 
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        ).join(' ');
       }
       return cleaned;
     };
