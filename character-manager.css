@@ -1971,10 +1971,10 @@
 /* Demo character tag - overlays portrait in sheet view */
 .sheet-demo-tag {
     position: absolute;
-    top: 8px;
-    left: 8px;
+    top: 12px;
+    left: 12px;
     z-index: 5;
-    padding: 3px 8px;
+    padding: 0 4px;
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.05em;
