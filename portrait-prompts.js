@@ -114,9 +114,12 @@
    */
   async function syncFromAPI() {
     if (apiSyncAttempted) return; // Only try once per session
-    apiSyncAttempted = true;
 
+    // Don't mark as attempted until we know the user is actually authenticated
+    // Otherwise we'd skip the sync entirely if auth isn't ready yet
     if (!isAuthenticated()) return;
+    
+    apiSyncAttempted = true;
 
     const token = getAuthToken();
     if (!token) return;
@@ -613,8 +616,8 @@
     adminCache = null;
   };
 
-  // Sync entries from API to localStorage (for authenticated users)
-  // Call this during app init to ensure cloud data is available locally
+  // Sync entries from API to memory cache (for authenticated users)
+  // Call this during app init to ensure cloud data is available for prompt generation
   PortraitPrompt.syncFromAPI = syncFromAPI;
 
   // Allow resetting the sync flag (useful for testing or re-auth)
@@ -751,7 +754,7 @@
   // AUTO-SYNC ON PAGE LOAD
   // ========================================
   // When the page loads and user is authenticated, sync entries from API
-  // to localStorage so they're available for prompt generation.
+  // to memory cache so they're available for prompt generation.
   function initAutoSync() {
     // Wait a moment for AuthService to initialize
     setTimeout(async () => {
