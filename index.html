@@ -265,6 +265,7 @@
                 <a href="#" class="mobile-back-link" onclick="closeMobileSheet(); return false;">
                     ← All characters
                 </a>
+                <span class="mobile-character-count" id="mobileCharacterCount"></span>
             </div>
             
             <!-- Mobile Sheet Container (character sheet shown here on mobile) -->
@@ -458,6 +459,23 @@
                                     <div class="settings-inline-field">
                                         <div class="settings-label">Level</div>
                                         <input type="number" id="editLevel" class="terminal-input" min="1" max="20" inputmode="numeric" placeholder="1-20">
+                                    </div>
+                                    <div class="settings-inline-field">
+                                        <div class="settings-label">Sex</div>
+                                        <div class="selector-shell selector-shell--match-width">
+                                            <button class="terminal-btn selector-trigger" id="editSex-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" onclick="CharacterSheet.toggleSelectorMenu(this)">
+                                                <span class="selector-trigger-label" id="editSex-label">Select Sex</span>
+                                            </button>
+                                            <div class="selector-menu" role="listbox" aria-label="Sex" aria-hidden="true">
+                                                <button class="selector-option" type="button" role="option" data-value="male" aria-selected="false" onclick="selectSex('male', 'Male')"><span class="selector-option-label">Male</span></button>
+                                                <button class="selector-option" type="button" role="option" data-value="female" aria-selected="false" onclick="selectSex('female', 'Female')"><span class="selector-option-label">Female</span></button>
+                                            </div>
+                                        </div>
+                                        <select id="editSex" class="terminal-select is-hidden">
+                                            <option value="">Select Sex</option>
+                                            <option value="male">Male</option>
+                                            <option value="female">Female</option>
+                                        </select>
                                     </div>
                                     <div class="settings-inline-field">
                                         <div class="settings-label">Alignment</div>

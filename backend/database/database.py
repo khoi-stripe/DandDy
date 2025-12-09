@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     r2_bucket_name: str = ""
     # Optional: public base URL for your bucket, e.g. https://<id>.r2.dev/danddy-portraits
     r2_public_base_url: str = ""
+
+    # Replicate API (optional, for Flux image generation)
+    replicate_api_token: str = ""
     
     class Config:
         env_file = ".env"

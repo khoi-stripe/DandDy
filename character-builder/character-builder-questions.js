@@ -70,6 +70,27 @@ const QUESTIONS = (window.QUESTIONS = [
       },
     ],
     aiPromptContext: 'player preferred combat and roleplay playstyle',
+    next: 'sex-choice',
+  },
+
+  {
+    id: 'sex-choice',
+    type: 'choice',
+    text: 'And this character of yours — what form do they take?',
+    options: [
+      {
+        text: 'Male',
+        value: 'male',
+      },
+      {
+        text: 'Female',
+        value: 'female',
+      },
+    ],
+    onSelect: (value) => {
+      CharacterState.updateCharacter({ sex: value });
+    },
+    aiPromptContext: 'character biological sex',
     next: 'physicality',
   },
 

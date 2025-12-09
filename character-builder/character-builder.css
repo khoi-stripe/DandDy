@@ -334,73 +334,97 @@
   font-size: var(--font-size-small);
 }
 
-/* Print styles - Builder-specific additions to terminal-theme.css print rules */
+/* Print styles */
 @media print {
-  /* Hide the body::before glow pseudo-element */
-  body::before {
-    display: none !important;
-    content: none !important;
+  body {
+    background: #ffffff;
+    color: #000000;
+    padding: 32px 16px 16px 16px;
+    overflow: visible;
   }
 
-  /* Reset all backgrounds to white for print */
-  body,
-  .terminal-container,
-  #main-content,
+  .terminal-header,
+  .terminal-footer,
+  #narrator-panel {
+    display: none !important;
+  }
+
+  .terminal-container {
+    display: block;
+    border: none;
+    padding: 0;
+    height: auto;
+    max-width: 100%;
+    box-shadow: none;
+    overflow: visible;
+  }
+
   .split-layout,
-  .right-panel,
+  .left-panel,
+  .right-panel {
+    display: block;
+    min-height: 0;
+    height: auto;
+    overflow: visible;
+  }
+
   #character-panel {
-    background: #fff !important;
-    background-color: #fff !important;
-    background-image: none !important;
+    width: 100%;
+    overflow: visible;
   }
 
-  /* Force all containers to block layout for proper print flow */
-  .terminal-container,
-  #main-content,
-  .split-layout {
-    display: block !important;
-    position: static !important;
-    height: auto !important;
-    width: 100% !important;
-    overflow: visible !important;
-  }
-
-  /* Ensure main content is visible (override .is-hidden if present) */
-  #main-content {
-    visibility: visible !important;
-    opacity: 1 !important;
-  }
-
-  /* Hide splash content in print */
-  .splash-content,
-  #splash-content {
-    display: none !important;
-  }
-
-  /* Hide narrator panel (builder-specific element) */
-  #narrator-panel,
-  .left-panel {
-    display: none !important;
-  }
-
-  /* Show right panel as block */
-  .right-panel,
-  #character-panel {
-    display: block !important;
-    position: static !important;
-    width: 100% !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  /* Ensure character sheet is visible */
   .character-sheet {
-    display: block !important;
-    visibility: visible !important;
-    width: 100% !important;
+    border: none;
+    color: #000000;
+    page-break-inside: auto;
   }
 
-  /* Show print logo in top-right corner */
+  .sheet-title-header {
+    border-bottom-color: #000000;
+  }
+
+  .sheet-title {
+    color: #000000;
+  }
+
+  .ascii-portrait {
+    display: block !important;
+    background: #000000 !important;
+    color: #ffffff !important;
+    padding: 16px !important;
+    border: 2px solid #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+
+  }
+
+  .original-portrait {
+    display: none !important;
+  }
+
+  .portrait-container {
+    background: transparent;
+    padding: 0;
+  }
+
+  .generate-ai-btn,
+  .generate-ai-btn-secondary,
+  .button-secondary,
+  .sheet-print-btn,
+  #toggle-portrait-btn {
+    display: none !important;
+  }
+
+  .sheet-header,
+  .sheet-header-title,
+  .sheet-content,
+  .stat-label,
+  .stat-value,
+  .text-dim {
+    color: #000000 !important;
+    border-color: #000000;
+  }
+
   .print-logo {
     display: block;
     position: absolute;
@@ -409,18 +433,6 @@
     width: 120px;
     height: auto;
     z-index: 9999;
-  }
-
-  /* Hide portrait action buttons */
-  .generate-ai-btn,
-  .generate-ai-btn-secondary,
-  #toggle-portrait-btn {
-    display: none !important;
-  }
-
-  /* Hide placeholder portrait (cube loading animation) */
-  .ascii-portrait--placeholder {
-    display: none !important;
   }
 }
 
@@ -552,6 +564,86 @@
 .settings-radio-option input[type='radio']:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--context-hover);
+}
+
+/* Settings toggle switch (on/off) */
+.settings-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+}
+
+.settings-toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.settings-toggle-track {
+  position: relative;
+  width: 40px;
+  height: 20px;
+  background: var(--terminal-bg);
+  border: 1.5px solid var(--context-accent);
+  border-radius: 10px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.settings-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--context-accent);
+  border-radius: 50%;
+  transition: transform 0.2s ease, background 0.2s ease;
+  opacity: 0.6;
+}
+
+.settings-toggle-input:checked + .settings-toggle-track {
+  background: color-mix(in srgb, var(--context-accent) 20%, transparent);
+  border-color: var(--context-accent);
+}
+
+.settings-toggle-input:checked + .settings-toggle-track::after {
+  transform: translateX(20px);
+  opacity: 1;
+  box-shadow: 0 0 8px var(--context-accent);
+}
+
+.settings-toggle-input:focus-visible + .settings-toggle-track {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--context-hover);
+}
+
+.settings-toggle-label {
+  color: var(--context-accent);
+  font-size: var(--font-size-small);
+  user-select: none;
+}
+
+/* Admin-only settings section */
+.settings-admin-section {
+  border-top: 1px dashed var(--terminal-dim);
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+}
+
+.settings-admin-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--terminal-dim);
+  background: color-mix(in srgb, var(--terminal-dim) 15%, transparent);
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: var(--spacing-sm);
+  vertical-align: middle;
 }
 
 .settings-help {

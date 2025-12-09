@@ -4,7 +4,212 @@
 // Global component for rendering character sheets across DandDy apps
 // Used by both Character Builder and Character Manager
 
+// Portrait debugging - enable with: window.DEBUG_PORTRAITS = true
+// To dump current debug log: window.CharacterSheet.dumpPortraitDebugLog()
+const PORTRAIT_DEBUG_LOG = [];
+const MAX_PORTRAIT_DEBUG_ENTRIES = 100;
+
+function logPortraitDebug(action, characterId, characterName, details) {
+  if (!window.DEBUG_PORTRAITS) return;
+  
+  const entry = {
+    timestamp: new Date().toISOString(),
+    action,
+    characterId,
+    characterName,
+    ...details
+  };
+  
+  PORTRAIT_DEBUG_LOG.push(entry);
+  if (PORTRAIT_DEBUG_LOG.length > MAX_PORTRAIT_DEBUG_ENTRIES) {
+    PORTRAIT_DEBUG_LOG.shift();
+  }
+  
+  console.log(`🖼️ [PORTRAIT DEBUG] ${action}`, {
+    characterId,
+    characterName,
+    ...details
+  });
+}
+
 const CharacterSheet = (window.CharacterSheet = {
+  /**
+   * Dump the portrait debug log to console for reporting.
+   * Call from console: CharacterSheet.dumpPortraitDebugLog()
+   */
+  dumpPortraitDebugLog() {
+    console.group('🖼️ Portrait Debug Log');
+    console.log('Total entries:', PORTRAIT_DEBUG_LOG.length);
+    console.log('Enable debugging with: window.DEBUG_PORTRAITS = true');
+    console.log('---');
+    PORTRAIT_DEBUG_LOG.forEach((entry, i) => {
+      console.log(`[${i}] ${entry.timestamp} - ${entry.action}`, entry);
+    });
+    console.groupEnd();
+    return PORTRAIT_DEBUG_LOG;
+  },
+
+  /**
+   * Get the current portrait debug log (for programmatic access).
+   */
+  getPortraitDebugLog() {
+    return [...PORTRAIT_DEBUG_LOG];
+  },
+
+  /**
+   * Clear the portrait debug log.
+   */
+  clearPortraitDebugLog() {
+    PORTRAIT_DEBUG_LOG.length = 0;
+    console.log('🖼️ Portrait debug log cleared');
+  },
+
+  /**
+   * Compare portrait data between card and sheet for a character.
+   * Call from console: CharacterSheet.comparePortraitSources(characterId)
+   */
+  comparePortraitSources(characterId) {
+    const character = window.AppState?.characters?.find(c => String(c.id) === String(characterId));
+    if (!character) {
+      console.error('Character not found:', characterId);
+      return null;
+    }
+
+    const result = {
+      characterId,
+      characterName: character.name,
+      portraitMetadata: character.portraitMetadata ? {
+        activeVersionId: character.portraitMetadata.activeVersionId,
+        versionsCount: character.portraitMetadata.versions?.length || 0,
+        versions: character.portraitMetadata.versions?.map(v => ({
+          id: v.id,
+          hasUrl: !!v.url,
+          urlPreview: v.url ? v.url.substring(0, 80) + '...' : null,
+          hasAscii: !!v.ascii,
+          asciiLength: v.ascii?.length || 0
+        }))
+      } : null,
+      legacyFields: {
+        customPortraitAscii: character.customPortraitAscii ? `[${character.customPortraitAscii.length} chars]` : null,
+        originalPortraitUrl: character.originalPortraitUrl || null,
+        portraitAscii: character.portrait?.ascii ? `[${character.portrait.ascii.length} chars]` : null,
+        portraitUrl: character.portrait?.url || null,
+        asciiPortrait: character.asciiPortrait ? `[${character.asciiPortrait.length} chars]` : null,
+        asciiPortraitKey: character.asciiPortraitKey || null
+      },
+      resolvedAscii: this.getAsciiPortrait(character) ? `[${this.getAsciiPortrait(character).length} chars]` : null,
+      resolvedUrl: this.getOriginalPortraitUrl(character),
+      raceClass: `${character.race}|${character.class}`
+    };
+
+    console.group(`🖼️ Portrait Sources Comparison: ${character.name}`);
+    console.log('Character ID:', characterId);
+    console.log('Portrait Metadata:', result.portraitMetadata);
+    console.log('Legacy Fields:', result.legacyFields);
+    console.log('Resolved ASCII:', result.resolvedAscii);
+    console.log('Resolved URL:', result.resolvedUrl);
+    console.log('Race|Class Key:', result.raceClass);
+    console.groupEnd();
+
+    return result;
+  },
+
+  /**
+   * Check for portrait mismatch between card and sheet in the DOM.
+   * Call from console: CharacterSheet.checkDomMismatch()
+   * Returns details about what's shown in the card vs the sheet.
+   */
+  checkDomMismatch() {
+    const selectedCard = document.querySelector('.character-card.is-selected');
+    const characterSheet = document.getElementById('characterSheet');
+    
+    if (!selectedCard) {
+      console.warn('🖼️ No character card is currently selected');
+      return null;
+    }
+
+    const characterId = selectedCard.getAttribute('data-id');
+    const character = window.AppState?.characters?.find(c => String(c.id) === String(characterId));
+    
+    // Get card thumbnail info
+    const cardThumb = selectedCard.querySelector('.card-thumbnail');
+    const cardImg = cardThumb?.querySelector('img');
+    const cardAscii = cardThumb?.querySelector('pre');
+    
+    // Get sheet portrait info
+    const sheetContainer = characterSheet?.querySelector('.portrait-container');
+    const sheetImg = sheetContainer?.querySelector('.original-portrait');
+    const sheetAscii = sheetContainer?.querySelector('.ascii-portrait pre');
+    
+    const cardInfo = {
+      hasImage: !!cardImg,
+      imageUrl: cardImg?.src || null,
+      imageTruncated: cardImg?.src ? cardImg.src.substring(0, 80) + '...' : null,
+      hasAscii: !!cardAscii,
+      asciiLength: cardAscii?.textContent?.length || 0,
+      asciiPreview: cardAscii?.textContent?.substring(0, 50) + '...' || null,
+      isImageMode: cardThumb?.classList.contains('card-thumbnail--image') || false
+    };
+
+    const sheetInfo = {
+      hasImage: !!sheetImg,
+      imageUrl: sheetImg?.src || null,
+      imageTruncated: sheetImg?.src ? sheetImg.src.substring(0, 80) + '...' : null,
+      imageHidden: sheetImg?.classList.contains('is-hidden') || false,
+      hasAscii: !!sheetAscii,
+      asciiLength: sheetAscii?.textContent?.length || 0,
+      asciiPreview: sheetAscii?.textContent?.substring(0, 50) + '...' || null,
+      asciiHidden: sheetContainer?.querySelector('.ascii-portrait')?.classList.contains('is-hidden') || false
+    };
+
+    // Check for mismatches
+    const urlMismatch = cardInfo.imageUrl !== sheetInfo.imageUrl;
+    const asciiLengthMismatch = cardInfo.asciiLength !== sheetInfo.asciiLength;
+
+    const result = {
+      characterId,
+      characterName: character?.name || 'Unknown',
+      card: cardInfo,
+      sheet: sheetInfo,
+      mismatch: {
+        url: urlMismatch,
+        asciiLength: asciiLengthMismatch,
+        summary: urlMismatch || asciiLengthMismatch ? '⚠️ MISMATCH DETECTED' : '✅ No mismatch'
+      }
+    };
+
+    console.group(`🖼️ DOM Portrait Check: ${result.characterName}`);
+    console.log('Character ID:', characterId);
+    console.log('Card:', cardInfo);
+    console.log('Sheet:', sheetInfo);
+    console.log('Mismatch:', result.mismatch);
+    if (urlMismatch) {
+      console.warn('⚠️ URL MISMATCH: Card and sheet show different images!');
+      console.log('Card URL:', cardInfo.imageUrl);
+      console.log('Sheet URL:', sheetInfo.imageUrl);
+    }
+    if (asciiLengthMismatch) {
+      console.warn('⚠️ ASCII LENGTH MISMATCH: Card and sheet have different ASCII art!');
+    }
+    console.groupEnd();
+
+    return result;
+  },
+
+  /**
+   * Enable portrait debugging mode. Call from console: CharacterSheet.enablePortraitDebug()
+   */
+  enablePortraitDebug() {
+    window.DEBUG_PORTRAITS = true;
+    console.log('🖼️ Portrait debugging ENABLED');
+    console.log('Available commands:');
+    console.log('  CharacterSheet.checkDomMismatch() - Check for visible mismatch');
+    console.log('  CharacterSheet.comparePortraitSources(id) - Compare data sources');
+    console.log('  CharacterSheet.dumpPortraitDebugLog() - Dump all debug entries');
+    console.log('  CharacterSheet.clearPortraitDebugLog() - Clear debug log');
+    console.log('  window.DEBUG_PORTRAITS = false - Disable debugging');
+  },
+
   /**
    * Manages scroll locking when selector menus are open.
    * Uses a CSS class for robust scroll prevention.
@@ -373,6 +578,16 @@ const CharacterSheet = (window.CharacterSheet = {
     const asciiPortrait = this.getAsciiPortrait(character);
     const originalPortraitUrl = this.getOriginalPortraitUrl(character);
 
+    // Log for debugging portrait mismatches
+    logPortraitDebug('renderPortrait (sheet)', character.id, character.name, {
+      context,
+      hasAscii: !!asciiPortrait,
+      asciiLength: asciiPortrait?.length || 0,
+      url: originalPortraitUrl,
+      portraitMetadataActiveId: character.portraitMetadata?.activeVersionId || null,
+      portraitMetadataVersionsCount: character.portraitMetadata?.versions?.length || 0
+    });
+
     // Global portrait view mode (ASCII vs Original). Builder + manager share
     // this preference via StorageService; fall back to config default.
     let portraitViewMode = 'original';
@@ -442,6 +657,9 @@ const CharacterSheet = (window.CharacterSheet = {
           this.toSentenceCase(this.formatAlignment(parsed.alignment)),
         )
       : '';
+    const sex = parsed.sex
+      ? this.escapeHtml(this.toSentenceCase(parsed.sex))
+      : '';
 
     return `
       <div class="sheet-section">
@@ -465,6 +683,11 @@ const CharacterSheet = (window.CharacterSheet = {
           ${
             isBuilder || alignment
               ? `<div class="stat-line"><span class="stat-label">Alignment:</span> <span class="stat-value">${alignment || '—'}</span></div>`
+              : ''
+          }
+          ${
+            isBuilder || sex
+              ? `<div class="stat-line"><span class="stat-label">Sex:</span> <span class="stat-value">${sex || '—'}</span></div>`
               : ''
           }
           <div class="stat-line">
@@ -1600,6 +1823,7 @@ const CharacterSheet = (window.CharacterSheet = {
       className,
       backgroundName,
       alignment: character.alignment || null,
+      sex: character.sex || null,
       level: character.level || 1,
 
       // Combat stats
@@ -1705,6 +1929,11 @@ const CharacterSheet = (window.CharacterSheet = {
   getAsciiPortrait(character) {
     if (!character) return null;
 
+    const charId = character.id;
+    const charName = character.name;
+    let source = null;
+    let result = null;
+
     // Prefer the active portrait version from history when available so
     // manager, builder, and history views all agree on "current" art.
     try {
@@ -1718,7 +1947,15 @@ const CharacterSheet = (window.CharacterSheet = {
           (v) => v && v.id === metadata.activeVersionId,
         );
         if (activeVersion && activeVersion.ascii) {
-          return activeVersion.ascii;
+          source = 'portraitMetadata.activeVersion';
+          result = activeVersion.ascii;
+          logPortraitDebug('getAsciiPortrait', charId, charName, {
+            source,
+            activeVersionId: metadata.activeVersionId,
+            asciiLength: result.length,
+            asciiPreview: result.substring(0, 50) + '...'
+          });
+          return result;
         }
       }
     } catch (e) {
@@ -1729,7 +1966,15 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // 1) Explicit custom portrait always wins
     if (character.customPortraitAscii) {
-      return character.customPortraitAscii;
+      source = 'customPortraitAscii';
+      result = character.customPortraitAscii;
+      logPortraitDebug('getAsciiPortrait', charId, charName, {
+        source,
+        raceClassKey: key,
+        asciiLength: result.length,
+        asciiPreview: result.substring(0, 50) + '...'
+      });
+      return result;
     }
 
     // 2) If asciiPortrait is tagged for this race/class combo, trust it
@@ -1738,19 +1983,49 @@ const CharacterSheet = (window.CharacterSheet = {
       character.asciiPortraitKey &&
       character.asciiPortraitKey === key
     ) {
-      return character.asciiPortrait;
+      source = 'asciiPortrait (key-matched)';
+      result = character.asciiPortrait;
+      logPortraitDebug('getAsciiPortrait', charId, charName, {
+        source,
+        raceClassKey: key,
+        asciiPortraitKey: character.asciiPortraitKey,
+        asciiLength: result.length,
+        asciiPreview: result.substring(0, 50) + '...'
+      });
+      return result;
     }
 
     // 3) Exported portrait object from builder
     if (character.portrait && character.portrait.ascii) {
-      return character.portrait.ascii;
+      source = 'portrait.ascii';
+      result = character.portrait.ascii;
+      logPortraitDebug('getAsciiPortrait', charId, charName, {
+        source,
+        raceClassKey: key,
+        asciiLength: result.length,
+        asciiPreview: result.substring(0, 50) + '...'
+      });
+      return result;
     }
 
     // 4) Legacy asciiPortrait without key tagging
     if (character.asciiPortrait) {
-      return character.asciiPortrait;
+      source = 'asciiPortrait (legacy)';
+      result = character.asciiPortrait;
+      logPortraitDebug('getAsciiPortrait', charId, charName, {
+        source,
+        raceClassKey: key,
+        asciiLength: result.length,
+        asciiPreview: result.substring(0, 50) + '...'
+      });
+      return result;
     }
 
+    logPortraitDebug('getAsciiPortrait', charId, charName, {
+      source: 'none',
+      raceClassKey: key,
+      result: null
+    });
     return null;
   },
 
@@ -1765,6 +2040,11 @@ const CharacterSheet = (window.CharacterSheet = {
   getOriginalPortraitUrl(character) {
     if (!character) return null;
 
+    const charId = character.id;
+    const charName = character.name;
+    let source = null;
+    let result = null;
+
     // Prefer the active portrait version from history when available so
     // manager, builder, and history views all agree on "current" art.
     try {
@@ -1778,7 +2058,14 @@ const CharacterSheet = (window.CharacterSheet = {
           (v) => v && v.id === metadata.activeVersionId,
         );
         if (activeVersion && activeVersion.url) {
-          return activeVersion.url;
+          source = 'portraitMetadata.activeVersion';
+          result = activeVersion.url;
+          logPortraitDebug('getOriginalPortraitUrl', charId, charName, {
+            source,
+            activeVersionId: metadata.activeVersionId,
+            url: result
+          });
+          return result;
         }
       }
     } catch (e) {
@@ -1787,14 +2074,30 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // 1) Explicit custom portrait URL
     if (character.originalPortraitUrl) {
-      return character.originalPortraitUrl;
+      source = 'originalPortraitUrl';
+      result = character.originalPortraitUrl;
+      logPortraitDebug('getOriginalPortraitUrl', charId, charName, {
+        source,
+        url: result
+      });
+      return result;
     }
 
     // 2) Exported portrait object from builder
     if (character.portrait && character.portrait.url) {
-      return character.portrait.url;
+      source = 'portrait.url';
+      result = character.portrait.url;
+      logPortraitDebug('getOriginalPortraitUrl', charId, charName, {
+        source,
+        url: result
+      });
+      return result;
     }
 
+    logPortraitDebug('getOriginalPortraitUrl', charId, charName, {
+      source: 'none',
+      result: null
+    });
     return null;
   },
 
@@ -1927,7 +2230,22 @@ const CharacterSheet = (window.CharacterSheet = {
       if (!character) return;
 
       // Never override an explicit custom AI portrait
-      if (character.customPortraitAscii) return;
+      if (character.customPortraitAscii) {
+        logPortraitDebug('_maybeUpgradePortraitFromFiles SKIPPED (has customPortraitAscii)', 
+          character.id, character.name, { context });
+        return;
+      }
+
+      // Never override if portrait history exists
+      if (character.portraitMetadata?.versions?.length > 0) {
+        logPortraitDebug('_maybeUpgradePortraitFromFiles SKIPPED (has portrait history)', 
+          character.id, character.name, { 
+            context, 
+            versionsCount: character.portraitMetadata.versions.length,
+            activeVersionId: character.portraitMetadata.activeVersionId
+          });
+        return;
+      }
 
       const race = character.race;
       const classType = character.class;
@@ -1940,6 +2258,16 @@ const CharacterSheet = (window.CharacterSheet = {
       if (character.asciiPortrait && character.asciiPortraitKey === key) {
         return;
       }
+
+      // Log that we're attempting to upgrade (this could be the culprit!)
+      logPortraitDebug('_maybeUpgradePortraitFromFiles ATTEMPTING upgrade', 
+        character.id, character.name, { 
+          context, 
+          key,
+          hasCustomPortraitAscii: !!character.customPortraitAscii,
+          hasPortraitMetadata: !!character.portraitMetadata,
+          versionsCount: character.portraitMetadata?.versions?.length || 0
+        });
 
       // Lightweight in-memory cache so we only fetch each combo once per page load
       if (!this._portraitFileCache) {
@@ -2051,6 +2379,13 @@ const CharacterSheet = (window.CharacterSheet = {
         Array.isArray(character.portraitMetadata.versions) &&
         character.portraitMetadata.versions.length > 0);
     if (hasCustomPortrait) {
+      logPortraitDebug('_applyUpgradedPortrait BLOCKED (has custom portrait)', 
+        character.id, character.name, { 
+          context, 
+          key,
+          hasCustomPortraitAscii: !!character.customPortraitAscii,
+          versionsCount: character.portraitMetadata?.versions?.length || 0
+        });
       return;
     }
 
@@ -2061,9 +2396,23 @@ const CharacterSheet = (window.CharacterSheet = {
       const elementCharacterId = portraitEl.getAttribute('data-character-id');
       if (elementCharacterId && elementCharacterId !== character.id) {
         // The DOM element now belongs to a different character; abort update
+        logPortraitDebug('_applyUpgradedPortrait BLOCKED (element belongs to different character)', 
+          character.id, character.name, { 
+            context, 
+            elementCharacterId,
+            characterId: character.id
+          });
         return;
       }
     }
+
+    // Log that we're about to apply an upgraded portrait - this could overwrite a custom one!
+    logPortraitDebug('_applyUpgradedPortrait APPLYING generic portrait', 
+      character.id, character.name, { 
+        context, 
+        key,
+        asciiLength: ascii?.length || 0
+      });
 
     // In manager context, also check if the selected character has changed
     // This provides an additional safety check beyond the DOM attribute

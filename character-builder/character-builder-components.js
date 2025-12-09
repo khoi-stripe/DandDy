@@ -72,6 +72,35 @@ const Components = (window.Components = {
     const currentNarratorId = StorageService.getNarratorId();
     const narratorsList = getNarratorList();
 
+    // Check if current user is admin (decode JWT)
+    let isUserAdmin = false;
+    try {
+      if (window.AuthService && typeof AuthService.isAuthenticated === 'function' && AuthService.isAuthenticated()) {
+        const token = AuthService.getToken ? AuthService.getToken() : null;
+        if (token) {
+          const payload = token.split('.')[1];
+          const decoded = JSON.parse(atob(payload));
+          isUserAdmin = decoded.role === 'admin';
+        }
+      }
+    } catch (e) {
+      // Silent fail - user is not admin
+    }
+
+    // High quality GPT Image setting (admin only)
+    const getHighQualityGPTImage = () => {
+      if (!StorageService || typeof StorageService.getHighQualityGPTImage !== 'function') {
+        return false;
+      }
+      try {
+        return StorageService.getHighQualityGPTImage();
+      } catch (e) {
+        return false;
+      }
+    };
+
+    const highQualityEnabled = getHighQualityGPTImage();
+
     // Helper to truncate text for options
     const truncate = (text, maxLength) => {
       return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
@@ -534,6 +563,25 @@ const Components = (window.Components = {
                         </div>
                       </div>
                     </div>
+                    ${isUserAdmin ? `
+                    <div class="settings-admin-section">
+                      <div class="settings-row">
+                        <label class="settings-toggle">
+                          <input
+                            type="checkbox"
+                            class="settings-toggle-input"
+                            id="high-quality-gpt-image"
+                            ${highQualityEnabled ? 'checked' : ''}
+                          >
+                          <span class="settings-toggle-track"></span>
+                          <span class="settings-toggle-label">
+                            High quality GPT Image 1
+                            <span class="settings-admin-badge">Admin</span>
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                    ` : ''}
                   </section>
                 </div>
               </div>
@@ -784,6 +832,12 @@ const SettingsModal = (window.SettingsModal = {
       StorageService.setPortraitPromptTheme
     ) {
       StorageService.setPortraitPromptTheme(portraitThemeSelect.value);
+    }
+
+    // Save high quality GPT Image setting (admin only)
+    const highQualityToggle = document.getElementById('high-quality-gpt-image');
+    if (highQualityToggle && window.StorageService && StorageService.setHighQualityGPTImage) {
+      StorageService.setHighQualityGPTImage(highQualityToggle.checked);
     }
 
     // Use a non-intrusive toast for settings changes instead of a narrator line

@@ -1387,6 +1387,13 @@
     color: var(--sheet-accent);
 }
 
+.mobile-character-count {
+    margin-left: auto;
+    color: var(--sheet-accent-dim);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-small);
+}
+
 /* Container for character sheet on mobile (inside left panel) */
 .mobile-sheet-container {
     display: none;

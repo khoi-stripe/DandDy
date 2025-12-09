@@ -15,6 +15,10 @@ class Alignment(enum.Enum):
     NEUTRAL_EVIL = "neutral_evil"
     CHAOTIC_EVIL = "chaotic_evil"
 
+class Sex(enum.Enum):
+    MALE = "male"
+    FEMALE = "female"
+
 class Character(Base):
     __tablename__ = "characters"
     __table_args__ = (
@@ -38,6 +42,7 @@ class Character(Base):
     level = Column(Integer, default=1, nullable=False)
     background = Column(String, nullable=True)
     alignment = Column(Enum(Alignment), nullable=True)
+    sex = Column(Enum(Sex), nullable=True)
     experience_points = Column(Integer, default=0, nullable=False)
     
     # Ability Scores

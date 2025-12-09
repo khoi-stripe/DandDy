@@ -16,6 +16,7 @@ import base64
 import httpx
 import boto3
 import openai
+import replicate
 from database.database import get_settings
 
 router = APIRouter(tags=["AI"])
@@ -43,6 +44,13 @@ R2_ACCESS_KEY_ID = settings.r2_access_key_id
 R2_SECRET_ACCESS_KEY = settings.r2_secret_access_key
 R2_BUCKET_NAME = settings.r2_bucket_name
 R2_PUBLIC_BASE_URL = settings.r2_public_base_url
+
+# Replicate configuration (optional, for Flux image generation)
+REPLICATE_API_TOKEN = settings.replicate_api_token
+if REPLICATE_API_TOKEN:
+    print("🎨 Replicate API configured - Flux models available")
+else:
+    print("⚠️  REPLICATE_API_TOKEN not set. Flux image generation unavailable.")
 
 # Light debug to confirm whether R2 looks configured (does NOT print secrets).
 print(
@@ -278,13 +286,15 @@ class ImageGenerationRequest(BaseModel):
     # that haven't been updated yet, but they will be mapped server-side.
     quality: str = Field("medium", pattern="^(standard|hd|low|medium|high|auto)$")
     # Image model to use. We currently support:
-    # - dall-e-3      (default)
-    # - gpt-image-1   (GPT Image 1 image model)
+    # - dall-e-3       (default, OpenAI)
+    # - gpt-image-1    (GPT Image 1, OpenAI)
+    # - flux-1.1-pro   (Flux Pro via Replicate - high quality)
+    # - flux-schnell   (Flux Schnell via Replicate - fast & cheap)
     # Additional models can be added here later without breaking callers.
     model: str = Field(
         "dall-e-3",
-        pattern="^(dall-e-3|gpt-image-1)$",
-        description="OpenAI image model identifier (e.g., 'dall-e-3' or 'gpt-image-1')",
+        pattern="^(dall-e-3|gpt-image-1|flux-1\\.1-pro|flux-schnell)$",
+        description="Image model identifier (e.g., 'dall-e-3', 'flux-1.1-pro')",
     )
 
 
@@ -466,11 +476,20 @@ def handle_openai_error(
 async def get_ai_status():
     """Check if AI service is available"""
     return {
-        "available": OPENAI_API_KEY is not None,
-        "provider": "openai",
+        "available": OPENAI_API_KEY is not None or REPLICATE_API_TOKEN is not None,
+        "providers": {
+            "openai": OPENAI_API_KEY is not None,
+            "replicate": REPLICATE_API_TOKEN is not None,
+        },
         "features": {
             "chat": OPENAI_API_KEY is not None,
-            "images": OPENAI_API_KEY is not None
+            "images": OPENAI_API_KEY is not None or REPLICATE_API_TOKEN is not None,
+        },
+        "image_models": {
+            "dall-e-3": OPENAI_API_KEY is not None,
+            "gpt-image-1": OPENAI_API_KEY is not None,
+            "flux-1.1-pro": REPLICATE_API_TOKEN is not None,
+            "flux-schnell": REPLICATE_API_TOKEN is not None,
         },
         "observability": {
             "loki_configured": bool(GRAFANA_LOKI_URL and GRAFANA_LOKI_TOKEN),
@@ -590,36 +609,187 @@ async def chat_completion(
         )
 
 
+async def _generate_with_flux(
+    prompt: str,
+    model: str,
+    size: str,
+    client_id: str,
+) -> tuple[str | None, bytes | None, str]:
+    """
+    Generate image using Replicate's Flux models.
+    
+    Returns: (image_url, image_bytes, content_type)
+    """
+    if not REPLICATE_API_TOKEN:
+        raise HTTPException(
+            status_code=503,
+            detail="Flux models require REPLICATE_API_TOKEN to be configured.",
+        )
+
+    # Set the API token for the replicate client
+    client = replicate.Client(api_token=REPLICATE_API_TOKEN)
+
+    # Map our model names to Replicate model identifiers
+    model_map = {
+        "flux-1.1-pro": "black-forest-labs/flux-1.1-pro",
+        "flux-schnell": "black-forest-labs/flux-schnell",
+    }
+    replicate_model = model_map.get(model, model_map["flux-1.1-pro"])
+
+    # Parse size to width/height
+    width, height = 1024, 1024
+    if "x" in size:
+        parts = size.split("x")
+        try:
+            width, height = int(parts[0]), int(parts[1])
+        except ValueError:
+            pass
+
+    print(f"🎨 Generating image with Flux ({model})...")
+    print(f"   Model: {replicate_model}")
+    print(f"   Prompt (truncated): {prompt[:120]}...")
+    print(f"   Size: {width}x{height}")
+
+    start = time.time()
+    try:
+        # Run the model
+        output = client.run(
+            replicate_model,
+            input={
+                "prompt": prompt,
+                "width": width,
+                "height": height,
+                "output_format": "webp",
+                "output_quality": 90,
+            }
+        )
+        duration_ms = int((time.time() - start) * 1000)
+        print(f"   ✅ Flux generation complete in {duration_ms}ms")
+
+        # Flux models return a FileOutput object or URL string
+        # Handle both cases
+        if hasattr(output, 'url'):
+            image_url = output.url
+        elif isinstance(output, str):
+            image_url = output
+        elif isinstance(output, list) and len(output) > 0:
+            # Some models return a list of outputs
+            first = output[0]
+            image_url = first.url if hasattr(first, 'url') else str(first)
+        else:
+            raise Exception(f"Unexpected Flux output format: {type(output)}")
+
+        print(f"   Flux URL: {image_url[:80]}...")
+
+        # Download the image bytes for R2 upload
+        async with httpx.AsyncClient(timeout=60.0) as http_client:
+            img_resp = await http_client.get(image_url)
+            img_resp.raise_for_status()
+            content_type = img_resp.headers.get("content-type", "image/webp")
+            body_bytes = img_resp.content
+
+        return image_url, body_bytes, content_type
+
+    except replicate.exceptions.ReplicateError as e:
+        print(f"   ❌ Replicate error: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Flux generation failed: {str(e)}",
+        )
+
+
 @router.post("/images/generate")
 async def generate_image(
     request: ImageGenerationRequest,
     http_request: Request
 ):
-    """Generate image using OpenAI image models (DALL-E 3, GPT Image 1, etc.)"""
-    check_api_key()
+    """Generate image using OpenAI (DALL-E, GPT Image) or Replicate (Flux) models."""
     client_id = get_client_id(http_request)
     check_rate_limit(client_id)
-    
+
+    model = request.model or "dall-e-3"
+    is_flux_model = model.startswith("flux-")
+
+    # Route to appropriate provider
+    if is_flux_model:
+        # Flux models via Replicate
+        try:
+            image_url, body_bytes, content_type = await _generate_with_flux(
+                prompt=request.prompt,
+                model=model,
+                size=request.size,
+                client_id=client_id,
+            )
+
+            final_url = image_url
+            image_b64 = None
+            revised_prompt = None  # Flux doesn't revise prompts
+
+            # Upload to R2 if configured
+            r2_client = _get_r2_client()
+            if r2_client and body_bytes:
+                try:
+                    ext = "webp" if "webp" in content_type else "png"
+                    timestamp = int(time.time())
+                    key = f"portraits/{timestamp}_{uuid.uuid4().hex}.{ext}"
+
+                    print("☁️  Uploading Flux portrait to Cloudflare R2...")
+                    print(f"   Bucket: {R2_BUCKET_NAME}")
+                    print(f"   Key: {key}")
+
+                    r2_client.put_object(
+                        Bucket=R2_BUCKET_NAME,
+                        Key=key,
+                        Body=body_bytes,
+                        ContentType=content_type,
+                    )
+
+                    if R2_PUBLIC_BASE_URL:
+                        base = R2_PUBLIC_BASE_URL.rstrip("/")
+                        final_url = f"{base}/{key}"
+                    else:
+                        final_url = f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com/{R2_BUCKET_NAME}/{key}"
+
+                    print("✅ Cloudflare R2 upload complete.")
+                    print(f"   Final image URL: {final_url}")
+                except Exception as r2_error:
+                    print(f"⚠️  Failed to upload to R2: {r2_error}")
+
+            return {
+                "success": True,
+                "url": final_url,
+                "revised_prompt": revised_prompt,
+                "model": model,
+            }
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Flux image generation failed: {str(e)}",
+            )
+
+    # OpenAI models (DALL-E, GPT Image)
+    check_api_key()
+
+    if model not in ("dall-e-3", "gpt-image-1"):
+        model = "dall-e-3"
+
+    # Normalize quality for the current Images API:
+    # - Official values: low, medium, high, auto
+    # - Legacy aliases: standard → medium, hd → high
+    raw_quality = (request.quality or "medium").lower()
+    if raw_quality == "standard":
+        normalized_quality = "medium"
+    elif raw_quality == "hd":
+        normalized_quality = "high"
+    elif raw_quality in ("low", "medium", "high", "auto"):
+        normalized_quality = raw_quality
+    else:
+        normalized_quality = "medium"
+
     try:
-        # Step 1: Generate image with OpenAI's image model
-        # Default defensively to DALL-E 3 if the requested model is missing/invalid.
-        model = request.model or "dall-e-3"
-        if model not in ("dall-e-3", "gpt-image-1"):
-            model = "dall-e-3"
-
-        # Normalize quality for the current Images API:
-        # - Official values: low, medium, high, auto
-        # - Legacy aliases: standard → medium, hd → high
-        raw_quality = (request.quality or "medium").lower()
-        if raw_quality == "standard":
-            normalized_quality = "medium"
-        elif raw_quality == "hd":
-            normalized_quality = "high"
-        elif raw_quality in ("low", "medium", "high", "auto"):
-            normalized_quality = raw_quality
-        else:
-            normalized_quality = "medium"
-
         try:
             response = _call_openai_with_logging(
                 kind="images.generate",
@@ -780,8 +950,9 @@ async def generate_image(
             "success": True,
             "url": final_url,
             "revised_prompt": revised_prompt,
+            "model": model,
         }
-    
+
     except Exception as e:
         handle_openai_error(
             e,

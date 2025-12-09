@@ -820,6 +820,9 @@ const MobileView = {
         // Swap to sheet view
         leftPanel.classList.add('is-viewing-sheet');
         
+        // Update character count display
+        this.updateCharacterCount(characterId);
+        
         // Scroll to top
         leftPanel.scrollTop = 0;
         
@@ -827,6 +830,24 @@ const MobileView = {
         if (isSwipeTransition) {
             this.waitForPortraitLoad(container);
         }
+    },
+    
+    /** Update the character count display in the mobile back bar */
+    updateCharacterCount(characterId) {
+        const countEl = document.getElementById('mobileCharacterCount');
+        if (!countEl) return;
+        
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) {
+            countEl.textContent = '';
+            return;
+        }
+        
+        const currentIndex = characters.findIndex(c => c.id === characterId);
+        const currentNum = currentIndex >= 0 ? currentIndex + 1 : 1;
+        const total = characters.length;
+        
+        countEl.textContent = `${currentNum} of ${total}`;
     },
     
     /** Add the swipe loader overlay to the portrait container */
@@ -1180,6 +1201,20 @@ const UI = {
         const originalPortraitUrl = window.CharacterSheet
             ? window.CharacterSheet.getOriginalPortraitUrl(character)
             : (character.originalPortraitUrl || character.portrait?.url || null);
+
+        // Debug logging for portrait mismatch investigation
+        if (window.DEBUG_PORTRAITS) {
+            console.log(`🖼️ [PORTRAIT DEBUG] renderCharacterCard`, {
+                characterId: character.id,
+                characterName: character.name,
+                context: 'card',
+                hasAscii: hasAsciiPortrait,
+                asciiLength: asciiPortrait?.length || 0,
+                url: originalPortraitUrl,
+                portraitMetadataActiveId: character.portraitMetadata?.activeVersionId || null,
+                portraitMetadataVersionsCount: character.portraitMetadata?.versions?.length || 0
+            });
+        }
         
         // Check portrait view mode preference
         let portraitViewMode = 'original';
@@ -1304,6 +1339,16 @@ async function viewCharacter(id, options = {}) {
     // clicked or focused card.
     const requestId = ++latestViewCharacterRequestId;
 
+    // Debug logging for portrait mismatch investigation
+    if (window.DEBUG_PORTRAITS) {
+        console.log(`🖼️ [PORTRAIT DEBUG] viewCharacter called`, {
+            id,
+            requestId,
+            options,
+            timestamp: new Date().toISOString()
+        });
+    }
+
     if (typeof AppState !== 'undefined' && AppState) {
         AppState.selectedCharacterId = id;
     }
@@ -1312,26 +1357,54 @@ async function viewCharacter(id, options = {}) {
     // Use String() comparison to handle type mismatches (cloud IDs may be numeric,
     // but onclick handlers pass string IDs)
     let character = null;
+    let characterSource = null;
     if (typeof AppState !== 'undefined' && AppState && Array.isArray(AppState.filteredCharacters)) {
         const idStr = String(id);
-        character =
-            AppState.filteredCharacters.find(c => c && String(c.id) === idStr) ||
-            AppState.characters.find(c => c && String(c.id) === idStr) ||
-            null;
+        character = AppState.filteredCharacters.find(c => c && String(c.id) === idStr);
+        if (character) {
+            characterSource = 'filteredCharacters';
+        } else {
+            character = AppState.characters.find(c => c && String(c.id) === idStr);
+            if (character) characterSource = 'characters';
+        }
     }
 
     if (!character) {
         // Fallback to storage lookup (cloud/local)
         character = await CharacterStorage.getById(id);
+        characterSource = 'storage';
     }
 
     // If a newer viewCharacter call started while we were waiting on
     // storage/cloud, abandon this update to avoid stale mismatches.
     if (requestId !== latestViewCharacterRequestId) {
+        if (window.DEBUG_PORTRAITS) {
+            console.log(`🖼️ [PORTRAIT DEBUG] viewCharacter ABANDONED (stale request)`, {
+                id,
+                requestId,
+                latestRequestId: latestViewCharacterRequestId
+            });
+        }
         return;
     }
 
     if (character) {
+        // Debug: Log the character data being used to render the sheet
+        if (window.DEBUG_PORTRAITS) {
+            console.log(`🖼️ [PORTRAIT DEBUG] viewCharacter rendering`, {
+                id: character.id,
+                name: character.name,
+                source: characterSource,
+                requestId,
+                portraitMetadataActiveId: character.portraitMetadata?.activeVersionId || null,
+                portraitMetadataVersionsCount: character.portraitMetadata?.versions?.length || 0,
+                originalPortraitUrl: character.originalPortraitUrl || null,
+                portraitUrl: character.portrait?.url || null,
+                hasCustomPortraitAscii: !!character.customPortraitAscii,
+                hasAsciiPortrait: !!character.asciiPortrait,
+                timestamp: new Date().toISOString()
+            });
+        }
         UI.showCharacterSheet(character);
         
         // Update URL with selected character (for sharing/bookmarking)
@@ -1435,6 +1508,34 @@ function selectAlignment(value, label) {
     }
 }
 
+function selectSex(value, label) {
+    // Update hidden select value
+    const select = document.getElementById('editSex');
+    if (select) {
+        select.value = value;
+    }
+    
+    // Update visible trigger label
+    const labelEl = document.getElementById('editSex-label');
+    if (labelEl) {
+        labelEl.textContent = label;
+    }
+    
+    // Update selected state in menu options
+    const trigger = document.getElementById('editSex-trigger');
+    if (trigger) {
+        const shell = trigger.closest('.selector-shell');
+        if (shell) {
+            const options = shell.querySelectorAll('.selector-option');
+            options.forEach(opt => {
+                const isSelected = opt.getAttribute('data-value') === value;
+                opt.classList.toggle('is-selected', isSelected);
+                opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+        }
+    }
+}
+
 async function editCharacter(id) {
     const character = await CharacterStorage.getById(id);
     if (!character) return;
@@ -1460,6 +1561,10 @@ async function editCharacter(id) {
     // ALIGNMENT (default to 'n' - True Neutral if not set)
     const alignmentValue = character.alignment || 'n';
     setValue('editAlignment', alignmentValue);
+
+    // SEX
+    const sexValue = character.sex || '';
+    setValue('editSex', sexValue);
 
     // ABILITY SCORES
     const abilities = parsed.abilities || {};
@@ -1512,6 +1617,7 @@ async function editCharacter(id) {
         
         // Update alignment selector after modal is visible (needs to be deferred)
         const savedAlignmentValue = alignmentValue; // Capture in closure
+        const savedSexValue = sexValue; // Capture in closure
         setTimeout(() => {
             const alignmentNames = {
                 'lg': 'Lawful Good',
@@ -1538,6 +1644,31 @@ async function editCharacter(id) {
                     const options = shell.querySelectorAll('.selector-option');
                     options.forEach(opt => {
                         const isSelected = opt.getAttribute('data-value') === savedAlignmentValue;
+                        opt.classList.toggle('is-selected', isSelected);
+                        opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+                    });
+                }
+            }
+
+            // Update sex selector
+            const sexNames = {
+                'male': 'Male',
+                'female': 'Female'
+            };
+            const sexName = sexNames[savedSexValue] || 'Select Sex';
+            const sexLabel = document.getElementById('editSex-label');
+            if (sexLabel) {
+                sexLabel.textContent = sexName;
+            }
+            
+            // Mark selected option in sex menu
+            const sexTrigger = document.getElementById('editSex-trigger');
+            if (sexTrigger) {
+                const shell = sexTrigger.closest('.selector-shell');
+                if (shell) {
+                    const options = shell.querySelectorAll('.selector-option');
+                    options.forEach(opt => {
+                        const isSelected = opt.getAttribute('data-value') === savedSexValue;
                         opt.classList.toggle('is-selected', isSelected);
                         opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
                     });
@@ -1633,6 +1764,9 @@ async function saveEditDetails() {
     // Alignment
     const alignmentValue = document.getElementById('editAlignment')?.value || '';
 
+    // Sex
+    const sexValue = document.getElementById('editSex')?.value || '';
+
     const updates = {
         // Store raw IDs/names; CharacterSheet will format as needed
         name: nameText,
@@ -1651,6 +1785,10 @@ async function saveEditDetails() {
 
     if (alignmentValue) {
         updates.alignment = alignmentValue;
+    }
+
+    if (sexValue) {
+        updates.sex = sexValue;
     }
 
     if (Object.keys(abilityUpdates).length > 0) {
@@ -2526,6 +2664,18 @@ async function confirmGeneratePortrait() {
             const nextCharacter = { ...character, ...updates };
             const idStr = String(portraitCharacterId);
 
+            // Debug: Log the character state BEFORE AppState update
+            if (window.DEBUG_PORTRAITS) {
+                console.log(`🖼️ [PORTRAIT DEBUG] After generation - updating AppState`, {
+                    characterId: idStr,
+                    characterName: nextCharacter.name,
+                    newPortraitUrl: updates.originalPortraitUrl,
+                    newActiveVersionId: updates.portraitMetadata?.activeVersionId,
+                    hasCustomPortraitAscii: !!updates.customPortraitAscii,
+                    timestamp: new Date().toISOString()
+                });
+            }
+
             if (window.AppState) {
                 if (Array.isArray(AppState.characters)) {
                     const idx = AppState.characters.findIndex(
@@ -2544,8 +2694,62 @@ async function confirmGeneratePortrait() {
                     }
                 }
             }
+
+            // Debug: Verify the AppState update
+            if (window.DEBUG_PORTRAITS) {
+                const verifyChar = AppState.characters.find(c => c && String(c.id) === idStr);
+                console.log(`🖼️ [PORTRAIT DEBUG] AppState AFTER in-place update`, {
+                    characterId: idStr,
+                    portraitUrl: verifyChar?.originalPortraitUrl,
+                    activeVersionId: verifyChar?.portraitMetadata?.activeVersionId,
+                    hasCustomPortraitAscii: !!verifyChar?.customPortraitAscii,
+                    timestamp: new Date().toISOString()
+                });
+            }
         } catch (stateError) {
             console.error('Error syncing AppState after portrait generation', stateError);
+        }
+
+        // Re-sort and re-render the grid WITHOUT reloading from storage.
+        // Previously we called `await AppState.loadCharacters()` here, but that
+        // could return stale data from storage/cloud if the write hadn't fully
+        // propagated, causing portrait mismatches when switching characters.
+        // Since we already updated AppState.characters in-place above, we just
+        // need to re-apply filters (which handles sorting) and re-render.
+        if (window.DEBUG_PORTRAITS) {
+            console.log(`🖼️ [PORTRAIT DEBUG] Re-sorting grid (no storage reload)`, {
+                characterId: portraitCharacterId,
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // Update the character's updatedAt timestamp so it sorts correctly in "date modified" mode
+        const idStr = String(portraitCharacterId);
+        const charInState = AppState.characters.find(c => c && String(c.id) === idStr);
+        if (charInState) {
+            charInState.updatedAt = new Date().toISOString();
+            // Also update in filteredCharacters if present
+            const filteredChar = AppState.filteredCharacters.find(c => c && String(c.id) === idStr);
+            if (filteredChar) {
+                filteredChar.updatedAt = charInState.updatedAt;
+            }
+        }
+
+        // Re-apply filters (handles sorting) and re-render
+        AppState.applyFilters();
+        UI.render();
+
+        // Debug: Verify the character data is still correct after re-render
+        if (window.DEBUG_PORTRAITS) {
+            const charAfterRender = AppState.characters.find(c => c && String(c.id) === idStr);
+            console.log(`🖼️ [PORTRAIT DEBUG] AppState AFTER re-render (no reload)`, {
+                characterId: idStr,
+                portraitUrl: charAfterRender?.originalPortraitUrl,
+                activeVersionId: charAfterRender?.portraitMetadata?.activeVersionId,
+                hasCustomPortraitAscii: !!charAfterRender?.customPortraitAscii,
+                versionsCount: charAfterRender?.portraitMetadata?.versions?.length || 0,
+                timestamp: new Date().toISOString()
+            });
         }
 
         // Notify the user that the portrait was generated successfully.

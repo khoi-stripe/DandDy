@@ -268,6 +268,10 @@
 
         if (imageModel === 'gpt-image-1') {
           subtext = '(This can take up to a minute)';
+        } else if (imageModel === 'flux-1.1-pro') {
+          subtext = '(Flux Pro – usually 10–20 seconds)';
+        } else if (imageModel === 'flux-schnell') {
+          subtext = '(Flux Schnell – usually 5–10 seconds)';
         }
       } catch (e) {
         // Fall back to default subtext on any error.

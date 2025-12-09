@@ -15,6 +15,9 @@
         --cube-tilt-x: 0deg;
         --cube-tilt-y: 0deg;
         --cube-bg-alpha: 0.05;
+        /* Tumbling rotation amounts */
+        --cube-rotate-x: 0deg;
+        --cube-rotate-y: 360deg;
       }
 
       body {
@@ -41,12 +44,22 @@
         display: flex;
         flex-direction: column;
         gap: 16px;
+        overflow-y: auto;
+        max-height: calc(100vh - 80px);
       }
 
       .controls-panel h1 {
         font-size: 14px;
         margin: 0 0 8px;
         color: var(--terminal-accent);
+      }
+
+      .controls-panel h2 {
+        font-size: 12px;
+        margin: 16px 0 8px;
+        color: var(--terminal-accent);
+        border-top: 1px solid var(--terminal-border);
+        padding-top: 16px;
       }
 
       .control-group {
@@ -66,6 +79,35 @@
 
       .control-input {
         width: 100%;
+      }
+
+      .preset-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .preset-btn {
+        flex: 1;
+        min-width: 80px;
+        padding: 8px 12px;
+        font-size: 11px;
+        background: transparent;
+        border: 1px solid var(--terminal-border);
+        color: var(--terminal-fg);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .preset-btn:hover {
+        border-color: var(--terminal-accent);
+        color: var(--terminal-accent);
+      }
+
+      .preset-btn.active {
+        background: var(--terminal-accent);
+        color: var(--terminal-bg);
+        border-color: var(--terminal-accent);
       }
 
       .cube-panel {
@@ -94,7 +136,7 @@
         height: var(--cube-size);
         position: relative;
         transform-style: preserve-3d;
-        animation: spin var(--cube-speed) infinite linear;
+        animation: cube-spin var(--cube-speed) infinite linear;
       }
 
       .cube-face {
@@ -133,12 +175,12 @@
         transform: rotateX(-90deg) translateZ(var(--cube-depth));
       }
 
-      @keyframes spin {
-        from {
-          transform: rotateY(0deg);
+      @keyframes cube-spin {
+        0% {
+          transform: rotateX(0deg) rotateY(0deg);
         }
-        to {
-          transform: rotateY(360deg);
+        100% {
+          transform: rotateX(var(--cube-rotate-x)) rotateY(var(--cube-rotate-y));
         }
       }
 
@@ -157,6 +199,49 @@
   <body>
     <section class="panel controls-panel">
       <h1>Cube Controls</h1>
+
+      <div class="control-group">
+        <label class="control-label">Animation Presets:</label>
+        <div class="preset-buttons">
+          <button class="preset-btn" id="preset-spin">Spin</button>
+          <button class="preset-btn" id="preset-tumble">Tumble</button>
+          <button class="preset-btn" id="preset-roll">Roll</button>
+        </div>
+      </div>
+
+      <h2>Rotation</h2>
+
+      <div class="control-group">
+        <label class="control-label" for="rotate-x">
+          X Rotation: <span id="rotate-x-value">0°</span>
+        </label>
+        <input
+          id="rotate-x"
+          class="control-input"
+          type="range"
+          min="-720"
+          max="720"
+          step="45"
+          value="0"
+        />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="rotate-y">
+          Y Rotation: <span id="rotate-y-value">360°</span>
+        </label>
+        <input
+          id="rotate-y"
+          class="control-input"
+          type="range"
+          min="-720"
+          max="720"
+          step="45"
+          value="360"
+        />
+      </div>
+
+      <h2>Appearance</h2>
 
       <div class="control-group">
         <label class="control-label" for="size">
@@ -203,7 +288,7 @@
 
       <div class="control-group">
         <label class="control-label" for="speed">
-          Spin speed: <span id="speed-value">4s</span>
+          Animation speed: <span id="speed-value">4s</span>
         </label>
         <input
           id="speed"
@@ -291,6 +376,8 @@
           tiltX: document.getElementById("tilt-x"),
           tiltY: document.getElementById("tilt-y"),
           bgAlpha: document.getElementById("bg-alpha"),
+          rotateX: document.getElementById("rotate-x"),
+          rotateY: document.getElementById("rotate-y"),
         };
 
         const labels = {
@@ -301,6 +388,8 @@
           tiltX: document.getElementById("tilt-x-value"),
           tiltY: document.getElementById("tilt-y-value"),
           bgAlpha: document.getElementById("bg-alpha-value"),
+          rotateX: document.getElementById("rotate-x-value"),
+          rotateY: document.getElementById("rotate-y-value"),
         };
 
         const defaults = {
@@ -311,6 +400,15 @@
           tiltX: 0,
           tiltY: 0,
           bgAlpha: 0.05,
+          rotateX: 0,
+          rotateY: 360,
+        };
+
+        // Presets for different animation styles
+        const presets = {
+          spin: { rotateX: 0, rotateY: 360, tiltX: -35, tiltY: 0 },
+          tumble: { rotateX: -360, rotateY: -540, tiltX: 0, tiltY: 0 },
+          roll: { rotateX: 360, rotateY: 0, tiltX: 0, tiltY: 25 },
         };
 
         function applySize(value) {
@@ -349,6 +447,56 @@
           root.style.setProperty("--cube-bg-alpha", value);
         }
 
+        function applyRotateX(value) {
+          labels.rotateX.textContent = value + "°";
+          root.style.setProperty("--cube-rotate-x", value + "deg");
+          updatePresetButtons();
+        }
+
+        function applyRotateY(value) {
+          labels.rotateY.textContent = value + "°";
+          root.style.setProperty("--cube-rotate-y", value + "deg");
+          updatePresetButtons();
+        }
+
+        function updatePresetButtons() {
+          const currentRotateX = parseInt(controls.rotateX.value);
+          const currentRotateY = parseInt(controls.rotateY.value);
+          const currentTiltX = parseInt(controls.tiltX.value);
+          const currentTiltY = parseInt(controls.tiltY.value);
+
+          document.querySelectorAll(".preset-btn").forEach((btn) => {
+            btn.classList.remove("active");
+          });
+
+          for (const [name, preset] of Object.entries(presets)) {
+            if (
+              currentRotateX === preset.rotateX &&
+              currentRotateY === preset.rotateY &&
+              currentTiltX === preset.tiltX &&
+              currentTiltY === preset.tiltY
+            ) {
+              document.getElementById(`preset-${name}`).classList.add("active");
+              break;
+            }
+          }
+        }
+
+        function applyPreset(name) {
+          const preset = presets[name];
+          if (!preset) return;
+
+          controls.rotateX.value = preset.rotateX;
+          controls.rotateY.value = preset.rotateY;
+          controls.tiltX.value = preset.tiltX;
+          controls.tiltY.value = preset.tiltY;
+
+          applyRotateX(preset.rotateX);
+          applyRotateY(preset.rotateY);
+          applyTiltX(preset.tiltX);
+          applyTiltY(preset.tiltY);
+        }
+
         function bindControl(id, applyFn) {
           const input = controls[id];
           input.addEventListener("input", () => {
@@ -365,6 +513,8 @@
         applyTiltX(defaults.tiltX);
         applyTiltY(defaults.tiltY);
         applyBgAlpha(defaults.bgAlpha);
+        applyRotateX(defaults.rotateX);
+        applyRotateY(defaults.rotateY);
 
         // Bind controls
         bindControl("size", applySize);
@@ -374,6 +524,13 @@
         bindControl("tiltX", applyTiltX);
         bindControl("tiltY", applyTiltY);
         bindControl("bgAlpha", applyBgAlpha);
+        bindControl("rotateX", applyRotateX);
+        bindControl("rotateY", applyRotateY);
+
+        // Preset buttons
+        document.getElementById("preset-spin").addEventListener("click", () => applyPreset("spin"));
+        document.getElementById("preset-tumble").addEventListener("click", () => applyPreset("tumble"));
+        document.getElementById("preset-roll").addEventListener("click", () => applyPreset("roll"));
 
         // Reset button
         document.getElementById("reset-btn").addEventListener("click", () => {
@@ -387,10 +544,10 @@
           applyTiltX(defaults.tiltX);
           applyTiltY(defaults.tiltY);
           applyBgAlpha(defaults.bgAlpha);
+          applyRotateX(defaults.rotateX);
+          applyRotateY(defaults.rotateY);
         });
       })();
     </script>
   </body>
 </html>
-
-

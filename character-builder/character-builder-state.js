@@ -65,6 +65,7 @@ const CharacterState = (window.CharacterState = {
       class: '',
       background: '',
       alignment: '',
+      sex: null,
       baseAbilities: null,
       abilities: {
         str: 10,
@@ -265,6 +266,7 @@ const CharacterState = (window.CharacterState = {
         class: '',
         background: '',
         alignment: '',
+        sex: null,
         baseAbilities: null,
         abilities: {
           str: 10,

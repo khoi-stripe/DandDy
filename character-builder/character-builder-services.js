@@ -208,6 +208,11 @@ const StorageService = (window.StorageService = {
 
   // Preferred AI image model for custom portraits.
   // Stored per-browser so builder + manager can share the same choice.
+  // Supported models:
+  // - dall-e-3      (OpenAI DALL-E 3)
+  // - gpt-image-1   (OpenAI GPT Image 1)
+  // - flux-1.1-pro  (Replicate Flux Pro - high quality)
+  // - flux-schnell  (Replicate Flux Schnell - fast & cheap)
   getImageModel() {
     try {
       const raw = localStorage.getItem('dnd_image_model');
@@ -216,7 +221,7 @@ const StorageService = (window.StorageService = {
         'dall-e-3';
       if (!raw) return fallback;
       const value = String(raw).trim();
-      const allowed = ['dall-e-3', 'gpt-image-1'];
+      const allowed = ['dall-e-3', 'gpt-image-1', 'flux-1.1-pro', 'flux-schnell'];
       return allowed.includes(value) ? value : fallback;
     } catch (e) {
       console.warn('StorageService.getImageModel failed, using fallback', e);
@@ -227,7 +232,7 @@ const StorageService = (window.StorageService = {
   setImageModel(model) {
     try {
       const value = String(model || '').trim();
-      const allowed = ['dall-e-3', 'gpt-image-1'];
+      const allowed = ['dall-e-3', 'gpt-image-1', 'flux-1.1-pro', 'flux-schnell'];
       if (!allowed.includes(value)) {
         console.warn('StorageService.setImageModel: ignoring unsupported model', value);
         // Clear invalid values so we fall back cleanly next time.
@@ -354,6 +359,30 @@ const StorageService = (window.StorageService = {
     }
   },
 
+  // High quality mode for GPT Image 1 (admin only).
+  // When enabled, uses 'high' quality instead of 'medium' for gpt-image-1 model.
+  getHighQualityGPTImage() {
+    try {
+      const raw = localStorage.getItem('dnd_high_quality_gpt_image');
+      return raw === 'true';
+    } catch (e) {
+      console.warn('StorageService.getHighQualityGPTImage failed', e);
+      return false;
+    }
+  },
+
+  setHighQualityGPTImage(enabled) {
+    try {
+      if (enabled) {
+        localStorage.setItem('dnd_high_quality_gpt_image', 'true');
+      } else {
+        localStorage.removeItem('dnd_high_quality_gpt_image');
+      }
+    } catch (e) {
+      console.warn('StorageService.setHighQualityGPTImage failed', e);
+    }
+  },
+
   // ==== CHARACTER STORAGE ====
   // Delegates to shared CharacterStorage facade (character-storage.js)
   // which handles cloud/local storage, fallbacks, and timestamp normalization.
@@ -434,7 +463,8 @@ const AsciiArtService = (window.AsciiArtService = {
 
     // Try race-class combo first
     if (classLower) {
-      const path = `generated_portraits/ascii/${raceLower}-${classLower}.txt`;
+      // Use ../ prefix since character-builder is in a subdirectory
+      const path = `../generated_portraits/ascii/${raceLower}-${classLower}.txt`;
       if (DEBUG_BUILDER) console.log(`📂 Trying to load: ${path}`);
       try {
         const response = await fetch(path);
@@ -450,7 +480,7 @@ const AsciiArtService = (window.AsciiArtService = {
     }
 
     // Fallback to race-only
-    const path = `generated_portraits/ascii/${raceLower}.txt`;
+    const path = `../generated_portraits/ascii/${raceLower}.txt`;
     if (DEBUG_BUILDER) console.log(`📂 Trying fallback: ${path}`);
     try {
       const response = await fetch(path);
@@ -487,7 +517,7 @@ const AsciiArtService = (window.AsciiArtService = {
 
     // Fallback: relative path for environments where PNGs are served locally.
     // This keeps older static setups working if images are present on disk.
-    return `../web/generated_portraits/images/${fileName}`;
+    return `../generated_portraits/images/${fileName}`;
   },
 
   // Load portrait (pre-generated or fallback to template)
@@ -1438,7 +1468,22 @@ Format your response as JSON array of strings, one for each option in order. Exa
         // Quality setting differs by model:
         // - DALL-E: 'standard' or 'hd'
         // - GPT Image 1: 'low', 'medium', 'high'
-        const quality = model.startsWith('dall-e') ? 'standard' : 'medium';
+        let quality = model.startsWith('dall-e') ? 'standard' : 'medium';
+        
+        // Check if high quality mode is enabled for GPT Image 1 (admin feature)
+        if (model === 'gpt-image-1') {
+          try {
+            if (window.StorageService && typeof StorageService.getHighQualityGPTImage === 'function') {
+              const highQualityEnabled = StorageService.getHighQualityGPTImage();
+              if (highQualityEnabled) {
+                quality = 'high';
+                console.log('  Quality: HIGH (admin setting enabled)');
+              }
+            }
+          } catch (e) {
+            console.warn('AIService: failed to read high quality setting', e);
+          }
+        }
 
         const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`, {
           method: 'POST',
@@ -1525,6 +1570,11 @@ Format your response as JSON array of strings, one for each option in order. Exa
 
     // Add D&D context header to help LLM understand class names like "Monk" are fantasy classes
     parts.push('Dungeons & Dragons fantasy character:');
+
+    // Sex - include if set (important for portrait generation)
+    if (character.sex) {
+      parts.push(character.sex);
+    }
 
     // Race - prefer admin-configured entries, fall back to shared description data
     if (character.race) {

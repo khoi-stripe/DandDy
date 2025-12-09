@@ -1680,6 +1680,10 @@ const App = (window.App = {
         }
         if (imageModel === 'gpt-image-1') {
           subtext = '(This can take up to a minute)';
+        } else if (imageModel === 'flux-1.1-pro') {
+          subtext = '(Flux Pro – usually 10–20 seconds)';
+        } else if (imageModel === 'flux-schnell') {
+          subtext = '(Flux Schnell – usually 5–10 seconds)';
         }
       }
     } catch (e) {
@@ -4855,11 +4859,12 @@ const App = (window.App = {
     );
     Utils.scrollToBottom(true);
 
-    // Randomly choose race, class, background, alignment
+    // Randomly choose race, class, background, alignment, sex
     const race = Utils.randomChoice(DND_DATA.races);
     const cls = Utils.randomChoice(DND_DATA.classes);
     const background = Utils.randomChoice(DND_DATA.backgrounds);
     const alignment = Utils.randomChoice(DND_DATA.alignments);
+    const sex = Utils.randomChoice(['male', 'female']);
 
     // Roll abilities using the existing rollAbility helper and apply racial bonuses
     let abilities = {
@@ -4915,6 +4920,7 @@ const App = (window.App = {
         class: cls.id,
         background: background.id,
         alignment: alignment.id,
+        sex: sex,
       };
       const summary = await AIService.generateCharacterSummary(tempChar, { nameCount: 3 });
       
@@ -4959,6 +4965,7 @@ const App = (window.App = {
       class: cls.id,
       background: background.id,
       alignment: alignment.id,
+      sex: sex,
       baseAbilities: { ...abilities },
       abilities,
       hitPoints,

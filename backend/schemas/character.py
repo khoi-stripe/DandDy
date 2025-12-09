@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Dict, Optional
-from models.character import Alignment
+from models.character import Alignment, Sex
 from datetime import datetime
 
 class CharacterBase(BaseModel):
@@ -10,6 +10,7 @@ class CharacterBase(BaseModel):
     level: int = 1
     background: Optional[str] = None
     alignment: Optional[Alignment] = None
+    sex: Optional[Sex] = None
     experience_points: int = 0
     
     # Ability Scores
@@ -95,6 +96,7 @@ class CharacterUpdate(BaseModel):
     level: Optional[int] = None
     experience_points: Optional[int] = None
     alignment: Optional[Alignment] = None
+    sex: Optional[Sex] = None
     # Ability Scores (editable from manager)
     strength: Optional[int] = None
     dexterity: Optional[int] = None

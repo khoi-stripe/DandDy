@@ -9,7 +9,7 @@
   <link href="https://cdn.jsdelivr.net/npm/@fontsource/google-sans-code@5.2.1/index.min.css" rel="stylesheet">
   <link rel="stylesheet" href="../terminal-theme.css?v=20251206c">
   <link rel="stylesheet" href="../portraits.css?v=20251206c">
-  <link rel="stylesheet" href="./character-builder.css?v=20251208b">
+  <link rel="stylesheet" href="./character-builder.css?v=20251206h">
 </head>
 <body>
   <!-- Print-only logo (positioned via CSS for print layout) -->
@@ -215,7 +215,7 @@
   <div id="sessionResumeModal" class="modal">
     <div class="modal-content session-resume-modal">
       <div class="modal-header">
-        <h2 class="modal-title">[ Character in progress ]</h2>
+        <h2 class="modal-title">Character in progress</h2>
         <span class="session-time" id="sessionTimeStamp"></span>
       </div>
       <div class="modal-body">
@@ -234,31 +234,8 @@
     </div>
   </div>
   
-  <!-- Unbundled scripts (mirror of scripts/simple_bundle.py: builder_parts) -->
-  <script src="../portrait-prompts.js"></script>
-  <script src="../shared-portrait-data.js"></script>
-  <script src="../danddy-config.js"></script>
-  <script src="../danddy-auth.js"></script>
-  <script src="../danddy-character-mapper.js"></script>
-  <script src="../danddy-storage.js"></script>
-  <script src="../character-manager-api.js"></script>
-  <script src="../character-storage.js"></script>
-  <script src="./character-builder-config.js"></script>
-  <script src="./character-builder-dnd-data.js"></script>
-  <script src="./character-builder-spells.js"></script>
-  <script src="./character-builder-narrators.js"></script>
-  <script src="./character-builder-utils.js"></script>
-  <script src="./character-builder-auth.js"></script>
-  <script src="./character-builder-api.js"></script>
-  <script src="../character-name-data.js"></script>
-  <script src="./character-builder-services.js"></script>
-  <script src="./character-builder-state.js?v=20251205b"></script>
-  <script src="../shared-character-sheet.js?v=20251204c"></script>
-  <script src="../portraits-ui.js"></script>
-  <script src="./character-builder-components.js"></script>
-  <script src="./character-builder-questions.js"></script>
-  <script src="./character-builder-app.js?v=20251205d"></script>
-  <script src="./character-builder-manager.js"></script>
+  <!-- Concatenated builder bundle (see scripts/simple_bundle.py) -->
+  <script src="builder.bundle.js?v=20251209a"></script>
 </body>
 </html>
 

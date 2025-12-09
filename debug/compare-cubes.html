@@ -39,6 +39,20 @@
         .line-height-relaxed {
             line-height: 1.6;
         }
+
+        /* Tumbling cube animation - rotates on both X and Y axes at different rates */
+        @keyframes cube-tumble {
+            0% {
+                transform: rotateX(0deg) rotateY(0deg);
+            }
+            100% {
+                transform: rotateX(-360deg) rotateY(-540deg);
+            }
+        }
+
+        .tumbling-cube .spinner-cube {
+            animation: cube-tumble var(--spinner-cube-speed) linear infinite;
+        }
     </style>
 </head>
 <body>
@@ -155,8 +169,26 @@
         </div>
     </div>
 
+    <div class="test-section">
+        <div class="test-label">7. TUMBLING CUBE (rotates on X and Y simultaneously):</div>
+        <div class="tumbling-cube" style="display: flex; align-items: center; justify-content: center; padding: 40px;">
+            <span class="spinner-cube-scene" style="--spinner-cube-speed: 4s; --spinner-cube-size: 80px; --spinner-cube-depth: 40px; --spinner-cube-border-width: 2px;">
+                <span class="spinner-cube-tilt">
+                    <span class="spinner-cube">
+                        <span class="spinner-cube-face spinner-cube-face-front"></span>
+                        <span class="spinner-cube-face spinner-cube-face-back"></span>
+                        <span class="spinner-cube-face spinner-cube-face-right"></span>
+                        <span class="spinner-cube-face spinner-cube-face-left"></span>
+                        <span class="spinner-cube-face spinner-cube-face-top"></span>
+                        <span class="spinner-cube-face spinner-cube-face-bottom"></span>
+                    </span>
+                </span>
+            </span>
+        </div>
+    </div>
+
     <div class="test-section" style="background: #000;">
-        <div class="test-label">7. PANEL LOADING CONTEXT (the broken one):</div>
+        <div class="test-label">8. PANEL LOADING CONTEXT (the broken one):</div>
         <div class="panel-loading-row" style="position: relative; height: 100px;">
             <div class="loading-indicator">
                 <div class="loading-text">

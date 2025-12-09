@@ -4,6 +4,8 @@ Pillow>=10.0.0
 numpy>=1.24.0
 google-generativeai>=0.3.0
 boto3>=1.35.0
+replicate>=1.0.4  # For Flux image generation via Replicate
 
 # Development tools
 watchdog>=3.0.0  # For auto-rebuilding bundles (scripts/watch_bundle.py)
+rjsmin>=1.2.0    # For JS minification in bundle builds
