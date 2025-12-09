@@ -46,13 +46,10 @@
     margin-left: auto;
 }
 
+/* Right panel uses teal scrollbars to match character sheet theme */
 .right-panel {
     display: flex;
     flex-direction: column;
-}
-
-/* Right panel uses teal scrollbars to match character sheet theme */
-.right-panel {
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
@@ -124,7 +121,7 @@
 }
 
 .guest-notice {
-    margin: 0 0 24px 0;
+    margin: 0 0 var(--spacing-lg) 0;
     padding: var(--spacing-sm) var(--spacing-md);
     border: 1px solid var(--modal-accent);
     background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.12);
@@ -547,8 +544,6 @@
     object-fit: cover;
     border: none;
 }
-
-/* Removed - using .text-dim from builder instead */
 
 /* ===== WELCOME MODAL (BUILDER-STYLE SPLASH) ===== */
 .welcome-modal {
@@ -1004,52 +999,52 @@
 /* DEPRECATED: Old text-based spinner (↻ glyph). Replaced by .spinner-cube-* in terminal-theme.css.
    Keeping these rules for backward compatibility with any legacy code that hasn't been migrated yet. */
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .spinner {
-  display: inline-block;
-  animation: spin 1s linear infinite;
-  font-size: 18px;
-  color: currentColor;
-  text-shadow: none;
-  vertical-align: middle;
-  margin-right: 8px;
+    display: inline-block;
+    animation: spin 1s linear infinite;
+    font-size: 18px;
+    color: currentColor;
+    text-shadow: none;
+    vertical-align: middle;
+    margin-right: 8px;
 }
 
 .loading-indicator {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: var(--spacing-xl);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--spacing-xl);
 }
 
 .split-layout {
-  position: relative;
+    position: relative;
 }
 
 .panel-loading-row {
-  position: absolute;
-  /* Fill the split layout and let CSS Grid handle centering so that
-     parent transforms don't interfere with the cube's 3D axis. */
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  pointer-events: none; /* let clicks fall through to underlying UI */
+    position: absolute;
+    /* Fill the split layout and let CSS Grid handle centering so that
+       parent transforms don't interfere with the cube's 3D axis. */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    pointer-events: none; /* let clicks fall through to underlying UI */
 }
 
 .loading-text {
-  color: var(--terminal-accent);
-  font-family: var(--font-mono);
-  font-size: calc(var(--font-size-base) * 1.1);
-  text-shadow: 0 0 10px var(--terminal-accent);
+    color: var(--terminal-accent);
+    font-family: var(--font-mono);
+    font-size: calc(var(--font-size-base) * 1.1);
+    text-shadow: 0 0 10px var(--terminal-accent);
 }
 
 /* Panel loading cube - larger, portrait-style cube */
@@ -1435,11 +1430,7 @@
     /* Terminal button colors */
     --terminal-border: var(--sheet-accent);
     --terminal-accent: var(--sheet-accent);
-}
-
-
-/* Use teal scrollbar theme when viewing sheet */
-.left-panel.is-viewing-sheet {
+    /* Teal scrollbar theme */
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
