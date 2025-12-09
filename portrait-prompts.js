@@ -646,7 +646,9 @@
     try {
       const cache = loadAdminCache();
       const styleKeys = cache && cache.styles ? Object.keys(cache.styles) : [];
-      const extraIds = styleKeys.filter((id) => !THEMES[id]);
+      // Use case-insensitive comparison to avoid duplicates
+      const builtInIds = Object.keys(THEMES).map((k) => k.toLowerCase());
+      const extraIds = styleKeys.filter((id) => !builtInIds.includes(id.toLowerCase()));
 
       customThemes = extraIds.map((id) => {
         const styleEntry = cache.styles[id] || {};
