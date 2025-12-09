@@ -1273,20 +1273,23 @@ const UI = {
         // Disable search when there are no characters at all
         if (searchInput) {
             searchInput.disabled = total === 0;
-            searchInput.placeholder = 'Search';
+            // Include character count in placeholder
+            if (total === 0) {
+                searchInput.placeholder = 'Search';
+            } else {
+                searchInput.placeholder = 'Search ' + total + ' character' + (total !== 1 ? 's' : '');
+            }
         }
         if (clearSearchBtn) {
             clearSearchBtn.disabled = total === 0;
         }
 
-        // Update character count display (pinned right, teal)
+        // Show filtered count only when actively filtering
         if (countEl) {
-            if (total === 0) {
-                countEl.textContent = '';
-            } else if (total === filtered) {
-                countEl.textContent = total + ' character' + (total !== 1 ? 's' : '');
-            } else {
+            if (filtered < total && total > 0) {
                 countEl.textContent = filtered + ' of ' + total;
+            } else {
+                countEl.textContent = '';
             }
         }
     },
