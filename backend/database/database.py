@@ -55,10 +55,14 @@ def _build_engine(database_url: str):
     Create a SQLAlchemy engine with sensible defaults for both SQLite and PostgreSQL.
     - Enables `check_same_thread=False` for SQLite so it works cleanly with FastAPI.
     - Turns on `pool_pre_ping` to avoid stale connections in long‑running deployments.
+    - Uses psycopg (v3) driver for PostgreSQL for better Supabase pooler compatibility.
     """
     connect_args = {}
     if database_url.startswith("sqlite"):
         connect_args = {"check_same_thread": False}
+    elif database_url.startswith("postgresql://"):
+        # Convert to use psycopg v3 driver for better Supabase compatibility
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
     return create_engine(
         database_url,
