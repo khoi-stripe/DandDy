@@ -4042,10 +4042,10 @@ const App = (window.App = {
       if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
         templatePrompt = AIService.buildCharacterDescription(character);
       } else {
-        templatePrompt = `${character.race} ${character.class}`;
+        templatePrompt = `${character.race}\u0020${character.class}`;
       }
     } catch (e) {
-      templatePrompt = `${character.race} ${character.class}`;
+      templatePrompt = `${character.race}\u0020${character.class}`;
     }
 
     // Update the prompt input field so user can see what was generated

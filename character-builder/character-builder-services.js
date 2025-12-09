@@ -1128,7 +1128,7 @@ const AIService = (window.AIService = {
       const fallbackNames = this.generateFallbackNames(race || 'human', nameCount);
       const template =
         '{{NAME}} is a ' +
-        `${race || 'mysterious'} ${classType || 'adventurer'} with a mysterious past. ` +
+        `${race || 'mysterious'}\u0020${classType || 'adventurer'} with a mysterious past. ` +
         "They don't talk about it much. Probably for the best.";
       return {
         names: fallbackNames,
@@ -1290,7 +1290,7 @@ const AIService = (window.AIService = {
     while (result.length < count && attempts < maxAttempts) {
       const firstName = Utils.randomChoice(pattern.first);
       const lastName = Utils.randomChoice(pattern.last);
-      const fullName = `${firstName} ${lastName}`;
+      const fullName = `${firstName}\u0020${lastName}`;
 
       if (!usedLocalCombos.has(fullName)) {
         usedLocalCombos.add(fullName);
@@ -1336,7 +1336,7 @@ const AIService = (window.AIService = {
 
       const firstKey = first.toLowerCase();
       const lastKey = last.toLowerCase();
-      const fullKey = last ? `${firstKey} ${lastKey}` : firstKey;
+      const fullKey = last ? `${firstKey}\u0020${lastKey}` : firstKey;
 
       // Enforce uniqueness across this browser session
       if (
@@ -1360,7 +1360,7 @@ const AIService = (window.AIService = {
   },
 
   async generateBackstory(character) {
-    const fallback = `${character.name} is a ${character.race} ${character.class} with a mysterious past. `
+    const fallback = `${character.name} is a ${character.race}\u0020${character.class} with a mysterious past. `
       + "They don't talk about it much. Probably for the best.";
 
     if (!CONFIG.ENABLE_AI) {

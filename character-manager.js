@@ -1195,7 +1195,7 @@ const UI = {
         // Handle race/class names (enhanced export has nested data)
         const raceNameRaw = character.raceData?.name || character.race || '?';
         const classNameRaw = character.classData?.name || character.class || '?';
-        const raceClassSentence = toSentenceCase(`${raceNameRaw} ${classNameRaw}`.trim());
+        const raceClassSentence = toSentenceCase(`${raceNameRaw}\u0020${classNameRaw}`.trim());
         const raceClass = Utils.escapeHtml(raceClassSentence || '?');
         const name = Utils.escapeHtml(character.name || 'Unnamed Character');
         
@@ -2275,10 +2275,10 @@ async function generatePortraitForCharacter(id) {
         if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
             defaultPrompt = AIService.buildCharacterDescription(character);
         } else {
-            defaultPrompt = `${character.race} ${character.class}`;
+            defaultPrompt = `${character.race}\u0020${character.class}`;
         }
     } catch (e) {
-        defaultPrompt = `${character.race} ${character.class}`;
+        defaultPrompt = `${character.race}\u0020${character.class}`;
     }
     
     // Populate style dropdown before setting the prompt
@@ -3001,10 +3001,10 @@ async function surpriseMePortrait() {
         if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
             templatePrompt = AIService.buildCharacterDescription(character);
         } else {
-            templatePrompt = `${character.race} ${character.class}`;
+            templatePrompt = `${character.race}\u0020${character.class}`;
         }
     } catch (e) {
-        templatePrompt = `${character.race} ${character.class}`;
+        templatePrompt = `${character.race}\u0020${character.class}`;
     }
 
     const promptInput = document.getElementById('portraitPrompt');

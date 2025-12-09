@@ -92,6 +92,6 @@ const SecureAIService = (window.SecureAIService = {
     const name = (character && character.name) || 'Unnamed character';
     const race = character && character.race ? String(character.race) : '';
     const cls = character && character.class ? String(character.class) : '';
-    return `${name}: ${race} ${cls}`.trim();
+    return `${name}:\u0020${race}\u0020${cls}`.trim();
   },
 });
