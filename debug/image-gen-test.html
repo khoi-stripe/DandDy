@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image Generation Test Lab</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0a0a0f;
+      --bg-panel: #12121a;
+      --bg-input: #1a1a24;
+      --border: #2a2a3a;
+      --border-glow: #4a9eff;
+      --text: #e0e0e0;
+      --text-dim: #888;
+      --accent-blue: #4a9eff;
+      --accent-green: #50fa7b;
+      --accent-orange: #ffb86c;
+      --accent-pink: #ff79c6;
+      --accent-red: #ff5555;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-dark);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      color: var(--accent-blue);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .header p {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    .prompt-section {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .prompt-section label {
+      display: block;
+      color: var(--accent-orange);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    .prompt-section textarea {
+      width: 100%;
+      height: 100px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9rem;
+      padding: 12px;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+
+    .prompt-section textarea:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+
+    .generate-both {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .panels-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 1000px) {
+      .panels-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      background: var(--bg-input);
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--accent-green);
+    }
+
+    .panel-title.panel-b {
+      color: var(--accent-pink);
+    }
+
+    .panel-controls {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .control-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    select {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.85rem;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+
+    select option {
+      background: var(--bg-dark);
+    }
+
+    .btn {
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      color: var(--bg-dark);
+    }
+
+    .btn-primary:hover {
+      background: #6ab0ff;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      background: var(--border);
+      color: var(--text-dim);
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-generate {
+      background: var(--accent-green);
+      color: var(--bg-dark);
+    }
+
+    .btn-generate:hover {
+      background: #70ff9b;
+    }
+
+    .btn-generate.panel-b {
+      background: var(--accent-pink);
+    }
+
+    .btn-generate.panel-b:hover {
+      background: #ff99d6;
+    }
+
+    .btn-generate:disabled {
+      background: var(--border);
+      color: var(--text-dim);
+      cursor: not-allowed;
+    }
+
+    .image-container {
+      padding: 16px;
+      min-height: 300px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-top: 1px solid var(--border);
+    }
+
+    .image-placeholder {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 40px;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      width: 100%;
+    }
+
+    .generated-image {
+      max-width: 100%;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .image-meta {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--bg-input);
+      border-radius: 4px;
+      width: 100%;
+      font-size: 0.75rem;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .meta-row:last-child {
+      border-bottom: none;
+    }
+
+    .meta-label {
+      color: var(--text-dim);
+    }
+
+    .meta-value {
+      color: var(--accent-blue);
+    }
+
+    .meta-value.success {
+      color: var(--accent-green);
+    }
+
+    .meta-value.error {
+      color: var(--accent-red);
+    }
+
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-dim);
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .error-message {
+      color: var(--accent-red);
+      background: rgba(255, 85, 85, 0.1);
+      border: 1px solid var(--accent-red);
+      padding: 12px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      width: 100%;
+      text-align: center;
+    }
+
+    .cost-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      margin-left: 8px;
+    }
+
+    .cost-cheap {
+      background: rgba(80, 250, 123, 0.2);
+      color: var(--accent-green);
+    }
+
+    .cost-medium {
+      background: rgba(255, 184, 108, 0.2);
+      color: var(--accent-orange);
+    }
+
+    .cost-high {
+      background: rgba(255, 121, 198, 0.2);
+      color: var(--accent-pink);
+    }
+
+    .api-status {
+      text-align: center;
+      padding: 12px;
+      margin-bottom: 20px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+
+    .api-status.loading {
+      background: rgba(74, 158, 255, 0.1);
+      border: 1px solid var(--accent-blue);
+      color: var(--accent-blue);
+    }
+
+    .api-status.success {
+      background: rgba(80, 250, 123, 0.1);
+      border: 1px solid var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    .api-status.error {
+      background: rgba(255, 85, 85, 0.1);
+      border: 1px solid var(--accent-red);
+      color: var(--accent-red);
+    }
+
+    .model-info {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚗️ Image Generation Test Lab</h1>
+    <p>Compare AI models side-by-side</p>
+  </div>
+
+  <div id="api-status" class="api-status loading">
+    Checking API availability...
+  </div>
+
+  <div class="prompt-section">
+    <label for="prompt">Shared Prompt</label>
+    <textarea id="prompt" placeholder="Enter your image generation prompt here...">A fantasy portrait of a wise elderly elf wizard with long silver hair, wearing ornate blue robes covered in glowing arcane runes, holding a crystal staff, dramatic lighting, detailed digital art style</textarea>
+  </div>
+
+  <div class="generate-both">
+    <button class="btn btn-primary" id="generate-both" onclick="generateBoth()">
+      ⚡ Generate Both
+    </button>
+  </div>
+
+  <div class="panels-container">
+    <!-- Panel A -->
+    <div class="panel" id="panel-a">
+      <div class="panel-header">
+        <span class="panel-title">Panel A</span>
+        <button class="btn btn-generate" onclick="generateImage('a')" id="btn-a">Generate</button>
+      </div>
+      <div class="panel-controls">
+        <div class="control-row">
+          <span class="control-label">Model</span>
+          <select id="model-a" onchange="updateModelInfo('a')">
+            <option value="flux-schnell">Flux Schnell</option>
+            <option value="flux-1.1-pro">Flux 1.1 Pro</option>
+            <option value="dall-e-3" selected>DALL-E 3</option>
+            <option value="gpt-image-1">GPT Image 1</option>
+          </select>
+        </div>
+        <div class="model-info" id="model-info-a">OpenAI • ~$0.04/image • High quality</div>
+        <div class="control-row">
+          <span class="control-label">Quality</span>
+          <select id="quality-a">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <span class="control-label">Size</span>
+          <select id="size-a">
+            <option value="1024x1024" selected>1024×1024</option>
+            <option value="1792x1024">1792×1024</option>
+            <option value="1024x1792">1024×1792</option>
+          </select>
+        </div>
+      </div>
+      <div class="image-container" id="result-a">
+        <div class="image-placeholder">
+          Generated image will appear here
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel B -->
+    <div class="panel" id="panel-b">
+      <div class="panel-header">
+        <span class="panel-title panel-b">Panel B</span>
+        <button class="btn btn-generate panel-b" onclick="generateImage('b')" id="btn-b">Generate</button>
+      </div>
+      <div class="panel-controls">
+        <div class="control-row">
+          <span class="control-label">Model</span>
+          <select id="model-b" onchange="updateModelInfo('b')">
+            <option value="flux-schnell" selected>Flux Schnell</option>
+            <option value="flux-1.1-pro">Flux 1.1 Pro</option>
+            <option value="dall-e-3">DALL-E 3</option>
+            <option value="gpt-image-1">GPT Image 1</option>
+          </select>
+        </div>
+        <div class="model-info" id="model-info-b">Replicate • ~$0.003/image • Fast & cheap</div>
+        <div class="control-row">
+          <span class="control-label">Quality</span>
+          <select id="quality-b">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div class="control-row">
+          <span class="control-label">Size</span>
+          <select id="size-b">
+            <option value="1024x1024" selected>1024×1024</option>
+            <option value="1792x1024">1792×1024</option>
+            <option value="1024x1792">1024×1792</option>
+          </select>
+        </div>
+      </div>
+      <div class="image-container" id="result-b">
+        <div class="image-placeholder">
+          Generated image will appear here
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../danddy-config.js"></script>
+  <script>
+    const API_BASE = window.DanddyConfig?.API_BASE_URL || 'https://danddy-api.onrender.com/api';
+    
+    const MODEL_INFO = {
+      'flux-schnell': { provider: 'Replicate', cost: '~$0.003/image', desc: 'Fast & cheap', costClass: 'cost-cheap' },
+      'flux-1.1-pro': { provider: 'Replicate', cost: '~$0.04/image', desc: 'High quality', costClass: 'cost-medium' },
+      'dall-e-3': { provider: 'OpenAI', cost: '~$0.04/image', desc: 'High quality', costClass: 'cost-medium' },
+      'gpt-image-1': { provider: 'OpenAI', cost: '~$0.02-0.08/image', desc: 'Newest model', costClass: 'cost-high' },
+    };
+
+    let apiStatus = { openai: false, replicate: false };
+
+    async function checkAPIStatus() {
+      const statusEl = document.getElementById('api-status');
+      try {
+        const response = await fetch(`${API_BASE}/ai/status`);
+        const data = await response.json();
+        
+        apiStatus = {
+          openai: data.providers?.openai || false,
+          replicate: data.providers?.replicate || false
+        };
+
+        const providers = [];
+        if (apiStatus.openai) providers.push('OpenAI ✓');
+        if (apiStatus.replicate) providers.push('Replicate ✓');
+
+        if (providers.length > 0) {
+          statusEl.className = 'api-status success';
+          statusEl.textContent = `API Ready: ${providers.join(' • ')}`;
+        } else {
+          statusEl.className = 'api-status error';
+          statusEl.textContent = '⚠️ No AI providers configured';
+        }
+
+        // Update model availability hints
+        updateModelInfo('a');
+        updateModelInfo('b');
+
+      } catch (error) {
+        statusEl.className = 'api-status error';
+        statusEl.textContent = `⚠️ API Error: ${error.message}`;
+      }
+    }
+
+    function updateModelInfo(panel) {
+      const model = document.getElementById(`model-${panel}`).value;
+      const info = MODEL_INFO[model];
+      const infoEl = document.getElementById(`model-info-${panel}`);
+      
+      const isFlux = model.startsWith('flux-');
+      const available = isFlux ? apiStatus.replicate : apiStatus.openai;
+      const availText = available ? '' : ' • ⚠️ NOT CONFIGURED';
+      
+      infoEl.innerHTML = `${info.provider} • <span class="${info.costClass}">${info.cost}</span> • ${info.desc}${availText}`;
+    }
+
+    async function generateImage(panel) {
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!prompt) {
+        alert('Please enter a prompt');
+        return;
+      }
+
+      const model = document.getElementById(`model-${panel}`).value;
+      const quality = document.getElementById(`quality-${panel}`).value;
+      const size = document.getElementById(`size-${panel}`).value;
+
+      const btn = document.getElementById(`btn-${panel}`);
+      const resultEl = document.getElementById(`result-${panel}`);
+      
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+      
+      resultEl.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <div>Generating with ${model}...</div>
+        </div>
+      `;
+
+      const startTime = Date.now();
+
+      try {
+        const response = await fetch(`${API_BASE}/ai/images/generate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt,
+            model,
+            quality,
+            size,
+          }),
+        });
+
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (!data.success || !data.url) {
+          throw new Error(data.detail || 'No image URL returned');
+        }
+
+        const info = MODEL_INFO[model];
+        resultEl.innerHTML = `
+          <img src="${data.url}" class="generated-image" alt="Generated image" />
+          <div class="image-meta">
+            <div class="meta-row">
+              <span class="meta-label">Status</span>
+              <span class="meta-value success">✓ Success</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Model</span>
+              <span class="meta-value">${model}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Time</span>
+              <span class="meta-value">${elapsed}s</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Est. Cost</span>
+              <span class="meta-value">${info.cost}</span>
+            </div>
+            ${data.revised_prompt ? `
+            <div class="meta-row">
+              <span class="meta-label">Revised</span>
+              <span class="meta-value" style="font-size: 0.65rem; color: var(--text-dim);">${data.revised_prompt.substring(0, 100)}...</span>
+            </div>
+            ` : ''}
+          </div>
+        `;
+
+      } catch (error) {
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        resultEl.innerHTML = `
+          <div class="error-message">
+            ❌ ${error.message}
+          </div>
+          <div class="image-meta">
+            <div class="meta-row">
+              <span class="meta-label">Status</span>
+              <span class="meta-value error">Failed</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Model</span>
+              <span class="meta-value">${model}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Time</span>
+              <span class="meta-value">${elapsed}s</span>
+            </div>
+          </div>
+        `;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generate';
+      }
+    }
+
+    async function generateBoth() {
+      const btn = document.getElementById('generate-both');
+      btn.disabled = true;
+      btn.textContent = '⚡ Generating...';
+
+      // Generate both in parallel
+      await Promise.all([
+        generateImage('a'),
+        generateImage('b')
+      ]);
+
+      btn.disabled = false;
+      btn.textContent = '⚡ Generate Both';
+    }
+
+    // Initialize
+    checkAPIStatus();
+    updateModelInfo('a');
+    updateModelInfo('b');
+  </script>
+</body>
+</html>
+
