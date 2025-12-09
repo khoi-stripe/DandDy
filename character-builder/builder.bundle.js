@@ -334,7 +334,10 @@ localStorage.setItem('dnd_portrait_view_mode',value);}catch(e){console.warn('Sto
 return fallback;}catch(e){}}
 return value||fallback;}catch(e){console.warn('StorageService.getPortraitPromptTheme failed, using fallback',e);return(CONFIG&&CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME)||null;}},setPortraitPromptTheme(themeId){try{const value=String(themeId||'').trim();if(!value){localStorage.removeItem('dnd_portrait_prompt_theme');return;}
 if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.getThemes==='function'){try{const themes=window.PortraitPrompt.getThemes();const allowedIds=Array.isArray(themes)?themes.map((t)=>t.id):[];if(!allowedIds.includes(value)){console.warn('StorageService.setPortraitPromptTheme: ignoring unknown theme id',value,);localStorage.removeItem('dnd_portrait_prompt_theme');return;}}catch(e){}}
-localStorage.setItem('dnd_portrait_prompt_theme',value);}catch(e){console.warn('StorageService.setPortraitPromptTheme failed',e);}},getHighQualityGPTImage(){try{const raw=localStorage.getItem('dnd_high_quality_gpt_image');return raw==='true';}catch(e){console.warn('StorageService.getHighQualityGPTImage failed',e);return false;}},setHighQualityGPTImage(enabled){try{if(enabled){localStorage.setItem('dnd_high_quality_gpt_image','true');}else{localStorage.removeItem('dnd_high_quality_gpt_image');}}catch(e){console.warn('StorageService.setHighQualityGPTImage failed',e);}},async getCharacters(){if(!window.CharacterStorage){console.warn('StorageService: CharacterStorage not available');return[];}
+localStorage.setItem('dnd_portrait_prompt_theme',value);}catch(e){console.warn('StorageService.setPortraitPromptTheme failed',e);}},getImageQuality(model){try{const raw=localStorage.getItem('dnd_image_quality');if(!raw)return null;const data=JSON.parse(raw);return data[model]||null;}catch(e){console.warn('StorageService.getImageQuality failed',e);return null;}},setImageQuality(model,quality){try{let data={};const raw=localStorage.getItem('dnd_image_quality');if(raw){try{data=JSON.parse(raw);}catch(e){data={};}}
+if(quality){data[model]=quality;}else{delete data[model];}
+localStorage.setItem('dnd_image_quality',JSON.stringify(data));}catch(e){console.warn('StorageService.setImageQuality failed',e);}},getHighQualityGPTImage(){try{const quality=this.getImageQuality('gpt-image-1');if(quality){return quality==='high';}
+const raw=localStorage.getItem('dnd_high_quality_gpt_image');return raw==='true';}catch(e){console.warn('StorageService.getHighQualityGPTImage failed',e);return false;}},setHighQualityGPTImage(enabled){this.setImageQuality('gpt-image-1',enabled?'high':'medium');try{localStorage.removeItem('dnd_high_quality_gpt_image');}catch(e){}},async getCharacters(){if(!window.CharacterStorage){console.warn('StorageService: CharacterStorage not available');return[];}
 return CharacterStorage.getAll();},async saveCharacter(character){if(!window.CharacterStorage){console.warn('StorageService: CharacterStorage not available');return character;}
 if(character.id){if(DEBUG_BUILDER){console.log('💾 BUILDER: Updating character via CharacterStorage:',character.id);}
 return CharacterStorage.update(character.id,character);}else{if(DEBUG_BUILDER){console.log('💾 BUILDER: Creating character via CharacterStorage');}
@@ -402,7 +405,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
 console.log('%c🎲 OPTIONS (Fallback - Using Original Texts) ✅','color: #f80; font-weight: bold');console.log('  The original option texts will be used instead of AI variations');return options.map((opt)=>opt.text);},async generatePortraitImage(character){if(!CONFIG.ENABLE_AI){console.log('AI service disabled for image generation');return null;}
 const prompt=this.buildPortraitPrompt(character);return await this.generateImageFromPrompt(prompt);},async generateImageFromPrompt(prompt){if(!CONFIG.ENABLE_AI){console.log('%c🎨 DALL-E (Unavailable - AI Disabled)','color: #ff0; font-weight: bold');return null;}
 try{let model='dall-e-3';try{if(window.StorageService&&typeof StorageService.getImageModel==='function'){model=StorageService.getImageModel();}else if(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL){model=CONFIG.DEFAULT_IMAGE_MODEL;}}catch(e){console.warn('AIService.generateImageFromPrompt: failed to read image model, using default',e);}
-console.log('%c🎨 IMAGE: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Prompt (preview):',prompt.substring(0,100)+(prompt.length>100?'…':''));console.log('  Model:',model);console.log('  Note: Image generation takes 20-30s (longer than text AI)...');let quality=model.startsWith('dall-e')?'standard':'medium';if(model==='gpt-image-1'){try{if(window.StorageService&&typeof StorageService.getHighQualityGPTImage==='function'){const highQualityEnabled=StorageService.getHighQualityGPTImage();if(highQualityEnabled){quality='high';console.log('  Quality: HIGH (admin setting enabled)');}}}catch(e){console.warn('AIService: failed to read high quality setting',e);}}
+console.log('%c🎨 IMAGE: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Prompt (preview):',prompt.substring(0,100)+(prompt.length>100?'…':''));console.log('  Model:',model);console.log('  Note: Image generation takes 20-30s (longer than text AI)...');const defaultQuality={'dall-e-3':'standard','gpt-image-1':'medium','flux-1.1-pro':'standard','flux-schnell':'standard',};let quality=defaultQuality[model]||'standard';try{if(window.StorageService&&typeof StorageService.getImageQuality==='function'){const savedQuality=StorageService.getImageQuality(model);if(savedQuality){quality=savedQuality;console.log(`  Quality: ${quality.toUpperCase()} (user preference)`);}}}catch(e){console.warn('AIService: failed to read quality setting',e);}
 const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({prompt:prompt,size:'1024x1024',quality:quality,model:model,}),},70000);if(!response.ok){const errorData=await response.json();console.log('%c🎨 IMAGE (Error)','color: #f00; font-weight: bold');console.log('  Error:',errorData.detail);const extractErrorMessage=(detail)=>{if(!detail)return null;if(Array.isArray(detail)){return detail.map(err=>{if(typeof err==='string')return err;const field=err.loc?err.loc.slice(1).join('.'):'unknown';return`${field}: ${err.msg || err.message || JSON.stringify(err)}`;}).join('; ');}
 if(typeof detail==='object'){return detail.msg||detail.message||JSON.stringify(detail);}
 return String(detail);};const errorMessage=extractErrorMessage(errorData.detail);if(response.status===429){const rateLimitError=new Error(errorMessage||'Rate limit exceeded');rateLimitError.isRateLimit=true;throw rateLimitError;}
@@ -3836,19 +3839,44 @@ const Components = (window.Components = {
       // Silent fail - user is not admin
     }
 
-    // High quality GPT Image setting (admin only)
-    const getHighQualityGPTImage = () => {
-      if (!StorageService || typeof StorageService.getHighQualityGPTImage !== 'function') {
-        return false;
-      }
-      try {
-        return StorageService.getHighQualityGPTImage();
-      } catch (e) {
-        return false;
-      }
+    // Image quality options per model
+    const modelQualityOptions = {
+      'dall-e-3': [
+        { value: 'standard', label: 'Standard' },
+        { value: 'hd', label: 'HD' },
+      ],
+      'gpt-image-1': [
+        { value: 'medium', label: 'Medium' },
+        { value: 'high', label: 'High' },
+      ],
+      // Flux models don't have quality options
+      'flux-1.1-pro': [],
+      'flux-schnell': [],
     };
 
-    const highQualityEnabled = getHighQualityGPTImage();
+    // Get default quality for a model
+    const getDefaultQuality = (model) => {
+      const options = modelQualityOptions[model] || [];
+      return options.length > 0 ? options[0].value : null;
+    };
+
+    // Get current quality setting for selected model
+    const getCurrentImageQuality = (model) => {
+      if (!StorageService || typeof StorageService.getImageQuality !== 'function') {
+        return getDefaultQuality(model);
+      }
+      try {
+        const quality = StorageService.getImageQuality(model);
+        if (quality) return quality;
+        // For gpt-image-1, check legacy setting
+        if (model === 'gpt-image-1' && StorageService.getHighQualityGPTImage) {
+          return StorageService.getHighQualityGPTImage() ? 'high' : 'medium';
+        }
+        return getDefaultQuality(model);
+      } catch (e) {
+        return getDefaultQuality(model);
+      }
+    };
 
     // Helper to truncate text for options
     const truncate = (text, maxLength) => {
@@ -3937,6 +3965,15 @@ aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-la
       imageModelOptions.find((opt) => opt.value === currentImageModelValue) ||
       imageModelOptions[0];
     const currentImageModelLabel = currentImageModelOption.label;
+
+    // Quality options for current model
+    const currentQualityOptions = modelQualityOptions[currentImageModelValue] || [];
+    const currentQualityValue = getCurrentImageQuality(currentImageModelValue);
+    const currentQualityOption = currentQualityOptions.find(
+      (opt) => opt.value === currentQualityValue,
+    ) || currentQualityOptions[0];
+    const currentQualityLabel = currentQualityOption?.label || '';
+    const hasQualityOptions = currentQualityOptions.length > 0;
 
     // Portrait view mode (ASCII vs Original)
     const getPortraitViewMode = () => {
@@ -4112,7 +4149,7 @@ class="terminal-select settings-select hidden">${promptThemes.map((theme)=>{cons
                               }>
                                 ${label}
                               </option>
-                            `;}).join('')}</select></div></div><div class="settings-row mb-lg"><div class="settings-label">AI model</div><div class="selector-shell selector-shell--listbox selector-shell--match-width"><button
+                            `;}).join('')}</select></div></div><div class="settings-row-inline mb-lg"><div class="settings-inline-field settings-inline-field--grow"><div class="settings-label">AI model</div><div class="selector-shell selector-shell--listbox selector-shell--match-width"><button
 class="terminal-btn selector-trigger"
 id="image-model-select-trigger"
 type="button"
@@ -4123,26 +4160,57 @@ class="selector-menu"
 role="listbox"
 aria-label="AI model"
 aria-hidden="true">${imageModelOptions.map((opt)=>{const isSelected=opt.value===currentImageModelOption.value;return`
-                              <button
-                                class="selector-option${isSelected ? ' is-selected' : ''}"
-                                type="button"
-                                role="option"
-                                data-value="${opt.value}"
-                                aria-selected="${isSelected ? 'true' : 'false'}"
-                              >
-                                <span class="selector-option-label">
-                                  ${opt.label}
-                                </span>
-                              </button>
-                            `;}).join('')}</div></div><select
+                                <button
+                                  class="selector-option${isSelected ? ' is-selected' : ''}"
+                                  type="button"
+                                  role="option"
+                                  data-value="${opt.value}"
+                                  aria-selected="${isSelected ? 'true' : 'false'}"
+                                >
+                                  <span class="selector-option-label">
+                                    ${opt.label}
+                                  </span>
+                                </button>
+                              `;}).join('')}</div></div><select
 id="image-model-select"
 class="terminal-select settings-select hidden">${imageModelOptions.map((opt)=>`
-                            <option value="${opt.value}" ${
-                              opt.value === currentImageModelOption.value ? 'selected' : ''
-                            }>
-                              ${opt.label}
-                            </option>
-                          `,).join('')}</select></div><div class="settings-row settings-row--stacked"><div class="settings-label">Default portrait view</div><div class="settings-field"><div class="settings-radio-group"role="radiogroup"aria-label="Default portrait view"><label class="settings-radio-option"><input
+                              <option value="${opt.value}" ${
+                                opt.value === currentImageModelOption.value ? 'selected' : ''
+                              }>
+                                ${opt.label}
+                              </option>
+                            `,).join('')}</select></div><div class="settings-inline-field settings-inline-field--quality ${hasQualityOptions ? '' : 'hidden'}"id="quality-selector-container"><div class="settings-label">Quality</div><div class="selector-shell selector-shell--listbox selector-shell--match-width"><button
+class="terminal-btn selector-trigger"
+id="image-quality-select-trigger"
+type="button"
+aria-haspopup="listbox"
+aria-expanded="false"
+onclick="CharacterSheet.toggleSelectorMenu(this)"><span class="selector-trigger-label"id="image-quality-select-label">${currentQualityLabel}</span></button><div
+class="selector-menu"
+role="listbox"
+aria-label="Image quality"
+aria-hidden="true"
+id="image-quality-options-menu">${currentQualityOptions.map((opt)=>{const isSelected=opt.value===currentQualityOption?.value;return`
+                                <button
+                                  class="selector-option${isSelected ? ' is-selected' : ''}"
+                                  type="button"
+                                  role="option"
+                                  data-value="${opt.value}"
+                                  aria-selected="${isSelected ? 'true' : 'false'}"
+                                >
+                                  <span class="selector-option-label">
+                                    ${opt.label}
+                                  </span>
+                                </button>
+                              `;}).join('')}</div></div><select
+id="image-quality-select"
+class="terminal-select settings-select hidden">${currentQualityOptions.map((opt)=>`
+                              <option value="${opt.value}" ${
+                                opt.value === currentQualityOption?.value ? 'selected' : ''
+                              }>
+                                ${opt.label}
+                              </option>
+                            `,).join('')}</select></div></div><div class="settings-row settings-row--stacked"><div class="settings-label">Default portrait view</div><div class="settings-field"><div class="settings-radio-group"role="radiogroup"aria-label="Default portrait view"><label class="settings-radio-option"><input
 type="radio"
 name="portrait-view-mode"
 value="original"
@@ -4150,25 +4218,7 @@ ${currentPortraitViewMode==='original'?'checked':''}><span class="settings-radio
 type="radio"
 name="portrait-view-mode"
 value="ascii"
-${currentPortraitViewMode==='original'?'':'checked'}><span class="settings-radio-label">ASCII</span></label></div></div></div>${isUserAdmin?`
-                    <div class="settings-admin-section">
-                      <div class="settings-row">
-                        <label class="settings-toggle">
-                          <input
-                            type="checkbox"
-                            class="settings-toggle-input"
-                            id="high-quality-gpt-image"
-                            ${highQualityEnabled ? 'checked' : ''}
-                          >
-                          <span class="settings-toggle-track"></span>
-                          <span class="settings-toggle-label">
-                            High quality GPT Image 1
-                            <span class="settings-admin-badge">Admin</span>
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                    `:''}</section></div></div></div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="SettingsModal.close()">CANCEL</button><button class="terminal-btn terminal-btn-primary"onclick="SettingsModal.save()">SAVE</button></div></div></div>`;
+${currentPortraitViewMode==='original'?'':'checked'}><span class="settings-radio-label">ASCII</span></label></div></div></div></section></div></div></div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="SettingsModal.close()">CANCEL</button><button class="terminal-btn terminal-btn-primary"onclick="SettingsModal.save()">SAVE</button></div></div></div>`;
   },
 });
 
@@ -4272,6 +4322,97 @@ const SettingsModal = (window.SettingsModal = {
       });
     }
 
+    // Quality options per model (duplicated here for initSelectors)
+    const modelQualityOptionsMap = {
+      'dall-e-3': [
+        { value: 'standard', label: 'Standard' },
+        { value: 'hd', label: 'HD' },
+      ],
+      'gpt-image-1': [
+        { value: 'medium', label: 'Medium' },
+        { value: 'high', label: 'High' },
+      ],
+      'flux-1.1-pro': [],
+      'flux-schnell': [],
+    };
+
+    // Helper to update quality selector options based on selected model
+    const updateQualityOptions = (modelValue) => {
+      const qualityContainer = modal.querySelector('#quality-selector-container');
+      const qualityLabel = modal.querySelector('#image-quality-select-label');
+      const qualitySelect = modal.querySelector('#image-quality-select');
+      const qualityMenu = modal.querySelector('#image-quality-options-menu');
+
+      const options = modelQualityOptionsMap[modelValue] || [];
+
+      if (!options.length) {
+        // Hide quality selector if model has no quality options
+        if (qualityContainer) qualityContainer.classList.add('hidden');
+        return;
+      }
+
+      // Show quality selector
+      if (qualityContainer) qualityContainer.classList.remove('hidden');
+
+      // Get saved quality for this model, or default to first option
+      let currentQuality = null;
+      if (window.StorageService && StorageService.getImageQuality) {
+        currentQuality = StorageService.getImageQuality(modelValue);
+      }
+      if (!currentQuality) {
+        currentQuality = options[0].value;
+      }
+
+      // Update menu options
+      if (qualityMenu) {
+        qualityMenu.innerHTML = options
+          .map((opt) => {
+            const isSelected = opt.value === currentQuality;
+            return `<button
+class="selector-option${isSelected ? ' is-selected' : ''}"
+type="button"
+role="option"
+data-value="${opt.value}"
+aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-label">${opt.label}</span></button>`;
+          })
+          .join('');
+
+        // Re-wire quality option clicks
+        const newQualityOptions = qualityMenu.querySelectorAll('.selector-option');
+        newQualityOptions.forEach((qOpt) => {
+          qOpt.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const qValue = qOpt.getAttribute('data-value');
+            const qLabel = qOpt.querySelector('.selector-option-label');
+            if (qValue && qLabel && qualityLabel && qualitySelect) {
+              qualityLabel.textContent = qLabel.textContent.trim();
+              qualitySelect.value = qValue;
+              newQualityOptions.forEach((o) => {
+                const isSelected = o === qOpt;
+                o.classList.toggle('is-selected', isSelected);
+                o.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+              });
+            }
+          });
+        });
+      }
+
+      // Update hidden select options
+      if (qualitySelect) {
+        qualitySelect.innerHTML = options
+          .map(
+            (opt) => `<option value="${opt.value}"${opt.value===currentQuality?'selected':''}>${opt.label}</option>`,
+          )
+          .join('');
+      }
+
+      // Update label
+      const activeOption = options.find((o) => o.value === currentQuality) || options[0];
+      if (qualityLabel && activeOption) {
+        qualityLabel.textContent = activeOption.label;
+      }
+    };
+
     // Image model selector
     const imageModelTrigger = modal.querySelector('#image-model-select-trigger');
     const imageModelLabel = modal.querySelector('#image-model-select-label');
@@ -4291,6 +4432,35 @@ const SettingsModal = (window.SettingsModal = {
             imageModelSelect.value = value;
             // Keep menu selection state in sync with the trigger
             imageModelOptions.forEach((opt) => {
+              const isSelected = opt === option;
+              opt.classList.toggle('is-selected', isSelected);
+              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+            // Update quality options when model changes
+            updateQualityOptions(value);
+          }
+        });
+      });
+    }
+
+    // Image quality selector (initial setup)
+    const qualityTrigger = modal.querySelector('#image-quality-select-trigger');
+    const qualityLabel = modal.querySelector('#image-quality-select-label');
+    const qualitySelect = modal.querySelector('#image-quality-select');
+    const qualityOptions = modal.querySelectorAll(
+      '#image-quality-options-menu .selector-option',
+    );
+
+    if (qualityTrigger && qualityLabel && qualitySelect && qualityOptions.length) {
+      qualityOptions.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = option.getAttribute('data-value');
+          const label = option.querySelector('.selector-option-label');
+          if (value && label) {
+            qualityLabel.textContent = label.textContent.trim();
+            qualitySelect.value = value;
+            qualityOptions.forEach((opt) => {
               const isSelected = opt === option;
               opt.classList.toggle('is-selected', isSelected);
               opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
@@ -4409,10 +4579,11 @@ const SettingsModal = (window.SettingsModal = {
       StorageService.setPortraitPromptTheme(portraitThemeSelect.value);
     }
 
-    // Save high quality GPT Image setting (admin only)
-    const highQualityToggle = document.getElementById('high-quality-gpt-image');
-    if (highQualityToggle && window.StorageService && StorageService.setHighQualityGPTImage) {
-      StorageService.setHighQualityGPTImage(highQualityToggle.checked);
+    // Save image quality setting for the selected model
+    const imageQualitySelect = document.getElementById('image-quality-select');
+    const imageModelForQuality = imageModelSelect?.value;
+    if (imageQualitySelect && imageModelForQuality && window.StorageService && StorageService.setImageQuality) {
+      StorageService.setImageQuality(imageModelForQuality, imageQualitySelect.value);
     }
 
     // Use a non-intrusive toast for settings changes instead of a narrator line

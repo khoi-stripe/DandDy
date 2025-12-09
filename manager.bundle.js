@@ -159,7 +159,10 @@ localStorage.setItem('dnd_portrait_view_mode',value);}catch(e){console.warn('Sto
 return fallback;}catch(e){}}
 return value||fallback;}catch(e){console.warn('StorageService.getPortraitPromptTheme failed, using fallback',e);return(CONFIG&&CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME)||null;}},setPortraitPromptTheme(themeId){try{const value=String(themeId||'').trim();if(!value){localStorage.removeItem('dnd_portrait_prompt_theme');return;}
 if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.getThemes==='function'){try{const themes=window.PortraitPrompt.getThemes();const allowedIds=Array.isArray(themes)?themes.map((t)=>t.id):[];if(!allowedIds.includes(value)){console.warn('StorageService.setPortraitPromptTheme: ignoring unknown theme id',value,);localStorage.removeItem('dnd_portrait_prompt_theme');return;}}catch(e){}}
-localStorage.setItem('dnd_portrait_prompt_theme',value);}catch(e){console.warn('StorageService.setPortraitPromptTheme failed',e);}},getHighQualityGPTImage(){try{const raw=localStorage.getItem('dnd_high_quality_gpt_image');return raw==='true';}catch(e){console.warn('StorageService.getHighQualityGPTImage failed',e);return false;}},setHighQualityGPTImage(enabled){try{if(enabled){localStorage.setItem('dnd_high_quality_gpt_image','true');}else{localStorage.removeItem('dnd_high_quality_gpt_image');}}catch(e){console.warn('StorageService.setHighQualityGPTImage failed',e);}},async getCharacters(){if(!window.CharacterStorage){console.warn('StorageService: CharacterStorage not available');return[];}
+localStorage.setItem('dnd_portrait_prompt_theme',value);}catch(e){console.warn('StorageService.setPortraitPromptTheme failed',e);}},getImageQuality(model){try{const raw=localStorage.getItem('dnd_image_quality');if(!raw)return null;const data=JSON.parse(raw);return data[model]||null;}catch(e){console.warn('StorageService.getImageQuality failed',e);return null;}},setImageQuality(model,quality){try{let data={};const raw=localStorage.getItem('dnd_image_quality');if(raw){try{data=JSON.parse(raw);}catch(e){data={};}}
+if(quality){data[model]=quality;}else{delete data[model];}
+localStorage.setItem('dnd_image_quality',JSON.stringify(data));}catch(e){console.warn('StorageService.setImageQuality failed',e);}},getHighQualityGPTImage(){try{const quality=this.getImageQuality('gpt-image-1');if(quality){return quality==='high';}
+const raw=localStorage.getItem('dnd_high_quality_gpt_image');return raw==='true';}catch(e){console.warn('StorageService.getHighQualityGPTImage failed',e);return false;}},setHighQualityGPTImage(enabled){this.setImageQuality('gpt-image-1',enabled?'high':'medium');try{localStorage.removeItem('dnd_high_quality_gpt_image');}catch(e){}},async getCharacters(){if(!window.CharacterStorage){console.warn('StorageService: CharacterStorage not available');return[];}
 return CharacterStorage.getAll();},async saveCharacter(character){if(!window.CharacterStorage){console.warn('StorageService: CharacterStorage not available');return character;}
 if(character.id){if(DEBUG_BUILDER){console.log('💾 BUILDER: Updating character via CharacterStorage:',character.id);}
 return CharacterStorage.update(character.id,character);}else{if(DEBUG_BUILDER){console.log('💾 BUILDER: Creating character via CharacterStorage');}
@@ -227,7 +230,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
 console.log('%c🎲 OPTIONS (Fallback - Using Original Texts) ✅','color: #f80; font-weight: bold');console.log('  The original option texts will be used instead of AI variations');return options.map((opt)=>opt.text);},async generatePortraitImage(character){if(!CONFIG.ENABLE_AI){console.log('AI service disabled for image generation');return null;}
 const prompt=this.buildPortraitPrompt(character);return await this.generateImageFromPrompt(prompt);},async generateImageFromPrompt(prompt){if(!CONFIG.ENABLE_AI){console.log('%c🎨 DALL-E (Unavailable - AI Disabled)','color: #ff0; font-weight: bold');return null;}
 try{let model='dall-e-3';try{if(window.StorageService&&typeof StorageService.getImageModel==='function'){model=StorageService.getImageModel();}else if(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL){model=CONFIG.DEFAULT_IMAGE_MODEL;}}catch(e){console.warn('AIService.generateImageFromPrompt: failed to read image model, using default',e);}
-console.log('%c🎨 IMAGE: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Prompt (preview):',prompt.substring(0,100)+(prompt.length>100?'…':''));console.log('  Model:',model);console.log('  Note: Image generation takes 20-30s (longer than text AI)...');let quality=model.startsWith('dall-e')?'standard':'medium';if(model==='gpt-image-1'){try{if(window.StorageService&&typeof StorageService.getHighQualityGPTImage==='function'){const highQualityEnabled=StorageService.getHighQualityGPTImage();if(highQualityEnabled){quality='high';console.log('  Quality: HIGH (admin setting enabled)');}}}catch(e){console.warn('AIService: failed to read high quality setting',e);}}
+console.log('%c🎨 IMAGE: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Prompt (preview):',prompt.substring(0,100)+(prompt.length>100?'…':''));console.log('  Model:',model);console.log('  Note: Image generation takes 20-30s (longer than text AI)...');const defaultQuality={'dall-e-3':'standard','gpt-image-1':'medium','flux-1.1-pro':'standard','flux-schnell':'standard',};let quality=defaultQuality[model]||'standard';try{if(window.StorageService&&typeof StorageService.getImageQuality==='function'){const savedQuality=StorageService.getImageQuality(model);if(savedQuality){quality=savedQuality;console.log(`  Quality: ${quality.toUpperCase()} (user preference)`);}}}catch(e){console.warn('AIService: failed to read quality setting',e);}
 const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({prompt:prompt,size:'1024x1024',quality:quality,model:model,}),},70000);if(!response.ok){const errorData=await response.json();console.log('%c🎨 IMAGE (Error)','color: #f00; font-weight: bold');console.log('  Error:',errorData.detail);const extractErrorMessage=(detail)=>{if(!detail)return null;if(Array.isArray(detail)){return detail.map(err=>{if(typeof err==='string')return err;const field=err.loc?err.loc.slice(1).join('.'):'unknown';return`${field}: ${err.msg || err.message || JSON.stringify(err)}`;}).join('; ');}
 if(typeof detail==='object'){return detail.msg||detail.message||JSON.stringify(detail);}
 return String(detail);};const errorMessage=extractErrorMessage(errorData.detail);if(response.status===429){const rateLimitError=new Error(errorMessage||'Rate limit exceeded');rateLimitError.isRateLimit=true;throw rateLimitError;}
@@ -296,8 +299,9 @@ console.log('─'.repeat(80));console.log('%c💡 DEBUGGING SUGGESTIONS:','color
         })}
       </div>
     `;},renderSettings(){const currentNarratorId=StorageService.getNarratorId();const narratorsList=getNarratorList();let isUserAdmin=false;try{if(window.AuthService&&typeof AuthService.isAuthenticated==='function'&&AuthService.isAuthenticated()){const token=AuthService.getToken?AuthService.getToken():null;if(token){const payload=token.split('.')[1];const decoded=JSON.parse(atob(payload));isUserAdmin=decoded.role==='admin';}}}catch(e){}
-const getHighQualityGPTImage=()=>{if(!StorageService||typeof StorageService.getHighQualityGPTImage!=='function'){return false;}
-try{return StorageService.getHighQualityGPTImage();}catch(e){return false;}};const highQualityEnabled=getHighQualityGPTImage();const truncate=(text,maxLength)=>{return text.length>maxLength?text.substring(0,maxLength-3)+'...':text;};const formatNarratorTitle=(narrator)=>{if(!narrator)return'';const base=String(narrator.name||narrator.id||'').trim();if(!base)return'';return base.split(/[-_\s]+/).filter(Boolean).map((part)=>part.charAt(0).toUpperCase()+part.slice(1).toLowerCase()).join(' ');};const getCurrentTextSpeed=()=>{if(!StorageService||typeof StorageService.getTextSpeedMultiplier!=='function'){return 1;}
+const modelQualityOptions={'dall-e-3':[{value:'standard',label:'Standard'},{value:'hd',label:'HD'},],'gpt-image-1':[{value:'medium',label:'Medium'},{value:'high',label:'High'},],'flux-1.1-pro':[],'flux-schnell':[],};const getDefaultQuality=(model)=>{const options=modelQualityOptions[model]||[];return options.length>0?options[0].value:null;};const getCurrentImageQuality=(model)=>{if(!StorageService||typeof StorageService.getImageQuality!=='function'){return getDefaultQuality(model);}
+try{const quality=StorageService.getImageQuality(model);if(quality)return quality;if(model==='gpt-image-1'&&StorageService.getHighQualityGPTImage){return StorageService.getHighQualityGPTImage()?'high':'medium';}
+return getDefaultQuality(model);}catch(e){return getDefaultQuality(model);}};const truncate=(text,maxLength)=>{return text.length>maxLength?text.substring(0,maxLength-3)+'...':text;};const formatNarratorTitle=(narrator)=>{if(!narrator)return'';const base=String(narrator.name||narrator.id||'').trim();if(!base)return'';return base.split(/[-_\s]+/).filter(Boolean).map((part)=>part.charAt(0).toUpperCase()+part.slice(1).toLowerCase()).join(' ');};const getCurrentTextSpeed=()=>{if(!StorageService||typeof StorageService.getTextSpeedMultiplier!=='function'){return 1;}
 try{return StorageService.getTextSpeedMultiplier();}catch(e){console.warn('Settings: failed to read text speed multiplier',e);return 1;}};const currentTextSpeedMultiplier=getCurrentTextSpeed();const getCurrentImageModel=()=>{if(!StorageService||typeof StorageService.getImageModel!=='function'){return(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL)||'dall-e-3';}
 try{return StorageService.getImageModel();}catch(e){console.warn('Settings: failed to read image model preference',e);return(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL)||'dall-e-3';}};const currentNarrator=narratorsList.find((n)=>n.id===currentNarratorId)||narratorsList[0];const currentNarratorLabel=currentNarrator?formatNarratorTitle(currentNarrator):'Choose narrator';const narratorOptionsMenu=narratorsList.map((narrator)=>{const label=formatNarratorTitle(narrator);const isSelected=narrator.id===currentNarratorId;return`
           <button
@@ -311,7 +315,7 @@ try{return StorageService.getImageModel();}catch(e){console.warn('Settings: fail
               ${label}
             </span>
           </button>
-        `;}).join('');const textSpeedOptions=[{value:1,label:'Normal'},{value:1.5,label:'Fast (1.5×)'},{value:2,label:'Very Fast (2×)'},];const currentTextSpeedOption=textSpeedOptions.find((opt)=>opt.value===currentTextSpeedMultiplier)||textSpeedOptions[0];const currentTextSpeedLabel=currentTextSpeedOption.label;const imageModelOptions=[{value:'dall-e-3',label:'DALL·E 3 (high detail)'},{value:'gpt-image-1',label:'GPT Image 1 (OpenAI)'},{value:'flux-1.1-pro',label:'Flux Pro (high quality)'},{value:'flux-schnell',label:'Flux Schnell (fast)'},];const currentImageModelValue=getCurrentImageModel();const currentImageModelOption=imageModelOptions.find((opt)=>opt.value===currentImageModelValue)||imageModelOptions[0];const currentImageModelLabel=currentImageModelOption.label;const getPortraitViewMode=()=>{if(window.StorageService&&StorageService.getPortraitViewMode){return StorageService.getPortraitViewMode();}
+        `;}).join('');const textSpeedOptions=[{value:1,label:'Normal'},{value:1.5,label:'Fast (1.5×)'},{value:2,label:'Very Fast (2×)'},];const currentTextSpeedOption=textSpeedOptions.find((opt)=>opt.value===currentTextSpeedMultiplier)||textSpeedOptions[0];const currentTextSpeedLabel=currentTextSpeedOption.label;const imageModelOptions=[{value:'dall-e-3',label:'DALL·E 3 (high detail)'},{value:'gpt-image-1',label:'GPT Image 1 (OpenAI)'},{value:'flux-1.1-pro',label:'Flux Pro (high quality)'},{value:'flux-schnell',label:'Flux Schnell (fast)'},];const currentImageModelValue=getCurrentImageModel();const currentImageModelOption=imageModelOptions.find((opt)=>opt.value===currentImageModelValue)||imageModelOptions[0];const currentImageModelLabel=currentImageModelOption.label;const currentQualityOptions=modelQualityOptions[currentImageModelValue]||[];const currentQualityValue=getCurrentImageQuality(currentImageModelValue);const currentQualityOption=currentQualityOptions.find((opt)=>opt.value===currentQualityValue,)||currentQualityOptions[0];const currentQualityLabel=currentQualityOption?.label||'';const hasQualityOptions=currentQualityOptions.length>0;const getPortraitViewMode=()=>{if(window.StorageService&&StorageService.getPortraitViewMode){return StorageService.getPortraitViewMode();}
 return(CONFIG&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE)||'original';};const currentPortraitViewMode=getPortraitViewMode();const getPortraitPromptTheme=()=>{try{if(window.StorageService&&StorageService.getPortraitPromptTheme){return StorageService.getPortraitPromptTheme();}}catch(e){console.warn('Settings: failed to read portrait prompt theme',e);}
 if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.getDefaultThemeId==='function'){try{return window.PortraitPrompt.getDefaultThemeId();}catch(e){}}
 return(CONFIG&&CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME)||null;};const currentPromptThemeId=getPortraitPromptTheme();let promptThemes=[];if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.getThemes==='function'){try{promptThemes=window.PortraitPrompt.getThemes()||[];}catch(e){console.warn('Settings: failed to read portrait prompt themes',e);}}
@@ -473,51 +477,100 @@ aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-la
                         </select>
                       </div>
                     </div>
-                    <div class="settings-row mb-lg">
-                      <div class="settings-label">AI model</div>
-                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
-                        <button
-                          class="terminal-btn selector-trigger"
-                          id="image-model-select-trigger"
-                          type="button"
-                          aria-haspopup="listbox"
-                          aria-expanded="false"
-                          onclick="CharacterSheet.toggleSelectorMenu(this)"
-                        >
-                          <span class="selector-trigger-label" id="image-model-select-label">
-                            ${currentImageModelLabel}
-                          </span>
-                        </button>
-                        <div
-                          class="selector-menu"
-                          role="listbox"
-                          aria-label="AI model"
-                          aria-hidden="true"
-                        >
-                          ${imageModelOptions
-                            .map((opt) => {
-                              const isSelected =
-                                opt.value === currentImageModelOption.value;
-                              return `<button
+                    <div class="settings-row-inline mb-lg">
+                      <div class="settings-inline-field settings-inline-field--grow">
+                        <div class="settings-label">AI model</div>
+                        <div class="selector-shell selector-shell--listbox selector-shell--match-width">
+                          <button
+                            class="terminal-btn selector-trigger"
+                            id="image-model-select-trigger"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            onclick="CharacterSheet.toggleSelectorMenu(this)"
+                          >
+                            <span class="selector-trigger-label" id="image-model-select-label">
+                              ${currentImageModelLabel}
+                            </span>
+                          </button>
+                          <div
+                            class="selector-menu"
+                            role="listbox"
+                            aria-label="AI model"
+                            aria-hidden="true"
+                          >
+                            ${imageModelOptions
+                              .map((opt) => {
+                                const isSelected =
+                                  opt.value === currentImageModelOption.value;
+                                return `<button
 class="selector-option${isSelected ? ' is-selected' : ''}"
 type="button"
 role="option"
 data-value="${opt.value}"
 aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-label">${opt.label}</span></button>`;
-                            })
-                            .join('')}
+                              })
+                              .join('')}
+                          </div>
                         </div>
+                        <select
+                          id="image-model-select"
+                          class="terminal-select settings-select hidden"
+                        >
+                          ${imageModelOptions
+                            .map(
+                              (opt) => `<option value="${opt.value}"${opt.value===currentImageModelOption.value?'selected':''}>${opt.label}</option>`,
+                            )
+                            .join('')}
+                        </select>
                       </div>
-                      <select
-                        id="image-model-select"
-                        class="terminal-select settings-select hidden"
-                      >
-                        ${imageModelOptions
-                          .map(
-                            (opt) => `<option value="${opt.value}"${opt.value===currentImageModelOption.value?'selected':''}>${opt.label}</option>`,
-                          )
-                          .join('')}
-                      </select>
+                      <div class="settings-inline-field settings-inline-field--quality ${hasQualityOptions ? '' : 'hidden'}" id="quality-selector-container">
+                        <div class="settings-label">Quality</div>
+                        <div class="selector-shell selector-shell--listbox selector-shell--match-width">
+                          <button
+                            class="terminal-btn selector-trigger"
+                            id="image-quality-select-trigger"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            onclick="CharacterSheet.toggleSelectorMenu(this)"
+                          >
+                            <span class="selector-trigger-label" id="image-quality-select-label">
+                              ${currentQualityLabel}
+                            </span>
+                          </button>
+                          <div
+                            class="selector-menu"
+                            role="listbox"
+                            aria-label="Image quality"
+                            aria-hidden="true"
+                            id="image-quality-options-menu"
+                          >
+                            ${currentQualityOptions
+                              .map((opt) => {
+                                const isSelected =
+                                  opt.value === currentQualityOption?.value;
+                                return `<button
+class="selector-option${isSelected ? ' is-selected' : ''}"
+type="button"
+role="option"
+data-value="${opt.value}"
+aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-label">${opt.label}</span></button>`;
+                              })
+                              .join('')}
+                          </div>
+                        </div>
+                        <select
+                          id="image-quality-select"
+                          class="terminal-select settings-select hidden"
+                        >
+                          ${currentQualityOptions
+                            .map(
+                              (opt) => `<option value="${opt.value}"${opt.value===currentQualityOption?.value?'selected':''}>${opt.label}</option>`,
+                            )
+                            .join('')}
+                        </select>
+                      </div>
                     </div>
                     <div class="settings-row settings-row--stacked">
                       <div class="settings-label">Default portrait view</div>
@@ -544,11 +597,6 @@ aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-la
                         </div>
                       </div>
                     </div>
-                    ${isUserAdmin ? `<div class="settings-admin-section"><div class="settings-row"><label class="settings-toggle"><input
-type="checkbox"
-class="settings-toggle-input"
-id="high-quality-gpt-image"
-${highQualityEnabled?'checked':''}><span class="settings-toggle-track"></span><span class="settings-toggle-label">High quality GPT Image 1<span class="settings-admin-badge">Admin</span></span></label></div></div>` : ''}
                   </section>
                 </div>
               </div>
@@ -563,7 +611,29 @@ ${highQualityEnabled?'checked':''}><span class="settings-toggle-track"></span><s
     `;},});const SettingsModal=(window.SettingsModal={_escHandler:null,open(){if(document.getElementById('settingsModal'))return;const settingsHTML=Components.renderSettings();const host=document.querySelector('.terminal-container')||document.querySelector('.terminal-frame')||document.body;host.insertAdjacentHTML('beforeend',settingsHTML);const modal=document.getElementById('settingsModal');if(modal&&typeof window.Utils!=='undefined'&&Utils.focusFirstFieldInModal){Utils.focusFirstFieldInModal(modal);}
 this.initSelectors(modal);this._escHandler=(e)=>{if(e.key==='Escape'){SettingsModal.close();}};document.addEventListener('keydown',this._escHandler);},initSelectors(modal){if(!modal)return;const narratorTrigger=modal.querySelector('#narrator-select-trigger');const narratorLabel=modal.querySelector('#narrator-select-label');const narratorSelect=modal.querySelector('#narrator-select');const narratorOptions=modal.querySelectorAll('.selector-menu[aria-label="Narrator voice"] .selector-option',);if(narratorTrigger&&narratorLabel&&narratorSelect&&narratorOptions.length){narratorOptions.forEach((option)=>{option.addEventListener('click',(e)=>{e.stopPropagation();const value=option.getAttribute('data-value');const label=option.querySelector('.selector-option-label');if(value&&label){narratorLabel.textContent=label.textContent.trim();narratorSelect.value=value;narratorOptions.forEach((opt)=>{const isSelected=opt===option;opt.classList.toggle('is-selected',isSelected);opt.setAttribute('aria-selected',isSelected?'true':'false');});}});});}
 const speedTrigger=modal.querySelector('#text-speed-select-trigger');const speedLabel=modal.querySelector('#text-speed-select-label');const speedSelect=modal.querySelector('#text-speed-select');const speedOptions=modal.querySelectorAll('.selector-menu[aria-label="Narrator text speed"] .selector-option',);if(speedTrigger&&speedLabel&&speedSelect&&speedOptions.length){speedOptions.forEach((option)=>{option.addEventListener('click',(e)=>{e.stopPropagation();const value=option.getAttribute('data-value');const label=option.querySelector('.selector-option-label');if(value&&label){speedLabel.textContent=label.textContent.trim();speedSelect.value=value;speedOptions.forEach((opt)=>{const isSelected=opt===option;opt.classList.toggle('is-selected',isSelected);opt.setAttribute('aria-selected',isSelected?'true':'false');});}});});}
-const imageModelTrigger=modal.querySelector('#image-model-select-trigger');const imageModelLabel=modal.querySelector('#image-model-select-label');const imageModelSelect=modal.querySelector('#image-model-select');const imageModelOptions=modal.querySelectorAll('.selector-menu[aria-label="AI model"] .selector-option',);if(imageModelTrigger&&imageModelLabel&&imageModelSelect&&imageModelOptions.length){imageModelOptions.forEach((option)=>{option.addEventListener('click',(e)=>{e.stopPropagation();const value=option.getAttribute('data-value');const label=option.querySelector('.selector-option-label');if(value&&label){imageModelLabel.textContent=label.textContent.trim();imageModelSelect.value=value;imageModelOptions.forEach((opt)=>{const isSelected=opt===option;opt.classList.toggle('is-selected',isSelected);opt.setAttribute('aria-selected',isSelected?'true':'false');});}});});}
+const modelQualityOptionsMap={'dall-e-3':[{value:'standard',label:'Standard'},{value:'hd',label:'HD'},],'gpt-image-1':[{value:'medium',label:'Medium'},{value:'high',label:'High'},],'flux-1.1-pro':[],'flux-schnell':[],};const updateQualityOptions=(modelValue)=>{const qualityContainer=modal.querySelector('#quality-selector-container');const qualityLabel=modal.querySelector('#image-quality-select-label');const qualitySelect=modal.querySelector('#image-quality-select');const qualityMenu=modal.querySelector('#image-quality-options-menu');const options=modelQualityOptionsMap[modelValue]||[];if(!options.length){if(qualityContainer)qualityContainer.classList.add('hidden');return;}
+if(qualityContainer)qualityContainer.classList.remove('hidden');let currentQuality=null;if(window.StorageService&&StorageService.getImageQuality){currentQuality=StorageService.getImageQuality(modelValue);}
+if(!currentQuality){currentQuality=options[0].value;}
+if(qualityMenu){qualityMenu.innerHTML=options.map((opt)=>{const isSelected=opt.value===currentQuality;return`
+              <button
+                class="selector-option${isSelected ? ' is-selected' : ''}"
+                type="button"
+                role="option"
+                data-value="${opt.value}"
+                aria-selected="${isSelected ? 'true' : 'false'}"
+              >
+                <span class="selector-option-label">
+                  ${opt.label}
+                </span>
+              </button>
+            `;}).join('');const newQualityOptions=qualityMenu.querySelectorAll('.selector-option');newQualityOptions.forEach((qOpt)=>{qOpt.addEventListener('click',(e)=>{e.stopPropagation();const qValue=qOpt.getAttribute('data-value');const qLabel=qOpt.querySelector('.selector-option-label');if(qValue&&qLabel&&qualityLabel&&qualitySelect){qualityLabel.textContent=qLabel.textContent.trim();qualitySelect.value=qValue;newQualityOptions.forEach((o)=>{const isSelected=o===qOpt;o.classList.toggle('is-selected',isSelected);o.setAttribute('aria-selected',isSelected?'true':'false');});}});});}
+if(qualitySelect){qualitySelect.innerHTML=options.map((opt)=>`
+            <option value="${opt.value}" ${opt.value === currentQuality ? 'selected' : ''}>
+              ${opt.label}
+            </option>
+          `,).join('');}
+const activeOption=options.find((o)=>o.value===currentQuality)||options[0];if(qualityLabel&&activeOption){qualityLabel.textContent=activeOption.label;}};const imageModelTrigger=modal.querySelector('#image-model-select-trigger');const imageModelLabel=modal.querySelector('#image-model-select-label');const imageModelSelect=modal.querySelector('#image-model-select');const imageModelOptions=modal.querySelectorAll('.selector-menu[aria-label="AI model"] .selector-option',);if(imageModelTrigger&&imageModelLabel&&imageModelSelect&&imageModelOptions.length){imageModelOptions.forEach((option)=>{option.addEventListener('click',(e)=>{e.stopPropagation();const value=option.getAttribute('data-value');const label=option.querySelector('.selector-option-label');if(value&&label){imageModelLabel.textContent=label.textContent.trim();imageModelSelect.value=value;imageModelOptions.forEach((opt)=>{const isSelected=opt===option;opt.classList.toggle('is-selected',isSelected);opt.setAttribute('aria-selected',isSelected?'true':'false');});updateQualityOptions(value);}});});}
+const qualityTrigger=modal.querySelector('#image-quality-select-trigger');const qualityLabel=modal.querySelector('#image-quality-select-label');const qualitySelect=modal.querySelector('#image-quality-select');const qualityOptions=modal.querySelectorAll('#image-quality-options-menu .selector-option',);if(qualityTrigger&&qualityLabel&&qualitySelect&&qualityOptions.length){qualityOptions.forEach((option)=>{option.addEventListener('click',(e)=>{e.stopPropagation();const value=option.getAttribute('data-value');const label=option.querySelector('.selector-option-label');if(value&&label){qualityLabel.textContent=label.textContent.trim();qualitySelect.value=value;qualityOptions.forEach((opt)=>{const isSelected=opt===option;opt.classList.toggle('is-selected',isSelected);opt.setAttribute('aria-selected',isSelected?'true':'false');});}});});}
 const themeTrigger=modal.querySelector('#portrait-theme-select-trigger',);const themeLabel=modal.querySelector('#portrait-theme-select-label');const themeSelect=modal.querySelector('#portrait-theme-select');const themeOptions=modal.querySelectorAll('.selector-menu[aria-label="Portrait prompt theme"] .selector-option',);if(themeTrigger&&themeLabel&&themeSelect&&themeOptions.length){themeOptions.forEach((option)=>{option.addEventListener('click',(e)=>{e.stopPropagation();const value=option.getAttribute('data-value');const label=option.querySelector('.selector-option-label');if(value&&label){themeLabel.textContent=label.textContent.trim();themeSelect.value=value;themeOptions.forEach((opt)=>{const isSelected=opt===option;opt.classList.toggle('is-selected',isSelected);opt.setAttribute('aria-selected',isSelected?'true':'false');});}});});}},close(){const modal=document.getElementById('settingsModal');if(!modal){if(this._escHandler){document.removeEventListener('keydown',this._escHandler);this._escHandler=null;}
 return;}
 const content=modal.querySelector('.modal-content')||modal;const handleClose=()=>{if(modal&&modal.parentNode){modal.parentNode.removeChild(modal);}
@@ -574,7 +644,7 @@ const imageModelSelect=document.getElementById('image-model-select');if(imageMod
 let portraitModeChanged=false;const portraitModeInput=document.querySelector('input[name="portrait-view-mode"]:checked',);if(portraitModeInput&&window.StorageService&&StorageService.setPortraitViewMode){const oldMode=StorageService.getPortraitViewMode?StorageService.getPortraitViewMode():null;const newMode=portraitModeInput.value;if(oldMode!==newMode){portraitModeChanged=true;}
 StorageService.setPortraitViewMode(newMode);}
 const portraitThemeSelect=document.getElementById('portrait-theme-select');if(portraitThemeSelect&&window.StorageService&&StorageService.setPortraitPromptTheme){StorageService.setPortraitPromptTheme(portraitThemeSelect.value);}
-const highQualityToggle=document.getElementById('high-quality-gpt-image');if(highQualityToggle&&window.StorageService&&StorageService.setHighQualityGPTImage){StorageService.setHighQualityGPTImage(highQualityToggle.checked);}
+const imageQualitySelect=document.getElementById('image-quality-select');const imageModelForQuality=imageModelSelect?.value;if(imageQualitySelect&&imageModelForQuality&&window.StorageService&&StorageService.setImageQuality){StorageService.setImageQuality(imageModelForQuality,imageQualitySelect.value);}
 if(window.App&&typeof App.showToast==='function'){App.showToast('Settings saved');}else if(typeof showNotification==='function'){showNotification('Settings saved');}
 this.close();if(portraitModeChanged){if(typeof UI!=='undefined'&&UI&&typeof UI.renderCharacterGrid==='function'){UI.renderCharacterGrid();if(typeof AppState!=='undefined'&&AppState&&AppState.selectedCharacterId){const selectedChar=AppState.filteredCharacters?.find(c=>c&&String(c.id)===String(AppState.selectedCharacterId))||AppState.characters?.find(c=>c&&String(c.id)===String(AppState.selectedCharacterId));if(selectedChar){UI.showCharacterSheet(selectedChar);}}}
 if(typeof App!=='undefined'&&App&&typeof CharacterState!=='undefined'){const state=CharacterState.get?CharacterState.get():null;if(state&&state.step==='complete'&&state.character){const panel=document.getElementById('character-panel');if(panel&&typeof Components!=='undefined'&&Components.renderCharacterSheet){panel.innerHTML=Components.renderCharacterSheet(state.character);if(typeof CharacterSheet!=='undefined'&&CharacterSheet.populatePortrait){CharacterSheet.populatePortrait(state.character);}}}}}},});const PORTRAIT_DEBUG_LOG=[];const MAX_PORTRAIT_DEBUG_ENTRIES=100;function logPortraitDebug(action,characterId,characterName,details){if(!window.DEBUG_PORTRAITS)return;const entry={timestamp:new Date().toISOString(),action,characterId,characterName,...details};PORTRAIT_DEBUG_LOG.push(entry);if(PORTRAIT_DEBUG_LOG.length>MAX_PORTRAIT_DEBUG_ENTRIES){PORTRAIT_DEBUG_LOG.shift();}
@@ -8067,7 +8137,7 @@ async function confirmGeneratePortrait() {
             const nextCharacter = { ...character, ...updates };
             const idStr = String(portraitCharacterId);
 
-            // Debug: Log the character state BEFORE AppState update
+            // Debug: Log the character state being applied
             if (window.DEBUG_PORTRAITS) {
                 console.log(`🖼️[PORTRAIT DEBUG]After generation-updating AppState`, {
                     characterId: idStr,
@@ -8079,22 +8149,22 @@ async function confirmGeneratePortrait() {
                 });
             }
 
-            if (window.AppState) {
-                if (Array.isArray(AppState.characters)) {
-                    const idx = AppState.characters.findIndex(
-                        c => c && String(c.id) === idStr,
-                    );
-                    if (idx !== -1) {
-                        AppState.characters[idx] = nextCharacter;
-                    }
+            // Update AppState arrays directly (avoid window.AppState check which
+            // could reference a different object due to module scoping)
+            if (Array.isArray(AppState.characters)) {
+                const idx = AppState.characters.findIndex(
+                    c => c && String(c.id) === idStr,
+                );
+                if (idx !== -1) {
+                    AppState.characters[idx] = nextCharacter;
                 }
-                if (Array.isArray(AppState.filteredCharacters)) {
-                    const fIdx = AppState.filteredCharacters.findIndex(
-                        c => c && String(c.id) === idStr,
-                    );
-                    if (fIdx !== -1) {
-                        AppState.filteredCharacters[fIdx] = nextCharacter;
-                    }
+            }
+            if (Array.isArray(AppState.filteredCharacters)) {
+                const fIdx = AppState.filteredCharacters.findIndex(
+                    c => c && String(c.id) === idStr,
+                );
+                if (fIdx !== -1) {
+                    AppState.filteredCharacters[fIdx] = nextCharacter;
                 }
             }
 

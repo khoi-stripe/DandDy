@@ -498,6 +498,15 @@
   min-width: 0;
 }
 
+.settings-inline-field--grow {
+  flex: 2;
+}
+
+.settings-inline-field--quality {
+  flex: 0 0 auto;
+  min-width: 100px;
+}
+
 .settings-field {
   display: flex;
   flex-direction: column;

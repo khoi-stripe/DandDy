@@ -87,19 +87,44 @@ const Components = (window.Components = {
       // Silent fail - user is not admin
     }
 
-    // High quality GPT Image setting (admin only)
-    const getHighQualityGPTImage = () => {
-      if (!StorageService || typeof StorageService.getHighQualityGPTImage !== 'function') {
-        return false;
-      }
-      try {
-        return StorageService.getHighQualityGPTImage();
-      } catch (e) {
-        return false;
-      }
+    // Image quality options per model
+    const modelQualityOptions = {
+      'dall-e-3': [
+        { value: 'standard', label: 'Standard' },
+        { value: 'hd', label: 'HD' },
+      ],
+      'gpt-image-1': [
+        { value: 'medium', label: 'Medium' },
+        { value: 'high', label: 'High' },
+      ],
+      // Flux models don't have quality options
+      'flux-1.1-pro': [],
+      'flux-schnell': [],
     };
 
-    const highQualityEnabled = getHighQualityGPTImage();
+    // Get default quality for a model
+    const getDefaultQuality = (model) => {
+      const options = modelQualityOptions[model] || [];
+      return options.length > 0 ? options[0].value : null;
+    };
+
+    // Get current quality setting for selected model
+    const getCurrentImageQuality = (model) => {
+      if (!StorageService || typeof StorageService.getImageQuality !== 'function') {
+        return getDefaultQuality(model);
+      }
+      try {
+        const quality = StorageService.getImageQuality(model);
+        if (quality) return quality;
+        // For gpt-image-1, check legacy setting
+        if (model === 'gpt-image-1' && StorageService.getHighQualityGPTImage) {
+          return StorageService.getHighQualityGPTImage() ? 'high' : 'medium';
+        }
+        return getDefaultQuality(model);
+      } catch (e) {
+        return getDefaultQuality(model);
+      }
+    };
 
     // Helper to truncate text for options
     const truncate = (text, maxLength) => {
@@ -195,6 +220,15 @@ const Components = (window.Components = {
       imageModelOptions.find((opt) => opt.value === currentImageModelValue) ||
       imageModelOptions[0];
     const currentImageModelLabel = currentImageModelOption.label;
+
+    // Quality options for current model
+    const currentQualityOptions = modelQualityOptions[currentImageModelValue] || [];
+    const currentQualityValue = getCurrentImageQuality(currentImageModelValue);
+    const currentQualityOption = currentQualityOptions.find(
+      (opt) => opt.value === currentQualityValue,
+    ) || currentQualityOptions[0];
+    const currentQualityLabel = currentQualityOption?.label || '';
+    const hasQualityOptions = currentQualityOptions.length > 0;
 
     // Portrait view mode (ASCII vs Original)
     const getPortraitViewMode = () => {
@@ -479,64 +513,126 @@ const Components = (window.Components = {
                         </select>
                       </div>
                     </div>
-                    <div class="settings-row mb-lg">
-                      <div class="settings-label">AI model</div>
-                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
-                        <button
-                          class="terminal-btn selector-trigger"
-                          id="image-model-select-trigger"
-                          type="button"
-                          aria-haspopup="listbox"
-                          aria-expanded="false"
-                          onclick="CharacterSheet.toggleSelectorMenu(this)"
-                        >
-                          <span class="selector-trigger-label" id="image-model-select-label">
-                            ${currentImageModelLabel}
-                          </span>
-                        </button>
-                        <div
-                          class="selector-menu"
-                          role="listbox"
-                          aria-label="AI model"
-                          aria-hidden="true"
+                    <div class="settings-row-inline mb-lg">
+                      <div class="settings-inline-field settings-inline-field--grow">
+                        <div class="settings-label">AI model</div>
+                        <div class="selector-shell selector-shell--listbox selector-shell--match-width">
+                          <button
+                            class="terminal-btn selector-trigger"
+                            id="image-model-select-trigger"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            onclick="CharacterSheet.toggleSelectorMenu(this)"
+                          >
+                            <span class="selector-trigger-label" id="image-model-select-label">
+                              ${currentImageModelLabel}
+                            </span>
+                          </button>
+                          <div
+                            class="selector-menu"
+                            role="listbox"
+                            aria-label="AI model"
+                            aria-hidden="true"
+                          >
+                            ${imageModelOptions
+                              .map((opt) => {
+                                const isSelected =
+                                  opt.value === currentImageModelOption.value;
+                                return `
+                                <button
+                                  class="selector-option${isSelected ? ' is-selected' : ''}"
+                                  type="button"
+                                  role="option"
+                                  data-value="${opt.value}"
+                                  aria-selected="${isSelected ? 'true' : 'false'}"
+                                >
+                                  <span class="selector-option-label">
+                                    ${opt.label}
+                                  </span>
+                                </button>
+                              `;
+                              })
+                              .join('')}
+                          </div>
+                        </div>
+                        <select
+                          id="image-model-select"
+                          class="terminal-select settings-select hidden"
                         >
                           ${imageModelOptions
-                            .map((opt) => {
-                              const isSelected =
-                                opt.value === currentImageModelOption.value;
-                              return `
-                              <button
-                                class="selector-option${isSelected ? ' is-selected' : ''}"
-                                type="button"
-                                role="option"
-                                data-value="${opt.value}"
-                                aria-selected="${isSelected ? 'true' : 'false'}"
-                              >
-                                <span class="selector-option-label">
-                                  ${opt.label}
-                                </span>
-                              </button>
-                            `;
-                            })
+                            .map(
+                              (opt) => `
+                              <option value="${opt.value}" ${
+                                opt.value === currentImageModelOption.value ? 'selected' : ''
+                              }>
+                                ${opt.label}
+                              </option>
+                            `,
+                            )
                             .join('')}
-                        </div>
+                        </select>
                       </div>
-                      <select
-                        id="image-model-select"
-                        class="terminal-select settings-select hidden"
-                      >
-                        ${imageModelOptions
-                          .map(
-                            (opt) => `
-                            <option value="${opt.value}" ${
-                              opt.value === currentImageModelOption.value ? 'selected' : ''
-                            }>
-                              ${opt.label}
-                            </option>
-                          `,
-                          )
-                          .join('')}
-                      </select>
+                      <div class="settings-inline-field settings-inline-field--quality ${hasQualityOptions ? '' : 'hidden'}" id="quality-selector-container">
+                        <div class="settings-label">Quality</div>
+                        <div class="selector-shell selector-shell--listbox selector-shell--match-width">
+                          <button
+                            class="terminal-btn selector-trigger"
+                            id="image-quality-select-trigger"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            onclick="CharacterSheet.toggleSelectorMenu(this)"
+                          >
+                            <span class="selector-trigger-label" id="image-quality-select-label">
+                              ${currentQualityLabel}
+                            </span>
+                          </button>
+                          <div
+                            class="selector-menu"
+                            role="listbox"
+                            aria-label="Image quality"
+                            aria-hidden="true"
+                            id="image-quality-options-menu"
+                          >
+                            ${currentQualityOptions
+                              .map((opt) => {
+                                const isSelected =
+                                  opt.value === currentQualityOption?.value;
+                                return `
+                                <button
+                                  class="selector-option${isSelected ? ' is-selected' : ''}"
+                                  type="button"
+                                  role="option"
+                                  data-value="${opt.value}"
+                                  aria-selected="${isSelected ? 'true' : 'false'}"
+                                >
+                                  <span class="selector-option-label">
+                                    ${opt.label}
+                                  </span>
+                                </button>
+                              `;
+                              })
+                              .join('')}
+                          </div>
+                        </div>
+                        <select
+                          id="image-quality-select"
+                          class="terminal-select settings-select hidden"
+                        >
+                          ${currentQualityOptions
+                            .map(
+                              (opt) => `
+                              <option value="${opt.value}" ${
+                                opt.value === currentQualityOption?.value ? 'selected' : ''
+                              }>
+                                ${opt.label}
+                              </option>
+                            `,
+                            )
+                            .join('')}
+                        </select>
+                      </div>
                     </div>
                     <div class="settings-row settings-row--stacked">
                       <div class="settings-label">Default portrait view</div>
@@ -563,25 +659,6 @@ const Components = (window.Components = {
                         </div>
                       </div>
                     </div>
-                    ${isUserAdmin ? `
-                    <div class="settings-admin-section">
-                      <div class="settings-row">
-                        <label class="settings-toggle">
-                          <input
-                            type="checkbox"
-                            class="settings-toggle-input"
-                            id="high-quality-gpt-image"
-                            ${highQualityEnabled ? 'checked' : ''}
-                          >
-                          <span class="settings-toggle-track"></span>
-                          <span class="settings-toggle-label">
-                            High quality GPT Image 1
-                            <span class="settings-admin-badge">Admin</span>
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                    ` : ''}
                   </section>
                 </div>
               </div>
@@ -697,6 +774,108 @@ const SettingsModal = (window.SettingsModal = {
       });
     }
 
+    // Quality options per model (duplicated here for initSelectors)
+    const modelQualityOptionsMap = {
+      'dall-e-3': [
+        { value: 'standard', label: 'Standard' },
+        { value: 'hd', label: 'HD' },
+      ],
+      'gpt-image-1': [
+        { value: 'medium', label: 'Medium' },
+        { value: 'high', label: 'High' },
+      ],
+      'flux-1.1-pro': [],
+      'flux-schnell': [],
+    };
+
+    // Helper to update quality selector options based on selected model
+    const updateQualityOptions = (modelValue) => {
+      const qualityContainer = modal.querySelector('#quality-selector-container');
+      const qualityLabel = modal.querySelector('#image-quality-select-label');
+      const qualitySelect = modal.querySelector('#image-quality-select');
+      const qualityMenu = modal.querySelector('#image-quality-options-menu');
+
+      const options = modelQualityOptionsMap[modelValue] || [];
+
+      if (!options.length) {
+        // Hide quality selector if model has no quality options
+        if (qualityContainer) qualityContainer.classList.add('hidden');
+        return;
+      }
+
+      // Show quality selector
+      if (qualityContainer) qualityContainer.classList.remove('hidden');
+
+      // Get saved quality for this model, or default to first option
+      let currentQuality = null;
+      if (window.StorageService && StorageService.getImageQuality) {
+        currentQuality = StorageService.getImageQuality(modelValue);
+      }
+      if (!currentQuality) {
+        currentQuality = options[0].value;
+      }
+
+      // Update menu options
+      if (qualityMenu) {
+        qualityMenu.innerHTML = options
+          .map((opt) => {
+            const isSelected = opt.value === currentQuality;
+            return `
+              <button
+                class="selector-option${isSelected ? ' is-selected' : ''}"
+                type="button"
+                role="option"
+                data-value="${opt.value}"
+                aria-selected="${isSelected ? 'true' : 'false'}"
+              >
+                <span class="selector-option-label">
+                  ${opt.label}
+                </span>
+              </button>
+            `;
+          })
+          .join('');
+
+        // Re-wire quality option clicks
+        const newQualityOptions = qualityMenu.querySelectorAll('.selector-option');
+        newQualityOptions.forEach((qOpt) => {
+          qOpt.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const qValue = qOpt.getAttribute('data-value');
+            const qLabel = qOpt.querySelector('.selector-option-label');
+            if (qValue && qLabel && qualityLabel && qualitySelect) {
+              qualityLabel.textContent = qLabel.textContent.trim();
+              qualitySelect.value = qValue;
+              newQualityOptions.forEach((o) => {
+                const isSelected = o === qOpt;
+                o.classList.toggle('is-selected', isSelected);
+                o.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+              });
+            }
+          });
+        });
+      }
+
+      // Update hidden select options
+      if (qualitySelect) {
+        qualitySelect.innerHTML = options
+          .map(
+            (opt) => `
+            <option value="${opt.value}" ${opt.value === currentQuality ? 'selected' : ''}>
+              ${opt.label}
+            </option>
+          `,
+          )
+          .join('');
+      }
+
+      // Update label
+      const activeOption = options.find((o) => o.value === currentQuality) || options[0];
+      if (qualityLabel && activeOption) {
+        qualityLabel.textContent = activeOption.label;
+      }
+    };
+
     // Image model selector
     const imageModelTrigger = modal.querySelector('#image-model-select-trigger');
     const imageModelLabel = modal.querySelector('#image-model-select-label');
@@ -716,6 +895,35 @@ const SettingsModal = (window.SettingsModal = {
             imageModelSelect.value = value;
             // Keep menu selection state in sync with the trigger
             imageModelOptions.forEach((opt) => {
+              const isSelected = opt === option;
+              opt.classList.toggle('is-selected', isSelected);
+              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+            // Update quality options when model changes
+            updateQualityOptions(value);
+          }
+        });
+      });
+    }
+
+    // Image quality selector (initial setup)
+    const qualityTrigger = modal.querySelector('#image-quality-select-trigger');
+    const qualityLabel = modal.querySelector('#image-quality-select-label');
+    const qualitySelect = modal.querySelector('#image-quality-select');
+    const qualityOptions = modal.querySelectorAll(
+      '#image-quality-options-menu .selector-option',
+    );
+
+    if (qualityTrigger && qualityLabel && qualitySelect && qualityOptions.length) {
+      qualityOptions.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = option.getAttribute('data-value');
+          const label = option.querySelector('.selector-option-label');
+          if (value && label) {
+            qualityLabel.textContent = label.textContent.trim();
+            qualitySelect.value = value;
+            qualityOptions.forEach((opt) => {
               const isSelected = opt === option;
               opt.classList.toggle('is-selected', isSelected);
               opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
@@ -834,10 +1042,11 @@ const SettingsModal = (window.SettingsModal = {
       StorageService.setPortraitPromptTheme(portraitThemeSelect.value);
     }
 
-    // Save high quality GPT Image setting (admin only)
-    const highQualityToggle = document.getElementById('high-quality-gpt-image');
-    if (highQualityToggle && window.StorageService && StorageService.setHighQualityGPTImage) {
-      StorageService.setHighQualityGPTImage(highQualityToggle.checked);
+    // Save image quality setting for the selected model
+    const imageQualitySelect = document.getElementById('image-quality-select');
+    const imageModelForQuality = imageModelSelect?.value;
+    if (imageQualitySelect && imageModelForQuality && window.StorageService && StorageService.setImageQuality) {
+      StorageService.setImageQuality(imageModelForQuality, imageQualitySelect.value);
     }
 
     // Use a non-intrusive toast for settings changes instead of a narrator line

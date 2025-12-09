@@ -359,10 +359,56 @@ const StorageService = (window.StorageService = {
     }
   },
 
-  // High quality mode for GPT Image 1 (admin only).
-  // When enabled, uses 'high' quality instead of 'medium' for gpt-image-1 model.
+  // Image quality setting per model.
+  // Returns the stored quality for a given model, or null if not set.
+  // Quality options vary by model:
+  // - dall-e-3: 'standard', 'hd'
+  // - gpt-image-1: 'medium', 'high'
+  // - flux-1.1-pro, flux-schnell: no quality options (always use default)
+  getImageQuality(model) {
+    try {
+      const raw = localStorage.getItem('dnd_image_quality');
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      return data[model] || null;
+    } catch (e) {
+      console.warn('StorageService.getImageQuality failed', e);
+      return null;
+    }
+  },
+
+  setImageQuality(model, quality) {
+    try {
+      let data = {};
+      const raw = localStorage.getItem('dnd_image_quality');
+      if (raw) {
+        try {
+          data = JSON.parse(raw);
+        } catch (e) {
+          data = {};
+        }
+      }
+      if (quality) {
+        data[model] = quality;
+      } else {
+        delete data[model];
+      }
+      localStorage.setItem('dnd_image_quality', JSON.stringify(data));
+    } catch (e) {
+      console.warn('StorageService.setImageQuality failed', e);
+    }
+  },
+
+  // Legacy support: check for old high quality setting and migrate
+  // Returns true if quality should be 'high' for gpt-image-1
   getHighQualityGPTImage() {
     try {
+      // First check new system
+      const quality = this.getImageQuality('gpt-image-1');
+      if (quality) {
+        return quality === 'high';
+      }
+      // Fall back to legacy setting
       const raw = localStorage.getItem('dnd_high_quality_gpt_image');
       return raw === 'true';
     } catch (e) {
@@ -372,14 +418,13 @@ const StorageService = (window.StorageService = {
   },
 
   setHighQualityGPTImage(enabled) {
+    // Migrate to new system
+    this.setImageQuality('gpt-image-1', enabled ? 'high' : 'medium');
+    // Also remove legacy setting
     try {
-      if (enabled) {
-        localStorage.setItem('dnd_high_quality_gpt_image', 'true');
-      } else {
-        localStorage.removeItem('dnd_high_quality_gpt_image');
-      }
+      localStorage.removeItem('dnd_high_quality_gpt_image');
     } catch (e) {
-      console.warn('StorageService.setHighQualityGPTImage failed', e);
+      // Ignore
     }
   },
 
@@ -1466,23 +1511,29 @@ Format your response as JSON array of strings, one for each option in order. Exa
       console.log('  Note: Image generation takes 20-30s (longer than text AI)...');
       
         // Quality setting differs by model:
-        // - DALL-E: 'standard' or 'hd'
-        // - GPT Image 1: 'low', 'medium', 'high'
-        let quality = model.startsWith('dall-e') ? 'standard' : 'medium';
+        // - DALL-E 3: 'standard' or 'hd'
+        // - GPT Image 1: 'medium', 'high'
+        // - Flux models: no quality setting (use 'standard' as default)
+        const defaultQuality = {
+          'dall-e-3': 'standard',
+          'gpt-image-1': 'medium',
+          'flux-1.1-pro': 'standard',
+          'flux-schnell': 'standard',
+        };
         
-        // Check if high quality mode is enabled for GPT Image 1 (admin feature)
-        if (model === 'gpt-image-1') {
-          try {
-            if (window.StorageService && typeof StorageService.getHighQualityGPTImage === 'function') {
-              const highQualityEnabled = StorageService.getHighQualityGPTImage();
-              if (highQualityEnabled) {
-                quality = 'high';
-                console.log('  Quality: HIGH (admin setting enabled)');
-              }
+        let quality = defaultQuality[model] || 'standard';
+        
+        // Check for user quality preference
+        try {
+          if (window.StorageService && typeof StorageService.getImageQuality === 'function') {
+            const savedQuality = StorageService.getImageQuality(model);
+            if (savedQuality) {
+              quality = savedQuality;
+              console.log(`  Quality: ${quality.toUpperCase()} (user preference)`);
             }
-          } catch (e) {
-            console.warn('AIService: failed to read high quality setting', e);
           }
+        } catch (e) {
+          console.warn('AIService: failed to read quality setting', e);
         }
 
         const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`, {

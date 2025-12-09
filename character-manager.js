@@ -2727,7 +2727,7 @@ async function confirmGeneratePortrait() {
             const nextCharacter = { ...character, ...updates };
             const idStr = String(portraitCharacterId);
 
-            // Debug: Log the character state BEFORE AppState update
+            // Debug: Log the character state being applied
             if (window.DEBUG_PORTRAITS) {
                 console.log(`🖼️ [PORTRAIT DEBUG] After generation - updating AppState`, {
                     characterId: idStr,
@@ -2739,22 +2739,22 @@ async function confirmGeneratePortrait() {
                 });
             }
 
-            if (window.AppState) {
-                if (Array.isArray(AppState.characters)) {
-                    const idx = AppState.characters.findIndex(
-                        c => c && String(c.id) === idStr,
-                    );
-                    if (idx !== -1) {
-                        AppState.characters[idx] = nextCharacter;
-                    }
+            // Update AppState arrays directly (avoid window.AppState check which
+            // could reference a different object due to module scoping)
+            if (Array.isArray(AppState.characters)) {
+                const idx = AppState.characters.findIndex(
+                    c => c && String(c.id) === idStr,
+                );
+                if (idx !== -1) {
+                    AppState.characters[idx] = nextCharacter;
                 }
-                if (Array.isArray(AppState.filteredCharacters)) {
-                    const fIdx = AppState.filteredCharacters.findIndex(
-                        c => c && String(c.id) === idStr,
-                    );
-                    if (fIdx !== -1) {
-                        AppState.filteredCharacters[fIdx] = nextCharacter;
-                    }
+            }
+            if (Array.isArray(AppState.filteredCharacters)) {
+                const fIdx = AppState.filteredCharacters.findIndex(
+                    c => c && String(c.id) === idStr,
+                );
+                if (fIdx !== -1) {
+                    AppState.filteredCharacters[fIdx] = nextCharacter;
                 }
             }
 
