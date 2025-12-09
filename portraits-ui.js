@@ -1194,7 +1194,7 @@
               onclick="event.stopPropagation(); PortraitUI.viewImageInfo('${characterId}', '${v.id}')"
               title="View image generation details"
             >
-              <span class="selector-option-icon">ℹ</span>
+              <span class="selector-option-icon">ℹ︎</span>
               <span class="selector-option-label">Image info</span>
             </button>
           `);

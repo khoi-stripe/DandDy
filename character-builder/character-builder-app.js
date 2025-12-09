@@ -2524,7 +2524,7 @@ const App = (window.App = {
                 onclick="event.stopPropagation(); App.viewPortraitImageInfo('${v.id}')"
                 title="View image generation details"
               >
-                <span class="selector-option-icon">ℹ</span>
+                <span class="selector-option-icon">ℹ︎</span>
                 <span class="selector-option-label">Image info</span>
               </button>
             `);

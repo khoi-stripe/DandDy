@@ -759,11 +759,12 @@
 }
 
 .settings-inline-field--grow {
-    flex: 0 1 auto;
+    flex: 2;
 }
 
 .settings-inline-field--quality {
     flex: 0 0 auto;
+    min-width: 100px;
 }
 
 .settings-group {
@@ -1967,17 +1968,18 @@
     font-size: var(--font-sm);
 }
 
-/* Demo character tag */
-.demo-tag {
-    display: inline-block;
-    margin-left: var(--spacing-sm);
-    padding: 2px 6px;
-    font-size: 0.65em;
+/* Demo character tag - overlays portrait in sheet view */
+.sheet-demo-tag {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 5;
+    padding: 3px 8px;
+    font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--terminal-bg);
     background-color: var(--sheet-accent);
     border-radius: 3px;
-    vertical-align: middle;
 }

@@ -756,14 +756,15 @@ onclick="${action.onclick}"${action.id?` id="${action.id}"`:''}><span class="sel
           ${editButtonHtml}
           ${headerMenu}
         </div>
-      `:'';const safeTitle=character.name&&typeof character.name==='string'?this.escapeHtml(character.name):'[ CHARACTER SHEET ]';const isDemo=window.DemoCharacters&&window.DemoCharacters.isDemo(character);const demoTag=isDemo?'<span class="demo-tag">SAMPLE</span>':'';return`
+      `:'';const safeTitle=character.name&&typeof character.name==='string'?this.escapeHtml(character.name):'[ CHARACTER SHEET ]';return`
       <div class="sheet-title-header">
-        <div class="sheet-title">${safeTitle}${demoTag}</div>
+        <div class="sheet-title">${safeTitle}</div>
         ${actionsBlock}
       </div>
-    `;},_renderPortrait(character,parsed,context,callbacks){const{onGeneratePortrait,onTogglePortrait}=callbacks;const asciiPortrait=this.getAsciiPortrait(character);const originalPortraitUrl=this.getOriginalPortraitUrl(character);logPortraitDebug('renderPortrait (sheet)',character.id,character.name,{context,hasAscii:!!asciiPortrait,asciiLength:asciiPortrait?.length||0,url:originalPortraitUrl,portraitMetadataActiveId:character.portraitMetadata?.activeVersionId||null,portraitMetadataVersionsCount:character.portraitMetadata?.versions?.length||0});let portraitViewMode='original';try{if(window.StorageService&&StorageService.getPortraitViewMode){portraitViewMode=StorageService.getPortraitViewMode();}else if(typeof CONFIG!=='undefined'&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE){portraitViewMode=CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;}}catch(e){}
-const safeIdForDom=character.id||'current';const portraitId=context==='builder'?'character-portrait':`character-portrait-${safeIdForDom}`;const originalPortraitId=context==='builder'?'original-portrait':`original-portrait-${safeIdForDom}`;const needsPlaceholder=!asciiPortrait&&!originalPortraitUrl;const showOriginalByDefault=!!originalPortraitUrl&&portraitViewMode==='original'&&!needsPlaceholder;return`
+    `;},_renderPortrait(character,parsed,context,callbacks){const{onGeneratePortrait,onTogglePortrait}=callbacks;const isDemo=window.DemoCharacters&&window.DemoCharacters.isDemo(character);const asciiPortrait=this.getAsciiPortrait(character);const originalPortraitUrl=this.getOriginalPortraitUrl(character);logPortraitDebug('renderPortrait (sheet)',character.id,character.name,{context,hasAscii:!!asciiPortrait,asciiLength:asciiPortrait?.length||0,url:originalPortraitUrl,portraitMetadataActiveId:character.portraitMetadata?.activeVersionId||null,portraitMetadataVersionsCount:character.portraitMetadata?.versions?.length||0});let portraitViewMode='original';try{if(window.StorageService&&StorageService.getPortraitViewMode){portraitViewMode=StorageService.getPortraitViewMode();}else if(typeof CONFIG!=='undefined'&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE){portraitViewMode=CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;}}catch(e){}
+const safeIdForDom=character.id||'current';const portraitId=context==='builder'?'character-portrait':`character-portrait-${safeIdForDom}`;const originalPortraitId=context==='builder'?'original-portrait':`original-portrait-${safeIdForDom}`;const needsPlaceholder=!asciiPortrait&&!originalPortraitUrl;const showOriginalByDefault=!!originalPortraitUrl&&portraitViewMode==='original'&&!needsPlaceholder;const demoTagHtml=isDemo?'<span class="sheet-demo-tag">SAMPLE</span>':'';return`
       <div class="portrait-container${showOriginalByDefault ? ' portrait-container--original-mode' : ''}">
+        ${demoTagHtml}
         <div class="ascii-portrait ${needsPlaceholder ? 'ascii-portrait--placeholder' : ''} ${showOriginalByDefault ? 'is-hidden' : ''}" id="${portraitId}">
           ${needsPlaceholder ? `<div class="portrait-placeholder-content"><div class="portrait-placeholder-cube-container"><div class="portrait-placeholder-cube"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div class="portrait-placeholder-text">Waiting for character data…</div></div>` : ''}
         </div>
@@ -5049,7 +5050,7 @@ class="selector-option"
 type="button"
 role="menuitem"
 onclick="event.stopPropagation(); PortraitUI.viewImageInfo('${characterId}', '${v.id}')"
-title="View image generation details"><span class="selector-option-icon">ℹ</span><span class="selector-option-label">Image info</span></button>`);
+title="View image generation details"><span class="selector-option-icon">ℹ︎</span><span class="selector-option-label">Image info</span></button>`);
 
           actionItems.push(`<button
 class="selector-option portrait-history-delete-option"

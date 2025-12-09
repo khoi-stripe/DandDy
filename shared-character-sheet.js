@@ -556,13 +556,9 @@ const CharacterSheet = (window.CharacterSheet = {
         ? this.escapeHtml(character.name)
         : '[ CHARACTER SHEET ]';
 
-    // Check if this is a demo character
-    const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
-    const demoTag = isDemo ? '<span class="demo-tag">SAMPLE</span>' : '';
-
     return `
       <div class="sheet-title-header">
-        <div class="sheet-title">${safeTitle}${demoTag}</div>
+        <div class="sheet-title">${safeTitle}</div>
         ${actionsBlock}
       </div>
     `;
@@ -570,6 +566,9 @@ const CharacterSheet = (window.CharacterSheet = {
 
   _renderPortrait(character, parsed, context, callbacks) {
     const { onGeneratePortrait, onTogglePortrait } = callbacks;
+
+    // Check if this is a demo character - show tag on portrait
+    const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
 
     // Prefer the active portrait version from history (if any) so the sheet
     // always matches the grid card + history modal. Fall back to legacy
@@ -619,8 +618,12 @@ const CharacterSheet = (window.CharacterSheet = {
       portraitViewMode === 'original' &&
       !needsPlaceholder;
 
+    // Demo tag overlays portrait like on cards
+    const demoTagHtml = isDemo ? '<span class="sheet-demo-tag">SAMPLE</span>' : '';
+
     return `
       <div class="portrait-container${showOriginalByDefault ? ' portrait-container--original-mode' : ''}">
+        ${demoTagHtml}
         <div class="ascii-portrait ${needsPlaceholder ? 'ascii-portrait--placeholder' : ''} ${showOriginalByDefault ? 'is-hidden' : ''}" id="${portraitId}">
           ${needsPlaceholder ? `
             <div class="portrait-placeholder-content">
