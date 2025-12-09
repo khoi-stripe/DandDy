@@ -6951,6 +6951,7 @@ function clearCharacterFromUrl() {
 }
 
 let currentEditCharacterId = null;
+let originalEditLevel = null;
 
 function selectAlignment(value, label) {
     // Update hidden select value
@@ -7026,8 +7027,9 @@ async function editCharacter(id) {
     // CHARACTER NAME
     setValue('editName', character.name || '');
 
-    // LEVEL
-    const level = parsed.level != null ? parsed.level : (character.level || 1);
+    // LEVEL - store original for change detection (ensure it's a number)
+    const level = parsed.level != null ? Number(parsed.level) : Number(character.level || 1);
+    originalEditLevel = level;
     setValue('editLevel', level);
 
     // ALIGNMENT (default to 'n' - True Neutral if not set)
@@ -7154,6 +7156,7 @@ function closeEditDetailsModal() {
     const modal = document.getElementById('editDetailsModal');
     if (!modal) {
         currentEditCharacterId = null;
+        originalEditLevel = null;
         return;
     }
 
@@ -7167,6 +7170,7 @@ function closeEditDetailsModal() {
         removeOnClose: false,
         onClosed: () => {
             currentEditCharacterId = null;
+            originalEditLevel = null;
         },
     });
 }
@@ -7219,6 +7223,55 @@ async function saveEditDetails() {
     };
 
     const levelValue = getNumber('editLevel');
+    
+    // Validate level range (D&D 5e: 1-20)
+    if (levelValue !== null && (levelValue < 1 || levelValue > 20)) {
+        // Hide loading overlay while showing validation error
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('is-visible');
+        }
+        showAlertDialog(`Level must be between 1 and 20.\n\nYou entered:${levelValue}`);
+        return;
+    }
+    
+    // Check if level has changed - prompt user for stat recalculation choice
+    const safeLevel = levelValue;
+    let levelChangeChoice = 'manual'; // default to manual if no change
+    let autoCalculatedStats = null;
+    
+    if (safeLevel !== null && originalEditLevel !== null && safeLevel !== originalEditLevel) {
+        // Hide loading overlay while showing the dialog
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('is-visible');
+        }
+        
+        levelChangeChoice = await showLevelChangeDialog(originalEditLevel, safeLevel);
+        
+        if (levelChangeChoice === 'cancel') {
+            // User cancelled - don't save anything
+            return;
+        }
+        
+        // Show loading overlay again after dialog closes
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('is-visible');
+        }
+        
+        if (levelChangeChoice === 'auto') {
+            // Calculate stats based on the new level and current abilities
+            // We need to get the current abilities from the form to use for calculation
+            const formAbilities = {
+                str: getNumber('editStr') ?? character.abilities?.str ?? 10,
+                dex: getNumber('editDex') ?? character.abilities?.dex ?? 10,
+                con: getNumber('editCon') ?? character.abilities?.con ?? 10,
+                int: getNumber('editInt') ?? character.abilities?.int ?? 10,
+                wis: getNumber('editWis') ?? character.abilities?.wis ?? 10,
+                cha: getNumber('editCha') ?? character.abilities?.cha ?? 10,
+            };
+            const tempCharacter = { ...character, abilities: formAbilities };
+            autoCalculatedStats = calculateStatsForLevel(tempCharacter, safeLevel);
+        }
+    }
 
     // Ability scores
     const abilityUpdates = {};
@@ -7236,14 +7289,22 @@ async function saveEditDetails() {
     if (wis !== null) abilityUpdates.wis = wis;
     if (cha !== null) abilityUpdates.cha = cha;
 
-    // Combat stats
-    const hpMax = getNumber('editHpMax');
-    const hpCurrent = getNumber('editHpCurrent');
+    // Combat stats - use auto-calculated values if user chose auto, otherwise use form values
+    let hpMax = getNumber('editHpMax');
+    let hpCurrent = getNumber('editHpCurrent');
     const hpTemp = getNumber('editHpTemp');
     const armorClass = getNumber('editArmorClass');
     const initiative = getNumber('editInitiative');
     const speed = getNumber('editSpeed');
-    const profBonus = getNumber('editProfBonus');
+    let profBonus = getNumber('editProfBonus');
+    
+    // Apply auto-calculated stats if user chose auto
+    if (autoCalculatedStats) {
+        hpMax = autoCalculatedStats.hpMax;
+        // Set current HP to max HP when auto-calculating (leveling up usually means full health)
+        hpCurrent = autoCalculatedStats.hpMax;
+        profBonus = autoCalculatedStats.proficiencyBonus;
+    }
 
     // Alignment
     const alignmentValue = document.getElementById('editAlignment')?.value || '';
@@ -7262,9 +7323,7 @@ async function saveEditDetails() {
     };
 
     if (levelValue !== null) {
-        // Clamp to a reasonable D&D range just in case
-        const safeLevel = Math.min(20, Math.max(1, levelValue));
-        updates.level = safeLevel;
+        updates.level = levelValue;
     }
 
     if (alignmentValue) {
@@ -9012,6 +9071,179 @@ function showConfirmDialog(message, onConfirm) {
     if (modal) {
         focusFirstFieldInModal(modal);
     }
+}
+
+// Helper to animate modal content transition with height change
+function animateModalContentSwap(modalContent, newHtml, onComplete) {
+    const startHeight = modalContent.offsetHeight;
+    
+    // Phase 1: Fade out current content
+    modalContent.style.overflow = 'hidden';
+    modalContent.style.height = startHeight + 'px';
+    modalContent.style.transition = 'opacity 0.15s ease-out';
+    modalContent.style.opacity = '0';
+    
+    setTimeout(() => {
+        // Swap content
+        modalContent.innerHTML = newHtml;
+        
+        // Measure new height (temporarily set to auto)
+        modalContent.style.height = 'auto';
+        const endHeight = modalContent.offsetHeight;
+        
+        // Reset to start height for animation
+        modalContent.style.height = startHeight + 'px';
+        modalContent.style.opacity = '0';
+        
+        // Force reflow
+        void modalContent.offsetHeight;
+        
+        // Phase 2: Animate height and fade in
+        modalContent.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease-out 0.1s';
+        modalContent.style.height = endHeight + 'px';
+        modalContent.style.opacity = '1';
+        
+        setTimeout(() => {
+            // Clean up - let height be auto again
+            modalContent.style.height = '';
+            modalContent.style.overflow = '';
+            modalContent.style.transition = '';
+            if (onComplete) onComplete();
+        }, 350);
+    }, 150);
+}
+
+// Show dialog when user changes level in character editor
+// Transforms the existing edit modal content instead of overlaying a new modal
+// Returns a promise that resolves to: 'auto' | 'manual' | 'cancel'
+function showLevelChangeDialog(oldLevel, newLevel) {
+    return new Promise((resolve) => {
+        const editModal = document.getElementById('editDetailsModal');
+        if (!editModal) {
+            resolve('manual');
+            return;
+        }
+
+        const modalContent = editModal.querySelector('.modal-content');
+        if (!modalContent) {
+            resolve('manual');
+            return;
+        }
+
+        // Store original content
+        const originalContent = modalContent.innerHTML;
+
+        const levelDiff = newLevel - oldLevel;
+        const direction = levelDiff > 0 ? 'up' : 'down';
+        const levelText = Math.abs(levelDiff) === 1 ? 'level' : 'levels';
+
+        // Create new content for level change dialog
+        const levelChangeHtml = `<div class="modal-header"><h2 class="modal-title">⬆ LEVEL CHANGE</h2><button class="modal-close"id="levelChangeClose">&times;</button></div><div class="modal-body"><p class="terminal-text">You're changing from<strong>Level&nbsp;${oldLevel}</strong>to<strong>Level&nbsp;${newLevel}</strong>&nbsp;(${Math.abs(levelDiff)}&nbsp;${levelText}&nbsp;${direction}).</p><p class="terminal-text-small"style="margin-top: 0.75rem; opacity: 0.8;">Would you like to automatically recalculate stats(HP,Proficiency Bonus)for the new level,or update them manually?</p></div><div class="modal-footer"style="flex-wrap: wrap; gap: 0.5rem;"><button class="terminal-btn"id="levelChangeCancel">CANCEL</button><button class="terminal-btn"id="levelChangeManual">KEEP MANUAL</button><button class="terminal-btn terminal-btn-primary"id="levelChangeAuto">AUTO-CALCULATE</button></div>`;
+
+        // Animate transition to level change dialog
+        animateModalContentSwap(modalContent, levelChangeHtml, () => {
+            const closeBtn = document.getElementById('levelChangeClose');
+            const cancelBtn = document.getElementById('levelChangeCancel');
+            const manualBtn = document.getElementById('levelChangeManual');
+            const autoBtn = document.getElementById('levelChangeAuto');
+
+            const restoreAndResolve = (result) => {
+                if (result === 'cancel') {
+                    // Animate back to original content
+                    animateModalContentSwap(modalContent, originalContent, () => {
+                        resolve(result);
+                    });
+                } else if (result === 'auto') {
+                    // Show cube loader while "calculating"
+                    const loadingHtml = `<div class="modal-header"><h2 class="modal-title">⬆ LEVEL CHANGE</h2></div><div class="modal-body"style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px;"><div class="panel-loading-cube-container"><div class="panel-loading-cube"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><p class="terminal-text-small"style="margin-top: 1rem; opacity: 0.8;">Calculating stats for Level ${newLevel}...</p></div>`;
+                    
+                    animateModalContentSwap(modalContent, loadingHtml, () => {
+                        // Show loader for a moment, then resolve
+                        setTimeout(() => {
+                            resolve(result);
+                        }, 500);
+                    });
+                } else {
+                    // Resolve immediately for manual
+                    resolve(result);
+                }
+            };
+
+            closeBtn?.addEventListener('click', () => restoreAndResolve('cancel'));
+            cancelBtn?.addEventListener('click', () => restoreAndResolve('cancel'));
+            manualBtn?.addEventListener('click', () => restoreAndResolve('manual'));
+            autoBtn?.addEventListener('click', () => restoreAndResolve('auto'));
+
+            // Focus the auto-calculate button after animation
+            autoBtn?.focus();
+        });
+    });
+}
+
+// Calculate derived stats for a given level
+// Returns { proficiencyBonus, hpMax } based on level, class hit die, and CON modifier
+function calculateStatsForLevel(character, newLevel) {
+    // Hit die mapping for standard 5e classes
+    const HIT_DIE_BY_CLASS = {
+        barbarian: 12,
+        fighter: 10,
+        paladin: 10,
+        ranger: 10,
+        cleric: 8,
+        druid: 8,
+        monk: 8,
+        rogue: 8,
+        bard: 8,
+        warlock: 8,
+        wizard: 6,
+        sorcerer: 6,
+    };
+
+    // Get hit die
+    let hitDie = character.hitDie || character.classData?.hitDie || null;
+    if (!hitDie) {
+        const rawClass = character.class || '';
+        const normalized = rawClass.toString().trim().toLowerCase().replace(/\s+/g, '-');
+        if (normalized && HIT_DIE_BY_CLASS[normalized]) {
+            hitDie = HIT_DIE_BY_CLASS[normalized];
+        }
+    }
+    if (!hitDie && window.DND_DATA && Array.isArray(window.DND_DATA.classes)) {
+        const classIdOrName = character.class;
+        if (classIdOrName) {
+            const cls = window.DND_DATA.classes.find(
+                (c) => c.id === classIdOrName || c.name === classIdOrName,
+            );
+            if (cls && cls.hitDie) {
+                hitDie = cls.hitDie;
+            }
+        }
+    }
+    if (!hitDie) {
+        hitDie = 8; // Default to d8 if unknown
+    }
+
+    // Get CON modifier
+    const abilities = character.abilities || character.abilityScores || {};
+    const conScore = abilities.con || 10;
+    const conMod = Math.floor((conScore - 10) / 2);
+
+    // Calculate proficiency bonus: ceil(level/4) + 1
+    const proficiencyBonus = Math.ceil(newLevel / 4) + 1;
+
+    // Calculate HP:
+    // Level 1: hitDie + CON mod (max at level 1)
+    // Each additional level: average die (hitDie/2 + 1) + CON mod
+    const baseHP = hitDie + conMod;
+    const averageDie = Math.floor(hitDie / 2) + 1;
+    const perLevel = Math.max(1, averageDie + conMod);
+    const hpMax = newLevel === 1 ? Math.max(1, baseHP) : Math.max(1, baseHP + perLevel * (newLevel - 1));
+
+    return {
+        proficiencyBonus,
+        hpMax,
+        hitDie,
+    };
 }
 
 // Generic alert modal using terminal modal styles
