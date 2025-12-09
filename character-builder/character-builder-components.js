@@ -156,7 +156,9 @@ const Components = (window.Components = {
 
     const imageModelOptions = [
       { value: 'dall-e-3', label: 'DALL·E 3 (high detail)' },
-      { value: 'gpt-image-1', label: 'GPT Image 1 (new)' },
+      { value: 'gpt-image-1', label: 'GPT Image 1 (OpenAI)' },
+      { value: 'flux-1.1-pro', label: 'Flux Pro (high quality)' },
+      { value: 'flux-schnell', label: 'Flux Schnell (fast)' },
     ];
 
     const currentImageModelValue = getCurrentImageModel();
@@ -260,7 +262,7 @@ const Components = (window.Components = {
         <div class="modal-content builder-settings-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
             <div class="modal-header-main">
-              <h2 class="modal-title">[ ⚙︎ Settings ]</h2>
+              <h2 class="modal-title">⚙︎ Settings</h2>
             </div>
             <button class="modal-close" onclick="SettingsModal.close()" aria-label="Close settings">&times;</button>
           </div>
@@ -760,11 +762,18 @@ const SettingsModal = (window.SettingsModal = {
     }
 
     // Save global portrait view mode (ASCII vs Original)
+    // Track if mode changed to trigger UI refresh
+    let portraitModeChanged = false;
     const portraitModeInput = document.querySelector(
       'input[name="portrait-view-mode"]:checked',
     );
     if (portraitModeInput && window.StorageService && StorageService.setPortraitViewMode) {
-      StorageService.setPortraitViewMode(portraitModeInput.value);
+      const oldMode = StorageService.getPortraitViewMode ? StorageService.getPortraitViewMode() : null;
+      const newMode = portraitModeInput.value;
+      if (oldMode !== newMode) {
+        portraitModeChanged = true;
+      }
+      StorageService.setPortraitViewMode(newMode);
     }
 
     // Save portrait prompt theme selection
@@ -785,6 +794,40 @@ const SettingsModal = (window.SettingsModal = {
     }
 
     this.close();
+
+    // If portrait view mode changed, refresh the UI to update images
+    if (portraitModeChanged) {
+      // Character Manager context: re-render grid and current sheet
+      if (typeof UI !== 'undefined' && UI && typeof UI.renderCharacterGrid === 'function') {
+        UI.renderCharacterGrid();
+        // Re-render the current character sheet if one is selected
+        if (typeof AppState !== 'undefined' && AppState && AppState.selectedCharacterId) {
+          const selectedChar = AppState.filteredCharacters?.find(
+            c => c && String(c.id) === String(AppState.selectedCharacterId)
+          ) || AppState.characters?.find(
+            c => c && String(c.id) === String(AppState.selectedCharacterId)
+          );
+          if (selectedChar) {
+            UI.showCharacterSheet(selectedChar);
+          }
+        }
+      }
+      // Character Builder context: re-render completion screen if on that step
+      if (typeof App !== 'undefined' && App && typeof CharacterState !== 'undefined') {
+        const state = CharacterState.get ? CharacterState.get() : null;
+        if (state && state.step === 'complete' && state.character) {
+          // Re-render the character panel to reflect the new view mode
+          const panel = document.getElementById('character-panel');
+          if (panel && typeof Components !== 'undefined' && Components.renderCharacterSheet) {
+            panel.innerHTML = Components.renderCharacterSheet(state.character);
+            // Populate the ASCII portrait after rendering
+            if (typeof CharacterSheet !== 'undefined' && CharacterSheet.populatePortrait) {
+              CharacterSheet.populatePortrait(state.character);
+            }
+          }
+        }
+      }
+    }
   },
 });
 

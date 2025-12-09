@@ -2842,6 +2842,11 @@ const StorageService = (window.StorageService = {
 
   // Preferred AI image model for custom portraits.
   // Stored per-browser so builder + manager can share the same choice.
+  // Supported models:
+  // - dall-e-3      (OpenAI DALL-E 3)
+  // - gpt-image-1   (OpenAI GPT Image 1)
+  // - flux-1.1-pro  (Replicate Flux Pro - high quality)
+  // - flux-schnell  (Replicate Flux Schnell - fast & cheap)
   getImageModel() {
     try {
       const raw = localStorage.getItem('dnd_image_model');
@@ -2850,7 +2855,7 @@ const StorageService = (window.StorageService = {
         'dall-e-3';
       if (!raw) return fallback;
       const value = String(raw).trim();
-      const allowed = ['dall-e-3', 'gpt-image-1'];
+      const allowed = ['dall-e-3', 'gpt-image-1', 'flux-1.1-pro', 'flux-schnell'];
       return allowed.includes(value) ? value : fallback;
     } catch (e) {
       console.warn('StorageService.getImageModel failed, using fallback', e);
@@ -2861,7 +2866,7 @@ const StorageService = (window.StorageService = {
   setImageModel(model) {
     try {
       const value = String(model || '').trim();
-      const allowed = ['dall-e-3', 'gpt-image-1'];
+      const allowed = ['dall-e-3', 'gpt-image-1', 'flux-1.1-pro', 'flux-schnell'];
       if (!allowed.includes(value)) {
         console.warn('StorageService.setImageModel: ignoring unsupported model', value);
         // Clear invalid values so we fall back cleanly next time.
@@ -4671,7 +4676,9 @@ const Components = (window.Components = {
 
     const imageModelOptions = [
       { value: 'dall-e-3', label: 'DALL·E 3 (high detail)' },
-      { value: 'gpt-image-1', label: 'GPT Image 1 (new)' },
+      { value: 'gpt-image-1', label: 'GPT Image 1 (OpenAI)' },
+      { value: 'flux-1.1-pro', label: 'Flux Pro (high quality)' },
+      { value: 'flux-schnell', label: 'Flux Schnell (fast)' },
     ];
 
     const currentImageModelValue = getCurrentImageModel();
@@ -5275,11 +5282,18 @@ const SettingsModal = (window.SettingsModal = {
     }
 
     // Save global portrait view mode (ASCII vs Original)
+    // Track if mode changed to trigger UI refresh
+    let portraitModeChanged = false;
     const portraitModeInput = document.querySelector(
       'input[name="portrait-view-mode"]:checked',
     );
     if (portraitModeInput && window.StorageService && StorageService.setPortraitViewMode) {
-      StorageService.setPortraitViewMode(portraitModeInput.value);
+      const oldMode = StorageService.getPortraitViewMode ? StorageService.getPortraitViewMode() : null;
+      const newMode = portraitModeInput.value;
+      if (oldMode !== newMode) {
+        portraitModeChanged = true;
+      }
+      StorageService.setPortraitViewMode(newMode);
     }
 
     // Save portrait prompt theme selection
@@ -5300,6 +5314,40 @@ const SettingsModal = (window.SettingsModal = {
     }
 
     this.close();
+
+    // If portrait view mode changed, refresh the UI to update images
+    if (portraitModeChanged) {
+      // Character Manager context: re-render grid and current sheet
+      if (typeof UI !== 'undefined' && UI && typeof UI.renderCharacterGrid === 'function') {
+        UI.renderCharacterGrid();
+        // Re-render the current character sheet if one is selected
+        if (typeof AppState !== 'undefined' && AppState && AppState.selectedCharacterId) {
+          const selectedChar = AppState.filteredCharacters?.find(
+            c => c && String(c.id) === String(AppState.selectedCharacterId)
+          ) || AppState.characters?.find(
+            c => c && String(c.id) === String(AppState.selectedCharacterId)
+          );
+          if (selectedChar) {
+            UI.showCharacterSheet(selectedChar);
+          }
+        }
+      }
+      // Character Builder context: re-render completion screen if on that step
+      if (typeof App !== 'undefined' && App && typeof CharacterState !== 'undefined') {
+        const state = CharacterState.get ? CharacterState.get() : null;
+        if (state && state.step === 'complete' && state.character) {
+          // Re-render the character panel to reflect the new view mode
+          const panel = document.getElementById('character-panel');
+          if (panel && typeof Components !== 'undefined' && Components.renderCharacterSheet) {
+            panel.innerHTML = Components.renderCharacterSheet(state.character);
+            // Populate the ASCII portrait after rendering
+            if (typeof CharacterSheet !== 'undefined' && CharacterSheet.populatePortrait) {
+              CharacterSheet.populatePortrait(state.character);
+            }
+          }
+        }
+      }
+    }
   },
 });
 
@@ -8766,6 +8814,10 @@ if (DEBUG_CLOUD) {
 
         if (imageModel === 'gpt-image-1') {
           subtext = '(This can take up to a minute)';
+        } else if (imageModel === 'flux-1.1-pro') {
+          subtext = '(Flux Pro – usually 10–20 seconds)';
+        } else if (imageModel === 'flux-schnell') {
+          subtext = '(Flux Schnell – usually 5–10 seconds)';
         }
       } catch (e) {
         // Fall back to default subtext on any error.
