@@ -123,8 +123,8 @@
 .guest-notice {
     margin: 0 0 var(--spacing-lg) 0;
     padding: var(--spacing-sm) var(--spacing-md);
-    border: 1px solid var(--modal-accent);
-    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.12);
+    border: 1px solid var(--sheet-accent);
+    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.12);
     font-size: var(--font-size-small);
     display: flex;
     align-items: center;
@@ -132,15 +132,21 @@
 }
 
 .guest-notice .highlight {
-    color: var(--modal-accent);
+    color: var(--sheet-accent);
 }
 
 .guest-notice-icon {
-    color: var(--modal-accent);
+    color: var(--sheet-accent);
 }
 
 .guest-notice-close {
     margin-left: auto;
+    color: var(--sheet-accent);
+}
+
+.guest-notice-close:hover {
+    color: var(--sheet-accent);
+    text-shadow: 0 0 8px var(--sheet-accent);
 }
 
 .search-bar {
@@ -262,7 +268,13 @@
 .search-actions {
     display: flex;
     align-items: center;
-    gap: var(--spacing-xs);
+    gap: var(--spacing-sm);
+}
+
+.search-character-count {
+    color: var(--terminal-accent);
+    font-size: var(--font-size-small);
+    white-space: nowrap;
 }
 
 .sort-trigger-wrap {
@@ -331,6 +343,24 @@
        Height includes: padding (32px top + 16px bottom), search bar (~45px),
        margin (16px), plus optional guest notice (~50px). */
     scroll-margin-top: 160px;
+    /* Position context for demo tag */
+    position: relative;
+}
+
+/* Sample character tag - top left corner */
+.card-demo-tag {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 5;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--terminal-fg);
+    background-color: rgba(0, 0, 0, 0.85);
+    padding: 2px 6px;
+    line-height: 1;
 }
 
 /* Hover and keyboard focus (unselected) - bright green outline, text, and ASCII */
@@ -1099,6 +1129,44 @@
   text-shadow: 0 0 10px var(--sheet-accent);
 }
 
+/* Modal loading overlay - shown while saving */
+.modal-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  border-radius: var(--radius-md);
+}
+
+.modal-loading-overlay.is-visible {
+  display: flex;
+}
+
+/* Modal loading cube - uses yellow modal theme */
+.modal-loading-overlay .panel-loading-cube i {
+  border-color: var(--modal-accent);
+  background: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.05);
+  box-shadow: 
+    inset 0 0 20px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.1),
+    0 0 15px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.2);
+}
+
+.modal-loading-overlay .panel-loading-text {
+  color: var(--modal-accent);
+  text-shadow: 0 0 10px var(--modal-accent);
+}
+
+.modal-content {
+  position: relative; /* needed for absolute overlay positioning */
+}
+
 /* ===== RESPONSIVE ===== */
 
 /* Tablet breakpoint: 2-column grid with card details */
@@ -1361,6 +1429,12 @@
         display: flex;
     }
     
+    .mobile-character-count {
+        color: var(--terminal-accent);
+        margin-left: auto;
+        white-space: nowrap;
+    }
+    
     /* Hide grid and controls when viewing sheet */
     .left-panel.is-viewing-sheet .controls-section,
     .left-panel.is-viewing-sheet .character-grid,
@@ -1385,13 +1459,6 @@
 
 .mobile-back-link:hover {
     color: var(--sheet-accent);
-}
-
-.mobile-character-count {
-    margin-left: auto;
-    color: var(--sheet-accent-dim);
-    font-family: var(--font-mono);
-    font-size: var(--font-size-small);
 }
 
 /* Container for character sheet on mobile (inside left panel) */
@@ -1437,7 +1504,11 @@
     /* Terminal button colors */
     --terminal-border: var(--sheet-accent);
     --terminal-accent: var(--sheet-accent);
-    /* Teal scrollbar theme */
+}
+
+
+/* Use teal scrollbar theme when viewing sheet */
+.left-panel.is-viewing-sheet {
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
@@ -1852,4 +1923,52 @@
         filter: grayscale(100%) !important;
         -webkit-filter: grayscale(100%) !important;
     }
+}
+
+/* ========================================
+   Demo Character List (Migration Modal)
+   ======================================== */
+.terminal-list {
+    list-style: none;
+    padding: 0;
+    margin: var(--spacing-sm) 0;
+}
+
+.terminal-list li {
+    padding: var(--spacing-xs) 0;
+    color: var(--text-muted);
+    position: relative;
+    padding-left: var(--spacing-md);
+}
+
+.terminal-list li::before {
+    content: '›';
+    position: absolute;
+    left: 0;
+    color: var(--terminal-cyan);
+}
+
+.terminal-list .demo-char-name {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.terminal-list .demo-char-info {
+    color: var(--text-dim);
+    font-size: var(--font-sm);
+}
+
+/* Demo character tag */
+.demo-tag {
+    display: inline-block;
+    margin-left: var(--spacing-sm);
+    padding: 2px 6px;
+    font-size: 0.65em;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--terminal-bg);
+    background-color: var(--sheet-accent);
+    border-radius: 3px;
+    vertical-align: middle;
 }

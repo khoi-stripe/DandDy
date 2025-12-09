@@ -3367,6 +3367,25 @@ const App = (window.App = {
     const state = CharacterState.get();
     const character = state.character;
 
+    // Block custom art generation for sample (demo) characters
+    if (window.DemoCharacters && DemoCharacters.isDemo(character)) {
+      this.showSystemMessage(
+        'Custom art generation is not available for sample characters. ' +
+        'Create your own character to generate custom portraits!'
+      );
+      return;
+    }
+
+    // In demo mode, check portrait limit per character
+    if (window.DemoCharacters && !DemoCharacters.canGenerateCustomArt(character)) {
+      const limit = DemoCharacters.DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
+      this.showSystemMessage(
+        `You've reached the limit of ${limit} custom portraits per character in demo mode. ` +
+        'Create a free account to generate unlimited portraits!'
+      );
+      return;
+    }
+
     if (!character.race || !character.class) {
       this.showSystemMessage(
         'Select both a race and a class before generating a custom portrait.',
@@ -3974,6 +3993,16 @@ const App = (window.App = {
     if (!character || !window.StorageService) {
       this.showSystemMessage(
         'Unable to save character right now. Please try again shortly.',
+      );
+      return;
+    }
+
+    // In demo mode, check if user has reached the character limit (for new characters only)
+    if (!character.id && window.DemoCharacters && DemoCharacters.hasReachedCharacterLimit()) {
+      const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
+      this.showSystemMessage(
+        `You've reached the limit of ${limit} characters in demo mode. ` +
+        'Create a free account to save unlimited characters!'
       );
       return;
     }
@@ -4993,7 +5022,7 @@ const App = (window.App = {
       narratorPanel.lastElementChild.querySelector('.narrator-text');
     await Utils.typewriter(
       summaryEl,
-      narrator.quickCreateSummary(race.name, cls.name, background.name, alignment.name),
+      narrator.quickCreateSummary(race.name, cls.name, background.name, alignment.name, sex.charAt(0).toUpperCase() + sex.slice(1)),
     );
     Utils.scrollToBottom(true);
 

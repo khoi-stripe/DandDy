@@ -62,6 +62,7 @@
         // Appearance & Backstory
         appearance: character.appearance || null,
         backstory: character.backstory || null,
+        sex: character.sex || null,
 
         // Portrait
         ascii_portrait: character.asciiPortrait || null,
@@ -147,6 +148,7 @@
 
         appearance: backendChar.appearance,
         backstory: backendChar.backstory,
+        sex: backendChar.sex || null,
 
         asciiPortrait: backendChar.ascii_portrait,
         originalPortraitUrl: backendChar.original_portrait_url,
@@ -251,6 +253,7 @@
         // Appearance & Backstory
         appearance: character.appearance || null,
         backstory: character.backstory || null,
+        sex: character.sex || null,
 
         // Portrait data
         ascii_portrait: character.asciiPortrait || null,
@@ -343,6 +346,7 @@
         flaws: apiChar.flaws,
         appearance: apiChar.appearance,
         backstory: apiChar.backstory,
+        sex: apiChar.sex || null,
 
         equipment: apiChar.inventory.map((item) =>
           typeof item === 'object' && item.name ? item.name : item,

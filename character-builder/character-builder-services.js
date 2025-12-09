@@ -1802,6 +1802,10 @@ Format your response as JSON array of strings, one for each option in order. Exa
     }
 
     const headerParts = [];
+    // Sex - include for portrait generation (e.g., "male dwarf" or "female elf")
+    if (character && character.sex) {
+      headerParts.push(character.sex);
+    }
     if (raceLabel) headerParts.push(raceLabel);
     if (classLabel) headerParts.push(classLabel);
     

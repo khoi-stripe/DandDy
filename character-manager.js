@@ -847,7 +847,7 @@ const MobileView = {
         const currentNum = currentIndex >= 0 ? currentIndex + 1 : 1;
         const total = characters.length;
         
-        countEl.textContent = `${currentNum} of ${total}`;
+        countEl.textContent = currentNum + ' of ' + total;
     },
     
     /** Add the swipe loader overlay to the portrait container */
@@ -1245,8 +1245,13 @@ const UI = {
             }
         }
 
+        // Check if this is a demo character
+        const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
+        const demoTagHtml = isDemo ? '<span class="card-demo-tag">SAMPLE</span>' : '';
+
         return `
             <div class="character-card" data-id="${character.id}" onclick="viewCharacter('${character.id}')">
+                ${demoTagHtml}
                 ${thumbnailHtml}
                 <div class="card-details">
                     <div class="card-name">${name}</div>
@@ -1261,25 +1266,28 @@ const UI = {
     updateCount() {
         const searchInput = document.getElementById('searchInput');
         const clearSearchBtn = document.getElementById('clearSearchBtn');
+        const countEl = document.getElementById('searchCharacterCount');
         const total = AppState.characters.length;
         const filtered = AppState.filteredCharacters.length;
 
         // Disable search when there are no characters at all
         if (searchInput) {
             searchInput.disabled = total === 0;
+            searchInput.placeholder = 'Search';
         }
         if (clearSearchBtn) {
             clearSearchBtn.disabled = total === 0;
         }
 
-        // Use compact placeholder on narrow viewports (≤1024px)
-        const isCompact = window.innerWidth <= 1024;
-        if (isCompact) {
-            searchInput.placeholder = 'Search';
-        } else if (total === filtered) {
-            searchInput.placeholder = `Search ${total} character${total !== 1 ? 's' : ''}`;
-        } else {
-            searchInput.placeholder = `Search ${filtered} of ${total} character${total !== 1 ? 's' : ''}`;
+        // Update character count display (pinned right, teal)
+        if (countEl) {
+            if (total === 0) {
+                countEl.textContent = '';
+            } else if (total === filtered) {
+                countEl.textContent = total + ' character' + (total !== 1 ? 's' : '');
+            } else {
+                countEl.textContent = filtered + ' of ' + total;
+            }
         }
     },
 
@@ -1321,6 +1329,16 @@ function printCharacterSheet() {
 // ========================================
 
 function createNewCharacter() {
+    // In demo mode, check if user has reached the character limit
+    if (window.DemoCharacters && DemoCharacters.hasReachedCharacterLimit()) {
+        const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
+        showAlertDialog(
+            `You've reached the limit of ${limit} characters in demo mode. ` +
+            'Create a free account to save unlimited characters!'
+        );
+        return;
+    }
+    
     // Launch the Character Builder in the same tab.
     // The builder has an EXIT button to return to the manager view.
     window.location.href = 'character-builder/index.html';
@@ -1685,6 +1703,12 @@ function closeEditDetailsModal() {
         return;
     }
 
+    // Hide loading overlay when modal closes
+    const loadingOverlay = document.getElementById('editDetailsLoading');
+    if (loadingOverlay) {
+        loadingOverlay.classList.remove('is-visible');
+    }
+
     animateModalClose(modal, {
         removeOnClose: false,
         onClosed: () => {
@@ -1703,6 +1727,12 @@ async function saveEditDetails() {
     if (!character) {
         closeEditDetailsModal();
         return;
+    }
+
+    // Show loading overlay
+    const loadingOverlay = document.getElementById('editDetailsLoading');
+    if (loadingOverlay) {
+        loadingOverlay.classList.add('is-visible');
     }
 
     const getLines = (id) => {
@@ -1824,13 +1854,24 @@ async function saveEditDetails() {
         updates.proficiencyBonus = profBonus;
     }
 
-    await CharacterStorage.update(currentEditCharacterId, updates);
-    markUserChanges(); // Show guest notice if applicable
-    await AppState.loadCharacters();
-    UI.render();
-    viewCharacter(currentEditCharacterId);
-    showNotification('Character details updated');
-    closeEditDetailsModal();
+    try {
+        await CharacterStorage.update(currentEditCharacterId, updates);
+        markUserChanges(); // Show guest notice if applicable
+        await AppState.loadCharacters();
+        UI.render();
+        viewCharacter(currentEditCharacterId);
+        showNotification('Character details updated');
+        closeEditDetailsModal();
+    } catch (error) {
+        console.error('Failed to save character details:', error);
+        showNotification('Failed to save changes', 'error');
+    } finally {
+        // Hide loading overlay
+        const loadingOverlay = document.getElementById('editDetailsLoading');
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('is-visible');
+        }
+    }
 }
 
 // Resolve the best host element for manager UI modals so that they are
@@ -2067,6 +2108,25 @@ function initPortraitStyleSelector() {
 async function generatePortraitForCharacter(id) {
     const character = await CharacterStorage.getById(id);
     if (!character) return;
+
+    // Block custom art generation for sample (demo) characters
+    if (window.DemoCharacters && DemoCharacters.isDemo(character)) {
+        showAlertDialog(
+            'Custom art generation is not available for sample characters. ' +
+            'Create your own character to generate custom portraits!'
+        );
+        return;
+    }
+
+    // In demo mode, check portrait limit per character
+    if (window.DemoCharacters && !DemoCharacters.canGenerateCustomArt(character)) {
+        const limit = DemoCharacters.DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
+        showAlertDialog(
+            `You've reached the limit of ${limit} custom portraits per character in demo mode. ` +
+            'Create a free account to generate unlimited portraits!'
+        );
+        return;
+    }
 
     // Check if race and class are defined
     if (!character.race || !character.class) {
@@ -3961,9 +4021,13 @@ async function handleLogin() {
             updateAuthUI();
             showNotification(`✓ Logged in as ${email}`);
             
-            // Check if should migrate
+            // Check if should migrate user-created characters first
             if (window.MigrationService.hasLocalCharacters()) {
                 showMigrationModal();
+            }
+            // Then check for demo character migration (only ask once)
+            else if (shouldShowDemoMigration()) {
+                showDemoMigrationModal();
             } else {
                 // Reload characters from cloud
                 await AppState.loadCharacters();
@@ -4029,9 +4093,17 @@ async function handleRegister() {
             updateAuthUI();
             showNotification(`✓ Registered as ${email}`);
             
-            // Check if should migrate
+            // Check if should migrate user-created characters first
             if (window.MigrationService.hasLocalCharacters()) {
                 showMigrationModal();
+            } 
+            // Then check for demo character migration (only ask once)
+            else if (shouldShowDemoMigration()) {
+                showDemoMigrationModal();
+            } else {
+                // Reload characters from cloud
+                await AppState.loadCharacters();
+                UI.render();
             }
         } else {
             errorEl.textContent = result.error || 'Registration failed';
@@ -4275,8 +4347,14 @@ function showMigrationModal() {
 
 function closeMigrationModal() {
     document.getElementById('migrationModal').classList.remove('show');
-    // Reload characters after closing (whether migrated or not)
-    AppState.loadCharacters().then(() => UI.render());
+    
+    // After user-created migration, also ask about demo characters (once)
+    if (shouldShowDemoMigration()) {
+        showDemoMigrationModal();
+    } else {
+        // Reload characters after closing (whether migrated or not)
+        AppState.loadCharacters().then(() => UI.render());
+    }
 }
 
 async function startMigration() {
@@ -4286,8 +4364,8 @@ async function startMigration() {
     statusEl.textContent = '☁️ Migrating to cloud...';
     
     try {
-        // Migrate
-        const results = await window.MigrationService.migrateToCloud();
+        // Migrate (excluding demo characters - they have their own modal)
+        const results = await window.MigrationService.migrateToCloud({ includeDemoCharacters: false });
         
         if (results.success > 0) {
             statusEl.textContent = `✓ Migrated ${results.success} character(s) successfully!`;
@@ -4318,6 +4396,97 @@ async function startMigration() {
         statusEl.textContent = '❌ Migration failed: ' + error.message;
         setTimeout(() => closeMigrationModal(), 3000);
     }
+}
+
+// ========================================
+// DEMO CHARACTER MIGRATION UI HANDLERS
+// ========================================
+
+function showDemoMigrationModal() {
+    if (!window.DemoCharacters) return;
+    
+    // Mark that we've asked about demo migration
+    window.DemoCharacters.markMigrationAsked();
+    
+    const demoChars = window.DemoCharacters.getAll();
+    const count = demoChars.length;
+    
+    document.getElementById('demoMigrationCount').textContent = count;
+    
+    // Populate the demo character list
+    const listEl = document.getElementById('demoCharacterList');
+    if (listEl) {
+        listEl.innerHTML = demoChars.map(char => {
+            const raceName = char.raceData?.name || char.race || '?';
+            const className = char.classData?.name || char.class || '?';
+            return `<li><span class="demo-char-name">${Utils.escapeHtml(char.name)}</span> <span class="demo-char-info">– Level ${char.level} ${raceName} ${className}</span></li>`;
+        }).join('');
+    }
+    
+    const modal = document.getElementById('demoMigrationModal');
+    if (modal) {
+        modal.classList.add('show');
+        focusFirstFieldInModal(modal);
+    }
+}
+
+function closeDemoMigrationModal(skipReload = false) {
+    const modal = document.getElementById('demoMigrationModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+    
+    if (!skipReload) {
+        // Reload characters from cloud
+        AppState.loadCharacters().then(() => UI.render());
+    }
+}
+
+async function migrateDemoCharacters() {
+    try {
+        // Get demo characters
+        const demoChars = window.DemoCharacters ? window.DemoCharacters.getAll() : [];
+        
+        if (demoChars.length === 0) {
+            closeDemoMigrationModal();
+            return;
+        }
+        
+        let successCount = 0;
+        
+        for (const demo of demoChars) {
+            try {
+                // Copy demo character to cloud (remove demo flags)
+                const charToAdd = { ...demo };
+                delete charToAdd.isDemo;
+                delete charToAdd.id;  // Let cloud assign new ID
+                
+                await window.CharacterCloudStorage.add(charToAdd);
+                successCount++;
+            } catch (error) {
+                console.error('Failed to migrate demo character:', demo.name, error);
+            }
+        }
+        
+        if (successCount > 0) {
+            showNotification(`✓ Added ${successCount} sample character(s) to your account`);
+        }
+        
+        closeDemoMigrationModal();
+    } catch (error) {
+        console.error('Demo migration error:', error);
+        showNotification('Failed to add sample characters', 'error');
+        closeDemoMigrationModal();
+    }
+}
+
+// Check if we should show demo migration prompt after registration/login
+function shouldShowDemoMigration() {
+    if (!window.DemoCharacters) return false;
+    if (window.DemoCharacters.hasMigrationBeenAsked()) return false;
+    
+    // Only show if there are demo characters
+    return window.MigrationService.hasDemoCharacters();
 }
 
 // ========================================

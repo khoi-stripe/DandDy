@@ -87,9 +87,7 @@ const QUESTIONS = (window.QUESTIONS = [
         value: 'female',
       },
     ],
-    onSelect: (value) => {
-      CharacterState.updateCharacter({ sex: value });
-    },
+    saveTo: 'sex',
     aiPromptContext: 'character biological sex',
     next: 'physicality',
   },

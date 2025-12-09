@@ -556,9 +556,13 @@ const CharacterSheet = (window.CharacterSheet = {
         ? this.escapeHtml(character.name)
         : '[ CHARACTER SHEET ]';
 
+    // Check if this is a demo character
+    const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
+    const demoTag = isDemo ? '<span class="demo-tag">SAMPLE</span>' : '';
+
     return `
       <div class="sheet-title-header">
-        <div class="sheet-title">${safeTitle}</div>
+        <div class="sheet-title">${safeTitle}${demoTag}</div>
         ${actionsBlock}
       </div>
     `;
@@ -685,11 +689,7 @@ const CharacterSheet = (window.CharacterSheet = {
               ? `<div class="stat-line"><span class="stat-label">Alignment:</span> <span class="stat-value">${alignment || '—'}</span></div>`
               : ''
           }
-          ${
-            isBuilder || sex
-              ? `<div class="stat-line"><span class="stat-label">Sex:</span> <span class="stat-value">${sex || '—'}</span></div>`
-              : ''
-          }
+          <div class="stat-line"><span class="stat-label">Sex:</span> <span class="stat-value">${sex || '—'}</span></div>
           <div class="stat-line">
             <span class="stat-label">Level:</span>
             <span class="stat-value">${parsed.level}</span>

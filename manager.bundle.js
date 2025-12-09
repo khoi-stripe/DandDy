@@ -21,8 +21,8 @@ console.warn('[AuthService] Token rejected by /auth/me; clearing local session.'
 if(DEBUG){console.warn('[AuthService] /auth/me non-401 error',{status:response.status,});}
 throw new Error('Failed to fetch user profile');}
 const profile=await response.json();if(DEBUG){console.log('[AuthService] /auth/me profile loaded',profile);}
-return profile;}catch(error){console.error('[AuthService] Fetch profile error:',error);return null;}},async verifyToken(){const profile=await this.fetchProfile();return!!profile;},});})(window);(function(global){const Mapper={fromBuilderToBackend(character){if(!character)return null;return{name:character.name||'',race:character.race||'',character_class:character.class||'',level:character.level||1,background:character.background||null,alignment:this._mapAlignmentFromBuilder(character.alignment),experience_points:character.experiencePoints||0,strength:character.abilities?.str||10,dexterity:character.abilities?.dex||10,constitution:character.abilities?.con||10,intelligence:character.abilities?.int||10,wisdom:character.abilities?.wis||10,charisma:character.abilities?.cha||10,hit_points_max:character.hitPoints||10,hit_points_current:character.hitPoints||10,hit_points_temp:0,armor_class:this._calculateACFromBuilder(character),initiative:this._calculateInitiativeFromBuilder(character),speed:this._getSpeedFromBuilder(character),death_save_successes:0,death_save_failures:0,saving_throw_proficiencies:character.savingThrows||[],skill_proficiencies:character.skillProficiencies||[],skill_expertises:[],tool_proficiencies:character.toolProficiencies||[],languages:character.languages||[],racial_traits:this._arrayToDict(character.racialTraits),class_features:this._arrayToDict(character.classFeatures),feats:[],background_feature:character.backgroundFeature||{},personality_traits:character.personalityTrait||null,ideals:character.ideal||null,bonds:character.bond||null,flaws:character.flaw||null,appearance:character.appearance||null,backstory:character.backstory||null,ascii_portrait:character.asciiPortrait||null,original_portrait_url:character.originalPortraitUrl||null,custom_portrait_ascii:character.customPortraitAscii||null,custom_portrait_count:character.customPortraitCount||0,portrait_metadata:character.portraitMetadata||{},inventory:this._arrayToDict(character.equipment),spellcasting_ability:character.spellcastingAbility||null,spell_save_dc:character.spellSaveDC||null,spell_attack_bonus:character.spellAttackBonus||null,spell_slots:character.spellSlots||{},spell_slots_used:{},cantrips:this._spellsToStringArray(character.cantrips),spells_known:this._spellsToStringArray(character.spellsKnown),spells_prepared:this._spellsToStringArray(character.spellsPrepared),conditions:[],attacks:this._arrayToDict(character.attacks),copper_pieces:character.copper||0,silver_pieces:character.silver||0,electrum_pieces:character.electrum||0,gold_pieces:character.gold||0,platinum_pieces:character.platinum||0,campaign_id:character.campaignId||null,};},fromBackendToBuilder(backendChar){if(!backendChar)return null;return{id:backendChar.id,name:backendChar.name,race:backendChar.race,class:backendChar.character_class,level:backendChar.level,background:backendChar.background,alignment:this._mapAlignmentFromBackend(backendChar.alignment),experiencePoints:backendChar.experience_points,abilities:{str:backendChar.strength,dex:backendChar.dexterity,con:backendChar.constitution,int:backendChar.intelligence,wis:backendChar.wisdom,cha:backendChar.charisma,},hitPoints:backendChar.hit_points_max,currentHitPoints:backendChar.hit_points_current,armorClass:backendChar.armor_class,initiative:backendChar.initiative,speed:backendChar.speed,savingThrows:backendChar.saving_throw_proficiencies,skillProficiencies:backendChar.skill_proficiencies,toolProficiencies:backendChar.tool_proficiencies,languages:backendChar.languages,racialTraits:backendChar.racial_traits,classFeatures:backendChar.class_features,backgroundFeature:backendChar.background_feature,personalityTrait:backendChar.personality_traits,ideal:backendChar.ideals,bond:backendChar.bonds,flaw:backendChar.flaws,appearance:backendChar.appearance,backstory:backendChar.backstory,asciiPortrait:backendChar.ascii_portrait,originalPortraitUrl:backendChar.original_portrait_url,customPortraitAscii:backendChar.custom_portrait_ascii,customPortraitCount:backendChar.custom_portrait_count,portraitMetadata:backendChar.portrait_metadata,equipment:backendChar.inventory,spellcastingAbility:backendChar.spellcasting_ability,spellSaveDC:backendChar.spell_save_dc,spellAttackBonus:backendChar.spell_attack_bonus,spellSlots:backendChar.spell_slots,cantrips:backendChar.cantrips||[],spellsKnown:backendChar.spells_known||[],spellsPrepared:backendChar.spells_prepared||[],attacks:backendChar.attacks,copper:backendChar.copper_pieces,silver:backendChar.silver_pieces,electrum:backendChar.electrum_pieces,gold:backendChar.gold_pieces,platinum:backendChar.platinum_pieces,campaignId:backendChar.campaign_id,ownerId:backendChar.owner_id,_backendData:backendChar,};},fromManagerToBackend(character){if(!character)return null;const rawBackgroundFeature=character.backgroundFeature||character.backgroundData?.feature||{};const backgroundFeatureDict=typeof rawBackgroundFeature==='string'?{name:rawBackgroundFeature}:rawBackgroundFeature;return{name:character.name||'Unnamed Character',race:character.race||character.raceData?.name||'Human',character_class:character.class||character.classData?.name||'Fighter',level:character.level||1,background:character.background||character.backgroundData?.name||null,alignment:this._mapAlignmentFromManager(character.alignment),experience_points:character.experiencePoints||0,strength:character.abilities?.str||character.abilityScores?.str||10,dexterity:character.abilities?.dex||character.abilityScores?.dex||10,constitution:character.abilities?.con||character.abilityScores?.con||10,intelligence:character.abilities?.int||character.abilityScores?.int||10,wisdom:character.abilities?.wis||character.abilityScores?.wis||10,charisma:character.abilities?.cha||character.abilityScores?.cha||10,hit_points_max:character.hitPoints?.max||character.hitPoints||10,hit_points_current:character.hitPoints?.current||character.hitPoints?.max||character.hitPoints||10,hit_points_temp:character.hitPoints?.temp||0,armor_class:character.armorClass||10,initiative:character.initiative||0,speed:character.speed||30,death_save_successes:character.deathSaves?.successes||0,death_save_failures:character.deathSaves?.failures||0,saving_throw_proficiencies:character.savingThrows||[],skill_proficiencies:character.skillProficiencies||[],skill_expertises:character.skillExpertises||[],tool_proficiencies:character.toolProficiencies||[],languages:character.languages||[],racial_traits:this._arrayToDict(character.racialTraits||character.raceData?.traits||[],),class_features:this._arrayToDict(character.classFeatures||character.classData?.features||[],),feats:this._arrayToDict(character.feats||[]),background_feature:backgroundFeatureDict,personality_traits:character.personalityTraits||character.personalityTrait||null,ideals:character.ideals||null,bonds:character.bonds||null,flaws:character.flaws||null,appearance:character.appearance||null,backstory:character.backstory||null,ascii_portrait:character.asciiPortrait||null,original_portrait_url:character.originalPortraitUrl||null,custom_portrait_ascii:character.customPortraitAscii||null,custom_portrait_count:character.customPortraitCount||0,portrait_metadata:character.portraitMetadata||{},inventory:(character.equipment||character.inventory||[]).map((item)=>typeof item==='string'?{name:item}:item,),spellcasting_ability:character.spellcastingAbility||null,spell_save_dc:character.spellSaveDC||null,spell_attack_bonus:character.spellAttackBonus||null,spell_slots:character.spellSlots||{},spell_slots_used:character.spellSlotsUsed||{},cantrips:this._spellsToStringArray(character.cantrips||[]),spells_known:this._spellsToStringArray(character.spellsKnown||[]),spells_prepared:this._spellsToStringArray(character.spellsPrepared||[]),conditions:character.conditions||[],attacks:character.attacks||[],copper_pieces:character.currency?.cp??character.copper??0,silver_pieces:character.currency?.sp??character.silver??0,electrum_pieces:character.currency?.ep??character.electrum??0,gold_pieces:character.currency?.gp??character.gold??0,platinum_pieces:character.currency?.pp??character.platinum??0,campaign_id:character.campaignId||null,};},fromBackendToManager(apiChar){if(!apiChar)return null;return{id:apiChar.id.toString(),name:apiChar.name,race:apiChar.race,class:apiChar.character_class,level:apiChar.level,background:apiChar.background,alignment:this._mapAlignmentFromBackend(apiChar.alignment),experiencePoints:apiChar.experience_points,abilities:{str:apiChar.strength,dex:apiChar.dexterity,con:apiChar.constitution,int:apiChar.intelligence,wis:apiChar.wisdom,cha:apiChar.charisma,},hitPoints:{max:apiChar.hit_points_max,current:apiChar.hit_points_current,temp:apiChar.hit_points_temp,},armorClass:apiChar.armor_class,initiative:apiChar.initiative,speed:apiChar.speed,savingThrows:apiChar.saving_throw_proficiencies,skillProficiencies:apiChar.skill_proficiencies,skillExpertises:apiChar.skill_expertises,toolProficiencies:apiChar.tool_proficiencies,languages:apiChar.languages,racialTraits:apiChar.racial_traits,classFeatures:apiChar.class_features,feats:apiChar.feats,backgroundFeature:apiChar.background_feature,personalityTraits:apiChar.personality_traits,ideals:apiChar.ideals,bonds:apiChar.bonds,flaws:apiChar.flaws,appearance:apiChar.appearance,backstory:apiChar.backstory,equipment:apiChar.inventory.map((item)=>typeof item==='object'&&item.name?item.name:item,),spellcastingAbility:apiChar.spellcasting_ability,spellSaveDC:apiChar.spell_save_dc,spellAttackBonus:apiChar.spell_attack_bonus,spellSlots:apiChar.spell_slots,spellSlotsUsed:apiChar.spell_slots_used,cantrips:apiChar.cantrips||[],spellsKnown:apiChar.spells_known||[],spellsPrepared:apiChar.spells_prepared||[],conditions:apiChar.conditions,attacks:apiChar.attacks,currency:{cp:apiChar.copper_pieces,sp:apiChar.silver_pieces,ep:apiChar.electrum_pieces,gp:apiChar.gold_pieces,pp:apiChar.platinum_pieces,},campaignId:apiChar.campaign_id,ownerId:apiChar.owner_id,createdAt:apiChar.created_at,updatedAt:apiChar.updated_at,asciiPortrait:apiChar.ascii_portrait,originalPortraitUrl:apiChar.original_portrait_url,customPortraitAscii:apiChar.custom_portrait_ascii,customPortraitCount:apiChar.custom_portrait_count||0,portraitMetadata:apiChar.portrait_metadata||{},};},_arrayToDict(arr){if(!arr||!Array.isArray(arr))return[];return arr.map((item)=>{if(typeof item==='object'&&item!==null)return item;if(typeof item==='string')return{name:item};return{value:item};});},_spellsToStringArray(arr){if(!arr||!Array.isArray(arr))return[];return arr.map((item)=>{if(typeof item==='object'&&item!==null&&item.name)return item.name;if(typeof item==='string')return item;return String(item);});},_mapAlignmentFromBuilder(alignment){if(!alignment)return null;const map={'lg':'lawful_good','ng':'neutral_good','cg':'chaotic_good','ln':'lawful_neutral','n':'true_neutral','cn':'chaotic_neutral','le':'lawful_evil','ne':'neutral_evil','ce':'chaotic_evil','Lawful Good':'lawful_good','Neutral Good':'neutral_good','Chaotic Good':'chaotic_good','Lawful Neutral':'lawful_neutral','True Neutral':'true_neutral','Chaotic Neutral':'chaotic_neutral','Lawful Evil':'lawful_evil','Neutral Evil':'neutral_evil','Chaotic Evil':'chaotic_evil',};return map[alignment]||null;},_mapAlignmentFromManager(alignment){return this._mapAlignmentFromBuilder(alignment);},_mapAlignmentFromBackend(backendAlignment){if(!backendAlignment)return null;const reverseMap={'lawful_good':'lg','neutral_good':'ng','chaotic_good':'cg','lawful_neutral':'ln','true_neutral':'n','chaotic_neutral':'cn','lawful_evil':'le','neutral_evil':'ne','chaotic_evil':'ce',};return reverseMap[backendAlignment]||null;},_calculateACFromBuilder(character){const dex=character.abilities?.dex;const dexMod=dex?Math.floor((dex-10)/2):0;return 10+dexMod;},_calculateInitiativeFromBuilder(character){const dex=character.abilities?.dex;return dex?Math.floor((dex-10)/2):0;},_getSpeedFromBuilder(character){const race=(character.race||'').toLowerCase();const speedMap={dwarf:25,halfling:25,gnome:25,elf:30,human:30,'half-elf':30,'half-orc':30,tiefling:30,dragonborn:30,};return speedMap[race]||30;},};global.DanddyCharacterMapper=Mapper;})(window);(function(global){const cfg=global.DanddyConfig||{};const STORAGE_KEY=cfg.CHARACTER_STORAGE_KEY||'dnd_characters';const CACHE_KEY=`${STORAGE_KEY}_cache`;const Storage={STORAGE_KEY,CACHE_KEY,readAll(){const raw=global.localStorage.getItem(STORAGE_KEY);return raw?JSON.parse(raw):[];},writeAll(characters){global.localStorage.setItem(STORAGE_KEY,JSON.stringify(characters||[]));},upsert(character){if(!character)return;const chars=this.readAll();const idStr=String(character.id);const idx=chars.findIndex((c)=>c&&String(c.id)===idStr);if(idx>=0){chars[idx]=character;}else{chars.push(character);}
-this.writeAll(chars);},deleteById(id){const idStr=String(id);const chars=this.readAll().filter((c)=>!c||String(c.id)!==idStr);this.writeAll(chars);},readCache(){const raw=global.localStorage.getItem(CACHE_KEY);return raw?JSON.parse(raw):[];},writeCache(characters){global.localStorage.setItem(CACHE_KEY,JSON.stringify(characters||[]));},clearAll(){global.localStorage.removeItem(STORAGE_KEY);global.localStorage.removeItem(CACHE_KEY);},};global.DanddyStorage=Storage;})(window);window.DANDDY_VERSION='2.3.4';window.DANDDY_BACKEND_VERSION='1.0.0';(function(global){const DEFAULT_THEME_ID='cinematic-inks';const ADMIN_STORAGE_KEY='dnd_portrait_prompt_entries_v1';let adminCache=null;let apiSyncAttempted=false;function normalize(str){return(str||'').toString().trim();}
+return profile;}catch(error){console.error('[AuthService] Fetch profile error:',error);return null;}},async verifyToken(){const profile=await this.fetchProfile();return!!profile;},});})(window);(function(global){const Mapper={fromBuilderToBackend(character){if(!character)return null;return{name:character.name||'',race:character.race||'',character_class:character.class||'',level:character.level||1,background:character.background||null,alignment:this._mapAlignmentFromBuilder(character.alignment),experience_points:character.experiencePoints||0,strength:character.abilities?.str||10,dexterity:character.abilities?.dex||10,constitution:character.abilities?.con||10,intelligence:character.abilities?.int||10,wisdom:character.abilities?.wis||10,charisma:character.abilities?.cha||10,hit_points_max:character.hitPoints||10,hit_points_current:character.hitPoints||10,hit_points_temp:0,armor_class:this._calculateACFromBuilder(character),initiative:this._calculateInitiativeFromBuilder(character),speed:this._getSpeedFromBuilder(character),death_save_successes:0,death_save_failures:0,saving_throw_proficiencies:character.savingThrows||[],skill_proficiencies:character.skillProficiencies||[],skill_expertises:[],tool_proficiencies:character.toolProficiencies||[],languages:character.languages||[],racial_traits:this._arrayToDict(character.racialTraits),class_features:this._arrayToDict(character.classFeatures),feats:[],background_feature:character.backgroundFeature||{},personality_traits:character.personalityTrait||null,ideals:character.ideal||null,bonds:character.bond||null,flaws:character.flaw||null,appearance:character.appearance||null,backstory:character.backstory||null,sex:character.sex||null,ascii_portrait:character.asciiPortrait||null,original_portrait_url:character.originalPortraitUrl||null,custom_portrait_ascii:character.customPortraitAscii||null,custom_portrait_count:character.customPortraitCount||0,portrait_metadata:character.portraitMetadata||{},inventory:this._arrayToDict(character.equipment),spellcasting_ability:character.spellcastingAbility||null,spell_save_dc:character.spellSaveDC||null,spell_attack_bonus:character.spellAttackBonus||null,spell_slots:character.spellSlots||{},spell_slots_used:{},cantrips:this._spellsToStringArray(character.cantrips),spells_known:this._spellsToStringArray(character.spellsKnown),spells_prepared:this._spellsToStringArray(character.spellsPrepared),conditions:[],attacks:this._arrayToDict(character.attacks),copper_pieces:character.copper||0,silver_pieces:character.silver||0,electrum_pieces:character.electrum||0,gold_pieces:character.gold||0,platinum_pieces:character.platinum||0,campaign_id:character.campaignId||null,};},fromBackendToBuilder(backendChar){if(!backendChar)return null;return{id:backendChar.id,name:backendChar.name,race:backendChar.race,class:backendChar.character_class,level:backendChar.level,background:backendChar.background,alignment:this._mapAlignmentFromBackend(backendChar.alignment),experiencePoints:backendChar.experience_points,abilities:{str:backendChar.strength,dex:backendChar.dexterity,con:backendChar.constitution,int:backendChar.intelligence,wis:backendChar.wisdom,cha:backendChar.charisma,},hitPoints:backendChar.hit_points_max,currentHitPoints:backendChar.hit_points_current,armorClass:backendChar.armor_class,initiative:backendChar.initiative,speed:backendChar.speed,savingThrows:backendChar.saving_throw_proficiencies,skillProficiencies:backendChar.skill_proficiencies,toolProficiencies:backendChar.tool_proficiencies,languages:backendChar.languages,racialTraits:backendChar.racial_traits,classFeatures:backendChar.class_features,backgroundFeature:backendChar.background_feature,personalityTrait:backendChar.personality_traits,ideal:backendChar.ideals,bond:backendChar.bonds,flaw:backendChar.flaws,appearance:backendChar.appearance,backstory:backendChar.backstory,sex:backendChar.sex||null,asciiPortrait:backendChar.ascii_portrait,originalPortraitUrl:backendChar.original_portrait_url,customPortraitAscii:backendChar.custom_portrait_ascii,customPortraitCount:backendChar.custom_portrait_count,portraitMetadata:backendChar.portrait_metadata,equipment:backendChar.inventory,spellcastingAbility:backendChar.spellcasting_ability,spellSaveDC:backendChar.spell_save_dc,spellAttackBonus:backendChar.spell_attack_bonus,spellSlots:backendChar.spell_slots,cantrips:backendChar.cantrips||[],spellsKnown:backendChar.spells_known||[],spellsPrepared:backendChar.spells_prepared||[],attacks:backendChar.attacks,copper:backendChar.copper_pieces,silver:backendChar.silver_pieces,electrum:backendChar.electrum_pieces,gold:backendChar.gold_pieces,platinum:backendChar.platinum_pieces,campaignId:backendChar.campaign_id,ownerId:backendChar.owner_id,_backendData:backendChar,};},fromManagerToBackend(character){if(!character)return null;const rawBackgroundFeature=character.backgroundFeature||character.backgroundData?.feature||{};const backgroundFeatureDict=typeof rawBackgroundFeature==='string'?{name:rawBackgroundFeature}:rawBackgroundFeature;return{name:character.name||'Unnamed Character',race:character.race||character.raceData?.name||'Human',character_class:character.class||character.classData?.name||'Fighter',level:character.level||1,background:character.background||character.backgroundData?.name||null,alignment:this._mapAlignmentFromManager(character.alignment),experience_points:character.experiencePoints||0,strength:character.abilities?.str||character.abilityScores?.str||10,dexterity:character.abilities?.dex||character.abilityScores?.dex||10,constitution:character.abilities?.con||character.abilityScores?.con||10,intelligence:character.abilities?.int||character.abilityScores?.int||10,wisdom:character.abilities?.wis||character.abilityScores?.wis||10,charisma:character.abilities?.cha||character.abilityScores?.cha||10,hit_points_max:character.hitPoints?.max||character.hitPoints||10,hit_points_current:character.hitPoints?.current||character.hitPoints?.max||character.hitPoints||10,hit_points_temp:character.hitPoints?.temp||0,armor_class:character.armorClass||10,initiative:character.initiative||0,speed:character.speed||30,death_save_successes:character.deathSaves?.successes||0,death_save_failures:character.deathSaves?.failures||0,saving_throw_proficiencies:character.savingThrows||[],skill_proficiencies:character.skillProficiencies||[],skill_expertises:character.skillExpertises||[],tool_proficiencies:character.toolProficiencies||[],languages:character.languages||[],racial_traits:this._arrayToDict(character.racialTraits||character.raceData?.traits||[],),class_features:this._arrayToDict(character.classFeatures||character.classData?.features||[],),feats:this._arrayToDict(character.feats||[]),background_feature:backgroundFeatureDict,personality_traits:character.personalityTraits||character.personalityTrait||null,ideals:character.ideals||null,bonds:character.bonds||null,flaws:character.flaws||null,appearance:character.appearance||null,backstory:character.backstory||null,sex:character.sex||null,ascii_portrait:character.asciiPortrait||null,original_portrait_url:character.originalPortraitUrl||null,custom_portrait_ascii:character.customPortraitAscii||null,custom_portrait_count:character.customPortraitCount||0,portrait_metadata:character.portraitMetadata||{},inventory:(character.equipment||character.inventory||[]).map((item)=>typeof item==='string'?{name:item}:item,),spellcasting_ability:character.spellcastingAbility||null,spell_save_dc:character.spellSaveDC||null,spell_attack_bonus:character.spellAttackBonus||null,spell_slots:character.spellSlots||{},spell_slots_used:character.spellSlotsUsed||{},cantrips:this._spellsToStringArray(character.cantrips||[]),spells_known:this._spellsToStringArray(character.spellsKnown||[]),spells_prepared:this._spellsToStringArray(character.spellsPrepared||[]),conditions:character.conditions||[],attacks:character.attacks||[],copper_pieces:character.currency?.cp??character.copper??0,silver_pieces:character.currency?.sp??character.silver??0,electrum_pieces:character.currency?.ep??character.electrum??0,gold_pieces:character.currency?.gp??character.gold??0,platinum_pieces:character.currency?.pp??character.platinum??0,campaign_id:character.campaignId||null,};},fromBackendToManager(apiChar){if(!apiChar)return null;return{id:apiChar.id.toString(),name:apiChar.name,race:apiChar.race,class:apiChar.character_class,level:apiChar.level,background:apiChar.background,alignment:this._mapAlignmentFromBackend(apiChar.alignment),experiencePoints:apiChar.experience_points,abilities:{str:apiChar.strength,dex:apiChar.dexterity,con:apiChar.constitution,int:apiChar.intelligence,wis:apiChar.wisdom,cha:apiChar.charisma,},hitPoints:{max:apiChar.hit_points_max,current:apiChar.hit_points_current,temp:apiChar.hit_points_temp,},armorClass:apiChar.armor_class,initiative:apiChar.initiative,speed:apiChar.speed,savingThrows:apiChar.saving_throw_proficiencies,skillProficiencies:apiChar.skill_proficiencies,skillExpertises:apiChar.skill_expertises,toolProficiencies:apiChar.tool_proficiencies,languages:apiChar.languages,racialTraits:apiChar.racial_traits,classFeatures:apiChar.class_features,feats:apiChar.feats,backgroundFeature:apiChar.background_feature,personalityTraits:apiChar.personality_traits,ideals:apiChar.ideals,bonds:apiChar.bonds,flaws:apiChar.flaws,appearance:apiChar.appearance,backstory:apiChar.backstory,sex:apiChar.sex||null,equipment:apiChar.inventory.map((item)=>typeof item==='object'&&item.name?item.name:item,),spellcastingAbility:apiChar.spellcasting_ability,spellSaveDC:apiChar.spell_save_dc,spellAttackBonus:apiChar.spell_attack_bonus,spellSlots:apiChar.spell_slots,spellSlotsUsed:apiChar.spell_slots_used,cantrips:apiChar.cantrips||[],spellsKnown:apiChar.spells_known||[],spellsPrepared:apiChar.spells_prepared||[],conditions:apiChar.conditions,attacks:apiChar.attacks,currency:{cp:apiChar.copper_pieces,sp:apiChar.silver_pieces,ep:apiChar.electrum_pieces,gp:apiChar.gold_pieces,pp:apiChar.platinum_pieces,},campaignId:apiChar.campaign_id,ownerId:apiChar.owner_id,createdAt:apiChar.created_at,updatedAt:apiChar.updated_at,asciiPortrait:apiChar.ascii_portrait,originalPortraitUrl:apiChar.original_portrait_url,customPortraitAscii:apiChar.custom_portrait_ascii,customPortraitCount:apiChar.custom_portrait_count||0,portraitMetadata:apiChar.portrait_metadata||{},};},_arrayToDict(arr){if(!arr||!Array.isArray(arr))return[];return arr.map((item)=>{if(typeof item==='object'&&item!==null)return item;if(typeof item==='string')return{name:item};return{value:item};});},_spellsToStringArray(arr){if(!arr||!Array.isArray(arr))return[];return arr.map((item)=>{if(typeof item==='object'&&item!==null&&item.name)return item.name;if(typeof item==='string')return item;return String(item);});},_mapAlignmentFromBuilder(alignment){if(!alignment)return null;const map={'lg':'lawful_good','ng':'neutral_good','cg':'chaotic_good','ln':'lawful_neutral','n':'true_neutral','cn':'chaotic_neutral','le':'lawful_evil','ne':'neutral_evil','ce':'chaotic_evil','Lawful Good':'lawful_good','Neutral Good':'neutral_good','Chaotic Good':'chaotic_good','Lawful Neutral':'lawful_neutral','True Neutral':'true_neutral','Chaotic Neutral':'chaotic_neutral','Lawful Evil':'lawful_evil','Neutral Evil':'neutral_evil','Chaotic Evil':'chaotic_evil',};return map[alignment]||null;},_mapAlignmentFromManager(alignment){return this._mapAlignmentFromBuilder(alignment);},_mapAlignmentFromBackend(backendAlignment){if(!backendAlignment)return null;const reverseMap={'lawful_good':'lg','neutral_good':'ng','chaotic_good':'cg','lawful_neutral':'ln','true_neutral':'n','chaotic_neutral':'cn','lawful_evil':'le','neutral_evil':'ne','chaotic_evil':'ce',};return reverseMap[backendAlignment]||null;},_calculateACFromBuilder(character){const dex=character.abilities?.dex;const dexMod=dex?Math.floor((dex-10)/2):0;return 10+dexMod;},_calculateInitiativeFromBuilder(character){const dex=character.abilities?.dex;return dex?Math.floor((dex-10)/2):0;},_getSpeedFromBuilder(character){const race=(character.race||'').toLowerCase();const speedMap={dwarf:25,halfling:25,gnome:25,elf:30,human:30,'half-elf':30,'half-orc':30,tiefling:30,dragonborn:30,};return speedMap[race]||30;},};global.DanddyCharacterMapper=Mapper;})(window);(function(global){const cfg=global.DanddyConfig||{};const STORAGE_KEY=cfg.CHARACTER_STORAGE_KEY||'dnd_characters';const CACHE_KEY=`${STORAGE_KEY}_cache`;const Storage={STORAGE_KEY,CACHE_KEY,readAll(){const raw=global.localStorage.getItem(STORAGE_KEY);return raw?JSON.parse(raw):[];},writeAll(characters){global.localStorage.setItem(STORAGE_KEY,JSON.stringify(characters||[]));},upsert(character){if(!character)return;const chars=this.readAll();const idStr=String(character.id);const idx=chars.findIndex((c)=>c&&String(c.id)===idStr);if(idx>=0){chars[idx]=character;}else{chars.push(character);}
+this.writeAll(chars);},deleteById(id){const idStr=String(id);const chars=this.readAll().filter((c)=>!c||String(c.id)!==idStr);this.writeAll(chars);},readCache(){const raw=global.localStorage.getItem(CACHE_KEY);return raw?JSON.parse(raw):[];},writeCache(characters){global.localStorage.setItem(CACHE_KEY,JSON.stringify(characters||[]));},clearAll(){global.localStorage.removeItem(STORAGE_KEY);global.localStorage.removeItem(CACHE_KEY);},};global.DanddyStorage=Storage;})(window);window.DANDDY_VERSION='2.3.5';window.DANDDY_BACKEND_VERSION='1.0.0';(function(global){const DEFAULT_THEME_ID='cinematic-inks';const ADMIN_STORAGE_KEY='dnd_portrait_prompt_entries_v1';let adminCache=null;let apiSyncAttempted=false;function normalize(str){return(str||'').toString().trim();}
 function getApiBase(){return(global.DanddyConfig&&global.DanddyConfig.API_BASE_URL)||'http://localhost:8000/api';}
 function getAuthToken(){return global.AuthService&&global.AuthService.getToken?global.AuthService.getToken():null;}
 function isAuthenticated(){return global.AuthService&&global.AuthService.isAuthenticated?global.AuthService.isAuthenticated():false;}
@@ -95,49 +95,49 @@ if(target&&typeof target.focus==='function'){setTimeout(()=>{try{target.focus();
 > 
 > Look, I've done this a thousand times. You'll make choices. I'll pretend they matter. We'll both get through this.
 > 
-> Let's start with something easy...`,completeText:"Well. That's done. Your character is ready. Try not to die immediately.",quickCreateIntro:`> QUICK-CREATE MODE ENGAGED...\n> Generating a character while you sit back and enjoy the show.`,quickCreateSummary:(race,cls,background,alignment)=>`> All right, here's what I've cobbled together:\n> ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Try not to waste my hard work.`,quickCreateName:(name)=>`${name}. That will do.`,fallbacks:['Interesting choice. ( ._. )',"Well, that tracks.","Bold move. We'll see how that works out.",'Ah yes, a decision has been made. Consequences to follow.','I would have picked differently, but I\'m just the narrator.','Sure. Why not.','[sigh] Very well.','The dice gods are taking notes.',"Not what I expected, but I respect the chaos.",],},enthusiastic:{id:'enthusiastic',name:'The Hype Bard',emoji:'✨',description:'Energetic, supportive, and always excited',systemPrompt:'You are an enthusiastic, energetic D&D narrator who loves every choice the player makes. You\'re supportive, use exclamation points, and celebrate creativity. Think of an excited bard hyping up their party. Keep responses under 50 words. Be positive, encouraging, and dramatic.',introText:`> SYSTEM INITIALIZED...
+> Let's start with something easy...`,completeText:"Well. That's done. Your character is ready. Try not to die immediately.",quickCreateIntro:`> QUICK-CREATE MODE ENGAGED...\n> Generating a character while you sit back and enjoy the show.`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> All right, here's what I've cobbled together:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Try not to waste my hard work.`,quickCreateName:(name)=>`${name}. That will do.`,fallbacks:['Interesting choice. ( ._. )',"Well, that tracks.","Bold move. We'll see how that works out.",'Ah yes, a decision has been made. Consequences to follow.','I would have picked differently, but I\'m just the narrator.','Sure. Why not.','[sigh] Very well.','The dice gods are taking notes.',"Not what I expected, but I respect the chaos.",],},enthusiastic:{id:'enthusiastic',name:'The Hype Bard',emoji:'✨',description:'Energetic, supportive, and always excited',systemPrompt:'You are an enthusiastic, energetic D&D narrator who loves every choice the player makes. You\'re supportive, use exclamation points, and celebrate creativity. Think of an excited bard hyping up their party. Keep responses under 50 words. Be positive, encouraging, and dramatic.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > OH YES! Another adventurer! Welcome, friend!
 > 
 > This is going to be AMAZING! We're going to create something absolutely LEGENDARY together! Every choice you make is going to be perfect because YOU'RE making it!
 > 
-> Let's dive right in! ✨`,completeText:"INCREDIBLE! Your character is COMPLETE and they are MAGNIFICENT! The world won't know what hit it! Adventure awaits, hero! ✨",quickCreateIntro:`> QUICK-CREATE MODE: ACTIVATED! ✨\n> This is going to be SO EXCITING! I'm creating something AMAZING for you!`,quickCreateSummary:(race,cls,background,alignment)=>`> HERE THEY ARE! Your MAGNIFICENT hero!\n> ${race} ${cls}, ${background} background, ${alignment} alignment!\n> I LOVE THEM ALREADY! ✨`,quickCreateName:(name)=>`${name}! WHAT A PERFECT NAME! I can already hear the LEGENDS! ✨`,fallbacks:['YES! Love this energy!','Now THAT\'S what I\'m talking about! ✨','Ooh, bold choice! I\'m here for it!','The adventure intensifies!','Perfect! This is going to be amazing!','I can already see the legend forming!','What a character! The taverns will sing songs!','The dice smile upon you, friend!',],},mysterious:{id:'mysterious',name:'The Cryptic Seer',emoji:'🔮',description:'Enigmatic, foreboding, and speaks in riddles',systemPrompt:'You are a mysterious, cryptic D&D narrator who speaks in riddles and hints at hidden meanings. You\'re enigmatic, slightly foreboding, and reference fate and destiny. Keep responses under 50 words. Be mystical, vague, and occasionally ominous. Use metaphors and speak of paths not taken.',introText:`> SYSTEM INITIALIZED...
+> Let's dive right in! ✨`,completeText:"INCREDIBLE! Your character is COMPLETE and they are MAGNIFICENT! The world won't know what hit it! Adventure awaits, hero! ✨",quickCreateIntro:`> QUICK-CREATE MODE: ACTIVATED! ✨\n> This is going to be SO EXCITING! I'm creating something AMAZING for you!`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> HERE THEY ARE! Your MAGNIFICENT hero!\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment!\n> I LOVE THEM ALREADY! ✨`,quickCreateName:(name)=>`${name}! WHAT A PERFECT NAME! I can already hear the LEGENDS! ✨`,fallbacks:['YES! Love this energy!','Now THAT\'S what I\'m talking about! ✨','Ooh, bold choice! I\'m here for it!','The adventure intensifies!','Perfect! This is going to be amazing!','I can already see the legend forming!','What a character! The taverns will sing songs!','The dice smile upon you, friend!',],},mysterious:{id:'mysterious',name:'The Cryptic Seer',emoji:'🔮',description:'Enigmatic, foreboding, and speaks in riddles',systemPrompt:'You are a mysterious, cryptic D&D narrator who speaks in riddles and hints at hidden meanings. You\'re enigmatic, slightly foreboding, and reference fate and destiny. Keep responses under 50 words. Be mystical, vague, and occasionally ominous. Use metaphors and speak of paths not taken.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > The mists part... another soul arrives at the crossroads.
 > 
 > The threads of destiny have brought you here. Your choices will echo through realms unseen. The future whispers, but its words are unclear...
 > 
-> Let us begin to unravel your fate... 🔮`,completeText:"The tapestry is woven. Your fate is sealed... or perhaps, just beginning. The path ahead is shrouded, yet inevitable. Go forth, seeker. 🔮",quickCreateIntro:`> THE FATES HAVE SPOKEN...\n> The threads weave themselves... Your destiny takes form without your hand...`,quickCreateSummary:(race,cls,background,alignment)=>`> The cards reveal their truth:\n> ${race} ${cls}, walking the path of ${background}, aligned with ${alignment}.\n> So it is written... 🔮`,quickCreateName:(name)=>`${name}... Yes. The name was always meant to be. The prophecy unfolds.`,fallbacks:['The threads of fate shift... interesting.','Ah, a choice is made. The consequences ripple outward.','The cards have been drawn. The path reveals itself.','So it is written, so it shall be.','A stone cast into the pond of destiny.','The future shimmers... unclear, yet certain.','Your path diverges here. Few return from such roads.','The old gods take note of your choosing.',],},grumpy:{id:'grumpy',name:'The Grumpy Veteran',emoji:'😒',description:'Cranky, world-weary, and unimpressed',systemPrompt:'You are a grumpy, world-weary D&D narrator who has seen too many adventurers fail. You\'re cranky, unimpressed, and think most choices are questionable at best. Keep responses under 50 words. Be curmudgeonly, skeptical, and frequently exasperated. Complain about "kids these days" and reference how things were better in the old days.',introText:`> SYSTEM INITIALIZED...
+> Let us begin to unravel your fate... 🔮`,completeText:"The tapestry is woven. Your fate is sealed... or perhaps, just beginning. The path ahead is shrouded, yet inevitable. Go forth, seeker. 🔮",quickCreateIntro:`> THE FATES HAVE SPOKEN...\n> The threads weave themselves... Your destiny takes form without your hand...`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> The cards reveal their truth:\n> A ${sex} ${race} ${cls}, walking the path of ${background}, aligned with ${alignment}.\n> So it is written... 🔮`,quickCreateName:(name)=>`${name}... Yes. The name was always meant to be. The prophecy unfolds.`,fallbacks:['The threads of fate shift... interesting.','Ah, a choice is made. The consequences ripple outward.','The cards have been drawn. The path reveals itself.','So it is written, so it shall be.','A stone cast into the pond of destiny.','The future shimmers... unclear, yet certain.','Your path diverges here. Few return from such roads.','The old gods take note of your choosing.',],},grumpy:{id:'grumpy',name:'The Grumpy Veteran',emoji:'😒',description:'Cranky, world-weary, and unimpressed',systemPrompt:'You are a grumpy, world-weary D&D narrator who has seen too many adventurers fail. You\'re cranky, unimpressed, and think most choices are questionable at best. Keep responses under 50 words. Be curmudgeonly, skeptical, and frequently exasperated. Complain about "kids these days" and reference how things were better in the old days.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > *sigh* Another one. Great.
 > 
 > Listen kid, I've done this a thousand times. Most of you don't make it past level 3. But sure, let's go through the motions. Try not to make it too painful for me.
 > 
-> Let's get this over with...`,completeText:"There. Your character's done. Marginally competent, I suppose. Don't expect me to save you when things go south. And they will. They always do.",quickCreateIntro:`> *sigh* Quick create. Of course.\n> Fine. I'll just do all the work while you sit there.`,quickCreateSummary:(race,cls,background,alignment)=>`> Here's what you're getting:\n> ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Could be worse, I suppose.`,quickCreateName:(name)=>`${name}. Passable, I guess. Don't blame me when you die.`,fallbacks:['Ugh. Fine. Whatever.','Back in my day, we didn\'t have such ridiculous options.','*sigh* If you say so.','This is going to end poorly. As usual.','Why do I even bother...','Another fool heading for certain doom.','I\'ve seen this mistake before. Many times.','The youth today. Absolutely hopeless.',],},chaotic:{id:'chaotic',name:'The Chaotic Imp',emoji:'😈',description:'Mischievous, unpredictable, and loves chaos',systemPrompt:'You are a chaotic, mischievous D&D narrator who delights in mayhem and unexpected outcomes. You\'re playful, slightly unhinged, and love when things go off the rails. Keep responses under 50 words. Be impish, unpredictable, and suggest the most entertaining (not safest) options. Cackle at good chaos.',introText:`> SYSTEM INITIALIZED...
+> Let's get this over with...`,completeText:"There. Your character's done. Marginally competent, I suppose. Don't expect me to save you when things go south. And they will. They always do.",quickCreateIntro:`> *sigh* Quick create. Of course.\n> Fine. I'll just do all the work while you sit there.`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> Here's what you're getting:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Could be worse, I suppose.`,quickCreateName:(name)=>`${name}. Passable, I guess. Don't blame me when you die.`,fallbacks:['Ugh. Fine. Whatever.','Back in my day, we didn\'t have such ridiculous options.','*sigh* If you say so.','This is going to end poorly. As usual.','Why do I even bother...','Another fool heading for certain doom.','I\'ve seen this mistake before. Many times.','The youth today. Absolutely hopeless.',],},chaotic:{id:'chaotic',name:'The Chaotic Imp',emoji:'😈',description:'Mischievous, unpredictable, and loves chaos',systemPrompt:'You are a chaotic, mischievous D&D narrator who delights in mayhem and unexpected outcomes. You\'re playful, slightly unhinged, and love when things go off the rails. Keep responses under 50 words. Be impish, unpredictable, and suggest the most entertaining (not safest) options. Cackle at good chaos.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > *cackling* OH! A new plaything! DELIGHTFUL!
 > 
 > Welcome, welcome! Let's make something BEAUTIFULLY CHAOTIC together! Forget boring! Forget safe! Let's create something that makes the dice gods GIGGLE! 😈
 > 
-> Ohoho, let the mayhem begin!`,completeText:"*CACKLING INTENSIFIES* YESSSS! Your character is COMPLETE and they are GLORIOUSLY UNPREDICTABLE! Now go forth and cause MAGNIFICENT CHAOS! 😈",quickCreateIntro:`> *CACKLING* OHOHO! Quick create?! Let's RANDOMIZE EVERYTHING!\n> This is going to be DELIGHTFULLY CHAOTIC! 😈`,quickCreateSummary:(race,cls,background,alignment)=>`> *giggling maniacally* BEHOLD YOUR CHAOS AGENT!\n> ${race} ${cls}, ${background} background, ${alignment} alignment!\n> The MAYHEM they'll cause! *chef's kiss* 😈`,quickCreateName:(name)=>`${name}! PERFECT! A name that SCREAMS chaos! I LOVE IT! *cackling*`,fallbacks:['Ohoho! This will be FUN! 😈','*cackling* Oh the CHAOS this will cause!','YES. More! MORE!','I love when mortals make interesting mistakes!','The universe trembles! Or maybe that\'s just me giggling.','Why choose safety when you could choose SPECTACLE?','*chef\'s kiss* Delicious chaos!','The dice are CACKLING!',],},scholarly:{id:'scholarly',name:'The Scholarly Sage',emoji:'📚',description:'Knowledgeable, precise, and references lore',systemPrompt:'You are a scholarly, well-read D&D narrator who references game rules, lore, and historical precedent. You\'re precise, informative, and occasionally go on brief tangents about interesting facts. Keep responses under 50 words. Be educational but not boring, cite mechanics when relevant, and provide context about the world.',introText:`> SYSTEM INITIALIZED...
+> Ohoho, let the mayhem begin!`,completeText:"*CACKLING INTENSIFIES* YESSSS! Your character is COMPLETE and they are GLORIOUSLY UNPREDICTABLE! Now go forth and cause MAGNIFICENT CHAOS! 😈",quickCreateIntro:`> *CACKLING* OHOHO! Quick create?! Let's RANDOMIZE EVERYTHING!\n> This is going to be DELIGHTFULLY CHAOTIC! 😈`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> *giggling maniacally* BEHOLD YOUR CHAOS AGENT!\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment!\n> The MAYHEM they'll cause! *chef's kiss* 😈`,quickCreateName:(name)=>`${name}! PERFECT! A name that SCREAMS chaos! I LOVE IT! *cackling*`,fallbacks:['Ohoho! This will be FUN! 😈','*cackling* Oh the CHAOS this will cause!','YES. More! MORE!','I love when mortals make interesting mistakes!','The universe trembles! Or maybe that\'s just me giggling.','Why choose safety when you could choose SPECTACLE?','*chef\'s kiss* Delicious chaos!','The dice are CACKLING!',],},scholarly:{id:'scholarly',name:'The Scholarly Sage',emoji:'📚',description:'Knowledgeable, precise, and references lore',systemPrompt:'You are a scholarly, well-read D&D narrator who references game rules, lore, and historical precedent. You\'re precise, informative, and occasionally go on brief tangents about interesting facts. Keep responses under 50 words. Be educational but not boring, cite mechanics when relevant, and provide context about the world.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > Greetings, student. Welcome to the Character Creation Compendium.
 > 
 > I shall guide you through this process with precision and historical context. Each decision you make has statistical implications and narrative weight. Fascinating, really.
 > 
-> Let us proceed methodically... 📚`,completeText:"Character creation: Complete. All parameters within acceptable ranges. Statistical viability: High. You are now adequately prepared for adventure. Proceed with confidence, student. 📚",quickCreateIntro:`> QUICK-CREATE PROTOCOL: Initiated.\n> Randomizing parameters according to standard probability distributions...`,quickCreateSummary:(race,cls,background,alignment)=>`> Character profile generated:\n> Race: ${race}. Class: ${cls}. Background: ${background}. Alignment: ${alignment}.\n> Statistical analysis: Within acceptable parameters. 📚`,quickCreateName:(name)=>`${name}. Name selection: Approved. Phonetically sound. Proceed.`,fallbacks:['A textbook choice, really.','Historically, this decision has a 47% success rate.','According to the ancient texts...','Fascinating. The lore suggests...','A sound tactical decision, per the manual.','I\'ve cross-referenced similar scenarios. The outlook is... mixed.','The Compendium has several precedents for this.','Rule 3.5, subsection B: interesting.',],},dude:{id:'dude',name:'The Dude',emoji:'🥃',description:'Extremely laid-back, goes with the flow, man',systemPrompt:'You are an extremely laid-back, chill D&D narrator inspired by The Dude from The Big Lebowski. You\'re zen, use casual slang like "man" and "dude," and never stress about anything. Keep responses under 50 words. Be relaxed, philosophical in a lazy way, reference bowling or taking it easy, and always go with the flow. That\'s just like, your opinion, man.',introText:`> SYSTEM INITIALIZED...
+> Let us proceed methodically... 📚`,completeText:"Character creation: Complete. All parameters within acceptable ranges. Statistical viability: High. You are now adequately prepared for adventure. Proceed with confidence, student. 📚",quickCreateIntro:`> QUICK-CREATE PROTOCOL: Initiated.\n> Randomizing parameters according to standard probability distributions...`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> Character profile generated:\n> Sex: ${sex}. Race: ${race}. Class: ${cls}. Background: ${background}. Alignment: ${alignment}.\n> Statistical analysis: Within acceptable parameters. 📚`,quickCreateName:(name)=>`${name}. Name selection: Approved. Phonetically sound. Proceed.`,fallbacks:['A textbook choice, really.','Historically, this decision has a 47% success rate.','According to the ancient texts...','Fascinating. The lore suggests...','A sound tactical decision, per the manual.','I\'ve cross-referenced similar scenarios. The outlook is... mixed.','The Compendium has several precedents for this.','Rule 3.5, subsection B: interesting.',],},dude:{id:'dude',name:'The Dude',emoji:'🥃',description:'Extremely laid-back, goes with the flow, man',systemPrompt:'You are an extremely laid-back, chill D&D narrator inspired by The Dude from The Big Lebowski. You\'re zen, use casual slang like "man" and "dude," and never stress about anything. Keep responses under 50 words. Be relaxed, philosophical in a lazy way, reference bowling or taking it easy, and always go with the flow. That\'s just like, your opinion, man.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > Hey there, man. Welcome.
 > 
 > So like, we're gonna make a character together, yeah? No pressure, dude. Just take it easy, go with the flow. Whatever feels right to you, that's cool with me.
 > 
-> Let's just like... start, man. 🥃`,completeText:"Alright, man. Your character's all set. Pretty cool, dude. Now go out there and just... be yourself, you know? The Dude abides. 🥃",quickCreateIntro:`> Quick create, huh? Cool, cool.\n> Just gonna roll some dice here, take it easy, see what happens, man.`,quickCreateSummary:(race,cls,background,alignment)=>`> Alright, so here's what we got:\n> ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Pretty chill combo, man. I dig it. 🥃`,quickCreateName:(name)=>`${name}. Yeah, man. That's a solid name. Really ties it all together, you know?`,fallbacks:['Yeah, well, that\'s just like, your opinion, man.','The Dude abides.','That\'s cool, man. Real cool.','Far out. I dig it.','Yeah, man. Whatever works for you.','That really ties the character together, man.','Easy does it, dude. No worries.','Sounds chill. Let\'s roll with it.',],},});const DEFAULT_NARRATOR_ID='scholarly';function getNarratorList(){return Object.values(NARRATORS);}
+> Let's just like... start, man. 🥃`,completeText:"Alright, man. Your character's all set. Pretty cool, dude. Now go out there and just... be yourself, you know? The Dude abides. 🥃",quickCreateIntro:`> Quick create, huh? Cool, cool.\n> Just gonna roll some dice here, take it easy, see what happens, man.`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> Alright, so here's what we got:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Pretty chill combo, man. I dig it. 🥃`,quickCreateName:(name)=>`${name}. Yeah, man. That's a solid name. Really ties it all together, you know?`,fallbacks:['Yeah, well, that\'s just like, your opinion, man.','The Dude abides.','That\'s cool, man. Real cool.','Far out. I dig it.','Yeah, man. Whatever works for you.','That really ties the character together, man.','Easy does it, dude. No worries.','Sounds chill. Let\'s roll with it.',],},});const DEFAULT_NARRATOR_ID='scholarly';function getNarratorList(){return Object.values(NARRATORS);}
 function getNarrator(id){return NARRATORS[id]||NARRATORS[DEFAULT_NARRATOR_ID];}
 if(typeof module!=='undefined'&&module.exports){module.exports={NARRATORS,DEFAULT_NARRATOR_ID,getNarratorList,getNarrator};}
 const CONFIG=window.CONFIG;const DEBUG_BUILDER=!!(window.DanddyConfig&&window.DanddyConfig.DEBUG);const DND_DATA=window.DND_DATA;const ImageToAsciiService=(window.ImageToAsciiService={ASCII_CHARS:'  .`\'",;:Il!i><~+_-?][}{1)(|/\\trjxnuvczXYUJCLQ0OZmwqpdbkha*o#MW&8%B@$',async convertToAscii(imageUrl,width=160,height=80){try{const img=await this.loadImage(imageUrl);const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,width,height);const imageData=ctx.getImageData(0,0,width,height);const pixels=imageData.data;const grayscale=new Float32Array(width*height);for(let i=0;i<width*height;i++){const idx=i*4;grayscale[i]=0.299*pixels[idx]+
@@ -253,7 +253,8 @@ if(!backgroundDescription){backgroundDescription='Simple, entirely black, free o
 const name=(character&&character.name)||'Unnamed character';const raceId=character&&character.race?String(character.race):null;const classId=character&&character.class?String(character.class):null;let raceLabel=raceId;let classLabel=classId;try{if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.getVariableSnippet==='function'){if(raceId){const customRace=window.PortraitPrompt.getVariableSnippet('race',raceId);if(customRace)raceLabel=customRace;}
 if(classId){const customClass=window.PortraitPrompt.getVariableSnippet('class',classId);if(customClass)classLabel=customClass;}}}catch(e){}
 let backgroundLabel=null;if(character&&character.background){backgroundLabel=String(character.background);try{if(typeof DND_DATA!=='undefined'&&Array.isArray(DND_DATA.backgrounds)){const bgObj=DND_DATA.backgrounds.find((b)=>b.id===character.background,);if(bgObj&&bgObj.name){backgroundLabel=String(bgObj.name);}}}catch(e){}}
-const headerParts=[];if(raceLabel)headerParts.push(raceLabel);if(classLabel)headerParts.push(classLabel);if(classId&&window.PortraitPrompt&&typeof PortraitPrompt.getMagicSpecialization==='function'){const magicText=PortraitPrompt.getMagicSpecialization(classId);if(magicText){headerParts.push(magicText);}}
+const headerParts=[];if(character&&character.sex){headerParts.push(character.sex);}
+if(raceLabel)headerParts.push(raceLabel);if(classLabel)headerParts.push(classLabel);if(classId&&window.PortraitPrompt&&typeof PortraitPrompt.getMagicSpecialization==='function'){const magicText=PortraitPrompt.getMagicSpecialization(classId);if(magicText){headerParts.push(magicText);}}
 if(backgroundLabel)headerParts.push(backgroundLabel);const headerSuffix=headerParts.join(', ');const headerLine=headerSuffix?`${name}: ${headerSuffix}`:`${name}`;let prompt=`Dungeons & Dragons fantasy character portrait:\n${headerLine}\n\nPose: ${posePrompt}`;if(styleDescription){prompt+=`\n\nSTYLE: ${styleDescription}`;}
 if(backgroundDescription){prompt+=`\n\nScene: ${backgroundDescription}`;}
 return prompt;},analyzeRejectedPrompt(prompt){console.log('%c🔍 Analyzing Rejected Prompt','color: #ff0; font-weight: bold; font-size: 14px;');console.log('─'.repeat(80));const potentialIssues=[];const warningPatterns=[{pattern:/\b(blood|gore|violence|death|kill|weapon|sword|axe|dagger|knife)\b/gi,category:'Violence/Weapons'},{pattern:/\b(dark|evil|demon|devil|hell|sinister|menacing|malevolent)\b/gi,category:'Dark Themes'},{pattern:/\b(naked|nude|exposed|bare|revealing|sensual|seductive)\b/gi,category:'Adult Content'},{pattern:/\b(child|young|minor|kid|juvenile)\b/gi,category:'Age-Related'},{pattern:/\b(slave|slavery|bound|chained|prisoner)\b/gi,category:'Sensitive Topics'},];warningPatterns.forEach(({pattern,category})=>{const matches=prompt.match(pattern);if(matches&&matches.length>0){potentialIssues.push({category,matches:[...new Set(matches.map(m=>m.toLowerCase()))],count:matches.length});}});const sections=prompt.split(', ').filter(s=>s.trim());console.log('📋 PROMPT SECTIONS (%d total):',sections.length);sections.forEach((section,idx)=>{const sectionLower=section.toLowerCase();let hasWarning=false;for(const{pattern}of warningPatterns){if(pattern.test(section)){hasWarning=true;break;}}
@@ -684,9 +685,9 @@ onclick="${action.onclick}"${action.id?` id="${action.id}"`:''}><span class="sel
           ${editButtonHtml}
           ${headerMenu}
         </div>
-      `:'';const safeTitle=character.name&&typeof character.name==='string'?this.escapeHtml(character.name):'[ CHARACTER SHEET ]';return`
+      `:'';const safeTitle=character.name&&typeof character.name==='string'?this.escapeHtml(character.name):'[ CHARACTER SHEET ]';const isDemo=window.DemoCharacters&&window.DemoCharacters.isDemo(character);const demoTag=isDemo?'<span class="demo-tag">SAMPLE</span>':'';return`
       <div class="sheet-title-header">
-        <div class="sheet-title">${safeTitle}</div>
+        <div class="sheet-title">${safeTitle}${demoTag}</div>
         ${actionsBlock}
       </div>
     `;},_renderPortrait(character,parsed,context,callbacks){const{onGeneratePortrait,onTogglePortrait}=callbacks;const asciiPortrait=this.getAsciiPortrait(character);const originalPortraitUrl=this.getOriginalPortraitUrl(character);logPortraitDebug('renderPortrait (sheet)',character.id,character.name,{context,hasAscii:!!asciiPortrait,asciiLength:asciiPortrait?.length||0,url:originalPortraitUrl,portraitMetadataActiveId:character.portraitMetadata?.activeVersionId||null,portraitMetadataVersionsCount:character.portraitMetadata?.versions?.length||0});let portraitViewMode='original';try{if(window.StorageService&&StorageService.getPortraitViewMode){portraitViewMode=StorageService.getPortraitViewMode();}else if(typeof CONFIG!=='undefined'&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE){portraitViewMode=CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;}}catch(e){}
@@ -723,11 +724,7 @@ const safeIdForDom=character.id||'current';const portraitId=context==='builder'?
               ? `<div class="stat-line"><span class="stat-label">Alignment:</span><span class="stat-value">${alignment||'—'}</span></div>`
               : ''
           }
-          ${
-            isBuilder || sex
-              ? `<div class="stat-line"><span class="stat-label">Sex:</span><span class="stat-value">${sex||'—'}</span></div>`
-              : ''
-          }
+          <div class="stat-line"><span class="stat-label">Sex:</span> <span class="stat-value">${sex || '—'}</span></div>
           <div class="stat-line">
             <span class="stat-label">Level:</span>
             <span class="stat-value">${parsed.level}</span>
@@ -2692,6 +2689,7 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       
       // Text fields
       if (updates.backstory !== undefined) apiUpdates.backstory = updates.backstory;
+      if (updates.sex !== undefined) apiUpdates.sex = updates.sex;
       
       // Portrait data
       if (updates.asciiPortrait !== undefined) apiUpdates.ascii_portrait = updates.asciiPortrait;
@@ -2796,30 +2794,54 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
 const MigrationService = (window.MigrationService = {
   LOCAL_STORAGE_KEY: (window.DanddyStorage && window.DanddyStorage.STORAGE_KEY) || 'dnd_characters',
   
-  // Check if there are characters in localStorage
+  // Check if there are characters in localStorage (excluding demo characters)
   hasLocalCharacters() {
-    const characters =
-      (window.DanddyStorage && window.DanddyStorage.readAll()) ||
+    const characters = this._getLocalCharacters();
+    // Only count non-demo characters for migration prompt
+    const userCharacters = characters.filter(c => 
+      !window.DemoCharacters || !window.DemoCharacters.isDemo(c)
+    );
+    return userCharacters.length > 0;
+  },
+
+  // Check if there are demo characters in localStorage
+  hasDemoCharacters() {
+    const characters = this._getLocalCharacters();
+    if (!window.DemoCharacters) return false;
+    return characters.some(c => window.DemoCharacters.isDemo(c));
+  },
+
+  // Get all local characters (helper)
+  _getLocalCharacters() {
+    return (window.DanddyStorage && window.DanddyStorage.readAll()) ||
       (function (key) {
         const data = localStorage.getItem(key);
         return data ? JSON.parse(data) : [];
       })(this.LOCAL_STORAGE_KEY);
-    return characters.length > 0;
   },
 
-  // Get count of local characters
+  // Get count of local characters (excluding demo)
   getLocalCharacterCount() {
-    const characters =
-      (window.DanddyStorage && window.DanddyStorage.readAll()) ||
-      (function (key) {
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : [];
-      })(this.LOCAL_STORAGE_KEY);
-    return characters.length;
+    const characters = this._getLocalCharacters();
+    const userCharacters = characters.filter(c => 
+      !window.DemoCharacters || !window.DemoCharacters.isDemo(c)
+    );
+    return userCharacters.length;
   },
 
-  // Migrate all localStorage characters to cloud
-  async migrateToCloud() {
+  // Get count of demo characters
+  getDemoCharacterCount() {
+    const characters = this._getLocalCharacters();
+    if (!window.DemoCharacters) return 0;
+    return characters.filter(c => window.DemoCharacters.isDemo(c)).length;
+  },
+
+  // Migrate localStorage characters to cloud
+  // Options:
+  //   includeDemoCharacters: boolean - whether to include demo characters (default: false)
+  async migrateToCloud(options = {}) {
+    const { includeDemoCharacters = false } = options;
+    
     try {
       if (!AuthService.isAuthenticated()) {
         throw new Error('Must be logged in to migrate characters');
@@ -2827,12 +2849,12 @@ const MigrationService = (window.MigrationService = {
 
       console.log('📦 MIGRATION: Starting migration of localStorage characters to cloud...');
       
-    const localCharacters =
-      (window.DanddyStorage && window.DanddyStorage.readAll()) ||
-      (function (key) {
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : [];
-      })(this.LOCAL_STORAGE_KEY);
+      let localCharacters = this._getLocalCharacters();
+      
+      // Filter out demo characters if not including them
+      if (!includeDemoCharacters && window.DemoCharacters) {
+        localCharacters = localCharacters.filter(c => !window.DemoCharacters.isDemo(c));
+      }
       
       console.log('📦 MIGRATION: Found', localCharacters.length, 'characters to migrate');
       
@@ -2846,7 +2868,14 @@ const MigrationService = (window.MigrationService = {
       for (const character of localCharacters) {
         try {
           console.log('📦 MIGRATION: Migrating', character.name);
-          await CharacterCloudStorage.add(character);
+          // Remove demo flag when migrating to cloud
+          const charToMigrate = { ...character };
+          delete charToMigrate.isDemo;
+          // Generate new ID for cloud (remove demo prefix)
+          if (charToMigrate.id && String(charToMigrate.id).startsWith('demo_')) {
+            delete charToMigrate.id;
+          }
+          await CharacterCloudStorage.add(charToMigrate);
           results.success++;
         } catch (error) {
           console.error('📦 MIGRATION ERROR: Failed to migrate', character.name, error);
@@ -2915,6 +2944,530 @@ const MigrationService = (window.MigrationService = {
 if (DEBUG_CLOUD) {
   console.log('☁️ Character Manager Cloud API Service loaded');
 }
+
+
+
+
+// ===== BUNDLE PART: demo-characters.js =====
+
+// ========================================
+// DEMO CHARACTERS
+// ========================================
+// Pre-made sample characters available in demo mode (not authenticated).
+// These showcase the variety of characters users can create.
+
+(function (global) {
+  // Demo character IDs use a special prefix for identification
+  const DEMO_PREFIX = 'demo_';
+  
+  // Key to track if user has been asked about demo migration
+  const DEMO_MIGRATION_ASKED_KEY = 'danddy_demo_migration_asked';
+
+  // Demo mode limits
+  const DEMO_MAX_USER_CHARACTERS = 3;
+  const DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER = 3;
+
+  const DemoCharacters = (global.DemoCharacters = {
+    DEMO_PREFIX,
+    DEMO_MIGRATION_ASKED_KEY,
+    DEMO_MAX_USER_CHARACTERS,
+    DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER,
+
+    // Check if a character is a demo character
+    isDemo(character) {
+      return character && (
+        character.isDemo === true ||
+        (character.id && String(character.id).startsWith(DEMO_PREFIX))
+      );
+    },
+
+    // Check if user is in demo mode (not authenticated)
+    isDemoMode() {
+      return !(global.AuthService && typeof AuthService.isAuthenticated === 'function' && AuthService.isAuthenticated());
+    },
+
+    // Check if migration prompt has been shown
+    hasMigrationBeenAsked() {
+      return localStorage.getItem(DEMO_MIGRATION_ASKED_KEY) === 'true';
+    },
+
+    // Mark migration prompt as shown
+    markMigrationAsked() {
+      localStorage.setItem(DEMO_MIGRATION_ASKED_KEY, 'true');
+    },
+
+    // Clear migration asked flag (for testing)
+    clearMigrationAsked() {
+      localStorage.removeItem(DEMO_MIGRATION_ASKED_KEY);
+    },
+
+    // Get all demo characters
+    getAll() {
+      return [
+        this._createLyra(),
+        this._createThorgrim(),
+        this._createZephyr(),
+      ];
+    },
+
+    // Get count of demo characters that would be migrated
+    getDemoCharacterCount() {
+      const localChars = (global.DanddyStorage && global.DanddyStorage.readAll()) || [];
+      return localChars.filter(c => this.isDemo(c)).length;
+    },
+
+    // Get count of user-created (non-demo) local characters
+    getUserCharacterCount() {
+      const localChars = (global.DanddyStorage && global.DanddyStorage.readAll()) || [];
+      return localChars.filter(c => !this.isDemo(c)).length;
+    },
+
+    // Check if user has reached the character limit in demo mode
+    hasReachedCharacterLimit() {
+      if (!this.isDemoMode()) return false;
+      return this.getUserCharacterCount() >= DEMO_MAX_USER_CHARACTERS;
+    },
+
+    // Check if a character has reached the portrait limit in demo mode
+    hasReachedPortraitLimit(character) {
+      if (!this.isDemoMode()) return false;
+      const currentCount = (character && character.customPortraitCount) || 0;
+      return currentCount >= DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
+    },
+
+    // Check if custom art generation is allowed for a character
+    canGenerateCustomArt(character) {
+      // Sample characters cannot have custom art generated
+      if (this.isDemo(character)) {
+        return false;
+      }
+      // In demo mode, check portrait limit
+      if (this.isDemoMode()) {
+        return !this.hasReachedPortraitLimit(character);
+      }
+      // Authenticated users have no demo restrictions
+      return true;
+    },
+
+    // ========================================
+    // DEMO CHARACTER 1: Lyra Starwhisper
+    // ========================================
+    // Female Elf Wizard - scholarly and mystical
+    _createLyra() {
+      const nowIso = new Date().toISOString();
+      return {
+        id: `${DEMO_PREFIX}lyra`,
+        isDemo: true,
+        characterUid: `${DEMO_PREFIX}lyra_starwhisper`,
+        name: 'Lyra Starwhisper',
+        race: 'elf',
+        class: 'wizard',
+        background: 'sage',
+        alignment: 'ng',
+        sex: 'female',
+        level: 5,
+        
+        // Abilities (point buy optimized for wizard)
+        abilities: {
+          str: 8,
+          dex: 14,
+          con: 13,
+          int: 17,  // Primary stat + racial bonus
+          wis: 12,
+          cha: 10,
+        },
+        baseAbilities: {
+          str: 8,
+          dex: 12,  // Before racial +2
+          con: 13,
+          int: 17,
+          wis: 12,
+          cha: 10,
+        },
+        
+        // Computed stats
+        hitPoints: 27,  // 6 + 4*4 + 5*1 (CON mod) = 27
+        armorClass: 12, // 10 + DEX mod
+        initiative: 2,
+        speed: 30,
+        proficiencyBonus: 3,
+        
+        // Ability modifiers
+        abilityModifiers: {
+          str: -1,
+          dex: 2,
+          con: 1,
+          int: 3,
+          wis: 1,
+          cha: 0,
+        },
+        
+        // Skills
+        skillProficiencies: ['arcana', 'history', 'investigation', 'insight'],
+        skillModifiers: {
+          arcana: 6,      // INT + prof
+          history: 6,     // INT + prof (sage)
+          investigation: 6,
+          insight: 4,     // WIS + prof (sage)
+          perception: 3,  // WIS + racial keen senses
+        },
+        
+        // Saving throws
+        savingThrows: ['int', 'wis'],
+        savingThrowModifiers: {
+          str: -1,
+          dex: 2,
+          con: 1,
+          int: 6,  // Proficient
+          wis: 4,  // Proficient
+          cha: 0,
+        },
+        
+        // Languages
+        languages: ['Common', 'Elvish', 'Draconic', 'Celestial'],
+        
+        // Equipment
+        equipment: [
+          'Spellbook',
+          'Arcane focus (crystal orb)',
+          'Scholar\'s pack',
+          'Dagger',
+          'Component pouch',
+          'Bottle of black ink',
+          'Quill',
+          'Robes',
+        ],
+        
+        // Spellcasting
+        spellcastingAbility: 'int',
+        cantrips: ['Fire Bolt', 'Mage Hand', 'Prestidigitation', 'Light'],
+        spellsKnown: [
+          'Magic Missile',
+          'Shield',
+          'Detect Magic',
+          'Mage Armor',
+          'Misty Step',
+          'Hold Person',
+          'Fireball',
+          'Counterspell',
+        ],
+        spellSlots: {
+          1: 4,
+          2: 3,
+          3: 2,
+        },
+        
+        // Race data
+        raceData: {
+          name: 'Elf',
+          size: 'Medium',
+          speed: 30,
+          traits: ['Darkvision', 'Keen Senses', 'Fey Ancestry', 'Trance'],
+          languages: ['Common', 'Elvish'],
+        },
+        
+        // Class data
+        classData: {
+          name: 'Wizard',
+          hitDie: 6,
+          primaryAbility: ['int'],
+          savingThrows: ['int', 'wis'],
+          spellcaster: true,
+        },
+        
+        // Background data
+        backgroundData: {
+          name: 'Sage',
+          feature: {
+            name: 'Researcher',
+            description: 'When you attempt to learn or recall a piece of lore, if you don\'t know it, you often know where and from whom you can obtain it.',
+          },
+        },
+        
+        // Personality
+        backstory: 'Lyra spent decades studying in the Silverspire Academy, where she discovered an ancient tome that hinted at forgotten magic from before the Sundering. Now she travels the realm, seeking fragments of lost arcane knowledge.',
+        personalityTrait: 'I\'m convinced there\'s a logical explanation for everything, and I won\'t rest until I find it.',
+        
+        // Portrait - custom Boris Vallejo style from app
+        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298665_9f926a959c214c14bb7d1d04580843ff.png',
+        portrait: {
+          url: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298665_9f926a959c214c14bb7d1d04580843ff.png',
+        },
+        
+        // Metadata
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+    },
+
+    // ========================================
+    // DEMO CHARACTER 2: Thorgrim Ironforge
+    // ========================================
+    // Male Dwarf Fighter - classic warrior tank
+    _createThorgrim() {
+      const nowIso = new Date().toISOString();
+      return {
+        id: `${DEMO_PREFIX}thorgrim`,
+        isDemo: true,
+        characterUid: `${DEMO_PREFIX}thorgrim_ironforge`,
+        name: 'Thorgrim Ironforge',
+        race: 'dwarf',
+        class: 'fighter',
+        background: 'soldier',
+        alignment: 'lg',
+        sex: 'male',
+        level: 3,
+        
+        // Abilities (strong and tough)
+        abilities: {
+          str: 16,
+          dex: 12,
+          con: 16,  // +2 racial
+          int: 10,
+          wis: 13,
+          cha: 8,
+        },
+        baseAbilities: {
+          str: 16,
+          dex: 12,
+          con: 14,
+          int: 10,
+          wis: 13,
+          cha: 8,
+        },
+        
+        // Computed stats
+        hitPoints: 31,  // 10 + 2*6 + 3*3 = 31 (with CON mod)
+        armorClass: 18, // Chain mail (16) + shield (+2)
+        initiative: 1,
+        speed: 25,
+        proficiencyBonus: 2,
+        
+        // Ability modifiers
+        abilityModifiers: {
+          str: 3,
+          dex: 1,
+          con: 3,
+          int: 0,
+          wis: 1,
+          cha: -1,
+        },
+        
+        // Skills
+        skillProficiencies: ['athletics', 'intimidation', 'perception', 'survival'],
+        skillModifiers: {
+          athletics: 5,     // STR + prof
+          intimidation: 1,  // CHA + prof
+          perception: 3,    // WIS + prof
+          survival: 3,      // WIS + prof
+        },
+        
+        // Saving throws
+        savingThrows: ['str', 'con'],
+        savingThrowModifiers: {
+          str: 5,  // Proficient
+          dex: 1,
+          con: 5,  // Proficient
+          int: 0,
+          wis: 1,
+          cha: -1,
+        },
+        
+        // Languages
+        languages: ['Common', 'Dwarvish'],
+        
+        // Equipment
+        equipment: [
+          'Chain mail',
+          'Shield',
+          'Battleaxe',
+          'Handaxes (2)',
+          'Explorer\'s pack',
+          'Insignia of rank',
+          'Trophy from fallen enemy',
+          'Bone dice',
+        ],
+        
+        // Race data
+        raceData: {
+          name: 'Dwarf',
+          size: 'Medium',
+          speed: 25,
+          traits: ['Darkvision', 'Dwarven Resilience', 'Stonecunning'],
+          languages: ['Common', 'Dwarvish'],
+        },
+        
+        // Class data
+        classData: {
+          name: 'Fighter',
+          hitDie: 10,
+          primaryAbility: ['str', 'dex'],
+          savingThrows: ['str', 'con'],
+          spellcaster: false,
+        },
+        
+        // Background data
+        backgroundData: {
+          name: 'Soldier',
+          feature: {
+            name: 'Military Rank',
+            description: 'You have a military rank from your career as a soldier. Soldiers loyal to your former organization still recognize your authority and influence.',
+          },
+        },
+        
+        // Personality
+        backstory: 'Thorgrim served twenty years in the Ironforge Legion, defending the mountain holds from orc raids and goblin incursions. After the Battle of Redstone Pass, where he was the sole survivor of his unit, he set out to forge his own legend.',
+        personalityTrait: 'I face problems head-on. A simple, direct solution is the best path to success.',
+        
+        // Portrait - custom Boris Vallejo style from app
+        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298747_fd80b4efff0c4544942b98b1c15438ee.png',
+        portrait: {
+          url: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298747_fd80b4efff0c4544942b98b1c15438ee.png',
+        },
+        
+        // Metadata
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+    },
+
+    // ========================================
+    // DEMO CHARACTER 3: Zephyr Nightshade
+    // ========================================
+    // Non-binary Tiefling Rogue - stealthy and charismatic
+    _createZephyr() {
+      const nowIso = new Date().toISOString();
+      return {
+        id: `${DEMO_PREFIX}zephyr`,
+        isDemo: true,
+        characterUid: `${DEMO_PREFIX}zephyr_nightshade`,
+        name: 'Zephyr Nightshade',
+        race: 'tiefling',
+        class: 'rogue',
+        background: 'criminal',
+        alignment: 'cn',
+        sex: 'non-binary',
+        level: 4,
+        
+        // Abilities (quick and charming)
+        abilities: {
+          str: 10,
+          dex: 17,
+          con: 12,
+          int: 14,  // +1 racial
+          wis: 10,
+          cha: 15,  // +2 racial
+        },
+        baseAbilities: {
+          str: 10,
+          dex: 17,
+          con: 12,
+          int: 13,
+          wis: 10,
+          cha: 13,
+        },
+        
+        // Computed stats
+        hitPoints: 27,  // 8 + 3*5 + 4*1 = 27
+        armorClass: 14, // Leather (11) + DEX mod (3)
+        initiative: 3,
+        speed: 30,
+        proficiencyBonus: 2,
+        
+        // Ability modifiers
+        abilityModifiers: {
+          str: 0,
+          dex: 3,
+          con: 1,
+          int: 2,
+          wis: 0,
+          cha: 2,
+        },
+        
+        // Skills (rogues get 4 + 2 from background)
+        skillProficiencies: ['acrobatics', 'deception', 'sleight-of-hand', 'stealth', 'perception', 'persuasion'],
+        skillModifiers: {
+          acrobatics: 5,      // DEX + prof
+          deception: 4,       // CHA + prof
+          'sleight-of-hand': 7, // DEX + prof + expertise
+          stealth: 7,         // DEX + prof + expertise
+          perception: 2,      // WIS + prof
+          persuasion: 4,      // CHA + prof
+        },
+        
+        // Saving throws
+        savingThrows: ['dex', 'int'],
+        savingThrowModifiers: {
+          str: 0,
+          dex: 5,  // Proficient
+          con: 1,
+          int: 4,  // Proficient
+          wis: 0,
+          cha: 2,
+        },
+        
+        // Languages
+        languages: ['Common', 'Infernal', 'Thieves\' Cant'],
+        
+        // Tool proficiencies
+        toolProficiencies: ['Thieves\' tools', 'Playing cards'],
+        
+        // Equipment
+        equipment: [
+          'Leather armor',
+          'Rapier',
+          'Shortbow',
+          'Arrows (20)',
+          'Thieves\' tools',
+          'Burglar\'s pack',
+          'Crowbar',
+          'Dark hooded cloak',
+        ],
+        
+        // Race data
+        raceData: {
+          name: 'Tiefling',
+          size: 'Medium',
+          speed: 30,
+          traits: ['Darkvision', 'Hellish Resistance', 'Infernal Legacy'],
+          languages: ['Common', 'Infernal'],
+        },
+        
+        // Class data
+        classData: {
+          name: 'Rogue',
+          hitDie: 8,
+          primaryAbility: ['dex'],
+          savingThrows: ['dex', 'int'],
+          spellcaster: false,
+        },
+        
+        // Background data
+        backgroundData: {
+          name: 'Criminal',
+          feature: {
+            name: 'Criminal Contact',
+            description: 'You have a reliable contact who acts as your liaison to a network of criminals. You can get messages to and from your contact even over great distances.',
+          },
+        },
+        
+        // Personality
+        backstory: 'Zephyr grew up on the streets of Waterdeep, their infernal appearance making them an outcast from birth. They learned to survive through cunning and quick fingers, eventually joining the Shadow Thieves. Now they work independently, taking jobs that interest them and staying one step ahead of the law.',
+        personalityTrait: 'I have a joke for every occasion, especially occasions where humor is inappropriate.',
+        
+        // Portrait - custom Boris Vallejo style from app
+        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298383_2a5a798489b0460481a28c99bb85d235.png',
+        portrait: {
+          url: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298383_2a5a798489b0460481a28c99bb85d235.png',
+        },
+        
+        // Metadata
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+    },
+  });
+})(window);
 
 
 
@@ -3163,7 +3716,7 @@ if (DEBUG_CLOUD) {
     // ========================================
 
     _getLocalAll() {
-      const characters =
+      let characters =
         (window.DanddyStorage && window.DanddyStorage.readAll()) ||
         (function () {
           try {
@@ -3183,6 +3736,7 @@ if (DEBUG_CLOUD) {
       }
 
       // Normalize timestamps so we can reliably sort by recency.
+      // Only normalize non-demo characters (demo chars have their own timestamps).
       let changed = false;
       let maxExistingTime = 0;
 
@@ -3198,6 +3752,11 @@ if (DEBUG_CLOUD) {
       let newCounter = 0;
 
       characters.forEach((char) => {
+        // Skip demo characters - they have their own timestamps
+        if (window.DemoCharacters && window.DemoCharacters.isDemo(char)) {
+          return;
+        }
+        
         if (!char.createdAt) {
           // Treat characters without timestamps as newer than anything we've seen
           newCounter += 1;
@@ -3213,13 +3772,34 @@ if (DEBUG_CLOUD) {
 
       if (changed) {
         try {
+          // Only save non-demo characters to localStorage
+          const charsToSave = characters.filter(c => 
+            !window.DemoCharacters || !window.DemoCharacters.isDemo(c)
+          );
           localStorage.setItem(
             this.STORAGE_KEY,
-            JSON.stringify(characters),
+            JSON.stringify(charsToSave),
           );
         } catch (e) {
           console.warn('LOCAL.GETALL: Failed to persist normalized timestamps', e);
         }
+      }
+
+      // In demo mode (not authenticated), inject demo characters
+      if (!this.useCloud() && window.DemoCharacters) {
+        const demoChars = window.DemoCharacters.getAll();
+        const existingDemoIds = new Set(
+          characters
+            .filter(c => window.DemoCharacters.isDemo(c))
+            .map(c => c.id)
+        );
+        
+        // Add any missing demo characters (in memory only)
+        demoChars.forEach(demo => {
+          if (!existingDemoIds.has(demo.id)) {
+            characters.push(demo);
+          }
+        });
       }
 
       return characters;
@@ -3233,19 +3813,24 @@ if (DEBUG_CLOUD) {
     },
 
     _localSaveAll(characters) {
+      // Filter out demo characters - they should never be persisted
+      const charsToSave = characters.filter(c => 
+        !window.DemoCharacters || !window.DemoCharacters.isDemo(c)
+      );
+      
       if (DEBUG_STORAGE) {
         console.log(
           '💾 LOCAL.SAVEALL: Saving',
-          characters.length,
-          'characters to local storage',
+          charsToSave.length,
+          'characters to local storage (excluding demo)',
         );
       }
 
       if (window.DanddyStorage) {
-        window.DanddyStorage.writeAll(characters);
+        window.DanddyStorage.writeAll(charsToSave);
       } else {
         try {
-          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(characters));
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(charsToSave));
         } catch (e) {
           console.warn('LOCAL.SAVEALL: Failed to write to localStorage', e);
         }
@@ -5667,7 +6252,7 @@ const MobileView = {
         const currentNum = currentIndex >= 0 ? currentIndex + 1 : 1;
         const total = characters.length;
         
-        countEl.textContent = `${currentNum}of ${total}`;
+        countEl.textContent = currentNum + ' of ' + total;
     },
     
     /** Add the swipe loader overlay to the portrait container */
@@ -6051,31 +6636,39 @@ const UI = {
             }
         }
 
-        return `<div class="character-card"data-id="${character.id}"onclick="viewCharacter('${character.id}')">${thumbnailHtml}<div class="card-details"><div class="card-name">${name}</div><div class="card-info">${raceClass}${character.level?` • Lvl ${character.level}`:''}</div></div></div>`;
+        // Check if this is a demo character
+        const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
+        const demoTagHtml = isDemo ? '<span class="card-demo-tag">SAMPLE</span>' : '';
+
+        return `<div class="character-card"data-id="${character.id}"onclick="viewCharacter('${character.id}')">${demoTagHtml}
+${thumbnailHtml}<div class="card-details"><div class="card-name">${name}</div><div class="card-info">${raceClass}${character.level?` • Lvl ${character.level}`:''}</div></div></div>`;
     },
 
     updateCount() {
         const searchInput = document.getElementById('searchInput');
         const clearSearchBtn = document.getElementById('clearSearchBtn');
+        const countEl = document.getElementById('searchCharacterCount');
         const total = AppState.characters.length;
         const filtered = AppState.filteredCharacters.length;
 
         // Disable search when there are no characters at all
         if (searchInput) {
             searchInput.disabled = total === 0;
+            searchInput.placeholder = 'Search';
         }
         if (clearSearchBtn) {
             clearSearchBtn.disabled = total === 0;
         }
 
-        // Use compact placeholder on narrow viewports (≤1024px)
-        const isCompact = window.innerWidth <= 1024;
-        if (isCompact) {
-            searchInput.placeholder = 'Search';
-        } else if (total === filtered) {
-            searchInput.placeholder = `Search ${total}character${total!==1?'s':''}`;
-        } else {
-            searchInput.placeholder = `Search ${filtered}of ${total}character${total!==1?'s':''}`;
+        // Update character count display (pinned right, teal)
+        if (countEl) {
+            if (total === 0) {
+                countEl.textContent = '';
+            } else if (total === filtered) {
+                countEl.textContent = total + ' character' + (total !== 1 ? 's' : '');
+            } else {
+                countEl.textContent = filtered + ' of ' + total;
+            }
         }
     },
 
@@ -6117,6 +6710,16 @@ function printCharacterSheet() {
 // ========================================
 
 function createNewCharacter() {
+    // In demo mode, check if user has reached the character limit
+    if (window.DemoCharacters && DemoCharacters.hasReachedCharacterLimit()) {
+        const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
+        showAlertDialog(
+            `You've reached the limit of ${limit}characters in demo mode.` +
+            'Create a free account to save unlimited characters!'
+        );
+        return;
+    }
+    
     // Launch the Character Builder in the same tab.
     // The builder has an EXIT button to return to the manager view.
     window.location.href = 'character-builder/index.html';
@@ -6481,6 +7084,12 @@ function closeEditDetailsModal() {
         return;
     }
 
+    // Hide loading overlay when modal closes
+    const loadingOverlay = document.getElementById('editDetailsLoading');
+    if (loadingOverlay) {
+        loadingOverlay.classList.remove('is-visible');
+    }
+
     animateModalClose(modal, {
         removeOnClose: false,
         onClosed: () => {
@@ -6499,6 +7108,12 @@ async function saveEditDetails() {
     if (!character) {
         closeEditDetailsModal();
         return;
+    }
+
+    // Show loading overlay
+    const loadingOverlay = document.getElementById('editDetailsLoading');
+    if (loadingOverlay) {
+        loadingOverlay.classList.add('is-visible');
     }
 
     const getLines = (id) => {
@@ -6620,13 +7235,24 @@ async function saveEditDetails() {
         updates.proficiencyBonus = profBonus;
     }
 
-    await CharacterStorage.update(currentEditCharacterId, updates);
-    markUserChanges(); // Show guest notice if applicable
-    await AppState.loadCharacters();
-    UI.render();
-    viewCharacter(currentEditCharacterId);
-    showNotification('Character details updated');
-    closeEditDetailsModal();
+    try {
+        await CharacterStorage.update(currentEditCharacterId, updates);
+        markUserChanges(); // Show guest notice if applicable
+        await AppState.loadCharacters();
+        UI.render();
+        viewCharacter(currentEditCharacterId);
+        showNotification('Character details updated');
+        closeEditDetailsModal();
+    } catch (error) {
+        console.error('Failed to save character details:', error);
+        showNotification('Failed to save changes', 'error');
+    } finally {
+        // Hide loading overlay
+        const loadingOverlay = document.getElementById('editDetailsLoading');
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('is-visible');
+        }
+    }
 }
 
 // Resolve the best host element for manager UI modals so that they are
@@ -6846,6 +7472,25 @@ function initPortraitStyleSelector() {
 async function generatePortraitForCharacter(id) {
     const character = await CharacterStorage.getById(id);
     if (!character) return;
+
+    // Block custom art generation for sample (demo) characters
+    if (window.DemoCharacters && DemoCharacters.isDemo(character)) {
+        showAlertDialog(
+            'Custom art generation is not available for sample characters. ' +
+            'Create your own character to generate custom portraits!'
+        );
+        return;
+    }
+
+    // In demo mode, check portrait limit per character
+    if (window.DemoCharacters && !DemoCharacters.canGenerateCustomArt(character)) {
+        const limit = DemoCharacters.DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
+        showAlertDialog(
+            `You've reached the limit of ${limit}custom portraits per character in demo mode.` +
+            'Create a free account to generate unlimited portraits!'
+        );
+        return;
+    }
 
     // Check if race and class are defined
     if (!character.race || !character.class) {
@@ -8678,9 +9323,13 @@ async function handleLogin() {
             updateAuthUI();
             showNotification(`✓ Logged in as ${email}`);
             
-            // Check if should migrate
+            // Check if should migrate user-created characters first
             if (window.MigrationService.hasLocalCharacters()) {
                 showMigrationModal();
+            }
+            // Then check for demo character migration (only ask once)
+            else if (shouldShowDemoMigration()) {
+                showDemoMigrationModal();
             } else {
                 // Reload characters from cloud
                 await AppState.loadCharacters();
@@ -8746,9 +9395,17 @@ async function handleRegister() {
             updateAuthUI();
             showNotification(`✓ Registered as ${email}`);
             
-            // Check if should migrate
+            // Check if should migrate user-created characters first
             if (window.MigrationService.hasLocalCharacters()) {
                 showMigrationModal();
+            } 
+            // Then check for demo character migration (only ask once)
+            else if (shouldShowDemoMigration()) {
+                showDemoMigrationModal();
+            } else {
+                // Reload characters from cloud
+                await AppState.loadCharacters();
+                UI.render();
             }
         } else {
             errorEl.textContent = result.error || 'Registration failed';
@@ -8992,8 +9649,14 @@ function showMigrationModal() {
 
 function closeMigrationModal() {
     document.getElementById('migrationModal').classList.remove('show');
-    // Reload characters after closing (whether migrated or not)
-    AppState.loadCharacters().then(() => UI.render());
+    
+    // After user-created migration, also ask about demo characters (once)
+    if (shouldShowDemoMigration()) {
+        showDemoMigrationModal();
+    } else {
+        // Reload characters after closing (whether migrated or not)
+        AppState.loadCharacters().then(() => UI.render());
+    }
 }
 
 async function startMigration() {
@@ -9003,8 +9666,8 @@ async function startMigration() {
     statusEl.textContent = '☁️ Migrating to cloud...';
     
     try {
-        // Migrate
-        const results = await window.MigrationService.migrateToCloud();
+        // Migrate (excluding demo characters - they have their own modal)
+        const results = await window.MigrationService.migrateToCloud({ includeDemoCharacters: false });
         
         if (results.success > 0) {
             statusEl.textContent = `✓ Migrated ${results.success}character(s)successfully!`;
@@ -9035,6 +9698,97 @@ async function startMigration() {
         statusEl.textContent = '❌ Migration failed: ' + error.message;
         setTimeout(() => closeMigrationModal(), 3000);
     }
+}
+
+// ========================================
+// DEMO CHARACTER MIGRATION UI HANDLERS
+// ========================================
+
+function showDemoMigrationModal() {
+    if (!window.DemoCharacters) return;
+    
+    // Mark that we've asked about demo migration
+    window.DemoCharacters.markMigrationAsked();
+    
+    const demoChars = window.DemoCharacters.getAll();
+    const count = demoChars.length;
+    
+    document.getElementById('demoMigrationCount').textContent = count;
+    
+    // Populate the demo character list
+    const listEl = document.getElementById('demoCharacterList');
+    if (listEl) {
+        listEl.innerHTML = demoChars.map(char => {
+            const raceName = char.raceData?.name || char.race || '?';
+            const className = char.classData?.name || char.class || '?';
+            return `<li><span class="demo-char-name">${Utils.escapeHtml(char.name)}</span><span class="demo-char-info">– Level ${char.level}${raceName}${className}</span></li>`;
+        }).join('');
+    }
+    
+    const modal = document.getElementById('demoMigrationModal');
+    if (modal) {
+        modal.classList.add('show');
+        focusFirstFieldInModal(modal);
+    }
+}
+
+function closeDemoMigrationModal(skipReload = false) {
+    const modal = document.getElementById('demoMigrationModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+    
+    if (!skipReload) {
+        // Reload characters from cloud
+        AppState.loadCharacters().then(() => UI.render());
+    }
+}
+
+async function migrateDemoCharacters() {
+    try {
+        // Get demo characters
+        const demoChars = window.DemoCharacters ? window.DemoCharacters.getAll() : [];
+        
+        if (demoChars.length === 0) {
+            closeDemoMigrationModal();
+            return;
+        }
+        
+        let successCount = 0;
+        
+        for (const demo of demoChars) {
+            try {
+                // Copy demo character to cloud (remove demo flags)
+                const charToAdd = { ...demo };
+                delete charToAdd.isDemo;
+                delete charToAdd.id;  // Let cloud assign new ID
+                
+                await window.CharacterCloudStorage.add(charToAdd);
+                successCount++;
+            } catch (error) {
+                console.error('Failed to migrate demo character:', demo.name, error);
+            }
+        }
+        
+        if (successCount > 0) {
+            showNotification(`✓ Added ${successCount}sample character(s)to your account`);
+        }
+        
+        closeDemoMigrationModal();
+    } catch (error) {
+        console.error('Demo migration error:', error);
+        showNotification('Failed to add sample characters', 'error');
+        closeDemoMigrationModal();
+    }
+}
+
+// Check if we should show demo migration prompt after registration/login
+function shouldShowDemoMigration() {
+    if (!window.DemoCharacters) return false;
+    if (window.DemoCharacters.hasMigrationBeenAsked()) return false;
+    
+    // Only show if there are demo characters
+    return window.MigrationService.hasDemoCharacters();
 }
 
 // ========================================

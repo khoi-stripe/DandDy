@@ -240,7 +240,7 @@
     // ========================================
 
     _getLocalAll() {
-      const characters =
+      let characters =
         (window.DanddyStorage && window.DanddyStorage.readAll()) ||
         (function () {
           try {
@@ -260,6 +260,7 @@
       }
 
       // Normalize timestamps so we can reliably sort by recency.
+      // Only normalize non-demo characters (demo chars have their own timestamps).
       let changed = false;
       let maxExistingTime = 0;
 
@@ -275,6 +276,11 @@
       let newCounter = 0;
 
       characters.forEach((char) => {
+        // Skip demo characters - they have their own timestamps
+        if (window.DemoCharacters && window.DemoCharacters.isDemo(char)) {
+          return;
+        }
+        
         if (!char.createdAt) {
           // Treat characters without timestamps as newer than anything we've seen
           newCounter += 1;
@@ -290,13 +296,34 @@
 
       if (changed) {
         try {
+          // Only save non-demo characters to localStorage
+          const charsToSave = characters.filter(c => 
+            !window.DemoCharacters || !window.DemoCharacters.isDemo(c)
+          );
           localStorage.setItem(
             this.STORAGE_KEY,
-            JSON.stringify(characters),
+            JSON.stringify(charsToSave),
           );
         } catch (e) {
           console.warn('LOCAL.GETALL: Failed to persist normalized timestamps', e);
         }
+      }
+
+      // In demo mode (not authenticated), inject demo characters
+      if (!this.useCloud() && window.DemoCharacters) {
+        const demoChars = window.DemoCharacters.getAll();
+        const existingDemoIds = new Set(
+          characters
+            .filter(c => window.DemoCharacters.isDemo(c))
+            .map(c => c.id)
+        );
+        
+        // Add any missing demo characters (in memory only)
+        demoChars.forEach(demo => {
+          if (!existingDemoIds.has(demo.id)) {
+            characters.push(demo);
+          }
+        });
       }
 
       return characters;
@@ -310,19 +337,24 @@
     },
 
     _localSaveAll(characters) {
+      // Filter out demo characters - they should never be persisted
+      const charsToSave = characters.filter(c => 
+        !window.DemoCharacters || !window.DemoCharacters.isDemo(c)
+      );
+      
       if (DEBUG_STORAGE) {
         console.log(
           '💾 LOCAL.SAVEALL: Saving',
-          characters.length,
-          'characters to local storage',
+          charsToSave.length,
+          'characters to local storage (excluding demo)',
         );
       }
 
       if (window.DanddyStorage) {
-        window.DanddyStorage.writeAll(characters);
+        window.DanddyStorage.writeAll(charsToSave);
       } else {
         try {
-          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(characters));
+          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(charsToSave));
         } catch (e) {
           console.warn('LOCAL.SAVEALL: Failed to write to localStorage', e);
         }

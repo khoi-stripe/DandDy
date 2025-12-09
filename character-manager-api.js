@@ -232,6 +232,7 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       
       // Text fields
       if (updates.backstory !== undefined) apiUpdates.backstory = updates.backstory;
+      if (updates.sex !== undefined) apiUpdates.sex = updates.sex;
       
       // Portrait data
       if (updates.asciiPortrait !== undefined) apiUpdates.ascii_portrait = updates.asciiPortrait;
@@ -336,30 +337,54 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
 const MigrationService = (window.MigrationService = {
   LOCAL_STORAGE_KEY: (window.DanddyStorage && window.DanddyStorage.STORAGE_KEY) || 'dnd_characters',
   
-  // Check if there are characters in localStorage
+  // Check if there are characters in localStorage (excluding demo characters)
   hasLocalCharacters() {
-    const characters =
-      (window.DanddyStorage && window.DanddyStorage.readAll()) ||
+    const characters = this._getLocalCharacters();
+    // Only count non-demo characters for migration prompt
+    const userCharacters = characters.filter(c => 
+      !window.DemoCharacters || !window.DemoCharacters.isDemo(c)
+    );
+    return userCharacters.length > 0;
+  },
+
+  // Check if there are demo characters in localStorage
+  hasDemoCharacters() {
+    const characters = this._getLocalCharacters();
+    if (!window.DemoCharacters) return false;
+    return characters.some(c => window.DemoCharacters.isDemo(c));
+  },
+
+  // Get all local characters (helper)
+  _getLocalCharacters() {
+    return (window.DanddyStorage && window.DanddyStorage.readAll()) ||
       (function (key) {
         const data = localStorage.getItem(key);
         return data ? JSON.parse(data) : [];
       })(this.LOCAL_STORAGE_KEY);
-    return characters.length > 0;
   },
 
-  // Get count of local characters
+  // Get count of local characters (excluding demo)
   getLocalCharacterCount() {
-    const characters =
-      (window.DanddyStorage && window.DanddyStorage.readAll()) ||
-      (function (key) {
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : [];
-      })(this.LOCAL_STORAGE_KEY);
-    return characters.length;
+    const characters = this._getLocalCharacters();
+    const userCharacters = characters.filter(c => 
+      !window.DemoCharacters || !window.DemoCharacters.isDemo(c)
+    );
+    return userCharacters.length;
   },
 
-  // Migrate all localStorage characters to cloud
-  async migrateToCloud() {
+  // Get count of demo characters
+  getDemoCharacterCount() {
+    const characters = this._getLocalCharacters();
+    if (!window.DemoCharacters) return 0;
+    return characters.filter(c => window.DemoCharacters.isDemo(c)).length;
+  },
+
+  // Migrate localStorage characters to cloud
+  // Options:
+  //   includeDemoCharacters: boolean - whether to include demo characters (default: false)
+  async migrateToCloud(options = {}) {
+    const { includeDemoCharacters = false } = options;
+    
     try {
       if (!AuthService.isAuthenticated()) {
         throw new Error('Must be logged in to migrate characters');
@@ -367,12 +392,12 @@ const MigrationService = (window.MigrationService = {
 
       console.log('📦 MIGRATION: Starting migration of localStorage characters to cloud...');
       
-    const localCharacters =
-      (window.DanddyStorage && window.DanddyStorage.readAll()) ||
-      (function (key) {
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : [];
-      })(this.LOCAL_STORAGE_KEY);
+      let localCharacters = this._getLocalCharacters();
+      
+      // Filter out demo characters if not including them
+      if (!includeDemoCharacters && window.DemoCharacters) {
+        localCharacters = localCharacters.filter(c => !window.DemoCharacters.isDemo(c));
+      }
       
       console.log('📦 MIGRATION: Found', localCharacters.length, 'characters to migrate');
       
@@ -386,7 +411,14 @@ const MigrationService = (window.MigrationService = {
       for (const character of localCharacters) {
         try {
           console.log('📦 MIGRATION: Migrating', character.name);
-          await CharacterCloudStorage.add(character);
+          // Remove demo flag when migrating to cloud
+          const charToMigrate = { ...character };
+          delete charToMigrate.isDemo;
+          // Generate new ID for cloud (remove demo prefix)
+          if (charToMigrate.id && String(charToMigrate.id).startsWith('demo_')) {
+            delete charToMigrate.id;
+          }
+          await CharacterCloudStorage.add(charToMigrate);
           results.success++;
         } catch (error) {
           console.error('📦 MIGRATION ERROR: Failed to migrate', character.name, error);
