@@ -1483,23 +1483,29 @@ Format your response as JSON array of strings, one for each option in order. Exa
   },
 
   // Generate image from custom prompt
-  async generateImageFromPrompt(prompt) {
+  async generateImageFromPrompt(prompt, options = {}) {
     if (!CONFIG.ENABLE_AI) {
       console.log('%c🎨 DALL-E (Unavailable - AI Disabled)', 'color: #ff0; font-weight: bold');
       return null;
     }
 
+    // Allow forcing a specific model (used for fallback)
+    const forceModel = options.forceModel || null;
+    const isRetry = options._isRetry || false;
+
     try {
       // Resolve current image model preference (builder + manager share this).
-      let model = 'dall-e-3';
-      try {
-        if (window.StorageService && typeof StorageService.getImageModel === 'function') {
-          model = StorageService.getImageModel();
-        } else if (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) {
-          model = CONFIG.DEFAULT_IMAGE_MODEL;
+      let model = forceModel || 'dall-e-3';
+      if (!forceModel) {
+        try {
+          if (window.StorageService && typeof StorageService.getImageModel === 'function') {
+            model = StorageService.getImageModel();
+          } else if (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) {
+            model = CONFIG.DEFAULT_IMAGE_MODEL;
+          }
+        } catch (e) {
+          console.warn('AIService.generateImageFromPrompt: failed to read image model, using default', e);
         }
-      } catch (e) {
-        console.warn('AIService.generateImageFromPrompt: failed to read image model, using default', e);
       }
 
       console.log('%c🎨 IMAGE: Calling backend AI...', 'color: #0ff; font-weight: bold');
@@ -1507,7 +1513,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
       // but make it clear that the full prompt (without truncation) is
       // sent to the backend.
       console.log('  Prompt (preview):', prompt.substring(0, 100) + (prompt.length > 100 ? '…' : ''));
-      console.log('  Model:', model);
+      console.log('  Model:', model + (forceModel ? ' (fallback)' : ''));
       console.log('  Note: Image generation takes 20-30s (longer than text AI)...');
       
         // Quality setting differs by model:
@@ -1581,8 +1587,22 @@ Format your response as JSON array of strings, one for each option in order. Exa
           throw rateLimitError;
         }
         
-        // Check for safety system rejection (handle both string and array detail)
+        // Check for Replicate/Flux service errors (502 from backend)
         const detailStr = typeof errorData.detail === 'string' ? errorData.detail : errorMessage;
+        if (response.status === 502 && detailStr && (
+          detailStr.toLowerCase().includes('flux') ||
+          detailStr.toLowerCase().includes('replicate')
+        )) {
+          console.warn('⚠️ Replicate/Flux service error:', detailStr);
+          
+          const fluxError = new Error('Flux image generation service is temporarily unavailable');
+          fluxError.isFluxError = true;
+          fluxError.originalMessage = detailStr;
+          fluxError.suggestModelSwitch = true;
+          throw fluxError;
+        }
+        
+        // Check for safety system rejection (handle both string and array detail)
         if (response.status === 400 && detailStr && detailStr.toLowerCase().includes('safety system')) {
           console.warn('⚠️ OpenAI safety system rejection:', detailStr);
           console.warn('📝 REJECTED PROMPT:', prompt);
@@ -1611,6 +1631,26 @@ Format your response as JSON array of strings, one for each option in order. Exa
     } catch (error) {
       console.log('%c🎨 IMAGE (Failed)', 'color: #f00; font-weight: bold');
       console.error('  Error:', error);
+      
+      // Auto-fallback: If Flux failed and we haven't tried fallback yet, retry with GPT Image
+      if (error.isFluxError && !isRetry) {
+        console.log('%c🔄 AUTO-FALLBACK: Flux unavailable, trying GPT Image instead...', 'color: #fa0; font-weight: bold');
+        
+        if (window.UIService) {
+          window.UIService.showNotification(
+            'Flux unavailable, switching to GPT Image...',
+            'info',
+            4000
+          );
+        }
+        
+        // Retry with GPT Image as fallback
+        return this.generateImageFromPrompt(prompt, { 
+          forceModel: 'gpt-image-1', 
+          _isRetry: true 
+        });
+      }
+      
       throw error;
     }
   },

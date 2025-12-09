@@ -614,11 +614,14 @@ async def _generate_with_flux(
     model: str,
     size: str,
     client_id: str,
+    max_retries: int = 3,
 ) -> tuple[str | None, bytes | None, str]:
     """
     Generate image using Replicate's Flux models.
     
     Returns: (image_url, image_bytes, content_type)
+    
+    Includes retry logic for transient errors (502, 503, timeouts).
     """
     if not REPLICATE_API_TOKEN:
         raise HTTPException(
@@ -650,51 +653,110 @@ async def _generate_with_flux(
     print(f"   Prompt (truncated): {prompt[:120]}...")
     print(f"   Size: {width}x{height}")
 
-    start = time.time()
-    try:
-        # Run the model
-        output = client.run(
-            replicate_model,
-            input={
-                "prompt": prompt,
-                "width": width,
-                "height": height,
-                "output_format": "webp",
-                "output_quality": 90,
-            }
-        )
-        duration_ms = int((time.time() - start) * 1000)
-        print(f"   ✅ Flux generation complete in {duration_ms}ms")
+    last_error = None
+    
+    for attempt in range(max_retries):
+        if attempt > 0:
+            # Exponential backoff: 2s, 4s, 8s...
+            wait_time = 2 ** attempt
+            print(f"   ⏳ Retry {attempt + 1}/{max_retries} after {wait_time}s...")
+            import asyncio
+            await asyncio.sleep(wait_time)
 
-        # Flux models return a FileOutput object or URL string
-        # Handle both cases
-        if hasattr(output, 'url'):
-            image_url = output.url
-        elif isinstance(output, str):
-            image_url = output
-        elif isinstance(output, list) and len(output) > 0:
-            # Some models return a list of outputs
-            first = output[0]
-            image_url = first.url if hasattr(first, 'url') else str(first)
-        else:
-            raise Exception(f"Unexpected Flux output format: {type(output)}")
+        start = time.time()
+        try:
+            # Run the model
+            output = client.run(
+                replicate_model,
+                input={
+                    "prompt": prompt,
+                    "width": width,
+                    "height": height,
+                    "output_format": "webp",
+                    "output_quality": 90,
+                }
+            )
+            duration_ms = int((time.time() - start) * 1000)
+            print(f"   ✅ Flux generation complete in {duration_ms}ms")
 
-        print(f"   Flux URL: {image_url[:80]}...")
+            # Flux models return a FileOutput object or URL string
+            # Handle both cases
+            if hasattr(output, 'url'):
+                image_url = output.url
+            elif isinstance(output, str):
+                image_url = output
+            elif isinstance(output, list) and len(output) > 0:
+                # Some models return a list of outputs
+                first = output[0]
+                image_url = first.url if hasattr(first, 'url') else str(first)
+            else:
+                raise Exception(f"Unexpected Flux output format: {type(output)}")
 
-        # Download the image bytes for R2 upload
-        async with httpx.AsyncClient(timeout=60.0) as http_client:
-            img_resp = await http_client.get(image_url)
-            img_resp.raise_for_status()
-            content_type = img_resp.headers.get("content-type", "image/webp")
-            body_bytes = img_resp.content
+            print(f"   Flux URL: {image_url[:80]}...")
 
-        return image_url, body_bytes, content_type
+            # Download the image bytes for R2 upload
+            async with httpx.AsyncClient(timeout=60.0) as http_client:
+                img_resp = await http_client.get(image_url)
+                img_resp.raise_for_status()
+                content_type = img_resp.headers.get("content-type", "image/webp")
+                body_bytes = img_resp.content
 
-    except replicate.exceptions.ReplicateError as e:
-        print(f"   ❌ Replicate error: {e}")
+            return image_url, body_bytes, content_type
+
+        except replicate.exceptions.ReplicateError as e:
+            last_error = e
+            error_str = str(e).lower()
+            error_status = getattr(e, 'status', None)
+            
+            # Check if this is a retryable error (502, 503, timeout, overloaded)
+            is_retryable = (
+                error_status in (502, 503, 504) or
+                "502" in error_str or
+                "503" in error_str or
+                "504" in error_str or
+                "timeout" in error_str or
+                "overloaded" in error_str or
+                "unavailable" in error_str or
+                "bad gateway" in error_str
+            )
+            
+            if is_retryable and attempt < max_retries - 1:
+                print(f"   ⚠️  Replicate error (attempt {attempt + 1}): {e}")
+                print(f"   🔄 Will retry...")
+                continue
+            else:
+                print(f"   ❌ Replicate error (final): {e}")
+                break
+        
+        except Exception as e:
+            last_error = e
+            error_str = str(e).lower()
+            
+            # Check for network/timeout errors that are retryable
+            is_retryable = (
+                "timeout" in error_str or
+                "connection" in error_str or
+                "network" in error_str
+            )
+            
+            if is_retryable and attempt < max_retries - 1:
+                print(f"   ⚠️  Error (attempt {attempt + 1}): {e}")
+                print(f"   🔄 Will retry...")
+                continue
+            else:
+                print(f"   ❌ Error (final): {e}")
+                break
+    
+    # All retries exhausted
+    if isinstance(last_error, replicate.exceptions.ReplicateError):
         raise HTTPException(
             status_code=502,
-            detail=f"Flux generation failed: {str(e)}",
+            detail=f"Flux generation failed after {max_retries} attempts: ReplicateError Details:\n\nstatus: {getattr(last_error, 'status', 'unknown')}\n\nThe Replicate service may be temporarily overloaded. Please try again in a few minutes, or switch to a different image model (DALL-E or GPT Image) in Settings.",
+        )
+    else:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Flux generation failed after {max_retries} attempts: {str(last_error)}. Please try again or switch to a different image model.",
         )
 
 

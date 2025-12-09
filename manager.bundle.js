@@ -228,16 +228,19 @@ ${optionDescriptions}
 
 Format your response as JSON array of strings, one for each option in order. Example: ["text1", "text2", "text3", "text4"]`;const systemPrompt='You are a creative D&D character creation assistant. Generate engaging option text that feels fresh but maintains the same meaning. '+'Be concise and direct. Return ONLY valid JSON.';console.log('%c🎲 OPTIONS: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Note: Will fallback to original option texts if unavailable...');const response=await this.generateCompletion(prompt,systemPrompt);if(response){try{const jsonMatch=response.match(/\[.*\]/s);if(jsonMatch){const variations=JSON.parse(jsonMatch[0]);if(Array.isArray(variations)&&variations.length===options.length){console.log('%c🎲 OPTIONS (AI Generated) ✨','color: #0f0; font-weight: bold');return variations;}}}catch(error){console.log('Failed to parse AI option variations:',error);}}
 console.log('%c🎲 OPTIONS (Fallback - Using Original Texts) ✅','color: #f80; font-weight: bold');console.log('  The original option texts will be used instead of AI variations');return options.map((opt)=>opt.text);},async generatePortraitImage(character){if(!CONFIG.ENABLE_AI){console.log('AI service disabled for image generation');return null;}
-const prompt=this.buildPortraitPrompt(character);return await this.generateImageFromPrompt(prompt);},async generateImageFromPrompt(prompt){if(!CONFIG.ENABLE_AI){console.log('%c🎨 DALL-E (Unavailable - AI Disabled)','color: #ff0; font-weight: bold');return null;}
-try{let model='dall-e-3';try{if(window.StorageService&&typeof StorageService.getImageModel==='function'){model=StorageService.getImageModel();}else if(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL){model=CONFIG.DEFAULT_IMAGE_MODEL;}}catch(e){console.warn('AIService.generateImageFromPrompt: failed to read image model, using default',e);}
-console.log('%c🎨 IMAGE: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Prompt (preview):',prompt.substring(0,100)+(prompt.length>100?'…':''));console.log('  Model:',model);console.log('  Note: Image generation takes 20-30s (longer than text AI)...');const defaultQuality={'dall-e-3':'standard','gpt-image-1':'medium','flux-1.1-pro':'standard','flux-schnell':'standard',};let quality=defaultQuality[model]||'standard';try{if(window.StorageService&&typeof StorageService.getImageQuality==='function'){const savedQuality=StorageService.getImageQuality(model);if(savedQuality){quality=savedQuality;console.log(`  Quality: ${quality.toUpperCase()} (user preference)`);}}}catch(e){console.warn('AIService: failed to read quality setting',e);}
+const prompt=this.buildPortraitPrompt(character);return await this.generateImageFromPrompt(prompt);},async generateImageFromPrompt(prompt,options={}){if(!CONFIG.ENABLE_AI){console.log('%c🎨 DALL-E (Unavailable - AI Disabled)','color: #ff0; font-weight: bold');return null;}
+const forceModel=options.forceModel||null;const isRetry=options._isRetry||false;try{let model=forceModel||'dall-e-3';if(!forceModel){try{if(window.StorageService&&typeof StorageService.getImageModel==='function'){model=StorageService.getImageModel();}else if(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL){model=CONFIG.DEFAULT_IMAGE_MODEL;}}catch(e){console.warn('AIService.generateImageFromPrompt: failed to read image model, using default',e);}}
+console.log('%c🎨 IMAGE: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Prompt (preview):',prompt.substring(0,100)+(prompt.length>100?'…':''));console.log('  Model:',model+(forceModel?' (fallback)':''));console.log('  Note: Image generation takes 20-30s (longer than text AI)...');const defaultQuality={'dall-e-3':'standard','gpt-image-1':'medium','flux-1.1-pro':'standard','flux-schnell':'standard',};let quality=defaultQuality[model]||'standard';try{if(window.StorageService&&typeof StorageService.getImageQuality==='function'){const savedQuality=StorageService.getImageQuality(model);if(savedQuality){quality=savedQuality;console.log(`  Quality: ${quality.toUpperCase()} (user preference)`);}}}catch(e){console.warn('AIService: failed to read quality setting',e);}
 const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({prompt:prompt,size:'1024x1024',quality:quality,model:model,}),},70000);if(!response.ok){const errorData=await response.json();console.log('%c🎨 IMAGE (Error)','color: #f00; font-weight: bold');console.log('  Error:',errorData.detail);const extractErrorMessage=(detail)=>{if(!detail)return null;if(Array.isArray(detail)){return detail.map(err=>{if(typeof err==='string')return err;const field=err.loc?err.loc.slice(1).join('.'):'unknown';return`${field}: ${err.msg || err.message || JSON.stringify(err)}`;}).join('; ');}
 if(typeof detail==='object'){return detail.msg||detail.message||JSON.stringify(detail);}
 return String(detail);};const errorMessage=extractErrorMessage(errorData.detail);if(response.status===429){const rateLimitError=new Error(errorMessage||'Rate limit exceeded');rateLimitError.isRateLimit=true;throw rateLimitError;}
-const detailStr=typeof errorData.detail==='string'?errorData.detail:errorMessage;if(response.status===400&&detailStr&&detailStr.toLowerCase().includes('safety system')){console.warn('⚠️ OpenAI safety system rejection:',detailStr);console.warn('📝 REJECTED PROMPT:',prompt);const analysis=this.analyzeRejectedPrompt(prompt);const safetyError=new Error('Portrait generation was flagged by OpenAI\'s content safety system');safetyError.isSafetyRejection=true;safetyError.originalMessage=detailStr;safetyError.rejectedPrompt=prompt;safetyError.promptAnalysis=analysis;throw safetyError;}
+const detailStr=typeof errorData.detail==='string'?errorData.detail:errorMessage;if(response.status===502&&detailStr&&(detailStr.toLowerCase().includes('flux')||detailStr.toLowerCase().includes('replicate'))){console.warn('⚠️ Replicate/Flux service error:',detailStr);const fluxError=new Error('Flux image generation service is temporarily unavailable');fluxError.isFluxError=true;fluxError.originalMessage=detailStr;fluxError.suggestModelSwitch=true;throw fluxError;}
+if(response.status===400&&detailStr&&detailStr.toLowerCase().includes('safety system')){console.warn('⚠️ OpenAI safety system rejection:',detailStr);console.warn('📝 REJECTED PROMPT:',prompt);const analysis=this.analyzeRejectedPrompt(prompt);const safetyError=new Error('Portrait generation was flagged by OpenAI\'s content safety system');safetyError.isSafetyRejection=true;safetyError.originalMessage=detailStr;safetyError.rejectedPrompt=prompt;safetyError.promptAnalysis=analysis;throw safetyError;}
 throw new Error(errorMessage||`API error: ${response.status}`);}
 const data=await response.json();if(data.success){console.log('%c🎨 IMAGE (Generated) ✨','color: #0f0; font-weight: bold');console.log('  URL:',data.url.substring(0,50)+'...');return data.url;}
-return null;}catch(error){console.log('%c🎨 IMAGE (Failed)','color: #f00; font-weight: bold');console.error('  Error:',error);throw error;}},buildCharacterDescription(character){const parts=[];parts.push('Dungeons & Dragons fantasy character:');if(character.sex){parts.push(character.sex);}
+return null;}catch(error){console.log('%c🎨 IMAGE (Failed)','color: #f00; font-weight: bold');console.error('  Error:',error);if(error.isFluxError&&!isRetry){console.log('%c🔄 AUTO-FALLBACK: Flux unavailable, trying GPT Image instead...','color: #fa0; font-weight: bold');if(window.UIService){window.UIService.showNotification('Flux unavailable, switching to GPT Image...','info',4000);}
+return this.generateImageFromPrompt(prompt,{forceModel:'gpt-image-1',_isRetry:true});}
+throw error;}},buildCharacterDescription(character){const parts=[];parts.push('Dungeons & Dragons fantasy character:');if(character.sex){parts.push(character.sex);}
 if(character.race){let raceDesc=null;try{if(window.PortraitPrompt&&typeof PortraitPrompt.getVariableSnippet==='function'){raceDesc=PortraitPrompt.getVariableSnippet('race',character.race);}}catch(e){}
 if(!raceDesc){raceDesc=window.PortraitPrompt?PortraitPrompt.getRaceDescription(character.race):character.race;}
 parts.push(raceDesc);}
@@ -5973,11 +5976,20 @@ const AppState = {
                 });
             }
             
-            const names = this.characters.map(c => c.name);
-            const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
+            // Check for characters with missing/empty names
+            const charsWithMissingNames = this.characters.filter(c => !c.name || !c.name.trim());
+            if (charsWithMissingNames.length > 0) {
+                console.warn('⚠️ CHARACTERS WITH MISSING NAMES:', charsWithMissingNames.length);
+                console.warn('  IDs:', charsWithMissingNames.map(c => c.id));
+                console.warn('  These may be incomplete characters from failed creation attempts.');
+            }
+            
+            // Check for actual duplicate names (excluding empty names)
+            const validNames = this.characters.filter(c => c.name && c.name.trim()).map(c => c.name);
+            const duplicates = validNames.filter((name, index) => validNames.indexOf(name) !== index);
             if (duplicates.length > 0) {
-                console.warn('⚠️ DUPLICATE NAMES DETECTED:', duplicates);
-                duplicates.forEach(dupName => {
+                console.warn('⚠️ DUPLICATE NAMES DETECTED:', [...new Set(duplicates)]);
+                [...new Set(duplicates)].forEach(dupName => {
                     const matches = this.characters.filter(c => c.name === dupName);
                     console.warn(`"${dupName}"appears ${matches.length}times with IDs:`, matches.map(m => m.id));
                 });
@@ -6867,8 +6879,14 @@ function createNewCharacter() {
     if (window.DemoCharacters && DemoCharacters.hasReachedCharacterLimit()) {
         const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
         showAlertDialog(
-            `You've reached the limit of ${limit}characters in demo mode.` +
-            'Create a free account to save unlimited characters!'
+            'You\'ve reached the limit of ' + limit + ' characters in demo mode.',
+            {
+                actionLabel: 'Create a free account',
+                onAction: () => {
+                    showAuthModal();
+                    showRegisterForm();
+                }
+            }
         );
         return;
     }
@@ -7327,8 +7345,8 @@ async function saveEditDetails() {
         
         levelChangeChoice = await showLevelChangeDialog(originalEditLevel, safeLevel);
         
-        if (levelChangeChoice === 'cancel') {
-            // User cancelled - don't save anything
+        if (levelChangeChoice === 'cancel' || levelChangeChoice === 'manual') {
+            // User cancelled or chose manual - return to edit form without saving
             return;
         }
         
@@ -7339,7 +7357,6 @@ async function saveEditDetails() {
         
         if (levelChangeChoice === 'auto') {
             // Calculate stats based on the new level and current abilities
-            // We need to get the current abilities from the form to use for calculation
             const formAbilities = {
                 str: getNumber('editStr') ?? character.abilities?.str ?? 10,
                 dex: getNumber('editDex') ?? character.abilities?.dex ?? 10,
@@ -7394,13 +7411,19 @@ async function saveEditDetails() {
 
     const updates = {
         // Store raw IDs/names; CharacterSheet will format as needed
-        name: nameText,
         skillProficiencies: skillLines.map(s => s.toLowerCase().replace(/\s+/g, '-')),
         equipment: equipmentLines,
         toolProficiencies: toolLines.map(t => t.toLowerCase().replace(/\s+/g, '-')),
         languages: languageLines,
         backstory: backstoryText,
     };
+    
+    // Only update name if non-empty (prevent accidental wiping)
+    if (nameText) {
+        updates.name = nameText;
+    } else {
+        console.warn('⚠️ EDIT: Name field was empty - preserving existing name');
+    }
 
     if (levelValue !== null) {
         updates.level = levelValue;
@@ -7698,8 +7721,14 @@ async function generatePortraitForCharacter(id) {
     if (window.DemoCharacters && !DemoCharacters.canGenerateCustomArt(character)) {
         const limit = DemoCharacters.DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
         showAlertDialog(
-            `You've reached the limit of ${limit}custom portraits per character in demo mode.` +
-            'Create a free account to generate unlimited portraits!'
+            'You\'ve reached the limit of ' + limit + ' custom portraits per character in demo mode.',
+            {
+                actionLabel: 'Create a free account',
+                onAction: () => {
+                    showAuthModal();
+                    showRegisterForm();
+                }
+            }
         );
         return;
     }
@@ -9236,12 +9265,11 @@ function showLevelChangeDialog(oldLevel, newLevel) {
         const levelText = Math.abs(levelDiff) === 1 ? 'level' : 'levels';
 
         // Create new content for level change dialog
-        const levelChangeHtml = `<div class="modal-header"><h2 class="modal-title">⬆ LEVEL CHANGE</h2><button class="modal-close"id="levelChangeClose">&times;</button></div><div class="modal-body"><p class="terminal-text">You're changing from<strong>Level&nbsp;${oldLevel}</strong>to<strong>Level&nbsp;${newLevel}</strong>&nbsp;(${Math.abs(levelDiff)}&nbsp;${levelText}&nbsp;${direction}).</p><p class="terminal-text-small"style="margin-top: 0.75rem; opacity: 0.8;">Would you like to automatically recalculate stats&nbsp;(HP,&nbsp;Proficiency Bonus)&nbsp;for the new level,or update them manually?</p></div><div class="modal-footer"style="flex-wrap: wrap; gap: 0.5rem;"><button class="terminal-btn"id="levelChangeCancel">CANCEL</button><button class="terminal-btn"id="levelChangeManual">KEEP MANUAL</button><button class="terminal-btn terminal-btn-primary"id="levelChangeAuto">AUTO-CALCULATE</button></div>`;
+        const levelChangeHtml = `<div class="modal-header"><h2 class="modal-title">↑︎ LEVEL CHANGE</h2><button class="modal-close"id="levelChangeClose">&times;</button></div><div class="modal-body"><p class="terminal-text">You're changing from<strong>Level&nbsp;${oldLevel}</strong>to<strong>Level&nbsp;${newLevel}</strong>&nbsp;(${Math.abs(levelDiff)}&nbsp;${levelText}&nbsp;${direction}).</p><p class="terminal-text-small"style="margin-top: 0.75rem; opacity: 0.8;">Would you like to automatically recalculate stats&nbsp;(HP,&nbsp;Proficiency Bonus)&nbsp;for the new level,or update them manually?</p></div><div class="modal-footer"style="flex-wrap: wrap; gap: 0.5rem;"><button class="terminal-btn"id="levelChangeManual">KEEP MANUAL</button><button class="terminal-btn terminal-btn-primary"id="levelChangeAuto">AUTO-CALCULATE</button></div>`;
 
         // Animate transition to level change dialog
         animateModalContentSwap(modalContent, levelChangeHtml, () => {
             const closeBtn = document.getElementById('levelChangeClose');
-            const cancelBtn = document.getElementById('levelChangeCancel');
             const manualBtn = document.getElementById('levelChangeManual');
             const autoBtn = document.getElementById('levelChangeAuto');
 
@@ -9257,26 +9285,29 @@ function showLevelChangeDialog(oldLevel, newLevel) {
                         resolve(result);
                     });
                 } else if (result === 'auto') {
-                    // Show cube loader while "calculating"
-                    const loadingHtml = `<div class="modal-header"><h2 class="modal-title">⬆ LEVEL CHANGE</h2></div><div class="modal-body"style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px;"><div class="panel-loading-cube-container"><div class="panel-loading-cube"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><p class="terminal-text-small"style="margin-top: 1rem; opacity: 0.8;">Calculating stats for Level ${newLevel}...</p></div>`;
+                    // Show cube loader while "calculating", then proceed with save
+                    const loadingHtml = `<div class="modal-header"><h2 class="modal-title">↑︎ LEVEL CHANGE</h2></div><div class="modal-body"style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px;"><div class="panel-loading-cube-container"><div class="panel-loading-cube"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><p class="terminal-text-small"style="margin-top: 1rem; opacity: 0.8;">Calculating stats for Level ${newLevel}...</p></div>`;
                     
                     animateModalContentSwap(modalContent, loadingHtml, () => {
-                        // Show loader for a moment, then restore original content and resolve
+                        // Show loader briefly, then resolve to proceed with save
                         setTimeout(() => {
-                            // Restore original form content so it's ready for next edit
-                            modalContent.innerHTML = originalContent;
                             resolve(result);
                         }, 500);
                     });
                 } else {
-                    // Restore original form content for manual, then resolve
-                    modalContent.innerHTML = originalContent;
-                    resolve(result);
+                    // Restore original form content for manual, keeping the new level value
+                    animateModalContentSwap(modalContent, originalContent, () => {
+                        // Restore the level value the user had entered (the new level)
+                        const levelInput = document.getElementById('editLevel');
+                        if (levelInput) {
+                            levelInput.value = newLevel;
+                        }
+                        resolve(result);
+                    });
                 }
             };
 
             closeBtn?.addEventListener('click', () => restoreAndResolve('cancel'));
-            cancelBtn?.addEventListener('click', () => restoreAndResolve('cancel'));
             manualBtn?.addEventListener('click', () => restoreAndResolve('manual'));
             autoBtn?.addEventListener('click', () => restoreAndResolve('auto'));
 
@@ -9353,16 +9384,23 @@ function calculateStatsForLevel(character, newLevel) {
 }
 
 // Generic alert modal using terminal modal styles
-function showAlertDialog(message) {
+// Optional `options.actionLabel` and `options.onAction` to show an action button
+function showAlertDialog(message, options) {
     const existing = document.getElementById('genericAlertModal');
     if (existing) existing.remove();
 
     const escapedMessage = Utils.escapeHtml(message).replace(/\n/g, '<br>');
-    const modalHtml = `<div id="genericAlertModal"class="modal show"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">NOTICE</h2><button class="modal-close"onclick="closeGenericAlertModal()">&times;</button></div><div class="modal-body"><p class="terminal-text">${escapedMessage}</p></div><div class="modal-footer modal-footer-end"><button class="terminal-btn terminal-btn-primary"id="genericAlertOk">OK</button></div></div></div>`;
+    const actionLabel = options && options.actionLabel;
+    const actionButtonHtml = actionLabel
+        ? `<button class="terminal-btn terminal-btn-secondary"id="genericAlertAction">${Utils.escapeHtml(actionLabel)}</button>`
+        : '';
+    
+    const modalHtml = `<div id="genericAlertModal"class="modal show"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">NOTICE</h2><button class="modal-close"onclick="closeGenericAlertModal()">&times;</button></div><div class="modal-body"><p class="terminal-text">${escapedMessage}</p></div><div class="modal-footer modal-footer-end">${actionButtonHtml}<button class="terminal-btn terminal-btn-primary"id="genericAlertOk">OK</button></div></div></div>`;
 
     getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('genericAlertModal');
     const okBtn = document.getElementById('genericAlertOk');
+    const actionBtn = document.getElementById('genericAlertAction');
 
     const close = () => {
         if (!modal) return;
@@ -9370,6 +9408,13 @@ function showAlertDialog(message) {
     };
 
     okBtn.addEventListener('click', close);
+    
+    if (actionBtn && options && typeof options.onAction === 'function') {
+        actionBtn.addEventListener('click', () => {
+            close();
+            options.onAction();
+        });
+    }
 
     if (modal) {
         focusFirstFieldInModal(modal);

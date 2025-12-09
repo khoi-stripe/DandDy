@@ -418,11 +418,20 @@ const AppState = {
                 });
             }
             
-            const names = this.characters.map(c => c.name);
-            const duplicates = names.filter((name, index) => names.indexOf(name) !== index);
+            // Check for characters with missing/empty names
+            const charsWithMissingNames = this.characters.filter(c => !c.name || !c.name.trim());
+            if (charsWithMissingNames.length > 0) {
+                console.warn('⚠️ CHARACTERS WITH MISSING NAMES:', charsWithMissingNames.length);
+                console.warn('  IDs:', charsWithMissingNames.map(c => c.id));
+                console.warn('  These may be incomplete characters from failed creation attempts.');
+            }
+            
+            // Check for actual duplicate names (excluding empty names)
+            const validNames = this.characters.filter(c => c.name && c.name.trim()).map(c => c.name);
+            const duplicates = validNames.filter((name, index) => validNames.indexOf(name) !== index);
             if (duplicates.length > 0) {
-                console.warn('⚠️ DUPLICATE NAMES DETECTED:', duplicates);
-                duplicates.forEach(dupName => {
+                console.warn('⚠️ DUPLICATE NAMES DETECTED:', [...new Set(duplicates)]);
+                [...new Set(duplicates)].forEach(dupName => {
                     const matches = this.characters.filter(c => c.name === dupName);
                     console.warn(`  "${dupName}" appears ${matches.length} times with IDs:`, matches.map(m => m.id));
                 });
@@ -1336,8 +1345,14 @@ function createNewCharacter() {
     if (window.DemoCharacters && DemoCharacters.hasReachedCharacterLimit()) {
         const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
         showAlertDialog(
-            `You've reached the limit of ${limit} characters in demo mode. ` +
-            'Create a free account to save unlimited characters!'
+            'You\'ve reached the limit of ' + limit + ' characters in demo mode.',
+            {
+                actionLabel: 'Create a free account',
+                onAction: () => {
+                    showAuthModal();
+                    showRegisterForm();
+                }
+            }
         );
         return;
     }
@@ -1796,8 +1811,8 @@ async function saveEditDetails() {
         
         levelChangeChoice = await showLevelChangeDialog(originalEditLevel, safeLevel);
         
-        if (levelChangeChoice === 'cancel') {
-            // User cancelled - don't save anything
+        if (levelChangeChoice === 'cancel' || levelChangeChoice === 'manual') {
+            // User cancelled or chose manual - return to edit form without saving
             return;
         }
         
@@ -1808,7 +1823,6 @@ async function saveEditDetails() {
         
         if (levelChangeChoice === 'auto') {
             // Calculate stats based on the new level and current abilities
-            // We need to get the current abilities from the form to use for calculation
             const formAbilities = {
                 str: getNumber('editStr') ?? character.abilities?.str ?? 10,
                 dex: getNumber('editDex') ?? character.abilities?.dex ?? 10,
@@ -1863,13 +1877,19 @@ async function saveEditDetails() {
 
     const updates = {
         // Store raw IDs/names; CharacterSheet will format as needed
-        name: nameText,
         skillProficiencies: skillLines.map(s => s.toLowerCase().replace(/\s+/g, '-')),
         equipment: equipmentLines,
         toolProficiencies: toolLines.map(t => t.toLowerCase().replace(/\s+/g, '-')),
         languages: languageLines,
         backstory: backstoryText,
     };
+    
+    // Only update name if non-empty (prevent accidental wiping)
+    if (nameText) {
+        updates.name = nameText;
+    } else {
+        console.warn('⚠️ EDIT: Name field was empty - preserving existing name');
+    }
 
     if (levelValue !== null) {
         updates.level = levelValue;
@@ -2184,8 +2204,14 @@ async function generatePortraitForCharacter(id) {
     if (window.DemoCharacters && !DemoCharacters.canGenerateCustomArt(character)) {
         const limit = DemoCharacters.DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
         showAlertDialog(
-            `You've reached the limit of ${limit} custom portraits per character in demo mode. ` +
-            'Create a free account to generate unlimited portraits!'
+            'You\'ve reached the limit of ' + limit + ' custom portraits per character in demo mode.',
+            {
+                actionLabel: 'Create a free account',
+                onAction: () => {
+                    showAuthModal();
+                    showRegisterForm();
+                }
+            }
         );
         return;
     }
@@ -3771,7 +3797,7 @@ function showLevelChangeDialog(oldLevel, newLevel) {
         // Create new content for level change dialog
         const levelChangeHtml = `
           <div class="modal-header">
-            <h2 class="modal-title">⬆ LEVEL CHANGE</h2>
+            <h2 class="modal-title">↑︎ LEVEL CHANGE</h2>
             <button class="modal-close" id="levelChangeClose">&times;</button>
           </div>
           <div class="modal-body">
@@ -3783,7 +3809,6 @@ function showLevelChangeDialog(oldLevel, newLevel) {
             </p>
           </div>
           <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">
-            <button class="terminal-btn" id="levelChangeCancel">CANCEL</button>
             <button class="terminal-btn" id="levelChangeManual">KEEP MANUAL</button>
             <button class="terminal-btn terminal-btn-primary" id="levelChangeAuto">AUTO-CALCULATE</button>
           </div>
@@ -3792,7 +3817,6 @@ function showLevelChangeDialog(oldLevel, newLevel) {
         // Animate transition to level change dialog
         animateModalContentSwap(modalContent, levelChangeHtml, () => {
             const closeBtn = document.getElementById('levelChangeClose');
-            const cancelBtn = document.getElementById('levelChangeCancel');
             const manualBtn = document.getElementById('levelChangeManual');
             const autoBtn = document.getElementById('levelChangeAuto');
 
@@ -3808,10 +3832,10 @@ function showLevelChangeDialog(oldLevel, newLevel) {
                         resolve(result);
                     });
                 } else if (result === 'auto') {
-                    // Show cube loader while "calculating"
+                    // Show cube loader while "calculating", then proceed with save
                     const loadingHtml = `
                       <div class="modal-header">
-                        <h2 class="modal-title">⬆ LEVEL CHANGE</h2>
+                        <h2 class="modal-title">↑︎ LEVEL CHANGE</h2>
                       </div>
                       <div class="modal-body" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px;">
                         <div class="panel-loading-cube-container">
@@ -3824,22 +3848,25 @@ function showLevelChangeDialog(oldLevel, newLevel) {
                     `;
                     
                     animateModalContentSwap(modalContent, loadingHtml, () => {
-                        // Show loader for a moment, then restore original content and resolve
+                        // Show loader briefly, then resolve to proceed with save
                         setTimeout(() => {
-                            // Restore original form content so it's ready for next edit
-                            modalContent.innerHTML = originalContent;
                             resolve(result);
                         }, 500);
                     });
                 } else {
-                    // Restore original form content for manual, then resolve
-                    modalContent.innerHTML = originalContent;
-                    resolve(result);
+                    // Restore original form content for manual, keeping the new level value
+                    animateModalContentSwap(modalContent, originalContent, () => {
+                        // Restore the level value the user had entered (the new level)
+                        const levelInput = document.getElementById('editLevel');
+                        if (levelInput) {
+                            levelInput.value = newLevel;
+                        }
+                        resolve(result);
+                    });
                 }
             };
 
             closeBtn?.addEventListener('click', () => restoreAndResolve('cancel'));
-            cancelBtn?.addEventListener('click', () => restoreAndResolve('cancel'));
             manualBtn?.addEventListener('click', () => restoreAndResolve('manual'));
             autoBtn?.addEventListener('click', () => restoreAndResolve('auto'));
 
@@ -3916,11 +3943,17 @@ function calculateStatsForLevel(character, newLevel) {
 }
 
 // Generic alert modal using terminal modal styles
-function showAlertDialog(message) {
+// Optional `options.actionLabel` and `options.onAction` to show an action button
+function showAlertDialog(message, options) {
     const existing = document.getElementById('genericAlertModal');
     if (existing) existing.remove();
 
     const escapedMessage = Utils.escapeHtml(message).replace(/\n/g, '<br>');
+    const actionLabel = options && options.actionLabel;
+    const actionButtonHtml = actionLabel
+        ? `<button class="terminal-btn terminal-btn-secondary" id="genericAlertAction">${Utils.escapeHtml(actionLabel)}</button>`
+        : '';
+    
     const modalHtml = `
       <div id="genericAlertModal" class="modal show">
         <div class="modal-content">
@@ -3932,6 +3965,7 @@ function showAlertDialog(message) {
             <p class="terminal-text">${escapedMessage}</p>
           </div>
           <div class="modal-footer modal-footer-end">
+            ${actionButtonHtml}
             <button class="terminal-btn terminal-btn-primary" id="genericAlertOk">OK</button>
           </div>
         </div>
@@ -3941,6 +3975,7 @@ function showAlertDialog(message) {
     getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('genericAlertModal');
     const okBtn = document.getElementById('genericAlertOk');
+    const actionBtn = document.getElementById('genericAlertAction');
 
     const close = () => {
         if (!modal) return;
@@ -3948,6 +3983,13 @@ function showAlertDialog(message) {
     };
 
     okBtn.addEventListener('click', close);
+    
+    if (actionBtn && options && typeof options.onAction === 'function') {
+        actionBtn.addEventListener('click', () => {
+            close();
+            options.onAction();
+        });
+    }
 
     if (modal) {
         focusFirstFieldInModal(modal);

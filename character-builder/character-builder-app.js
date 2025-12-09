@@ -3503,8 +3503,8 @@ const App = (window.App = {
     if (window.DemoCharacters && !DemoCharacters.canGenerateCustomArt(character)) {
       const limit = DemoCharacters.DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
       this.showSystemMessage(
-        `You've reached the limit of ${limit} custom portraits per character in demo mode. ` +
-        'Create a free account to generate unlimited portraits!'
+        'You\'ve reached the limit of ' + limit + ' custom portraits per character in demo mode. ' +
+        '<a href="#" onclick="showAuthModal(); showRegisterForm(); return false;" class="terminal-link">Create a free account</a> to generate unlimited portraits!'
       );
       return;
     }
@@ -4142,8 +4142,8 @@ const App = (window.App = {
     if (!character.id && window.DemoCharacters && DemoCharacters.hasReachedCharacterLimit()) {
       const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
       this.showSystemMessage(
-        `You've reached the limit of ${limit} characters in demo mode. ` +
-        'Create a free account to save unlimited characters!'
+        'You\'ve reached the limit of ' + limit + ' characters in demo mode. ' +
+        '<a href="#" onclick="showAuthModal(); showRegisterForm(); return false;" class="terminal-link">Create a free account</a> to save unlimited characters!'
       );
       return;
     }
