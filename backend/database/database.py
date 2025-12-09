@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 from functools import lru_cache
 
 class Settings(BaseSettings):
-    database_url: str = "sqlite:///./danddy.db"  # Default for local dev; Render overrides with PostgreSQL
+    database_url: str = "sqlite:///./danddy.db"  # Default for local dev; production uses Supabase PostgreSQL
     secret_key: str = "your-secret-key-here"
     algorithm: str = "HS256"
     # Default token lifetime (in minutes). Override with ACCESS_TOKEN_EXPIRE_MINUTES in env for flexibility.

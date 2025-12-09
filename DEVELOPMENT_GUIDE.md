@@ -216,7 +216,7 @@ python3 -m http.server 8080
 
 ### Location
 - **Local:** `backend/danddy.db` (SQLite)
-- **Production:** PostgreSQL on Render
+- **Production:** Supabase PostgreSQL
 
 ### Reset Local Database
 
@@ -354,8 +354,8 @@ _DandDy/
 - Accounts: Stored locally
 - **Deleted when you delete `danddy.db`**
 
-**Production (Render):**
-- Database: PostgreSQL on Render
+**Production (Render + Supabase):**
+- Database: Supabase PostgreSQL
 - Backend: `https://danddy-api.onrender.com`
 - Accounts: Stored in cloud
 - **Safe and persistent**

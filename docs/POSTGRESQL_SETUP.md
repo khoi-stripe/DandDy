@@ -1,112 +1,82 @@
 # PostgreSQL Setup Guide
 
-## Phase 1: Add PostgreSQL Database (CURRENT)
+## Current Setup: Supabase + Render
+
+### Architecture
+- **Frontend**: GitHub Pages (static hosting)
+- **Backend API**: Render (FastAPI)
+- **Database**: Supabase (PostgreSQL)
 
 ### What This Does
-- Adds a PostgreSQL database to your Render deployment
-- Database is ready when you need user accounts (Phase 2)
-- No frontend changes needed yet
+- Uses Supabase's free PostgreSQL database for production
 - Still uses SQLite locally for development
+- Backend on Render connects to Supabase via `DATABASE_URL`
 
-### Deployment Steps
+### Configuration
 
-#### Option A: Deploy via Git Push (Recommended)
+#### Render Environment Variables
 
-1. **Commit and push the changes**:
-   ```bash
-   git add -A
-   git commit -m "feat: add PostgreSQL database to Render"
-   git push origin main
-   ```
+In your Render dashboard (`danddy-api` service → Environment), set:
 
-2. **Render will automatically**:
-   - Detect the `databases` section in `render.yaml`
-   - Create a new PostgreSQL database named `danddy-db`
-   - Connect it to your web service via `DATABASE_URL` environment variable
-   - Run migrations (tables will be created automatically)
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Your Supabase connection string |
+| `SECRET_KEY` | Auto-generated |
+| `OPENAI_API_KEY` | Your OpenAI key |
 
-3. **Monitor the deployment**:
-   - Go to: https://dashboard.render.com
-   - Look for your `danddy-api` service
-   - Click on it to see deployment logs
-   - Should see: "Database danddy-db created" or similar
+#### Supabase Connection String
 
-#### Option B: Manual Setup in Dashboard
+Find it in: Supabase Dashboard → Project Settings → Database → Connection string (URI)
 
-If auto-deploy doesn't work, create the database manually:
+Format:
+```
+postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+```
 
-1. **Go to Render Dashboard**: https://dashboard.render.com
+### Local Development
 
-2. **Create PostgreSQL Database**:
-   - Click "New +" → "PostgreSQL"
-   - Name: `danddy-db`
-   - Database: `danddy`
-   - User: `danddy`
-   - Region: Same as your web service (US-West usually)
-   - Plan: **Free** (90 days free, then $7/month)
-   - Click "Create Database"
+Local development still uses SQLite (`backend/danddy.db`). No changes needed.
 
-3. **Connect to Web Service**:
-   - Go to your `danddy-api` web service
-   - Click "Environment" tab
-   - Find `DATABASE_URL`
-   - Change from SQLite to: Click "Generate Value" → Select `danddy-db` → `connectionString`
-   - Click "Save Changes"
-
-4. **Trigger Deploy**:
-   - Your service will automatically redeploy
-   - Tables will be created on first run
+```bash
+cd backend
+python -m uvicorn main:app --reload
+```
 
 ### Verify It's Working
 
-1. **Check Logs**:
-   ```
-   Go to your danddy-api service → Logs tab
-   Look for: "Database tables created successfully" or similar
-   ```
+1. **Check Render Logs**:
+   - Go to your `danddy-api` service → Logs tab
+   - Look for successful startup messages
 
 2. **Test the API**:
    ```bash
-   # Should still work (uses AI proxy, not database yet)
    curl https://danddy-api.onrender.com/api/ai/status
    ```
 
-3. **Check Database**:
-   - Go to `danddy-db` in Render dashboard
-   - Click "Connect" → Copy the connection string
-   - Use a tool like TablePlus or psql to connect
-   - You should see tables: `users`, `characters`, `campaigns`
+3. **Check Supabase**:
+   - Go to Supabase Dashboard → Table Editor
+   - You should see tables: `users`, `characters`, `campaigns`, etc.
 
 ### What Changed?
 
-**Files Modified**:
-- `render.yaml` - Added PostgreSQL database configuration
-- `backend/database/database.py` - Updated default to SQLite (local) but accepts PostgreSQL from env
-- `backend/env.example` - Added PostgreSQL connection string format
+**Files**:
+- `render.yaml` - Database URL set manually (points to Supabase)
+- `backend/database/database.py` - Accepts any PostgreSQL URL from env
 
-**What Happens**:
-- **Local development**: Still uses SQLite (`danddy.db` file)
-- **Production (Render)**: Uses PostgreSQL database
-- **Frontend**: No changes! Still using localStorage
-- **Backend**: Tables are created, but not used yet (waiting for Phase 2)
+**Environments**:
+- **Local**: SQLite (`danddy.db` file)
+- **Production**: Supabase PostgreSQL
 
 ### Costs
 
-- **Render Web Service**: Free tier (or $7/month)
-- **Render PostgreSQL**: **Free for 90 days**, then $7/month
-- **Total**: $0-14/month
-
-### Next Steps (Phase 2 - Later)
-
-When you're ready to add user accounts:
-1. Add login/register UI to frontend
-2. Update frontend to save characters to database
-3. Users can access characters from any device
+| Service | Cost |
+|---------|------|
+| GitHub Pages | Free |
+| Render Web Service | Free tier |
+| Supabase PostgreSQL | Free tier (500MB, no expiration) |
+| **Total** | **$0/month** |
 
 ### Troubleshooting
-
-**Problem**: Deploy fails with "Database not found"
-**Solution**: Make sure database name in `render.yaml` matches dashboard
 
 **Problem**: "relation 'users' does not exist"
 **Solution**: Tables not created yet. Check that `main.py` has:
@@ -114,17 +84,11 @@ When you're ready to add user accounts:
 Base.metadata.create_all(bind=engine)
 ```
 
-**Problem**: Can't connect to database locally
-**Solution**: That's expected! Local uses SQLite. PostgreSQL is only on Render.
+**Problem**: Connection refused to Supabase
+**Solution**: 
+- Check `DATABASE_URL` is correct in Render dashboard
+- Ensure Supabase project is active (not paused)
+- Use the "URI" connection string format, not individual params
 
-### Rollback (if needed)
-
-If something goes wrong, you can revert:
-
-```bash
-git revert HEAD
-git push origin main
-```
-
-This will switch back to SQLite on Render.
-
+**Problem**: SSL connection error
+**Solution**: Supabase requires SSL. The connection string should work by default, but if issues arise, append `?sslmode=require` to the URL.
