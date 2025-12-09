@@ -755,17 +755,15 @@
 }
 
 .settings-inline-field {
-    flex: 1;
-    min-width: 0;
+    flex: 0 1 auto;
 }
 
 .settings-inline-field--grow {
-    flex: 2;
+    flex: 0 1 auto;
 }
 
 .settings-inline-field--quality {
     flex: 0 0 auto;
-    min-width: 100px;
 }
 
 .settings-group {
