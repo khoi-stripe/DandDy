@@ -21,6 +21,88 @@
 
   // In-memory cache of admin-configured variables (race/class/scene/style).
   let adminCache = null;
+
+  // ========================================
+  // BUILT-IN DEFAULT POSES AND CAMERAS
+  // ========================================
+  // These defaults are used when no admin-configured data is available
+  // (e.g., logged-out users, fresh installs, empty localStorage).
+  
+  const DEFAULT_POSES = {
+    default: [
+      'standing in a confident, heroic pose',
+      'standing in a relaxed but ready stance',
+      'standing tall with one hand raised in greeting',
+    ],
+    fighter: [
+      'standing in a battle-ready stance, weapon raised',
+      'resting a heavy weapon across their shoulder',
+      'standing guard with shield raised',
+    ],
+    wizard: [
+      'gesturing mystically with arcane energy gathering',
+      'holding a staff aloft, channeling power',
+      'studying an ancient tome with focused concentration',
+    ],
+    rogue: [
+      'emerging from shadows with a sly grin',
+      'perched in a ready crouch, daggers drawn',
+      'leaning casually against nothing, arms crossed',
+    ],
+    cleric: [
+      'raising a holy symbol with radiant light',
+      'standing in peaceful prayer',
+      'blessing with an outstretched hand',
+    ],
+    ranger: [
+      'drawing a bow with focused aim',
+      'kneeling to examine tracks on the ground',
+      'standing with a beast companion at their side',
+    ],
+    paladin: [
+      'standing resolute with sword planted before them',
+      'raising a glowing holy weapon high',
+      'kneeling in devotion, armor gleaming',
+    ],
+    barbarian: [
+      'roaring in battle rage, muscles tensed',
+      'wielding a massive weapon overhead',
+      'standing defiant with chest out',
+    ],
+    bard: [
+      'strumming a lute with a charming smile',
+      'performing dramatically with flowing gestures',
+      'winking knowingly at the viewer',
+    ],
+    druid: [
+      'communing with nature, eyes closed',
+      'shape-shifting with swirling magical energy',
+      'standing surrounded by woodland creatures',
+    ],
+    monk: [
+      'in a focused martial arts stance',
+      'meditating in peaceful contemplation',
+      'executing a precise combat technique',
+    ],
+    sorcerer: [
+      'crackling with innate magical energy',
+      'casting with wild, uncontrolled power',
+      'standing with elemental forces swirling around them',
+    ],
+    warlock: [
+      'channeling dark eldritch energy',
+      'standing with patron symbols glowing nearby',
+      'invoking otherworldly power with outstretched hands',
+    ],
+  };
+
+  const DEFAULT_CAMERAS = {
+    default: [
+      'Camera angle: three-quarter view that clearly shows the character',
+      'Camera angle: dramatic low angle looking up at the character',
+      'Camera angle: portrait framing focused on upper body and face',
+    ],
+  };
   // Track if we've already tried to sync from API this session
   let apiSyncAttempted = false;
 
@@ -239,7 +321,8 @@
 
   /**
    * Get all pose variants for a given class key.
-   * Returns an array of pose descriptions, or null if none configured.
+   * Returns an array of pose descriptions.
+   * Falls back to built-in defaults if no admin-configured data.
    * @param {string} classKey
    * @returns {string[]|null}
    */
@@ -247,16 +330,30 @@
     const cache = loadAdminCache();
     const k = normalize(classKey).toLowerCase();
     if (!k) return null;
+    
+    // Try admin-configured poses first
     const variants = cache.poses[k];
     if (Array.isArray(variants) && variants.length) {
       return variants;
     }
+    
+    // Fall back to built-in defaults
+    if (DEFAULT_POSES[k] && DEFAULT_POSES[k].length) {
+      return DEFAULT_POSES[k];
+    }
+    
+    // Last resort: return default poses
+    if (DEFAULT_POSES.default && DEFAULT_POSES.default.length) {
+      return DEFAULT_POSES.default;
+    }
+    
     return null;
   }
 
   /**
    * Get all camera variants for a given class key.
-   * Returns an array of camera descriptions, or null if none configured.
+   * Returns an array of camera descriptions.
+   * Falls back to built-in defaults if no admin-configured data.
    * @param {string} classKey
    * @returns {string[]|null}
    */
@@ -264,10 +361,23 @@
     const cache = loadAdminCache();
     const k = normalize(classKey).toLowerCase();
     if (!k) return null;
+    
+    // Try admin-configured cameras first
     const variants = cache.cameras[k];
     if (Array.isArray(variants) && variants.length) {
       return variants;
     }
+    
+    // Fall back to built-in defaults (cameras are generally class-agnostic)
+    if (DEFAULT_CAMERAS[k] && DEFAULT_CAMERAS[k].length) {
+      return DEFAULT_CAMERAS[k];
+    }
+    
+    // Last resort: return default cameras
+    if (DEFAULT_CAMERAS.default && DEFAULT_CAMERAS.default.length) {
+      return DEFAULT_CAMERAS.default;
+    }
+    
     return null;
   }
 
