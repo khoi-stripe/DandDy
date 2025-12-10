@@ -2240,26 +2240,18 @@ function showPendingSharesModal(shares) {
                     <span class="share-card-value">${level}</span>
                   </div>
                   <div class="share-card-stat">
-                    <span class="share-card-label">Background</span>
-                    <span class="share-card-value">${safeBackground}</span>
-                  </div>
-                  <div class="share-card-stat">
                     <span class="share-card-label">Alignment</span>
                     <span class="share-card-value">${safeAlignment}</span>
-                  </div>
-                  <div class="share-card-stat">
-                    <span class="share-card-label">Sex</span>
-                    <span class="share-card-value">${safeSex}</span>
                   </div>
                 </div>
                 <p class="share-card-from">
                   From: ${fromEmail} · ${dateStr}
                 </p>
+                <div class="share-card-actions">
+                  <button class="terminal-btn pending-share-ignore" data-share-id="${share.id}">IGNORE</button>
+                  <button class="terminal-btn pending-share-accept" data-share-id="${share.id}">ADD CHARACTER</button>
+                </div>
               </div>
-            </div>
-            <div class="share-card-actions">
-              <button class="terminal-btn pending-share-ignore" data-share-id="${share.id}">IGNORE</button>
-              <button class="terminal-btn pending-share-accept" data-share-id="${share.id}">ADD CHARACTER</button>
             </div>
           </div>
         `;

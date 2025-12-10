@@ -2023,13 +2023,15 @@
 .share-card-layout {
     display: flex;
     gap: 0;
+    align-items: stretch;
 }
 
-/* Portrait column - 3:4 aspect ratio */
+/* Portrait column - fixed 3:4 aspect ratio (140px × 187px) */
 .share-card-portrait-col {
     flex: 0 0 140px;
-    aspect-ratio: 3 / 4;
-    background: rgba(0, 0, 0, 0.3);
+    width: 140px;
+    height: 187px; /* 140 * 4/3 for 3:4 aspect ratio */
+    background: var(--modal-accent);
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -2048,16 +2050,15 @@
     overflow: hidden;
 }
 
-/* Image portrait styling */
+/* Image portrait styling - yellow themed with multiply blend */
 .share-card-portrait-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: top center;
     display: block;
-    /* Yellow-tinted blend for terminal aesthetic */
-    filter: sepia(30%) saturate(1.2);
-    opacity: 0.85;
+    mix-blend-mode: multiply;
+    opacity: 0.9;
 }
 
 .share-card-portrait-placeholder {
@@ -2068,17 +2069,19 @@
     letter-spacing: 0.05em;
 }
 
-/* Info column */
+/* Info column - matches portrait height */
 .share-card-info-col {
     flex: 1;
-    padding: 1rem;
+    padding: 0.75rem 1rem;
     display: flex;
     flex-direction: column;
     min-width: 0;
+    height: 187px;
+    box-sizing: border-box;
 }
 
 .share-card-name {
-    margin: 0 0 0.75rem 0;
+    margin: 0 0 0.5rem 0;
     font-size: 1.1rem;
     font-weight: 600;
     color: var(--modal-accent);
@@ -2089,9 +2092,8 @@
 
 .share-card-stats {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.4rem 1rem;
-    flex: 1;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.25rem 0.5rem;
 }
 
 .share-card-stat {
@@ -2117,12 +2119,10 @@
 }
 
 .share-card-from {
-    margin: 0.75rem 0 0 0;
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--modal-accent-dim);
-    opacity: 0.5;
+    margin-top: 0.75rem;
     font-size: 0.7rem;
     color: var(--modal-accent);
+    opacity: 0.5;
 }
 
 /* Action buttons - pinned to the right */
@@ -2130,8 +2130,7 @@
     display: flex;
     justify-content: flex-end;
     gap: var(--spacing-sm);
-    padding: var(--spacing-md);
-    border-top: 1px solid var(--modal-accent-dim);
+    margin-top: auto;
 }
 
 .share-card-actions .terminal-btn {
@@ -2157,6 +2156,7 @@
     .share-card-portrait-col {
         flex: none;
         width: 100%;
+        height: auto;
         aspect-ratio: 4 / 3;
         border-right: none;
         border-bottom: 1px solid var(--modal-accent-dim);
@@ -2166,11 +2166,12 @@
         font-size: 5px;
     }
     
-    .share-card-stats {
-        grid-template-columns: repeat(3, 1fr);
+    .share-card-info-col {
+        height: auto;
+        padding: 1rem;
     }
     
     .share-card-actions {
-        justify-content: flex-end;
+        margin-top: var(--spacing-md);
     }
 }
