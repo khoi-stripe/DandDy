@@ -409,7 +409,7 @@ const CharacterSheet = (window.CharacterSheet = {
     ) {
       headerActions.push({
         icon: '★',
-        label: 'Custom AI Portrait',
+        label: 'Customize portrait',
         onclick: generateFn,
       });
     }
