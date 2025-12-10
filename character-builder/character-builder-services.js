@@ -1529,17 +1529,24 @@ Format your response as JSON array of strings, one for each option in order. Exa
         
         let quality = defaultQuality[model] || 'standard';
         
-        // Check for user quality preference
-        try {
-          if (window.StorageService && typeof StorageService.getImageQuality === 'function') {
-            const savedQuality = StorageService.getImageQuality(model);
-            if (savedQuality) {
-              quality = savedQuality;
-              console.log(`  Quality: ${quality.toUpperCase()} (user preference)`);
+        // In demo mode, always use 'medium' quality for gpt-image-1 to manage costs
+        const isDemoMode = window.DemoCharacters && typeof DemoCharacters.isDemoMode === 'function' && DemoCharacters.isDemoMode();
+        if (isDemoMode && model === 'gpt-image-1') {
+          quality = 'medium';
+          console.log(`  Quality: MEDIUM (demo mode default)`);
+        } else {
+          // Check for user quality preference (logged-in users only)
+          try {
+            if (window.StorageService && typeof StorageService.getImageQuality === 'function') {
+              const savedQuality = StorageService.getImageQuality(model);
+              if (savedQuality) {
+                quality = savedQuality;
+                console.log(`  Quality: ${quality.toUpperCase()} (user preference)`);
+              }
             }
+          } catch (e) {
+            console.warn('AIService: failed to read quality setting', e);
           }
-        } catch (e) {
-          console.warn('AIService: failed to read quality setting', e);
         }
 
         const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`, {
