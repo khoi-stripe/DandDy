@@ -3231,6 +3231,15 @@ function closeDuplicateModal() {
     });
 }
 
+function saveDuplicateResolution() {
+    const selectedRadio = document.querySelector('input[name="duplicateAction"]:checked');
+    if (!selectedRadio) {
+        console.error('No duplicate action selected!');
+        return;
+    }
+    resolveDuplicate(selectedRadio.value);
+}
+
 function resolveDuplicate(action) {
     if (!pendingDuplicateResolution) {
         console.error('No pending duplicate resolution!');

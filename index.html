@@ -402,12 +402,20 @@
             </div>
             <div class="modal-body">
                 <p class="terminal-text">A character named "<span id="duplicateCharName"></span>" already exists in your collection.</p>
-                <p class="terminal-text modal-body-question">What would you like to do?</p>
+                <div class="duplicate-options">
+                    <label class="settings-radio-option">
+                        <input type="radio" name="duplicateAction" value="keep-both" checked>
+                        <span class="settings-radio-label">Keep both characters</span>
+                    </label>
+                    <label class="settings-radio-option">
+                        <input type="radio" name="duplicateAction" value="overwrite">
+                        <span class="settings-radio-label">Replace existing character</span>
+                    </label>
+                </div>
             </div>
-            <div class="modal-footer modal-footer-centered">
+            <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="closeDuplicateModal()">CANCEL</button>
-                <button class="terminal-btn terminal-btn-warning" onclick="resolveDuplicate('overwrite')">REPLACE EXISTING</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="resolveDuplicate('keep-both')">KEEP BOTH</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="saveDuplicateResolution()">SAVE</button>
             </div>
         </div>
     </div>
@@ -715,7 +723,7 @@
                 <p class="terminal-text-small terminal-text-dim">Note: After successful migration, your local copies will be cleared.</p>
                 <div id="migrationStatus" class="terminal-text is-hidden"></div>
             </div>
-            <div class="modal-footer modal-footer-centered">
+            <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="closeMigrationModal()">SKIP</button>
                 <button class="terminal-btn terminal-btn-primary" onclick="startMigration()">MIGRATE NOW</button>
             </div>
@@ -736,7 +744,7 @@
                 </ul>
                 <p class="terminal-text">Would you like to copy them to your account? You can modify or delete them later.</p>
             </div>
-            <div class="modal-footer modal-footer-centered">
+            <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="closeDemoMigrationModal(false)">NO THANKS</button>
                 <button class="terminal-btn terminal-btn-primary" onclick="migrateDemoCharacters()">YES, KEEP THEM</button>
             </div>

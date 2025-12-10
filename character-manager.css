@@ -674,6 +674,13 @@
     margin-top: var(--spacing-md);
 }
 
+.duplicate-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-md);
+}
+
 .modal-footer-centered {
     justify-content: center;
 }
