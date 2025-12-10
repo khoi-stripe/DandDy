@@ -190,47 +190,83 @@
   }
 
   /**
+   * Fetch global prompt entries from the public API endpoint.
+   * No authentication required - used for demo mode users.
+   */
+  async function syncGlobalEntries() {
+    try {
+      const response = await fetch(`${getApiBase()}/prompt-entries/global`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.warn('PortraitPrompt: Global entries fetch failed with status', response.status);
+        return null;
+      }
+
+      const apiEntries = await response.json();
+      if (!Array.isArray(apiEntries)) {
+        console.warn('PortraitPrompt: Global entries API returned non-array');
+        return null;
+      }
+
+      return apiEntries;
+    } catch (e) {
+      console.warn('PortraitPrompt: Global entries fetch error', e);
+      return null;
+    }
+  }
+
+  /**
    * Fetch prompt entries directly from the API (for authenticated users).
    * Stores result in memory cache - no localStorage needed.
    * Returns a promise that resolves when sync is complete.
    */
   async function syncFromAPI() {
     if (apiSyncAttempted) return; // Only try once per session
-
-    // Don't mark as attempted until we know the user is actually authenticated
-    // Otherwise we'd skip the sync entirely if auth isn't ready yet
-    if (!isAuthenticated()) return;
     
     apiSyncAttempted = true;
 
-    const token = getAuthToken();
-    if (!token) return;
+    // For authenticated users, fetch their entries + global entries
+    if (isAuthenticated()) {
+      const token = getAuthToken();
+      if (!token) return;
 
-    try {
-      const response = await fetch(`${getApiBase()}/prompt-entries`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      try {
+        const response = await fetch(`${getApiBase()}/prompt-entries`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
 
-      if (!response.ok) {
-        console.warn('PortraitPrompt: API fetch failed with status', response.status);
-        return;
+        if (!response.ok) {
+          console.warn('PortraitPrompt: API fetch failed with status', response.status);
+          return;
+        }
+
+        const apiEntries = await response.json();
+        if (!Array.isArray(apiEntries)) {
+          console.warn('PortraitPrompt: API returned non-array');
+          return;
+        }
+
+        // Parse API entries directly into memory cache (skip localStorage)
+        adminCache = parseEntriesToCache(apiEntries);
+        
+        console.log('PortraitPrompt: Loaded', apiEntries.length, 'entries from API (cloud)');
+      } catch (e) {
+        console.warn('PortraitPrompt: API fetch error', e);
       }
-
-      const apiEntries = await response.json();
-      if (!Array.isArray(apiEntries)) {
-        console.warn('PortraitPrompt: API returned non-array');
-        return;
+    } else {
+      // For demo users (not authenticated), fetch only global entries
+      const globalEntries = await syncGlobalEntries();
+      if (globalEntries && globalEntries.length > 0) {
+        adminCache = parseEntriesToCache(globalEntries);
+        console.log('PortraitPrompt: Loaded', globalEntries.length, 'global entries for demo mode');
       }
-
-      // Parse API entries directly into memory cache (skip localStorage)
-      adminCache = parseEntriesToCache(apiEntries);
-      
-      console.log('PortraitPrompt: Loaded', apiEntries.length, 'entries from API (cloud)');
-    } catch (e) {
-      console.warn('PortraitPrompt: API fetch error', e);
     }
   }
 
@@ -865,17 +901,16 @@
   // ========================================
   // AUTO-SYNC ON PAGE LOAD
   // ========================================
-  // When the page loads and user is authenticated, sync entries from API
-  // to memory cache so they're available for prompt generation.
+  // When the page loads, sync entries from API to memory cache.
+  // For authenticated users: fetches their entries + global entries.
+  // For demo users: fetches only global entries (public endpoint).
   function initAutoSync() {
     // Wait a moment for AuthService to initialize
     setTimeout(async () => {
-      if (isAuthenticated()) {
-        try {
-          await syncFromAPI();
-        } catch (e) {
-          console.warn('PortraitPrompt: Auto-sync failed', e);
-        }
+      try {
+        await syncFromAPI();
+      } catch (e) {
+        console.warn('PortraitPrompt: Auto-sync failed', e);
       }
     }, 500);
   }
