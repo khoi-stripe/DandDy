@@ -105,6 +105,16 @@ def get_pending_shares(
             db.commit()
             continue
             
+        # Get alignment value (it's an enum, so extract the value)
+        alignment_value = None
+        if share.character.alignment:
+            alignment_value = share.character.alignment.value if hasattr(share.character.alignment, 'value') else str(share.character.alignment)
+        
+        # Get sex value (it's an enum)
+        sex_value = None
+        if share.character.sex:
+            sex_value = share.character.sex.value if hasattr(share.character.sex, 'value') else str(share.character.sex)
+        
         result.append(PendingShareResponse(
             id=share.id,
             character=CharacterPreview(
@@ -113,6 +123,9 @@ def get_pending_shares(
                 race=share.character.race,
                 character_class=share.character.character_class,
                 level=share.character.level,
+                background=share.character.background,
+                alignment=alignment_value,
+                sex=sex_value,
                 ascii_portrait=share.character.ascii_portrait
             ),
             from_email=share.from_user.email if share.from_user else "Unknown",

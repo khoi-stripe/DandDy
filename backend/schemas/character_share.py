@@ -28,12 +28,15 @@ class CharacterShareResponse(BaseModel):
 
 
 class CharacterPreview(BaseModel):
-    """Minimal character info for share preview."""
+    """Character info for share preview card."""
     id: int
     name: str
     race: str
     character_class: str
     level: int
+    background: Optional[str] = None
+    alignment: Optional[str] = None
+    sex: Optional[str] = None
     ascii_portrait: Optional[str] = None
     
     class Config:

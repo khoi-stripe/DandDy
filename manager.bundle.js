@@ -7786,21 +7786,30 @@ function showPendingSharesModal(shares) {
         const safeRace = Utils.escapeHtml(char.race || 'Unknown');
         const safeClass = Utils.escapeHtml(char.character_class || 'Unknown');
         const level = char.level || 1;
+        const safeBackground = Utils.escapeHtml(char.background || '—');
         const fromEmail = Utils.escapeHtml(share.from_email || 'Unknown');
+        
+        // Format alignment nicely (e.g., "lawful_good" -> "Lawful Good")
+        const formatAlignment = (align) => {
+            if (!align) return '—';
+            return align.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        };
+        const safeAlignment = formatAlignment(char.alignment);
+        
+        // Format sex (capitalize)
+        const safeSex = char.sex ? char.sex.charAt(0).toUpperCase() + char.sex.slice(1) : '—';
         
         // Format the date
         const createdDate = new Date(share.created_at);
         const dateStr = createdDate.toLocaleDateString();
 
-        // ASCII portrait preview (truncated)
-        let portraitPreview = '';
+        // ASCII portrait (full height for 3:4 aspect ratio container)
+        let portraitHtml = '<div class="share-card-portrait-placeholder">No Portrait</div>';
         if (char.ascii_portrait) {
-            const lines = char.ascii_portrait.split('\n').slice(0, 8);
-            const truncated = lines.join('\n');
-            portraitPreview = `<pre class="pending-share-portrait">${Utils.escapeHtml(truncated)}</pre>`;
+            portraitHtml = `<pre class="share-card-portrait">${Utils.escapeHtml(char.ascii_portrait)}</pre>`;
         }
 
-        return `<div class="pending-share-card"data-share-id="${share.id}"data-index="${index}"><div class="pending-share-info">${portraitPreview}<div class="pending-share-details"><h3 class="pending-share-name">${safeName}</h3><p class="pending-share-meta">Level ${level}${safeRace}${safeClass}</p><p class="pending-share-from terminal-text-dim">From:${fromEmail}· ${dateStr}</p></div></div><div class="pending-share-actions"><button class="terminal-btn pending-share-ignore"data-share-id="${share.id}">IGNORE</button><button class="terminal-btn terminal-btn-primary pending-share-accept"data-share-id="${share.id}">ADD CHARACTER</button></div></div>`;
+        return `<div class="pending-share-card"data-share-id="${share.id}"data-index="${index}"><div class="share-card-layout"><div class="share-card-portrait-col">${portraitHtml}</div><div class="share-card-info-col"><h3 class="share-card-name">${safeName}</h3><div class="share-card-stats"><div class="share-card-stat"><span class="share-card-label">Race</span><span class="share-card-value">${safeRace}</span></div><div class="share-card-stat"><span class="share-card-label">Class</span><span class="share-card-value">${safeClass}</span></div><div class="share-card-stat"><span class="share-card-label">Level</span><span class="share-card-value">${level}</span></div><div class="share-card-stat"><span class="share-card-label">Background</span><span class="share-card-value">${safeBackground}</span></div><div class="share-card-stat"><span class="share-card-label">Alignment</span><span class="share-card-value">${safeAlignment}</span></div><div class="share-card-stat"><span class="share-card-label">Sex</span><span class="share-card-value">${safeSex}</span></div></div><p class="share-card-from">From:${fromEmail}· ${dateStr}</p></div></div><div class="share-card-actions"><button class="terminal-btn pending-share-ignore"data-share-id="${share.id}">IGNORE</button><button class="terminal-btn terminal-btn-primary pending-share-accept"data-share-id="${share.id}">ADD CHARACTER</button></div></div>`;
     }).join('');
 
     const modalHtml = `<div id="pendingSharesModal"class="modal show"><div class="modal-content pending-shares-modal"><div class="modal-header"><h2 class="modal-title">↓ ${title}</h2><button class="modal-close"onclick="closePendingSharesModal()">&times;</button></div><div class="modal-body"><p class="terminal-text-small terminal-text-dim"style="margin-bottom: 1rem;">${shareCount===1?'Someone shared a character with you!':'Other users have shared characters with you!'}
