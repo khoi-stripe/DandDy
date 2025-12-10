@@ -38,6 +38,7 @@ class CharacterPreview(BaseModel):
     alignment: Optional[str] = None
     sex: Optional[str] = None
     ascii_portrait: Optional[str] = None
+    original_portrait_url: Optional[str] = None
     
     class Config:
         from_attributes = True

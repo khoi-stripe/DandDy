@@ -7782,38 +7782,43 @@ function showPendingSharesModal(shares) {
     // Build share cards HTML
     const shareCardsHtml = shares.map((share, index) => {
         const char = share.character;
-        const safeName = Utils.escapeHtml(char.name || 'Unnamed');
-        const safeRace = Utils.escapeHtml(char.race || 'Unknown');
-        const safeClass = Utils.escapeHtml(char.character_class || 'Unknown');
-        const level = char.level || 1;
-        const safeBackground = Utils.escapeHtml(char.background || '—');
-        const fromEmail = Utils.escapeHtml(share.from_email || 'Unknown');
         
-        // Format alignment nicely (e.g., "lawful_good" -> "Lawful Good")
-        const formatAlignment = (align) => {
-            if (!align) return '—';
-            return align.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        // Title case helper (e.g., "halfling" -> "Halfling", "neutral evil" -> "Neutral Evil")
+        const toTitleCase = (str) => {
+            if (!str) return '—';
+            return str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
         };
-        const safeAlignment = formatAlignment(char.alignment);
         
-        // Format sex (capitalize)
-        const safeSex = char.sex ? char.sex.charAt(0).toUpperCase() + char.sex.slice(1) : '—';
+        const safeName = Utils.escapeHtml(char.name || 'Unnamed');
+        const safeRace = Utils.escapeHtml(toTitleCase(char.race || 'Unknown'));
+        const safeClass = Utils.escapeHtml(toTitleCase(char.character_class || 'Unknown'));
+        const level = char.level || 1;
+        const safeBackground = Utils.escapeHtml(toTitleCase(char.background || '—'));
+        const fromEmail = Utils.escapeHtml(share.from_email || 'Unknown');
+        const safeAlignment = Utils.escapeHtml(toTitleCase(char.alignment));
+        
+        // Format sex (title case)
+        const safeSex = Utils.escapeHtml(toTitleCase(char.sex));
         
         // Format the date
         const createdDate = new Date(share.created_at);
         const dateStr = createdDate.toLocaleDateString();
 
-        // ASCII portrait (full height for 3:4 aspect ratio container)
+        // Portrait: prefer image, fallback to ASCII, then placeholder
         let portraitHtml = '<div class="share-card-portrait-placeholder">No Portrait</div>';
-        if (char.ascii_portrait) {
+        if (char.original_portrait_url) {
+            // Image portrait
+            portraitHtml = `<img class="share-card-portrait-image"src="${Utils.escapeHtml(char.original_portrait_url)}"alt="${safeName} portrait"/>`;
+        } else if (char.ascii_portrait) {
+            // ASCII portrait fallback
             portraitHtml = `<pre class="share-card-portrait">${Utils.escapeHtml(char.ascii_portrait)}</pre>`;
         }
 
-        return `<div class="pending-share-card"data-share-id="${share.id}"data-index="${index}"><div class="share-card-layout"><div class="share-card-portrait-col">${portraitHtml}</div><div class="share-card-info-col"><h3 class="share-card-name">${safeName}</h3><div class="share-card-stats"><div class="share-card-stat"><span class="share-card-label">Race</span><span class="share-card-value">${safeRace}</span></div><div class="share-card-stat"><span class="share-card-label">Class</span><span class="share-card-value">${safeClass}</span></div><div class="share-card-stat"><span class="share-card-label">Level</span><span class="share-card-value">${level}</span></div><div class="share-card-stat"><span class="share-card-label">Background</span><span class="share-card-value">${safeBackground}</span></div><div class="share-card-stat"><span class="share-card-label">Alignment</span><span class="share-card-value">${safeAlignment}</span></div><div class="share-card-stat"><span class="share-card-label">Sex</span><span class="share-card-value">${safeSex}</span></div></div><p class="share-card-from">From:${fromEmail}· ${dateStr}</p></div></div><div class="share-card-actions"><button class="terminal-btn pending-share-ignore"data-share-id="${share.id}">IGNORE</button><button class="terminal-btn terminal-btn-primary pending-share-accept"data-share-id="${share.id}">ADD CHARACTER</button></div></div>`;
+        return `<div class="pending-share-card"data-share-id="${share.id}"data-index="${index}"><div class="share-card-layout"><div class="share-card-portrait-col">${portraitHtml}</div><div class="share-card-info-col"><h3 class="share-card-name">${safeName}</h3><div class="share-card-stats"><div class="share-card-stat"><span class="share-card-label">Race</span><span class="share-card-value">${safeRace}</span></div><div class="share-card-stat"><span class="share-card-label">Class</span><span class="share-card-value">${safeClass}</span></div><div class="share-card-stat"><span class="share-card-label">Level</span><span class="share-card-value">${level}</span></div><div class="share-card-stat"><span class="share-card-label">Background</span><span class="share-card-value">${safeBackground}</span></div><div class="share-card-stat"><span class="share-card-label">Alignment</span><span class="share-card-value">${safeAlignment}</span></div><div class="share-card-stat"><span class="share-card-label">Sex</span><span class="share-card-value">${safeSex}</span></div></div><p class="share-card-from">From:${fromEmail}· ${dateStr}</p></div></div><div class="share-card-actions"><button class="terminal-btn pending-share-ignore"data-share-id="${share.id}">IGNORE</button><button class="terminal-btn pending-share-accept"data-share-id="${share.id}">ADD CHARACTER</button></div></div>`;
     }).join('');
 
     const modalHtml = `<div id="pendingSharesModal"class="modal show"><div class="modal-content pending-shares-modal"><div class="modal-header"><h2 class="modal-title">↓ ${title}</h2><button class="modal-close"onclick="closePendingSharesModal()">&times;</button></div><div class="modal-body"><p class="terminal-text-small terminal-text-dim"style="margin-bottom: 1rem;">${shareCount===1?'Someone shared a character with you!':'Other users have shared characters with you!'}
-Add them to your collection or ignore to dismiss.</p><div class="pending-shares-list">${shareCardsHtml}</div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="closePendingSharesModal()">CLOSE</button></div></div></div>`;
+Add them to your collection or ignore to dismiss.</p><div class="pending-shares-list">${shareCardsHtml}</div></div></div></div>`;
 
     getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('pendingSharesModal');
