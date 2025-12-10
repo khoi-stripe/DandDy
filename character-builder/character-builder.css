@@ -1343,6 +1343,9 @@
     height: 100dvh;
     /* Prevent overscroll/bounce effects */
     overscroll-behavior: none;
+    /* iOS Safari fix: position fixed forces scroll lock without blocking touch-action in children */
+    position: fixed;
+    width: 100%;
   }
   
   .terminal-container {
@@ -1381,6 +1384,8 @@
     flex: 1;
     /* Contain scroll to prevent page bounce */
     overscroll-behavior: contain;
+    /* Allow vertical scroll only */
+    touch-action: pan-y;
   }
   
   .right-panel {
@@ -1392,6 +1397,13 @@
     flex: 1;
     /* Contain scroll to prevent page bounce */
     overscroll-behavior: contain;
+    /* Allow vertical scroll only */
+    touch-action: pan-y;
+  }
+  
+  /* Modal bodies need touch scrolling too */
+  .modal-body {
+    touch-action: pan-y;
   }
   
   .auth-container {

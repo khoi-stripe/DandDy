@@ -1970,6 +1970,9 @@ body.selector-menu-open .splash-art {
     height: 100dvh;
     /* Prevent overscroll/bounce effects */
     overscroll-behavior: none;
+    /* iOS Safari fix: position fixed forces scroll lock without blocking touch-action in children */
+    position: fixed;
+    width: 100%;
   }
   
   .terminal-frame,
@@ -2048,6 +2051,13 @@ body.selector-menu-open .splash-art {
     -webkit-overflow-scrolling: touch;
     /* Contain scroll to prevent page bounce */
     overscroll-behavior: contain;
+    /* Allow vertical scroll only; horizontal swipes handled by JS */
+    touch-action: pan-y;
+  }
+  
+  /* Modal bodies need touch scrolling too */
+  .modal-body {
+    touch-action: pan-y;
   }
 }
 
