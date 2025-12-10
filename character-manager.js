@@ -3097,43 +3097,64 @@ async function confirmGeneratePortrait() {
             const asciiEl = document.getElementById(portraitDomId);
             const imgEl = document.getElementById(originalPortraitDomId);
 
-            // Update original image src so the "View original art" toggle shows
-            // the freshly generated image without requiring a re-render.
-            if (imgEl && result.imageUrl) {
-                imgEl.src = result.imageUrl;
-            }
-
-            // Animate the ASCII portrait into place, mirroring the builder's
-            // typewriter-style reveal so it feels consistent with build mode.
-            if (asciiEl && portraitArt) {
-                await typeManagerPortrait(asciiEl, portraitArt);
-            }
-
             // If we temporarily switched from original → ASCII to show the
             // loader, restore the original image view now that the new art
-            // is ready, as long as the DOM is still in the expected state.
+            // is ready. Skip the ASCII animation when in original mode.
             if (shouldRestoreOriginalView && asciiEl && imgEl) {
                 const container = asciiEl.closest('.portrait-container');
                 const toggleBtn = document.getElementById(`toggle-portrait-btn-${portraitCharacterId}`);
 
-                const isAsciiCurrentlyVisible = !asciiEl.classList.contains('is-hidden');
-                const isOriginalCurrentlyHidden = imgEl.classList.contains('is-hidden');
-
-                if (container && isAsciiCurrentlyVisible && isOriginalCurrentlyHidden) {
-                    asciiEl.classList.add('is-hidden');
-                    imgEl.classList.remove('is-hidden');
-                    container.classList.add('portrait-container--original-mode');
-
-                    if (toggleBtn) {
-                        const iconSpan = toggleBtn.querySelector('.selector-option-icon');
-                        const labelSpan = toggleBtn.querySelector('.selector-option-label');
-                        if (iconSpan && labelSpan) {
-                            iconSpan.textContent = '≡';
-                            labelSpan.textContent = 'View ASCII Art';
-                        } else {
-                            toggleBtn.textContent = '≡ View ASCII Art';
-                        }
+                // Store the ASCII art in the element without animation so it's
+                // available if user toggles to ASCII view later.
+                if (portraitArt) {
+                    if (window.CharacterSheet && typeof CharacterSheet.setPortraitContent === 'function') {
+                        CharacterSheet.setPortraitContent(asciiEl, portraitArt);
+                    } else {
+                        asciiEl.innerHTML = '';
+                        const pre = document.createElement('pre');
+                        pre.textContent = portraitArt;
+                        asciiEl.appendChild(pre);
                     }
+                    // Remove loading/placeholder classes since content is now set
+                    asciiEl.classList.remove('ascii-portrait--placeholder', 'ascii-portrait--loading');
+                }
+
+                // Restore original image view with reveal animation
+                asciiEl.classList.add('is-hidden');
+                imgEl.classList.remove('is-hidden', 'is-loaded', 'portrait-reveal');
+                if (container) {
+                    container.classList.add('portrait-container--original-mode');
+                }
+
+                // Set image src and trigger reveal animation when it loads
+                imgEl.onload = function() {
+                    this.classList.add('is-loaded', 'portrait-reveal');
+                    // Clean up the reveal class after animation completes
+                    this.addEventListener('animationend', () => {
+                        this.classList.remove('portrait-reveal');
+                    }, { once: true });
+                };
+                imgEl.src = result.imageUrl;
+
+                if (toggleBtn) {
+                    const iconSpan = toggleBtn.querySelector('.selector-option-icon');
+                    const labelSpan = toggleBtn.querySelector('.selector-option-label');
+                    if (iconSpan && labelSpan) {
+                        iconSpan.textContent = '≡';
+                        labelSpan.textContent = 'View ASCII Art';
+                    } else {
+                        toggleBtn.textContent = '≡ View ASCII Art';
+                    }
+                }
+            } else {
+                // Update original image src so it's ready if user toggles view
+                if (imgEl && result.imageUrl) {
+                    imgEl.src = result.imageUrl;
+                }
+                // In ASCII mode: animate the ASCII portrait into place, mirroring
+                // the builder's typewriter-style reveal so it feels consistent.
+                if (asciiEl && portraitArt) {
+                    await typeManagerPortrait(asciiEl, portraitArt);
                 }
             }
 
@@ -4383,6 +4404,60 @@ function showAlertDialog(message, options) {
     }
 }
 
+// ========================================
+// SESSION EXPIRED MODAL
+// ========================================
+
+// Show a modal when the session has expired proactively
+function showSessionExpiredModal() {
+    const existing = document.getElementById('sessionExpiredModal');
+    if (existing) existing.remove();
+
+    const modalHtml = `
+      <div id="sessionExpiredModal" class="modal show">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title">⚠ SESSION EXPIRED</h2>
+          </div>
+          <div class="modal-body">
+            <p class="terminal-text">Your login session has expired. Your local changes are safe, but you'll need to log in again to sync with the cloud.</p>
+          </div>
+          <div class="modal-footer modal-footer-end">
+            <button class="terminal-btn terminal-btn-secondary" id="sessionExpiredDismiss">CONTINUE OFFLINE</button>
+            <button class="terminal-btn terminal-btn-primary" id="sessionExpiredLogin">RE-LOGIN</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('sessionExpiredModal');
+    const dismissBtn = document.getElementById('sessionExpiredDismiss');
+    const loginBtn = document.getElementById('sessionExpiredLogin');
+
+    const close = () => {
+        if (!modal) return;
+        animateModalClose(modal, { removeOnClose: true });
+    };
+
+    dismissBtn.addEventListener('click', () => {
+        close();
+        showNotification('Working offline - log in to sync changes');
+    });
+
+    loginBtn.addEventListener('click', () => {
+        close();
+        // Small delay to let the modal close animation finish
+        setTimeout(() => {
+            showAuthModal();
+        }, 200);
+    });
+
+    if (modal) {
+        focusFirstFieldInModal(modal);
+    }
+}
+
 // Track guest notice state per session
 let guestNoticeShownThisSession = false;
 let userHasMadeChanges = false;
@@ -4740,6 +4815,11 @@ async function handleLogin() {
             closeAuthModal();
             updateAuthUI();
             showNotification(`✓ Logged in as ${email}`);
+
+            // Start session monitoring now that user is logged in
+            if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
+                window.AuthService.startSessionMonitor();
+            }
             
             // Check if should migrate user-created characters first
             if (window.MigrationService.hasLocalCharacters()) {
@@ -4815,6 +4895,11 @@ async function handleRegister() {
             closeAuthModal();
             updateAuthUI();
             showNotification(`✓ Registered as ${email}`);
+
+            // Start session monitoring now that user is logged in
+            if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
+                window.AuthService.startSessionMonitor();
+            }
             
             // Check if should migrate user-created characters first
             if (window.MigrationService.hasLocalCharacters()) {
@@ -5297,6 +5382,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Sync header / guest notice with actual auth state
     updateAuthUI();
+
+    // Start session monitoring if authenticated, and listen for expiry events
+    if (isAuthenticated && window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
+        window.AuthService.startSessionMonitor();
+    }
+
+    // Listen for session expired events to show the modal
+    window.addEventListener('danddy:sessionExpired', () => {
+        showSessionExpiredModal();
+    });
 
     // Check if user is returning from builder or has already dismissed the splash
     const urlParams = new URLSearchParams(window.location.search);

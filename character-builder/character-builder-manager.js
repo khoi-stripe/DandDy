@@ -78,6 +78,11 @@ async function handleLogin() {
             closeAuthModal();
             updateAuthUI();
             console.log(`✓ Logged in as ${email}`);
+
+            // Start session monitoring now that user is logged in
+            if (typeof window.AuthService.startSessionMonitor === 'function') {
+                window.AuthService.startSessionMonitor();
+            }
             
             // Show notification in Builder's terminal
             if (window.App && window.App.showNotification) {
@@ -118,6 +123,11 @@ async function handleRegister() {
             closeAuthModal();
             updateAuthUI();
             console.log(`✓ Registered as ${email}`);
+
+            // Start session monitoring now that user is logged in
+            if (typeof window.AuthService.startSessionMonitor === 'function') {
+                window.AuthService.startSessionMonitor();
+            }
             
             // Show notification in Builder's terminal
             if (window.App && window.App.showNotification) {
@@ -257,14 +267,54 @@ async function saveCurrentCharacterToCloud() {
 }
 
 // ========================================
+// SESSION EXPIRED HANDLING
+// ========================================
+
+// Handle session expired events in the builder
+function handleSessionExpired() {
+    // Update the UI to reflect logged-out state
+    updateAuthUI();
+
+    // Show a confirmation overlay with options
+    if (window.App && window.App.showConfirmationOverlay) {
+        window.App.showConfirmationOverlay(
+            'Your session has expired. Your character is safe locally, but you\'ll need to log in again to sync with the cloud.',
+            () => {
+                // User clicked RE-LOGIN
+                showAuthModal();
+            },
+            'RE-LOGIN',
+            'CONTINUE OFFLINE'
+        );
+    } else if (window.App && window.App.showNotification) {
+        // Fallback: just show a notification
+        window.App.showNotification('⚠ Session expired - log in again to sync', 'warning');
+    }
+}
+
+// ========================================
 // INITIALIZATION
 // ========================================
 
-// Initialize auth UI when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateAuthUI);
-} else {
+// Initialize auth UI and session monitor when DOM is ready
+function initBuilderAuth() {
     updateAuthUI();
+
+    // Start session monitoring if authenticated
+    if (window.AuthService && window.AuthService.isAuthenticated()) {
+        if (typeof window.AuthService.startSessionMonitor === 'function') {
+            window.AuthService.startSessionMonitor();
+        }
+    }
+
+    // Listen for session expired events
+    window.addEventListener('danddy:sessionExpired', handleSessionExpired);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBuilderAuth);
+} else {
+    initBuilderAuth();
 }
 
 console.log('☁️ Character Builder Cloud Integration loaded');

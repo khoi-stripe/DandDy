@@ -45,6 +45,9 @@
     },
 
     logout() {
+      // Stop session monitoring before clearing tokens
+      this.stopSessionMonitor();
+
       this.clearToken();
       // Clear any in-progress character builder session so it doesn't persist
       // and get offered to a different user who logs in later
@@ -391,6 +394,154 @@
     async verifyToken() {
       const profile = await this.fetchProfile();
       return !!profile;
+    },
+
+    // ===== Session Monitoring =====
+    // Proactively detect expired sessions and notify users before they attempt actions.
+
+    _sessionCheckInterval: null,
+    _lastSessionCheck: 0,
+    _visibilityHandler: null,
+    _sessionMonitorActive: false,
+
+    // Check session every 5 minutes while active
+    SESSION_CHECK_INTERVAL_MS: 5 * 60 * 1000,
+    // Minimum 30 seconds between checks (cooldown for visibility changes)
+    SESSION_CHECK_COOLDOWN_MS: 30 * 1000,
+
+    /**
+     * Start monitoring the session for expiry.
+     * Call this after confirming the user is logged in.
+     */
+    startSessionMonitor() {
+      if (this._sessionMonitorActive) {
+        if (DEBUG) {
+          console.log('[AuthService] Session monitor already active');
+        }
+        return;
+      }
+
+      if (!this.isAuthenticated()) {
+        if (DEBUG) {
+          console.log('[AuthService] Not authenticated, skipping session monitor');
+        }
+        return;
+      }
+
+      if (DEBUG) {
+        console.log('[AuthService] Starting session monitor');
+      }
+
+      this._sessionMonitorActive = true;
+      this._lastSessionCheck = Date.now();
+
+      // Set up visibility change handler (check when user returns to tab)
+      this._visibilityHandler = () => this._onVisibilityChange();
+      document.addEventListener('visibilitychange', this._visibilityHandler);
+
+      // Set up periodic background check
+      this._sessionCheckInterval = setInterval(() => {
+        this._performSessionCheck('interval');
+      }, this.SESSION_CHECK_INTERVAL_MS);
+    },
+
+    /**
+     * Stop monitoring the session.
+     * Call this on logout or when cleaning up.
+     */
+    stopSessionMonitor() {
+      if (DEBUG) {
+        console.log('[AuthService] Stopping session monitor');
+      }
+
+      this._sessionMonitorActive = false;
+
+      if (this._visibilityHandler) {
+        document.removeEventListener('visibilitychange', this._visibilityHandler);
+        this._visibilityHandler = null;
+      }
+
+      if (this._sessionCheckInterval) {
+        clearInterval(this._sessionCheckInterval);
+        this._sessionCheckInterval = null;
+      }
+    },
+
+    /**
+     * Handle visibility change events.
+     * When the user returns to the tab, verify session is still valid.
+     */
+    _onVisibilityChange() {
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+
+      // Apply cooldown to avoid hammering the server
+      const timeSinceLastCheck = Date.now() - this._lastSessionCheck;
+      if (timeSinceLastCheck < this.SESSION_CHECK_COOLDOWN_MS) {
+        if (DEBUG) {
+          console.log('[AuthService] Skipping visibility check (cooldown)');
+        }
+        return;
+      }
+
+      this._performSessionCheck('visibility');
+    },
+
+    /**
+     * Perform an actual session validity check.
+     * @param {string} trigger - What triggered this check ('visibility' or 'interval')
+     */
+    async _performSessionCheck(trigger) {
+      if (!this.isAuthenticated()) {
+        // User logged out manually, stop monitoring
+        this.stopSessionMonitor();
+        return;
+      }
+
+      if (DEBUG) {
+        console.log(`[AuthService] Performing session check (trigger: ${trigger})`);
+      }
+
+      this._lastSessionCheck = Date.now();
+
+      try {
+        const isValid = await this.verifyToken();
+
+        if (!isValid) {
+          if (DEBUG) {
+            console.log('[AuthService] Session expired detected');
+          }
+          this._handleSessionExpired();
+        } else if (DEBUG) {
+          console.log('[AuthService] Session still valid');
+        }
+      } catch (error) {
+        // Network error - don't treat as session expired (user might be offline)
+        console.warn('[AuthService] Session check failed (network?):', error);
+      }
+    },
+
+    /**
+     * Handle an expired session: clear state, dispatch event, and update UI.
+     */
+    _handleSessionExpired() {
+      // Stop monitoring (session is already dead)
+      this.stopSessionMonitor();
+
+      // Clear local auth state
+      this.clearToken();
+
+      // Dispatch custom event for UI components to react
+      const event = new CustomEvent('danddy:sessionExpired', {
+        detail: { reason: 'token_expired' },
+      });
+      window.dispatchEvent(event);
+
+      // Also trigger the existing updateAuthUI if available
+      if (typeof window.updateAuthUI === 'function') {
+        window.updateAuthUI();
+      }
     },
   });
 })(window);
