@@ -2010,7 +2010,7 @@
 }
 
 .pending-share-card {
-    border: 1px solid var(--ui-border-color);
+    border: 1px solid var(--terminal-primary);
     border-radius: 4px;
     background: var(--terminal-bg);
     transition: opacity 0.3s ease;
@@ -2032,7 +2032,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-right: 1px solid var(--ui-border-color);
+    border-right: 1px solid var(--terminal-primary);
 }
 
 .share-card-portrait {
@@ -2047,7 +2047,8 @@
 
 .share-card-portrait-placeholder {
     font-size: 0.7rem;
-    color: var(--ui-dim-color);
+    color: var(--terminal-primary);
+    opacity: 0.5;
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -2088,12 +2089,13 @@
     font-size: 0.65rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--ui-dim-color);
+    color: var(--terminal-primary);
+    opacity: 0.6;
 }
 
 .share-card-value {
     font-size: 0.85rem;
-    color: var(--ui-fg-color);
+    color: var(--terminal-primary);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2102,23 +2104,24 @@
 .share-card-from {
     margin: 0.75rem 0 0 0;
     padding-top: 0.5rem;
-    border-top: 1px solid var(--ui-border-color);
+    border-top: 1px solid var(--terminal-primary);
+    opacity: 0.4;
     font-size: 0.7rem;
-    color: var(--ui-dim-color);
+    color: var(--terminal-primary);
 }
 
 /* Action buttons */
 .share-card-actions {
     display: flex;
     gap: 0;
-    border-top: 1px solid var(--ui-border-color);
+    border-top: 1px solid var(--terminal-primary);
 }
 
 .share-card-actions .terminal-btn {
     flex: 1;
     border-radius: 0;
     border: none;
-    border-left: 1px solid var(--ui-border-color);
+    border-left: 1px solid var(--terminal-primary);
     padding: 0.6rem;
 }
 
@@ -2141,7 +2144,7 @@
         width: 100%;
         aspect-ratio: 4 / 3;
         border-right: none;
-        border-bottom: 1px solid var(--ui-border-color);
+        border-bottom: 1px solid var(--terminal-primary);
     }
     
     .share-card-portrait {
@@ -2158,7 +2161,7 @@
     
     .share-card-actions .terminal-btn {
         border-left: none;
-        border-top: 1px solid var(--ui-border-color);
+        border-top: 1px solid var(--terminal-primary);
     }
     
     .share-card-actions .terminal-btn:first-child {
