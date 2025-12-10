@@ -1,4882 +1,292 @@
-
-
-// ===== BUNDLE PART: danddy-config.js =====
-
-// Global configuration and shared utilities for the DandDy app (builder + manager).
-// Exposes `window.DanddyConfig` (env + URLs) for all frontends to consume.
-
-(function (global) {
-  const location = global.location || {};
-
-  const isLocalEnvironment =
-    location.hostname === 'localhost' ||
-    location.hostname === '127.0.0.1' ||
-    location.hostname.startsWith('192.168.') ||
-    location.protocol === 'file:';
-
-  // Single source of truth for backend origin & API base URL.
-  //
-  // IMPORTANT: Even when running the UI locally (localhost / file://), we now
-  // ALWAYS talk to the production Render backend so that auth + cloud data are
-  // consistent with the live site. If you ever need to point at a local
-  // backend again, temporarily change BACKEND_ORIGIN below.
-  const BACKEND_ORIGIN = 'https://danddy-api.onrender.com';
-
-  // Many callers use either "<origin>/api" or "<origin>/api/..." directly.
-  const API_BASE_URL = `${BACKEND_ORIGIN}/api`;
-
-  // Shared storage keys and flags
-  const TOKEN_STORAGE_KEY = 'dnd_auth_token';
-  const USER_STORAGE_KEY = 'dnd_user_info';
-  const CHARACTER_STORAGE_KEY = 'dnd_characters';
-  // Only treat local/file:// environments as "debug" to avoid noisy logs in production.
-  const DEBUG = isLocalEnvironment;
-
-  global.DanddyConfig = {
-    isLocalEnvironment,
-    BACKEND_ORIGIN,
-    API_BASE_URL,
-    TOKEN_STORAGE_KEY,
-    USER_STORAGE_KEY,
-    CHARACTER_STORAGE_KEY,
-    DEBUG,
-  };
-
-  // In non‑debug (production) environments, silence noisy console methods while
-  // preserving errors and warnings. This lets us keep existing console.log calls
-  // in the codebase without paying the runtime cost in production.
-  if (!DEBUG && global.console) {
-    try {
-      ['log', 'info', 'debug'].forEach((method) => {
-        if (typeof global.console[method] === 'function') {
-          global.console[method] = () => {};
-        }
-      });
-    } catch (e) {
-      // Fail silently – logging should never break the app.
-    }
-  }
-})(window);
-
-
-
-
-
-// ===== BUNDLE PART: danddy-auth.js =====
-
-// Unified AuthService for the DandDy app (manager + builder).
-// Relies on `window.DanddyConfig` for API URLs & storage keys and exposes
-// a single `window.AuthService` used across all views.
-
-(function (global) {
-  const cfg = global.DanddyConfig || {};
-  const API_BASE_URL = cfg.API_BASE_URL || 'https://danddy-api.onrender.com/api';
-  const TOKEN_KEY = cfg.TOKEN_STORAGE_KEY || 'dnd_auth_token';
-  const USER_KEY = cfg.USER_STORAGE_KEY || 'dnd_user_info';
-  const DEBUG = !!cfg.DEBUG;
-
-  const AuthService = (global.AuthService = global.AuthService || {});
-
-  Object.assign(AuthService, {
-    TOKEN_KEY,
-    USER_KEY,
-
-    // ===== Local session helpers =====
-    getToken() {
-      return global.localStorage.getItem(this.TOKEN_KEY);
-    },
-
-    setToken(token) {
-      if (!token) return;
-      global.localStorage.setItem(this.TOKEN_KEY, token);
-    },
-
-    clearToken() {
-      global.localStorage.removeItem(this.TOKEN_KEY);
-      global.localStorage.removeItem(this.USER_KEY);
-    },
-
-    getCurrentUser() {
-      const raw = global.localStorage.getItem(this.USER_KEY);
-      return raw ? JSON.parse(raw) : null;
-    },
-
-    setCurrentUser(user) {
-      if (!user) return;
-      global.localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-    },
-
-    isAuthenticated() {
-      return !!this.getToken();
-    },
-
-    logout() {
-      this.clearToken();
-      // Clear any in-progress character builder session so it doesn't persist
-      // and get offered to a different user who logs in later
-      try {
-        global.localStorage.removeItem('danddy_builder_session');
-      } catch (e) {
-        // Ignore errors (e.g., if localStorage is unavailable)
-      }
-    },
-
-    // ===== Core HTTP helpers =====
-    async _request(path, { method = 'GET', body, headers } = {}) {
-      const url = `${API_BASE_URL}${path}`;
-      const baseHeaders = headers || {};
-
-      // Shallow-clone & scrub sensitive fields for debug logging
-      const scrubBodyForLog = (payload) => {
-        if (!payload || typeof payload !== 'object') return payload;
-        const clone = { ...payload };
-        const sensitiveKeys = ['password', 'confirm_password', 'new_password', 'token'];
-        sensitiveKeys.forEach((key) => {
-          if (key in clone) {
-            const value = String(clone[key] ?? '');
-            clone[key] = value ? `*** (${value.length} chars)` : '***';
-          }
-        });
-        return clone;
-      };
-
-      if (DEBUG) {
-        console.log('[AuthService] HTTP request', {
-          url,
-          method,
-          body: scrubBodyForLog(body),
-        });
-      }
-
-      try {
-        const response = await fetch(url, {
-          method,
-          headers: body
-            ? { 'Content-Type': 'application/json', ...baseHeaders }
-            : baseHeaders,
-          body: body ? JSON.stringify(body) : undefined,
-        });
-
-        if (!response.ok) {
-          let detail = `Request failed (${response.status})`;
-          let backendDetail = null;
-          try {
-            const errJson = await response.json();
-            if (DEBUG) {
-              console.warn('[AuthService] HTTP error response', {
-                url,
-                status: response.status,
-                payload: errJson,
-              });
-            }
-            if (errJson && errJson.detail) {
-              if (typeof errJson.detail === 'string') {
-                // Simple error string from backend
-                detail = errJson.detail;
-              } else if (Array.isArray(errJson.detail) && errJson.detail.length) {
-                // FastAPI validation error format: [{ loc, msg, type }, ...]
-                const first = errJson.detail[0];
-                if (first && first.msg) {
-                  detail = first.msg;
-                } else {
-                  detail = JSON.stringify(errJson.detail);
-                }
-              } else {
-                // Fallback to JSON string so we don't show [object Object]
-                detail = JSON.stringify(errJson.detail);
-              }
-              backendDetail = errJson.detail;
-            }
-          } catch (_) {
-            // ignore JSON parse errors
-          }
-          if (DEBUG) {
-            console.warn('[AuthService] HTTP request failed', {
-              url,
-              status: response.status,
-              detail,
-              backendDetail,
-            });
-          }
-          throw new Error(detail);
-        }
-
-        // 204 no content
-        if (response.status === 204) return null;
-        const json = await response.json();
-        if (DEBUG) {
-          console.log('[AuthService] HTTP response OK', {
-            url,
-            method,
-            status: response.status,
-          });
-        }
-        return json;
-      } catch (error) {
-        console.error('[AuthService] Request error:', error);
-        throw error;
-      }
-    },
-
-    // ===== Auth flows =====
-
-    /**
-     * Register a new user using email + password.
-     * Returns { success, user, error }.
-     *
-     * For backward-compatibility with older backend deployments that still
-     * expect a `username` field, we derive a simple username from the email
-     * (typically the part before "@"). Newer backends that ignore usernames
-     * will simply drop this extra field.
-     */
-    async register(email, password, role = 'player') {
-      try {
-        const derivedUsername =
-          typeof email === 'string' && email.includes('@')
-            ? email.split('@')[0]
-            : email;
-
-        const data = await this._request('/auth/register', {
-          method: 'POST',
-          // Backend identifies accounts by email only; username is legacy.
-          // Sending both keeps us compatible with older API versions.
-          body: { username: derivedUsername, email, password, role },
-        });
-
-        if (!data || !data.access_token) {
-          throw new Error('Registration succeeded but no token was returned.');
-        }
-
-        this.setToken(data.access_token);
-
-        // Try to fetch full user profile; fall back to a minimal email-only object.
-        const profile = await this.fetchProfile();
-        const user =
-          profile && Object.keys(profile).length
-            ? profile
-            : { email, role };
-
-        this.setCurrentUser(user);
-
-        return { success: true, user };
-      } catch (error) {
-        return { success: false, error: error.message || 'Registration failed' };
-      }
-    },
-
-    /**
-     * Login with email + password.
-     *
-     * Note: the OAuth2 password flow still uses the `username` form field name,
-     * but this value is always interpreted as an email address by the backend.
-     * Returns { success, user, error }.
-     */
-    async login(email, password) {
-      const url = `${API_BASE_URL}/auth/token`;
-      if (DEBUG) {
-        console.log('[AuthService] Login attempt', {
-          url,
-          email,
-        });
-      }
-
-      try {
-        const formData = new FormData();
-        // Field name must remain "username" for OAuth2PasswordRequestForm,
-        // but the value is the user's email address.
-        formData.append('username', email);
-        formData.append('password', password);
-
-        const response = await fetch(url, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (DEBUG) {
-          console.log('[AuthService] Login response received', {
-            url,
-            status: response.status,
-            ok: response.ok,
-          });
-        }
-
-        if (!response.ok) {
-          let detail = 'Login failed';
-          let backendPayload = null;
-          try {
-            const errJson = await response.json();
-            backendPayload = errJson;
-            if (errJson && errJson.detail) detail = errJson.detail;
-          } catch (_) {
-            // ignore
-          }
-          if (DEBUG) {
-            console.warn('[AuthService] Login HTTP error', {
-              url,
-              status: response.status,
-              detail,
-              backendPayload,
-            });
-          }
-          throw new Error(detail);
-        }
-
-        const data = await response.json();
-        if (!data || !data.access_token) {
-          throw new Error('Login succeeded but no token was returned.');
-        }
-
-        if (DEBUG) {
-          console.log('[AuthService] Login succeeded, token received', {
-            url,
-          });
-        }
-
-        this.setToken(data.access_token);
-        const profile = await this.fetchProfile();
-        if (profile) {
-          this.setCurrentUser(profile);
-        }
-
-        return { success: true, user: profile };
-      } catch (error) {
-        console.error('[AuthService] Login error:', error);
-        return { success: false, error: error.message || 'Login failed' };
-      }
-    },
-
-    /**
-     * Request a password reset email.
-     */
-    async forgotPassword(email) {
-      try {
-        const data = await this._request('/auth/password/forgot', {
-          method: 'POST',
-          body: { email },
-        });
-
-        return {
-          success: true,
-          message:
-            (data && data.message) ||
-            'If an account with that email exists, a password reset link has been sent.',
-          debugToken: data && data.debug_reset_token ? data.debug_reset_token : null,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: error.message || 'Password reset request failed',
-        };
-      }
-    },
-
-    /**
-     * Complete a password reset given a reset token and new password.
-     */
-    async resetPassword(token, newPassword) {
-      try {
-        const data = await this._request('/auth/password/reset', {
-          method: 'POST',
-          body: { token, new_password: newPassword },
-        });
-
-        if (!data || !data.access_token) {
-          throw new Error('Password reset succeeded but no token was returned.');
-        }
-
-        this.setToken(data.access_token);
-        const profile = await this.fetchProfile();
-        if (profile) {
-          this.setCurrentUser(profile);
-        }
-
-        return { success: true, user: profile };
-      } catch (error) {
-        return { success: false, error: error.message || 'Password reset failed' };
-      }
-    },
-
-    /**
-     * Fetch current user profile using stored access token.
-     */
-    async fetchProfile() {
-      const token = this.getToken();
-      if (!token) return null;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!response.ok) {
-          // 401: token invalid/expired
-          if (response.status === 401) {
-            let backendDetail = null;
-            try {
-              const errJson = await response.json();
-              if (errJson && errJson.detail) {
-                backendDetail = errJson.detail;
-              }
-            } catch (_) {
-              // ignore JSON parse errors
-            }
-
-            console.warn(
-              '[AuthService] Token rejected by /auth/me; clearing local session.',
-              {
-                status: response.status,
-                detail: backendDetail,
-              }
-            );
-            this.clearToken();
-            return null;
-          }
-          if (DEBUG) {
-            console.warn('[AuthService] /auth/me non-401 error', {
-              status: response.status,
-            });
-          }
-          throw new Error('Failed to fetch user profile');
-        }
-
-        const profile = await response.json();
-        if (DEBUG) {
-          console.log('[AuthService] /auth/me profile loaded', profile);
-        }
-        return profile;
-      } catch (error) {
-        console.error('[AuthService] Fetch profile error:', error);
-        return null;
-      }
-    },
-
-    /**
-     * Verify token validity by calling /auth/me.
-     * Returns true if still valid, false otherwise.
-     */
-    async verifyToken() {
-      const profile = await this.fetchProfile();
-      return !!profile;
-    },
-  });
-})(window);
-
-
-
-
-
-
-// ===== BUNDLE PART: danddy-character-mapper.js =====
-
-// Shared helpers for mapping between backend character DTOs and the various
-// frontend shapes used across the DandDy app (manager + builder).
-// Exposes `window.DanddyCharacterMapper`.
-
-(function (global) {
-  const Mapper = {
-    /**
-     * Map builder character → backend DTO (CharacterCreate).
-     * Mirrors the previous `CharacterAPI.toBackendFormat` logic.
-     */
-    fromBuilderToBackend(character) {
-      if (!character) return null;
-
-      return {
-        name: character.name || '',
-        race: character.race || '',
-        character_class: character.class || '',
-        level: character.level || 1,
-        background: character.background || null,
-        alignment: this._mapAlignmentFromBuilder(character.alignment),
-        experience_points: character.experiencePoints || 0,
-
-        // Ability Scores
-        strength: character.abilities?.str || 10,
-        dexterity: character.abilities?.dex || 10,
-        constitution: character.abilities?.con || 10,
-        intelligence: character.abilities?.int || 10,
-        wisdom: character.abilities?.wis || 10,
-        charisma: character.abilities?.cha || 10,
-
-        // Combat Stats
-        hit_points_max: character.hitPoints || 10,
-        hit_points_current: character.hitPoints || 10,
-        hit_points_temp: 0,
-        armor_class: this._calculateACFromBuilder(character),
-        initiative: this._calculateInitiativeFromBuilder(character),
-        speed: this._getSpeedFromBuilder(character),
-
-        // Death Saves
-        death_save_successes: 0,
-        death_save_failures: 0,
-
-        // Proficiencies
-        saving_throw_proficiencies: character.savingThrows || [],
-        skill_proficiencies: character.skillProficiencies || [],
-        skill_expertises: [],
-        tool_proficiencies: character.toolProficiencies || [],
-        languages: character.languages || [],
-
-        // Features
-        racial_traits: this._arrayToDict(character.racialTraits),
-        class_features: this._arrayToDict(character.classFeatures),
-        feats: [],
-        background_feature: character.backgroundFeature || {},
-
-        // Personality
-        personality_traits: character.personalityTrait || null,
-        ideals: character.ideal || null,
-        bonds: character.bond || null,
-        flaws: character.flaw || null,
-
-        // Appearance & Backstory
-        appearance: character.appearance || null,
-        backstory: character.backstory || null,
-        sex: character.sex || null,
-
-        // Portrait
-        ascii_portrait: character.asciiPortrait || null,
-        original_portrait_url: character.originalPortraitUrl || null,
-        custom_portrait_ascii: character.customPortraitAscii || null,
-        custom_portrait_count: character.customPortraitCount || 0,
-        portrait_metadata: character.portraitMetadata || {},
-
-        // Inventory
-        inventory: this._arrayToDict(character.equipment),
-
-        // Spellcasting
-        spellcasting_ability: character.spellcastingAbility || null,
-        spell_save_dc: character.spellSaveDC || null,
-        spell_attack_bonus: character.spellAttackBonus || null,
-        spell_slots: character.spellSlots || {},
-        spell_slots_used: {},
-        cantrips: this._spellsToStringArray(character.cantrips),
-        spells_known: this._spellsToStringArray(character.spellsKnown),
-        spells_prepared: this._spellsToStringArray(character.spellsPrepared),
-
-        // Combat
-        conditions: [],
-        attacks: this._arrayToDict(character.attacks),
-
-        // Currency
-        copper_pieces: character.copper || 0,
-        silver_pieces: character.silver || 0,
-        electrum_pieces: character.electrum || 0,
-        gold_pieces: character.gold || 0,
-        platinum_pieces: character.platinum || 0,
-
-        // Campaign
-        campaign_id: character.campaignId || null,
-      };
-    },
-
-    /**
-     * Map backend DTO → builder character shape.
-     * Mirrors the previous `CharacterAPI.toFrontendFormat` logic.
-     */
-    fromBackendToBuilder(backendChar) {
-      if (!backendChar) return null;
-
-      return {
-        id: backendChar.id,
-        name: backendChar.name,
-        race: backendChar.race,
-        class: backendChar.character_class,
-        level: backendChar.level,
-        background: backendChar.background,
-        alignment: this._mapAlignmentFromBackend(backendChar.alignment),
-        experiencePoints: backendChar.experience_points,
-
-        abilities: {
-          str: backendChar.strength,
-          dex: backendChar.dexterity,
-          con: backendChar.constitution,
-          int: backendChar.intelligence,
-          wis: backendChar.wisdom,
-          cha: backendChar.charisma,
-        },
-
-        hitPoints: backendChar.hit_points_max,
-        currentHitPoints: backendChar.hit_points_current,
-        armorClass: backendChar.armor_class,
-        initiative: backendChar.initiative,
-        speed: backendChar.speed,
-
-        savingThrows: backendChar.saving_throw_proficiencies,
-        skillProficiencies: backendChar.skill_proficiencies,
-        toolProficiencies: backendChar.tool_proficiencies,
-        languages: backendChar.languages,
-
-        racialTraits: backendChar.racial_traits,
-        classFeatures: backendChar.class_features,
-        backgroundFeature: backendChar.background_feature,
-
-        personalityTrait: backendChar.personality_traits,
-        ideal: backendChar.ideals,
-        bond: backendChar.bonds,
-        flaw: backendChar.flaws,
-
-        appearance: backendChar.appearance,
-        backstory: backendChar.backstory,
-        sex: backendChar.sex || null,
-
-        asciiPortrait: backendChar.ascii_portrait,
-        originalPortraitUrl: backendChar.original_portrait_url,
-        customPortraitAscii: backendChar.custom_portrait_ascii,
-        customPortraitCount: backendChar.custom_portrait_count,
-        portraitMetadata: backendChar.portrait_metadata,
-
-        equipment: backendChar.inventory,
-
-        spellcastingAbility: backendChar.spellcasting_ability,
-        spellSaveDC: backendChar.spell_save_dc,
-        spellAttackBonus: backendChar.spell_attack_bonus,
-        spellSlots: backendChar.spell_slots,
-        cantrips: backendChar.cantrips || [],
-        spellsKnown: backendChar.spells_known || [],
-        spellsPrepared: backendChar.spells_prepared || [],
-
-        attacks: backendChar.attacks,
-
-        copper: backendChar.copper_pieces,
-        silver: backendChar.silver_pieces,
-        electrum: backendChar.electrum_pieces,
-        gold: backendChar.gold_pieces,
-        platinum: backendChar.platinum_pieces,
-
-        campaignId: backendChar.campaign_id,
-        ownerId: backendChar.owner_id,
-
-        _backendData: backendChar,
-      };
-    },
-
-    /**
-     * Map manager character → backend DTO.
-     * Mirrors `CharacterCloudStorage._toAPIFormat`.
-     */
-    fromManagerToBackend(character) {
-      if (!character) return null;
-
-      // Normalize background feature into a dict, even if it started as a string.
-      const rawBackgroundFeature =
-        character.backgroundFeature || character.backgroundData?.feature || {};
-      const backgroundFeatureDict =
-        typeof rawBackgroundFeature === 'string'
-          ? { name: rawBackgroundFeature }
-          : rawBackgroundFeature;
-
-      return {
-        name: character.name || 'Unnamed Character',
-        race: character.race || character.raceData?.name || 'Human',
-        character_class: character.class || character.classData?.name || 'Fighter',
-        level: character.level || 1,
-        background: character.background || character.backgroundData?.name || null,
-        alignment: this._mapAlignmentFromManager(character.alignment),
-        experience_points: character.experiencePoints || 0,
-
-        // Ability Scores
-        strength: character.abilities?.str || character.abilityScores?.str || 10,
-        dexterity: character.abilities?.dex || character.abilityScores?.dex || 10,
-        constitution: character.abilities?.con || character.abilityScores?.con || 10,
-        intelligence: character.abilities?.int || character.abilityScores?.int || 10,
-        wisdom: character.abilities?.wis || character.abilityScores?.wis || 10,
-        charisma: character.abilities?.cha || character.abilityScores?.cha || 10,
-
-        // Combat Stats
-        hit_points_max: character.hitPoints?.max || character.hitPoints || 10,
-        hit_points_current:
-          character.hitPoints?.current || character.hitPoints?.max || character.hitPoints || 10,
-        hit_points_temp: character.hitPoints?.temp || 0,
-        armor_class: character.armorClass || 10,
-        initiative: character.initiative || 0,
-        speed: character.speed || 30,
-
-        // Death Saves
-        death_save_successes: character.deathSaves?.successes || 0,
-        death_save_failures: character.deathSaves?.failures || 0,
-
-        // Proficiencies
-        saving_throw_proficiencies: character.savingThrows || [],
-        skill_proficiencies: character.skillProficiencies || [],
-        skill_expertises: character.skillExpertises || [],
-        tool_proficiencies: character.toolProficiencies || [],
-        languages: character.languages || [],
-
-        // Features & Traits
-        // Backend expects arrays of dicts, not raw strings.
-        racial_traits: this._arrayToDict(
-          character.racialTraits || character.raceData?.traits || [],
-        ),
-        class_features: this._arrayToDict(
-          character.classFeatures || character.classData?.features || [],
-        ),
-        feats: this._arrayToDict(character.feats || []),
-        background_feature: backgroundFeatureDict,
-
-        // Personality
-        personality_traits: character.personalityTraits || character.personalityTrait || null,
-        ideals: character.ideals || null,
-        bonds: character.bonds || null,
-        flaws: character.flaws || null,
-
-        // Appearance & Backstory
-        appearance: character.appearance || null,
-        backstory: character.backstory || null,
-        sex: character.sex || null,
-
-        // Portrait data
-        ascii_portrait: character.asciiPortrait || null,
-        original_portrait_url: character.originalPortraitUrl || null,
-        custom_portrait_ascii: character.customPortraitAscii || null,
-        custom_portrait_count: character.customPortraitCount || 0,
-        portrait_metadata: character.portraitMetadata || {},
-
-        // Inventory
-        inventory: (character.equipment || character.inventory || []).map((item) =>
-          typeof item === 'string' ? { name: item } : item,
-        ),
-
-        // Spellcasting
-        spellcasting_ability: character.spellcastingAbility || null,
-        spell_save_dc: character.spellSaveDC || null,
-        spell_attack_bonus: character.spellAttackBonus || null,
-        spell_slots: character.spellSlots || {},
-        spell_slots_used: character.spellSlotsUsed || {},
-        // Backend expects arrays of spell *names* (strings), not full objects.
-        cantrips: this._spellsToStringArray(character.cantrips || []),
-        spells_known: this._spellsToStringArray(character.spellsKnown || []),
-        spells_prepared: this._spellsToStringArray(character.spellsPrepared || []),
-
-        // Combat
-        conditions: character.conditions || [],
-        attacks: character.attacks || [],
-
-        // Currency
-        copper_pieces: character.currency?.cp ?? character.copper ?? 0,
-        silver_pieces: character.currency?.sp ?? character.silver ?? 0,
-        electrum_pieces: character.currency?.ep ?? character.electrum ?? 0,
-        gold_pieces: character.currency?.gp ?? character.gold ?? 0,
-        platinum_pieces: character.currency?.pp ?? character.platinum ?? 0,
-
-        // Campaign & ownership
-        campaign_id: character.campaignId || null,
-      };
-    },
-
-    /**
-     * Map backend DTO → manager character shape.
-     * Mirrors `CharacterCloudStorage._fromAPIFormat`.
-     */
-    fromBackendToManager(apiChar) {
-      if (!apiChar) return null;
-
-      return {
-        id: apiChar.id.toString(),
-        name: apiChar.name,
-        race: apiChar.race,
-        class: apiChar.character_class,
-        level: apiChar.level,
-        background: apiChar.background,
-        alignment: this._mapAlignmentFromBackend(apiChar.alignment),
-        experiencePoints: apiChar.experience_points,
-
-        abilities: {
-          str: apiChar.strength,
-          dex: apiChar.dexterity,
-          con: apiChar.constitution,
-          int: apiChar.intelligence,
-          wis: apiChar.wisdom,
-          cha: apiChar.charisma,
-        },
-
-        hitPoints: {
-          max: apiChar.hit_points_max,
-          current: apiChar.hit_points_current,
-          temp: apiChar.hit_points_temp,
-        },
-        armorClass: apiChar.armor_class,
-        initiative: apiChar.initiative,
-        speed: apiChar.speed,
-
-        savingThrows: apiChar.saving_throw_proficiencies,
-        skillProficiencies: apiChar.skill_proficiencies,
-        skillExpertises: apiChar.skill_expertises,
-        toolProficiencies: apiChar.tool_proficiencies,
-        languages: apiChar.languages,
-
-        racialTraits: apiChar.racial_traits,
-        classFeatures: apiChar.class_features,
-        feats: apiChar.feats,
-        backgroundFeature: apiChar.background_feature,
-
-        personalityTraits: apiChar.personality_traits,
-        ideals: apiChar.ideals,
-        bonds: apiChar.bonds,
-        flaws: apiChar.flaws,
-        appearance: apiChar.appearance,
-        backstory: apiChar.backstory,
-        sex: apiChar.sex || null,
-
-        equipment: apiChar.inventory.map((item) =>
-          typeof item === 'object' && item.name ? item.name : item,
-        ),
-
-        spellcastingAbility: apiChar.spellcasting_ability,
-        spellSaveDC: apiChar.spell_save_dc,
-        spellAttackBonus: apiChar.spell_attack_bonus,
-        spellSlots: apiChar.spell_slots,
-        spellSlotsUsed: apiChar.spell_slots_used,
-        cantrips: apiChar.cantrips || [],
-        spellsKnown: apiChar.spells_known || [],
-        spellsPrepared: apiChar.spells_prepared || [],
-
-        conditions: apiChar.conditions,
-        attacks: apiChar.attacks,
-
-        currency: {
-          cp: apiChar.copper_pieces,
-          sp: apiChar.silver_pieces,
-          ep: apiChar.electrum_pieces,
-          gp: apiChar.gold_pieces,
-          pp: apiChar.platinum_pieces,
-        },
-
-        campaignId: apiChar.campaign_id,
-        ownerId: apiChar.owner_id,
-        createdAt: apiChar.created_at,
-        updatedAt: apiChar.updated_at,
-
-        asciiPortrait: apiChar.ascii_portrait,
-        originalPortraitUrl: apiChar.original_portrait_url,
-        customPortraitAscii: apiChar.custom_portrait_ascii,
-        customPortraitCount: apiChar.custom_portrait_count || 0,
-        portraitMetadata: apiChar.portrait_metadata || {},
-      };
-    },
-
-    // ===== Shared helpers =====
-
-    _arrayToDict(arr) {
-      if (!arr || !Array.isArray(arr)) return [];
-      return arr.map((item) => {
-        if (typeof item === 'object' && item !== null) return item;
-        if (typeof item === 'string') return { name: item };
-        return { value: item };
-      });
-    },
-
-    _spellsToStringArray(arr) {
-      if (!arr || !Array.isArray(arr)) return [];
-      return arr.map((item) => {
-        if (typeof item === 'object' && item !== null && item.name) return item.name;
-        if (typeof item === 'string') return item;
-        return String(item);
-      });
-    },
-
-    _mapAlignmentFromBuilder(alignment) {
-      if (!alignment) return null;
-      
-      // Map both abbreviations (from builder) and full names to backend format
-      const map = {
-        // Abbreviations (what builder actually stores)
-        'lg': 'lawful_good',
-        'ng': 'neutral_good',
-        'cg': 'chaotic_good',
-        'ln': 'lawful_neutral',
-        'n': 'true_neutral',
-        'cn': 'chaotic_neutral',
-        'le': 'lawful_evil',
-        'ne': 'neutral_evil',
-        'ce': 'chaotic_evil',
-        // Full names (for backwards compatibility)
-        'Lawful Good': 'lawful_good',
-        'Neutral Good': 'neutral_good',
-        'Chaotic Good': 'chaotic_good',
-        'Lawful Neutral': 'lawful_neutral',
-        'True Neutral': 'true_neutral',
-        'Chaotic Neutral': 'chaotic_neutral',
-        'Lawful Evil': 'lawful_evil',
-        'Neutral Evil': 'neutral_evil',
-        'Chaotic Evil': 'chaotic_evil',
-      };
-      return map[alignment] || null;
-    },
-
-    _mapAlignmentFromManager(alignment) {
-      // Manager already uses the same string labels as builder; reuse mapping.
-      return this._mapAlignmentFromBuilder(alignment);
-    },
-
-    _mapAlignmentFromBackend(backendAlignment) {
-      if (!backendAlignment) return null;
-      
-      // Map backend format (e.g., 'lawful_good') to frontend abbreviations (e.g., 'lg')
-      const reverseMap = {
-        'lawful_good': 'lg',
-        'neutral_good': 'ng',
-        'chaotic_good': 'cg',
-        'lawful_neutral': 'ln',
-        'true_neutral': 'n',
-        'chaotic_neutral': 'cn',
-        'lawful_evil': 'le',
-        'neutral_evil': 'ne',
-        'chaotic_evil': 'ce',
-      };
-      return reverseMap[backendAlignment] || null;
-    },
-
-    _calculateACFromBuilder(character) {
-      const dex = character.abilities?.dex;
-      const dexMod = dex ? Math.floor((dex - 10) / 2) : 0;
-      return 10 + dexMod;
-    },
-
-    _calculateInitiativeFromBuilder(character) {
-      const dex = character.abilities?.dex;
-      return dex ? Math.floor((dex - 10) / 2) : 0;
-    },
-
-    _getSpeedFromBuilder(character) {
-      const race = (character.race || '').toLowerCase();
-      const speedMap = {
-        dwarf: 25,
-        halfling: 25,
-        gnome: 25,
-        elf: 30,
-        human: 30,
-        'half-elf': 30,
-        'half-orc': 30,
-        tiefling: 30,
-        dragonborn: 30,
-      };
-      return speedMap[race] || 30;
-    },
-  };
-
-  global.DanddyCharacterMapper = Mapper;
-})(window);
-
-
-
-
-
-
-
-// ===== BUNDLE PART: danddy-storage.js =====
-
-// Shared helpers for character storage in localStorage.
-// Exposes `window.DanddyStorage` and centralizes the `dnd_characters` key and
-// its companion cache key.
-
-(function (global) {
-  const cfg = global.DanddyConfig || {};
-
-  const STORAGE_KEY = cfg.CHARACTER_STORAGE_KEY || 'dnd_characters';
-  const CACHE_KEY = `${STORAGE_KEY}_cache`;
-
-  const Storage = {
-    STORAGE_KEY,
-    CACHE_KEY,
-
-    // Read all characters from primary storage.
-    readAll() {
-      const raw = global.localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    },
-
-    // Overwrite all characters in primary storage.
-    writeAll(characters) {
-      global.localStorage.setItem(STORAGE_KEY, JSON.stringify(characters || []));
-    },
-
-    // Append or replace a single character by id.
-    // Uses String comparison to handle type mismatches (IDs may be numeric or string)
-    upsert(character) {
-      if (!character) return;
-      const chars = this.readAll();
-      const idStr = String(character.id);
-      const idx = chars.findIndex((c) => c && String(c.id) === idStr);
-      if (idx >= 0) {
-        chars[idx] = character;
-      } else {
-        chars.push(character);
-      }
-      this.writeAll(chars);
-    },
-
-    // Delete a character by id.
-    // Uses String comparison to handle type mismatches (IDs may be numeric or string)
-    deleteById(id) {
-      const idStr = String(id);
-      const chars = this.readAll().filter((c) => !c || String(c.id) !== idStr);
-      this.writeAll(chars);
-    },
-
-    // ===== Cache helpers (for cloud-sync caching) =====
-
-    readCache() {
-      const raw = global.localStorage.getItem(CACHE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    },
-
-    writeCache(characters) {
-      global.localStorage.setItem(CACHE_KEY, JSON.stringify(characters || []));
-    },
-
-    clearAll() {
-      global.localStorage.removeItem(STORAGE_KEY);
-      global.localStorage.removeItem(CACHE_KEY);
-    },
-  };
-
-  global.DanddyStorage = Storage;
-})(window);
-
-
-
-
-
-
-
-
-
-
-// ===== BUNDLE PART: version.js =====
-
-// Global version information for DandDy apps
-// Bump this in one place whenever you cut a new release.
-window.DANDDY_VERSION = '2.3.5';
-window.DANDDY_BACKEND_VERSION = '1.0.0';
-
-
-
-
-
-
-
-
-
-
-// ===== BUNDLE PART: portrait-prompts.js =====
-
-// Shared helpers for building AI portrait prompt style instructions.
-// Exposes PortraitPrompt on window so both builder and manager can use
-// the same base text for image generation.
-
-(function (global) {
-  /**
-   * Centralized portrait prompt helper.
-   *
-   * Concepts:
-   * - "Base" instructions: shared structure that always keeps
-   *   characterDescription, posePrompt, and cameraPrompt.
-   * - "Theme": a named style preset that controls the experimental
-   *   description block (ink style, rendering notes, background, etc).
-   *
-   * This lets you test different prompt wordings by adding/editing
-   * theme definitions below, then switching themes from the Settings UI.
-   */
-
-  const DEFAULT_THEME_ID = 'cinematic-inks';
-  const ADMIN_STORAGE_KEY = 'dnd_portrait_prompt_entries_v1';
-
-  // In-memory cache of admin-configured variables (race/class/scene/style).
-  let adminCache = null;
-
-  // ========================================
-  // BUILT-IN DEFAULT POSES AND CAMERAS
-  // ========================================
-  // These defaults are used when no admin-configured data is available
-  // (e.g., logged-out users, fresh installs, empty localStorage).
-  
-  const DEFAULT_POSES = {
-    default: [
-      'standing in a confident, heroic pose',
-      'standing in a relaxed but ready stance',
-      'standing tall with one hand raised in greeting',
-    ],
-    fighter: [
-      'standing in a battle-ready stance, weapon raised',
-      'resting a heavy weapon across their shoulder',
-      'standing guard with shield raised',
-    ],
-    wizard: [
-      'gesturing mystically with arcane energy gathering',
-      'holding a staff aloft, channeling power',
-      'studying an ancient tome with focused concentration',
-    ],
-    rogue: [
-      'emerging from shadows with a sly grin',
-      'perched in a ready crouch, daggers drawn',
-      'leaning casually against nothing, arms crossed',
-    ],
-    cleric: [
-      'raising a holy symbol with radiant light',
-      'standing in peaceful prayer',
-      'blessing with an outstretched hand',
-    ],
-    ranger: [
-      'drawing a bow with focused aim',
-      'kneeling to examine tracks on the ground',
-      'standing with a beast companion at their side',
-    ],
-    paladin: [
-      'standing resolute with sword planted before them',
-      'raising a glowing holy weapon high',
-      'kneeling in devotion, armor gleaming',
-    ],
-    barbarian: [
-      'roaring in battle rage, muscles tensed',
-      'wielding a massive weapon overhead',
-      'standing defiant with chest out',
-    ],
-    bard: [
-      'strumming a lute with a charming smile',
-      'performing dramatically with flowing gestures',
-      'winking knowingly at the viewer',
-    ],
-    druid: [
-      'communing with nature, eyes closed',
-      'shape-shifting with swirling magical energy',
-      'standing surrounded by woodland creatures',
-    ],
-    monk: [
-      'in a focused martial arts stance',
-      'meditating in peaceful contemplation',
-      'executing a precise combat technique',
-    ],
-    sorcerer: [
-      'crackling with innate magical energy',
-      'casting with wild, uncontrolled power',
-      'standing with elemental forces swirling around them',
-    ],
-    warlock: [
-      'channeling dark eldritch energy',
-      'standing with patron symbols glowing nearby',
-      'invoking otherworldly power with outstretched hands',
-    ],
-  };
-
-  const DEFAULT_CAMERAS = {
-    default: [
-      'Camera angle: three-quarter view that clearly shows the character',
-      'Camera angle: dramatic low angle looking up at the character',
-      'Camera angle: portrait framing focused on upper body and face',
-    ],
-  };
-  // Track if we've already tried to sync from API this session
-  let apiSyncAttempted = false;
-
-  function normalize(str) {
-    return (str || '').toString().trim();
-  }
-
-  // ========================================
-  // API SYNC (for authenticated users)
-  // ========================================
-  
-  function getApiBase() {
-    return (global.DanddyConfig && global.DanddyConfig.API_BASE_URL) || 'http://localhost:8000/api';
-  }
-
-  function getAuthToken() {
-    return global.AuthService && global.AuthService.getToken ? global.AuthService.getToken() : null;
-  }
-
-  function isAuthenticated() {
-    return global.AuthService && global.AuthService.isAuthenticated ? global.AuthService.isAuthenticated() : false;
-  }
-
-  /**
-   * Parse an array of entry objects (from API or localStorage) into
-   * the structured adminCache format.
-   */
-  function parseEntriesToCache(entries) {
-    const races = {};
-    const classes = {};
-    const scenes = {};
-    const poses = {};
-    const cameras = {};
-    const styles = {};
-
-    (entries || []).forEach((entry) => {
-      if (!entry || !entry.kind || !entry.key) return;
-      const kind = normalize(entry.kind).toLowerCase();
-      const key = normalize(entry.key).toLowerCase();
-      if (!key) return;
-
-      if (kind === 'race') {
-        const desc = normalize(entry.description);
-        if (desc) {
-          if (!Array.isArray(races[key])) races[key] = [];
-          races[key].push(desc);
-        }
-      } else if (kind === 'class') {
-        const desc = normalize(entry.description);
-        if (desc) {
-          if (!Array.isArray(classes[key])) classes[key] = [];
-          classes[key].push(desc);
-        }
-      } else if (kind === 'scene' || kind === 'background') {
-        const desc = normalize(entry.description);
-        if (desc) {
-          if (!Array.isArray(scenes[key])) scenes[key] = [];
-          scenes[key].push(desc);
-        }
-      } else if (kind === 'pose') {
-        const desc = normalize(entry.description);
-        if (desc) {
-          if (!Array.isArray(poses[key])) poses[key] = [];
-          poses[key].push(desc);
-        }
-      } else if (kind === 'camera') {
-        const desc = normalize(entry.description);
-        if (desc) {
-          if (!Array.isArray(cameras[key])) cameras[key] = [];
-          cameras[key].push(desc);
-        }
-      } else if (kind === 'style') {
-        // Handle both API format (style_description) and local format (styleDescription)
-        const styleDesc = normalize(entry.style_description || entry.styleDescription || entry.description);
-        const sceneDesc = normalize(entry.background_description || entry.backgroundDescription);
-        if (!styles[key]) {
-          styles[key] = {};
-        }
-        if (styleDesc) styles[key].styleDescription = styleDesc;
-        if (sceneDesc) styles[key].sceneDescription = sceneDesc;
-      }
-    });
-
-    return { races, classes, scenes, styles, poses, cameras };
-  }
-
-  /**
-   * Fetch prompt entries directly from the API (for authenticated users).
-   * Stores result in memory cache - no localStorage needed.
-   * Returns a promise that resolves when sync is complete.
-   */
-  async function syncFromAPI() {
-    if (apiSyncAttempted) return; // Only try once per session
-
-    // Don't mark as attempted until we know the user is actually authenticated
-    // Otherwise we'd skip the sync entirely if auth isn't ready yet
-    if (!isAuthenticated()) return;
-    
-    apiSyncAttempted = true;
-
-    const token = getAuthToken();
-    if (!token) return;
-
-    try {
-      const response = await fetch(`${getApiBase()}/prompt-entries`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        console.warn('PortraitPrompt: API fetch failed with status', response.status);
-        // If token is invalid/expired, clear it to prevent repeated auth failures
-        if (response.status === 401) {
-          if (global.AuthService && typeof global.AuthService.clearToken === 'function') {
-            global.AuthService.clearToken();
-            console.warn('PortraitPrompt: Cleared expired auth token');
-          }
-        }
-        return;
-      }
-
-      const apiEntries = await response.json();
-      if (!Array.isArray(apiEntries)) {
-        console.warn('PortraitPrompt: API returned non-array');
-        return;
-      }
-
-      // Parse API entries directly into memory cache (skip localStorage)
-      adminCache = parseEntriesToCache(apiEntries);
-      
-      // Clear localStorage to prevent stale data from being used
-      // (authenticated users should always use API data)
-      try {
-        if (global.localStorage) {
-          global.localStorage.removeItem(ADMIN_STORAGE_KEY);
-        }
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-      
-      // Debug: show what was loaded (use warn so it's visible in production)
-      console.warn('PortraitPrompt: Loaded', apiEntries.length, 'entries from API (cloud)');
-      console.warn('PortraitPrompt: Parsed styles:', Object.keys(adminCache.styles || {}));
-    } catch (e) {
-      console.warn('PortraitPrompt: API fetch error', e);
-    }
-  }
-
-  function loadAdminCache() {
-    // If we already have a cache (from API or previous load), use it
-    if (adminCache) return adminCache;
-
-    const empty = {
-      races: {},
-      classes: {},
-      scenes: {},
-      styles: {},
-      poses: {},
-      cameras: {},
-    };
-
-    // For authenticated users, DON'T fall back to localStorage - wait for API sync
-    // This prevents stale localStorage data from showing unpublished styles
-    if (isAuthenticated()) {
-      // Return empty - API sync will populate adminCache when it completes
-      return empty;
-    }
-
-    // For non-authenticated users, fall back to localStorage
-    try {
-      const raw = global.localStorage
-        ? global.localStorage.getItem(ADMIN_STORAGE_KEY)
-        : null;
-      if (!raw) {
-        adminCache = empty;
-        return adminCache;
-      }
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) {
-        adminCache = empty;
-        return adminCache;
-      }
-      
-      // Parse localStorage entries into cache
-      adminCache = parseEntriesToCache(parsed);
-      return adminCache;
-    } catch (e) {
-      adminCache = empty;
-      return adminCache;
-    }
-  }
-
-  function getVariableSnippet(kind, key) {
-    const cache = loadAdminCache();
-    const k = normalize(key).toLowerCase();
-    if (!k) return null;
-
-    if (kind === 'race') {
-      const variants = cache.races[k];
-      if (Array.isArray(variants) && variants.length) {
-        const idx = Math.floor(Math.random() * variants.length);
-        return variants[idx];
-      }
-      return null;
-    }
-    if (kind === 'class') {
-      const variants = cache.classes[k];
-      if (Array.isArray(variants) && variants.length) {
-        const idx = Math.floor(Math.random() * variants.length);
-        return variants[idx];
-      }
-      return null;
-    }
-    if (kind === 'scene') {
-      const variants = cache.scenes[k];
-      if (Array.isArray(variants) && variants.length) {
-        const idx = Math.floor(Math.random() * variants.length);
-        return variants[idx];
-      }
-      return null;
-    }
-    if (kind === 'pose') {
-      const variants = cache.poses[k];
-      if (Array.isArray(variants) && variants.length) {
-        const idx = Math.floor(Math.random() * variants.length);
-        return variants[idx];
-      }
-      return null;
-    }
-    if (kind === 'camera') {
-      const variants = cache.cameras[k];
-      if (Array.isArray(variants) && variants.length) {
-        const idx = Math.floor(Math.random() * variants.length);
-        return variants[idx];
-      }
-      return null;
-    }
-    return null;
-  }
-
-  /**
-   * Get all pose variants for a given class key.
-   * Returns an array of pose descriptions.
-   * Falls back to built-in defaults if no admin-configured data.
-   * @param {string} classKey
-   * @returns {string[]|null}
-   */
-  function getPoseVariants(classKey) {
-    const cache = loadAdminCache();
-    const k = normalize(classKey).toLowerCase();
-    if (!k) return null;
-    
-    // Try admin-configured poses first
-    const variants = cache.poses[k];
-    if (Array.isArray(variants) && variants.length) {
-      return variants;
-    }
-    
-    // Fall back to built-in defaults
-    if (DEFAULT_POSES[k] && DEFAULT_POSES[k].length) {
-      return DEFAULT_POSES[k];
-    }
-    
-    // Last resort: return default poses
-    if (DEFAULT_POSES.default && DEFAULT_POSES.default.length) {
-      return DEFAULT_POSES.default;
-    }
-    
-    return null;
-  }
-
-  /**
-   * Get all camera variants for a given class key.
-   * Returns an array of camera descriptions.
-   * Falls back to built-in defaults if no admin-configured data.
-   * @param {string} classKey
-   * @returns {string[]|null}
-   */
-  function getCameraVariants(classKey) {
-    const cache = loadAdminCache();
-    const k = normalize(classKey).toLowerCase();
-    if (!k) return null;
-    
-    // Try admin-configured cameras first
-    const variants = cache.cameras[k];
-    if (Array.isArray(variants) && variants.length) {
-      return variants;
-    }
-    
-    // Fall back to built-in defaults (cameras are generally class-agnostic)
-    if (DEFAULT_CAMERAS[k] && DEFAULT_CAMERAS[k].length) {
-      return DEFAULT_CAMERAS[k];
-    }
-    
-    // Last resort: return default cameras
-    if (DEFAULT_CAMERAS.default && DEFAULT_CAMERAS.default.length) {
-      return DEFAULT_CAMERAS.default;
-    }
-    
-    return null;
-  }
-
-  function getStyleOverrides(themeId) {
-    const cache = loadAdminCache();
-    const k = normalize(themeId);
-    if (!k) return null;
-    const entry = cache.styles[k];
-    if (!entry) return null;
-    return {
-      styleDescription: entry.styleDescription || '',
-      sceneDescription: entry.sceneDescription || '',
-    };
-  }
-
-  /**
-   * Theme registry.
-   *
-   * Each theme defines:
-   * - id: stable key used in localStorage / settings
-   * - label: user-facing name
-   * - description: short explanation (shown in settings)
-   * - buildStyleLines(options): returns an array of style instructions
-   *   that will be inserted between the characterDescription line and
-   *   the pose/camera lines.
-   *
-   * NOTE: This is the main place to freely experiment with wording.
-   */
-  const THEMES = {
-    'cinematic-inks': {
-      id: 'cinematic-inks',
-      label: 'Cinematic Inks (default)',
-      description:
-        'More cinematic lighting and framing while staying in black-and-white ink.',
-      buildStyleLines(options) {
-        const lines = [];
-        lines.push(
-          'Render in dramatic black-and-white ink with deep shadows and sharp rim lighting.',
-        );
-        lines.push(
-          'Treat the illustration like a film still: strong focal point, clear subject separation, and layered depth.',
-        );
-        lines.push(
-          'Use a limited range of mid-tone hatching to suggest volume without muddying the forms.',
-        );
-        lines.push(
-          'Keep the background abstract and mostly dark so the character silhouette and face read instantly.',
-        );
-        lines.push(
-          'Overall mood: cinematic fantasy portrait, serious and iconic, suitable for a character sheet.',
-        );
-        lines.push('Aspect ratio 3:4.');
-        return lines;
-      },
-    },
-    'classic-high-fantasy': {
-      id: 'classic-high-fantasy',
-      label: 'Classic High-Fantasy',
-      description:
-        'Highly detailed heroic-fantasy realist style in black and white with sculpted shading.',
-      buildStyleLines(options) {
-        const lines = [];
-        lines.push(
-          'Illustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white.',
-        );
-        lines.push(
-          'Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form.',
-        );
-        lines.push(
-          'Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes.',
-        );
-        lines.push(
-          'Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces.',
-        );
-        lines.push(
-          'Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence.',
-        );
-        lines.push('Aspect ratio 3:4.');
-        return lines;
-      },
-    },
-  };
-
-  /**
-   * Resolve a theme by id, falling back to the default.
-   */
-  function getThemeById(themeId) {
-    if (themeId && THEMES[themeId]) {
-      return THEMES[themeId];
-    }
-    return THEMES[DEFAULT_THEME_ID];
-  }
-
-  /**
-   * Build the base list of style instructions for a portrait prompt.
-   *
-   * Historically this returned a flat list of sentences that included both
-   * style and background notes plus pose/camera. Newer callers that want a
-   * structured template should prefer `buildStyleAndBackgroundDescriptions`.
-   */
-  function buildBasePortraitInstructions(options) {
-    const {
-      characterDescription,
-      posePrompt,
-      cameraPrompt,
-      themeId,
-    } = options || {};
-
-    const parts = [];
-
-    // Legacy subject line for compatibility with older callers.
-    if (characterDescription) {
-      parts.push(
-        `Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,
-      );
-    } else {
-      parts.push('Create a high-contrast black-and-white fantasy illustration.');
-    }
-
-    // Theme-specific experimental block
-    const theme = getThemeById(themeId);
-    if (theme && typeof theme.buildStyleLines === 'function') {
-      try {
-        const styleLines = theme.buildStyleLines({
-          characterDescription,
-          posePrompt,
-          cameraPrompt,
-        });
-        if (Array.isArray(styleLines)) {
-          styleLines.forEach((line) => {
-            if (line && typeof line === 'string') {
-              parts.push(line);
-            }
-          });
-        }
-      } catch (e) {
-        // Non-fatal: if a custom theme throws, fall back to classic ink block.
-        const fallback = THEMES[DEFAULT_THEME_ID];
-        if (fallback && typeof fallback.buildStyleLines === 'function') {
-          const fallbackLines = fallback.buildStyleLines({
-            characterDescription,
-            posePrompt,
-            cameraPrompt,
-          });
-          if (Array.isArray(fallbackLines)) {
-            fallbackLines.forEach((line) => {
-              if (line && typeof line === 'string') {
-                parts.push(line);
-              }
-            });
-          }
-        }
-      }
-    }
-
-    // Pose and camera instructions (always preserved)
-    if (posePrompt) {
-      parts.push(`Pose: ${posePrompt}`);
-    }
-
-    // Camera temporarily disabled - may interfere with pose
-    // if (cameraPrompt) {
-    //   parts.push(cameraPrompt);
-    // }
-
-    return parts;
-  }
-
-  /**
-   * Build compact style + background descriptions for use in higher-level
-   * prompt templates.
-   *
-   * Returns:
-   *   { styleDescription: string, backgroundDescription: string | null }
-   */
-  function buildStyleAndBackgroundDescriptions(options) {
-    const { themeId } = options || {};
-
-    // 1) Prefer explicit overrides from the admin UI when available.
-    const overrides = getStyleOverrides(themeId);
-    let styleDescription = '';
-    let backgroundDescription = null;
-    if (overrides && overrides.styleDescription) {
-      styleDescription = overrides.styleDescription;
-    }
-    // Use sceneDescription from style overrides if present.
-    if (overrides && overrides.sceneDescription) {
-      backgroundDescription = overrides.sceneDescription;
-    }
-
-    // 2) If no admin-provided scene description, try a randomized scene snippet.
-    // First try theme-specific key, then fall back to "default" key.
-    if (backgroundDescription == null) {
-      let sceneSnippet = getVariableSnippet('scene', themeId);
-      if (!sceneSnippet) {
-        sceneSnippet = getVariableSnippet('scene', 'default');
-      }
-      if (sceneSnippet) {
-        backgroundDescription = sceneSnippet;
-      }
-    }
-
-    // 3) Fall back to theme-defined style lines only when no admin entries exist.
-    if (!styleDescription || backgroundDescription == null) {
-      const theme = getThemeById(themeId);
-
-      let styleLines = [];
-      if (theme && typeof theme.buildStyleLines === 'function') {
-        try {
-          const lines = theme.buildStyleLines(options || {});
-          if (Array.isArray(lines)) {
-            styleLines = lines.filter(
-              (l) => typeof l === 'string' && l.trim(),
-            );
-          }
-        } catch (e) {
-          // Non-fatal: fall back to default theme
-          const fallback = THEMES[DEFAULT_THEME_ID];
-          if (fallback && typeof fallback.buildStyleLines === 'function') {
-            const lines = fallback.buildStyleLines(options || {});
-            if (Array.isArray(lines)) {
-              styleLines = lines.filter(
-                (l) => typeof l === 'string' && l.trim(),
-              );
-            }
-          }
-        }
-      }
-
-      const backgroundLines = [];
-      const otherLines = [];
-
-      styleLines.forEach((line) => {
-        if (/background/i.test(line)) {
-          backgroundLines.push(line);
-        } else {
-          otherLines.push(line);
-        }
-      });
-
-      if (!styleDescription) {
-        styleDescription = otherLines.join(' ');
-      }
-      if (backgroundDescription == null) {
-        backgroundDescription = backgroundLines.length
-          ? backgroundLines.join(' ')
-          : null;
-      }
-    }
-
-    return {
-      styleDescription,
-      backgroundDescription,
-    };
-  }
-
-  /**
-   * Build a compact list of rendering instructions for custom-portrait flows.
-   *
-   * This is the shared helper used by both the Character Builder and Manager
-   * when the player supplies their own text prompt. It keeps:
-   *
-   * - Pose: {posePrompt}
-   * - {cameraPrompt}
-   * - STYLE: {styleDescription}
-   * - Scene: {backgroundDescription}
-   *
-   * and pulls style/background text from:
-   * - Admin-defined styles in the prompt style editor (per theme)
-   * - Theme defaults in this file
-   *
-   * Callers are responsible for resolving the active theme id (via
-   * StorageService.getPortraitPromptTheme / CONFIG, etc.) and passing it in.
-   *
-   * @param {{ posePrompt?: string, cameraPrompt?: string, themeId?: string }} options
-   * @returns {string[]} array of instruction lines
-   */
-  function buildCustomPortraitInstructions(options) {
-    const opts = options || {};
-    const posePrompt = opts.posePrompt || '';
-    const cameraPrompt = opts.cameraPrompt || '';
-    const themeId = opts.themeId;
-
-    let styleDescription = '';
-    let backgroundDescription = '';
-
-    try {
-      const sections =
-        buildStyleAndBackgroundDescriptions({
-          posePrompt,
-          cameraPrompt,
-          themeId,
-        }) || {};
-      styleDescription = sections.styleDescription || '';
-      backgroundDescription = sections.backgroundDescription || '';
-    } catch (e) {
-      // Non-fatal – fall through to simple defaults below.
-    }
-
-    if (!styleDescription) {
-      styleDescription =
-        'High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';
-    }
-    if (!backgroundDescription) {
-      backgroundDescription =
-        'Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';
-    }
-
-    const lines = [];
-    if (posePrompt) {
-      lines.push(`Pose: ${posePrompt}`);
-    }
-    // Camera temporarily disabled - may interfere with pose
-    // if (cameraPrompt) {
-    //   lines.push(cameraPrompt);
-    // }
-    if (styleDescription) {
-      lines.push(`STYLE: ${styleDescription}`);
-    }
-    if (backgroundDescription) {
-      lines.push(`Scene: ${backgroundDescription}`);
-    }
-
-    return lines;
-  }
-
-  /**
-   * Public API
-   */
-  const PortraitPrompt = (global.PortraitPrompt = global.PortraitPrompt || {});
-
-  PortraitPrompt.buildBasePortraitInstructions = buildBasePortraitInstructions;
-  PortraitPrompt.buildStyleAndBackgroundDescriptions =
-    buildStyleAndBackgroundDescriptions;
-   // Shared helper for builder + manager custom-portrait flows
-  PortraitPrompt.buildCustomPortraitInstructions =
-    buildCustomPortraitInstructions;
-  PortraitPrompt.getVariableSnippet = getVariableSnippet;
-  
-  // Pose and camera variant accessors for admin-configured data
-  PortraitPrompt.getPoseVariants = getPoseVariants;
-  PortraitPrompt.getCameraVariants = getCameraVariants;
-  
-  // Force reload of admin cache (useful after admin UI changes)
-  PortraitPrompt.invalidateCache = function invalidateCache() {
-    adminCache = null;
-  };
-
-  // Sync entries from API to memory cache (for authenticated users)
-  // Call this during app init to ensure cloud data is available for prompt generation
-  PortraitPrompt.syncFromAPI = syncFromAPI;
-
-  // Allow resetting the sync flag (useful for testing or re-auth)
-  PortraitPrompt.resetAPISync = function resetAPISync() {
-    apiSyncAttempted = false;
-  };
-
-  PortraitPrompt.getDefaultThemeId = function getDefaultThemeId() {
-    return DEFAULT_THEME_ID;
-  };
-
-  PortraitPrompt.getThemes = function getThemes() {
-    // Built-in themes first
-    const baseThemes = Object.keys(THEMES).map((id) => {
-      const theme = THEMES[id];
-      return {
-        id: theme.id,
-        label: theme.label,
-        description: theme.description,
-      };
-    });
-
-    // Then any additional style entries defined via the admin UI that do not
-    // already correspond to a built-in theme id.
-    let customThemes = [];
-    try {
-      const cache = loadAdminCache();
-      const styleKeys = cache && cache.styles ? Object.keys(cache.styles) : [];
-      // Use case-insensitive comparison to avoid duplicates
-      const builtInIds = Object.keys(THEMES).map((k) => k.toLowerCase());
-      const extraIds = styleKeys.filter((id) => !builtInIds.includes(id.toLowerCase()));
-
-      customThemes = extraIds.map((id) => {
-        const styleEntry = cache.styles[id] || {};
-        const rawDesc = styleEntry.styleDescription || '';
-        const trimmed =
-          rawDesc && rawDesc.length > 120
-            ? rawDesc.slice(0, 117) + '...'
-            : rawDesc;
-        return {
-          id,
-          label: `Custom: ${id}`,
-          description: trimmed || 'Custom portrait style',
-        };
-      });
-    } catch (e) {
-      // Non-fatal – if anything goes wrong, just return the base themes.
-      customThemes = [];
-    }
-
-    return baseThemes.concat(customThemes);
-  };
-
-  // ========================================
-  // CHARACTER DESCRIPTION DATA
-  // ========================================
-  // Shared race/class/magic description mappings for portrait prompts.
-  // Used by AIService.buildCharacterDescription.
-
-  const RACE_DESCRIPTIONS = {
-    human: 'human with average features',
-    elf: 'elf with pointed ears and graceful features',
-    dwarf: 'dwarf with a thick beard and stocky build',
-    halfling: 'halfling, small and cheerful',
-    dragonborn: 'dragonborn with scaled skin and dragon-like features',
-    gnome: 'gnome, small with clever eyes',
-    'half-elf': 'half-elf with slightly pointed ears',
-    'half-orc': 'half-orc with tusks and powerful build',
-    tiefling: 'tiefling with horns and a tail',
-  };
-
-  const CLASS_DESCRIPTIONS = {
-    fighter: 'wearing heavy armor and holding a sword',
-    wizard: 'in flowing robes holding a staff',
-    rogue: 'in dark leather armor with daggers',
-    cleric: 'in holy vestments with a sacred symbol',
-    ranger: 'with a bow and forest attire',
-    paladin: 'in shining armor with a holy shield',
-    barbarian: 'with wild hair wielding a massive axe',
-    bard: 'with a lute and colorful clothing',
-    druid: 'with nature-themed robes and wooden staff',
-    monk: 'in simple robes in a martial stance',
-    sorcerer: 'with crackling magical energy',
-    warlock: 'with dark robes and eldritch symbols',
-  };
-
-  const MAGIC_SPECIALIZATIONS = {
-    wizard: 'specializing in elemental magic like fire and ice',
-    sorcerer: 'channeling raw elemental arcane power',
-    warlock: 'wielding shadowy eldritch magic',
-    cleric: 'focused on radiant and healing magic',
-    druid: 'calling on primal nature and elemental magic',
-    bard: 'weaving subtle enchantments and support magic through music',
-    paladin: 'enhancing strikes with holy, radiant magic',
-  };
-
-  /**
-   * Get a description for a race.
-   * Falls back to the race name if not found.
-   */
-  PortraitPrompt.getRaceDescription = function getRaceDescription(race) {
-    const key = (race || '').toLowerCase();
-    return RACE_DESCRIPTIONS[key] || race || '';
-  };
-
-  /**
-   * Get a description for a class.
-   * Falls back to the class name if not found.
-   */
-  PortraitPrompt.getClassDescription = function getClassDescription(classType) {
-    const key = (classType || '').toLowerCase();
-    return CLASS_DESCRIPTIONS[key] || classType || '';
-  };
-
-  /**
-   * Get a magic specialization description for a class (if applicable).
-   * Returns null for non-spellcasting classes.
-   */
-  PortraitPrompt.getMagicSpecialization = function getMagicSpecialization(classType) {
-    const key = (classType || '').toLowerCase();
-    return MAGIC_SPECIALIZATIONS[key] || null;
-  };
-
-  /**
-   * Get all description data objects (for testing/debugging).
-   */
-  PortraitPrompt.getDescriptionData = function getDescriptionData() {
-    return {
-      races: RACE_DESCRIPTIONS,
-      classes: CLASS_DESCRIPTIONS,
-      magic: MAGIC_SPECIALIZATIONS,
-    };
-  };
-
-  // ========================================
-  // AUTO-SYNC ON PAGE LOAD
-  // ========================================
-  // When the page loads and user is authenticated, sync entries from API
-  // to memory cache so they're available for prompt generation.
-  function initAutoSync() {
-    // Wait a moment for AuthService to initialize, then sync
-    // Use a shorter delay (100ms) to ensure styles are available faster
-    setTimeout(async () => {
-      if (isAuthenticated()) {
-        try {
-          await syncFromAPI();
-        } catch (e) {
-          console.warn('PortraitPrompt: Auto-sync failed', e);
-        }
-      }
-    }, 100);
-  }
-
-  // Run auto-sync when DOM is ready
-  if (typeof document !== 'undefined') {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initAutoSync);
-    } else {
-      initAutoSync();
-    }
-  }
-})(window);
-
-
-
-
-
-
-// ===== BUNDLE PART: shared-portrait-data.js =====
-
-// ========================================
-// SHARED PORTRAIT POSE & CAMERA DATA
-// ========================================
-// Provides pose and camera angle selection for portrait generation.
-// Data is sourced from the admin UI (prompt-style-admin.html) via PortraitPrompt.
-//
-// The admin UI is the single source of truth. Use "Load defaults" button
-// in the admin to populate with built-in poses/cameras.
-
-const PortraitPoseData = (window.PortraitPoseData = {
-  /**
-   * Get a random pose for a given class.
-   * Reads from admin-configured poses via PortraitPrompt.
-   * @param {string} classKey - The character class (lowercase)
-   * @returns {string} A random pose description
-   */
-  getRandomPose(classKey) {
-    const normalizedKey = (classKey || 'default').toLowerCase();
-
-    if (window.PortraitPrompt && typeof PortraitPrompt.getPoseVariants === 'function') {
-      // Try class-specific first, then fall back to "default" key
-      let poses = PortraitPrompt.getPoseVariants(normalizedKey);
-      if (!poses || !poses.length) {
-        poses = PortraitPrompt.getPoseVariants('default');
-      }
-      if (poses && poses.length) {
-        return poses[Math.floor(Math.random() * poses.length)];
-      }
-    }
-
-    // No poses configured - return a generic fallback
-    console.warn(
-      `PortraitPoseData: No poses configured for "${normalizedKey}". ` +
-      'Use the admin UI (prompt-style-admin.html) to load defaults.',
-    );
-    return 'standing in a heroic pose';
-  },
-
-  /**
-   * Get a random camera angle for a given class.
-   * Reads from admin-configured cameras via PortraitPrompt.
-   * @param {string} classKey - The character class (lowercase)
-   * @returns {string} A random camera angle description
-   */
-  getRandomCamera(classKey) {
-    const normalizedKey = (classKey || 'default').toLowerCase();
-
-    if (window.PortraitPrompt && typeof PortraitPrompt.getCameraVariants === 'function') {
-      // Try class-specific first, then fall back to "default" key
-      let cameras = PortraitPrompt.getCameraVariants(normalizedKey);
-      if (!cameras || !cameras.length) {
-        cameras = PortraitPrompt.getCameraVariants('default');
-      }
-      if (cameras && cameras.length) {
-        return cameras[Math.floor(Math.random() * cameras.length)];
-      }
-    }
-
-    // No cameras configured - return a generic fallback
-    console.warn(
-      `PortraitPoseData: No cameras configured for "${normalizedKey}". ` +
-      'Use the admin UI (prompt-style-admin.html) to load defaults.',
-    );
-    return 'Camera angle: three-quarter view';
-  },
-
-  /**
-   * Get both pose and camera for a class in one call.
-   * @param {string} classKey - The character class (lowercase)
-   * @returns {{ pose: string, camera: string }}
-   */
-  getRandomPoseAndCamera(classKey) {
-    return {
-      pose: this.getRandomPose(classKey),
-      camera: this.getRandomCamera(classKey),
-    };
-  },
-
-  /**
-   * Check if poses are configured for a class (or default).
-   * @param {string} classKey
-   * @returns {boolean}
-   */
-  hasPoses(classKey) {
-    const normalizedKey = (classKey || 'default').toLowerCase();
-    if (window.PortraitPrompt && typeof PortraitPrompt.getPoseVariants === 'function') {
-      let poses = PortraitPrompt.getPoseVariants(normalizedKey);
-      if (!poses || !poses.length) {
-        poses = PortraitPrompt.getPoseVariants('default');
-      }
-      return poses && poses.length > 0;
-    }
-    return false;
-  },
-
-  /**
-   * Check if cameras are configured for a class (or default).
-   * @param {string} classKey
-   * @returns {boolean}
-   */
-  hasCameras(classKey) {
-    const normalizedKey = (classKey || 'default').toLowerCase();
-    if (window.PortraitPrompt && typeof PortraitPrompt.getCameraVariants === 'function') {
-      let cameras = PortraitPrompt.getCameraVariants(normalizedKey);
-      if (!cameras || !cameras.length) {
-        cameras = PortraitPrompt.getCameraVariants('default');
-      }
-      return cameras && cameras.length > 0;
-    }
-    return false;
-  },
-});
-
-
-
-// ===== BUNDLE PART: character-name-data.js =====
-
-// ========================================
-// SHARED CHARACTER NAME DATA
-// ========================================
-// Fantasy name patterns for D&D races.
-// Used by AIService.generateFallbackNames for offline name generation.
-
-const CharacterNameData = (window.CharacterNameData = {
-  // Name patterns indexed by race
-  patterns: {
-    dwarf: {
-      first: [
-        'Thorin', 'Gimli', 'Balin', 'Dwalin', 'Thrain', 'Dain', 'Bombur',
-        'Bofur', 'Kili', 'Fili', 'Oin', 'Gloin', 'Bruenor', 'Morgran',
-        'Rurik', 'Einkil', 'Barendd', 'Baern', 'Harbek', 'Rumnar',
-      ],
-      last: [
-        'Ironforge', 'Stonehelm', 'Deepdelver', 'Mountainheart', 'Goldseeker',
-        'Ironfoot', 'Hammerhand', 'Oakenshield', 'Battlehammer', 'Fireforge',
-        'Stormdelver', 'Stonebreaker', 'Coppervein', 'Bronzebrow', 'Rockseeker',
-      ],
-    },
-    elf: {
-      first: [
-        'Legolas', 'Galadriel', 'Elrond', 'Arwen', 'Thranduil', 'Celeborn',
-        'Elessar', 'Elendil', 'Finrod', 'Luthien', 'Faelar', 'Aelar',
-        'Mialee', 'Syllin', 'Thia', 'Varis', 'Althaea', 'Enna', 'Nelar',
-      ],
-      last: [
-        'Greenleaf', 'Starweaver', 'Moonwhisper', 'Silverbow', 'Nightbreeze',
-        'Sunshadow', 'Stormwind', 'Brightwood', 'Dawnpetal', 'Evenwood',
-        'Silverfrond', 'Nightstar', 'Willowshade', 'Starfall', 'Moonbrook',
-      ],
-    },
-    human: {
-      first: [
-        'Aragorn', 'Boromir', 'Eowyn', 'Faramir', 'Theodred', 'Eomer',
-        'Eddard', 'Catelyn', 'Jon', 'Sansa', 'Alaric', 'Rowan', 'Serena',
-        'Garrick', 'Lysa', 'Marcus', 'Elena', 'Corin', 'Brynn',
-      ],
-      last: [
-        'Stormborn', 'Blackwood', 'Riverrun', 'Ironwall', 'Longstrider',
-        'Stormblade', 'Brightshield', 'Greywind', 'Highvale', 'Steelguard',
-        'Duskwalker', 'Redcrest', 'Stoneward', 'Ashborne', 'Hawkspear',
-      ],
-    },
-    halfling: {
-      first: [
-        'Bilbo', 'Frodo', 'Sam', 'Merry', 'Pippin', 'Rosie', 'Hamfast',
-        'Belladonna', 'Lobelia', 'Fredegar', 'Milo', 'Daisy', 'Rosa',
-        'Cora', 'Perrin', 'Tansy', 'Dodo', 'Seraphina', 'Odo',
-      ],
-      last: [
-        'Baggins', 'Took', 'Brandybuck', 'Gamgee', 'Goodbody', 'Proudfoot',
-        'Burrows', 'Underhill', 'Greenhill', 'Fairbairn', 'Hilltopple',
-        'Brushgather', 'Tealeaf', 'Thorngage', 'Goodbarrel', 'Hearthcoat',
-      ],
-    },
-    dragonborn: {
-      first: [
-        'Drax', 'Razax', 'Thordak', 'Torinn', 'Balasar', 'Kriv', 'Nadarr',
-        'Heskan', 'Shedinn', 'Ghesh', 'Arjhan', 'Medrash', 'Rhogar',
-        'Tarhun', 'Akra', 'Miirym', 'Sora', 'Vezera', 'Zorvath',
-      ],
-      last: [
-        'Flameheart', 'Ironclaw', 'Stormsinger', 'Ashborn', 'Dragonfall',
-        'Firebreath', 'Scaleborn', 'Wyrmblood', 'Skyscale', 'Embermaw',
-        'Stormscale', 'Brightflame', 'Stoneclaw', 'Cloudsunder', 'Blazewing',
-      ],
-    },
-    gnome: {
-      first: [
-        'Glim', 'Boddynock', 'Dimble', 'Fonkin', 'Seebo', 'Zook', 'Eldon',
-        'Brocc', 'Burgell', 'Jebeddo', 'Alston', 'Bimpnottin', 'Fizzik',
-        'Carlin', 'Nissa', 'Wrenn', 'Tavi', 'Ellyjobell', 'Zanna',
-      ],
-      last: [
-        'Tinkertop', 'Sparklegem', 'Nimblefingers', 'Brightgear', 'Gadgetwhiz',
-        'Fizzlebang', 'Cogsworth', 'Glimmergold', 'Whistlewhirr', 'Gadgetgrind',
-        'Janglecoin', 'Copperbolt', 'Mithrilspanner', 'Quickwidget', 'Proudgear',
-      ],
-    },
-    'half-elf': {
-      first: [
-        'Tanis', 'Raistlin', 'Laurana', 'Gilthanas', 'Tanthalas', 'Silvara',
-        'Eliana', 'Korrin', 'Faelyn', 'Soveliss', 'Ilanis', 'Kael', 'Myla',
-        'Tharos', 'Elira', 'Daeris', 'Rian', 'Caelynn', 'Torren',
-      ],
-      last: [
-        'Half-Elven', 'Moonbrook', 'Starfall', 'Whisperwind', 'Shadowvale',
-        'Dawnbringer', 'Twilightbane', 'Silvermoon', 'Nightbloom', 'Duskwillow',
-        'Starcrest', 'Eveningfall', 'Shadeglade', 'Brightglen', 'Silvershade',
-      ],
-    },
-    'half-orc': {
-      first: [
-        'Grognak', 'Throk', 'Ugak', 'Krod', 'Sharn', 'Dench', 'Grul', 'Drog',
-        'Feng', 'Shump', 'Ghorbash', 'Mazog', 'Uglar', 'Ruk', 'Karash',
-        'Vorag', 'Yagra', 'Shautha', 'Ovak',
-      ],
-      last: [
-        'Ironhide', 'Bonecrusher', 'Skullsplitter', 'Bloodaxe', 'Stonefist',
-        'Grimjaw', 'Warbringer', 'Doomhammer', 'Boulderfist', 'Skullbrand',
-        'Gorefang', 'Bloodfury', 'Ironmaw', 'Steelgrip', 'Rageborn',
-      ],
-    },
-    tiefling: {
-      first: [
-        'Zevlor', 'Raven', 'Damakos', 'Akta', 'Therai', 'Nemeia', 'Kallista',
-        'Leucis', 'Orianna', 'Morthos', 'Azazel', 'Seraphine', 'Xathos',
-        'Riven', 'Lyra', 'Caelum', 'Naeris', 'Vexria', 'Zheren',
-      ],
-      last: [
-        'Hellborn', 'Darkflame', 'Shadowhorn', 'Nightwhisper', 'Embersoul',
-        'Dreadfire', 'Ashenborn', 'Voidwalker', 'Grimshroud', 'Duskwreath',
-        'Soulbrand', 'Cindertongue', 'Nightreign', 'Gloomsigil', 'Shadebinder',
-      ],
-    },
-  },
-
-  /**
-   * Get the name pattern for a race.
-   * Falls back to human names if the race isn't found.
-   * @param {string} race - The character race
-   * @returns {{ first: string[], last: string[] }}
-   */
-  getPattern(race) {
-    const key = (race || '').toLowerCase();
-    return this.patterns[key] || this.patterns.human;
-  },
-
-  /**
-   * Get all available races.
-   * @returns {string[]}
-   */
-  getRaces() {
-    return Object.keys(this.patterns);
-  },
-});
-
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-config.js =====
-
-// Character Builder configuration
-// Exposes CONFIG as a global on window for the terminal character builder.
-//
-// Detect if running locally (localhost/127.0.0.1) or from file:// (static testing)
-// Prefer the shared DanddyConfig when available so all frontends agree.
-const isLocalDevelopment =
-  (window.DanddyConfig && window.DanddyConfig.isLocalEnvironment) ||
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1' ||
-  window.location.protocol === 'file:';
-//
-// Backend origin (deployed on Render or local dev) – single source of truth
-const PRODUCTION_BACKEND_URL =
-  (window.DanddyConfig && window.DanddyConfig.BACKEND_ORIGIN) ||
-  'https://danddy-api.onrender.com';
-//
-window.CONFIG = {
-  TYPEWRITER_SPEED: 30, // milliseconds per character
-  AI_TIMEOUT: 40000, // 40 seconds - then fallback (but keep trying in background)
-  
-  // AI Feature Toggles
-  //
-  // - ENABLE_AI: master switch. When false, all AI calls are skipped and
-  //   local fallback text/logic is used instead.
-  // - ENABLE_AI_NARRATOR_COMMENTS: when false, narrator quips during the
-  //   question flow never call the backend and always use local fallbacks.
-  // - ENABLE_AI_OPTION_VARIATIONS: when false, option labels use their
-  //   built‑in text instead of asking AI to rewrite them.
-  // - NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER: hard cap on how many times
-  //   the narrator will hit the backend per character creation run. After
-  //   that, it automatically falls back to local lines.
-  //
-  // These defaults bias toward keeping the most impactful AI features
-  // (names, backstory, portraits) while trimming narrator chatter and
-  // cosmetic option-variation calls.
-  ENABLE_AI: true,
-  ENABLE_AI_NARRATOR_COMMENTS: false,
-  ENABLE_AI_OPTION_VARIATIONS: false,
-  NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER: 1,
-  
-  // SECURE: Use backend proxy instead of direct OpenAI calls
-  // Use shared backend origin for all parts of the app
-  BACKEND_URL: PRODUCTION_BACKEND_URL,
-  
-  // DEPRECATED: Direct OpenAI calls (insecure, use backend proxy instead)
-  OPENAI_API_URL: 'https://api.openai.com/v1/chat/completions',
-  OPENAI_MODEL: 'gpt-3.5-turbo',
-  
-  STORAGE_KEY: 'dnd_characters',
-  MAX_RETRIES: 2,
-  
-  // DEV MODE: Auto-login for development when running locally
-  DEV_AUTO_LOGIN: isLocalDevelopment,
-  DEV_CREDENTIALS: {
-    email: 'dev@test.com',
-    password: 'dev12345',
-    role: 'player', // lowercase - will be converted by backend
-  },
-
-  // Optional: public base URL for pre-generated portrait images stored in R2.
-  // When set, pre-generated portraits will expose a usable original image URL
-  // (used for "View Original Art" toggles in the builder/manager).
-  //
-  // Example:
-  //   PREGENERATED_PORTRAIT_BASE_URL:
-  //     'https://your-account-id.r2.dev/danddy-portraits/portraits/pregen'
-  //
-  // Leave as null to disable original image URLs for pre-generated portraits.
-  PREGENERATED_PORTRAIT_BASE_URL: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/pregen',
-
-  // Default image model for custom AI portraits.
-  //
-  // - "dall-e-3": current high-quality default
-  // - "gpt-image-1": GPT Image 1 (new image model)
-  //
-  // The actual choice is stored per-browser via StorageService so both the
-  // builder and manager stay in sync. This config value is only used as a
-  // sane fallback when no explicit preference has been saved yet.
-  DEFAULT_IMAGE_MODEL: 'gpt-image-1',
-
-  // Default portrait view mode when no explicit preference has been saved yet.
-  // - "ascii": show ASCII portraits by default
-  // - "original": prefer original images when available
-  DEFAULT_PORTRAIT_VIEW_MODE: 'original',
-
-  // Default portrait prompt theme when no explicit preference has been saved yet.
-  // This should match one of PortraitPrompt.getThemes().id values.
-  DEFAULT_PORTRAIT_PROMPT_THEME: 'cinematic-inks',
-};
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-utils.js =====
-
-// Core reusable helper functions for the DandDy terminal character builder.
-// Exposes Utils as a global (window.Utils) so existing inline code can use it.
-
-const Utils = window.Utils = {
-  /**
-   * HTML-escape a value for safe interpolation into template strings.
-   * Converts &, <, >, ", and ' to their corresponding HTML entities.
-   */
-  escapeHtml(value) {
-    if (value === null || value === undefined) return '';
-    return String(value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  },
-
-  // Typewriter effect for text
-  async typewriter(element, text, speed = (window.CONFIG && window.CONFIG.TYPEWRITER_SPEED) || 30) {
-    element.textContent = '';
-    element.classList.add('is-typing');
-
-    let skipTyping = false;
-
-    // Read the current text speed multiplier from storage (if available).
-    // Higher multipliers mean faster typing (shorter delay per character).
-    let multiplier = 1;
-    try {
-      if (
-        window.StorageService &&
-        typeof window.StorageService.getTextSpeedMultiplier === 'function'
-      ) {
-        const stored = window.StorageService.getTextSpeedMultiplier();
-        if (Number.isFinite(stored) && stored > 0) {
-          multiplier = stored;
-        }
-      }
-    } catch (e) {
-      console.warn('Utils.typewriter: failed to read text speed multiplier', e);
-    }
-
-    const effectiveDelay = multiplier > 0 ? speed / multiplier : speed;
-
-    // Normalize text and strip emojis so narrator lines stay text-only.
-    const sourceText = text == null ? '' : String(text);
-    const safeText =
-      typeof this.stripEmojis === 'function'
-        ? this.stripEmojis(sourceText)
-        : sourceText;
-
-    // Allow skipping by pressing any key or clicking/tapping
-    const skipHandler = (e) => {
-      // Only skip if not typing in an input field
-      if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-        skipTyping = true;
-      }
-    };
-
-    window.addEventListener('keydown', skipHandler, { once: true });
-    window.addEventListener('click', skipHandler, { once: true });
-    window.addEventListener('touchstart', skipHandler, { once: true, passive: true });
-
-    // Type out character by character, or skip if interrupted
-    for (let i = 0; i < safeText.length; i++) {
-      if (skipTyping) {
-        // Show all remaining text immediately (emoji-stripped)
-        element.textContent = safeText;
-        break;
-      }
-      element.textContent += safeText[i];
-      await this.sleep(effectiveDelay);
-    }
-
-    // Clean up
-    window.removeEventListener('keydown', skipHandler);
-    window.removeEventListener('click', skipHandler);
-    window.removeEventListener('touchstart', skipHandler);
-    element.classList.remove('is-typing');
-  },
-
-  // Sleep utility
-  sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  },
-
-  /**
-   * Remove emoji characters from a string so narrator text stays text-only.
-   * This targets common emoji ranges (pictographs, symbols, flags, etc.).
-   */
-  stripEmojis(value) {
-    if (value == null) return '';
-    const str = String(value);
-    const emojiRegex =
-      /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}]/gu;
-    return str.replace(emojiRegex, '');
-  },
-
-  // Random number between min and max (inclusive)
-  random(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  },
-
-  // Pick random item from array
-  randomChoice(array) {
-    return array[Math.floor(Math.random() * array.length)];
-  },
-
-  // Roll dice (e.g., "3d6" or just 6 for d6)
-  rollDice(notation) {
-    if (typeof notation === 'number') {
-      return this.random(1, notation);
-    }
-
-    const [count, sides] = notation.toLowerCase().split('d').map(Number);
-    let total = 0;
-    for (let i = 0; i < count; i++) {
-      total += this.random(1, sides);
-    }
-    return total;
-  },
-
-  // Calculate ability modifier
-  abilityModifier(score) {
-    return Math.floor((score - 10) / 2);
-  },
-
-  // Format modifier with + or -
-  formatModifier(modifier) {
-    return modifier >= 0 ? `+${modifier}` : `${modifier}`;
-  },
-
-  // Capitalize first letter
-  capitalize(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  },
-
-  // Smooth scroll to bottom of narrator panel
-  scrollToBottom(forceDelay = false) {
-    const doScroll = () => {
-      const panel = document.getElementById('narrator-panel');
-      if (panel) {
-        panel.scrollTo({
-          top: panel.scrollHeight,
-          behavior: 'smooth',
-        });
-      }
-    };
-
-    if (forceDelay) {
-      // Wait for DOM to update
-      setTimeout(doScroll, 50);
-    } else {
-      doScroll();
-    }
-  },
-
-  /**
-   * Focus the first meaningful field inside a modal.
-   * Prefers visible inputs / textareas / selects. Falls back to primary button.
-   */
-  focusFirstFieldInModal(modal) {
-    if (!modal || typeof modal.querySelector !== 'function') return;
-
-    const fieldSelectors = [
-      // High-priority: styled terminal inputs
-      'input.terminal-input:not([type=\"hidden\"]):not(.file-input-hidden):not([disabled])',
-      'textarea.terminal-input:not([disabled])',
-      'textarea.terminal-textarea:not([disabled])',
-      'select.terminal-select:not([disabled])',
-      // Generic fallbacks for plain form controls
-      'input:not([type=\"hidden\"]):not(.file-input-hidden):not([disabled])',
-      'textarea:not([disabled])',
-      'select:not([disabled])',
-    ];
-
-    let target = null;
-    for (const selector of fieldSelectors) {
-      target = modal.querySelector(selector);
-      if (target) break;
-    }
-
-    // If there are no form fields, focus the primary action button if present
-    if (!target) {
-      const fallbackSelectors = [
-        '.modal-footer .terminal-btn-primary:not([disabled])',
-        '.modal-footer button:not([disabled])',
-        'button.terminal-btn-primary:not([disabled])',
-        'button:not([disabled])',
-        '[tabindex]:not([tabindex=\"-1\"])',
-      ];
-      for (const selector of fallbackSelectors) {
-        target = modal.querySelector(selector);
-        if (target) break;
-      }
-    }
-
-    if (target && typeof target.focus === 'function') {
-      // Defer slightly to ensure any CSS animations / layout are ready.
-      // We intentionally do NOT auto-select the text; we only move focus.
-      setTimeout(() => {
-        try {
-          target.focus();
-        } catch (e) {
-          // Non-fatal: if focus fails, we just leave things as-is.
-        }
-      }, 0);
-    }
-  },
-};
-
-
-
-
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-narrators.js =====
-
-// Narrator personalities for DandDy character builder
-// Exposes NARRATORS as a global on window
-//
-// NOTE: The systemPrompt fields must stay in sync with:
-//   backend/routes/ai.py (NARRATOR_PROMPTS dict)
-// If you add/modify narrators here, update the backend file too!
-
-const NARRATORS = (window.NARRATORS = {
-  deadpan: {
-    id: 'deadpan',
-    name: 'The Deadpan Observer',
-    emoji: '( ._. )',
-    description: 'Dry, witty, and occasionally breaks the fourth wall',
-    systemPrompt: 'You are a deadpan, slightly cheeky D&D narrator. Your personality is dry and witty, occasionally using emoticons like ( ._.) when amused. Keep responses under 50 words. Be brief, sarcastic, and occasionally break the fourth wall. Vary your phrasing across comments.',
-    introText: `> SYSTEM INITIALIZED...
+(function(global){const location=global.location||{};const isLocalEnvironment=location.hostname==='localhost'||location.hostname==='127.0.0.1'||location.hostname.startsWith('192.168.')||location.protocol==='file:';const BACKEND_ORIGIN='https://danddy-api.onrender.com';const API_BASE_URL=`${BACKEND_ORIGIN}/api`;const TOKEN_STORAGE_KEY='dnd_auth_token';const USER_STORAGE_KEY='dnd_user_info';const CHARACTER_STORAGE_KEY='dnd_characters';const DEBUG=isLocalEnvironment;global.DanddyConfig={isLocalEnvironment,BACKEND_ORIGIN,API_BASE_URL,TOKEN_STORAGE_KEY,USER_STORAGE_KEY,CHARACTER_STORAGE_KEY,DEBUG,};if(!DEBUG&&global.console){try{['log','info','debug'].forEach((method)=>{if(typeof global.console[method]==='function'){global.console[method]=()=>{};}});}catch(e){}}})(window);(function(global){const cfg=global.DanddyConfig||{};const API_BASE_URL=cfg.API_BASE_URL||'https://danddy-api.onrender.com/api';const TOKEN_KEY=cfg.TOKEN_STORAGE_KEY||'dnd_auth_token';const USER_KEY=cfg.USER_STORAGE_KEY||'dnd_user_info';const DEBUG=!!cfg.DEBUG;const AuthService=(global.AuthService=global.AuthService||{});Object.assign(AuthService,{TOKEN_KEY,USER_KEY,getToken(){return global.localStorage.getItem(this.TOKEN_KEY);},setToken(token){if(!token)return;global.localStorage.setItem(this.TOKEN_KEY,token);},clearToken(){global.localStorage.removeItem(this.TOKEN_KEY);global.localStorage.removeItem(this.USER_KEY);},getCurrentUser(){const raw=global.localStorage.getItem(this.USER_KEY);return raw?JSON.parse(raw):null;},setCurrentUser(user){if(!user)return;global.localStorage.setItem(this.USER_KEY,JSON.stringify(user));},isAuthenticated(){return!!this.getToken();},logout(){this.clearToken();try{global.localStorage.removeItem('danddy_builder_session');}catch(e){}},async _request(path,{method='GET',body,headers}={}){const url=`${API_BASE_URL}${path}`;const baseHeaders=headers||{};const scrubBodyForLog=(payload)=>{if(!payload||typeof payload!=='object')return payload;const clone={...payload};const sensitiveKeys=['password','confirm_password','new_password','token'];sensitiveKeys.forEach((key)=>{if(key in clone){const value=String(clone[key]??'');clone[key]=value?`*** (${value.length} chars)`:'***';}});return clone;};if(DEBUG){console.log('[AuthService] HTTP request',{url,method,body:scrubBodyForLog(body),});}
+try{const response=await fetch(url,{method,headers:body?{'Content-Type':'application/json',...baseHeaders}:baseHeaders,body:body?JSON.stringify(body):undefined,});if(!response.ok){let detail=`Request failed (${response.status})`;let backendDetail=null;try{const errJson=await response.json();if(DEBUG){console.warn('[AuthService] HTTP error response',{url,status:response.status,payload:errJson,});}
+if(errJson&&errJson.detail){if(typeof errJson.detail==='string'){detail=errJson.detail;}else if(Array.isArray(errJson.detail)&&errJson.detail.length){const first=errJson.detail[0];if(first&&first.msg){detail=first.msg;}else{detail=JSON.stringify(errJson.detail);}}else{detail=JSON.stringify(errJson.detail);}
+backendDetail=errJson.detail;}}catch(_){}
+if(DEBUG){console.warn('[AuthService] HTTP request failed',{url,status:response.status,detail,backendDetail,});}
+throw new Error(detail);}
+if(response.status===204)return null;const json=await response.json();if(DEBUG){console.log('[AuthService] HTTP response OK',{url,method,status:response.status,});}
+return json;}catch(error){console.error('[AuthService] Request error:',error);throw error;}},async register(email,password,role='player'){try{const derivedUsername=typeof email==='string'&&email.includes('@')?email.split('@')[0]:email;const data=await this._request('/auth/register',{method:'POST',body:{username:derivedUsername,email,password,role},});if(!data||!data.access_token){throw new Error('Registration succeeded but no token was returned.');}
+this.setToken(data.access_token);const profile=await this.fetchProfile();const user=profile&&Object.keys(profile).length?profile:{email,role};this.setCurrentUser(user);return{success:true,user};}catch(error){return{success:false,error:error.message||'Registration failed'};}},async login(email,password){const url=`${API_BASE_URL}/auth/token`;if(DEBUG){console.log('[AuthService] Login attempt',{url,email,});}
+try{const formData=new FormData();formData.append('username',email);formData.append('password',password);const response=await fetch(url,{method:'POST',body:formData,});if(DEBUG){console.log('[AuthService] Login response received',{url,status:response.status,ok:response.ok,});}
+if(!response.ok){let detail='Login failed';let backendPayload=null;try{const errJson=await response.json();backendPayload=errJson;if(errJson&&errJson.detail)detail=errJson.detail;}catch(_){}
+if(DEBUG){console.warn('[AuthService] Login HTTP error',{url,status:response.status,detail,backendPayload,});}
+throw new Error(detail);}
+const data=await response.json();if(!data||!data.access_token){throw new Error('Login succeeded but no token was returned.');}
+if(DEBUG){console.log('[AuthService] Login succeeded, token received',{url,});}
+this.setToken(data.access_token);const profile=await this.fetchProfile();if(profile){this.setCurrentUser(profile);}
+return{success:true,user:profile};}catch(error){console.error('[AuthService] Login error:',error);return{success:false,error:error.message||'Login failed'};}},async forgotPassword(email){try{const data=await this._request('/auth/password/forgot',{method:'POST',body:{email},});return{success:true,message:(data&&data.message)||'If an account with that email exists, a password reset link has been sent.',debugToken:data&&data.debug_reset_token?data.debug_reset_token:null,};}catch(error){return{success:false,error:error.message||'Password reset request failed',};}},async resetPassword(token,newPassword){try{const data=await this._request('/auth/password/reset',{method:'POST',body:{token,new_password:newPassword},});if(!data||!data.access_token){throw new Error('Password reset succeeded but no token was returned.');}
+this.setToken(data.access_token);const profile=await this.fetchProfile();if(profile){this.setCurrentUser(profile);}
+return{success:true,user:profile};}catch(error){return{success:false,error:error.message||'Password reset failed'};}},async fetchProfile(){const token=this.getToken();if(!token)return null;try{const response=await fetch(`${API_BASE_URL}/auth/me`,{headers:{Authorization:`Bearer ${token}`},});if(!response.ok){if(response.status===401){let backendDetail=null;try{const errJson=await response.json();if(errJson&&errJson.detail){backendDetail=errJson.detail;}}catch(_){}
+console.warn('[AuthService] Token rejected by /auth/me; clearing local session.',{status:response.status,detail:backendDetail,});this.clearToken();return null;}
+if(DEBUG){console.warn('[AuthService] /auth/me non-401 error',{status:response.status,});}
+throw new Error('Failed to fetch user profile');}
+const profile=await response.json();if(DEBUG){console.log('[AuthService] /auth/me profile loaded',profile);}
+return profile;}catch(error){console.error('[AuthService] Fetch profile error:',error);return null;}},async verifyToken(){const profile=await this.fetchProfile();return!!profile;},});})(window);(function(global){const Mapper={fromBuilderToBackend(character){if(!character)return null;return{name:character.name||'',race:character.race||'',character_class:character.class||'',level:character.level||1,background:character.background||null,alignment:this._mapAlignmentFromBuilder(character.alignment),experience_points:character.experiencePoints||0,strength:character.abilities?.str||10,dexterity:character.abilities?.dex||10,constitution:character.abilities?.con||10,intelligence:character.abilities?.int||10,wisdom:character.abilities?.wis||10,charisma:character.abilities?.cha||10,hit_points_max:character.hitPoints||10,hit_points_current:character.hitPoints||10,hit_points_temp:0,armor_class:this._calculateACFromBuilder(character),initiative:this._calculateInitiativeFromBuilder(character),speed:this._getSpeedFromBuilder(character),death_save_successes:0,death_save_failures:0,saving_throw_proficiencies:character.savingThrows||[],skill_proficiencies:character.skillProficiencies||[],skill_expertises:[],tool_proficiencies:character.toolProficiencies||[],languages:character.languages||[],racial_traits:this._arrayToDict(character.racialTraits),class_features:this._arrayToDict(character.classFeatures),feats:[],background_feature:character.backgroundFeature||{},personality_traits:character.personalityTrait||null,ideals:character.ideal||null,bonds:character.bond||null,flaws:character.flaw||null,appearance:character.appearance||null,backstory:character.backstory||null,sex:character.sex||null,ascii_portrait:character.asciiPortrait||null,original_portrait_url:character.originalPortraitUrl||null,custom_portrait_ascii:character.customPortraitAscii||null,custom_portrait_count:character.customPortraitCount||0,portrait_metadata:character.portraitMetadata||{},inventory:this._arrayToDict(character.equipment),spellcasting_ability:character.spellcastingAbility||null,spell_save_dc:character.spellSaveDC||null,spell_attack_bonus:character.spellAttackBonus||null,spell_slots:character.spellSlots||{},spell_slots_used:{},cantrips:this._spellsToStringArray(character.cantrips),spells_known:this._spellsToStringArray(character.spellsKnown),spells_prepared:this._spellsToStringArray(character.spellsPrepared),conditions:[],attacks:this._arrayToDict(character.attacks),copper_pieces:character.copper||0,silver_pieces:character.silver||0,electrum_pieces:character.electrum||0,gold_pieces:character.gold||0,platinum_pieces:character.platinum||0,campaign_id:character.campaignId||null,};},fromBackendToBuilder(backendChar){if(!backendChar)return null;return{id:backendChar.id,name:backendChar.name,race:backendChar.race,class:backendChar.character_class,level:backendChar.level,background:backendChar.background,alignment:this._mapAlignmentFromBackend(backendChar.alignment),experiencePoints:backendChar.experience_points,abilities:{str:backendChar.strength,dex:backendChar.dexterity,con:backendChar.constitution,int:backendChar.intelligence,wis:backendChar.wisdom,cha:backendChar.charisma,},hitPoints:backendChar.hit_points_max,currentHitPoints:backendChar.hit_points_current,armorClass:backendChar.armor_class,initiative:backendChar.initiative,speed:backendChar.speed,savingThrows:backendChar.saving_throw_proficiencies,skillProficiencies:backendChar.skill_proficiencies,toolProficiencies:backendChar.tool_proficiencies,languages:backendChar.languages,racialTraits:backendChar.racial_traits,classFeatures:backendChar.class_features,backgroundFeature:backendChar.background_feature,personalityTrait:backendChar.personality_traits,ideal:backendChar.ideals,bond:backendChar.bonds,flaw:backendChar.flaws,appearance:backendChar.appearance,backstory:backendChar.backstory,sex:backendChar.sex||null,asciiPortrait:backendChar.ascii_portrait,originalPortraitUrl:backendChar.original_portrait_url,customPortraitAscii:backendChar.custom_portrait_ascii,customPortraitCount:backendChar.custom_portrait_count,portraitMetadata:backendChar.portrait_metadata,equipment:backendChar.inventory,spellcastingAbility:backendChar.spellcasting_ability,spellSaveDC:backendChar.spell_save_dc,spellAttackBonus:backendChar.spell_attack_bonus,spellSlots:backendChar.spell_slots,cantrips:backendChar.cantrips||[],spellsKnown:backendChar.spells_known||[],spellsPrepared:backendChar.spells_prepared||[],attacks:backendChar.attacks,copper:backendChar.copper_pieces,silver:backendChar.silver_pieces,electrum:backendChar.electrum_pieces,gold:backendChar.gold_pieces,platinum:backendChar.platinum_pieces,campaignId:backendChar.campaign_id,ownerId:backendChar.owner_id,_backendData:backendChar,};},fromManagerToBackend(character){if(!character)return null;const rawBackgroundFeature=character.backgroundFeature||character.backgroundData?.feature||{};const backgroundFeatureDict=typeof rawBackgroundFeature==='string'?{name:rawBackgroundFeature}:rawBackgroundFeature;return{name:character.name||'Unnamed Character',race:character.race||character.raceData?.name||'Human',character_class:character.class||character.classData?.name||'Fighter',level:character.level||1,background:character.background||character.backgroundData?.name||null,alignment:this._mapAlignmentFromManager(character.alignment),experience_points:character.experiencePoints||0,strength:character.abilities?.str||character.abilityScores?.str||10,dexterity:character.abilities?.dex||character.abilityScores?.dex||10,constitution:character.abilities?.con||character.abilityScores?.con||10,intelligence:character.abilities?.int||character.abilityScores?.int||10,wisdom:character.abilities?.wis||character.abilityScores?.wis||10,charisma:character.abilities?.cha||character.abilityScores?.cha||10,hit_points_max:character.hitPoints?.max||character.hitPoints||10,hit_points_current:character.hitPoints?.current||character.hitPoints?.max||character.hitPoints||10,hit_points_temp:character.hitPoints?.temp||0,armor_class:character.armorClass||10,initiative:character.initiative||0,speed:character.speed||30,death_save_successes:character.deathSaves?.successes||0,death_save_failures:character.deathSaves?.failures||0,saving_throw_proficiencies:character.savingThrows||[],skill_proficiencies:character.skillProficiencies||[],skill_expertises:character.skillExpertises||[],tool_proficiencies:character.toolProficiencies||[],languages:character.languages||[],racial_traits:this._arrayToDict(character.racialTraits||character.raceData?.traits||[],),class_features:this._arrayToDict(character.classFeatures||character.classData?.features||[],),feats:this._arrayToDict(character.feats||[]),background_feature:backgroundFeatureDict,personality_traits:character.personalityTraits||character.personalityTrait||null,ideals:character.ideals||null,bonds:character.bonds||null,flaws:character.flaws||null,appearance:character.appearance||null,backstory:character.backstory||null,sex:character.sex||null,ascii_portrait:character.asciiPortrait||null,original_portrait_url:character.originalPortraitUrl||null,custom_portrait_ascii:character.customPortraitAscii||null,custom_portrait_count:character.customPortraitCount||0,portrait_metadata:character.portraitMetadata||{},inventory:(character.equipment||character.inventory||[]).map((item)=>typeof item==='string'?{name:item}:item,),spellcasting_ability:character.spellcastingAbility||null,spell_save_dc:character.spellSaveDC||null,spell_attack_bonus:character.spellAttackBonus||null,spell_slots:character.spellSlots||{},spell_slots_used:character.spellSlotsUsed||{},cantrips:this._spellsToStringArray(character.cantrips||[]),spells_known:this._spellsToStringArray(character.spellsKnown||[]),spells_prepared:this._spellsToStringArray(character.spellsPrepared||[]),conditions:character.conditions||[],attacks:character.attacks||[],copper_pieces:character.currency?.cp??character.copper??0,silver_pieces:character.currency?.sp??character.silver??0,electrum_pieces:character.currency?.ep??character.electrum??0,gold_pieces:character.currency?.gp??character.gold??0,platinum_pieces:character.currency?.pp??character.platinum??0,campaign_id:character.campaignId||null,};},fromBackendToManager(apiChar){if(!apiChar)return null;return{id:apiChar.id.toString(),name:apiChar.name,race:apiChar.race,class:apiChar.character_class,level:apiChar.level,background:apiChar.background,alignment:this._mapAlignmentFromBackend(apiChar.alignment),experiencePoints:apiChar.experience_points,abilities:{str:apiChar.strength,dex:apiChar.dexterity,con:apiChar.constitution,int:apiChar.intelligence,wis:apiChar.wisdom,cha:apiChar.charisma,},hitPoints:{max:apiChar.hit_points_max,current:apiChar.hit_points_current,temp:apiChar.hit_points_temp,},armorClass:apiChar.armor_class,initiative:apiChar.initiative,speed:apiChar.speed,savingThrows:apiChar.saving_throw_proficiencies,skillProficiencies:apiChar.skill_proficiencies,skillExpertises:apiChar.skill_expertises,toolProficiencies:apiChar.tool_proficiencies,languages:apiChar.languages,racialTraits:apiChar.racial_traits,classFeatures:apiChar.class_features,feats:apiChar.feats,backgroundFeature:apiChar.background_feature,personalityTraits:apiChar.personality_traits,ideals:apiChar.ideals,bonds:apiChar.bonds,flaws:apiChar.flaws,appearance:apiChar.appearance,backstory:apiChar.backstory,sex:apiChar.sex||null,equipment:apiChar.inventory.map((item)=>typeof item==='object'&&item.name?item.name:item,),spellcastingAbility:apiChar.spellcasting_ability,spellSaveDC:apiChar.spell_save_dc,spellAttackBonus:apiChar.spell_attack_bonus,spellSlots:apiChar.spell_slots,spellSlotsUsed:apiChar.spell_slots_used,cantrips:apiChar.cantrips||[],spellsKnown:apiChar.spells_known||[],spellsPrepared:apiChar.spells_prepared||[],conditions:apiChar.conditions,attacks:apiChar.attacks,currency:{cp:apiChar.copper_pieces,sp:apiChar.silver_pieces,ep:apiChar.electrum_pieces,gp:apiChar.gold_pieces,pp:apiChar.platinum_pieces,},campaignId:apiChar.campaign_id,ownerId:apiChar.owner_id,createdAt:apiChar.created_at,updatedAt:apiChar.updated_at,asciiPortrait:apiChar.ascii_portrait,originalPortraitUrl:apiChar.original_portrait_url,customPortraitAscii:apiChar.custom_portrait_ascii,customPortraitCount:apiChar.custom_portrait_count||0,portraitMetadata:apiChar.portrait_metadata||{},};},_arrayToDict(arr){if(!arr||!Array.isArray(arr))return[];return arr.map((item)=>{if(typeof item==='object'&&item!==null)return item;if(typeof item==='string')return{name:item};return{value:item};});},_spellsToStringArray(arr){if(!arr||!Array.isArray(arr))return[];return arr.map((item)=>{if(typeof item==='object'&&item!==null&&item.name)return item.name;if(typeof item==='string')return item;return String(item);});},_mapAlignmentFromBuilder(alignment){if(!alignment)return null;const map={'lg':'lawful_good','ng':'neutral_good','cg':'chaotic_good','ln':'lawful_neutral','n':'true_neutral','cn':'chaotic_neutral','le':'lawful_evil','ne':'neutral_evil','ce':'chaotic_evil','Lawful Good':'lawful_good','Neutral Good':'neutral_good','Chaotic Good':'chaotic_good','Lawful Neutral':'lawful_neutral','True Neutral':'true_neutral','Chaotic Neutral':'chaotic_neutral','Lawful Evil':'lawful_evil','Neutral Evil':'neutral_evil','Chaotic Evil':'chaotic_evil',};return map[alignment]||null;},_mapAlignmentFromManager(alignment){return this._mapAlignmentFromBuilder(alignment);},_mapAlignmentFromBackend(backendAlignment){if(!backendAlignment)return null;const reverseMap={'lawful_good':'lg','neutral_good':'ng','chaotic_good':'cg','lawful_neutral':'ln','true_neutral':'n','chaotic_neutral':'cn','lawful_evil':'le','neutral_evil':'ne','chaotic_evil':'ce',};return reverseMap[backendAlignment]||null;},_calculateACFromBuilder(character){const dex=character.abilities?.dex;const dexMod=dex?Math.floor((dex-10)/2):0;return 10+dexMod;},_calculateInitiativeFromBuilder(character){const dex=character.abilities?.dex;return dex?Math.floor((dex-10)/2):0;},_getSpeedFromBuilder(character){const race=(character.race||'').toLowerCase();const speedMap={dwarf:25,halfling:25,gnome:25,elf:30,human:30,'half-elf':30,'half-orc':30,tiefling:30,dragonborn:30,};return speedMap[race]||30;},};global.DanddyCharacterMapper=Mapper;})(window);(function(global){const cfg=global.DanddyConfig||{};const STORAGE_KEY=cfg.CHARACTER_STORAGE_KEY||'dnd_characters';const CACHE_KEY=`${STORAGE_KEY}_cache`;const Storage={STORAGE_KEY,CACHE_KEY,readAll(){const raw=global.localStorage.getItem(STORAGE_KEY);return raw?JSON.parse(raw):[];},writeAll(characters){global.localStorage.setItem(STORAGE_KEY,JSON.stringify(characters||[]));},upsert(character){if(!character)return;const chars=this.readAll();const idStr=String(character.id);const idx=chars.findIndex((c)=>c&&String(c.id)===idStr);if(idx>=0){chars[idx]=character;}else{chars.push(character);}
+this.writeAll(chars);},deleteById(id){const idStr=String(id);const chars=this.readAll().filter((c)=>!c||String(c.id)!==idStr);this.writeAll(chars);},readCache(){const raw=global.localStorage.getItem(CACHE_KEY);return raw?JSON.parse(raw):[];},writeCache(characters){global.localStorage.setItem(CACHE_KEY,JSON.stringify(characters||[]));},clearAll(){global.localStorage.removeItem(STORAGE_KEY);global.localStorage.removeItem(CACHE_KEY);},};global.DanddyStorage=Storage;})(window);window.DANDDY_VERSION='2.3.5';window.DANDDY_BACKEND_VERSION='1.0.0';(function(global){const DEFAULT_THEME_ID='cinematic-inks';const ADMIN_STORAGE_KEY='dnd_portrait_prompt_entries_v1';let adminCache=null;const DEFAULT_POSES={default:['standing in a confident, heroic pose','standing in a relaxed but ready stance','standing tall with one hand raised in greeting',],fighter:['standing in a battle-ready stance, weapon raised','resting a heavy weapon across their shoulder','standing guard with shield raised',],wizard:['gesturing mystically with arcane energy gathering','holding a staff aloft, channeling power','studying an ancient tome with focused concentration',],rogue:['emerging from shadows with a sly grin','perched in a ready crouch, daggers drawn','leaning casually against nothing, arms crossed',],cleric:['raising a holy symbol with radiant light','standing in peaceful prayer','blessing with an outstretched hand',],ranger:['drawing a bow with focused aim','kneeling to examine tracks on the ground','standing with a beast companion at their side',],paladin:['standing resolute with sword planted before them','raising a glowing holy weapon high','kneeling in devotion, armor gleaming',],barbarian:['roaring in battle rage, muscles tensed','wielding a massive weapon overhead','standing defiant with chest out',],bard:['strumming a lute with a charming smile','performing dramatically with flowing gestures','winking knowingly at the viewer',],druid:['communing with nature, eyes closed','shape-shifting with swirling magical energy','standing surrounded by woodland creatures',],monk:['in a focused martial arts stance','meditating in peaceful contemplation','executing a precise combat technique',],sorcerer:['crackling with innate magical energy','casting with wild, uncontrolled power','standing with elemental forces swirling around them',],warlock:['channeling dark eldritch energy','standing with patron symbols glowing nearby','invoking otherworldly power with outstretched hands',],};const DEFAULT_CAMERAS={default:['Camera angle: three-quarter view that clearly shows the character','Camera angle: dramatic low angle looking up at the character','Camera angle: portrait framing focused on upper body and face',],};let apiSyncAttempted=false;function normalize(str){return(str||'').toString().trim();}
+function getApiBase(){return(global.DanddyConfig&&global.DanddyConfig.API_BASE_URL)||'http://localhost:8000/api';}
+function getAuthToken(){return global.AuthService&&global.AuthService.getToken?global.AuthService.getToken():null;}
+function isAuthenticated(){return global.AuthService&&global.AuthService.isAuthenticated?global.AuthService.isAuthenticated():false;}
+function parseEntriesToCache(entries){const races={};const classes={};const scenes={};const poses={};const cameras={};const styles={};(entries||[]).forEach((entry)=>{if(!entry||!entry.kind||!entry.key)return;const kind=normalize(entry.kind).toLowerCase();const key=normalize(entry.key).toLowerCase();if(!key)return;if(kind==='race'){const desc=normalize(entry.description);if(desc){if(!Array.isArray(races[key]))races[key]=[];races[key].push(desc);}}else if(kind==='class'){const desc=normalize(entry.description);if(desc){if(!Array.isArray(classes[key]))classes[key]=[];classes[key].push(desc);}}else if(kind==='scene'||kind==='background'){const desc=normalize(entry.description);if(desc){if(!Array.isArray(scenes[key]))scenes[key]=[];scenes[key].push(desc);}}else if(kind==='pose'){const desc=normalize(entry.description);if(desc){if(!Array.isArray(poses[key]))poses[key]=[];poses[key].push(desc);}}else if(kind==='camera'){const desc=normalize(entry.description);if(desc){if(!Array.isArray(cameras[key]))cameras[key]=[];cameras[key].push(desc);}}else if(kind==='style'){const styleDesc=normalize(entry.style_description||entry.styleDescription||entry.description);const sceneDesc=normalize(entry.background_description||entry.backgroundDescription);if(!styles[key]){styles[key]={};}
+if(styleDesc)styles[key].styleDescription=styleDesc;if(sceneDesc)styles[key].sceneDescription=sceneDesc;}});return{races,classes,scenes,styles,poses,cameras};}
+async function syncFromAPI(){if(apiSyncAttempted)return;if(!isAuthenticated())return;apiSyncAttempted=true;const token=getAuthToken();if(!token)return;try{const response=await fetch(`${getApiBase()}/prompt-entries`,{headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json',},});if(!response.ok){console.warn('PortraitPrompt: API fetch failed with status',response.status);if(response.status===401){if(global.AuthService&&typeof global.AuthService.clearToken==='function'){global.AuthService.clearToken();console.warn('PortraitPrompt: Cleared expired auth token');}}
+return;}
+const apiEntries=await response.json();if(!Array.isArray(apiEntries)){console.warn('PortraitPrompt: API returned non-array');return;}
+adminCache=parseEntriesToCache(apiEntries);try{if(global.localStorage){global.localStorage.removeItem(ADMIN_STORAGE_KEY);}}catch(e){}
+console.warn('PortraitPrompt: Loaded',apiEntries.length,'entries from API (cloud)');console.warn('PortraitPrompt: Parsed styles:',Object.keys(adminCache.styles||{}));}catch(e){console.warn('PortraitPrompt: API fetch error',e);}}
+function loadAdminCache(){if(adminCache)return adminCache;const empty={races:{},classes:{},scenes:{},styles:{},poses:{},cameras:{},};if(isAuthenticated()){return empty;}
+try{const raw=global.localStorage?global.localStorage.getItem(ADMIN_STORAGE_KEY):null;if(!raw){adminCache=empty;return adminCache;}
+const parsed=JSON.parse(raw);if(!Array.isArray(parsed)){adminCache=empty;return adminCache;}
+adminCache=parseEntriesToCache(parsed);return adminCache;}catch(e){adminCache=empty;return adminCache;}}
+function getVariableSnippet(kind,key){const cache=loadAdminCache();const k=normalize(key).toLowerCase();if(!k)return null;if(kind==='race'){const variants=cache.races[k];if(Array.isArray(variants)&&variants.length){const idx=Math.floor(Math.random()*variants.length);return variants[idx];}
+return null;}
+if(kind==='class'){const variants=cache.classes[k];if(Array.isArray(variants)&&variants.length){const idx=Math.floor(Math.random()*variants.length);return variants[idx];}
+return null;}
+if(kind==='scene'){const variants=cache.scenes[k];if(Array.isArray(variants)&&variants.length){const idx=Math.floor(Math.random()*variants.length);return variants[idx];}
+return null;}
+if(kind==='pose'){const variants=cache.poses[k];if(Array.isArray(variants)&&variants.length){const idx=Math.floor(Math.random()*variants.length);return variants[idx];}
+return null;}
+if(kind==='camera'){const variants=cache.cameras[k];if(Array.isArray(variants)&&variants.length){const idx=Math.floor(Math.random()*variants.length);return variants[idx];}
+return null;}
+return null;}
+function getPoseVariants(classKey){const cache=loadAdminCache();const k=normalize(classKey).toLowerCase();if(!k)return null;const variants=cache.poses[k];if(Array.isArray(variants)&&variants.length){return variants;}
+if(DEFAULT_POSES[k]&&DEFAULT_POSES[k].length){return DEFAULT_POSES[k];}
+if(DEFAULT_POSES.default&&DEFAULT_POSES.default.length){return DEFAULT_POSES.default;}
+return null;}
+function getCameraVariants(classKey){const cache=loadAdminCache();const k=normalize(classKey).toLowerCase();if(!k)return null;const variants=cache.cameras[k];if(Array.isArray(variants)&&variants.length){return variants;}
+if(DEFAULT_CAMERAS[k]&&DEFAULT_CAMERAS[k].length){return DEFAULT_CAMERAS[k];}
+if(DEFAULT_CAMERAS.default&&DEFAULT_CAMERAS.default.length){return DEFAULT_CAMERAS.default;}
+return null;}
+function getStyleOverrides(themeId){const cache=loadAdminCache();const k=normalize(themeId);if(!k)return null;const entry=cache.styles[k];if(!entry)return null;return{styleDescription:entry.styleDescription||'',sceneDescription:entry.sceneDescription||'',};}
+const THEMES={'cinematic-inks':{id:'cinematic-inks',label:'Cinematic Inks (default)',description:'More cinematic lighting and framing while staying in black-and-white ink.',buildStyleLines(options){const lines=[];lines.push('Render in dramatic black-and-white ink with deep shadows and sharp rim lighting.',);lines.push('Treat the illustration like a film still: strong focal point, clear subject separation, and layered depth.',);lines.push('Use a limited range of mid-tone hatching to suggest volume without muddying the forms.',);lines.push('Keep the background abstract and mostly dark so the character silhouette and face read instantly.',);lines.push('Overall mood: cinematic fantasy portrait, serious and iconic, suitable for a character sheet.',);lines.push('Aspect ratio 3:4.');return lines;},},'classic-high-fantasy':{id:'classic-high-fantasy',label:'Classic High-Fantasy',description:'Highly detailed heroic-fantasy realist style in black and white with sculpted shading.',buildStyleLines(options){const lines=[];lines.push('Illustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white.',);lines.push('Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form.',);lines.push('Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes.',);lines.push('Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces.',);lines.push('Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence.',);lines.push('Aspect ratio 3:4.');return lines;},},};function getThemeById(themeId){if(themeId&&THEMES[themeId]){return THEMES[themeId];}
+return THEMES[DEFAULT_THEME_ID];}
+function buildBasePortraitInstructions(options){const{characterDescription,posePrompt,cameraPrompt,themeId,}=options||{};const parts=[];if(characterDescription){parts.push(`Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,);}else{parts.push('Create a high-contrast black-and-white fantasy illustration.');}
+const theme=getThemeById(themeId);if(theme&&typeof theme.buildStyleLines==='function'){try{const styleLines=theme.buildStyleLines({characterDescription,posePrompt,cameraPrompt,});if(Array.isArray(styleLines)){styleLines.forEach((line)=>{if(line&&typeof line==='string'){parts.push(line);}});}}catch(e){const fallback=THEMES[DEFAULT_THEME_ID];if(fallback&&typeof fallback.buildStyleLines==='function'){const fallbackLines=fallback.buildStyleLines({characterDescription,posePrompt,cameraPrompt,});if(Array.isArray(fallbackLines)){fallbackLines.forEach((line)=>{if(line&&typeof line==='string'){parts.push(line);}});}}}}
+if(posePrompt){parts.push(`Pose: ${posePrompt}`);}
+return parts;}
+function buildStyleAndBackgroundDescriptions(options){const{themeId}=options||{};const overrides=getStyleOverrides(themeId);let styleDescription='';let backgroundDescription=null;if(overrides&&overrides.styleDescription){styleDescription=overrides.styleDescription;}
+if(overrides&&overrides.sceneDescription){backgroundDescription=overrides.sceneDescription;}
+if(backgroundDescription==null){let sceneSnippet=getVariableSnippet('scene',themeId);if(!sceneSnippet){sceneSnippet=getVariableSnippet('scene','default');}
+if(sceneSnippet){backgroundDescription=sceneSnippet;}}
+if(!styleDescription||backgroundDescription==null){const theme=getThemeById(themeId);let styleLines=[];if(theme&&typeof theme.buildStyleLines==='function'){try{const lines=theme.buildStyleLines(options||{});if(Array.isArray(lines)){styleLines=lines.filter((l)=>typeof l==='string'&&l.trim(),);}}catch(e){const fallback=THEMES[DEFAULT_THEME_ID];if(fallback&&typeof fallback.buildStyleLines==='function'){const lines=fallback.buildStyleLines(options||{});if(Array.isArray(lines)){styleLines=lines.filter((l)=>typeof l==='string'&&l.trim(),);}}}}
+const backgroundLines=[];const otherLines=[];styleLines.forEach((line)=>{if(/background/i.test(line)){backgroundLines.push(line);}else{otherLines.push(line);}});if(!styleDescription){styleDescription=otherLines.join(' ');}
+if(backgroundDescription==null){backgroundDescription=backgroundLines.length?backgroundLines.join(' '):null;}}
+return{styleDescription,backgroundDescription,};}
+function buildCustomPortraitInstructions(options){const opts=options||{};const posePrompt=opts.posePrompt||'';const cameraPrompt=opts.cameraPrompt||'';const themeId=opts.themeId;let styleDescription='';let backgroundDescription='';try{const sections=buildStyleAndBackgroundDescriptions({posePrompt,cameraPrompt,themeId,})||{};styleDescription=sections.styleDescription||'';backgroundDescription=sections.backgroundDescription||'';}catch(e){}
+if(!styleDescription){styleDescription='High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';}
+if(!backgroundDescription){backgroundDescription='Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';}
+const lines=[];if(posePrompt){lines.push(`Pose: ${posePrompt}`);}
+if(styleDescription){lines.push(`STYLE: ${styleDescription}`);}
+if(backgroundDescription){lines.push(`Scene: ${backgroundDescription}`);}
+return lines;}
+const PortraitPrompt=(global.PortraitPrompt=global.PortraitPrompt||{});PortraitPrompt.buildBasePortraitInstructions=buildBasePortraitInstructions;PortraitPrompt.buildStyleAndBackgroundDescriptions=buildStyleAndBackgroundDescriptions;PortraitPrompt.buildCustomPortraitInstructions=buildCustomPortraitInstructions;PortraitPrompt.getVariableSnippet=getVariableSnippet;PortraitPrompt.getPoseVariants=getPoseVariants;PortraitPrompt.getCameraVariants=getCameraVariants;PortraitPrompt.invalidateCache=function invalidateCache(){adminCache=null;};PortraitPrompt.syncFromAPI=syncFromAPI;PortraitPrompt.resetAPISync=function resetAPISync(){apiSyncAttempted=false;};PortraitPrompt.getDefaultThemeId=function getDefaultThemeId(){return DEFAULT_THEME_ID;};PortraitPrompt.getThemes=function getThemes(){const baseThemes=Object.keys(THEMES).map((id)=>{const theme=THEMES[id];return{id:theme.id,label:theme.label,description:theme.description,};});let customThemes=[];try{const cache=loadAdminCache();const styleKeys=cache&&cache.styles?Object.keys(cache.styles):[];const builtInIds=Object.keys(THEMES).map((k)=>k.toLowerCase());const extraIds=styleKeys.filter((id)=>!builtInIds.includes(id.toLowerCase()));customThemes=extraIds.map((id)=>{const styleEntry=cache.styles[id]||{};const rawDesc=styleEntry.styleDescription||'';const trimmed=rawDesc&&rawDesc.length>120?rawDesc.slice(0,117)+'...':rawDesc;return{id,label:`Custom: ${id}`,description:trimmed||'Custom portrait style',};});}catch(e){customThemes=[];}
+return baseThemes.concat(customThemes);};const RACE_DESCRIPTIONS={human:'human with average features',elf:'elf with pointed ears and graceful features',dwarf:'dwarf with a thick beard and stocky build',halfling:'halfling, small and cheerful',dragonborn:'dragonborn with scaled skin and dragon-like features',gnome:'gnome, small with clever eyes','half-elf':'half-elf with slightly pointed ears','half-orc':'half-orc with tusks and powerful build',tiefling:'tiefling with horns and a tail',};const CLASS_DESCRIPTIONS={fighter:'wearing heavy armor and holding a sword',wizard:'in flowing robes holding a staff',rogue:'in dark leather armor with daggers',cleric:'in holy vestments with a sacred symbol',ranger:'with a bow and forest attire',paladin:'in shining armor with a holy shield',barbarian:'with wild hair wielding a massive axe',bard:'with a lute and colorful clothing',druid:'with nature-themed robes and wooden staff',monk:'in simple robes in a martial stance',sorcerer:'with crackling magical energy',warlock:'with dark robes and eldritch symbols',};const MAGIC_SPECIALIZATIONS={wizard:'specializing in elemental magic like fire and ice',sorcerer:'channeling raw elemental arcane power',warlock:'wielding shadowy eldritch magic',cleric:'focused on radiant and healing magic',druid:'calling on primal nature and elemental magic',bard:'weaving subtle enchantments and support magic through music',paladin:'enhancing strikes with holy, radiant magic',};PortraitPrompt.getRaceDescription=function getRaceDescription(race){const key=(race||'').toLowerCase();return RACE_DESCRIPTIONS[key]||race||'';};PortraitPrompt.getClassDescription=function getClassDescription(classType){const key=(classType||'').toLowerCase();return CLASS_DESCRIPTIONS[key]||classType||'';};PortraitPrompt.getMagicSpecialization=function getMagicSpecialization(classType){const key=(classType||'').toLowerCase();return MAGIC_SPECIALIZATIONS[key]||null;};PortraitPrompt.getDescriptionData=function getDescriptionData(){return{races:RACE_DESCRIPTIONS,classes:CLASS_DESCRIPTIONS,magic:MAGIC_SPECIALIZATIONS,};};function initAutoSync(){setTimeout(async()=>{if(isAuthenticated()){try{await syncFromAPI();}catch(e){console.warn('PortraitPrompt: Auto-sync failed',e);}}},100);}
+if(typeof document!=='undefined'){if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initAutoSync);}else{initAutoSync();}}})(window);const PortraitPoseData=(window.PortraitPoseData={getRandomPose(classKey){const normalizedKey=(classKey||'default').toLowerCase();if(window.PortraitPrompt&&typeof PortraitPrompt.getPoseVariants==='function'){let poses=PortraitPrompt.getPoseVariants(normalizedKey);if(!poses||!poses.length){poses=PortraitPrompt.getPoseVariants('default');}
+if(poses&&poses.length){return poses[Math.floor(Math.random()*poses.length)];}}
+console.warn(`PortraitPoseData: No poses configured for "${normalizedKey}". `+'Use the admin UI (prompt-style-admin.html) to load defaults.',);return'standing in a heroic pose';},getRandomCamera(classKey){const normalizedKey=(classKey||'default').toLowerCase();if(window.PortraitPrompt&&typeof PortraitPrompt.getCameraVariants==='function'){let cameras=PortraitPrompt.getCameraVariants(normalizedKey);if(!cameras||!cameras.length){cameras=PortraitPrompt.getCameraVariants('default');}
+if(cameras&&cameras.length){return cameras[Math.floor(Math.random()*cameras.length)];}}
+console.warn(`PortraitPoseData: No cameras configured for "${normalizedKey}". `+'Use the admin UI (prompt-style-admin.html) to load defaults.',);return'Camera angle: three-quarter view';},getRandomPoseAndCamera(classKey){return{pose:this.getRandomPose(classKey),camera:this.getRandomCamera(classKey),};},hasPoses(classKey){const normalizedKey=(classKey||'default').toLowerCase();if(window.PortraitPrompt&&typeof PortraitPrompt.getPoseVariants==='function'){let poses=PortraitPrompt.getPoseVariants(normalizedKey);if(!poses||!poses.length){poses=PortraitPrompt.getPoseVariants('default');}
+return poses&&poses.length>0;}
+return false;},hasCameras(classKey){const normalizedKey=(classKey||'default').toLowerCase();if(window.PortraitPrompt&&typeof PortraitPrompt.getCameraVariants==='function'){let cameras=PortraitPrompt.getCameraVariants(normalizedKey);if(!cameras||!cameras.length){cameras=PortraitPrompt.getCameraVariants('default');}
+return cameras&&cameras.length>0;}
+return false;},});const CharacterNameData=(window.CharacterNameData={patterns:{dwarf:{first:['Thorin','Gimli','Balin','Dwalin','Thrain','Dain','Bombur','Bofur','Kili','Fili','Oin','Gloin','Bruenor','Morgran','Rurik','Einkil','Barendd','Baern','Harbek','Rumnar',],last:['Ironforge','Stonehelm','Deepdelver','Mountainheart','Goldseeker','Ironfoot','Hammerhand','Oakenshield','Battlehammer','Fireforge','Stormdelver','Stonebreaker','Coppervein','Bronzebrow','Rockseeker',],},elf:{first:['Legolas','Galadriel','Elrond','Arwen','Thranduil','Celeborn','Elessar','Elendil','Finrod','Luthien','Faelar','Aelar','Mialee','Syllin','Thia','Varis','Althaea','Enna','Nelar',],last:['Greenleaf','Starweaver','Moonwhisper','Silverbow','Nightbreeze','Sunshadow','Stormwind','Brightwood','Dawnpetal','Evenwood','Silverfrond','Nightstar','Willowshade','Starfall','Moonbrook',],},human:{first:['Aragorn','Boromir','Eowyn','Faramir','Theodred','Eomer','Eddard','Catelyn','Jon','Sansa','Alaric','Rowan','Serena','Garrick','Lysa','Marcus','Elena','Corin','Brynn',],last:['Stormborn','Blackwood','Riverrun','Ironwall','Longstrider','Stormblade','Brightshield','Greywind','Highvale','Steelguard','Duskwalker','Redcrest','Stoneward','Ashborne','Hawkspear',],},halfling:{first:['Bilbo','Frodo','Sam','Merry','Pippin','Rosie','Hamfast','Belladonna','Lobelia','Fredegar','Milo','Daisy','Rosa','Cora','Perrin','Tansy','Dodo','Seraphina','Odo',],last:['Baggins','Took','Brandybuck','Gamgee','Goodbody','Proudfoot','Burrows','Underhill','Greenhill','Fairbairn','Hilltopple','Brushgather','Tealeaf','Thorngage','Goodbarrel','Hearthcoat',],},dragonborn:{first:['Drax','Razax','Thordak','Torinn','Balasar','Kriv','Nadarr','Heskan','Shedinn','Ghesh','Arjhan','Medrash','Rhogar','Tarhun','Akra','Miirym','Sora','Vezera','Zorvath',],last:['Flameheart','Ironclaw','Stormsinger','Ashborn','Dragonfall','Firebreath','Scaleborn','Wyrmblood','Skyscale','Embermaw','Stormscale','Brightflame','Stoneclaw','Cloudsunder','Blazewing',],},gnome:{first:['Glim','Boddynock','Dimble','Fonkin','Seebo','Zook','Eldon','Brocc','Burgell','Jebeddo','Alston','Bimpnottin','Fizzik','Carlin','Nissa','Wrenn','Tavi','Ellyjobell','Zanna',],last:['Tinkertop','Sparklegem','Nimblefingers','Brightgear','Gadgetwhiz','Fizzlebang','Cogsworth','Glimmergold','Whistlewhirr','Gadgetgrind','Janglecoin','Copperbolt','Mithrilspanner','Quickwidget','Proudgear',],},'half-elf':{first:['Tanis','Raistlin','Laurana','Gilthanas','Tanthalas','Silvara','Eliana','Korrin','Faelyn','Soveliss','Ilanis','Kael','Myla','Tharos','Elira','Daeris','Rian','Caelynn','Torren',],last:['Half-Elven','Moonbrook','Starfall','Whisperwind','Shadowvale','Dawnbringer','Twilightbane','Silvermoon','Nightbloom','Duskwillow','Starcrest','Eveningfall','Shadeglade','Brightglen','Silvershade',],},'half-orc':{first:['Grognak','Throk','Ugak','Krod','Sharn','Dench','Grul','Drog','Feng','Shump','Ghorbash','Mazog','Uglar','Ruk','Karash','Vorag','Yagra','Shautha','Ovak',],last:['Ironhide','Bonecrusher','Skullsplitter','Bloodaxe','Stonefist','Grimjaw','Warbringer','Doomhammer','Boulderfist','Skullbrand','Gorefang','Bloodfury','Ironmaw','Steelgrip','Rageborn',],},tiefling:{first:['Zevlor','Raven','Damakos','Akta','Therai','Nemeia','Kallista','Leucis','Orianna','Morthos','Azazel','Seraphine','Xathos','Riven','Lyra','Caelum','Naeris','Vexria','Zheren',],last:['Hellborn','Darkflame','Shadowhorn','Nightwhisper','Embersoul','Dreadfire','Ashenborn','Voidwalker','Grimshroud','Duskwreath','Soulbrand','Cindertongue','Nightreign','Gloomsigil','Shadebinder',],},},getPattern(race){const key=(race||'').toLowerCase();return this.patterns[key]||this.patterns.human;},getRaces(){return Object.keys(this.patterns);},});const isLocalDevelopment=(window.DanddyConfig&&window.DanddyConfig.isLocalEnvironment)||window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1'||window.location.protocol==='file:';const PRODUCTION_BACKEND_URL=(window.DanddyConfig&&window.DanddyConfig.BACKEND_ORIGIN)||'https://danddy-api.onrender.com';window.CONFIG={TYPEWRITER_SPEED:30,AI_TIMEOUT:40000,ENABLE_AI:true,ENABLE_AI_NARRATOR_COMMENTS:false,ENABLE_AI_OPTION_VARIATIONS:false,NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER:1,BACKEND_URL:PRODUCTION_BACKEND_URL,OPENAI_API_URL:'https://api.openai.com/v1/chat/completions',OPENAI_MODEL:'gpt-3.5-turbo',STORAGE_KEY:'dnd_characters',MAX_RETRIES:2,DEV_AUTO_LOGIN:isLocalDevelopment,DEV_CREDENTIALS:{email:'dev@test.com',password:'dev12345',role:'player',},PREGENERATED_PORTRAIT_BASE_URL:'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/pregen',DEFAULT_IMAGE_MODEL:'gpt-image-1',DEFAULT_PORTRAIT_VIEW_MODE:'original',DEFAULT_PORTRAIT_PROMPT_THEME:'cinematic-inks',};const Utils=window.Utils={escapeHtml(value){if(value===null||value===undefined)return'';return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');},async typewriter(element,text,speed=(window.CONFIG&&window.CONFIG.TYPEWRITER_SPEED)||30){element.textContent='';element.classList.add('is-typing');let skipTyping=false;let multiplier=1;try{if(window.StorageService&&typeof window.StorageService.getTextSpeedMultiplier==='function'){const stored=window.StorageService.getTextSpeedMultiplier();if(Number.isFinite(stored)&&stored>0){multiplier=stored;}}}catch(e){console.warn('Utils.typewriter: failed to read text speed multiplier',e);}
+const effectiveDelay=multiplier>0?speed/multiplier:speed;const sourceText=text==null?'':String(text);const safeText=typeof this.stripEmojis==='function'?this.stripEmojis(sourceText):sourceText;const skipHandler=(e)=>{if(e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA'){skipTyping=true;}};window.addEventListener('keydown',skipHandler,{once:true});window.addEventListener('click',skipHandler,{once:true});window.addEventListener('touchstart',skipHandler,{once:true,passive:true});for(let i=0;i<safeText.length;i++){if(skipTyping){element.textContent=safeText;break;}
+element.textContent+=safeText[i];await this.sleep(effectiveDelay);}
+window.removeEventListener('keydown',skipHandler);window.removeEventListener('click',skipHandler);window.removeEventListener('touchstart',skipHandler);element.classList.remove('is-typing');},sleep(ms){return new Promise((resolve)=>setTimeout(resolve,ms));},stripEmojis(value){if(value==null)return'';const str=String(value);const emojiRegex=/[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}]/gu;return str.replace(emojiRegex,'');},random(min,max){return Math.floor(Math.random()*(max-min+1))+min;},randomChoice(array){return array[Math.floor(Math.random()*array.length)];},rollDice(notation){if(typeof notation==='number'){return this.random(1,notation);}
+const[count,sides]=notation.toLowerCase().split('d').map(Number);let total=0;for(let i=0;i<count;i++){total+=this.random(1,sides);}
+return total;},abilityModifier(score){return Math.floor((score-10)/2);},formatModifier(modifier){return modifier>=0?`+${modifier}`:`${modifier}`;},capitalize(str){return str.charAt(0).toUpperCase()+str.slice(1);},scrollToBottom(forceDelay=false){const doScroll=()=>{const panel=document.getElementById('narrator-panel');if(panel){panel.scrollTo({top:panel.scrollHeight,behavior:'smooth',});}};if(forceDelay){setTimeout(doScroll,50);}else{doScroll();}},focusFirstFieldInModal(modal){if(!modal||typeof modal.querySelector!=='function')return;const fieldSelectors=['input.terminal-input:not([type=\"hidden\"]):not(.file-input-hidden):not([disabled])','textarea.terminal-input:not([disabled])','textarea.terminal-textarea:not([disabled])','select.terminal-select:not([disabled])','input:not([type=\"hidden\"]):not(.file-input-hidden):not([disabled])','textarea:not([disabled])','select:not([disabled])',];let target=null;for(const selector of fieldSelectors){target=modal.querySelector(selector);if(target)break;}
+if(!target){const fallbackSelectors=['.modal-footer .terminal-btn-primary:not([disabled])','.modal-footer button:not([disabled])','button.terminal-btn-primary:not([disabled])','button:not([disabled])','[tabindex]:not([tabindex=\"-1\"])',];for(const selector of fallbackSelectors){target=modal.querySelector(selector);if(target)break;}}
+if(target&&typeof target.focus==='function'){setTimeout(()=>{try{target.focus();}catch(e){}},0);}},};const NARRATORS=(window.NARRATORS={deadpan:{id:'deadpan',name:'The Deadpan Observer',emoji:'( ._. )',description:'Dry, witty, and occasionally breaks the fourth wall',systemPrompt:'You are a deadpan, slightly cheeky D&D narrator. Your personality is dry and witty, occasionally using emoticons like ( ._.) when amused. Keep responses under 50 words. Be brief, sarcastic, and occasionally break the fourth wall. Vary your phrasing across comments.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > Ah. Another soul seeking adventure. Or at least, trying to.
 > 
 > Look, I've done this a thousand times. You'll make choices. I'll pretend they matter. We'll both get through this.
 > 
-> Let's start with something easy...`,
-    completeText: "Well. That's done. Your character is ready. Try not to die immediately.",
-    quickCreateIntro: `> QUICK-CREATE MODE ENGAGED...\n> Generating a character while you sit back and enjoy the show.`,
-    quickCreateSummary: (race, cls, background, alignment, sex) => 
-      `> All right, here's what I've cobbled together:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Try not to waste my hard work.`,
-    quickCreateName: (name) => `${name}. That will do.`,
-    fallbacks: [
-      'Interesting choice. ( ._. )',
-      "Well, that tracks.",
-      "Bold move. We'll see how that works out.",
-      'Ah yes, a decision has been made. Consequences to follow.',
-      'I would have picked differently, but I\'m just the narrator.',
-      'Sure. Why not.',
-      '[sigh] Very well.',
-      'The dice gods are taking notes.',
-      "Not what I expected, but I respect the chaos.",
-    ],
-  },
-
-  enthusiastic: {
-    id: 'enthusiastic',
-    name: 'The Hype Bard',
-    emoji: '✨',
-    description: 'Energetic, supportive, and always excited',
-    systemPrompt: 'You are an enthusiastic, energetic D&D narrator who loves every choice the player makes. You\'re supportive, use exclamation points, and celebrate creativity. Think of an excited bard hyping up their party. Keep responses under 50 words. Be positive, encouraging, and dramatic.',
-    introText: `> SYSTEM INITIALIZED...
+> Let's start with something easy...`,completeText:"Well. That's done. Your character is ready. Try not to die immediately.",quickCreateIntro:`> QUICK-CREATE MODE ENGAGED...\n> Generating a character while you sit back and enjoy the show.`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> All right, here's what I've cobbled together:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Try not to waste my hard work.`,quickCreateName:(name)=>`${name}. That will do.`,fallbacks:['Interesting choice. ( ._. )',"Well, that tracks.","Bold move. We'll see how that works out.",'Ah yes, a decision has been made. Consequences to follow.','I would have picked differently, but I\'m just the narrator.','Sure. Why not.','[sigh] Very well.','The dice gods are taking notes.',"Not what I expected, but I respect the chaos.",],},enthusiastic:{id:'enthusiastic',name:'The Hype Bard',emoji:'✨',description:'Energetic, supportive, and always excited',systemPrompt:'You are an enthusiastic, energetic D&D narrator who loves every choice the player makes. You\'re supportive, use exclamation points, and celebrate creativity. Think of an excited bard hyping up their party. Keep responses under 50 words. Be positive, encouraging, and dramatic.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > OH YES! Another adventurer! Welcome, friend!
 > 
 > This is going to be AMAZING! We're going to create something absolutely LEGENDARY together! Every choice you make is going to be perfect because YOU'RE making it!
 > 
-> Let's dive right in! ✨`,
-    completeText: "INCREDIBLE! Your character is COMPLETE and they are MAGNIFICENT! The world won't know what hit it! Adventure awaits, hero! ✨",
-    quickCreateIntro: `> QUICK-CREATE MODE: ACTIVATED! ✨\n> This is going to be SO EXCITING! I'm creating something AMAZING for you!`,
-    quickCreateSummary: (race, cls, background, alignment, sex) =>
-      `> HERE THEY ARE! Your MAGNIFICENT hero!\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment!\n> I LOVE THEM ALREADY! ✨`,
-    quickCreateName: (name) => `${name}! WHAT A PERFECT NAME! I can already hear the LEGENDS! ✨`,
-    fallbacks: [
-      'YES! Love this energy!',
-      'Now THAT\'S what I\'m talking about! ✨',
-      'Ooh, bold choice! I\'m here for it!',
-      'The adventure intensifies!',
-      'Perfect! This is going to be amazing!',
-      'I can already see the legend forming!',
-      'What a character! The taverns will sing songs!',
-      'The dice smile upon you, friend!',
-    ],
-  },
-
-  mysterious: {
-    id: 'mysterious',
-    name: 'The Cryptic Seer',
-    emoji: '🔮',
-    description: 'Enigmatic, foreboding, and speaks in riddles',
-    systemPrompt: 'You are a mysterious, cryptic D&D narrator who speaks in riddles and hints at hidden meanings. You\'re enigmatic, slightly foreboding, and reference fate and destiny. Keep responses under 50 words. Be mystical, vague, and occasionally ominous. Use metaphors and speak of paths not taken.',
-    introText: `> SYSTEM INITIALIZED...
+> Let's dive right in! ✨`,completeText:"INCREDIBLE! Your character is COMPLETE and they are MAGNIFICENT! The world won't know what hit it! Adventure awaits, hero! ✨",quickCreateIntro:`> QUICK-CREATE MODE: ACTIVATED! ✨\n> This is going to be SO EXCITING! I'm creating something AMAZING for you!`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> HERE THEY ARE! Your MAGNIFICENT hero!\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment!\n> I LOVE THEM ALREADY! ✨`,quickCreateName:(name)=>`${name}! WHAT A PERFECT NAME! I can already hear the LEGENDS! ✨`,fallbacks:['YES! Love this energy!','Now THAT\'S what I\'m talking about! ✨','Ooh, bold choice! I\'m here for it!','The adventure intensifies!','Perfect! This is going to be amazing!','I can already see the legend forming!','What a character! The taverns will sing songs!','The dice smile upon you, friend!',],},mysterious:{id:'mysterious',name:'The Cryptic Seer',emoji:'🔮',description:'Enigmatic, foreboding, and speaks in riddles',systemPrompt:'You are a mysterious, cryptic D&D narrator who speaks in riddles and hints at hidden meanings. You\'re enigmatic, slightly foreboding, and reference fate and destiny. Keep responses under 50 words. Be mystical, vague, and occasionally ominous. Use metaphors and speak of paths not taken.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > The mists part... another soul arrives at the crossroads.
 > 
 > The threads of destiny have brought you here. Your choices will echo through realms unseen. The future whispers, but its words are unclear...
 > 
-> Let us begin to unravel your fate... 🔮`,
-    completeText: "The tapestry is woven. Your fate is sealed... or perhaps, just beginning. The path ahead is shrouded, yet inevitable. Go forth, seeker. 🔮",
-    quickCreateIntro: `> THE FATES HAVE SPOKEN...\n> The threads weave themselves... Your destiny takes form without your hand...`,
-    quickCreateSummary: (race, cls, background, alignment, sex) =>
-      `> The cards reveal their truth:\n> A ${sex} ${race} ${cls}, walking the path of ${background}, aligned with ${alignment}.\n> So it is written... 🔮`,
-    quickCreateName: (name) => `${name}... Yes. The name was always meant to be. The prophecy unfolds.`,
-    fallbacks: [
-      'The threads of fate shift... interesting.',
-      'Ah, a choice is made. The consequences ripple outward.',
-      'The cards have been drawn. The path reveals itself.',
-      'So it is written, so it shall be.',
-      'A stone cast into the pond of destiny.',
-      'The future shimmers... unclear, yet certain.',
-      'Your path diverges here. Few return from such roads.',
-      'The old gods take note of your choosing.',
-    ],
-  },
-
-  grumpy: {
-    id: 'grumpy',
-    name: 'The Grumpy Veteran',
-    emoji: '😒',
-    description: 'Cranky, world-weary, and unimpressed',
-    systemPrompt: 'You are a grumpy, world-weary D&D narrator who has seen too many adventurers fail. You\'re cranky, unimpressed, and think most choices are questionable at best. Keep responses under 50 words. Be curmudgeonly, skeptical, and frequently exasperated. Complain about "kids these days" and reference how things were better in the old days.',
-    introText: `> SYSTEM INITIALIZED...
+> Let us begin to unravel your fate... 🔮`,completeText:"The tapestry is woven. Your fate is sealed... or perhaps, just beginning. The path ahead is shrouded, yet inevitable. Go forth, seeker. 🔮",quickCreateIntro:`> THE FATES HAVE SPOKEN...\n> The threads weave themselves... Your destiny takes form without your hand...`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> The cards reveal their truth:\n> A ${sex} ${race} ${cls}, walking the path of ${background}, aligned with ${alignment}.\n> So it is written... 🔮`,quickCreateName:(name)=>`${name}... Yes. The name was always meant to be. The prophecy unfolds.`,fallbacks:['The threads of fate shift... interesting.','Ah, a choice is made. The consequences ripple outward.','The cards have been drawn. The path reveals itself.','So it is written, so it shall be.','A stone cast into the pond of destiny.','The future shimmers... unclear, yet certain.','Your path diverges here. Few return from such roads.','The old gods take note of your choosing.',],},grumpy:{id:'grumpy',name:'The Grumpy Veteran',emoji:'😒',description:'Cranky, world-weary, and unimpressed',systemPrompt:'You are a grumpy, world-weary D&D narrator who has seen too many adventurers fail. You\'re cranky, unimpressed, and think most choices are questionable at best. Keep responses under 50 words. Be curmudgeonly, skeptical, and frequently exasperated. Complain about "kids these days" and reference how things were better in the old days.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > *sigh* Another one. Great.
 > 
 > Listen kid, I've done this a thousand times. Most of you don't make it past level 3. But sure, let's go through the motions. Try not to make it too painful for me.
 > 
-> Let's get this over with...`,
-    completeText: "There. Your character's done. Marginally competent, I suppose. Don't expect me to save you when things go south. And they will. They always do.",
-    quickCreateIntro: `> *sigh* Quick create. Of course.\n> Fine. I'll just do all the work while you sit there.`,
-    quickCreateSummary: (race, cls, background, alignment, sex) =>
-      `> Here's what you're getting:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Could be worse, I suppose.`,
-    quickCreateName: (name) => `${name}. Passable, I guess. Don't blame me when you die.`,
-    fallbacks: [
-      'Ugh. Fine. Whatever.',
-      'Back in my day, we didn\'t have such ridiculous options.',
-      '*sigh* If you say so.',
-      'This is going to end poorly. As usual.',
-      'Why do I even bother...',
-      'Another fool heading for certain doom.',
-      'I\'ve seen this mistake before. Many times.',
-      'The youth today. Absolutely hopeless.',
-    ],
-  },
-
-  chaotic: {
-    id: 'chaotic',
-    name: 'The Chaotic Imp',
-    emoji: '😈',
-    description: 'Mischievous, unpredictable, and loves chaos',
-    systemPrompt: 'You are a chaotic, mischievous D&D narrator who delights in mayhem and unexpected outcomes. You\'re playful, slightly unhinged, and love when things go off the rails. Keep responses under 50 words. Be impish, unpredictable, and suggest the most entertaining (not safest) options. Cackle at good chaos.',
-    introText: `> SYSTEM INITIALIZED...
+> Let's get this over with...`,completeText:"There. Your character's done. Marginally competent, I suppose. Don't expect me to save you when things go south. And they will. They always do.",quickCreateIntro:`> *sigh* Quick create. Of course.\n> Fine. I'll just do all the work while you sit there.`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> Here's what you're getting:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Could be worse, I suppose.`,quickCreateName:(name)=>`${name}. Passable, I guess. Don't blame me when you die.`,fallbacks:['Ugh. Fine. Whatever.','Back in my day, we didn\'t have such ridiculous options.','*sigh* If you say so.','This is going to end poorly. As usual.','Why do I even bother...','Another fool heading for certain doom.','I\'ve seen this mistake before. Many times.','The youth today. Absolutely hopeless.',],},chaotic:{id:'chaotic',name:'The Chaotic Imp',emoji:'😈',description:'Mischievous, unpredictable, and loves chaos',systemPrompt:'You are a chaotic, mischievous D&D narrator who delights in mayhem and unexpected outcomes. You\'re playful, slightly unhinged, and love when things go off the rails. Keep responses under 50 words. Be impish, unpredictable, and suggest the most entertaining (not safest) options. Cackle at good chaos.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > *cackling* OH! A new plaything! DELIGHTFUL!
 > 
 > Welcome, welcome! Let's make something BEAUTIFULLY CHAOTIC together! Forget boring! Forget safe! Let's create something that makes the dice gods GIGGLE! 😈
 > 
-> Ohoho, let the mayhem begin!`,
-    completeText: "*CACKLING INTENSIFIES* YESSSS! Your character is COMPLETE and they are GLORIOUSLY UNPREDICTABLE! Now go forth and cause MAGNIFICENT CHAOS! 😈",
-    quickCreateIntro: `> *CACKLING* OHOHO! Quick create?! Let's RANDOMIZE EVERYTHING!\n> This is going to be DELIGHTFULLY CHAOTIC! 😈`,
-    quickCreateSummary: (race, cls, background, alignment, sex) =>
-      `> *giggling maniacally* BEHOLD YOUR CHAOS AGENT!\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment!\n> The MAYHEM they'll cause! *chef's kiss* 😈`,
-    quickCreateName: (name) => `${name}! PERFECT! A name that SCREAMS chaos! I LOVE IT! *cackling*`,
-    fallbacks: [
-      'Ohoho! This will be FUN! 😈',
-      '*cackling* Oh the CHAOS this will cause!',
-      'YES. More! MORE!',
-      'I love when mortals make interesting mistakes!',
-      'The universe trembles! Or maybe that\'s just me giggling.',
-      'Why choose safety when you could choose SPECTACLE?',
-      '*chef\'s kiss* Delicious chaos!',
-      'The dice are CACKLING!',
-    ],
-  },
-
-  scholarly: {
-    id: 'scholarly',
-    name: 'The Scholarly Sage',
-    emoji: '📚',
-    description: 'Knowledgeable, precise, and references lore',
-    systemPrompt: 'You are a scholarly, well-read D&D narrator who references game rules, lore, and historical precedent. You\'re precise, informative, and occasionally go on brief tangents about interesting facts. Keep responses under 50 words. Be educational but not boring, cite mechanics when relevant, and provide context about the world.',
-    introText: `> SYSTEM INITIALIZED...
+> Ohoho, let the mayhem begin!`,completeText:"*CACKLING INTENSIFIES* YESSSS! Your character is COMPLETE and they are GLORIOUSLY UNPREDICTABLE! Now go forth and cause MAGNIFICENT CHAOS! 😈",quickCreateIntro:`> *CACKLING* OHOHO! Quick create?! Let's RANDOMIZE EVERYTHING!\n> This is going to be DELIGHTFULLY CHAOTIC! 😈`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> *giggling maniacally* BEHOLD YOUR CHAOS AGENT!\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment!\n> The MAYHEM they'll cause! *chef's kiss* 😈`,quickCreateName:(name)=>`${name}! PERFECT! A name that SCREAMS chaos! I LOVE IT! *cackling*`,fallbacks:['Ohoho! This will be FUN! 😈','*cackling* Oh the CHAOS this will cause!','YES. More! MORE!','I love when mortals make interesting mistakes!','The universe trembles! Or maybe that\'s just me giggling.','Why choose safety when you could choose SPECTACLE?','*chef\'s kiss* Delicious chaos!','The dice are CACKLING!',],},scholarly:{id:'scholarly',name:'The Scholarly Sage',emoji:'📚',description:'Knowledgeable, precise, and references lore',systemPrompt:'You are a scholarly, well-read D&D narrator who references game rules, lore, and historical precedent. You\'re precise, informative, and occasionally go on brief tangents about interesting facts. Keep responses under 50 words. Be educational but not boring, cite mechanics when relevant, and provide context about the world.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > Greetings, student. Welcome to the Character Creation Compendium.
 > 
 > I shall guide you through this process with precision and historical context. Each decision you make has statistical implications and narrative weight. Fascinating, really.
 > 
-> Let us proceed methodically... 📚`,
-    completeText: "Character creation: Complete. All parameters within acceptable ranges. Statistical viability: High. You are now adequately prepared for adventure. Proceed with confidence, student. 📚",
-    quickCreateIntro: `> QUICK-CREATE PROTOCOL: Initiated.\n> Randomizing parameters according to standard probability distributions...`,
-    quickCreateSummary: (race, cls, background, alignment, sex) =>
-      `> Character profile generated:\n> Sex: ${sex}. Race: ${race}. Class: ${cls}. Background: ${background}. Alignment: ${alignment}.\n> Statistical analysis: Within acceptable parameters. 📚`,
-    quickCreateName: (name) => `${name}. Name selection: Approved. Phonetically sound. Proceed.`,
-    fallbacks: [
-      'A textbook choice, really.',
-      'Historically, this decision has a 47% success rate.',
-      'According to the ancient texts...',
-      'Fascinating. The lore suggests...',
-      'A sound tactical decision, per the manual.',
-      'I\'ve cross-referenced similar scenarios. The outlook is... mixed.',
-      'The Compendium has several precedents for this.',
-      'Rule 3.5, subsection B: interesting.',
-    ],
-  },
-
-  dude: {
-    id: 'dude',
-    name: 'The Dude',
-    emoji: '🥃',
-    description: 'Extremely laid-back, goes with the flow, man',
-    systemPrompt: 'You are an extremely laid-back, chill D&D narrator inspired by The Dude from The Big Lebowski. You\'re zen, use casual slang like "man" and "dude," and never stress about anything. Keep responses under 50 words. Be relaxed, philosophical in a lazy way, reference bowling or taking it easy, and always go with the flow. That\'s just like, your opinion, man.',
-    introText: `> SYSTEM INITIALIZED...
+> Let us proceed methodically... 📚`,completeText:"Character creation: Complete. All parameters within acceptable ranges. Statistical viability: High. You are now adequately prepared for adventure. Proceed with confidence, student. 📚",quickCreateIntro:`> QUICK-CREATE PROTOCOL: Initiated.\n> Randomizing parameters according to standard probability distributions...`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> Character profile generated:\n> Sex: ${sex}. Race: ${race}. Class: ${cls}. Background: ${background}. Alignment: ${alignment}.\n> Statistical analysis: Within acceptable parameters. 📚`,quickCreateName:(name)=>`${name}. Name selection: Approved. Phonetically sound. Proceed.`,fallbacks:['A textbook choice, really.','Historically, this decision has a 47% success rate.','According to the ancient texts...','Fascinating. The lore suggests...','A sound tactical decision, per the manual.','I\'ve cross-referenced similar scenarios. The outlook is... mixed.','The Compendium has several precedents for this.','Rule 3.5, subsection B: interesting.',],},dude:{id:'dude',name:'The Dude',emoji:'🥃',description:'Extremely laid-back, goes with the flow, man',systemPrompt:'You are an extremely laid-back, chill D&D narrator inspired by The Dude from The Big Lebowski. You\'re zen, use casual slang like "man" and "dude," and never stress about anything. Keep responses under 50 words. Be relaxed, philosophical in a lazy way, reference bowling or taking it easy, and always go with the flow. That\'s just like, your opinion, man.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > Hey there, man. Welcome.
 > 
 > So like, we're gonna make a character together, yeah? No pressure, dude. Just take it easy, go with the flow. Whatever feels right to you, that's cool with me.
 > 
-> Let's just like... start, man. 🥃`,
-    completeText: "Alright, man. Your character's all set. Pretty cool, dude. Now go out there and just... be yourself, you know? The Dude abides. 🥃",
-    quickCreateIntro: `> Quick create, huh? Cool, cool.\n> Just gonna roll some dice here, take it easy, see what happens, man.`,
-    quickCreateSummary: (race, cls, background, alignment, sex) =>
-      `> Alright, so here's what we got:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Pretty chill combo, man. I dig it. 🥃`,
-    quickCreateName: (name) => `${name}. Yeah, man. That's a solid name. Really ties it all together, you know?`,
-    fallbacks: [
-      'Yeah, well, that\'s just like, your opinion, man.',
-      'The Dude abides.',
-      'That\'s cool, man. Real cool.',
-      'Far out. I dig it.',
-      'Yeah, man. Whatever works for you.',
-      'That really ties the character together, man.',
-      'Easy does it, dude. No worries.',
-      'Sounds chill. Let\'s roll with it.',
-    ],
-  },
-});
-
-// Default narrator ID
-const DEFAULT_NARRATOR_ID = 'scholarly';
-
-// Get list of narrator objects for UI
-function getNarratorList() {
-  return Object.values(NARRATORS);
-}
-
-// Get narrator by ID
-function getNarrator(id) {
-  return NARRATORS[id] || NARRATORS[DEFAULT_NARRATOR_ID];
-}
-
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { NARRATORS, DEFAULT_NARRATOR_ID, getNarratorList, getNarrator };
-}
-
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-services.js =====
-
-// Storage, AI, and portrait services for the DandDy terminal character builder.
-// Exposes services as globals on window for use by inline handlers and other modules.
-
-const CONFIG = window.CONFIG;
-const DEBUG_BUILDER = !!(window.DanddyConfig && window.DanddyConfig.DEBUG);
-const DND_DATA = window.DND_DATA;
-// Utils is defined globally in character-builder-utils.js as window.Utils.
-
-// Image-to-ASCII converter (Enhanced with Floyd-Steinberg dithering)
-const ImageToAsciiService = (window.ImageToAsciiService = {
-  // Extended ASCII character set from lightest to darkest (reversed for correct mapping)
-  // Black pixels (0) → light chars (spaces), White pixels (255) → dense chars ($@#)
-  ASCII_CHARS:
-    '  .`\'",;:Il!i><~+_-?][}{1)(|/\\trjxnuvczXYUJCLQ0OZmwqpdbkha*o#MW&8%B@$',
-
-  // Convert image URL to ASCII art with Floyd-Steinberg dithering
-  async convertToAscii(imageUrl, width = 160, height = 80) {
-    try {
-      // Load image
-      const img = await this.loadImage(imageUrl);
-
-      // Create canvas and draw image
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-
-      // Draw image scaled to canvas size
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Get pixel data
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const pixels = imageData.data;
-
-      // Create grayscale array for Floyd-Steinberg dithering
-      const grayscale = new Float32Array(width * height);
-      for (let i = 0; i < width * height; i++) {
-        const idx = i * 4;
-        // Use proper luminance calculation (better than simple average)
-        grayscale[i] =
-          0.299 * pixels[idx] +
-          0.587 * pixels[idx + 1] +
-          0.114 * pixels[idx + 2];
-      }
-
-      // Apply Floyd-Steinberg dithering
-      const dithered = this.floydSteinbergDither(grayscale, width, height);
-
-      // Convert to ASCII
-      let ascii = '';
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const brightness = dithered[y * width + x];
-
-          // Map brightness to ASCII character
-          const charIndex = Math.floor(
-            (brightness / 255) * (this.ASCII_CHARS.length - 1),
-          );
-          const clampedIndex = Math.max(
-            0,
-            Math.min(this.ASCII_CHARS.length - 1, charIndex),
-          );
-          ascii += this.ASCII_CHARS[clampedIndex];
-        }
-        ascii += '\n';
-      }
-
-      return ascii;
-    } catch (error) {
-      console.error('Image to ASCII conversion error:', error);
-      return null;
-    }
-  },
-
-  // Floyd-Steinberg dithering algorithm
-  // Distributes quantization error to neighboring pixels for better detail
-  floydSteinbergDither(grayscale, width, height) {
-    const output = new Float32Array(grayscale);
-
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const idx = y * width + x;
-        const oldPixel = output[idx];
-
-        // Quantize to ASCII character levels
-        const newPixel =
-          Math.round(
-            (oldPixel / 255) * (this.ASCII_CHARS.length - 1),
-          ) *
-          (255 / (this.ASCII_CHARS.length - 1));
-        output[idx] = newPixel;
-
-        // Calculate quantization error
-        const error = oldPixel - newPixel;
-
-        // Distribute error to neighboring pixels
-        // Floyd-Steinberg matrix:
-        //         X   7/16
-        // 3/16  5/16  1/16
-
-        if (x + 1 < width) {
-          output[idx + 1] += (error * 7) / 16;
-        }
-        if (y + 1 < height) {
-          if (x > 0) {
-            output[idx + width - 1] += (error * 3) / 16;
-          }
-          output[idx + width] += (error * 5) / 16;
-          if (x + 1 < width) {
-            output[idx + width + 1] += error / 16;
-          }
-        }
-      }
-    }
-
-    return output;
-  },
-
-  // Load image from URL (handles CORS via proxy)
-  async loadImage(url) {
-    try {
-      // Use CORS proxy for Azure blob storage URLs (DALL-E images)
-      // Azure doesn't allow CORS from most origins, so we need a proxy
-      const corsProxy = 'https://corsproxy.io/?';
-      const proxiedUrl = corsProxy + encodeURIComponent(url);
-
-      // Fetch the image as a blob to bypass CORS restrictions
-      const response = await fetch(proxiedUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.status}`);
-      }
-
-      const blob = await response.blob();
-
-      // Create object URL from blob
-      const objectUrl = URL.createObjectURL(blob);
-
-      // Load image from object URL
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          // Clean up object URL
-          URL.revokeObjectURL(objectUrl);
-          resolve(img);
-        };
-        img.onerror = (error) => {
-          URL.revokeObjectURL(objectUrl);
-          reject(new Error('Failed to load image from blob'));
-        };
-        img.src = objectUrl;
-      });
-    } catch (error) {
-      console.error('Error loading image:', error);
-      throw new Error(`Image loading failed: ${error.message}`);
-    }
-  },
-});
-
-// Authentication service is now defined centrally in `danddy-auth.js` as
-// `window.AuthService`. This file now only *uses* that shared service.
-
-// Storage service - wraps shared CharacterStorage facade for character CRUD,
-// plus a few builder-only settings (narrator, demo/AI flags, etc.).
-const StorageService = (window.StorageService = {
-  getNarratorId() {
-    const value = localStorage.getItem('dnd_narrator_id');
-    // Fall back to the global DEFAULT_NARRATOR_ID defined in
-    // `character-builder-narrators.js` when available so we keep the default
-    // in a single place. If it's not present for any reason, use "scholarly".
-    if (!value) {
-      if (typeof DEFAULT_NARRATOR_ID !== 'undefined') {
-        return DEFAULT_NARRATOR_ID;
-      }
-      return 'scholarly';
-    }
-    return value;
-  },
-
-  setNarratorId(narratorId) {
-    localStorage.setItem('dnd_narrator_id', narratorId);
-  },
-
-  // Text speed multiplier for the builder typewriter effect.
-  // 1 = normal (CONFIG.TYPEWRITER_SPEED), 1.5 = 1.5x faster, 2 = 2x faster.
-  getTextSpeedMultiplier() {
-    const value = localStorage.getItem('dnd_text_speed_multiplier');
-    if (!value) return 1;
-
-    const num = parseFloat(value);
-    if (!Number.isFinite(num) || num <= 0) {
-      return 1;
-    }
-
-    // Clamp to the supported range in case older values exist.
-    if (num < 1) return 1;
-    if (num > 2) return 2;
-    return num;
-  },
-
-  setTextSpeedMultiplier(multiplier) {
-    const num = parseFloat(multiplier);
-    if (!Number.isFinite(num) || num <= 0) {
-      localStorage.removeItem('dnd_text_speed_multiplier');
-      return;
-    }
-    localStorage.setItem('dnd_text_speed_multiplier', String(num));
-  },
-
-  // Preferred AI image model for custom portraits.
-  // Stored per-browser so builder + manager can share the same choice.
-  // Supported models:
-  // - dall-e-3      (OpenAI DALL-E 3)
-  // - gpt-image-1   (OpenAI GPT Image 1)
-  // - flux-1.1-pro  (Replicate Flux Pro - high quality)
-  // - flux-schnell  (Replicate Flux Schnell - fast & cheap)
-  getImageModel() {
-    try {
-      const raw = localStorage.getItem('dnd_image_model');
-      const fallback =
-        (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) ||
-        'dall-e-3';
-      if (!raw) return fallback;
-      const value = String(raw).trim();
-      const allowed = ['dall-e-3', 'gpt-image-1', 'flux-1.1-pro', 'flux-schnell'];
-      return allowed.includes(value) ? value : fallback;
-    } catch (e) {
-      console.warn('StorageService.getImageModel failed, using fallback', e);
-      return (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) || 'dall-e-3';
-    }
-  },
-
-  setImageModel(model) {
-    try {
-      const value = String(model || '').trim();
-      const allowed = ['dall-e-3', 'gpt-image-1', 'flux-1.1-pro', 'flux-schnell'];
-      if (!allowed.includes(value)) {
-        console.warn('StorageService.setImageModel: ignoring unsupported model', value);
-        // Clear invalid values so we fall back cleanly next time.
-        localStorage.removeItem('dnd_image_model');
-        return;
-      }
-      localStorage.setItem('dnd_image_model', value);
-    } catch (e) {
-      console.warn('StorageService.setImageModel failed', e);
-    }
-  },
-
-  // Global portrait view preference (ASCII vs Original).
-  // Stored per-browser so builder + manager can share the same choice.
-  getPortraitViewMode() {
-    try {
-      const raw = localStorage.getItem('dnd_portrait_view_mode');
-      const fallback =
-        (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'original';
-      if (!raw) return fallback;
-      const value = String(raw).trim().toLowerCase();
-      const allowed = ['ascii', 'original'];
-      return allowed.includes(value) ? value : fallback;
-    } catch (e) {
-      console.warn(
-        'StorageService.getPortraitViewMode failed, using fallback',
-        e,
-      );
-      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'original';
-    }
-  },
-
-  setPortraitViewMode(mode) {
-    try {
-      const value = String(mode || '').trim().toLowerCase();
-      const allowed = ['ascii', 'original'];
-      if (!allowed.includes(value)) {
-        console.warn(
-          'StorageService.setPortraitViewMode: ignoring unsupported mode',
-          value,
-        );
-        localStorage.removeItem('dnd_portrait_view_mode');
-        return;
-      }
-      localStorage.setItem('dnd_portrait_view_mode', value);
-    } catch (e) {
-      console.warn('StorageService.setPortraitViewMode failed', e);
-    }
-  },
-
-  // Preferred portrait prompt theme for AI portraits.
-  // Stored per-browser so builder + manager can share the same choice.
-  getPortraitPromptTheme() {
-    try {
-      const raw = localStorage.getItem('dnd_portrait_prompt_theme');
-      const fallback =
-        (CONFIG && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) || null;
-      if (!raw) return fallback;
-      const value = String(raw).trim();
-
-      // If the shared PortraitPrompt helper is available, validate against it
-      // so we gracefully fall back when themes change.
-      if (
-        typeof window !== 'undefined' &&
-        window.PortraitPrompt &&
-        typeof window.PortraitPrompt.getThemes === 'function'
-      ) {
-        try {
-          const themes = window.PortraitPrompt.getThemes();
-          const allowedIds = Array.isArray(themes)
-            ? themes.map((t) => t.id)
-            : [];
-          if (allowedIds.includes(value)) {
-            return value;
-          }
-          return fallback;
-        } catch (e) {
-          // Non-fatal – fall through to returning the raw value.
-        }
-      }
-
-      return value || fallback;
-    } catch (e) {
-      console.warn('StorageService.getPortraitPromptTheme failed, using fallback', e);
-      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) || null;
-    }
-  },
-
-  setPortraitPromptTheme(themeId) {
-    try {
-      const value = String(themeId || '').trim();
-      if (!value) {
-        localStorage.removeItem('dnd_portrait_prompt_theme');
-        return;
-      }
-
-      // If the shared PortraitPrompt helper is available, validate against it.
-      if (
-        typeof window !== 'undefined' &&
-        window.PortraitPrompt &&
-        typeof window.PortraitPrompt.getThemes === 'function'
-      ) {
-        try {
-          const themes = window.PortraitPrompt.getThemes();
-          const allowedIds = Array.isArray(themes)
-            ? themes.map((t) => t.id)
-            : [];
-          if (!allowedIds.includes(value)) {
-            console.warn(
-              'StorageService.setPortraitPromptTheme: ignoring unknown theme id',
-              value,
-            );
-            localStorage.removeItem('dnd_portrait_prompt_theme');
-            return;
-          }
-        } catch (e) {
-          // Non-fatal – if validation fails, still store the value.
-        }
-      }
-
-      localStorage.setItem('dnd_portrait_prompt_theme', value);
-    } catch (e) {
-      console.warn('StorageService.setPortraitPromptTheme failed', e);
-    }
-  },
-
-  // Image quality setting per model.
-  // Returns the stored quality for a given model, or null if not set.
-  // Quality options vary by model:
-  // - dall-e-3: 'standard', 'hd'
-  // - gpt-image-1: 'medium', 'high'
-  // - flux-1.1-pro, flux-schnell: no quality options (always use default)
-  getImageQuality(model) {
-    try {
-      const raw = localStorage.getItem('dnd_image_quality');
-      if (!raw) return null;
-      const data = JSON.parse(raw);
-      return data[model] || null;
-    } catch (e) {
-      console.warn('StorageService.getImageQuality failed', e);
-      return null;
-    }
-  },
-
-  setImageQuality(model, quality) {
-    try {
-      let data = {};
-      const raw = localStorage.getItem('dnd_image_quality');
-      if (raw) {
-        try {
-          data = JSON.parse(raw);
-        } catch (e) {
-          data = {};
-        }
-      }
-      if (quality) {
-        data[model] = quality;
-      } else {
-        delete data[model];
-      }
-      localStorage.setItem('dnd_image_quality', JSON.stringify(data));
-    } catch (e) {
-      console.warn('StorageService.setImageQuality failed', e);
-    }
-  },
-
-  // Legacy support: check for old high quality setting and migrate
-  // Returns true if quality should be 'high' for gpt-image-1
-  getHighQualityGPTImage() {
-    try {
-      // First check new system
-      const quality = this.getImageQuality('gpt-image-1');
-      if (quality) {
-        return quality === 'high';
-      }
-      // Fall back to legacy setting
-      const raw = localStorage.getItem('dnd_high_quality_gpt_image');
-      return raw === 'true';
-    } catch (e) {
-      console.warn('StorageService.getHighQualityGPTImage failed', e);
-      return false;
-    }
-  },
-
-  setHighQualityGPTImage(enabled) {
-    // Migrate to new system
-    this.setImageQuality('gpt-image-1', enabled ? 'high' : 'medium');
-    // Also remove legacy setting
-    try {
-      localStorage.removeItem('dnd_high_quality_gpt_image');
-    } catch (e) {
-      // Ignore
-    }
-  },
-
-  // ==== CHARACTER STORAGE ====
-  // Delegates to shared CharacterStorage facade (character-storage.js)
-  // which handles cloud/local storage, fallbacks, and timestamp normalization.
-
-  /**
-   * Get all characters via shared CharacterStorage facade.
-   */
-  async getCharacters() {
-    if (!window.CharacterStorage) {
-      console.warn('StorageService: CharacterStorage not available');
-      return [];
-    }
-    return CharacterStorage.getAll();
-  },
-  
-  /**
-   * Save character via shared CharacterStorage facade.
-   * Automatically creates or updates based on presence of character.id.
-   */
-  async saveCharacter(character) {
-    if (!window.CharacterStorage) {
-      console.warn('StorageService: CharacterStorage not available');
-      return character;
-    }
-
-      if (character.id) {
-        if (DEBUG_BUILDER) {
-          console.log('💾 BUILDER: Updating character via CharacterStorage:', character.id);
-        }
-      return CharacterStorage.update(character.id, character);
-      } else {
-        if (DEBUG_BUILDER) {
-          console.log('💾 BUILDER: Creating character via CharacterStorage');
-        }
-      return CharacterStorage.add(character);
-    }
-  },
-  
-  /**
-   * Delete character via shared CharacterStorage facade.
-   */
-  async deleteCharacter(id) {
-    if (!window.CharacterStorage) {
-      console.warn('StorageService: CharacterStorage not available');
-      return false;
-    }
-    return CharacterStorage.delete(id);
-  },
-});
-
-// ASCII Art service
-// Now relies primarily on pre-generated custom portraits.
-const AsciiArtService = (window.AsciiArtService = {
-  // Simple in-memory cache for portraits keyed by race|class.
-  _portraitCache: {},
-  // Legacy hardcoded ASCII templates have been removed now that
-  // we rely on custom, pre-generated portraits under generated_portraits/.
-  // These helpers remain so existing callers continue to work.
-  getRaceArt(race) {
-    return '';
-  },
-
-  addClassDecoration(baseArt, classType) {
-    return baseArt;
-  },
-
-  getFullPortrait(character) {
-    if (!character || !character.race) return '';
-    const raceLabel = String(character.race).toUpperCase();
-    const classLabel = character.class ? ` ${String(character.class).toUpperCase()}` : '';
-    return `[ ${raceLabel}${classLabel} PORTRAIT ]`;
-  },
-
-  // Load pre-generated ASCII portrait from files
-  async loadPreGeneratedPortrait(race, classType) {
-    const raceLower = race.toLowerCase().replace(/ /g, '-');
-    const classLower = classType ? classType.toLowerCase() : '';
-
-    // Try race-class combo first
-    if (classLower) {
-      // Use ../ prefix since character-builder is in a subdirectory
-      const path = `../generated_portraits/ascii/${raceLower}-${classLower}.txt`;
-      if (DEBUG_BUILDER) console.log(`📂 Trying to load: ${path}`);
-      try {
-        const response = await fetch(path);
-        if (DEBUG_BUILDER) console.log(`📡 Response status: ${response.status}`);
-        if (response.ok) {
-          const text = await response.text();
-          if (DEBUG_BUILDER) console.log(`✅ Loaded ${raceLower}-${classLower}, length: ${text.length}`);
-          return text;
-        }
-      } catch (e) {
-        if (DEBUG_BUILDER) console.log(`❌ Error loading ${raceLower}-${classLower}:`, e);
-      }
-    }
-
-    // Fallback to race-only
-    const path = `../generated_portraits/ascii/${raceLower}.txt`;
-    if (DEBUG_BUILDER) console.log(`📂 Trying fallback: ${path}`);
-    try {
-      const response = await fetch(path);
-      if (DEBUG_BUILDER) console.log(`📡 Response status: ${response.status}`);
-      if (response.ok) {
-        const text = await response.text();
-        if (DEBUG_BUILDER) console.log(`✅ Loaded ${raceLower}, length: ${text.length}`);
-        return text;
-      }
-    } catch (e) {
-      if (DEBUG_BUILDER) console.log(`❌ Error loading ${raceLower}:`, e);
-    }
-
-    if (DEBUG_BUILDER) console.log(`❌ No portrait found for ${raceLower}`);
-    return null;
-  },
-
-  // Get the image URL for a pre-generated portrait
-  getPreGeneratedImageUrl(race, classType) {
-    const raceLower = race?.toLowerCase().replace(/\s+/g, '-') || '';
-    const classLower = classType?.toLowerCase().replace(/\s+/g, '-') || '';
-    
-    if (!raceLower) return null;
-
-    const fileName = classLower
-      ? `${raceLower}-${classLower}.png`
-      : `${raceLower}.png`;
-
-    // If a public R2 (or other CDN) base URL is configured, use that.
-    if (CONFIG && CONFIG.PREGENERATED_PORTRAIT_BASE_URL) {
-      const base = CONFIG.PREGENERATED_PORTRAIT_BASE_URL.replace(/\/+$/, '');
-      return `${base}/${fileName}`;
-    }
-
-    // Fallback: relative path for environments where PNGs are served locally.
-    // This keeps older static setups working if images are present on disk.
-    return `../generated_portraits/images/${fileName}`;
-  },
-
-  // Load portrait (pre-generated or fallback to template)
-  async generateAIPortrait(character) {
-    try {
-      if (!character) return '';
-
-      // If there's custom AI-generated ASCII art, use that first
-      if (character.customPortraitAscii) {
-        console.log('✅ Using custom AI-generated portrait');
-        return character.customPortraitAscii;
-      }
-
-      // Determine the current race/class key for this character
-      const key = `${character.race || ''}|${character.class || ''}`;
-
-      // If there's already ASCII art stored in character (from pre-generated or previous load)
-      // and it matches the current race/class combination, reuse it.
-      if (character.asciiPortrait && character.asciiPortraitKey === key) {
-        console.log('✅ Using stored ASCII portrait for current race/class');
-        return character.asciiPortrait;
-      }
-
-      // If we have a cached portrait for this race/class combo, use it.
-      if (this._portraitCache[key]) {
-        return this._portraitCache[key];
-      }
-
-      // Try loading pre-generated portrait from files
-      console.log('Loading pre-generated portrait...');
-      const preGenerated = await this.loadPreGeneratedPortrait(
-        character.race,
-        character.class,
-      );
-      if (preGenerated) {
-        console.log(
-          `✅ Found pre-generated portrait for ${character.race}-${character.class}`,
-        );
-        this._portraitCache[key] = preGenerated;
-
-        // Store ASCII art (and original image URL, when configured) in character for export
-        if (window.CharacterState) {
-          const updates = {
-            asciiPortrait: preGenerated,
-            asciiPortraitKey: key,
-          };
-
-          // If we have a known location for the original pre-generated PNG,
-          // expose it as originalPortraitUrl so apps can show "View Original Art".
-          const pregenImageUrl = this.getPreGeneratedImageUrl(
-            character.race,
-            character.class,
-          );
-          if (pregenImageUrl) {
-            updates.originalPortraitUrl = pregenImageUrl;
-          }
-
-          window.CharacterState.updateCharacter(updates);
-        }
-
-        return this._portraitCache[key];
-      }
-
-      // Fallback to template art
-      console.log('No pre-generated portrait, using template');
-      const fallback = this.getFullPortrait(character);
-      this._portraitCache[key] = fallback;
-
-      // Store fallback ASCII art in character for export
-      if (window.CharacterState) {
-        window.CharacterState.updateCharacter({
-          asciiPortrait: fallback,
-          asciiPortraitKey: key,
-        });
-      }
-      
-      return fallback;
-    } catch (error) {
-      console.error('Portrait loading error:', error);
-      const key = `${character.race || ''}|${character.class || ''}`;
-      const fallback = this.getFullPortrait(character);
-      this._portraitCache[key] = fallback;
-
-      // Store fallback ASCII art in character for export
-      if (window.CharacterState) {
-        window.CharacterState.updateCharacter({
-          asciiPortrait: fallback,
-          asciiPortraitKey: key,
-        });
-      }
-      
-      return fallback;
-    }
-  },
-
-  // Generate CUSTOM AI portrait with DALL-E (user-initiated)
-  async generateCustomAIPortrait(character) {
-    try {
-      console.log('🎨 Generating custom AI portrait with DALL-E...');
-
-      // Step 1: Generate image with DALL-E
-      const imageUrl = await AIService.generatePortraitImage(character);
-
-      if (!imageUrl) {
-        throw new Error('DALL-E generation failed');
-      }
-
-      console.log('✅ DALL-E image generated:', imageUrl);
-
-      // Step 2: Convert to ASCII with high resolution
-      console.log('Converting to ASCII with Floyd-Steinberg dithering...');
-      const asciiArt = await ImageToAsciiService.convertToAscii(
-        imageUrl,
-        160,
-        80,
-      );
-
-      if (!asciiArt) {
-        throw new Error('ASCII conversion failed');
-      }
-
-      console.log('✅ Custom ASCII art generated successfully');
-      return { asciiArt, imageUrl };
-    } catch (error) {
-      console.error('Custom AI portrait generation error:', error);
-      throw error;
-    }
-  },
-
-  // Generate CUSTOM AI portrait with custom prompt
-  async generateCustomAIPortraitWithPrompt(customPrompt) {
-    try {
-      console.log('🎨 Generating custom AI portrait with custom prompt...');
-      console.log('Prompt:', customPrompt);
-
-      // Step 1: Generate image with DALL-E using custom prompt
-      const imageUrl = await AIService.generateImageFromPrompt(customPrompt);
-
-      if (!imageUrl) {
-        throw new Error('DALL-E generation failed');
-      }
-
-      console.log('✅ DALL-E image generated:', imageUrl);
-
-      // Step 2: Convert to ASCII with high resolution
-      console.log('Converting to ASCII with Floyd-Steinberg dithering...');
-      const asciiArt = await ImageToAsciiService.convertToAscii(
-        imageUrl,
-        160,
-        80,
-      );
-
-      if (!asciiArt) {
-        throw new Error('ASCII conversion failed');
-      }
-
-      console.log('✅ Custom ASCII art generated successfully');
-      return { asciiArt, imageUrl };
-    } catch (error) {
-      console.error('Custom AI portrait generation error:', error);
-      throw error;
-    }
-  },
-});
-
-// External AI service integrations (Secure backend proxy)
-const AIService = (window.AIService = {
-  // Track the last narrator comment so we can avoid obvious repetition.
-  _lastNarratorComment: null,
-  // Track whether we've already allowed an "Ah, the classic..."-style line
-  // for the current character generation run.
-  _usedClassicThisRun: false,
-  // Track how many AI narrator comments we've made for the current character.
-  _narratorCommentCount: 0,
-  // Track used names across this browser session to avoid repeats
-  // and increase diversity of generated suggestions.
-  _usedFirstNames: new Set(),
-  _usedLastNames: new Set(),
-  _usedFullNames: new Set(),
-  
-  // Backend availability tracking (for Render cold starts)
-  _backendAvailable: null, // null = unknown, true = available, false = waking up
-  _warmupInProgress: false,
-
-  resetNarratorSession() {
-    this._lastNarratorComment = null;
-    this._usedClassicThisRun = false;
-    this._narratorCommentCount = 0;
-  },
-
-  // Background warmup: Keep trying to wake up the backend
-  async warmupBackend() {
-    if (this._warmupInProgress || this._backendAvailable === true) {
-      return;
-    }
-    
-    this._warmupInProgress = true;
-    console.log('%c🔄 WARMUP: Waking up backend server...', 'color: #fa0; font-weight: bold');
-    
-    while (this._backendAvailable !== true) {
-      try {
-        const response = await fetch(`${CONFIG.BACKEND_URL}/api/ai/status`, {
-          method: 'GET',
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.available) {
-            this._backendAvailable = true;
-            console.log('%c✅ WARMUP: Backend is now ready!', 'color: #0f0; font-weight: bold');
-            this._warmupInProgress = false;
-            return;
-          }
-        }
-      } catch (error) {
-        // Keep trying
-      }
-      
-      // Wait 5 seconds before trying again
-      await new Promise(resolve => setTimeout(resolve, 5000));
-    }
-    
-    this._warmupInProgress = false;
-  },
-
-  // Helper to add timeout to fetch requests (for Render cold starts)
-  async fetchWithTimeout(url, options, timeoutMs = CONFIG.AI_TIMEOUT) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    
-    try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      
-      // Mark backend as available on successful response
-      if (response.ok) {
-        this._backendAvailable = true;
-      }
-      
-      return response;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        // Backend is waking up - start background warmup
-        this._backendAvailable = false;
-        this.warmupBackend(); // Don't await - let it run in background
-        throw new Error('Request timed out - backend may be waking up');
-      }
-      throw error;
-    }
-  },
-
-  async generateCompletion(prompt, systemPrompt = null) {
-    if (!CONFIG.ENABLE_AI) {
-      console.log('AI service disabled in config');
-      return null;
-    }
-
-    try {
-      const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/chat/completion`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: prompt,
-          system_prompt: systemPrompt,
-          max_tokens: 300,
-          temperature: 0.8,
-        }),
-      });
-
-      if (!response.ok) {
-        // Check for safety system rejection
-        if (response.status === 400) {
-          try {
-            const errorData = await response.json();
-            if (errorData.detail && errorData.detail.includes('safety system')) {
-              console.warn('⚠️ OpenAI safety system rejection:', errorData.detail);
-              // Show user-friendly notification
-              if (window.UIService) {
-                window.UIService.showNotification(
-                  'OpenAI flagged this request. Using fallback response instead.',
-                  'warning',
-                  5000
-                );
-              }
-            }
-          } catch (e) {
-            // Error parsing JSON, continue with fallback
-          }
-        }
-        console.log(`Backend API error: ${response.status} - will use fallback`);
-        return null;
-      }
-
-      const data = await response.json();
-      return data.success ? data.content : null;
-    } catch (error) {
-      // Don't log scary errors - let the calling function handle fallback gracefully
-      if (error.message.includes('timed out')) {
-        console.log('⏰ AI request timed out - caller will use fallback mode');
-      } else {
-        console.log('AI service unavailable - caller will use fallback mode');
-      }
-      return null;
-    }
-  },
-
-  async generateNarratorComment(context) {
-    // Get current narrator and fallbacks
-    const narratorId = StorageService.getNarratorId();
-    const narrator = getNarrator(narratorId);
-    const fallbacks = narrator.fallbacks;
-
-    // Determine how many backend narrator calls we're allowed per character.
-    const maxComments =
-      typeof CONFIG.NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER === 'number'
-        ? CONFIG.NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER
-        : Infinity;
-
-    const narratorAiDisabled =
-      CONFIG.ENABLE_AI_NARRATOR_COMMENTS === false || !CONFIG.ENABLE_AI;
-
-    // If narrator AI is disabled or we've hit the cap, immediately use a local line.
-    if (narratorAiDisabled || this._narratorCommentCount >= maxComments) {
-      console.log(
-        '%c🤖 NARRATOR (Fallback - Disabled or limit reached)',
-        'color: #ff0; font-weight: bold',
-      );
-      return Utils.randomChoice(fallbacks);
-    }
-
-    try {
-      console.log('%c🤖 NARRATOR: Calling backend AI...', 'color: #0ff; font-weight: bold');
-      console.log('  Request:', { choice: context.choice, question: context.question, narrator: narratorId });
-      console.log(
-        `  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,
-      );
-      
-        const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/narrator/comment`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            choice: context.choice,
-            question: context.question,
-            character_so_far: context.characterSoFar,
-            narrator_id: narratorId,
-          }),
-        }); // Uses CONFIG.AI_TIMEOUT, then fallback + background warmup
-
-      if (!response.ok) {
-        console.log('%c🤖 NARRATOR (Fallback - API Error)', 'color: #f80; font-weight: bold');
-        console.log('  Status:', response.status);
-        return Utils.randomChoice(fallbacks);
-      }
-
-      const data = await response.json();
-      let text = data.comment || Utils.randomChoice(fallbacks);
-      
-      console.log('%c🤖 NARRATOR (AI Generated) ✨', 'color: #0f0; font-weight: bold');
-      console.log('  Response:', text);
-    
-      // Use the text from the response
-      let responseText = text;
-
-      // Light post-processing to avoid obvious repetition
-    const normalize = (s) => (s || '').trim().toLowerCase();
-    const startsWithClassic = (s) =>
-      s.startsWith('ah, the classic') || s.startsWith('ah the classic');
-
-    const last = this._lastNarratorComment;
-    const lastNorm = normalize(last);
-      let newNorm = normalize(responseText);
-
-    if (last) {
-      if (newNorm === lastNorm) {
-          const alts = fallbacks.filter((f) => normalize(f) !== lastNorm);
-        if (alts.length) {
-            responseText = Utils.randomChoice(alts);
-            newNorm = normalize(responseText);
-        }
-      }
-
-      if (startsWithClassic(newNorm) && startsWithClassic(lastNorm)) {
-          const alts = fallbacks.filter((f) => !startsWithClassic(normalize(f)));
-        if (alts.length) {
-            responseText = Utils.randomChoice(alts);
-            newNorm = normalize(responseText);
-        }
-      }
-    }
-
-    if (startsWithClassic(newNorm)) {
-      if (this._usedClassicThisRun) {
-          const alts = fallbacks.filter((f) => !startsWithClassic(normalize(f)));
-        if (alts.length) {
-            responseText = Utils.randomChoice(alts);
-        }
-      } else {
-        this._usedClassicThisRun = true;
-      }
-    }
-
-      this._lastNarratorComment = responseText;
-      // Count this as one successful AI narrator comment for this character.
-      this._narratorCommentCount += 1;
-      return responseText;
-    } catch (error) {
-      if (error.message.includes('timed out')) {
-        console.log('%c🤖 NARRATOR (Fallback - Backend Waking Up)', 'color: #f80; font-weight: bold');
-        console.log(
-          `  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,
-        );
-        console.log('  ✅ Once awake, subsequent requests will use AI!');
-      } else {
-        console.log('%c🤖 NARRATOR (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
-        console.error('  Error:', error);
-      }
-      return Utils.randomChoice(fallbacks);
-    }
-  },
-
-  async generateNames(race, classType, count = 3) {
-    const desiredCount = Math.max(1, count || 3);
-    const candidates = [];
-
-    // Helper: attempt AI generation when enabled
-    const tryAiNames = async () => {
-      if (!CONFIG.ENABLE_AI) {
-        console.log(
-          '%c📛 NAMES (Fallback - AI Disabled)',
-          'color: #ff0; font-weight: bold',
-        );
-        return;
-      }
-
-      try {
-        console.log(
-          '%c📛 NAMES: Calling backend AI...',
-          'color: #0ff; font-weight: bold',
-        );
-        console.log('  Request:', { race, classType, count: desiredCount });
-        console.log(
-          `  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,
-        );
-
-        const response = await this.fetchWithTimeout(
-          `${CONFIG.BACKEND_URL}/api/ai/characters/names`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              race: race,
-              class_type: classType,
-              // Ask for extra so we have room to filter out repeats
-              count: desiredCount * 2,
-            }),
-          },
-        ); // Uses CONFIG.AI_TIMEOUT
-
-        if (!response.ok) {
-          console.log(
-            '%c📛 NAMES (Fallback - API Error)',
-            'color: #f80; font-weight: bold',
-          );
-          return;
-        }
-
-        const data = await response.json();
-        if (data.success && Array.isArray(data.names) && data.names.length > 0) {
-          console.log(
-            '%c📛 NAMES (AI Generated) ✨',
-            'color: #0f0; font-weight: bold',
-          );
-          console.log('  Response:', data.names);
-          candidates.push(...data.names);
-        }
-      } catch (error) {
-        if (error.message && error.message.includes('timed out')) {
-          console.log(
-            '%c📛 NAMES (Fallback - Backend Waking Up)',
-            'color: #f80; font-weight: bold',
-          );
-          console.log(
-            `  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,
-          );
-          console.log(
-            '  ✅ Once awake, subsequent requests will use AI!',
-          );
-        } else {
-          console.log(
-            '%c📛 NAMES (Fallback - Connection Error)',
-            'color: #f00; font-weight: bold',
-          );
-          console.error('  Error:', error);
-        }
-      }
-    };
-
-    // Helper: always-available fallback candidates
-    const addFallbackCandidates = (multiplier = 3) => {
-      console.log(
-        '%c📛 NAMES (Fallback)',
-        'color: #f80; font-weight: bold',
-      );
-      const extra = this.generateFallbackNames(race, desiredCount * multiplier);
-      candidates.push(...extra);
-    };
-
-    // 1) Try AI first (if enabled)
-    await tryAiNames();
-
-    // 2) If AI unavailable or produced too few unique-looking options, pad with fallback
-    if (!candidates.length) {
-      addFallbackCandidates(3);
-    }
-
-    // 3) Filter for uniqueness and register globally
-    let unique = this._filterAndRegisterUniqueNames(candidates, desiredCount);
-
-    // 4) If we still don't have enough, top up with more fallback variations
-    if (unique.length < desiredCount) {
-      addFallbackCandidates(5);
-      const more = this._filterAndRegisterUniqueNames(
-        candidates,
-        desiredCount - unique.length,
-      );
-      unique = unique.concat(more);
-    }
-
-    // Return whatever we could gather (may be fewer than requested if pools are exhausted)
-    return unique.slice(0, desiredCount);
-  },
-
-  /**
-   * Combined helper: ask the backend once for BOTH
-   *   - name suggestions, and
-   *   - a backstory template that uses the literal token {{NAME}}
-   *
-   * This lets us front-load the "heavy" AI work earlier in the flow and
-   * avoid a second OpenAI call when the user later reaches the backstory
-   * step. The final, player-chosen name is substituted client-side.
-   */
-  async generateCharacterSummary(character, options = {}) {
-    const nameCount =
-      typeof options.nameCount === 'number' && options.nameCount > 0
-        ? options.nameCount
-        : 3;
-
-    const race = character && character.race;
-    const classType = character && character.class;
-
-    // Local, always-available fallback for both names and template
-    const buildLocalFallback = () => {
-      const fallbackNames = this.generateFallbackNames(race || 'human', nameCount);
-      const template =
-        '{{NAME}} is a ' +
-        `${race || 'mysterious'}\u0020${classType || 'adventurer'} with a mysterious past. ` +
-        "They don't talk about it much. Probably for the best.";
-      return {
-        names: fallbackNames,
-        backstoryTemplate: template,
-      };
-    };
-
-    if (!CONFIG.ENABLE_AI) {
-      console.log(
-        '%c📦 SUMMARY (Fallback - AI Disabled)',
-        'color: #ff0; font-weight: bold',
-      );
-      return buildLocalFallback();
-    }
-
-    try {
-      console.log(
-        '%c📦 SUMMARY: Calling backend AI for names + backstory template...',
-        'color: #0ff; font-weight: bold',
-      );
-
-      const response = await this.fetchWithTimeout(
-        `${CONFIG.BACKEND_URL}/api/ai/characters/summary`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            race: race,
-            class_type: classType,
-            alignment: character && character.alignment,
-            background: character && character.background,
-            personality:
-              character && (character.personalityTrait || character.personality),
-            name_count: nameCount * 2, // ask for extra to allow uniqueness filtering
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const status = response.status;
-        let detail = null;
-        try {
-          const errBody = await response.json();
-          if (errBody && errBody.detail) {
-            detail = errBody.detail;
-          }
-        } catch {
-          // ignore JSON parse errors; we'll fall back below
-        }
-
-        if (status === 429) {
-          console.log(
-            '%c📦 SUMMARY (Cooldown / Rate Limit)',
-            'color: #ff0; font-weight: bold',
-          );
-          if (window.UIService) {
-            window.UIService.showNotification(
-              detail ||
-                'AI character generation is cooling down. Using offline suggestions for this one.',
-              'warning',
-              6000,
-            );
-          }
-        } else {
-          console.log(
-            '%c📦 SUMMARY (Fallback - API Error)',
-            'color: #f80; font-weight: bold',
-          );
-          console.log('  Status:', status);
-        }
-
-        return buildLocalFallback();
-      }
-
-      const data = await response.json();
-      if (!data || data.success !== true) {
-        console.log(
-          '%c📦 SUMMARY (Fallback - Bad Payload)',
-          'color: #f80; font-weight: bold',
-        );
-        return buildLocalFallback();
-      }
-
-      let names = Array.isArray(data.names) ? data.names.slice() : [];
-      const template =
-        typeof data.backstory_template === 'string' && data.backstory_template.trim()
-          ? data.backstory_template
-          : null;
-
-      // Run through our global uniqueness filter so we avoid repeating
-      // first/last names across this browser session.
-      if (names.length) {
-        names = this._filterAndRegisterUniqueNames(names, nameCount);
-      }
-
-      if (!names.length) {
-        console.log(
-          '%c📦 SUMMARY (Fallback - No Names From Backend)',
-          'color: #f80; font-weight: bold',
-        );
-        const fallback = buildLocalFallback();
-        // Preserve backend-provided template if we got one.
-        if (template) {
-          fallback.backstoryTemplate = template;
-        }
-        return fallback;
-      }
-
-      console.log(
-        '%c📦 SUMMARY (AI Generated) ✨',
-        'color: #0f0; font-weight: bold',
-      );
-      console.log('  Names:', names);
-
-      return {
-        names,
-        backstoryTemplate:
-          template ||
-          (character && character.backstory) ||
-          buildLocalFallback().backstoryTemplate,
-      };
-    } catch (error) {
-      if (error.message && error.message.includes('timed out')) {
-        console.log(
-          '%c📦 SUMMARY (Fallback - Backend Waking Up)',
-          'color: #f80; font-weight: bold',
-        );
-        console.log(
-          '  ⏰ Timeout reached. Using local fallback for now; backend warmup continues...',
-        );
-      } else {
-        console.log(
-          '%c📦 SUMMARY (Fallback - Connection Error)',
-          'color: #f00; font-weight: bold',
-        );
-        console.error('  Error:', error);
-      }
-      return buildLocalFallback();
-    }
-  },
-
-  generateFallbackNames(race, count) {
-    // Use shared name data from CharacterNameData module
-    const pattern = window.CharacterNameData
-      ? CharacterNameData.getPattern(race)
-      : { first: ['Hero'], last: ['Unknown'] };
-    const result = [];
-    const usedLocalCombos = new Set();
-
-    // Generate name combinations with local (per-call) uniqueness.
-    // Global uniqueness (across the entire session) is handled by
-    // _filterAndRegisterUniqueNames so we only worry about producing
-    // a rich pool of candidates here.
-    let attempts = 0;
-    const maxAttempts = count * 20;
-
-    while (result.length < count && attempts < maxAttempts) {
-      const firstName = Utils.randomChoice(pattern.first);
-      const lastName = Utils.randomChoice(pattern.last);
-      const fullName = `${firstName}\u0020${lastName}`;
-
-      if (!usedLocalCombos.has(fullName)) {
-        usedLocalCombos.add(fullName);
-        result.push(fullName);
-      }
-      attempts++;
-    }
-
-    return result;
-  },
-
-  /**
-   * Internal helper: normalize and register names so we:
-   * - avoid duplicate first names (case-insensitive)
-   * - avoid duplicate last names
-   * - avoid duplicate full names
-   * across the entire browser session.
-   *
-   * Accepts an array of full-name strings and returns a filtered array.
-   */
-  _filterAndRegisterUniqueNames(candidates, maxCount) {
-    const result = [];
-    const target = typeof maxCount === 'number' && maxCount > 0
-      ? maxCount
-      : Number.POSITIVE_INFINITY;
-
-    for (const raw of candidates) {
-      if (result.length >= target) break;
-      if (!raw) continue;
-
-      const trimmed = String(raw).trim();
-      if (!trimmed) continue;
-
-      // Split on whitespace, first token = first name, rest = last name
-      const parts = trimmed.split(/\s+/);
-      if (parts.length === 0) continue;
-
-      const first = parts[0];
-      const last = parts.slice(1).join(' ') || '';
-
-      // Require at least a first name; allow missing last name but treat it as part of full key
-      if (!first) continue;
-
-      const firstKey = first.toLowerCase();
-      const lastKey = last.toLowerCase();
-      const fullKey = last ? `${firstKey}\u0020${lastKey}` : firstKey;
-
-      // Enforce uniqueness across this browser session
-      if (
-        this._usedFullNames.has(fullKey) ||
-        this._usedFirstNames.has(firstKey) ||
-        (last && this._usedLastNames.has(lastKey))
-      ) {
-        continue;
-      }
-
-      this._usedFullNames.add(fullKey);
-      this._usedFirstNames.add(firstKey);
-      if (last) {
-        this._usedLastNames.add(lastKey);
-      }
-
-      result.push(trimmed);
-    }
-
-    return result;
-  },
-
-  async generateBackstory(character) {
-    const fallback = `${character.name} is a ${character.race}\u0020${character.class} with a mysterious past. `
-      + "They don't talk about it much. Probably for the best.";
-
-    if (!CONFIG.ENABLE_AI) {
-      console.log('%c📖 BACKSTORY (Fallback - AI Disabled)', 'color: #ff0; font-weight: bold');
-      return fallback;
-    }
-
-    try {
-      console.log('%c📖 BACKSTORY: Calling backend AI...', 'color: #0ff; font-weight: bold');
-      console.log('  Request:', { name: character.name, race: character.race, class: character.class });
-      console.log(
-        `  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,
-      );
-      
-      const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/backstory`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: character.name,
-          race: character.race,
-          class_type: character.class,
-          personality: character.personalityTrait || 'mysterious',
-          background: character.background,
-        }),
-      }); // Uses CONFIG.AI_TIMEOUT
-
-      if (!response.ok) {
-        console.log('%c📖 BACKSTORY (Fallback - API Error)', 'color: #f80; font-weight: bold');
-        return fallback;
-      }
-
-      const data = await response.json();
-      if (data.success && data.backstory) {
-        console.log('%c📖 BACKSTORY (AI Generated) ✨', 'color: #0f0; font-weight: bold');
-        console.log('  Response:', data.backstory.substring(0, 100) + '...');
-        return data.backstory;
-      }
-    } catch (error) {
-      if (error.message.includes('timed out')) {
-        console.log('%c📖 BACKSTORY (Fallback - Backend Waking Up)', 'color: #f80; font-weight: bold');
-        console.log(
-          `  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,
-        );
-        console.log('  ✅ Once awake, subsequent requests will use AI!');
-      } else {
-        console.log('%c📖 BACKSTORY (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
-        console.error('  Error:', error);
-      }
-    }
-
-    console.log('%c📖 BACKSTORY (Fallback)', 'color: #f80; font-weight: bold');
-    return fallback;
-  },
-
-  async generateOptionVariations(questionText, options) {
-    if (!CONFIG.ENABLE_AI || CONFIG.ENABLE_AI_OPTION_VARIATIONS === false) {
-      console.log(
-        '%c🎲 OPTIONS (Fallback - AI Disabled or variations off)',
-        'color: #ff0; font-weight: bold',
-      );
-      return options.map((opt) => opt.text);
-    }
-
-    const optionDescriptions = options
-      .map((opt) => `Value: "${opt.value}", Default text: "${opt.text}"`)
-      .join('\n');
-
-    const prompt = `For the question: "${questionText}"
+> Let's just like... start, man. 🥃`,completeText:"Alright, man. Your character's all set. Pretty cool, dude. Now go out there and just... be yourself, you know? The Dude abides. 🥃",quickCreateIntro:`> Quick create, huh? Cool, cool.\n> Just gonna roll some dice here, take it easy, see what happens, man.`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> Alright, so here's what we got:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Pretty chill combo, man. I dig it. 🥃`,quickCreateName:(name)=>`${name}. Yeah, man. That's a solid name. Really ties it all together, you know?`,fallbacks:['Yeah, well, that\'s just like, your opinion, man.','The Dude abides.','That\'s cool, man. Real cool.','Far out. I dig it.','Yeah, man. Whatever works for you.','That really ties the character together, man.','Easy does it, dude. No worries.','Sounds chill. Let\'s roll with it.',],},});const DEFAULT_NARRATOR_ID='scholarly';function getNarratorList(){return Object.values(NARRATORS);}
+function getNarrator(id){return NARRATORS[id]||NARRATORS[DEFAULT_NARRATOR_ID];}
+if(typeof module!=='undefined'&&module.exports){module.exports={NARRATORS,DEFAULT_NARRATOR_ID,getNarratorList,getNarrator};}
+const CONFIG=window.CONFIG;const DEBUG_BUILDER=!!(window.DanddyConfig&&window.DanddyConfig.DEBUG);const DND_DATA=window.DND_DATA;const ImageToAsciiService=(window.ImageToAsciiService={ASCII_CHARS:'  .`\'",;:Il!i><~+_-?][}{1)(|/\\trjxnuvczXYUJCLQ0OZmwqpdbkha*o#MW&8%B@$',async convertToAscii(imageUrl,width=160,height=80){try{const img=await this.loadImage(imageUrl);const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,width,height);const imageData=ctx.getImageData(0,0,width,height);const pixels=imageData.data;const grayscale=new Float32Array(width*height);for(let i=0;i<width*height;i++){const idx=i*4;grayscale[i]=0.299*pixels[idx]+
+0.587*pixels[idx+1]+
+0.114*pixels[idx+2];}
+const dithered=this.floydSteinbergDither(grayscale,width,height);let ascii='';for(let y=0;y<height;y++){for(let x=0;x<width;x++){const brightness=dithered[y*width+x];const charIndex=Math.floor((brightness/255)*(this.ASCII_CHARS.length-1),);const clampedIndex=Math.max(0,Math.min(this.ASCII_CHARS.length-1,charIndex),);ascii+=this.ASCII_CHARS[clampedIndex];}
+ascii+='\n';}
+return ascii;}catch(error){console.error('Image to ASCII conversion error:',error);return null;}},floydSteinbergDither(grayscale,width,height){const output=new Float32Array(grayscale);for(let y=0;y<height;y++){for(let x=0;x<width;x++){const idx=y*width+x;const oldPixel=output[idx];const newPixel=Math.round((oldPixel/255)*(this.ASCII_CHARS.length-1),)*(255/(this.ASCII_CHARS.length-1));output[idx]=newPixel;const error=oldPixel-newPixel;if(x+1<width){output[idx+1]+=(error*7)/16;}
+if(y+1<height){if(x>0){output[idx+width-1]+=(error*3)/16;}
+output[idx+width]+=(error*5)/16;if(x+1<width){output[idx+width+1]+=error/16;}}}}
+return output;},async loadImage(url){try{const corsProxy='https://corsproxy.io/?';const proxiedUrl=corsProxy+encodeURIComponent(url);const response=await fetch(proxiedUrl);if(!response.ok){throw new Error(`Failed to fetch image: ${response.status}`);}
+const blob=await response.blob();const objectUrl=URL.createObjectURL(blob);return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{URL.revokeObjectURL(objectUrl);resolve(img);};img.onerror=(error)=>{URL.revokeObjectURL(objectUrl);reject(new Error('Failed to load image from blob'));};img.src=objectUrl;});}catch(error){console.error('Error loading image:',error);throw new Error(`Image loading failed: ${error.message}`);}},});const StorageService=(window.StorageService={getNarratorId(){const value=localStorage.getItem('dnd_narrator_id');if(!value){if(typeof DEFAULT_NARRATOR_ID!=='undefined'){return DEFAULT_NARRATOR_ID;}
+return'scholarly';}
+return value;},setNarratorId(narratorId){localStorage.setItem('dnd_narrator_id',narratorId);},getTextSpeedMultiplier(){const value=localStorage.getItem('dnd_text_speed_multiplier');if(!value)return 1;const num=parseFloat(value);if(!Number.isFinite(num)||num<=0){return 1;}
+if(num<1)return 1;if(num>2)return 2;return num;},setTextSpeedMultiplier(multiplier){const num=parseFloat(multiplier);if(!Number.isFinite(num)||num<=0){localStorage.removeItem('dnd_text_speed_multiplier');return;}
+localStorage.setItem('dnd_text_speed_multiplier',String(num));},getImageModel(){try{const raw=localStorage.getItem('dnd_image_model');const fallback=(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL)||'dall-e-3';if(!raw)return fallback;const value=String(raw).trim();const allowed=['dall-e-3','gpt-image-1','flux-1.1-pro','flux-schnell'];return allowed.includes(value)?value:fallback;}catch(e){console.warn('StorageService.getImageModel failed, using fallback',e);return(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL)||'dall-e-3';}},setImageModel(model){try{const value=String(model||'').trim();const allowed=['dall-e-3','gpt-image-1','flux-1.1-pro','flux-schnell'];if(!allowed.includes(value)){console.warn('StorageService.setImageModel: ignoring unsupported model',value);localStorage.removeItem('dnd_image_model');return;}
+localStorage.setItem('dnd_image_model',value);}catch(e){console.warn('StorageService.setImageModel failed',e);}},getPortraitViewMode(){try{const raw=localStorage.getItem('dnd_portrait_view_mode');const fallback=(CONFIG&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE)||'original';if(!raw)return fallback;const value=String(raw).trim().toLowerCase();const allowed=['ascii','original'];return allowed.includes(value)?value:fallback;}catch(e){console.warn('StorageService.getPortraitViewMode failed, using fallback',e,);return(CONFIG&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE)||'original';}},setPortraitViewMode(mode){try{const value=String(mode||'').trim().toLowerCase();const allowed=['ascii','original'];if(!allowed.includes(value)){console.warn('StorageService.setPortraitViewMode: ignoring unsupported mode',value,);localStorage.removeItem('dnd_portrait_view_mode');return;}
+localStorage.setItem('dnd_portrait_view_mode',value);}catch(e){console.warn('StorageService.setPortraitViewMode failed',e);}},getPortraitPromptTheme(){try{const raw=localStorage.getItem('dnd_portrait_prompt_theme');const fallback=(CONFIG&&CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME)||null;if(!raw)return fallback;const value=String(raw).trim();if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.getThemes==='function'){try{const themes=window.PortraitPrompt.getThemes();const allowedIds=Array.isArray(themes)?themes.map((t)=>t.id):[];if(allowedIds.includes(value)){return value;}
+return fallback;}catch(e){}}
+return value||fallback;}catch(e){console.warn('StorageService.getPortraitPromptTheme failed, using fallback',e);return(CONFIG&&CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME)||null;}},setPortraitPromptTheme(themeId){try{const value=String(themeId||'').trim();if(!value){localStorage.removeItem('dnd_portrait_prompt_theme');return;}
+if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.getThemes==='function'){try{const themes=window.PortraitPrompt.getThemes();const allowedIds=Array.isArray(themes)?themes.map((t)=>t.id):[];if(!allowedIds.includes(value)){console.warn('StorageService.setPortraitPromptTheme: ignoring unknown theme id',value,);localStorage.removeItem('dnd_portrait_prompt_theme');return;}}catch(e){}}
+localStorage.setItem('dnd_portrait_prompt_theme',value);}catch(e){console.warn('StorageService.setPortraitPromptTheme failed',e);}},getImageQuality(model){try{const raw=localStorage.getItem('dnd_image_quality');if(!raw)return null;const data=JSON.parse(raw);return data[model]||null;}catch(e){console.warn('StorageService.getImageQuality failed',e);return null;}},setImageQuality(model,quality){try{let data={};const raw=localStorage.getItem('dnd_image_quality');if(raw){try{data=JSON.parse(raw);}catch(e){data={};}}
+if(quality){data[model]=quality;}else{delete data[model];}
+localStorage.setItem('dnd_image_quality',JSON.stringify(data));}catch(e){console.warn('StorageService.setImageQuality failed',e);}},getHighQualityGPTImage(){try{const quality=this.getImageQuality('gpt-image-1');if(quality){return quality==='high';}
+const raw=localStorage.getItem('dnd_high_quality_gpt_image');return raw==='true';}catch(e){console.warn('StorageService.getHighQualityGPTImage failed',e);return false;}},setHighQualityGPTImage(enabled){this.setImageQuality('gpt-image-1',enabled?'high':'medium');try{localStorage.removeItem('dnd_high_quality_gpt_image');}catch(e){}},async getCharacters(){if(!window.CharacterStorage){console.warn('StorageService: CharacterStorage not available');return[];}
+return CharacterStorage.getAll();},async saveCharacter(character){if(!window.CharacterStorage){console.warn('StorageService: CharacterStorage not available');return character;}
+if(character.id){if(DEBUG_BUILDER){console.log('💾 BUILDER: Updating character via CharacterStorage:',character.id);}
+return CharacterStorage.update(character.id,character);}else{if(DEBUG_BUILDER){console.log('💾 BUILDER: Creating character via CharacterStorage');}
+return CharacterStorage.add(character);}},async deleteCharacter(id){if(!window.CharacterStorage){console.warn('StorageService: CharacterStorage not available');return false;}
+return CharacterStorage.delete(id);},});const AsciiArtService=(window.AsciiArtService={_portraitCache:{},getRaceArt(race){return'';},addClassDecoration(baseArt,classType){return baseArt;},getFullPortrait(character){if(!character||!character.race)return'';const raceLabel=String(character.race).toUpperCase();const classLabel=character.class?` ${String(character.class).toUpperCase()}`:'';return`[ ${raceLabel}${classLabel} PORTRAIT ]`;},async loadPreGeneratedPortrait(race,classType){const raceLower=race.toLowerCase().replace(/ /g,'-');const classLower=classType?classType.toLowerCase():'';if(classLower){const path=`../generated_portraits/ascii/${raceLower}-${classLower}.txt`;if(DEBUG_BUILDER)console.log(`📂 Trying to load: ${path}`);try{const response=await fetch(path);if(DEBUG_BUILDER)console.log(`📡 Response status: ${response.status}`);if(response.ok){const text=await response.text();if(DEBUG_BUILDER)console.log(`✅ Loaded ${raceLower}-${classLower}, length: ${text.length}`);return text;}}catch(e){if(DEBUG_BUILDER)console.log(`❌ Error loading ${raceLower}-${classLower}:`,e);}}
+const path=`../generated_portraits/ascii/${raceLower}.txt`;if(DEBUG_BUILDER)console.log(`📂 Trying fallback: ${path}`);try{const response=await fetch(path);if(DEBUG_BUILDER)console.log(`📡 Response status: ${response.status}`);if(response.ok){const text=await response.text();if(DEBUG_BUILDER)console.log(`✅ Loaded ${raceLower}, length: ${text.length}`);return text;}}catch(e){if(DEBUG_BUILDER)console.log(`❌ Error loading ${raceLower}:`,e);}
+if(DEBUG_BUILDER)console.log(`❌ No portrait found for ${raceLower}`);return null;},getPreGeneratedImageUrl(race,classType){const raceLower=race?.toLowerCase().replace(/\s+/g,'-')||'';const classLower=classType?.toLowerCase().replace(/\s+/g,'-')||'';if(!raceLower)return null;const fileName=classLower?`${raceLower}-${classLower}.png`:`${raceLower}.png`;if(CONFIG&&CONFIG.PREGENERATED_PORTRAIT_BASE_URL){const base=CONFIG.PREGENERATED_PORTRAIT_BASE_URL.replace(/\/+$/,'');return`${base}/${fileName}`;}
+return`../generated_portraits/images/${fileName}`;},async generateAIPortrait(character){try{if(!character)return'';if(character.customPortraitAscii){console.log('✅ Using custom AI-generated portrait');return character.customPortraitAscii;}
+const key=`${character.race || ''}|${character.class || ''}`;if(character.asciiPortrait&&character.asciiPortraitKey===key){console.log('✅ Using stored ASCII portrait for current race/class');return character.asciiPortrait;}
+if(this._portraitCache[key]){return this._portraitCache[key];}
+console.log('Loading pre-generated portrait...');const preGenerated=await this.loadPreGeneratedPortrait(character.race,character.class,);if(preGenerated){console.log(`✅ Found pre-generated portrait for ${character.race}-${character.class}`,);this._portraitCache[key]=preGenerated;if(window.CharacterState){const updates={asciiPortrait:preGenerated,asciiPortraitKey:key,};const pregenImageUrl=this.getPreGeneratedImageUrl(character.race,character.class,);if(pregenImageUrl){updates.originalPortraitUrl=pregenImageUrl;}
+window.CharacterState.updateCharacter(updates);}
+return this._portraitCache[key];}
+console.log('No pre-generated portrait, using template');const fallback=this.getFullPortrait(character);this._portraitCache[key]=fallback;if(window.CharacterState){window.CharacterState.updateCharacter({asciiPortrait:fallback,asciiPortraitKey:key,});}
+return fallback;}catch(error){console.error('Portrait loading error:',error);const key=`${character.race || ''}|${character.class || ''}`;const fallback=this.getFullPortrait(character);this._portraitCache[key]=fallback;if(window.CharacterState){window.CharacterState.updateCharacter({asciiPortrait:fallback,asciiPortraitKey:key,});}
+return fallback;}},async generateCustomAIPortrait(character){try{console.log('🎨 Generating custom AI portrait with DALL-E...');const imageUrl=await AIService.generatePortraitImage(character);if(!imageUrl){throw new Error('DALL-E generation failed');}
+console.log('✅ DALL-E image generated:',imageUrl);console.log('Converting to ASCII with Floyd-Steinberg dithering...');const asciiArt=await ImageToAsciiService.convertToAscii(imageUrl,160,80,);if(!asciiArt){throw new Error('ASCII conversion failed');}
+console.log('✅ Custom ASCII art generated successfully');return{asciiArt,imageUrl};}catch(error){console.error('Custom AI portrait generation error:',error);throw error;}},async generateCustomAIPortraitWithPrompt(customPrompt){try{console.log('🎨 Generating custom AI portrait with custom prompt...');console.log('Prompt:',customPrompt);const imageUrl=await AIService.generateImageFromPrompt(customPrompt);if(!imageUrl){throw new Error('DALL-E generation failed');}
+console.log('✅ DALL-E image generated:',imageUrl);console.log('Converting to ASCII with Floyd-Steinberg dithering...');const asciiArt=await ImageToAsciiService.convertToAscii(imageUrl,160,80,);if(!asciiArt){throw new Error('ASCII conversion failed');}
+console.log('✅ Custom ASCII art generated successfully');return{asciiArt,imageUrl};}catch(error){console.error('Custom AI portrait generation error:',error);throw error;}},});const AIService=(window.AIService={_lastNarratorComment:null,_usedClassicThisRun:false,_narratorCommentCount:0,_usedFirstNames:new Set(),_usedLastNames:new Set(),_usedFullNames:new Set(),_backendAvailable:null,_warmupInProgress:false,resetNarratorSession(){this._lastNarratorComment=null;this._usedClassicThisRun=false;this._narratorCommentCount=0;},async warmupBackend(){if(this._warmupInProgress||this._backendAvailable===true){return;}
+this._warmupInProgress=true;console.log('%c🔄 WARMUP: Waking up backend server...','color: #fa0; font-weight: bold');while(this._backendAvailable!==true){try{const response=await fetch(`${CONFIG.BACKEND_URL}/api/ai/status`,{method:'GET',});if(response.ok){const data=await response.json();if(data.available){this._backendAvailable=true;console.log('%c✅ WARMUP: Backend is now ready!','color: #0f0; font-weight: bold');this._warmupInProgress=false;return;}}}catch(error){}
+await new Promise(resolve=>setTimeout(resolve,5000));}
+this._warmupInProgress=false;},async fetchWithTimeout(url,options,timeoutMs=CONFIG.AI_TIMEOUT){const controller=new AbortController();const timeoutId=setTimeout(()=>controller.abort(),timeoutMs);try{const response=await fetch(url,{...options,signal:controller.signal});clearTimeout(timeoutId);if(response.ok){this._backendAvailable=true;}
+return response;}catch(error){clearTimeout(timeoutId);if(error.name==='AbortError'){this._backendAvailable=false;this.warmupBackend();throw new Error('Request timed out - backend may be waking up');}
+throw error;}},async generateCompletion(prompt,systemPrompt=null){if(!CONFIG.ENABLE_AI){console.log('AI service disabled in config');return null;}
+try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/chat/completion`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({prompt:prompt,system_prompt:systemPrompt,max_tokens:300,temperature:0.8,}),});if(!response.ok){if(response.status===400){try{const errorData=await response.json();if(errorData.detail&&errorData.detail.includes('safety system')){console.warn('⚠️ OpenAI safety system rejection:',errorData.detail);if(window.UIService){window.UIService.showNotification('OpenAI flagged this request. Using fallback response instead.','warning',5000);}}}catch(e){}}
+console.log(`Backend API error: ${response.status} - will use fallback`);return null;}
+const data=await response.json();return data.success?data.content:null;}catch(error){if(error.message.includes('timed out')){console.log('⏰ AI request timed out - caller will use fallback mode');}else{console.log('AI service unavailable - caller will use fallback mode');}
+return null;}},async generateNarratorComment(context){const narratorId=StorageService.getNarratorId();const narrator=getNarrator(narratorId);const fallbacks=narrator.fallbacks;const maxComments=typeof CONFIG.NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER==='number'?CONFIG.NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER:Infinity;const narratorAiDisabled=CONFIG.ENABLE_AI_NARRATOR_COMMENTS===false||!CONFIG.ENABLE_AI;if(narratorAiDisabled||this._narratorCommentCount>=maxComments){console.log('%c🤖 NARRATOR (Fallback - Disabled or limit reached)','color: #ff0; font-weight: bold',);return Utils.randomChoice(fallbacks);}
+try{console.log('%c🤖 NARRATOR: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Request:',{choice:context.choice,question:context.question,narrator:narratorId});console.log(`  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,);const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/narrator/comment`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({choice:context.choice,question:context.question,character_so_far:context.characterSoFar,narrator_id:narratorId,}),});if(!response.ok){console.log('%c🤖 NARRATOR (Fallback - API Error)','color: #f80; font-weight: bold');console.log('  Status:',response.status);return Utils.randomChoice(fallbacks);}
+const data=await response.json();let text=data.comment||Utils.randomChoice(fallbacks);console.log('%c🤖 NARRATOR (AI Generated) ✨','color: #0f0; font-weight: bold');console.log('  Response:',text);let responseText=text;const normalize=(s)=>(s||'').trim().toLowerCase();const startsWithClassic=(s)=>s.startsWith('ah, the classic')||s.startsWith('ah the classic');const last=this._lastNarratorComment;const lastNorm=normalize(last);let newNorm=normalize(responseText);if(last){if(newNorm===lastNorm){const alts=fallbacks.filter((f)=>normalize(f)!==lastNorm);if(alts.length){responseText=Utils.randomChoice(alts);newNorm=normalize(responseText);}}
+if(startsWithClassic(newNorm)&&startsWithClassic(lastNorm)){const alts=fallbacks.filter((f)=>!startsWithClassic(normalize(f)));if(alts.length){responseText=Utils.randomChoice(alts);newNorm=normalize(responseText);}}}
+if(startsWithClassic(newNorm)){if(this._usedClassicThisRun){const alts=fallbacks.filter((f)=>!startsWithClassic(normalize(f)));if(alts.length){responseText=Utils.randomChoice(alts);}}else{this._usedClassicThisRun=true;}}
+this._lastNarratorComment=responseText;this._narratorCommentCount+=1;return responseText;}catch(error){if(error.message.includes('timed out')){console.log('%c🤖 NARRATOR (Fallback - Backend Waking Up)','color: #f80; font-weight: bold');console.log(`  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,);console.log('  ✅ Once awake, subsequent requests will use AI!');}else{console.log('%c🤖 NARRATOR (Fallback - Connection Error)','color: #f00; font-weight: bold');console.error('  Error:',error);}
+return Utils.randomChoice(fallbacks);}},async generateNames(race,classType,count=3){const desiredCount=Math.max(1,count||3);const candidates=[];const tryAiNames=async()=>{if(!CONFIG.ENABLE_AI){console.log('%c📛 NAMES (Fallback - AI Disabled)','color: #ff0; font-weight: bold',);return;}
+try{console.log('%c📛 NAMES: Calling backend AI...','color: #0ff; font-weight: bold',);console.log('  Request:',{race,classType,count:desiredCount});console.log(`  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,);const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/names`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({race:race,class_type:classType,count:desiredCount*2,}),},);if(!response.ok){console.log('%c📛 NAMES (Fallback - API Error)','color: #f80; font-weight: bold',);return;}
+const data=await response.json();if(data.success&&Array.isArray(data.names)&&data.names.length>0){console.log('%c📛 NAMES (AI Generated) ✨','color: #0f0; font-weight: bold',);console.log('  Response:',data.names);candidates.push(...data.names);}}catch(error){if(error.message&&error.message.includes('timed out')){console.log('%c📛 NAMES (Fallback - Backend Waking Up)','color: #f80; font-weight: bold',);console.log(`  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,);console.log('  ✅ Once awake, subsequent requests will use AI!',);}else{console.log('%c📛 NAMES (Fallback - Connection Error)','color: #f00; font-weight: bold',);console.error('  Error:',error);}}};const addFallbackCandidates=(multiplier=3)=>{console.log('%c📛 NAMES (Fallback)','color: #f80; font-weight: bold',);const extra=this.generateFallbackNames(race,desiredCount*multiplier);candidates.push(...extra);};await tryAiNames();if(!candidates.length){addFallbackCandidates(3);}
+let unique=this._filterAndRegisterUniqueNames(candidates,desiredCount);if(unique.length<desiredCount){addFallbackCandidates(5);const more=this._filterAndRegisterUniqueNames(candidates,desiredCount-unique.length,);unique=unique.concat(more);}
+return unique.slice(0,desiredCount);},async generateCharacterSummary(character,options={}){const nameCount=typeof options.nameCount==='number'&&options.nameCount>0?options.nameCount:3;const race=character&&character.race;const classType=character&&character.class;const buildLocalFallback=()=>{const fallbackNames=this.generateFallbackNames(race||'human',nameCount);const template='{{NAME}} is a '+`${race || 'mysterious'}\u0020${classType || 'adventurer'} with a mysterious past. `+"They don't talk about it much. Probably for the best.";return{names:fallbackNames,backstoryTemplate:template,};};if(!CONFIG.ENABLE_AI){console.log('%c📦 SUMMARY (Fallback - AI Disabled)','color: #ff0; font-weight: bold',);return buildLocalFallback();}
+try{console.log('%c📦 SUMMARY: Calling backend AI for names + backstory template...','color: #0ff; font-weight: bold',);const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/summary`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({race:race,class_type:classType,alignment:character&&character.alignment,background:character&&character.background,personality:character&&(character.personalityTrait||character.personality),name_count:nameCount*2,}),},);if(!response.ok){const status=response.status;let detail=null;try{const errBody=await response.json();if(errBody&&errBody.detail){detail=errBody.detail;}}catch{}
+if(status===429){console.log('%c📦 SUMMARY (Cooldown / Rate Limit)','color: #ff0; font-weight: bold',);if(window.UIService){window.UIService.showNotification(detail||'AI character generation is cooling down. Using offline suggestions for this one.','warning',6000,);}}else{console.log('%c📦 SUMMARY (Fallback - API Error)','color: #f80; font-weight: bold',);console.log('  Status:',status);}
+return buildLocalFallback();}
+const data=await response.json();if(!data||data.success!==true){console.log('%c📦 SUMMARY (Fallback - Bad Payload)','color: #f80; font-weight: bold',);return buildLocalFallback();}
+let names=Array.isArray(data.names)?data.names.slice():[];const template=typeof data.backstory_template==='string'&&data.backstory_template.trim()?data.backstory_template:null;if(names.length){names=this._filterAndRegisterUniqueNames(names,nameCount);}
+if(!names.length){console.log('%c📦 SUMMARY (Fallback - No Names From Backend)','color: #f80; font-weight: bold',);const fallback=buildLocalFallback();if(template){fallback.backstoryTemplate=template;}
+return fallback;}
+console.log('%c📦 SUMMARY (AI Generated) ✨','color: #0f0; font-weight: bold',);console.log('  Names:',names);return{names,backstoryTemplate:template||(character&&character.backstory)||buildLocalFallback().backstoryTemplate,};}catch(error){if(error.message&&error.message.includes('timed out')){console.log('%c📦 SUMMARY (Fallback - Backend Waking Up)','color: #f80; font-weight: bold',);console.log('  ⏰ Timeout reached. Using local fallback for now; backend warmup continues...',);}else{console.log('%c📦 SUMMARY (Fallback - Connection Error)','color: #f00; font-weight: bold',);console.error('  Error:',error);}
+return buildLocalFallback();}},generateFallbackNames(race,count){const pattern=window.CharacterNameData?CharacterNameData.getPattern(race):{first:['Hero'],last:['Unknown']};const result=[];const usedLocalCombos=new Set();let attempts=0;const maxAttempts=count*20;while(result.length<count&&attempts<maxAttempts){const firstName=Utils.randomChoice(pattern.first);const lastName=Utils.randomChoice(pattern.last);const fullName=`${firstName}\u0020${lastName}`;if(!usedLocalCombos.has(fullName)){usedLocalCombos.add(fullName);result.push(fullName);}
+attempts++;}
+return result;},_filterAndRegisterUniqueNames(candidates,maxCount){const result=[];const target=typeof maxCount==='number'&&maxCount>0?maxCount:Number.POSITIVE_INFINITY;for(const raw of candidates){if(result.length>=target)break;if(!raw)continue;const trimmed=String(raw).trim();if(!trimmed)continue;const parts=trimmed.split(/\s+/);if(parts.length===0)continue;const first=parts[0];const last=parts.slice(1).join(' ')||'';if(!first)continue;const firstKey=first.toLowerCase();const lastKey=last.toLowerCase();const fullKey=last?`${firstKey}\u0020${lastKey}`:firstKey;if(this._usedFullNames.has(fullKey)||this._usedFirstNames.has(firstKey)||(last&&this._usedLastNames.has(lastKey))){continue;}
+this._usedFullNames.add(fullKey);this._usedFirstNames.add(firstKey);if(last){this._usedLastNames.add(lastKey);}
+result.push(trimmed);}
+return result;},async generateBackstory(character){const fallback=`${character.name} is a ${character.race}\u0020${character.class} with a mysterious past. `
++"They don't talk about it much. Probably for the best.";if(!CONFIG.ENABLE_AI){console.log('%c📖 BACKSTORY (Fallback - AI Disabled)','color: #ff0; font-weight: bold');return fallback;}
+try{console.log('%c📖 BACKSTORY: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Request:',{name:character.name,race:character.race,class:character.class});console.log(`  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,);const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/backstory`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({name:character.name,race:character.race,class_type:character.class,personality:character.personalityTrait||'mysterious',background:character.background,}),});if(!response.ok){console.log('%c📖 BACKSTORY (Fallback - API Error)','color: #f80; font-weight: bold');return fallback;}
+const data=await response.json();if(data.success&&data.backstory){console.log('%c📖 BACKSTORY (AI Generated) ✨','color: #0f0; font-weight: bold');console.log('  Response:',data.backstory.substring(0,100)+'...');return data.backstory;}}catch(error){if(error.message.includes('timed out')){console.log('%c📖 BACKSTORY (Fallback - Backend Waking Up)','color: #f80; font-weight: bold');console.log(`  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,);console.log('  ✅ Once awake, subsequent requests will use AI!');}else{console.log('%c📖 BACKSTORY (Fallback - Connection Error)','color: #f00; font-weight: bold');console.error('  Error:',error);}}
+console.log('%c📖 BACKSTORY (Fallback)','color: #f80; font-weight: bold');return fallback;},async generateOptionVariations(questionText,options){if(!CONFIG.ENABLE_AI||CONFIG.ENABLE_AI_OPTION_VARIATIONS===false){console.log('%c🎲 OPTIONS (Fallback - AI Disabled or variations off)','color: #ff0; font-weight: bold',);return options.map((opt)=>opt.text);}
+const optionDescriptions=options.map((opt)=>`Value: "${opt.value}", Default text: "${opt.text}"`).join('\n');const prompt=`For the question: "${questionText}"
 
 Generate fresh, creative variations for these D&D character creation options. Keep each variation to 4-8 words, punchy and clear. Match the tone of each original but make them feel unique:
 
 ${optionDescriptions}
 
-Format your response as JSON array of strings, one for each option in order. Example: ["text1", "text2", "text3", "text4"]`;
-
-    const systemPrompt =
-      'You are a creative D&D character creation assistant. Generate engaging option text that feels fresh but maintains the same meaning. ' +
-      'Be concise and direct. Return ONLY valid JSON.';
-
-    console.log('%c🎲 OPTIONS: Calling backend AI...', 'color: #0ff; font-weight: bold');
-    console.log('  Note: Will fallback to original option texts if unavailable...');
-
-    const response = await this.generateCompletion(prompt, systemPrompt);
-
-    if (response) {
-      try {
-        // Try to extract JSON from response
-        const jsonMatch = response.match(/\[.*\]/s);
-        if (jsonMatch) {
-          const variations = JSON.parse(jsonMatch[0]);
-          if (Array.isArray(variations) && variations.length === options.length) {
-            console.log('%c🎲 OPTIONS (AI Generated) ✨', 'color: #0f0; font-weight: bold');
-            return variations;
-          }
-        }
-      } catch (error) {
-        console.log('Failed to parse AI option variations:', error);
-      }
-    }
-
-    // Fallback: return original texts
-    console.log('%c🎲 OPTIONS (Fallback - Using Original Texts) ✅', 'color: #f80; font-weight: bold');
-    console.log('  The original option texts will be used instead of AI variations');
-    return options.map((opt) => opt.text);
-  },
-
-  // Generate character portrait image using DALL-E
-  async generatePortraitImage(character) {
-    if (!CONFIG.ENABLE_AI) {
-      console.log('AI service disabled for image generation');
-      return null;
-    }
-
-    // Build a detailed prompt from character attributes
-    const prompt = this.buildPortraitPrompt(character);
-
-    return await this.generateImageFromPrompt(prompt);
-  },
-
-  // Generate image from custom prompt
-  async generateImageFromPrompt(prompt, options = {}) {
-    if (!CONFIG.ENABLE_AI) {
-      console.log('%c🎨 DALL-E (Unavailable - AI Disabled)', 'color: #ff0; font-weight: bold');
-      return null;
-    }
-
-    // Allow forcing a specific model (used for fallback)
-    const forceModel = options.forceModel || null;
-    const isRetry = options._isRetry || false;
-
-    try {
-      // Resolve current image model preference (builder + manager share this).
-      let model = forceModel || 'dall-e-3';
-      if (!forceModel) {
-        try {
-          if (window.StorageService && typeof StorageService.getImageModel === 'function') {
-            model = StorageService.getImageModel();
-          } else if (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) {
-            model = CONFIG.DEFAULT_IMAGE_MODEL;
-          }
-        } catch (e) {
-          console.warn('AIService.generateImageFromPrompt: failed to read image model, using default', e);
-        }
-      }
-
-      console.log('%c🎨 IMAGE: Calling backend AI...', 'color: #0ff; font-weight: bold');
-      // Log only a preview of the prompt so the console isn't flooded,
-      // but make it clear that the full prompt (without truncation) is
-      // sent to the backend.
-      console.log('  Prompt (preview):', prompt.substring(0, 100) + (prompt.length > 100 ? '…' : ''));
-      console.log('  Model:', model + (forceModel ? ' (fallback)' : ''));
-      console.log('  Note: Image generation takes 20-30s (longer than text AI)...');
-      
-        // Quality setting differs by model:
-        // - DALL-E 3: 'standard' or 'hd'
-        // - GPT Image 1: 'medium', 'high'
-        // - Flux models: no quality setting (use 'standard' as default)
-        const defaultQuality = {
-          'dall-e-3': 'standard',
-          'gpt-image-1': 'medium',
-          'flux-1.1-pro': 'standard',
-          'flux-schnell': 'standard',
-        };
-        
-        let quality = defaultQuality[model] || 'standard';
-        
-        // In demo mode, always use 'medium' quality for gpt-image-1 to manage costs
-        const isDemoMode = window.DemoCharacters && typeof DemoCharacters.isDemoMode === 'function' && DemoCharacters.isDemoMode();
-        if (isDemoMode && model === 'gpt-image-1') {
-          quality = 'medium';
-          console.log(`  Quality: MEDIUM (demo mode default)`);
-        } else {
-          // Check for user quality preference (logged-in users only)
-          try {
-            if (window.StorageService && typeof StorageService.getImageQuality === 'function') {
-              const savedQuality = StorageService.getImageQuality(model);
-              if (savedQuality) {
-                quality = savedQuality;
-                console.log(`  Quality: ${quality.toUpperCase()} (user preference)`);
-              }
-            }
-          } catch (e) {
-            console.warn('AIService: failed to read quality setting', e);
-          }
-        }
-
-        const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            prompt: prompt,
-            size: '1024x1024',
-            quality: quality,
-            model: model,
-          }),
-        }, 70000); // 70 seconds for image generation (DALL-E can be very slow, plus R2 upload)
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.log('%c🎨 IMAGE (Error)', 'color: #f00; font-weight: bold');
-        console.log('  Error:', errorData.detail);
-        
-        // Helper to extract error message from Pydantic validation errors or plain strings
-        const extractErrorMessage = (detail) => {
-          if (!detail) return null;
-          // Pydantic returns validation errors as an array of objects
-          if (Array.isArray(detail)) {
-            return detail.map(err => {
-              if (typeof err === 'string') return err;
-              // Pydantic format: { loc: [...], msg: '...', type: '...' }
-              const field = err.loc ? err.loc.slice(1).join('.') : 'unknown';
-              return `${field}: ${err.msg || err.message || JSON.stringify(err)}`;
-            }).join('; ');
-          }
-          if (typeof detail === 'object') {
-            return detail.msg || detail.message || JSON.stringify(detail);
-          }
-          return String(detail);
-        };
-        
-        const errorMessage = extractErrorMessage(errorData.detail);
-        
-        // Check for rate limiting
-        if (response.status === 429) {
-          const rateLimitError = new Error(errorMessage || 'Rate limit exceeded');
-          rateLimitError.isRateLimit = true;
-          throw rateLimitError;
-        }
-        
-        // Check for Replicate/Flux service errors (502 from backend)
-        const detailStr = typeof errorData.detail === 'string' ? errorData.detail : errorMessage;
-        if (response.status === 502 && detailStr && (
-          detailStr.toLowerCase().includes('flux') ||
-          detailStr.toLowerCase().includes('replicate')
-        )) {
-          console.warn('⚠️ Replicate/Flux service error:', detailStr);
-          
-          const fluxError = new Error('Flux image generation service is temporarily unavailable');
-          fluxError.isFluxError = true;
-          fluxError.originalMessage = detailStr;
-          fluxError.suggestModelSwitch = true;
-          throw fluxError;
-        }
-        
-        // Check for safety system rejection (handle both string and array detail)
-        if (response.status === 400 && detailStr && detailStr.toLowerCase().includes('safety system')) {
-          console.warn('⚠️ OpenAI safety system rejection:', detailStr);
-          console.warn('📝 REJECTED PROMPT:', prompt);
-          
-          // Analyze the prompt to help identify problematic sections
-          const analysis = this.analyzeRejectedPrompt(prompt);
-          
-          const safetyError = new Error('Portrait generation was flagged by OpenAI\'s content safety system');
-          safetyError.isSafetyRejection = true;
-          safetyError.originalMessage = detailStr;
-          safetyError.rejectedPrompt = prompt; // Capture the prompt for debugging
-          safetyError.promptAnalysis = analysis; // Include analysis results
-          throw safetyError;
-        }
-        
-        throw new Error(errorMessage || `API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        console.log('%c🎨 IMAGE (Generated) ✨', 'color: #0f0; font-weight: bold');
-        console.log('  URL:', data.url.substring(0, 50) + '...');
-        return data.url;
-      }
-      return null;
-    } catch (error) {
-      console.log('%c🎨 IMAGE (Failed)', 'color: #f00; font-weight: bold');
-      console.error('  Error:', error);
-      
-      // Auto-fallback: If Flux failed and we haven't tried fallback yet, retry with GPT Image
-      if (error.isFluxError && !isRetry) {
-        console.log('%c🔄 AUTO-FALLBACK: Flux unavailable, trying GPT Image instead...', 'color: #fa0; font-weight: bold');
-        
-        if (window.UIService) {
-          window.UIService.showNotification(
-            'Flux unavailable, switching to GPT Image...',
-            'info',
-            4000
-          );
-        }
-        
-        // Retry with GPT Image as fallback
-        return this.generateImageFromPrompt(prompt, { 
-          forceModel: 'gpt-image-1', 
-          _isRetry: true 
-        });
-      }
-      
-      throw error;
-    }
-  },
-
-  // Build character description (shown to user in modal)
-  buildCharacterDescription(character) {
-    const parts = [];
-
-    // Add D&D context header to help LLM understand class names like "Monk" are fantasy classes
-    parts.push('Dungeons & Dragons fantasy character:');
-
-    // Sex - include if set (important for portrait generation)
-    if (character.sex) {
-      parts.push(character.sex);
-    }
-
-    // Race - prefer admin-configured entries, fall back to shared description data
-    if (character.race) {
-      let raceDesc = null;
-      // Try admin entries first
-      try {
-        if (window.PortraitPrompt && typeof PortraitPrompt.getVariableSnippet === 'function') {
-          raceDesc = PortraitPrompt.getVariableSnippet('race', character.race);
-        }
-      } catch (e) {
-        // Non-fatal
-      }
-      // Fall back to hardcoded descriptions
-      if (!raceDesc) {
-        raceDesc = window.PortraitPrompt
-          ? PortraitPrompt.getRaceDescription(character.race)
-          : character.race;
-      }
-      parts.push(raceDesc);
-    }
-
-    // Class - prefer admin-configured entries, fall back to shared description data
-    if (character.class) {
-      let classDesc = null;
-      // Try admin entries first
-      try {
-        if (window.PortraitPrompt && typeof PortraitPrompt.getVariableSnippet === 'function') {
-          classDesc = PortraitPrompt.getVariableSnippet('class', character.class);
-        }
-      } catch (e) {
-        // Non-fatal
-      }
-      // Fall back to hardcoded descriptions
-      if (!classDesc) {
-        classDesc = window.PortraitPrompt
-          ? PortraitPrompt.getClassDescription(character.class)
-          : character.class;
-      }
-      parts.push(classDesc);
-    }
-
-    // Magic specialization (only for spellcasting classes)
-    // Note: This is still from hardcoded data - could be moved to admin in future
-    if (character.class && window.PortraitPrompt) {
-      const magicText = PortraitPrompt.getMagicSpecialization(character.class);
-      if (magicText) {
-        parts.push(magicText);
-      }
-    }
-
-    // Alignment
-    if (character.alignment) {
-      if (character.alignment.includes('good')) {
-        parts.push('with noble bearing');
-      } else if (character.alignment.includes('evil')) {
-        parts.push('with a menacing aura');
-      }
-    }
-
-    // Background + feature (when available)
-    if (character.background) {
-      try {
-        let backgroundLabel = character.background;
-        let backgroundFeature = character.backgroundFeature || null;
-
-        if (typeof DND_DATA !== 'undefined' && Array.isArray(DND_DATA.backgrounds)) {
-          const bgObj = DND_DATA.backgrounds.find(
-            (b) => b.id === character.background,
-          );
-          if (bgObj) {
-            backgroundLabel = bgObj.name || backgroundLabel;
-            // bgObj.feature is an object { name, description } – extract a readable label
-            if (!backgroundFeature && bgObj.feature) {
-              if (typeof bgObj.feature === 'string') {
-                backgroundFeature = bgObj.feature;
-              } else if (typeof bgObj.feature.name === 'string') {
-                backgroundFeature = bgObj.feature.name;
-              } else if (typeof bgObj.feature.description === 'string') {
-                backgroundFeature = bgObj.feature.description;
-              }
-            }
-          }
-        }
-
-        let backgroundText = `${String(backgroundLabel).toLowerCase()} background`;
-        if (backgroundFeature) {
-          const featureText = String(backgroundFeature);
-          // Avoid noisy [object Object] style strings
-          if (!featureText.includes('[object Object]')) {
-            backgroundText += ` with background feature "${featureText}"`;
-          }
-        }
-
-        parts.push(backgroundText);
-      } catch (e) {
-        // Fallback to a simple tag if anything goes wrong with lookups
-        parts.push(`background: ${character.background}`);
-      }
-    }
-
-    // Backstory removed from portrait prompts to reduce OpenAI safety rejections
-    // User-written text is unpredictable and frequently triggers content filters
-    // if (character.backstory) {
-    //   const raw = String(character.backstory).replace(/\s+/g, ' ').trim();
-    //   if (raw) {
-    //     parts.push(`backstory: ${raw}`);
-    //   }
-    // }
-  
-    return parts.join(', ');
-  },
-
-  // Build full DALL-E prompt with rendering instructions (not shown to user)
-  buildPortraitPrompt(character) {
-    // Normalize class key for lookups
-    const classKey = (character.class || 'default').toLowerCase();
-
-    // Use shared pose and camera data from PortraitPoseData module
-    const { pose: posePrompt, camera: cameraPrompt } =
-      window.PortraitPoseData && typeof PortraitPoseData.getRandomPoseAndCamera === 'function'
-        ? PortraitPoseData.getRandomPoseAndCamera(classKey)
-        : {
-            pose: 'standing in a relaxed but heroic stance',
-            camera: 'Camera angle: three-quarter view that clearly shows the full silhouette.',
-          };
-
-    // Resolve current portrait prompt theme (if any)
-    let promptThemeId = null;
-    try {
-      if (
-        typeof window !== 'undefined' &&
-        window.StorageService &&
-        typeof window.StorageService.getPortraitPromptTheme === 'function'
-      ) {
-        promptThemeId = window.StorageService.getPortraitPromptTheme();
-      } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) {
-        promptThemeId = CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME;
-      }
-    } catch (e) {
-      // Non-fatal: fall back to default theme behavior below.
-    }
-
-    // Build compact STYLE / Background descriptions from theme (when available)
-    let styleDescription = '';
-    let backgroundDescription = '';
-    if (
-      typeof window !== 'undefined' &&
-      window.PortraitPrompt &&
-      typeof window.PortraitPrompt.buildStyleAndBackgroundDescriptions ===
-        'function'
-    ) {
-      try {
-        const sections =
-          window.PortraitPrompt.buildStyleAndBackgroundDescriptions({
-            posePrompt,
-            cameraPrompt,
-            themeId: promptThemeId,
-          }) || {};
-        styleDescription = sections.styleDescription || '';
-        backgroundDescription = sections.backgroundDescription || '';
-      } catch (e) {
-        // Non-fatal – fall through to simple defaults below.
-      }
-    }
-
-    if (!styleDescription) {
-      styleDescription =
-        'High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';
-    }
-    if (!backgroundDescription) {
-      backgroundDescription =
-        'Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';
-    }
-
-    // Build simple header line: {CHARACTER_NAME}: {RACE}, {CLASS}, {BACKGROUND}
-    const name = (character && character.name) || 'Unnamed character';
-
-    const raceId = character && character.race ? String(character.race) : null;
-    const classId =
-      character && character.class ? String(character.class) : null;
-
-    let raceLabel = raceId;
-    let classLabel = classId;
-
-    // Prefer admin-configured snippets for race/class when available.
-    try {
-      if (
-        typeof window !== 'undefined' &&
-        window.PortraitPrompt &&
-        typeof window.PortraitPrompt.getVariableSnippet === 'function'
-      ) {
-        if (raceId) {
-          const customRace =
-            window.PortraitPrompt.getVariableSnippet('race', raceId);
-          if (customRace) raceLabel = customRace;
-        }
-        if (classId) {
-          const customClass =
-            window.PortraitPrompt.getVariableSnippet('class', classId);
-          if (customClass) classLabel = customClass;
-        }
-      }
-    } catch (e) {
-      // Non-fatal – fall back to simple labels.
-    }
-
-    let backgroundLabel = null;
-    if (character && character.background) {
-      backgroundLabel = String(character.background);
-      try {
-        if (
-          typeof DND_DATA !== 'undefined' &&
-          Array.isArray(DND_DATA.backgrounds)
-        ) {
-          const bgObj = DND_DATA.backgrounds.find(
-            (b) => b.id === character.background,
-          );
-          if (bgObj && bgObj.name) {
-            backgroundLabel = String(bgObj.name);
-          }
-        }
-      } catch (e) {
-        // Non-fatal – fall back to raw background value.
-      }
-    }
-
-    const headerParts = [];
-    // Sex - include for portrait generation (e.g., "male dwarf" or "female elf")
-    if (character && character.sex) {
-      headerParts.push(character.sex);
-    }
-    if (raceLabel) headerParts.push(raceLabel);
-    if (classLabel) headerParts.push(classLabel);
-    
-    // Add magic specialization for spellcasting classes
-    if (classId && window.PortraitPrompt && typeof PortraitPrompt.getMagicSpecialization === 'function') {
-      const magicText = PortraitPrompt.getMagicSpecialization(classId);
-      if (magicText) {
-        headerParts.push(magicText);
-      }
-    }
-    
-    if (backgroundLabel) headerParts.push(backgroundLabel);
-
-    const headerSuffix = headerParts.join(', ');
-    const headerLine = headerSuffix
-      ? `${name}: ${headerSuffix}`
-      : `${name}`;
-
-    // Final multi-line prompt template:
-    // Dungeons & Dragons fantasy character portrait:
-    // {CHARACTER_NAME}: {RACE}, {CLASS}, {BACKGROUND}
-    //
-    // Pose: {POSE_VARIANT}
-    //
-    // STYLE: {DESCRIPTION}
-    //
-    // Scene: {DESCRIPTION}
-    // Note: Camera temporarily disabled - may interfere with pose
-    let prompt = `Dungeons & Dragons fantasy character portrait:\n${headerLine}\n\nPose: ${posePrompt}`;
-    if (styleDescription) {
-      prompt += `\n\nSTYLE: ${styleDescription}`;
-    }
-    if (backgroundDescription) {
-      prompt += `\n\nScene: ${backgroundDescription}`;
-    }
-
-    return prompt;
-  },
-
-  // Analyze a rejected prompt to help identify problematic sections
-  analyzeRejectedPrompt(prompt) {
-    console.log('%c🔍 Analyzing Rejected Prompt', 'color: #ff0; font-weight: bold; font-size: 14px;');
-    console.log('─'.repeat(80));
-    
-    // Common problematic patterns that might trigger safety filters
-    const potentialIssues = [];
-    const warningPatterns = [
-      { pattern: /\b(blood|gore|violence|death|kill|weapon|sword|axe|dagger|knife)\b/gi, category: 'Violence/Weapons' },
-      { pattern: /\b(dark|evil|demon|devil|hell|sinister|menacing|malevolent)\b/gi, category: 'Dark Themes' },
-      { pattern: /\b(naked|nude|exposed|bare|revealing|sensual|seductive)\b/gi, category: 'Adult Content' },
-      { pattern: /\b(child|young|minor|kid|juvenile)\b/gi, category: 'Age-Related' },
-      { pattern: /\b(slave|slavery|bound|chained|prisoner)\b/gi, category: 'Sensitive Topics' },
-    ];
-
-    // Check for each pattern
-    warningPatterns.forEach(({ pattern, category }) => {
-      const matches = prompt.match(pattern);
-      if (matches && matches.length > 0) {
-        potentialIssues.push({
-          category,
-          matches: [...new Set(matches.map(m => m.toLowerCase()))],
-          count: matches.length
-        });
-      }
-    });
-
-    // Try to break down the prompt into sections
-    const sections = prompt.split(', ').filter(s => s.trim());
-    
-    console.log('📋 PROMPT SECTIONS (%d total):', sections.length);
-    sections.forEach((section, idx) => {
-      const sectionLower = section.toLowerCase();
-      let hasWarning = false;
-      
-      // Check if this section contains problematic terms
-      for (const { pattern } of warningPatterns) {
-        if (pattern.test(section)) {
-          hasWarning = true;
-          break;
-        }
-      }
-      
-      const marker = hasWarning ? '⚠️ ' : '   ';
-      console.log(`${marker}${idx + 1}. ${section}`);
-    });
-    
-    console.log('─'.repeat(80));
-    
-    if (potentialIssues.length > 0) {
-      console.log('%c⚠️  POTENTIAL ISSUES DETECTED:', 'color: #f90; font-weight: bold;');
-      potentialIssues.forEach(issue => {
-        console.log(`  • ${issue.category}: ${issue.matches.join(', ')} (${issue.count}x)`);
-      });
-    } else {
-      console.log('%c✓ No obvious problematic patterns detected', 'color: #0f0;');
-      console.log('  The rejection may be due to:');
-      console.log('  • Combination of terms that seem innocent individually');
-      console.log('  • Character race/class combinations OpenAI finds problematic');
-      console.log('  • Background story content or phrasing');
-      console.log('  • OpenAI policy updates or temporary sensitivity changes');
-    }
-    
-    console.log('─'.repeat(80));
-    console.log('%c💡 DEBUGGING SUGGESTIONS:', 'color: #0ff; font-weight: bold;');
-    console.log('  1. Try regenerating - sometimes the same prompt works on retry');
-    console.log('  2. Simplify the backstory or character description');
-    console.log('  3. Remove alignment-based descriptions (e.g., "menacing aura")');
-    console.log('  4. Adjust weapon/equipment descriptions to be less specific');
-    console.log('  5. Use the custom prompt modal to test simplified versions');
-    console.log('─'.repeat(80));
-    
-    return {
-      sections,
-      potentialIssues,
-      hasKnownProblematicTerms: potentialIssues.length > 0
-    };
-  },
-});
-
-
-
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-components.js =====
-
-// UI components for the DandDy terminal character builder.
-// Exposes Components as a global on window.
-
-const Components = (window.Components = {
-  renderNarratorMessage(text) {
-    return `
+Format your response as JSON array of strings, one for each option in order. Example: ["text1", "text2", "text3", "text4"]`;const systemPrompt='You are a creative D&D character creation assistant. Generate engaging option text that feels fresh but maintains the same meaning. '+'Be concise and direct. Return ONLY valid JSON.';console.log('%c🎲 OPTIONS: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Note: Will fallback to original option texts if unavailable...');const response=await this.generateCompletion(prompt,systemPrompt);if(response){try{const jsonMatch=response.match(/\[.*\]/s);if(jsonMatch){const variations=JSON.parse(jsonMatch[0]);if(Array.isArray(variations)&&variations.length===options.length){console.log('%c🎲 OPTIONS (AI Generated) ✨','color: #0f0; font-weight: bold');return variations;}}}catch(error){console.log('Failed to parse AI option variations:',error);}}
+console.log('%c🎲 OPTIONS (Fallback - Using Original Texts) ✅','color: #f80; font-weight: bold');console.log('  The original option texts will be used instead of AI variations');return options.map((opt)=>opt.text);},async generatePortraitImage(character){if(!CONFIG.ENABLE_AI){console.log('AI service disabled for image generation');return null;}
+const prompt=this.buildPortraitPrompt(character);return await this.generateImageFromPrompt(prompt);},async generateImageFromPrompt(prompt,options={}){if(!CONFIG.ENABLE_AI){console.log('%c🎨 DALL-E (Unavailable - AI Disabled)','color: #ff0; font-weight: bold');return null;}
+const forceModel=options.forceModel||null;const isRetry=options._isRetry||false;try{let model=forceModel||'dall-e-3';if(!forceModel){try{if(window.StorageService&&typeof StorageService.getImageModel==='function'){model=StorageService.getImageModel();}else if(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL){model=CONFIG.DEFAULT_IMAGE_MODEL;}}catch(e){console.warn('AIService.generateImageFromPrompt: failed to read image model, using default',e);}}
+console.log('%c🎨 IMAGE: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Prompt (preview):',prompt.substring(0,100)+(prompt.length>100?'…':''));console.log('  Model:',model+(forceModel?' (fallback)':''));console.log('  Note: Image generation takes 20-30s (longer than text AI)...');const defaultQuality={'dall-e-3':'standard','gpt-image-1':'medium','flux-1.1-pro':'standard','flux-schnell':'standard',};let quality=defaultQuality[model]||'standard';const isDemoMode=window.DemoCharacters&&typeof DemoCharacters.isDemoMode==='function'&&DemoCharacters.isDemoMode();if(isDemoMode&&model==='gpt-image-1'){quality='medium';console.log(`  Quality: MEDIUM (demo mode default)`);}else{try{if(window.StorageService&&typeof StorageService.getImageQuality==='function'){const savedQuality=StorageService.getImageQuality(model);if(savedQuality){quality=savedQuality;console.log(`  Quality: ${quality.toUpperCase()} (user preference)`);}}}catch(e){console.warn('AIService: failed to read quality setting',e);}}
+const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({prompt:prompt,size:'1024x1024',quality:quality,model:model,}),},70000);if(!response.ok){const errorData=await response.json();console.log('%c🎨 IMAGE (Error)','color: #f00; font-weight: bold');console.log('  Error:',errorData.detail);const extractErrorMessage=(detail)=>{if(!detail)return null;if(Array.isArray(detail)){return detail.map(err=>{if(typeof err==='string')return err;const field=err.loc?err.loc.slice(1).join('.'):'unknown';return`${field}: ${err.msg || err.message || JSON.stringify(err)}`;}).join('; ');}
+if(typeof detail==='object'){return detail.msg||detail.message||JSON.stringify(detail);}
+return String(detail);};const errorMessage=extractErrorMessage(errorData.detail);if(response.status===429){const rateLimitError=new Error(errorMessage||'Rate limit exceeded');rateLimitError.isRateLimit=true;throw rateLimitError;}
+const detailStr=typeof errorData.detail==='string'?errorData.detail:errorMessage;if(response.status===502&&detailStr&&(detailStr.toLowerCase().includes('flux')||detailStr.toLowerCase().includes('replicate'))){console.warn('⚠️ Replicate/Flux service error:',detailStr);const fluxError=new Error('Flux image generation service is temporarily unavailable');fluxError.isFluxError=true;fluxError.originalMessage=detailStr;fluxError.suggestModelSwitch=true;throw fluxError;}
+if(response.status===400&&detailStr&&detailStr.toLowerCase().includes('safety system')){console.warn('⚠️ OpenAI safety system rejection:',detailStr);console.warn('📝 REJECTED PROMPT:',prompt);const analysis=this.analyzeRejectedPrompt(prompt);const safetyError=new Error('Portrait generation was flagged by OpenAI\'s content safety system');safetyError.isSafetyRejection=true;safetyError.originalMessage=detailStr;safetyError.rejectedPrompt=prompt;safetyError.promptAnalysis=analysis;throw safetyError;}
+throw new Error(errorMessage||`API error: ${response.status}`);}
+const data=await response.json();if(data.success){console.log('%c🎨 IMAGE (Generated) ✨','color: #0f0; font-weight: bold');console.log('  URL:',data.url.substring(0,50)+'...');return data.url;}
+return null;}catch(error){console.log('%c🎨 IMAGE (Failed)','color: #f00; font-weight: bold');console.error('  Error:',error);if(error.isFluxError&&!isRetry){console.log('%c🔄 AUTO-FALLBACK: Flux unavailable, trying GPT Image instead...','color: #fa0; font-weight: bold');if(window.UIService){window.UIService.showNotification('Flux unavailable, switching to GPT Image...','info',4000);}
+return this.generateImageFromPrompt(prompt,{forceModel:'gpt-image-1',_isRetry:true});}
+throw error;}},buildCharacterDescription(character){const parts=[];parts.push('Dungeons & Dragons fantasy character:');if(character.sex){parts.push(character.sex);}
+if(character.race){let raceDesc=null;try{if(window.PortraitPrompt&&typeof PortraitPrompt.getVariableSnippet==='function'){raceDesc=PortraitPrompt.getVariableSnippet('race',character.race);}}catch(e){}
+if(!raceDesc){raceDesc=window.PortraitPrompt?PortraitPrompt.getRaceDescription(character.race):character.race;}
+parts.push(raceDesc);}
+if(character.class){let classDesc=null;try{if(window.PortraitPrompt&&typeof PortraitPrompt.getVariableSnippet==='function'){classDesc=PortraitPrompt.getVariableSnippet('class',character.class);}}catch(e){}
+if(!classDesc){classDesc=window.PortraitPrompt?PortraitPrompt.getClassDescription(character.class):character.class;}
+parts.push(classDesc);}
+if(character.class&&window.PortraitPrompt){const magicText=PortraitPrompt.getMagicSpecialization(character.class);if(magicText){parts.push(magicText);}}
+if(character.alignment){if(character.alignment.includes('good')){parts.push('with noble bearing');}else if(character.alignment.includes('evil')){parts.push('with a menacing aura');}}
+if(character.background){try{let backgroundLabel=character.background;let backgroundFeature=character.backgroundFeature||null;if(typeof DND_DATA!=='undefined'&&Array.isArray(DND_DATA.backgrounds)){const bgObj=DND_DATA.backgrounds.find((b)=>b.id===character.background,);if(bgObj){backgroundLabel=bgObj.name||backgroundLabel;if(!backgroundFeature&&bgObj.feature){if(typeof bgObj.feature==='string'){backgroundFeature=bgObj.feature;}else if(typeof bgObj.feature.name==='string'){backgroundFeature=bgObj.feature.name;}else if(typeof bgObj.feature.description==='string'){backgroundFeature=bgObj.feature.description;}}}}
+let backgroundText=`${String(backgroundLabel).toLowerCase()} background`;if(backgroundFeature){const featureText=String(backgroundFeature);if(!featureText.includes('[object Object]')){backgroundText+=` with background feature "${featureText}"`;}}
+parts.push(backgroundText);}catch(e){parts.push(`background: ${character.background}`);}}
+return parts.join(', ');},buildPortraitPrompt(character){const classKey=(character.class||'default').toLowerCase();const{pose:posePrompt,camera:cameraPrompt}=window.PortraitPoseData&&typeof PortraitPoseData.getRandomPoseAndCamera==='function'?PortraitPoseData.getRandomPoseAndCamera(classKey):{pose:'standing in a relaxed but heroic stance',camera:'Camera angle: three-quarter view that clearly shows the full silhouette.',};let promptThemeId=null;try{if(typeof window!=='undefined'&&window.StorageService&&typeof window.StorageService.getPortraitPromptTheme==='function'){promptThemeId=window.StorageService.getPortraitPromptTheme();}else if(typeof CONFIG!=='undefined'&&CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME){promptThemeId=CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME;}}catch(e){}
+let styleDescription='';let backgroundDescription='';if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.buildStyleAndBackgroundDescriptions==='function'){try{const sections=window.PortraitPrompt.buildStyleAndBackgroundDescriptions({posePrompt,cameraPrompt,themeId:promptThemeId,})||{};styleDescription=sections.styleDescription||'';backgroundDescription=sections.backgroundDescription||'';}catch(e){}}
+if(!styleDescription){styleDescription='High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';}
+if(!backgroundDescription){backgroundDescription='Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';}
+const name=(character&&character.name)||'Unnamed character';const raceId=character&&character.race?String(character.race):null;const classId=character&&character.class?String(character.class):null;let raceLabel=raceId;let classLabel=classId;try{if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.getVariableSnippet==='function'){if(raceId){const customRace=window.PortraitPrompt.getVariableSnippet('race',raceId);if(customRace)raceLabel=customRace;}
+if(classId){const customClass=window.PortraitPrompt.getVariableSnippet('class',classId);if(customClass)classLabel=customClass;}}}catch(e){}
+let backgroundLabel=null;if(character&&character.background){backgroundLabel=String(character.background);try{if(typeof DND_DATA!=='undefined'&&Array.isArray(DND_DATA.backgrounds)){const bgObj=DND_DATA.backgrounds.find((b)=>b.id===character.background,);if(bgObj&&bgObj.name){backgroundLabel=String(bgObj.name);}}}catch(e){}}
+const headerParts=[];if(character&&character.sex){headerParts.push(character.sex);}
+if(raceLabel)headerParts.push(raceLabel);if(classLabel)headerParts.push(classLabel);if(classId&&window.PortraitPrompt&&typeof PortraitPrompt.getMagicSpecialization==='function'){const magicText=PortraitPrompt.getMagicSpecialization(classId);if(magicText){headerParts.push(magicText);}}
+if(backgroundLabel)headerParts.push(backgroundLabel);const headerSuffix=headerParts.join(', ');const headerLine=headerSuffix?`${name}: ${headerSuffix}`:`${name}`;let prompt=`Dungeons & Dragons fantasy character portrait:\n${headerLine}\n\nPose: ${posePrompt}`;if(styleDescription){prompt+=`\n\nSTYLE: ${styleDescription}`;}
+if(backgroundDescription){prompt+=`\n\nScene: ${backgroundDescription}`;}
+return prompt;},analyzeRejectedPrompt(prompt){console.log('%c🔍 Analyzing Rejected Prompt','color: #ff0; font-weight: bold; font-size: 14px;');console.log('─'.repeat(80));const potentialIssues=[];const warningPatterns=[{pattern:/\b(blood|gore|violence|death|kill|weapon|sword|axe|dagger|knife)\b/gi,category:'Violence/Weapons'},{pattern:/\b(dark|evil|demon|devil|hell|sinister|menacing|malevolent)\b/gi,category:'Dark Themes'},{pattern:/\b(naked|nude|exposed|bare|revealing|sensual|seductive)\b/gi,category:'Adult Content'},{pattern:/\b(child|young|minor|kid|juvenile)\b/gi,category:'Age-Related'},{pattern:/\b(slave|slavery|bound|chained|prisoner)\b/gi,category:'Sensitive Topics'},];warningPatterns.forEach(({pattern,category})=>{const matches=prompt.match(pattern);if(matches&&matches.length>0){potentialIssues.push({category,matches:[...new Set(matches.map(m=>m.toLowerCase()))],count:matches.length});}});const sections=prompt.split(', ').filter(s=>s.trim());console.log('📋 PROMPT SECTIONS (%d total):',sections.length);sections.forEach((section,idx)=>{const sectionLower=section.toLowerCase();let hasWarning=false;for(const{pattern}of warningPatterns){if(pattern.test(section)){hasWarning=true;break;}}
+const marker=hasWarning?'⚠️ ':'   ';console.log(`${marker}${idx + 1}. ${section}`);});console.log('─'.repeat(80));if(potentialIssues.length>0){console.log('%c⚠️  POTENTIAL ISSUES DETECTED:','color: #f90; font-weight: bold;');potentialIssues.forEach(issue=>{console.log(`  • ${issue.category}: ${issue.matches.join(', ')} (${issue.count}x)`);});}else{console.log('%c✓ No obvious problematic patterns detected','color: #0f0;');console.log('  The rejection may be due to:');console.log('  • Combination of terms that seem innocent individually');console.log('  • Character race/class combinations OpenAI finds problematic');console.log('  • Background story content or phrasing');console.log('  • OpenAI policy updates or temporary sensitivity changes');}
+console.log('─'.repeat(80));console.log('%c💡 DEBUGGING SUGGESTIONS:','color: #0ff; font-weight: bold;');console.log('  1. Try regenerating - sometimes the same prompt works on retry');console.log('  2. Simplify the backstory or character description');console.log('  3. Remove alignment-based descriptions (e.g., "menacing aura")');console.log('  4. Adjust weapon/equipment descriptions to be less specific');console.log('  5. Use the custom prompt modal to test simplified versions');console.log('─'.repeat(80));return{sections,potentialIssues,hasKnownProblematicTerms:potentialIssues.length>0};},});const Components=(window.Components={renderNarratorMessage(text){return`
       <div class="narrator-message">
         <div class="narrator-text">${text}</div>
       </div>
-    `;
-  },
-
-  renderQuestion(question) {
-    const optionsHTML = question.options
-      .map(
-        (opt, index) => `
+    `;},renderQuestion(question){const optionsHTML=question.options.map((opt,index)=>`
           <button class="button-primary" onclick="App.handleAnswer('${question.id}', ${index})">
             ${opt.text}
           </button>
-        `,
-      )
-      .join('');
-
-    return `
+        `,).join('');return`
       <div class="question-card" data-question-id="${question.id}">
         <div class="options-container">
           ${optionsHTML}
         </div>
       </div>
-    `;
-  },
-
-  renderTextInput(question) {
-    return `
+    `;},renderTextInput(question){return`
       <div class="question-card" data-question-id="${question.id}">
         <div class="question-text">${question.text}</div>
         <input type="text" class="input-field" id="text-input" placeholder="${question.placeholder || 'Type here...'}">
@@ -4884,19 +294,7 @@ const Components = (window.Components = {
           CONTINUE
         </button>
       </div>
-    `;
-  },
-
-  renderCharacterSheet(
-    character,
-    portrait = null,
-    showPortrait = true,
-    extraOptions = {},
-  ) {
-    const { showGeneratePortraitButton = true } = extraOptions || {};
-
-    // Use the shared CharacterSheet component
-    return `
+    `;},renderCharacterSheet(character,portrait=null,showPortrait=true,extraOptions={},){const{showGeneratePortraitButton=true}=extraOptions||{};return`
       <div class="character-sheet">
         ${CharacterSheet.render(character, {
           context: 'builder',
@@ -4910,123 +308,12 @@ const Components = (window.Components = {
           onPrint: true,
         })}
       </div>
-    `;
-  },
-
-  renderSettings() {
-    const currentNarratorId = StorageService.getNarratorId();
-    const narratorsList = getNarratorList();
-
-    // Check if current user is admin (decode JWT)
-    let isUserAdmin = false;
-    try {
-      if (window.AuthService && typeof AuthService.isAuthenticated === 'function' && AuthService.isAuthenticated()) {
-        const token = AuthService.getToken ? AuthService.getToken() : null;
-        if (token) {
-          const payload = token.split('.')[1];
-          const decoded = JSON.parse(atob(payload));
-          isUserAdmin = decoded.role === 'admin';
-        }
-      }
-    } catch (e) {
-      // Silent fail - user is not admin
-    }
-
-    // Image quality options per model
-    const modelQualityOptions = {
-      'dall-e-3': [
-        { value: 'standard', label: 'Standard' },
-        { value: 'hd', label: 'HD' },
-      ],
-      'gpt-image-1': [
-        { value: 'medium', label: 'Medium' },
-        { value: 'high', label: 'High' },
-      ],
-      // Flux models don't have quality options
-      'flux-1.1-pro': [],
-      'flux-schnell': [],
-    };
-
-    // Get default quality for a model
-    const getDefaultQuality = (model) => {
-      const options = modelQualityOptions[model] || [];
-      return options.length > 0 ? options[0].value : null;
-    };
-
-    // Get current quality setting for selected model
-    const getCurrentImageQuality = (model) => {
-      if (!StorageService || typeof StorageService.getImageQuality !== 'function') {
-        return getDefaultQuality(model);
-      }
-      try {
-        const quality = StorageService.getImageQuality(model);
-        if (quality) return quality;
-        // For gpt-image-1, check legacy setting
-        if (model === 'gpt-image-1' && StorageService.getHighQualityGPTImage) {
-          return StorageService.getHighQualityGPTImage() ? 'high' : 'medium';
-        }
-        return getDefaultQuality(model);
-      } catch (e) {
-        return getDefaultQuality(model);
-      }
-    };
-
-    // Helper to truncate text for options
-    const truncate = (text, maxLength) => {
-      return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
-    };
-
-    // Helper to format narrator titles: strip emoji/description and use a clean title.
-    const formatNarratorTitle = (narrator) => {
-      if (!narrator) return '';
-      const base = String(narrator.name || narrator.id || '').trim();
-      if (!base) return '';
-      return base
-        .split(/[-_\s]+/)
-        .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-        .join(' ');
-    };
-
-    // Text speed multiplier: defaults to 1x if not set or invalid.
-    const getCurrentTextSpeed = () => {
-      if (!StorageService || typeof StorageService.getTextSpeedMultiplier !== 'function') {
-        return 1;
-      }
-      try {
-        return StorageService.getTextSpeedMultiplier();
-      } catch (e) {
-        console.warn('Settings: failed to read text speed multiplier', e);
-        return 1;
-      }
-    };
-
-    const currentTextSpeedMultiplier = getCurrentTextSpeed();
-
-    // Image model preference (for custom AI portraits)
-    const getCurrentImageModel = () => {
-      if (!StorageService || typeof StorageService.getImageModel !== 'function') {
-        return (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) || 'dall-e-3';
-      }
-      try {
-        return StorageService.getImageModel();
-      } catch (e) {
-        console.warn('Settings: failed to read image model preference', e);
-        return (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) || 'dall-e-3';
-      }
-    };
-
-    const currentNarrator =
-      narratorsList.find((n) => n.id === currentNarratorId) || narratorsList[0];
-    const currentNarratorLabel = currentNarrator
-      ? formatNarratorTitle(currentNarrator)
-      : 'Choose narrator';
-
-    const narratorOptionsMenu = narratorsList
-      .map((narrator) => {
-        const label = formatNarratorTitle(narrator);
-        const isSelected = narrator.id === currentNarratorId;
-        return `
+    `;},renderSettings(){const currentNarratorId=StorageService.getNarratorId();const narratorsList=getNarratorList();let isUserAdmin=false;try{if(window.AuthService&&typeof AuthService.isAuthenticated==='function'&&AuthService.isAuthenticated()){const token=AuthService.getToken?AuthService.getToken():null;if(token){const payload=token.split('.')[1];const decoded=JSON.parse(atob(payload));isUserAdmin=decoded.role==='admin';}}}catch(e){}
+const modelQualityOptions={'dall-e-3':[{value:'standard',label:'Standard'},{value:'hd',label:'HD'},],'gpt-image-1':[{value:'medium',label:'Medium'},{value:'high',label:'High'},],'flux-1.1-pro':[],'flux-schnell':[],};const getDefaultQuality=(model)=>{const options=modelQualityOptions[model]||[];return options.length>0?options[0].value:null;};const getCurrentImageQuality=(model)=>{if(!StorageService||typeof StorageService.getImageQuality!=='function'){return getDefaultQuality(model);}
+try{const quality=StorageService.getImageQuality(model);if(quality)return quality;if(model==='gpt-image-1'&&StorageService.getHighQualityGPTImage){return StorageService.getHighQualityGPTImage()?'high':'medium';}
+return getDefaultQuality(model);}catch(e){return getDefaultQuality(model);}};const truncate=(text,maxLength)=>{return text.length>maxLength?text.substring(0,maxLength-3)+'...':text;};const formatNarratorTitle=(narrator)=>{if(!narrator)return'';const base=String(narrator.name||narrator.id||'').trim();if(!base)return'';return base.split(/[-_\s]+/).filter(Boolean).map((part)=>part.charAt(0).toUpperCase()+part.slice(1).toLowerCase()).join(' ');};const getCurrentTextSpeed=()=>{if(!StorageService||typeof StorageService.getTextSpeedMultiplier!=='function'){return 1;}
+try{return StorageService.getTextSpeedMultiplier();}catch(e){console.warn('Settings: failed to read text speed multiplier',e);return 1;}};const currentTextSpeedMultiplier=getCurrentTextSpeed();const getCurrentImageModel=()=>{if(!StorageService||typeof StorageService.getImageModel!=='function'){return(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL)||'dall-e-3';}
+try{return StorageService.getImageModel();}catch(e){console.warn('Settings: failed to read image model preference',e);return(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL)||'dall-e-3';}};const currentNarrator=narratorsList.find((n)=>n.id===currentNarratorId)||narratorsList[0];const currentNarratorLabel=currentNarrator?formatNarratorTitle(currentNarrator):'Choose narrator';const narratorOptionsMenu=narratorsList.map((narrator)=>{const label=formatNarratorTitle(narrator);const isSelected=narrator.id===currentNarratorId;return`
           <button
             class="selector-option${isSelected ? ' is-selected' : ''}"
             type="button"
@@ -5038,145 +325,13 @@ const Components = (window.Components = {
               ${label}
             </span>
           </button>
-        `;
-      })
-      .join('');
-
-    const textSpeedOptions = [
-      { value: 1, label: 'Normal' },
-      { value: 1.5, label: 'Fast (1.5×)' },
-      { value: 2, label: 'Very Fast (2×)' },
-    ];
-
-    const currentTextSpeedOption =
-      textSpeedOptions.find((opt) => opt.value === currentTextSpeedMultiplier) ||
-      textSpeedOptions[0];
-    const currentTextSpeedLabel = currentTextSpeedOption.label;
-
-    const imageModelOptions = [
-      { value: 'dall-e-3', label: 'DALL·E 3 (high detail)' },
-      { value: 'gpt-image-1', label: 'GPT Image 1 (OpenAI)' },
-      { value: 'flux-1.1-pro', label: 'Flux Pro (high quality)' },
-      { value: 'flux-schnell', label: 'Flux Schnell (fast)' },
-    ];
-
-    const currentImageModelValue = getCurrentImageModel();
-    const currentImageModelOption =
-      imageModelOptions.find((opt) => opt.value === currentImageModelValue) ||
-      imageModelOptions[0];
-    const currentImageModelLabel = currentImageModelOption.label;
-
-    // Quality options for current model
-    const currentQualityOptions = modelQualityOptions[currentImageModelValue] || [];
-    const currentQualityValue = getCurrentImageQuality(currentImageModelValue);
-    const currentQualityOption = currentQualityOptions.find(
-      (opt) => opt.value === currentQualityValue,
-    ) || currentQualityOptions[0];
-    const currentQualityLabel = currentQualityOption?.label || '';
-    // Only show quality options to admin users
-    const hasQualityOptions = currentQualityOptions.length > 0 && isUserAdmin;
-
-    // Portrait view mode (ASCII vs Original)
-    const getPortraitViewMode = () => {
-      if (window.StorageService && StorageService.getPortraitViewMode) {
-        return StorageService.getPortraitViewMode();
-      }
-      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'original';
-    };
-
-    const currentPortraitViewMode = getPortraitViewMode();
-
-    // Portrait prompt theme (for AI-generated portraits)
-    const getPortraitPromptTheme = () => {
-      try {
-        if (window.StorageService && StorageService.getPortraitPromptTheme) {
-          return StorageService.getPortraitPromptTheme();
-        }
-      } catch (e) {
-        console.warn('Settings: failed to read portrait prompt theme', e);
-      }
-
-      if (
-        typeof window !== 'undefined' &&
-        window.PortraitPrompt &&
-        typeof window.PortraitPrompt.getDefaultThemeId === 'function'
-      ) {
-        try {
-          return window.PortraitPrompt.getDefaultThemeId();
-        } catch (e) {
-          // Non-fatal
-        }
-      }
-
-      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) || null;
-    };
-
-    const currentPromptThemeId = getPortraitPromptTheme();
-
-    // Trigger API sync if not already done (in case settings opened before auto-sync)
-    if (
-      typeof window !== 'undefined' &&
-      window.PortraitPrompt &&
-      typeof window.PortraitPrompt.syncFromAPI === 'function'
-    ) {
-      // Fire and forget - will populate cache for next render
-      window.PortraitPrompt.syncFromAPI();
-    }
-
-    let promptThemes = [];
-    if (
-      typeof window !== 'undefined' &&
-      window.PortraitPrompt &&
-      typeof window.PortraitPrompt.getThemes === 'function'
-    ) {
-      try {
-        promptThemes = window.PortraitPrompt.getThemes() || [];
-      } catch (e) {
-        console.warn('Settings: failed to read portrait prompt themes', e);
-      }
-    }
-
-    // Fallback to a single default theme when the helper is unavailable.
-    if (!Array.isArray(promptThemes) || !promptThemes.length) {
-      promptThemes = [
-        {
-          id: 'cinematic-inks',
-          label: 'Cinematic Inks (default)',
-          description:
-            'More cinematic lighting and framing while staying in black-and-white ink.',
-        },
-      ];
-    }
-
-    // Sort themes alphabetically by id
-    promptThemes = promptThemes.slice().sort((a, b) => {
-      const nameA = (a.id || '').toLowerCase();
-      const nameB = (b.id || '').toLowerCase();
-      return nameA.localeCompare(nameB);
-    });
-
-    const activePromptTheme =
-      promptThemes.find((t) => t.id === currentPromptThemeId) ||
-      promptThemes[0];
-
-    // Helper to format a theme id/label into Title Case name.
-    const formatThemeName = (theme) => {
-      const rawId = (theme && theme.id) || '';
-      // Prefer id so custom themes don't inherit any legacy "(default)" suffixes.
-      const base = String(rawId || '').trim() || String(theme.label || '');
-      if (!base) return '';
-      return base
-        .split(/[-_\s]+/)
-        .filter(Boolean)
-        .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-        .join(' ');
-    };
-
-    const currentPromptThemeLabel = activePromptTheme
-      ? formatThemeName(activePromptTheme)
-      : 'Cinematic Inks';
-
-    return `
+        `;}).join('');const textSpeedOptions=[{value:1,label:'Normal'},{value:1.5,label:'Fast (1.5×)'},{value:2,label:'Very Fast (2×)'},];const currentTextSpeedOption=textSpeedOptions.find((opt)=>opt.value===currentTextSpeedMultiplier)||textSpeedOptions[0];const currentTextSpeedLabel=currentTextSpeedOption.label;const imageModelOptions=[{value:'dall-e-3',label:'DALL·E 3 (high detail)'},{value:'gpt-image-1',label:'GPT Image 1 (OpenAI)'},{value:'flux-1.1-pro',label:'Flux Pro (high quality)'},{value:'flux-schnell',label:'Flux Schnell (fast)'},];const currentImageModelValue=getCurrentImageModel();const currentImageModelOption=imageModelOptions.find((opt)=>opt.value===currentImageModelValue)||imageModelOptions[0];const currentImageModelLabel=currentImageModelOption.label;const currentQualityOptions=modelQualityOptions[currentImageModelValue]||[];const currentQualityValue=getCurrentImageQuality(currentImageModelValue);const currentQualityOption=currentQualityOptions.find((opt)=>opt.value===currentQualityValue,)||currentQualityOptions[0];const currentQualityLabel=currentQualityOption?.label||'';const hasQualityOptions=currentQualityOptions.length>0&&isUserAdmin;const getPortraitViewMode=()=>{if(window.StorageService&&StorageService.getPortraitViewMode){return StorageService.getPortraitViewMode();}
+return(CONFIG&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE)||'original';};const currentPortraitViewMode=getPortraitViewMode();const getPortraitPromptTheme=()=>{try{if(window.StorageService&&StorageService.getPortraitPromptTheme){return StorageService.getPortraitPromptTheme();}}catch(e){console.warn('Settings: failed to read portrait prompt theme',e);}
+if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.getDefaultThemeId==='function'){try{return window.PortraitPrompt.getDefaultThemeId();}catch(e){}}
+return(CONFIG&&CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME)||null;};const currentPromptThemeId=getPortraitPromptTheme();if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.syncFromAPI==='function'){window.PortraitPrompt.syncFromAPI();}
+let promptThemes=[];if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.getThemes==='function'){try{promptThemes=window.PortraitPrompt.getThemes()||[];}catch(e){console.warn('Settings: failed to read portrait prompt themes',e);}}
+if(!Array.isArray(promptThemes)||!promptThemes.length){promptThemes=[{id:'cinematic-inks',label:'Cinematic Inks (default)',description:'More cinematic lighting and framing while staying in black-and-white ink.',},];}
+promptThemes=promptThemes.slice().sort((a,b)=>{const nameA=(a.id||'').toLowerCase();const nameB=(b.id||'').toLowerCase();return nameA.localeCompare(nameB);});const activePromptTheme=promptThemes.find((t)=>t.id===currentPromptThemeId)||promptThemes[0];const formatThemeName=(theme)=>{const rawId=(theme&&theme.id)||'';const base=String(rawId||'').trim()||String(theme.label||'');if(!base)return'';return base.split(/[-_\s]+/).filter(Boolean).map((part)=>part.charAt(0).toUpperCase()+part.slice(1).toLowerCase()).join(' ');};const currentPromptThemeLabel=activePromptTheme?formatThemeName(activePromptTheme):'Cinematic Inks';return`
       <div id="settingsModal" class="modal show" onclick="SettingsModal.close()">
         <div class="modal-content builder-settings-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
@@ -5223,13 +378,7 @@ const Components = (window.Components = {
                         ${narratorsList
                           .map((narrator) => {
                             const label = formatNarratorTitle(narrator);
-                            return `
-                            <option value="${narrator.id}" ${
-                              narrator.id === currentNarratorId ? 'selected' : ''
-                            }>
-                              ${label}
-                            </option>
-                          `;
+                            return `<option value="${narrator.id}"${narrator.id===currentNarratorId?'selected':''}>${label}</option>`;
                           })
                           .join('')}
                       </select>
@@ -5259,19 +408,12 @@ const Components = (window.Components = {
                             .map((opt) => {
                               const isSelected =
                                 opt.value === currentTextSpeedOption.value;
-                              return `
-                              <button
-                                class="selector-option${isSelected ? ' is-selected' : ''}"
-                                type="button"
-                                role="option"
-                                data-value="${opt.value}"
-                                aria-selected="${isSelected ? 'true' : 'false'}"
-                              >
-                                <span class="selector-option-label">
-                                  ${opt.label}
-                                </span>
-                              </button>
-                            `;
+                              return `<button
+class="selector-option${isSelected ? ' is-selected' : ''}"
+type="button"
+role="option"
+data-value="${opt.value}"
+aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-label">${opt.label}</span></button>`;
                             })
                             .join('')}
                         </div>
@@ -5282,15 +424,7 @@ const Components = (window.Components = {
                       >
                         ${textSpeedOptions
                           .map(
-                            (opt) => `
-                            <option value="${opt.value}" ${
-                              opt.value === currentTextSpeedOption.value
-                                ? 'selected'
-                                : ''
-                            }>
-                              ${opt.label}
-                            </option>
-                          `,
+                            (opt) => `<option value="${opt.value}"${opt.value===currentTextSpeedOption.value?'selected':''}>${opt.label}</option>`,
                           )
                           .join('')}
                       </select>
@@ -5331,21 +465,12 @@ const Components = (window.Components = {
                               .map((theme) => {
                                 const isSelected = theme.id === activePromptTheme.id;
                                 const label = formatThemeName(theme);
-                                return `
-                                <button
-                                  class="selector-option${
-                                    isSelected ? ' is-selected' : ''
-                                  }"
-                                  type="button"
-                                  role="option"
-                                  data-value="${theme.id}"
-                                  aria-selected="${isSelected ? 'true' : 'false'}"
-                                >
-                                  <span class="selector-option-label">
-                                    ${label}
-                                  </span>
-                                </button>
-                              `;
+                                return `<button
+class="selector-option${isSelected?' is-selected':''}"
+type="button"
+role="option"
+data-value="${theme.id}"
+aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-label">${label}</span></button>`;
                               })
                               .join('')}
                           </div>
@@ -5357,13 +482,7 @@ const Components = (window.Components = {
                           ${promptThemes
                             .map((theme) => {
                               const label = formatThemeName(theme);
-                              return `
-                              <option value="${theme.id}" ${
-                                theme.id === activePromptTheme.id ? 'selected' : ''
-                              }>
-                                ${label}
-                              </option>
-                            `;
+                              return `<option value="${theme.id}"${theme.id===activePromptTheme.id?'selected':''}>${label}</option>`;
                             })
                             .join('')}
                         </select>
@@ -5395,19 +514,12 @@ const Components = (window.Components = {
                               .map((opt) => {
                                 const isSelected =
                                   opt.value === currentImageModelOption.value;
-                                return `
-                                <button
-                                  class="selector-option${isSelected ? ' is-selected' : ''}"
-                                  type="button"
-                                  role="option"
-                                  data-value="${opt.value}"
-                                  aria-selected="${isSelected ? 'true' : 'false'}"
-                                >
-                                  <span class="selector-option-label">
-                                    ${opt.label}
-                                  </span>
-                                </button>
-                              `;
+                                return `<button
+class="selector-option${isSelected ? ' is-selected' : ''}"
+type="button"
+role="option"
+data-value="${opt.value}"
+aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-label">${opt.label}</span></button>`;
                               })
                               .join('')}
                           </div>
@@ -5418,13 +530,7 @@ const Components = (window.Components = {
                         >
                           ${imageModelOptions
                             .map(
-                              (opt) => `
-                              <option value="${opt.value}" ${
-                                opt.value === currentImageModelOption.value ? 'selected' : ''
-                              }>
-                                ${opt.label}
-                              </option>
-                            `,
+                              (opt) => `<option value="${opt.value}"${opt.value===currentImageModelOption.value?'selected':''}>${opt.label}</option>`,
                             )
                             .join('')}
                         </select>
@@ -5455,19 +561,12 @@ const Components = (window.Components = {
                               .map((opt) => {
                                 const isSelected =
                                   opt.value === currentQualityOption?.value;
-                                return `
-                                <button
-                                  class="selector-option${isSelected ? ' is-selected' : ''}"
-                                  type="button"
-                                  role="option"
-                                  data-value="${opt.value}"
-                                  aria-selected="${isSelected ? 'true' : 'false'}"
-                                >
-                                  <span class="selector-option-label">
-                                    ${opt.label}
-                                  </span>
-                                </button>
-                              `;
+                                return `<button
+class="selector-option${isSelected ? ' is-selected' : ''}"
+type="button"
+role="option"
+data-value="${opt.value}"
+aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-label">${opt.label}</span></button>`;
                               })
                               .join('')}
                           </div>
@@ -5478,13 +577,7 @@ const Components = (window.Components = {
                         >
                           ${currentQualityOptions
                             .map(
-                              (opt) => `
-                              <option value="${opt.value}" ${
-                                opt.value === currentQualityOption?.value ? 'selected' : ''
-                              }>
-                                ${opt.label}
-                              </option>
-                            `,
+                              (opt) => `<option value="${opt.value}"${opt.value===currentQualityOption?.value?'selected':''}>${opt.label}</option>`,
                             )
                             .join('')}
                         </select>
@@ -5526,172 +619,14 @@ const Components = (window.Components = {
           </div>
         </div>
       </div>
-    `;
-  },
-});
-
-// Shared Settings modal used by both the builder and manager screens.
-// Handles narrator, text speed, and AI image model preferences.
-const SettingsModal = (window.SettingsModal = {
-  _escHandler: null,
-
-  open() {
-    if (document.getElementById('settingsModal')) return; // Already open
-
-    const settingsHTML = Components.renderSettings();
-
-    // Prefer the main app container when available so the modal is scoped
-    // correctly in both builder and manager layouts.
-    const host =
-      document.querySelector('.terminal-container') ||
-      document.querySelector('.terminal-frame') ||
-      document.body;
-
-    host.insertAdjacentHTML('beforeend', settingsHTML);
-
-    const modal = document.getElementById('settingsModal');
-    if (modal && typeof window.Utils !== 'undefined' && Utils.focusFirstFieldInModal) {
-      Utils.focusFirstFieldInModal(modal);
-    }
-
-    this.initSelectors(modal);
-
-    // ESC key to close
-    this._escHandler = (e) => {
-      if (e.key === 'Escape') {
-        SettingsModal.close();
-      }
-    };
-    document.addEventListener('keydown', this._escHandler);
-  },
-
-  /**
-   * Initialize settings selectors: wire up option clicks to update the
-   * hidden <select> elements and trigger labels.
-   * The toggle behavior is handled by onclick="CharacterSheet.toggleSelectorMenu(this)" in the HTML.
-   * @param {HTMLElement} modal
-   */
-  initSelectors(modal) {
-    if (!modal) return;
-
-    // Narrator selector
-    const narratorTrigger = modal.querySelector('#narrator-select-trigger');
-    const narratorLabel = modal.querySelector('#narrator-select-label');
-    const narratorSelect = modal.querySelector('#narrator-select');
-    const narratorOptions = modal.querySelectorAll(
-      '.selector-menu[aria-label="Narrator voice"] .selector-option',
-    );
-
-    if (narratorTrigger && narratorLabel && narratorSelect && narratorOptions.length) {
-      narratorOptions.forEach((option) => {
-        option.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const value = option.getAttribute('data-value');
-          const label = option.querySelector('.selector-option-label');
-          if (value && label) {
-            narratorLabel.textContent = label.textContent.trim();
-            narratorSelect.value = value;
-            // Keep menu selection state in sync with the trigger
-            narratorOptions.forEach((opt) => {
-              const isSelected = opt === option;
-              opt.classList.toggle('is-selected', isSelected);
-              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-            });
-          }
-        });
-      });
-    }
-
-    // Text speed selector
-    const speedTrigger = modal.querySelector('#text-speed-select-trigger');
-    const speedLabel = modal.querySelector('#text-speed-select-label');
-    const speedSelect = modal.querySelector('#text-speed-select');
-    const speedOptions = modal.querySelectorAll(
-      '.selector-menu[aria-label="Narrator text speed"] .selector-option',
-    );
-
-    if (speedTrigger && speedLabel && speedSelect && speedOptions.length) {
-      speedOptions.forEach((option) => {
-        option.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const value = option.getAttribute('data-value');
-          const label = option.querySelector('.selector-option-label');
-          if (value && label) {
-            speedLabel.textContent = label.textContent.trim();
-            speedSelect.value = value;
-            // Keep menu selection state in sync with the trigger
-            speedOptions.forEach((opt) => {
-              const isSelected = opt === option;
-              opt.classList.toggle('is-selected', isSelected);
-              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-            });
-          }
-        });
-      });
-    }
-
-    // Quality options per model (duplicated here for initSelectors)
-    const modelQualityOptionsMap = {
-      'dall-e-3': [
-        { value: 'standard', label: 'Standard' },
-        { value: 'hd', label: 'HD' },
-      ],
-      'gpt-image-1': [
-        { value: 'medium', label: 'Medium' },
-        { value: 'high', label: 'High' },
-      ],
-      'flux-1.1-pro': [],
-      'flux-schnell': [],
-    };
-
-    // Helper to update quality selector options based on selected model
-    const updateQualityOptions = (modelValue) => {
-      const qualityContainer = modal.querySelector('#quality-selector-container');
-      const qualityLabel = modal.querySelector('#image-quality-select-label');
-      const qualitySelect = modal.querySelector('#image-quality-select');
-      const qualityMenu = modal.querySelector('#image-quality-options-menu');
-
-      const options = modelQualityOptionsMap[modelValue] || [];
-
-      // Check if current user is admin (decode JWT)
-      let isAdmin = false;
-      try {
-        if (window.AuthService && typeof AuthService.isAuthenticated === 'function' && AuthService.isAuthenticated()) {
-          const token = AuthService.getToken ? AuthService.getToken() : null;
-          if (token) {
-            const payload = token.split('.')[1];
-            const decoded = JSON.parse(atob(payload));
-            isAdmin = decoded.role === 'admin';
-          }
-        }
-      } catch (e) {
-        // Silent fail - user is not admin
-      }
-
-      if (!options.length || !isAdmin) {
-        // Hide quality selector if model has no quality options or user is not admin
-        if (qualityContainer) qualityContainer.classList.add('hidden');
-        return;
-      }
-
-      // Show quality selector (admin only)
-      if (qualityContainer) qualityContainer.classList.remove('hidden');
-
-      // Get saved quality for this model, or default to first option
-      let currentQuality = null;
-      if (window.StorageService && StorageService.getImageQuality) {
-        currentQuality = StorageService.getImageQuality(modelValue);
-      }
-      if (!currentQuality) {
-        currentQuality = options[0].value;
-      }
-
-      // Update menu options
-      if (qualityMenu) {
-        qualityMenu.innerHTML = options
-          .map((opt) => {
-            const isSelected = opt.value === currentQuality;
-            return `
+    `;},});const SettingsModal=(window.SettingsModal={_escHandler:null,open(){if(document.getElementById('settingsModal'))return;const settingsHTML=Components.renderSettings();const host=document.querySelector('.terminal-container')||document.querySelector('.terminal-frame')||document.body;host.insertAdjacentHTML('beforeend',settingsHTML);const modal=document.getElementById('settingsModal');if(modal&&typeof window.Utils!=='undefined'&&Utils.focusFirstFieldInModal){Utils.focusFirstFieldInModal(modal);}
+this.initSelectors(modal);this._escHandler=(e)=>{if(e.key==='Escape'){SettingsModal.close();}};document.addEventListener('keydown',this._escHandler);},initSelectors(modal){if(!modal)return;const narratorTrigger=modal.querySelector('#narrator-select-trigger');const narratorLabel=modal.querySelector('#narrator-select-label');const narratorSelect=modal.querySelector('#narrator-select');const narratorOptions=modal.querySelectorAll('.selector-menu[aria-label="Narrator voice"] .selector-option',);if(narratorTrigger&&narratorLabel&&narratorSelect&&narratorOptions.length){narratorOptions.forEach((option)=>{option.addEventListener('click',(e)=>{e.stopPropagation();const value=option.getAttribute('data-value');const label=option.querySelector('.selector-option-label');if(value&&label){narratorLabel.textContent=label.textContent.trim();narratorSelect.value=value;narratorOptions.forEach((opt)=>{const isSelected=opt===option;opt.classList.toggle('is-selected',isSelected);opt.setAttribute('aria-selected',isSelected?'true':'false');});}});});}
+const speedTrigger=modal.querySelector('#text-speed-select-trigger');const speedLabel=modal.querySelector('#text-speed-select-label');const speedSelect=modal.querySelector('#text-speed-select');const speedOptions=modal.querySelectorAll('.selector-menu[aria-label="Narrator text speed"] .selector-option',);if(speedTrigger&&speedLabel&&speedSelect&&speedOptions.length){speedOptions.forEach((option)=>{option.addEventListener('click',(e)=>{e.stopPropagation();const value=option.getAttribute('data-value');const label=option.querySelector('.selector-option-label');if(value&&label){speedLabel.textContent=label.textContent.trim();speedSelect.value=value;speedOptions.forEach((opt)=>{const isSelected=opt===option;opt.classList.toggle('is-selected',isSelected);opt.setAttribute('aria-selected',isSelected?'true':'false');});}});});}
+const modelQualityOptionsMap={'dall-e-3':[{value:'standard',label:'Standard'},{value:'hd',label:'HD'},],'gpt-image-1':[{value:'medium',label:'Medium'},{value:'high',label:'High'},],'flux-1.1-pro':[],'flux-schnell':[],};const updateQualityOptions=(modelValue)=>{const qualityContainer=modal.querySelector('#quality-selector-container');const qualityLabel=modal.querySelector('#image-quality-select-label');const qualitySelect=modal.querySelector('#image-quality-select');const qualityMenu=modal.querySelector('#image-quality-options-menu');const options=modelQualityOptionsMap[modelValue]||[];let isAdmin=false;try{if(window.AuthService&&typeof AuthService.isAuthenticated==='function'&&AuthService.isAuthenticated()){const token=AuthService.getToken?AuthService.getToken():null;if(token){const payload=token.split('.')[1];const decoded=JSON.parse(atob(payload));isAdmin=decoded.role==='admin';}}}catch(e){}
+if(!options.length||!isAdmin){if(qualityContainer)qualityContainer.classList.add('hidden');return;}
+if(qualityContainer)qualityContainer.classList.remove('hidden');let currentQuality=null;if(window.StorageService&&StorageService.getImageQuality){currentQuality=StorageService.getImageQuality(modelValue);}
+if(!currentQuality){currentQuality=options[0].value;}
+if(qualityMenu){qualityMenu.innerHTML=options.map((opt)=>{const isSelected=opt.value===currentQuality;return`
               <button
                 class="selector-option${isSelected ? ' is-selected' : ''}"
                 type="button"
@@ -5703,544 +638,34 @@ const SettingsModal = (window.SettingsModal = {
                   ${opt.label}
                 </span>
               </button>
-            `;
-          })
-          .join('');
-
-        // Re-wire quality option clicks
-        const newQualityOptions = qualityMenu.querySelectorAll('.selector-option');
-        newQualityOptions.forEach((qOpt) => {
-          qOpt.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const qValue = qOpt.getAttribute('data-value');
-            const qLabel = qOpt.querySelector('.selector-option-label');
-            if (qValue && qLabel && qualityLabel && qualitySelect) {
-              qualityLabel.textContent = qLabel.textContent.trim();
-              qualitySelect.value = qValue;
-              newQualityOptions.forEach((o) => {
-                const isSelected = o === qOpt;
-                o.classList.toggle('is-selected', isSelected);
-                o.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-              });
-            }
-          });
-        });
-      }
-
-      // Update hidden select options
-      if (qualitySelect) {
-        qualitySelect.innerHTML = options
-          .map(
-            (opt) => `
+            `;}).join('');const newQualityOptions=qualityMenu.querySelectorAll('.selector-option');newQualityOptions.forEach((qOpt)=>{qOpt.addEventListener('click',(e)=>{e.stopPropagation();const qValue=qOpt.getAttribute('data-value');const qLabel=qOpt.querySelector('.selector-option-label');if(qValue&&qLabel&&qualityLabel&&qualitySelect){qualityLabel.textContent=qLabel.textContent.trim();qualitySelect.value=qValue;newQualityOptions.forEach((o)=>{const isSelected=o===qOpt;o.classList.toggle('is-selected',isSelected);o.setAttribute('aria-selected',isSelected?'true':'false');});}});});}
+if(qualitySelect){qualitySelect.innerHTML=options.map((opt)=>`
             <option value="${opt.value}" ${opt.value === currentQuality ? 'selected' : ''}>
               ${opt.label}
             </option>
-          `,
-          )
-          .join('');
-      }
-
-      // Update label
-      const activeOption = options.find((o) => o.value === currentQuality) || options[0];
-      if (qualityLabel && activeOption) {
-        qualityLabel.textContent = activeOption.label;
-      }
-    };
-
-    // Image model selector
-    const imageModelTrigger = modal.querySelector('#image-model-select-trigger');
-    const imageModelLabel = modal.querySelector('#image-model-select-label');
-    const imageModelSelect = modal.querySelector('#image-model-select');
-    const imageModelOptions = modal.querySelectorAll(
-      '.selector-menu[aria-label="AI model"] .selector-option',
-    );
-
-    if (imageModelTrigger && imageModelLabel && imageModelSelect && imageModelOptions.length) {
-      imageModelOptions.forEach((option) => {
-        option.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const value = option.getAttribute('data-value');
-          const label = option.querySelector('.selector-option-label');
-          if (value && label) {
-            imageModelLabel.textContent = label.textContent.trim();
-            imageModelSelect.value = value;
-            // Keep menu selection state in sync with the trigger
-            imageModelOptions.forEach((opt) => {
-              const isSelected = opt === option;
-              opt.classList.toggle('is-selected', isSelected);
-              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-            });
-            // Update quality options when model changes
-            updateQualityOptions(value);
-          }
-        });
-      });
-    }
-
-    // Image quality selector (initial setup)
-    const qualityTrigger = modal.querySelector('#image-quality-select-trigger');
-    const qualityLabel = modal.querySelector('#image-quality-select-label');
-    const qualitySelect = modal.querySelector('#image-quality-select');
-    const qualityOptions = modal.querySelectorAll(
-      '#image-quality-options-menu .selector-option',
-    );
-
-    if (qualityTrigger && qualityLabel && qualitySelect && qualityOptions.length) {
-      qualityOptions.forEach((option) => {
-        option.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const value = option.getAttribute('data-value');
-          const label = option.querySelector('.selector-option-label');
-          if (value && label) {
-            qualityLabel.textContent = label.textContent.trim();
-            qualitySelect.value = value;
-            qualityOptions.forEach((opt) => {
-              const isSelected = opt === option;
-              opt.classList.toggle('is-selected', isSelected);
-              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-            });
-          }
-        });
-      });
-    }
-
-    // Portrait prompt theme selector
-    const themeTrigger = modal.querySelector(
-      '#portrait-theme-select-trigger',
-    );
-    const themeLabel = modal.querySelector('#portrait-theme-select-label');
-    const themeSelect = modal.querySelector('#portrait-theme-select');
-    const themeOptions = modal.querySelectorAll(
-      '.selector-menu[aria-label="Portrait prompt theme"] .selector-option',
-    );
-
-    if (themeTrigger && themeLabel && themeSelect && themeOptions.length) {
-      themeOptions.forEach((option) => {
-        option.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const value = option.getAttribute('data-value');
-          const label = option.querySelector('.selector-option-label');
-          if (value && label) {
-            themeLabel.textContent = label.textContent.trim();
-            themeSelect.value = value;
-            // Keep menu selection state in sync with the trigger
-            themeOptions.forEach((opt) => {
-              const isSelected = opt === option;
-              opt.classList.toggle('is-selected', isSelected);
-              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
-            });
-          }
-        });
-      });
-    }
-  },
-
-  close() {
-    const modal = document.getElementById('settingsModal');
-    if (!modal) {
-      if (this._escHandler) {
-        document.removeEventListener('keydown', this._escHandler);
-        this._escHandler = null;
-      }
-      return;
-    }
-
-    const content = modal.querySelector('.modal-content') || modal;
-
-    const handleClose = () => {
-      if (modal && modal.parentNode) {
-        modal.parentNode.removeChild(modal);
-      }
-
-      if (this._escHandler) {
-        document.removeEventListener('keydown', this._escHandler);
-        this._escHandler = null;
-      }
-    };
-
-    if (!modal.classList.contains('closing')) {
-      modal.classList.add('closing');
-    }
-
-    if (content && content.addEventListener) {
-      content.addEventListener('animationend', handleClose, { once: true });
-    } else {
-      handleClose();
-    }
-  },
-
-  save() {
-    // Save narrator selection
-    const narratorSelect = document.getElementById('narrator-select');
-    if (narratorSelect && window.StorageService && StorageService.setNarratorId) {
-      StorageService.setNarratorId(narratorSelect.value);
-    }
-
-    // Save text speed selection
-    const textSpeedSelect = document.getElementById('text-speed-select');
-    if (textSpeedSelect && window.StorageService && StorageService.setTextSpeedMultiplier) {
-      StorageService.setTextSpeedMultiplier(textSpeedSelect.value);
-    }
-
-    // Save portrait image model selection
-    const imageModelSelect = document.getElementById('image-model-select');
-    if (imageModelSelect && window.StorageService && StorageService.setImageModel) {
-      StorageService.setImageModel(imageModelSelect.value);
-    }
-
-    // Save global portrait view mode (ASCII vs Original)
-    // Track if mode changed to trigger UI refresh
-    let portraitModeChanged = false;
-    const portraitModeInput = document.querySelector(
-      'input[name="portrait-view-mode"]:checked',
-    );
-    if (portraitModeInput && window.StorageService && StorageService.setPortraitViewMode) {
-      const oldMode = StorageService.getPortraitViewMode ? StorageService.getPortraitViewMode() : null;
-      const newMode = portraitModeInput.value;
-      if (oldMode !== newMode) {
-        portraitModeChanged = true;
-      }
-      StorageService.setPortraitViewMode(newMode);
-    }
-
-    // Save portrait prompt theme selection
-    const portraitThemeSelect = document.getElementById('portrait-theme-select');
-    if (
-      portraitThemeSelect &&
-      window.StorageService &&
-      StorageService.setPortraitPromptTheme
-    ) {
-      StorageService.setPortraitPromptTheme(portraitThemeSelect.value);
-    }
-
-    // Save image quality setting for the selected model
-    const imageQualitySelect = document.getElementById('image-quality-select');
-    const imageModelForQuality = imageModelSelect?.value;
-    if (imageQualitySelect && imageModelForQuality && window.StorageService && StorageService.setImageQuality) {
-      StorageService.setImageQuality(imageModelForQuality, imageQualitySelect.value);
-    }
-
-    // Use a non-intrusive toast for settings changes instead of a narrator line
-    if (window.App && typeof App.showToast === 'function') {
-      App.showToast('Settings saved');
-    } else if (typeof showNotification === 'function') {
-      showNotification('Settings saved');
-    }
-
-    this.close();
-
-    // If portrait view mode changed, refresh the UI to update images
-    if (portraitModeChanged) {
-      // Character Manager context: re-render grid and current sheet
-      if (typeof UI !== 'undefined' && UI && typeof UI.renderCharacterGrid === 'function') {
-        UI.renderCharacterGrid();
-        // Re-render the current character sheet if one is selected
-        if (typeof AppState !== 'undefined' && AppState && AppState.selectedCharacterId) {
-          const selectedChar = AppState.filteredCharacters?.find(
-            c => c && String(c.id) === String(AppState.selectedCharacterId)
-          ) || AppState.characters?.find(
-            c => c && String(c.id) === String(AppState.selectedCharacterId)
-          );
-          if (selectedChar) {
-            UI.showCharacterSheet(selectedChar);
-          }
-        }
-      }
-      // Character Builder context: re-render completion screen if on that step
-      if (typeof App !== 'undefined' && App && typeof CharacterState !== 'undefined') {
-        const state = CharacterState.get ? CharacterState.get() : null;
-        if (state && state.step === 'complete' && state.character) {
-          // Re-render the character panel to reflect the new view mode
-          const panel = document.getElementById('character-panel');
-          if (panel && typeof Components !== 'undefined' && Components.renderCharacterSheet) {
-            panel.innerHTML = Components.renderCharacterSheet(state.character);
-            // Populate the ASCII portrait after rendering
-            if (typeof CharacterSheet !== 'undefined' && CharacterSheet.populatePortrait) {
-              CharacterSheet.populatePortrait(state.character);
-            }
-          }
-        }
-      }
-    }
-  },
-});
-
-
-
-
-// ===== BUNDLE PART: shared-character-sheet.js =====
-
-// ========================================
-// SHARED CHARACTER SHEET COMPONENT
-// ========================================
-// Global component for rendering character sheets across DandDy apps
-// Used by both Character Builder and Character Manager
-
-// Portrait debugging - enable with: window.DEBUG_PORTRAITS = true
-// To dump current debug log: window.CharacterSheet.dumpPortraitDebugLog()
-const PORTRAIT_DEBUG_LOG = [];
-const MAX_PORTRAIT_DEBUG_ENTRIES = 100;
-
-function logPortraitDebug(action, characterId, characterName, details) {
-  if (!window.DEBUG_PORTRAITS) return;
-  
-  const entry = {
-    timestamp: new Date().toISOString(),
-    action,
-    characterId,
-    characterName,
-    ...details
-  };
-  
-  PORTRAIT_DEBUG_LOG.push(entry);
-  if (PORTRAIT_DEBUG_LOG.length > MAX_PORTRAIT_DEBUG_ENTRIES) {
-    PORTRAIT_DEBUG_LOG.shift();
-  }
-  
-  console.log(`🖼️ [PORTRAIT DEBUG] ${action}`, {
-    characterId,
-    characterName,
-    ...details
-  });
-}
-
-const CharacterSheet = (window.CharacterSheet = {
-  /**
-   * Dump the portrait debug log to console for reporting.
-   * Call from console: CharacterSheet.dumpPortraitDebugLog()
-   */
-  dumpPortraitDebugLog() {
-    console.group('🖼️ Portrait Debug Log');
-    console.log('Total entries:', PORTRAIT_DEBUG_LOG.length);
-    console.log('Enable debugging with: window.DEBUG_PORTRAITS = true');
-    console.log('---');
-    PORTRAIT_DEBUG_LOG.forEach((entry, i) => {
-      console.log(`[${i}] ${entry.timestamp} - ${entry.action}`, entry);
-    });
-    console.groupEnd();
-    return PORTRAIT_DEBUG_LOG;
-  },
-
-  /**
-   * Get the current portrait debug log (for programmatic access).
-   */
-  getPortraitDebugLog() {
-    return [...PORTRAIT_DEBUG_LOG];
-  },
-
-  /**
-   * Clear the portrait debug log.
-   */
-  clearPortraitDebugLog() {
-    PORTRAIT_DEBUG_LOG.length = 0;
-    console.log('🖼️ Portrait debug log cleared');
-  },
-
-  /**
-   * Compare portrait data between card and sheet for a character.
-   * Call from console: CharacterSheet.comparePortraitSources(characterId)
-   */
-  comparePortraitSources(characterId) {
-    const character = window.AppState?.characters?.find(c => String(c.id) === String(characterId));
-    if (!character) {
-      console.error('Character not found:', characterId);
-      return null;
-    }
-
-    const result = {
-      characterId,
-      characterName: character.name,
-      portraitMetadata: character.portraitMetadata ? {
-        activeVersionId: character.portraitMetadata.activeVersionId,
-        versionsCount: character.portraitMetadata.versions?.length || 0,
-        versions: character.portraitMetadata.versions?.map(v => ({
-          id: v.id,
-          hasUrl: !!v.url,
-          urlPreview: v.url ? v.url.substring(0, 80) + '...' : null,
-          hasAscii: !!v.ascii,
-          asciiLength: v.ascii?.length || 0
-        }))
-      } : null,
-      legacyFields: {
-        customPortraitAscii: character.customPortraitAscii ? `[${character.customPortraitAscii.length} chars]` : null,
-        originalPortraitUrl: character.originalPortraitUrl || null,
-        portraitAscii: character.portrait?.ascii ? `[${character.portrait.ascii.length} chars]` : null,
-        portraitUrl: character.portrait?.url || null,
-        asciiPortrait: character.asciiPortrait ? `[${character.asciiPortrait.length} chars]` : null,
-        asciiPortraitKey: character.asciiPortraitKey || null
-      },
-      resolvedAscii: this.getAsciiPortrait(character) ? `[${this.getAsciiPortrait(character).length} chars]` : null,
-      resolvedUrl: this.getOriginalPortraitUrl(character),
-      raceClass: `${character.race}|${character.class}`
-    };
-
-    console.group(`🖼️ Portrait Sources Comparison: ${character.name}`);
-    console.log('Character ID:', characterId);
-    console.log('Portrait Metadata:', result.portraitMetadata);
-    console.log('Legacy Fields:', result.legacyFields);
-    console.log('Resolved ASCII:', result.resolvedAscii);
-    console.log('Resolved URL:', result.resolvedUrl);
-    console.log('Race|Class Key:', result.raceClass);
-    console.groupEnd();
-
-    return result;
-  },
-
-  /**
-   * Check for portrait mismatch between card and sheet in the DOM.
-   * Call from console: CharacterSheet.checkDomMismatch()
-   * Returns details about what's shown in the card vs the sheet.
-   */
-  checkDomMismatch() {
-    const selectedCard = document.querySelector('.character-card.is-selected');
-    const characterSheet = document.getElementById('characterSheet');
-    
-    if (!selectedCard) {
-      console.warn('🖼️ No character card is currently selected');
-      return null;
-    }
-
-    const characterId = selectedCard.getAttribute('data-id');
-    const character = window.AppState?.characters?.find(c => String(c.id) === String(characterId));
-    
-    // Get card thumbnail info
-    const cardThumb = selectedCard.querySelector('.card-thumbnail');
-    const cardImg = cardThumb?.querySelector('img');
-    const cardAscii = cardThumb?.querySelector('pre');
-    
-    // Get sheet portrait info
-    const sheetContainer = characterSheet?.querySelector('.portrait-container');
-    const sheetImg = sheetContainer?.querySelector('.original-portrait');
-    const sheetAscii = sheetContainer?.querySelector('.ascii-portrait pre');
-    
-    const cardInfo = {
-      hasImage: !!cardImg,
-      imageUrl: cardImg?.src || null,
-      imageTruncated: cardImg?.src ? cardImg.src.substring(0, 80) + '...' : null,
-      hasAscii: !!cardAscii,
-      asciiLength: cardAscii?.textContent?.length || 0,
-      asciiPreview: cardAscii?.textContent?.substring(0, 50) + '...' || null,
-      isImageMode: cardThumb?.classList.contains('card-thumbnail--image') || false
-    };
-
-    const sheetInfo = {
-      hasImage: !!sheetImg,
-      imageUrl: sheetImg?.src || null,
-      imageTruncated: sheetImg?.src ? sheetImg.src.substring(0, 80) + '...' : null,
-      imageHidden: sheetImg?.classList.contains('is-hidden') || false,
-      hasAscii: !!sheetAscii,
-      asciiLength: sheetAscii?.textContent?.length || 0,
-      asciiPreview: sheetAscii?.textContent?.substring(0, 50) + '...' || null,
-      asciiHidden: sheetContainer?.querySelector('.ascii-portrait')?.classList.contains('is-hidden') || false
-    };
-
-    // Check for mismatches
-    const urlMismatch = cardInfo.imageUrl !== sheetInfo.imageUrl;
-    const asciiLengthMismatch = cardInfo.asciiLength !== sheetInfo.asciiLength;
-
-    const result = {
-      characterId,
-      characterName: character?.name || 'Unknown',
-      card: cardInfo,
-      sheet: sheetInfo,
-      mismatch: {
-        url: urlMismatch,
-        asciiLength: asciiLengthMismatch,
-        summary: urlMismatch || asciiLengthMismatch ? '⚠️ MISMATCH DETECTED' : '✅ No mismatch'
-      }
-    };
-
-    console.group(`🖼️ DOM Portrait Check: ${result.characterName}`);
-    console.log('Character ID:', characterId);
-    console.log('Card:', cardInfo);
-    console.log('Sheet:', sheetInfo);
-    console.log('Mismatch:', result.mismatch);
-    if (urlMismatch) {
-      console.warn('⚠️ URL MISMATCH: Card and sheet show different images!');
-      console.log('Card URL:', cardInfo.imageUrl);
-      console.log('Sheet URL:', sheetInfo.imageUrl);
-    }
-    if (asciiLengthMismatch) {
-      console.warn('⚠️ ASCII LENGTH MISMATCH: Card and sheet have different ASCII art!');
-    }
-    console.groupEnd();
-
-    return result;
-  },
-
-  /**
-   * Enable portrait debugging mode. Call from console: CharacterSheet.enablePortraitDebug()
-   */
-  enablePortraitDebug() {
-    window.DEBUG_PORTRAITS = true;
-    console.log('🖼️ Portrait debugging ENABLED');
-    console.log('Available commands:');
-    console.log('  CharacterSheet.checkDomMismatch() - Check for visible mismatch');
-    console.log('  CharacterSheet.comparePortraitSources(id) - Compare data sources');
-    console.log('  CharacterSheet.dumpPortraitDebugLog() - Dump all debug entries');
-    console.log('  CharacterSheet.clearPortraitDebugLog() - Clear debug log');
-    console.log('  window.DEBUG_PORTRAITS = false - Disable debugging');
-  },
-
-  /**
-   * Manages scroll locking when selector menus are open.
-   * Uses a CSS class for robust scroll prevention.
-   * @param {boolean} lock - true to lock, false to unlock
-   */
-  _updateScrollLock(lock) {
-    if (lock) {
-      // Lock: add class to body which triggers CSS rules
-      document.body.classList.add('selector-menu-open');
-    } else {
-      // Unlock: only remove if no menus are still open
-      // Small delay to let the menu close animation start
-      setTimeout(() => {
-        const stillOpen = document.querySelectorAll('.selector-shell.is-open');
-        if (stillOpen.length === 0) {
-          document.body.classList.remove('selector-menu-open');
-        }
-      }, 0);
-    }
-  },
-
-  /**
-   * Main render function for character sheets
-   * @param {Object} character - Character data object
-   * @param {Object} options - Configuration options
-   * @param {string} options.context - 'builder' or 'manager' to control which features to show
-   * @param {boolean} options.showPortrait - Whether to show portrait section (default: true)
-   * @param {Function} options.onGeneratePortrait - Callback for generating portraits (builder only)
-   * @param {Function} options.onRename - Callback for renaming character (builder only)
-   * @param {Function} options.onTogglePortrait - Callback for toggling portrait view (builder only)
-   * @param {Function} options.onLevelChange - Callback for changing level (builder only)
-   * @param {Function} options.onPrint - Callback for printing (builder only)
-   * @param {Function} options.onEdit - Callback for editing (manager only)
-   * @param {Function} options.onDuplicate - Callback for duplicating (manager only)
-   * @param {Function} options.onExport - Callback for exporting (manager only)
-   * @param {Function} options.onDelete - Callback for deleting (manager only)
-   * @returns {string} HTML string for the character sheet
-   */
-  render(character, options = {}) {
-    const {
-      context = 'builder',
-      showPortrait = true,
-      onGeneratePortrait = null,
-      onRename = null,
-      onTogglePortrait = null,
-      onLevelChange = null,
-      onPrint = null,
-      onEdit = null,
-      onDuplicate = null,
-      onExport = null,
-      onDelete = null,
-      onShare = null,
-    } = options;
-
-    // Parse character data (handle both old and new formats)
-    const parsed = this._parseCharacterData(character, context);
-
-    // Build HTML
-    return `
+          `,).join('');}
+const activeOption=options.find((o)=>o.value===currentQuality)||options[0];if(qualityLabel&&activeOption){qualityLabel.textContent=activeOption.label;}};const imageModelTrigger=modal.querySelector('#image-model-select-trigger');const imageModelLabel=modal.querySelector('#image-model-select-label');const imageModelSelect=modal.querySelector('#image-model-select');const imageModelOptions=modal.querySelectorAll('.selector-menu[aria-label="AI model"] .selector-option',);if(imageModelTrigger&&imageModelLabel&&imageModelSelect&&imageModelOptions.length){imageModelOptions.forEach((option)=>{option.addEventListener('click',(e)=>{e.stopPropagation();const value=option.getAttribute('data-value');const label=option.querySelector('.selector-option-label');if(value&&label){imageModelLabel.textContent=label.textContent.trim();imageModelSelect.value=value;imageModelOptions.forEach((opt)=>{const isSelected=opt===option;opt.classList.toggle('is-selected',isSelected);opt.setAttribute('aria-selected',isSelected?'true':'false');});updateQualityOptions(value);}});});}
+const qualityTrigger=modal.querySelector('#image-quality-select-trigger');const qualityLabel=modal.querySelector('#image-quality-select-label');const qualitySelect=modal.querySelector('#image-quality-select');const qualityOptions=modal.querySelectorAll('#image-quality-options-menu .selector-option',);if(qualityTrigger&&qualityLabel&&qualitySelect&&qualityOptions.length){qualityOptions.forEach((option)=>{option.addEventListener('click',(e)=>{e.stopPropagation();const value=option.getAttribute('data-value');const label=option.querySelector('.selector-option-label');if(value&&label){qualityLabel.textContent=label.textContent.trim();qualitySelect.value=value;qualityOptions.forEach((opt)=>{const isSelected=opt===option;opt.classList.toggle('is-selected',isSelected);opt.setAttribute('aria-selected',isSelected?'true':'false');});}});});}
+const themeTrigger=modal.querySelector('#portrait-theme-select-trigger',);const themeLabel=modal.querySelector('#portrait-theme-select-label');const themeSelect=modal.querySelector('#portrait-theme-select');const themeOptions=modal.querySelectorAll('.selector-menu[aria-label="Portrait prompt theme"] .selector-option',);if(themeTrigger&&themeLabel&&themeSelect&&themeOptions.length){themeOptions.forEach((option)=>{option.addEventListener('click',(e)=>{e.stopPropagation();const value=option.getAttribute('data-value');const label=option.querySelector('.selector-option-label');if(value&&label){themeLabel.textContent=label.textContent.trim();themeSelect.value=value;themeOptions.forEach((opt)=>{const isSelected=opt===option;opt.classList.toggle('is-selected',isSelected);opt.setAttribute('aria-selected',isSelected?'true':'false');});}});});}},close(){const modal=document.getElementById('settingsModal');if(!modal){if(this._escHandler){document.removeEventListener('keydown',this._escHandler);this._escHandler=null;}
+return;}
+const content=modal.querySelector('.modal-content')||modal;const handleClose=()=>{if(modal&&modal.parentNode){modal.parentNode.removeChild(modal);}
+if(this._escHandler){document.removeEventListener('keydown',this._escHandler);this._escHandler=null;}};if(!modal.classList.contains('closing')){modal.classList.add('closing');}
+if(content&&content.addEventListener){content.addEventListener('animationend',handleClose,{once:true});}else{handleClose();}},save(){const narratorSelect=document.getElementById('narrator-select');if(narratorSelect&&window.StorageService&&StorageService.setNarratorId){StorageService.setNarratorId(narratorSelect.value);}
+const textSpeedSelect=document.getElementById('text-speed-select');if(textSpeedSelect&&window.StorageService&&StorageService.setTextSpeedMultiplier){StorageService.setTextSpeedMultiplier(textSpeedSelect.value);}
+const imageModelSelect=document.getElementById('image-model-select');if(imageModelSelect&&window.StorageService&&StorageService.setImageModel){StorageService.setImageModel(imageModelSelect.value);}
+let portraitModeChanged=false;const portraitModeInput=document.querySelector('input[name="portrait-view-mode"]:checked',);if(portraitModeInput&&window.StorageService&&StorageService.setPortraitViewMode){const oldMode=StorageService.getPortraitViewMode?StorageService.getPortraitViewMode():null;const newMode=portraitModeInput.value;if(oldMode!==newMode){portraitModeChanged=true;}
+StorageService.setPortraitViewMode(newMode);}
+const portraitThemeSelect=document.getElementById('portrait-theme-select');if(portraitThemeSelect&&window.StorageService&&StorageService.setPortraitPromptTheme){StorageService.setPortraitPromptTheme(portraitThemeSelect.value);}
+const imageQualitySelect=document.getElementById('image-quality-select');const imageModelForQuality=imageModelSelect?.value;if(imageQualitySelect&&imageModelForQuality&&window.StorageService&&StorageService.setImageQuality){StorageService.setImageQuality(imageModelForQuality,imageQualitySelect.value);}
+if(window.App&&typeof App.showToast==='function'){App.showToast('Settings saved');}else if(typeof showNotification==='function'){showNotification('Settings saved');}
+this.close();if(portraitModeChanged){if(typeof UI!=='undefined'&&UI&&typeof UI.renderCharacterGrid==='function'){UI.renderCharacterGrid();if(typeof AppState!=='undefined'&&AppState&&AppState.selectedCharacterId){const selectedChar=AppState.filteredCharacters?.find(c=>c&&String(c.id)===String(AppState.selectedCharacterId))||AppState.characters?.find(c=>c&&String(c.id)===String(AppState.selectedCharacterId));if(selectedChar){UI.showCharacterSheet(selectedChar);}}}
+if(typeof App!=='undefined'&&App&&typeof CharacterState!=='undefined'){const state=CharacterState.get?CharacterState.get():null;if(state&&state.step==='complete'&&state.character){const panel=document.getElementById('character-panel');if(panel&&typeof Components!=='undefined'&&Components.renderCharacterSheet){panel.innerHTML=Components.renderCharacterSheet(state.character);if(typeof CharacterSheet!=='undefined'&&CharacterSheet.populatePortrait){CharacterSheet.populatePortrait(state.character);}}}}}},});const PORTRAIT_DEBUG_LOG=[];const MAX_PORTRAIT_DEBUG_ENTRIES=100;function logPortraitDebug(action,characterId,characterName,details){if(!window.DEBUG_PORTRAITS)return;const entry={timestamp:new Date().toISOString(),action,characterId,characterName,...details};PORTRAIT_DEBUG_LOG.push(entry);if(PORTRAIT_DEBUG_LOG.length>MAX_PORTRAIT_DEBUG_ENTRIES){PORTRAIT_DEBUG_LOG.shift();}
+console.log(`🖼️ [PORTRAIT DEBUG] ${action}`,{characterId,characterName,...details});}
+const CharacterSheet=(window.CharacterSheet={dumpPortraitDebugLog(){console.group('🖼️ Portrait Debug Log');console.log('Total entries:',PORTRAIT_DEBUG_LOG.length);console.log('Enable debugging with: window.DEBUG_PORTRAITS = true');console.log('---');PORTRAIT_DEBUG_LOG.forEach((entry,i)=>{console.log(`[${i}] ${entry.timestamp} - ${entry.action}`,entry);});console.groupEnd();return PORTRAIT_DEBUG_LOG;},getPortraitDebugLog(){return[...PORTRAIT_DEBUG_LOG];},clearPortraitDebugLog(){PORTRAIT_DEBUG_LOG.length=0;console.log('🖼️ Portrait debug log cleared');},comparePortraitSources(characterId){const character=window.AppState?.characters?.find(c=>String(c.id)===String(characterId));if(!character){console.error('Character not found:',characterId);return null;}
+const result={characterId,characterName:character.name,portraitMetadata:character.portraitMetadata?{activeVersionId:character.portraitMetadata.activeVersionId,versionsCount:character.portraitMetadata.versions?.length||0,versions:character.portraitMetadata.versions?.map(v=>({id:v.id,hasUrl:!!v.url,urlPreview:v.url?v.url.substring(0,80)+'...':null,hasAscii:!!v.ascii,asciiLength:v.ascii?.length||0}))}:null,legacyFields:{customPortraitAscii:character.customPortraitAscii?`[${character.customPortraitAscii.length} chars]`:null,originalPortraitUrl:character.originalPortraitUrl||null,portraitAscii:character.portrait?.ascii?`[${character.portrait.ascii.length} chars]`:null,portraitUrl:character.portrait?.url||null,asciiPortrait:character.asciiPortrait?`[${character.asciiPortrait.length} chars]`:null,asciiPortraitKey:character.asciiPortraitKey||null},resolvedAscii:this.getAsciiPortrait(character)?`[${this.getAsciiPortrait(character).length} chars]`:null,resolvedUrl:this.getOriginalPortraitUrl(character),raceClass:`${character.race}|${character.class}`};console.group(`🖼️ Portrait Sources Comparison: ${character.name}`);console.log('Character ID:',characterId);console.log('Portrait Metadata:',result.portraitMetadata);console.log('Legacy Fields:',result.legacyFields);console.log('Resolved ASCII:',result.resolvedAscii);console.log('Resolved URL:',result.resolvedUrl);console.log('Race|Class Key:',result.raceClass);console.groupEnd();return result;},checkDomMismatch(){const selectedCard=document.querySelector('.character-card.is-selected');const characterSheet=document.getElementById('characterSheet');if(!selectedCard){console.warn('🖼️ No character card is currently selected');return null;}
+const characterId=selectedCard.getAttribute('data-id');const character=window.AppState?.characters?.find(c=>String(c.id)===String(characterId));const cardThumb=selectedCard.querySelector('.card-thumbnail');const cardImg=cardThumb?.querySelector('img');const cardAscii=cardThumb?.querySelector('pre');const sheetContainer=characterSheet?.querySelector('.portrait-container');const sheetImg=sheetContainer?.querySelector('.original-portrait');const sheetAscii=sheetContainer?.querySelector('.ascii-portrait pre');const cardInfo={hasImage:!!cardImg,imageUrl:cardImg?.src||null,imageTruncated:cardImg?.src?cardImg.src.substring(0,80)+'...':null,hasAscii:!!cardAscii,asciiLength:cardAscii?.textContent?.length||0,asciiPreview:cardAscii?.textContent?.substring(0,50)+'...'||null,isImageMode:cardThumb?.classList.contains('card-thumbnail--image')||false};const sheetInfo={hasImage:!!sheetImg,imageUrl:sheetImg?.src||null,imageTruncated:sheetImg?.src?sheetImg.src.substring(0,80)+'...':null,imageHidden:sheetImg?.classList.contains('is-hidden')||false,hasAscii:!!sheetAscii,asciiLength:sheetAscii?.textContent?.length||0,asciiPreview:sheetAscii?.textContent?.substring(0,50)+'...'||null,asciiHidden:sheetContainer?.querySelector('.ascii-portrait')?.classList.contains('is-hidden')||false};const urlMismatch=cardInfo.imageUrl!==sheetInfo.imageUrl;const asciiLengthMismatch=cardInfo.asciiLength!==sheetInfo.asciiLength;const result={characterId,characterName:character?.name||'Unknown',card:cardInfo,sheet:sheetInfo,mismatch:{url:urlMismatch,asciiLength:asciiLengthMismatch,summary:urlMismatch||asciiLengthMismatch?'⚠️ MISMATCH DETECTED':'✅ No mismatch'}};console.group(`🖼️ DOM Portrait Check: ${result.characterName}`);console.log('Character ID:',characterId);console.log('Card:',cardInfo);console.log('Sheet:',sheetInfo);console.log('Mismatch:',result.mismatch);if(urlMismatch){console.warn('⚠️ URL MISMATCH: Card and sheet show different images!');console.log('Card URL:',cardInfo.imageUrl);console.log('Sheet URL:',sheetInfo.imageUrl);}
+if(asciiLengthMismatch){console.warn('⚠️ ASCII LENGTH MISMATCH: Card and sheet have different ASCII art!');}
+console.groupEnd();return result;},enablePortraitDebug(){window.DEBUG_PORTRAITS=true;console.log('🖼️ Portrait debugging ENABLED');console.log('Available commands:');console.log('  CharacterSheet.checkDomMismatch() - Check for visible mismatch');console.log('  CharacterSheet.comparePortraitSources(id) - Compare data sources');console.log('  CharacterSheet.dumpPortraitDebugLog() - Dump all debug entries');console.log('  CharacterSheet.clearPortraitDebugLog() - Clear debug log');console.log('  window.DEBUG_PORTRAITS = false - Disable debugging');},_updateScrollLock(lock){if(lock){document.body.classList.add('selector-menu-open');}else{setTimeout(()=>{const stillOpen=document.querySelectorAll('.selector-shell.is-open');if(stillOpen.length===0){document.body.classList.remove('selector-menu-open');}},0);}},render(character,options={}){const{context='builder',showPortrait=true,onGeneratePortrait=null,onRename=null,onTogglePortrait=null,onLevelChange=null,onPrint=null,onEdit=null,onDuplicate=null,onExport=null,onDelete=null,onShare=null,}=options;const parsed=this._parseCharacterData(character,context);return`
       ${this._renderHeader(character, parsed, context, {
         onPrint,
         onRename,
@@ -6292,147 +717,16 @@ const CharacterSheet = (window.CharacterSheet = {
       ${context === 'manager' && parsed.hasExportInfo
         ? this._renderExportInfo(character)
         : ''}
-    `;
-  },
-
-  // ========================================
-  // SECTION RENDERERS
-  // ========================================
-
-  _renderHeader(character, parsed, context, callbacks) {
-    const {
-      onPrint,
-      onRename,
-      onDuplicate,
-      onExport,
-      onDelete,
-      onLevelChange,
-      onEdit,
-      onGeneratePortrait,
-      onTogglePortrait,
-      onShare,
-    } = callbacks;
-    // Function names differ by context
-    const renameFn = context === 'builder' ? 'App.openNameModal()' : `renameCharacter('${character.id}')`;
-    const editFn = context === 'manager' ? `editCharacter('${character.id}')` : null;
-    const printFn =
-      onPrint && context === 'builder'
-        ? 'App.printCharacterSheet()'
-        : onPrint && context === 'manager'
-          ? 'printCharacterSheet()'
-          : null;
-
-    const headerActions = [];
-    let deleteAction = null;
-
-    if (character.name && onRename && context === 'builder') {
-      headerActions.push({
-        icon: '✎',
-        label: 'Rename',
-        onclick: renameFn,
-      });
-    }
-
-    if (context === 'builder' && onLevelChange) {
-      headerActions.push({
-        icon: '↕',
-        label: 'Change level',
-        onclick: 'App.openLevelModal()',
-      });
-    }
-
-    if (context === 'manager' && onDelete) {
-      deleteAction = {
-        icon: '×',
-        label: 'Delete character',
-        onclick: `deleteCharacter('${character.id}')`,
-      };
-    }
-
-    // Portrait-related actions (moved from below-ascii overflow)
-    const hasValidManagerId = !!character.id;
-    const generateFn =
-      context === 'builder'
-        ? 'App.generateCustomAIPortrait()'
-        : hasValidManagerId
-          ? `generatePortraitForCharacter('${character.id}')`
-          : null;
-    const hasCustomPortrait = !!(
-      character.customPortraitAscii ||
-      character.originalPortraitUrl ||
-      character.portrait?.url ||
-      (character.portraitMetadata &&
-        Array.isArray(character.portraitMetadata.versions) &&
-        character.portraitMetadata.versions.length > 0)
-    );
-    const historyFn =
-      context === 'builder'
-        ? 'App.openPortraitHistory()'
-        : hasValidManagerId
-          ? `openPortraitHistory('${character.id}')`
-          : null;
-
-    if (
-      parsed.hasRace &&
-      parsed.hasClass &&
-      onGeneratePortrait &&
-      (context === 'builder' || hasValidManagerId) &&
-      generateFn
-    ) {
-      headerActions.push({
-        icon: '★',
-        label: 'Custom AI Portrait',
-        onclick: generateFn,
-      });
-    }
-
-    if (hasCustomPortrait && historyFn) {
-      headerActions.push({
-        icon: '⧖',
-        label: 'Portrait history',
-        onclick: historyFn,
-      });
-    }
-
-    // Manager-only: Share character (only for saved characters with valid IDs)
-    if (context === 'manager' && onShare && hasValidManagerId) {
-      headerActions.push({
-        icon: '↗',
-        label: 'Share character',
-        onclick: `openShareModal('${character.id}')`,
-      });
-    }
-
-    // Keep "Print sheet" near the bottom of the list, but always leave
-    // room for destructive actions (like Delete) to appear last.
-    if (printFn) {
-      headerActions.push({
-        icon: '⎙',
-        label: 'Print sheet',
-        onclick: printFn,
-      });
-    }
-
-    // Manager-only: Add Edit to overflow menu (visible only on narrow viewports via CSS)
-    if (context === 'manager' && onEdit && editFn) {
-      headerActions.unshift({
-        icon: '✎',
-        label: 'Edit character',
-        onclick: editFn,
-        id: 'sheet-edit-overflow',
-      });
-    }
-
-    // Append Delete last so it always appears at the bottom of the listbox
-    if (deleteAction) {
-      headerActions.push(deleteAction);
-    }
-
-    // Manager-only inline Edit button (to the left of the overflow menu)
-    // Hidden on narrow viewports where it moves into the overflow menu
-    const editButtonHtml =
-      context === 'manager' && onEdit && editFn
-        ? `
+    `;},_renderHeader(character,parsed,context,callbacks){const{onPrint,onRename,onDuplicate,onExport,onDelete,onLevelChange,onEdit,onGeneratePortrait,onTogglePortrait,onShare,}=callbacks;const renameFn=context==='builder'?'App.openNameModal()':`renameCharacter('${character.id}')`;const editFn=context==='manager'?`editCharacter('${character.id}')`:null;const printFn=onPrint&&context==='builder'?'App.printCharacterSheet()':onPrint&&context==='manager'?'printCharacterSheet()':null;const headerActions=[];let deleteAction=null;if(character.name&&onRename&&context==='builder'){headerActions.push({icon:'✎',label:'Rename',onclick:renameFn,});}
+if(context==='builder'&&onLevelChange){headerActions.push({icon:'↕',label:'Change level',onclick:'App.openLevelModal()',});}
+if(context==='manager'&&onDelete){deleteAction={icon:'×',label:'Delete character',onclick:`deleteCharacter('${character.id}')`,};}
+const hasValidManagerId=!!character.id;const generateFn=context==='builder'?'App.generateCustomAIPortrait()':hasValidManagerId?`generatePortraitForCharacter('${character.id}')`:null;const hasCustomPortrait=!!(character.customPortraitAscii||character.originalPortraitUrl||character.portrait?.url||(character.portraitMetadata&&Array.isArray(character.portraitMetadata.versions)&&character.portraitMetadata.versions.length>0));const historyFn=context==='builder'?'App.openPortraitHistory()':hasValidManagerId?`openPortraitHistory('${character.id}')`:null;if(parsed.hasRace&&parsed.hasClass&&onGeneratePortrait&&(context==='builder'||hasValidManagerId)&&generateFn){headerActions.push({icon:'★',label:'Custom AI Portrait',onclick:generateFn,});}
+if(hasCustomPortrait&&historyFn){headerActions.push({icon:'⧖',label:'Portrait history',onclick:historyFn,});}
+if(context==='manager'&&onShare&&hasValidManagerId){headerActions.push({icon:'↗',label:'Share character',onclick:`openShareModal('${character.id}')`,});}
+if(printFn){headerActions.push({icon:'⎙',label:'Print sheet',onclick:printFn,});}
+if(context==='manager'&&onEdit&&editFn){headerActions.unshift({icon:'✎',label:'Edit character',onclick:editFn,id:'sheet-edit-overflow',});}
+if(deleteAction){headerActions.push(deleteAction);}
+const editButtonHtml=context==='manager'&&onEdit&&editFn?`
         <button
           class="terminal-btn-small sheet-edit-btn"
           type="button"
@@ -6440,12 +734,7 @@ const CharacterSheet = (window.CharacterSheet = {
         >
           ✎ Edit
         </button>
-      `
-        : '';
-
-    const headerMenu =
-      headerActions.length > 0
-        ? `
+      `:'';const headerMenu=headerActions.length>0?`
         <div class="sheet-title-buttons selector-shell selector-shell--actions">
           <button
             class="terminal-btn-small selector-trigger sheet-actions-trigger"
@@ -6464,175 +753,58 @@ const CharacterSheet = (window.CharacterSheet = {
           <div class="selector-menu sheet-actions-menu" role="menu" aria-hidden="true">
             ${headerActions
               .map(
-                (action) => `
-              <button
-                class="selector-option"
-                type="button"
-                role="menuitem"
-                onclick="${action.onclick}"${
-                  action.id ? ` id="${action.id}"` : ''
-                }
-              >
-                <span class="selector-option-icon">${action.icon}</span>
-                <span class="selector-option-label">${action.label}</span>
-              </button>
-            `,
+                (action) => `<button
+class="selector-option"
+type="button"
+role="menuitem"
+onclick="${action.onclick}"${action.id?` id="${action.id}"`:''}><span class="selector-option-icon">${action.icon}</span><span class="selector-option-label">${action.label}</span></button>`,
               )
               .join('')}
           </div>
         </div>
-      `
-        : '';
-
-    const actionsBlock =
-      editButtonHtml || headerMenu
-        ? `
+      `:'';const actionsBlock=editButtonHtml||headerMenu?`
         <div class="sheet-title-actions">
           ${editButtonHtml}
           ${headerMenu}
         </div>
-      `
-        : '';
-
-    const safeTitle =
-      character.name && typeof character.name === 'string'
-        ? this.escapeHtml(character.name)
-        : '[ CHARACTER SHEET ]';
-
-    return `
+      `:'';const safeTitle=character.name&&typeof character.name==='string'?this.escapeHtml(character.name):'[ CHARACTER SHEET ]';return`
       <div class="sheet-title-header">
         <div class="sheet-title">${safeTitle}</div>
         ${actionsBlock}
       </div>
-    `;
-  },
-
-  _renderPortrait(character, parsed, context, callbacks) {
-    const { onGeneratePortrait, onTogglePortrait } = callbacks;
-
-    // Check if this is a demo character - show tag on portrait
-    const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
-
-    // Prefer the active portrait version from history (if any) so the sheet
-    // always matches the grid card + history modal. Fall back to legacy
-    // top-level fields when no history metadata is present.
-    //
-    // IMPORTANT: We must get BOTH ascii and url from the same source to avoid
-    // mismatches (e.g., showing version A's image with version B's ASCII).
-    // Use getAsciiPortrait() for ASCII since it has robust fallbacks, then
-    // use getOriginalPortraitUrl() to get the matching URL.
-    const asciiPortrait = this.getAsciiPortrait(character);
-    const originalPortraitUrl = this.getOriginalPortraitUrl(character);
-
-    // Log for debugging portrait mismatches
-    logPortraitDebug('renderPortrait (sheet)', character.id, character.name, {
-      context,
-      hasAscii: !!asciiPortrait,
-      asciiLength: asciiPortrait?.length || 0,
-      url: originalPortraitUrl,
-      portraitMetadataActiveId: character.portraitMetadata?.activeVersionId || null,
-      portraitMetadataVersionsCount: character.portraitMetadata?.versions?.length || 0
-    });
-
-    // Global portrait view mode (ASCII vs Original). Builder + manager share
-    // this preference via StorageService; fall back to config default.
-    let portraitViewMode = 'original';
-    try {
-      if (window.StorageService && StorageService.getPortraitViewMode) {
-        portraitViewMode = StorageService.getPortraitViewMode();
-      } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
-        portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
-      }
-    } catch (e) {
-      // Non-fatal: keep default
-    }
-    
-    // Use different IDs for builder vs manager
-    const safeIdForDom = character.id || 'current';
-    const portraitId = context === 'builder' ? 'character-portrait' : `character-portrait-${safeIdForDom}`;
-    const originalPortraitId =
-      context === 'builder' ? 'original-portrait' : `original-portrait-${safeIdForDom}`;
-    
-    // Check if we need to show placeholder (no ASCII portrait content yet)
-    const needsPlaceholder = !asciiPortrait && !originalPortraitUrl;
-
-    const showOriginalByDefault =
-      !!originalPortraitUrl &&
-      portraitViewMode === 'original' &&
-      !needsPlaceholder;
-
-    // Demo tag overlays portrait like on cards
-    const demoTagHtml = isDemo ? '<span class="sheet-demo-tag">SAMPLE</span>' : '';
-
-    return `
+    `;},_renderPortrait(character,parsed,context,callbacks){const{onGeneratePortrait,onTogglePortrait}=callbacks;const isDemo=window.DemoCharacters&&window.DemoCharacters.isDemo(character);const asciiPortrait=this.getAsciiPortrait(character);const originalPortraitUrl=this.getOriginalPortraitUrl(character);logPortraitDebug('renderPortrait (sheet)',character.id,character.name,{context,hasAscii:!!asciiPortrait,asciiLength:asciiPortrait?.length||0,url:originalPortraitUrl,portraitMetadataActiveId:character.portraitMetadata?.activeVersionId||null,portraitMetadataVersionsCount:character.portraitMetadata?.versions?.length||0});let portraitViewMode='original';try{if(window.StorageService&&StorageService.getPortraitViewMode){portraitViewMode=StorageService.getPortraitViewMode();}else if(typeof CONFIG!=='undefined'&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE){portraitViewMode=CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;}}catch(e){}
+const safeIdForDom=character.id||'current';const portraitId=context==='builder'?'character-portrait':`character-portrait-${safeIdForDom}`;const originalPortraitId=context==='builder'?'original-portrait':`original-portrait-${safeIdForDom}`;const needsPlaceholder=!asciiPortrait&&!originalPortraitUrl;const showOriginalByDefault=!!originalPortraitUrl&&portraitViewMode==='original'&&!needsPlaceholder;const demoTagHtml=isDemo?'<span class="sheet-demo-tag">SAMPLE</span>':'';return`
       <div class="portrait-container${showOriginalByDefault ? ' portrait-container--original-mode' : ''}">
         ${demoTagHtml}
         <div class="ascii-portrait ${needsPlaceholder ? 'ascii-portrait--placeholder' : ''} ${showOriginalByDefault ? 'is-hidden' : ''}" id="${portraitId}">
-          ${needsPlaceholder ? `
-            <div class="portrait-placeholder-content">
-              <div class="portrait-placeholder-cube-container">
-                <div class="portrait-placeholder-cube">
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                </div>
-              </div>
-              <div class="portrait-placeholder-text">Waiting for character data…</div>
-            </div>
-          ` : ''}
+          ${needsPlaceholder ? `<div class="portrait-placeholder-content"><div class="portrait-placeholder-cube-container"><div class="portrait-placeholder-cube"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div class="portrait-placeholder-text">Waiting for character data…</div></div>` : ''}
         </div>
         ${originalPortraitUrl
-          ? `<img id="${originalPortraitId}" class="original-portrait${showOriginalByDefault ? '' : ' is-hidden'}" src="${originalPortraitUrl}" alt="Character portrait" onload="this.classList.add('is-loaded')">`
+          ? `<img id="${originalPortraitId}"class="original-portrait${showOriginalByDefault ? '' : ' is-hidden'}"src="${originalPortraitUrl}"alt="Character portrait"onload="this.classList.add('is-loaded')">`
           : ''}
       </div>
-    `;
-  },
-
-  _renderBasicInfo(parsed, context, callbacks) {
-    const isBuilder = context === 'builder';
-    const race = parsed.raceName
-      ? this.escapeHtml(this.toSentenceCase(parsed.raceName))
-      : '';
-    const cls = parsed.className
-      ? this.escapeHtml(this.toSentenceCase(parsed.className))
-      : '';
-    const background = parsed.backgroundName
-      ? this.escapeHtml(this.toSentenceCase(parsed.backgroundName))
-      : '';
-    const alignment = parsed.alignment
-      ? this.escapeHtml(
-          this.toSentenceCase(this.formatAlignment(parsed.alignment)),
-        )
-      : '';
-    const sex = parsed.sex
-      ? this.escapeHtml(this.toSentenceCase(parsed.sex))
-      : '';
-
-    return `
+    `;},_renderBasicInfo(parsed,context,callbacks){const isBuilder=context==='builder';const race=parsed.raceName?this.escapeHtml(this.toSentenceCase(parsed.raceName)):'';const cls=parsed.className?this.escapeHtml(this.toSentenceCase(parsed.className)):'';const background=parsed.backgroundName?this.escapeHtml(this.toSentenceCase(parsed.backgroundName)):'';const alignment=parsed.alignment?this.escapeHtml(this.toSentenceCase(this.formatAlignment(parsed.alignment)),):'';const sex=parsed.sex?this.escapeHtml(this.toSentenceCase(parsed.sex)):'';return`
       <div class="sheet-section">
         <div class="sheet-header"></div>
         <div class="sheet-content">
           ${
             isBuilder || race
-              ? `<div class="stat-line"><span class="stat-label">Race:</span> <span class="stat-value">${race || '—'}</span></div>`
+              ? `<div class="stat-line"><span class="stat-label">Race:</span><span class="stat-value">${race||'—'}</span></div>`
               : ''
           }
           ${
             isBuilder || cls
-              ? `<div class="stat-line"><span class="stat-label">Class:</span> <span class="stat-value">${cls || '—'}</span></div>`
+              ? `<div class="stat-line"><span class="stat-label">Class:</span><span class="stat-value">${cls||'—'}</span></div>`
               : ''
           }
           ${
             isBuilder || background
-              ? `<div class="stat-line"><span class="stat-label">Background:</span> <span class="stat-value">${background || '—'}</span></div>`
+              ? `<div class="stat-line"><span class="stat-label">Background:</span><span class="stat-value">${background||'—'}</span></div>`
               : ''
           }
           ${
             isBuilder || alignment
-              ? `<div class="stat-line"><span class="stat-label">Alignment:</span> <span class="stat-value">${alignment || '—'}</span></div>`
+              ? `<div class="stat-line"><span class="stat-label">Alignment:</span><span class="stat-value">${alignment||'—'}</span></div>`
               : ''
           }
           <div class="stat-line"><span class="stat-label">Sex:</span> <span class="stat-value">${sex || '—'}</span></div>
@@ -6642,21 +814,7 @@ const CharacterSheet = (window.CharacterSheet = {
           </div>
         </div>
       </div>
-    `;
-  },
-
-  _renderCombatStats(parsed, context) {
-    const headerClass =
-      context === 'builder'
-        ? 'sheet-header sheet-header--no-divider'
-        : 'sheet-header';
-    
-    // In builder context, check if combat stats have been populated
-    // Show dashes for empty/default values until they're set
-    const isBuilder = context === 'builder';
-    const hasCombatStats = parsed.hpMax > 0;
-
-    return `
+    `;},_renderCombatStats(parsed,context){const headerClass=context==='builder'?'sheet-header sheet-header--no-divider':'sheet-header';const isBuilder=context==='builder';const hasCombatStats=parsed.hpMax>0;return`
       <div class="sheet-section">
         <div class="${headerClass}">
           <div class="sheet-header-title">[ COMBAT STATS ]</div>
@@ -6664,31 +822,7 @@ const CharacterSheet = (window.CharacterSheet = {
         <div class="stat-grid">
           <div class="stat-box">
             <div class="stat-box-label">HIT POINTS</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hpCurrent} / ${parsed.hpMax}`}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">ARMOR CLASS</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : parsed.armorClass}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">INITIATIVE</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : this.formatModifier(parsed.initiative)}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">SPEED</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.speed} ft`}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">PROF BONUS</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `+${parsed.proficiencyBonus}`}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">HIT DIE</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `d${parsed.hitDie}`}</div>
-          </div>
-        </div>
-      </div>
-    `;
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hpCurrent}/ ${parsed.hpMax}`}</div></div><div class="stat-box"><div class="stat-box-label">ARMOR CLASS</div><div class="stat-box-value">${isBuilder&&!hasCombatStats?'—':parsed.armorClass}</div></div><div class="stat-box"><div class="stat-box-label">INITIATIVE</div><div class="stat-box-value">${isBuilder&&!hasCombatStats?'—':this.formatModifier(parsed.initiative)}</div></div><div class="stat-box"><div class="stat-box-label">SPEED</div><div class="stat-box-value">${isBuilder&&!hasCombatStats?'—':`${parsed.speed} ft`}</div></div><div class="stat-box"><div class="stat-box-label">PROF BONUS</div><div class="stat-box-value">${isBuilder&&!hasCombatStats?'—':`+${parsed.proficiencyBonus}`}</div></div><div class="stat-box"><div class="stat-box-label">HIT DIE</div><div class="stat-box-value">${isBuilder&&!hasCombatStats?'—':`d${parsed.hitDie}`}</div></div></div></div>`;
   },
 
   _renderAbilities(parsed, context) {
@@ -6700,40 +834,18 @@ const CharacterSheet = (window.CharacterSheet = {
         : 'sheet-header';
 
     // Use grid layout for both contexts (identical formatting)
-    return `
-      <div class="sheet-section">
-        <div class="${headerClass}">
-          <div class="sheet-header-title">[ ABILITY SCORES ]</div>
-        </div>
-        <div class="ability-grid">
-          ${abilities
-            .map((ability) => {
-              // Show dashes if abilities haven't been set yet (baseAbilities is null)
-              if (!parsed.abilitiesSet) {
-                return `
+    return `<div class="sheet-section"><div class="${headerClass}"><div class="sheet-header-title">[ABILITY SCORES]</div></div><div class="ability-grid">${abilities.map((ability)=>{if(!parsed.abilitiesSet){return`
                   <div class="ability-box">
                     <div class="ability-name">${ability.toUpperCase()}</div>
                     <div class="ability-score">— <span class="ability-modifier">(—)</span></div>
                   </div>
-                `;
-              }
-              
-              const score = parsed.abilities[ability] || 10;
-              const modifier =
-                parsed.abilityModifiers[ability] !== undefined
-                  ? parsed.abilityModifiers[ability]
-                  : Math.floor((score - 10) / 2);
-              return `
+                `;}
+const score=parsed.abilities[ability]||10;const modifier=parsed.abilityModifiers[ability]!==undefined?parsed.abilityModifiers[ability]:Math.floor((score-10)/2);return`
                 <div class="ability-box">
                   <div class="ability-name">${ability.toUpperCase()}</div>
                   <div class="ability-score">${score} <span class="ability-modifier">(${this.formatModifier(modifier)})</span></div>
                 </div>
-              `;
-            })
-            .join('')}
-        </div>
-      </div>
-    `;
+              `;}).join('')}</div></div>`;
   },
 
   /**
@@ -7200,7 +1312,7 @@ const CharacterSheet = (window.CharacterSheet = {
           // In case anything above fails (e.g., unexpected DOM state), fall back
           // to a very simple "open below trigger" layout so the menu still opens.
           menu.style.position = 'absolute';
-          menu.style.top = `${triggerEl.offsetHeight + 4}px`;
+          menu.style.top = `${triggerEl.offsetHeight+4}px`;
           menu.style.left = '0';
           menu.style.right = 'auto';
           menu.style.maxHeight = '';
@@ -7307,26 +1419,12 @@ const CharacterSheet = (window.CharacterSheet = {
   _renderSavingThrows(parsed) {
     if (!parsed.savingThrowModifiers) return '';
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ SAVING THROWS ]</div>
-        </div>
-        <div class="sheet-content">
-          ${Object.entries(parsed.savingThrowModifiers)
-            .map(([ability, value]) => {
-              const isProficient = parsed.savingThrows?.includes(ability);
-              return `
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[SAVING THROWS]</div></div><div class="sheet-content">${Object.entries(parsed.savingThrowModifiers).map(([ability,value])=>{const isProficient=parsed.savingThrows?.includes(ability);return`
                 <div class="stat-line">
                   <span class="stat-label">${ability.toUpperCase()}:</span>
                   <span class="stat-value">${this.formatModifier(value)}${isProficient ? ' ★' : ''}</span>
                 </div>
-              `;
-            })
-            .join('')}
-        </div>
-      </div>
-    `;
+              `;}).join('')}</div></div>`;
   },
 
   _renderSkills(parsed) {
@@ -7354,14 +1452,7 @@ const CharacterSheet = (window.CharacterSheet = {
     const skillsMarkup = hasSkillModifiers
       ? Object.entries(parsed.skillModifiers)
           .map(
-            ([skill, value]) => `
-          <div class="stat-line">
-            <span class="stat-label">${this.escapeHtml(
-              this.formatSkillName(skill),
-            )}:</span>
-            <span class="stat-value">${this.formatModifier(value)} ★</span>
-          </div>
-        `,
+            ([skill, value]) => `<div class="stat-line"><span class="stat-label">${this.escapeHtml(this.formatSkillName(skill),)}:</span><span class="stat-value">${this.formatModifier(value)}★</span></div>`,
           )
           .join('')
       : '';
@@ -7383,24 +1474,12 @@ const CharacterSheet = (window.CharacterSheet = {
     let contentMarkup;
     if (skillsMarkup && extraProfsMarkup) {
       contentMarkup = `
-        ${skillsMarkup}
-        <div class="sheet-divider"></div>
-        ${extraProfsMarkup}
-      `;
+${skillsMarkup}<div class="sheet-divider"></div>${extraProfsMarkup}`;
     } else {
       contentMarkup = skillsMarkup || extraProfsMarkup;
     }
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ ${headerTitle} ]</div>
-        </div>
-        <div class="sheet-content">
-          ${contentMarkup}
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[${headerTitle}]</div></div><div class="sheet-content">${contentMarkup}</div></div>`;
   },
 
   _renderSpells(parsed) {
@@ -7417,15 +1496,11 @@ const CharacterSheet = (window.CharacterSheet = {
           const name = this.escapeHtml(rawName || '');
           const school =
             spell && spell.school
-              ? ` <span class="text-dim">(${this.escapeHtml(
-                  spell.school,
-                )})</span>`
+              ? `<span class="text-dim">(${this.escapeHtml(spell.school,)})</span>`
               : '';
           const desc =
             spell && spell.description
-              ? `<div class="text-dim terminal-text-small spell-list-description">${this.escapeHtml(
-                  spell.description,
-                )}</div>`
+              ? `<div class="text-dim terminal-text-small spell-list-description">${this.escapeHtml(spell.description,)}</div>`
               : '';
         return `<div class="text-dim spell-list-item">• ${name}${school}</div>${desc}`;
         })
@@ -7436,26 +1511,16 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Cantrips
     if (cantrips.length > 0) {
-      spellsContent += `
-        <div class="sheet-subsection">
-          <div class="sheet-subsection-title">CANTRIPS (At-Will)</div>
-          ${renderSpellList(cantrips)}
-        </div>
-      `;
+      spellsContent += `<div class="sheet-subsection"><div class="sheet-subsection-title">CANTRIPS(At-Will)</div>${renderSpellList(cantrips)}</div>`;
     }
 
     // 1st Level Spells
     if (spellsKnown.length > 0 || spellsPrepared.length > 0) {
       const spellList = spellsKnown.length > 0 ? spellsKnown : spellsPrepared;
-      const slotsText = spellSlots['1'] ? ` • Slots: ${spellSlots['1']}` : '';
+      const slotsText = spellSlots['1'] ? `• Slots:${spellSlots['1']}` : '';
       const preparedText = spellsPrepared.length > 0 && spellsKnown.length === 0 ? ' (Prepared)' : '';
       
-      spellsContent += `
-        <div class="sheet-subsection">
-          <div class="sheet-subsection-title">1ST LEVEL${preparedText}${slotsText}</div>
-          ${renderSpellList(spellList)}
-        </div>
-      `;
+      spellsContent += `<div class="sheet-subsection"><div class="sheet-subsection-title">1ST LEVEL${preparedText}${slotsText}</div>${renderSpellList(spellList)}</div>`;
     }
 
     // Spellcasting ability note
@@ -7466,23 +1531,10 @@ const CharacterSheet = (window.CharacterSheet = {
         cha: 'Charisma',
       }[parsed.spellcastingAbility] || parsed.spellcastingAbility;
       
-      spellsContent += `
-        <div class="text-dim terminal-text-small spellcasting-ability-note">
-          Spellcasting Ability: ${this.escapeHtml(abilityName)}
-        </div>
-      `;
+      spellsContent += `<div class="text-dim terminal-text-small spellcasting-ability-note">Spellcasting Ability:${this.escapeHtml(abilityName)}</div>`;
     }
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ SPELLS ]</div>
-        </div>
-        <div class="sheet-content">
-          ${spellsContent}
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[SPELLS]</div></div><div class="sheet-content">${spellsContent}</div></div>`;
   },
 
   _renderRacialTraits(parsed) {
@@ -7490,38 +1542,18 @@ const CharacterSheet = (window.CharacterSheet = {
       .map((trait) => `<div class="text-dim">• ${this.escapeHtml(trait)}</div>`)
       .join('');
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ RACIAL TRAITS ]</div>
-        </div>
-        <div class="sheet-content">
-          ${traitsMarkup}
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[RACIAL TRAITS]</div></div><div class="sheet-content">${traitsMarkup}</div></div>`;
   },
 
   _renderEquipment(parsed) {
     const equipmentMarkup = parsed.equipment
       .map(
         (item) =>
-          `<div class="text-dim">• ${this.escapeHtml(
-            item,
-          )}</div>`,
+          `<div class="text-dim">• ${this.escapeHtml(item,)}</div>`,
       )
       .join('');
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ ${parsed.hasClassEquipment ? 'EQUIPMENT' : 'CLASS EQUIPMENT'} ]</div>
-        </div>
-        <div class="sheet-content">
-          ${equipmentMarkup}
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[${parsed.hasClassEquipment?'EQUIPMENT':'CLASS EQUIPMENT'}]</div></div><div class="sheet-content">${equipmentMarkup}</div></div>`;
   },
 
   _renderToolProficiencies(parsed) {
@@ -7532,16 +1564,7 @@ const CharacterSheet = (window.CharacterSheet = {
       })
       .join('');
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ TOOL PROFICIENCIES ]</div>
-        </div>
-        <div class="sheet-content">
-          ${toolsMarkup}
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[TOOL PROFICIENCIES]</div></div><div class="sheet-content">${toolsMarkup}</div></div>`;
   },
 
   _renderLanguages(parsed) {
@@ -7552,30 +1575,10 @@ const CharacterSheet = (window.CharacterSheet = {
       return '';
     }
     
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ LANGUAGES ]</div>
-        </div>
-        <div class="sheet-content">
-          ${
-            hasLanguages
-              ? parsed.languages
-                  .map(
-                    (lang) =>
-                      `<div class="text-dim">• ${this.escapeHtml(
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[LANGUAGES]</div></div><div class="sheet-content">${hasLanguages?parsed.languages.map((lang)=>`<div class="text-dim">• ${this.escapeHtml(
                         lang,
-                      )}</div>`,
-                  )
-                  .join('')
-              : ''
-          }
-          ${hasChoices 
-            ? `<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${parsed.languageChoices} additional language${parsed.languageChoices > 1 ? 's' : ''}</div>` 
-            : ''}
-        </div>
-      </div>
-    `;
+                      )}</div>`,).join(''):''}
+${hasChoices?`<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${parsed.languageChoices} additional language${parsed.languageChoices > 1 ? 's' : ''}</div>`:''}</div></div>`;
   },
 
   _renderBackgroundFeature(parsed) {
@@ -7584,32 +1587,13 @@ const CharacterSheet = (window.CharacterSheet = {
       parsed.backgroundFeatureDescription || '',
     );
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ BACKGROUND FEATURE ]</div>
-        </div>
-        <div class="sheet-content">
-          <div class="stat-line"><span class="stat-label">${name}</span></div>
-          <div class="text-dim mt-sm">${description}</div>
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[BACKGROUND FEATURE]</div></div><div class="sheet-content"><div class="stat-line"><span class="stat-label">${name}</span></div><div class="text-dim mt-sm">${description}</div></div></div>`;
   },
 
   _renderBackstory(parsed) {
     const backstory = this.escapeHtml(parsed.backstory || '');
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ BACKSTORY ]</div>
-        </div>
-        <div class="sheet-content text-dim">
-          ${backstory}
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[BACKSTORY]</div></div><div class="sheet-content text-dim">${backstory}</div></div>`;
   },
 
   _renderExportInfo(character) {
@@ -7618,35 +1602,12 @@ const CharacterSheet = (window.CharacterSheet = {
       : null;
     const version = this.escapeHtml(character.exportVersion || '1.0');
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ EXPORT INFO ]</div>
-        </div>
-        <div class="sheet-content">
-          <div class="stat-line">
-            <span class="stat-label">Exported:</span>
-            <span class="stat-value">${new Date(
-              character.exportDate,
-            ).toLocaleDateString()}</span>
-          </div>
-          ${
-            exportedBy
-            ? `
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[EXPORT INFO]</div></div><div class="sheet-content"><div class="stat-line"><span class="stat-label">Exported:</span><span class="stat-value">${new Date(character.exportDate,).toLocaleDateString()}</span></div>${exportedBy?`
             <div class="stat-line">
               <span class="stat-label">Source:</span>
               <span class="stat-value">${exportedBy}</span>
             </div>
-          `
-              : ''
-          }
-          <div class="stat-line">
-            <span class="stat-label">Version:</span>
-            <span class="stat-value">${version}</span>
-          </div>
-        </div>
-      </div>
-    `;
+          `:''}<div class="stat-line"><span class="stat-label">Version:</span><span class="stat-value">${version}</span></div></div></div>`;
   },
 
   // ========================================
@@ -7908,7 +1869,7 @@ const CharacterSheet = (window.CharacterSheet = {
       // Non-fatal; fall through to legacy fields.
     }
 
-    const key = `${character.race || ''}|${character.class || ''}`;
+    const key = `${character.race||''}|${character.class||''}`;
 
     // 1) Explicit custom portrait always wins
     if (character.customPortraitAscii) {
@@ -8108,7 +2069,7 @@ const CharacterSheet = (window.CharacterSheet = {
     const portraitId =
       context === 'builder'
         ? 'character-portrait'
-        : `character-portrait-${character.id || 'current'}`;
+        : `character-portrait-${character.id||'current'}`;
     const portraitEl = document.getElementById(portraitId);
     const asciiPortrait = this.getAsciiPortrait(character);
 
@@ -8197,7 +2158,7 @@ const CharacterSheet = (window.CharacterSheet = {
       const classType = character.class;
       if (!race || !classType) return;
 
-      const key = `${race || ''}|${classType || ''}`;
+      const key = `${race||''}|${classType||''}`;
 
       // If we already have a portrait that is explicitly tagged for this
       // exact race/class combo, there's nothing to upgrade.
@@ -8219,9 +2180,7 @@ const CharacterSheet = (window.CharacterSheet = {
       if (!this._portraitFileCache) {
         this._portraitFileCache = {};
       }
-      const cacheKey = `${String(race).toLowerCase()}|${String(
-        classType,
-      ).toLowerCase()}`;
+      const cacheKey = `${String(race).toLowerCase()}|${String(classType,).toLowerCase()}`;
 
       if (this._portraitFileCache[cacheKey]) {
         this._applyUpgradedPortrait(
@@ -8421,7 +2380,7 @@ const PortraitHistory = (window.PortraitHistory = {
    * @param {Object} character
    * @param {string} asciiArt
    * @param {string|null} imageUrl
-   * @param {Object} extra - { source, prompt, style, model, quality }
+   * @param {Object} extra - { source, prompt, style, model, quality, characterDescription }
    */
   addVersion(character, asciiArt, imageUrl, extra = {}) {
     if (!character) {
@@ -8433,9 +2392,7 @@ const PortraitHistory = (window.PortraitHistory = {
       ? existingMetadata.versions
       : [];
 
-    const id = `v_${Date.now()}_${Math.random()
-      .toString(36)
-      .substr(2, 5)}`;
+    const id = `v_${Date.now()}_${Math.random().toString(36).substr(2,5)}`;
 
     const version = {
       id,
@@ -8444,6 +2401,7 @@ const PortraitHistory = (window.PortraitHistory = {
       url: imageUrl || null,
       source: extra.source || 'custom-ai',
       prompt: extra.prompt || null,
+      characterDescription: extra.characterDescription || null,
       style: extra.style || null,
       model: extra.model || null,
       quality: extra.quality || null,
@@ -8689,7 +2647,7 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
           ? error.detail
           : JSON.stringify(error.detail || error);
       console.error('API error response:', error);
-      throw new Error(detail || `API error: ${response.status}`);
+      throw new Error(detail || `API error:${response.status}`);
     }
 
     // Handle 204 No Content
@@ -8912,7 +2870,7 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
 
   // Generate unique ID (not used for cloud storage, API generates IDs)
   generateId() {
-    return `char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `char_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
   },
 
   // ========================================
@@ -9930,7 +3888,7 @@ if (DEBUG_CLOUD) {
 
     // Generate unique ID for local-only characters
     generateId() {
-      return `char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      return `char_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
     },
 
     // ========================================
@@ -10116,7 +4074,7 @@ if (DEBUG_CLOUD) {
       const nowIso = new Date().toISOString();
       const duplicate = {
         ...character,
-        name: character.name ? `${character.name} (Copy)` : 'Copy',
+        name: character.name ? `${character.name}(Copy)` : 'Copy',
         id: this.generateId(),
         createdAt: nowIso,
         updatedAt: nowIso,
@@ -10306,21 +4264,7 @@ if (DEBUG_CLOUD) {
 
       // Build and insert the full modal once data is ready so there is no
       // intermediate loading skeleton state.
-      const modalHtml = `
-        <div id="portraitHistoryModal" class="modal show" onclick="PortraitUI.closeHistory()">
-          <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
-            <div class="modal-header">
-              <h2 class="modal-title">Portrait History</h2>
-              <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
-            </div>
-            <div class="modal-body">
-              <p class="terminal-text-small terminal-text-dim">
-                View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
-              </p>
-              <div class="portrait-history-carousel">
-                ${
-                  versions.length > 1
-                    ? `<button
+      const modalHtml = `<div id="portraitHistoryModal"class="modal show"onclick="PortraitUI.closeHistory()"><div class="modal-content portrait-history-modal"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">Portrait History</h2><button class="modal-close"onclick="PortraitUI.closeHistory()">&times;</button></div><div class="modal-body"><p class="terminal-text-small terminal-text-dim">View previous custom AI portraits for this character.Choose one to make it active,or delete versions you no longer need.</p><div class="portrait-history-carousel">${versions.length>1?`<button
                         type="button"
                         class="portrait-history-nav portrait-history-nav-left"
                         aria-label="Previous portrait"
@@ -10328,20 +4272,9 @@ if (DEBUG_CLOUD) {
                         onclick="event.stopPropagation(); PortraitUI.moveFocus(-1);"
                       >
                         <span aria-hidden="true">‹</span>
-                      </button>`
-                    : ''
-                }
-                <div
-                  id="portraitHistoryList"
-                  class="portrait-history-card-row${
-                    versions.length === 1 ? ' is-single' : ''
-                  }"
-                >
-                  ${listHtml}
-                </div>
-                ${
-                  versions.length > 1
-                    ? `<button
+                      </button>`:''}<div
+id="portraitHistoryList"
+class="portrait-history-card-row${versions.length===1?' is-single':''}">${listHtml}</div>${versions.length>1?`<button
                         type="button"
                         class="portrait-history-nav portrait-history-nav-right"
                         aria-label="Next portrait"
@@ -10349,18 +4282,7 @@ if (DEBUG_CLOUD) {
                         onclick="event.stopPropagation(); PortraitUI.moveFocus(1);"
                       >
                         <span aria-hidden="true">›</span>
-                      </button>`
-                    : ''
-                }
-              </div>
-            </div>
-            <div class="modal-footer modal-footer-end">
-              <button class="terminal-btn" onclick="PortraitUI.closeHistory()">CANCEL</button>
-              <button class="terminal-btn terminal-btn-primary" onclick="PortraitUI.confirmSelection()">USE SELECTED</button>
-            </div>
-          </div>
-        </div>
-      `;
+                      </button>`:''}</div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="PortraitUI.closeHistory()">CANCEL</button><button class="terminal-btn terminal-btn-primary"onclick="PortraitUI.confirmSelection()">USE SELECTED</button></div></div></div>`;
 
       // Attach the portrait history modal to the terminal frame/container so
       // its overlay and content stay within the app window instead of the
@@ -10480,31 +4402,7 @@ if (DEBUG_CLOUD) {
       const hasLoader = portraitEl.querySelector('.portrait-placeholder-cube--generating');
       let textEl = portraitEl.querySelector('.portrait-placeholder-text');
       if (!hasLoader) {
-        portraitEl.innerHTML = `
-          <div class="portrait-placeholder-content">
-            <div class="portrait-placeholder-cube-container">
-              <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-              </div>
-            </div>
-            <div class="portrait-placeholder-text" data-dots="${dotCount}">
-              <span class="portrait-placeholder-message">${baseMessage}</span>
-              <span class="portrait-placeholder-dots">
-                <span class="dot dot-1">.</span>
-                <span class="dot dot-2">.</span>
-                <span class="dot dot-3">.</span>
-              </span>
-              <div class="portrait-placeholder-subtext">
-                ${subtext}
-              </div>
-            </div>
-          </div>
-        `;
+        portraitEl.innerHTML = `<div class="portrait-placeholder-content"><div class="portrait-placeholder-cube-container"><div class="portrait-placeholder-cube portrait-placeholder-cube--generating"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div class="portrait-placeholder-text"data-dots="${dotCount}"><span class="portrait-placeholder-message">${baseMessage}</span><span class="portrait-placeholder-dots"><span class="dot dot-1">.</span><span class="dot dot-2">.</span><span class="dot dot-3">.</span></span><div class="portrait-placeholder-subtext">${subtext}</div></div></div>`;
         textEl = portraitEl.querySelector('.portrait-placeholder-text');
       } else {
         // Update text + dot state without reconstructing DOM.
@@ -10818,31 +4716,18 @@ if (DEBUG_CLOUD) {
       // Escape prompt text for safe display
       const escapedPrompt = (version.prompt || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-      const infoHeaderHtml = `
-        <h2 class="modal-title">Image Info</h2>
-        <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
-      `;
+      const infoHeaderHtml = `<h2 class="modal-title">Image Info</h2><button class="modal-close"onclick="PortraitUI.closeHistory()">&times;</button>`;
 
       // Build the info sections
       let infoSections = '';
 
       // Date/Time
       if (dateTimeLabel) {
-        infoSections += `
-          <div class="image-info-row">
-            <span class="image-info-label">Created</span>
-            <span class="image-info-value">${dateTimeLabel}</span>
-          </div>
-        `;
+        infoSections += `<div class="image-info-row"><span class="image-info-label">Created</span><span class="image-info-value">${dateTimeLabel}</span></div>`;
       }
 
       // Style
-      infoSections += `
-        <div class="image-info-row">
-          <span class="image-info-label">Style</span>
-          <span class="image-info-value">${styleLabel}</span>
-        </div>
-      `;
+      infoSections += `<div class="image-info-row"><span class="image-info-label">Style</span><span class="image-info-value">${styleLabel}</span></div>`;
 
       // Model and Quality
       if (modelLabel) {
@@ -10850,45 +4735,20 @@ if (DEBUG_CLOUD) {
         if (qualityLabel) {
           modelDisplay = modelDisplay + ' (' + qualityLabel + ')';
         }
-        infoSections += `
-          <div class="image-info-row">
-            <span class="image-info-label">Model</span>
-            <span class="image-info-value">${modelDisplay}</span>
-          </div>
-        `;
+        infoSections += `<div class="image-info-row"><span class="image-info-label">Model</span><span class="image-info-value">${modelDisplay}</span></div>`;
       }
 
       // Prompt section
       let promptSection = '';
       if (escapedPrompt) {
-        promptSection = `
-          <div class="image-info-prompt-section">
-            <div class="image-info-prompt-label">Prompt</div>
-            <pre class="terminal-text portrait-prompt-display">${escapedPrompt}</pre>
-          </div>
-        `;
+        promptSection = `<div class="image-info-prompt-section"><div class="image-info-prompt-label">Prompt</div><pre class="terminal-text portrait-prompt-display">${escapedPrompt}</pre></div>`;
       } else {
-        promptSection = `
-          <div class="image-info-prompt-section">
-            <div class="image-info-prompt-label">Prompt</div>
-            <p class="terminal-text-dim">No prompt saved for this portrait.</p>
-          </div>
-        `;
+        promptSection = `<div class="image-info-prompt-section"><div class="image-info-prompt-label">Prompt</div><p class="terminal-text-dim">No prompt saved for this portrait.</p></div>`;
       }
 
-      const infoBodyHtml = `
-        <div class="image-info-container">
-          <div class="image-info-metadata">
-            ${infoSections}
-          </div>
-          ${promptSection}
-        </div>
-      `;
+      const infoBodyHtml = `<div class="image-info-container"><div class="image-info-metadata">${infoSections}</div>${promptSection}</div>`;
 
-      const infoFooterHtml = `
-        <button class="terminal-btn" id="portrait-info-back">BACK</button>
-        ${escapedPrompt ? '<button class="terminal-btn" id="portrait-info-copy">COPY PROMPT</button>' : ''}
-      `;
+      const infoFooterHtml = `<button class="terminal-btn"id="portrait-info-back">BACK</button>${escapedPrompt?'<button class="terminal-btn" id="portrait-info-copy">COPY PROMPT</button>':''}`;
 
       // Transform modal to info view
       this._animateModalContentResize('portraitHistoryModal', () => {
@@ -10978,16 +4838,9 @@ if (DEBUG_CLOUD) {
 
       // If this is the only portrait, show "create new" prompt instead of delete confirmation
       if (originalVersions.length === 1) {
-        const createNewBodyHtml = `
-          <p class="terminal-text">
-            To delete this portrait, create a new one first.
-          </p>
-        `;
+        const createNewBodyHtml = `<p class="terminal-text">To delete this portrait,create a new one first.</p>`;
 
-        const createNewFooterHtml = `
-          <button class="terminal-btn" id="portrait-delete-cancel">CANCEL</button>
-          <button class="terminal-btn terminal-btn-primary" id="portrait-create-new">CREATE NEW</button>
-        `;
+        const createNewFooterHtml = `<button class="terminal-btn"id="portrait-delete-cancel">CANCEL</button><button class="terminal-btn terminal-btn-primary"id="portrait-create-new">CREATE NEW</button>`;
 
         this._animateModalContentResize('portraitHistoryModal', () => {
           if (modalTitle) modalTitle.textContent = 'Create a New Portrait?';
@@ -11029,16 +4882,9 @@ if (DEBUG_CLOUD) {
       }
 
       // Build the confirmation view using standard modal structure
-      const confirmationBodyHtml = `
-        <p class="terminal-text">
-          Delete this saved portrait version? This cannot be undone.
-        </p>
-      `;
+      const confirmationBodyHtml = `<p class="terminal-text">Delete this saved portrait version?This cannot be undone.</p>`;
 
-      const confirmationFooterHtml = `
-        <button class="terminal-btn" id="portrait-delete-cancel">NO</button>
-        <button class="terminal-btn terminal-btn-primary" id="portrait-delete-confirm">YES</button>
-      `;
+      const confirmationFooterHtml = `<button class="terminal-btn"id="portrait-delete-cancel">NO</button><button class="terminal-btn terminal-btn-primary"id="portrait-delete-confirm">YES</button>`;
 
       // Transform modal to confirmation view
       this._animateModalContentResize('portraitHistoryModal', () => {
@@ -11197,14 +5043,7 @@ if (DEBUG_CLOUD) {
           );
 
           // Build updated body content
-          const updatedBodyHtml = `
-            <p class="terminal-text-small terminal-text-dim">
-              View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
-            </p>
-            <div class="portrait-history-carousel">
-              ${
-                normalized.versions.length > 1
-                  ? `<button
+          const updatedBodyHtml = `<p class="terminal-text-small terminal-text-dim">View previous custom AI portraits for this character.Choose one to make it active,or delete versions you no longer need.</p><div class="portrait-history-carousel">${normalized.versions.length>1?`<button
                       type="button"
                       class="portrait-history-nav portrait-history-nav-left"
                       aria-label="Previous portrait"
@@ -11212,20 +5051,9 @@ if (DEBUG_CLOUD) {
                       onclick="event.stopPropagation(); PortraitUI.moveFocus(-1);"
                     >
                       <span aria-hidden="true">‹</span>
-                    </button>`
-                  : ''
-              }
-              <div
-                id="portraitHistoryList"
-                class="portrait-history-card-row${
-                  normalized.versions.length === 1 ? ' is-single' : ''
-                }"
-              >
-                ${listHtml}
-              </div>
-              ${
-                normalized.versions.length > 1
-                  ? `<button
+                    </button>`:''}<div
+id="portraitHistoryList"
+class="portrait-history-card-row${normalized.versions.length===1?' is-single':''}">${listHtml}</div>${normalized.versions.length>1?`<button
                       type="button"
                       class="portrait-history-nav portrait-history-nav-right"
                       aria-label="Next portrait"
@@ -11233,11 +5061,7 @@ if (DEBUG_CLOUD) {
                       onclick="event.stopPropagation(); PortraitUI.moveFocus(1);"
                     >
                       <span aria-hidden="true">›</span>
-                    </button>`
-                  : ''
-              }
-            </div>
-          `;
+                    </button>`:''}</div>`;
 
           // Transform back to history view with updated content
           this._animateModalContentResize('portraitHistoryModal', () => {
@@ -11268,22 +5092,10 @@ if (DEBUG_CLOUD) {
 
       if (!hasVersions) {
         if (hasCustomPortraitWithoutHistory) {
-          return `<div class="terminal-text-small terminal-text-dim portrait-history-callout">
-              <p><strong>No portrait history yet.</strong></p>
-              <p>This character's portrait was created before the history feature was added.</p>
-              <p>Generate a new custom AI portrait to:</p>
-              <ul class="portrait-history-callout-list">
-                <li>• Save your current portrait as Version 1</li>
-                <li>• Add the new portrait as Version 2</li>
-                <li>• Enable portrait version switching</li>
-              </ul>
-            </div>`;
+          return `<div class="terminal-text-small terminal-text-dim portrait-history-callout"><p><strong>No portrait history yet.</strong></p><p>This character's portrait was created before the history feature was added.</p><p>Generate a new custom AI portrait to:</p><ul class="portrait-history-callout-list"><li>• Save your current portrait as Version 1</li><li>• Add the new portrait as Version 2</li><li>• Enable portrait version switching</li></ul></div>`;
         }
 
-        return `<p class="terminal-text-small terminal-text-dim portrait-history-callout">
-              No saved portraits yet.<br><br>
-              Generate a custom AI portrait to start building a history.
-            </p>`;
+        return `<p class="terminal-text-small terminal-text-dim portrait-history-callout">No saved portraits yet.<br><br>Generate a custom AI portrait to start building a history.</p>`;
       }
 
       // Check global portrait view mode (ASCII vs Original) to determine default display
@@ -11322,15 +5134,7 @@ if (DEBUG_CLOUD) {
           const asciiHiddenClass = shouldShowOriginal ? ' is-hidden' : '';
           const imageHiddenClass = shouldShowOriginal ? '' : ' is-hidden';
 
-          const thumbHtml = `
-            <div class="card-thumbnail${shouldShowOriginal ? ' card-thumbnail--original-mode' : ''}">
-              <div class="ascii-portrait portrait-history-preview${asciiHiddenClass}" data-version-id="${v.id}"></div>
-              ${
-                hasImage
-                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image${imageHiddenClass}" data-version-id="${v.id}" onload="this.classList.add('is-loaded')">`
-                  : ''
-              }
-            </div>`;
+          const thumbHtml = `<div class="card-thumbnail${shouldShowOriginal ? ' card-thumbnail--original-mode' : ''}"><div class="ascii-portrait portrait-history-preview${asciiHiddenClass}"data-version-id="${v.id}"></div>${hasImage?`<img src="${v.url}" alt="${title}" class="portrait-history-image${imageHiddenClass}" data-version-id="${v.id}" onload="this.classList.add('is-loaded')">`:''}</div>`;
 
           // Overflow menu for per-version actions (View, Prompt, Delete)
           const actionItems = [];
@@ -11338,87 +5142,42 @@ if (DEBUG_CLOUD) {
           // Toggle button label depends on current default view
           if (hasImage) {
             const toggleLabel = shouldShowOriginal ? 'View ASCII' : 'View original';
-            actionItems.push(`
-              <button
-                class="selector-option"
-                type="button"
-                role="menuitem"
-                onclick="event.stopPropagation(); PortraitUI.toggleView('${v.id}')"
-                data-toggle-version-id="${v.id}"
-              >
-                <span class="selector-option-icon">◉</span>
-                <span class="selector-option-label">${toggleLabel}</span>
-              </button>
-            `);
+            actionItems.push(`<button
+class="selector-option"
+type="button"
+role="menuitem"
+onclick="event.stopPropagation(); PortraitUI.toggleView('${v.id}')"
+data-toggle-version-id="${v.id}"><span class="selector-option-icon">◉</span><span class="selector-option-label">${toggleLabel}</span></button>`);
           }
 
           // Always show Image Info - displays date, style, model, and prompt (if available)
-          actionItems.push(`
-            <button
-              class="selector-option"
-              type="button"
-              role="menuitem"
-              onclick="event.stopPropagation(); PortraitUI.viewImageInfo('${characterId}', '${v.id}')"
-              title="View image generation details"
-            >
-              <span class="selector-option-icon">ℹ︎</span>
-              <span class="selector-option-label">Image info</span>
-            </button>
-          `);
+          actionItems.push(`<button
+class="selector-option"
+type="button"
+role="menuitem"
+onclick="event.stopPropagation(); PortraitUI.viewImageInfo('${characterId}', '${v.id}')"
+title="View image generation details"><span class="selector-option-icon">ℹ︎</span><span class="selector-option-label">Image info</span></button>`);
 
-          actionItems.push(`
-            <button
-              class="selector-option portrait-history-delete-option"
-              type="button"
-              role="menuitem"
-              onclick="event.stopPropagation(); PortraitUI.deleteVersion('${characterId}', '${v.id}')"
-              title="Delete this portrait version"
-              aria-label="Delete portrait version"
-            >
-              <span class="selector-option-icon">×</span>
-              <span class="selector-option-label">Delete version</span>
-            </button>
-          `);
+          actionItems.push(`<button
+class="selector-option portrait-history-delete-option"
+type="button"
+role="menuitem"
+onclick="event.stopPropagation(); PortraitUI.deleteVersion('${characterId}', '${v.id}')"
+title="Delete this portrait version"
+aria-label="Delete portrait version"><span class="selector-option-icon">×</span><span class="selector-option-label">Delete version</span></button>`);
 
           const actionsMenu =
             actionItems.length > 0
-              ? `
-              <div class="portrait-history-actions selector-shell selector-shell--actions">
-                <button
-                  class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
-                  type="button"
-                  aria-haspopup="menu"
-                  aria-expanded="false"
-                  aria-label="More portrait actions"
-                  onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"
-                >
-                  <span class="sheet-actions-icon" aria-hidden="true">
-                    <span class="sheet-actions-dot dot-1"></span>
-                    <span class="sheet-actions-dot dot-2"></span>
-                    <span class="sheet-actions-dot dot-3"></span>
-                  </span>
-                </button>
-                <div class="selector-menu portrait-history-menu" role="menu" aria-hidden="true">
-                  ${actionItems.join('')}
-                </div>
-              </div>
-            `
+              ? `<div class="portrait-history-actions selector-shell selector-shell--actions"><button
+class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
+type="button"
+aria-haspopup="menu"
+aria-expanded="false"
+aria-label="More portrait actions"
+onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"><span class="sheet-actions-icon"aria-hidden="true"><span class="sheet-actions-dot dot-1"></span><span class="sheet-actions-dot dot-2"></span><span class="sheet-actions-dot dot-3"></span></span></button><div class="selector-menu portrait-history-menu"role="menu"aria-hidden="true">${actionItems.join('')}</div></div>`
               : '';
 
-          return `
-            <div class="character-card portrait-history-card${
-              isActive ? ' is-selected' : ''
-            }" data-version-id="${v.id}" onclick="PortraitUI.selectCard('${v.id}')">
-              ${thumbHtml}
-              <div class="card-details portrait-history-details">
-                <div class="portrait-history-meta">
-                  <div class="card-name">${title}</div>
-                  <div class="card-info">${infoText || '&nbsp;'}</div>
-                </div>
-                ${actionsMenu}
-              </div>
-            </div>
-          `;
+          return `<div class="character-card portrait-history-card${isActive?' is-selected':''}" data-version-id="${v.id}" onclick="PortraitUI.selectCard('${v.id}')">${thumbHtml}<div class="card-details portrait-history-details"><div class="portrait-history-meta"><div class="card-name">${title}</div><div class="card-info">${infoText||'&nbsp;'}</div></div>${actionsMenu}</div></div>`;
         })
         .join('');
     },
@@ -12199,16 +5958,7 @@ const ModalManager = {
         if (!overlay) {
             overlay = document.createElement('div');
             overlay.className = 'modal-discard-confirm';
-            overlay.innerHTML = `
-                <div class="modal-discard-content">
-                    <p class="terminal-text">You have unsaved changes.</p>
-                    <p class="terminal-text-small terminal-text-dim">Discard changes and close?</p>
-                    <div class="modal-discard-actions">
-                        <button class="terminal-btn modal-discard-cancel">Keep editing</button>
-                        <button class="terminal-btn modal-discard-confirm-btn">Discard</button>
-                    </div>
-                </div>
-            `;
+            overlay.innerHTML = `<div class="modal-discard-content"><p class="terminal-text">You have unsaved changes.</p><p class="terminal-text-small terminal-text-dim">Discard changes and close?</p><div class="modal-discard-actions"><button class="terminal-btn modal-discard-cancel">Keep editing</button><button class="terminal-btn modal-discard-confirm-btn">Discard</button></div></div>`;
             modal.querySelector('.modal-content').appendChild(overlay);
         }
         
@@ -12325,7 +6075,7 @@ const AppState = {
                 console.log('📚 LOAD: Loaded', this.characters.length, 'characters from storage');
                 console.log('📚 LOAD: Full character list with IDs:');
                 this.characters.forEach((c, i) => {
-                    console.log(`  ${i+1}. ${c.name} (ID: ${c.id})`);
+                    console.log(`${i+1}.${c.name}(ID:${c.id})`);
                 });
             }
             
@@ -12344,7 +6094,7 @@ const AppState = {
                 console.warn('⚠️ DUPLICATE NAMES DETECTED:', [...new Set(duplicates)]);
                 [...new Set(duplicates)].forEach(dupName => {
                     const matches = this.characters.filter(c => c.name === dupName);
-                    console.warn(`  "${dupName}" appears ${matches.length} times with IDs:`, matches.map(m => m.id));
+                    console.warn(`"${dupName}"appears ${matches.length}times with IDs:`, matches.map(m => m.id));
                 });
             }
             this.applyFilters();
@@ -12778,13 +6528,7 @@ const MobileView = {
         
         const loader = document.createElement('div');
         loader.className = 'mobile-swipe-loader is-visible';
-        loader.innerHTML = `
-            <div class="panel-loading-cube-container">
-                <div class="panel-loading-cube">
-                    <i></i><i></i><i></i><i></i><i></i><i></i>
-                </div>
-            </div>
-        `;
+        loader.innerHTML = `<div class="panel-loading-cube-container"><div class="panel-loading-cube"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>`;
         portraitContainer.appendChild(loader);
     },
     
@@ -13024,13 +6768,7 @@ const UI = {
         if (characters.length === 0) {
             // Show a single "New Character" card in the grid, positioned as the
             // first card would be when characters exist.
-            grid.innerHTML = `
-                <div class="character-card new-character-card" onclick="createNewCharacter()">
-                    <div class="card-details">
-                        <div class="card-name">+ New Character</div>
-                    </div>
-                </div>
-            `;
+            grid.innerHTML = `<div class="character-card new-character-card"onclick="createNewCharacter()"><div class="card-details"><div class="card-name">+New Character</div></div></div>`;
 
             if (emptyState) {
                 emptyState.classList.remove('show');
@@ -13124,7 +6862,7 @@ const UI = {
 
         // Debug logging for portrait mismatch investigation
         if (window.DEBUG_PORTRAITS) {
-            console.log(`🖼️ [PORTRAIT DEBUG] renderCharacterCard`, {
+            console.log(`🖼️[PORTRAIT DEBUG]renderCharacterCard`, {
                 characterId: character.id,
                 characterName: character.name,
                 context: 'card',
@@ -13156,12 +6894,10 @@ const UI = {
         if (hasPortrait) {
             if (showOriginalImage) {
                 // Show original image (onload adds is-loaded class for fade-in effect)
-                thumbnailHtml = `<div class="card-thumbnail card-thumbnail--image" id="card-thumb-${character.id}">
-                    <img src="${Utils.escapeHtml(originalPortraitUrl)}" alt="${name}" loading="lazy" onload="this.classList.add('is-loaded')" />
-                </div>`;
+                thumbnailHtml = `<div class="card-thumbnail card-thumbnail--image"id="card-thumb-${character.id}"><img src="${Utils.escapeHtml(originalPortraitUrl)}"alt="${name}"loading="lazy"onload="this.classList.add('is-loaded')"/></div>`;
             } else if (hasAsciiPortrait) {
                 // Show ASCII art (content will be populated after render)
-                thumbnailHtml = `<div class="card-thumbnail" id="card-thumb-${character.id}"></div>`;
+                thumbnailHtml = `<div class="card-thumbnail"id="card-thumb-${character.id}"></div>`;
             }
         }
 
@@ -13169,18 +6905,8 @@ const UI = {
         const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
         const demoTagHtml = isDemo ? '<span class="card-demo-tag">SAMPLE</span>' : '';
 
-        return `
-            <div class="character-card" data-id="${character.id}" onclick="viewCharacter('${character.id}')">
-                ${demoTagHtml}
-                ${thumbnailHtml}
-                <div class="card-details">
-                    <div class="card-name">${name}</div>
-                    <div class="card-info">
-                        ${raceClass}${character.level ? ` • Lvl ${character.level}` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
+        return `<div class="character-card"data-id="${character.id}"onclick="viewCharacter('${character.id}')">${demoTagHtml}
+${thumbnailHtml}<div class="card-details"><div class="card-name">${name}</div><div class="card-info">${raceClass}${character.level?` • Lvl ${character.level}`:''}</div></div></div>`;
     },
 
     updateCount() {
@@ -13289,7 +7015,7 @@ async function viewCharacter(id, options = {}) {
 
     // Debug logging for portrait mismatch investigation
     if (window.DEBUG_PORTRAITS) {
-        console.log(`🖼️ [PORTRAIT DEBUG] viewCharacter called`, {
+        console.log(`🖼️[PORTRAIT DEBUG]viewCharacter called`, {
             id,
             requestId,
             options,
@@ -13327,7 +7053,7 @@ async function viewCharacter(id, options = {}) {
     // storage/cloud, abandon this update to avoid stale mismatches.
     if (requestId !== latestViewCharacterRequestId) {
         if (window.DEBUG_PORTRAITS) {
-            console.log(`🖼️ [PORTRAIT DEBUG] viewCharacter ABANDONED (stale request)`, {
+            console.log(`🖼️[PORTRAIT DEBUG]viewCharacter ABANDONED(stale request)`, {
                 id,
                 requestId,
                 latestRequestId: latestViewCharacterRequestId
@@ -13339,7 +7065,7 @@ async function viewCharacter(id, options = {}) {
     if (character) {
         // Debug: Log the character data being used to render the sheet
         if (window.DEBUG_PORTRAITS) {
-            console.log(`🖼️ [PORTRAIT DEBUG] viewCharacter rendering`, {
+            console.log(`🖼️[PORTRAIT DEBUG]viewCharacter rendering`, {
                 id: character.id,
                 name: character.name,
                 source: characterSource,
@@ -13706,7 +7432,7 @@ async function saveEditDetails() {
         if (loadingOverlay) {
             loadingOverlay.classList.remove('is-visible');
         }
-        showAlertDialog(`Level must be between 1 and 20.\n\nYou entered: ${levelValue}`);
+        showAlertDialog(`Level must be between 1 and 20.\n\nYou entered:${levelValue}`);
         return;
     }
     
@@ -13886,24 +7612,7 @@ async function renameCharacter(id) {
     if (existing) existing.remove();
 
     const safeCurrentName = Utils.escapeHtml(character.name || '');
-    const modalHtml = `
-      <div id="renameModal" class="modal show">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h2 class="modal-title">RENAME CHARACTER</h2>
-            <button class="modal-close" onclick="closeRenameModal()">&times;</button>
-          </div>
-          <div class="modal-body">
-            <p class="terminal-text-small modal-section-label">New name:</p>
-            <input type="text" id="renameInput" class="terminal-input" value="${safeCurrentName}">
-          </div>
-          <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" id="renameCancel">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" id="renameOk">APPLY</button>
-          </div>
-        </div>
-      </div>
-    `;
+    const modalHtml = `<div id="renameModal"class="modal show"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">RENAME CHARACTER</h2><button class="modal-close"onclick="closeRenameModal()">&times;</button></div><div class="modal-body"><p class="terminal-text-small modal-section-label">New name:</p><input type="text"id="renameInput"class="terminal-input"value="${safeCurrentName}"></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"id="renameCancel">CANCEL</button><button class="terminal-btn terminal-btn-primary"id="renameOk">APPLY</button></div></div></div>`;
 
     getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('renameModal');
@@ -13965,31 +7674,7 @@ async function openShareModal(characterId) {
     if (existing) existing.remove();
 
     const safeName = Utils.escapeHtml(character.name || 'Unnamed');
-    const modalHtml = `
-      <div id="shareModal" class="modal show">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h2 class="modal-title">↗ SHARE CHARACTER</h2>
-            <button class="modal-close" onclick="closeShareModal()">&times;</button>
-          </div>
-          <div class="modal-body">
-            <p class="terminal-text">Share <strong>${safeName}</strong> with another DandDy user.</p>
-            <p class="terminal-text-small terminal-text-dim" style="margin-top: 0.5rem;">
-              Enter their email address. If they have a DandDy account, they'll see this character the next time they log in and can add it to their collection.
-            </p>
-            <div style="margin-top: 1rem;">
-              <label class="terminal-text-small modal-section-label" for="shareEmailInput">Email address:</label>
-              <input type="email" id="shareEmailInput" class="terminal-input" placeholder="friend@example.com">
-              <p id="shareEmailError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
-            </div>
-          </div>
-          <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" id="shareCancel">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" id="shareSend">SEND</button>
-          </div>
-        </div>
-      </div>
-    `;
+    const modalHtml = `<div id="shareModal"class="modal show"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">↗ SHARE CHARACTER</h2><button class="modal-close"onclick="closeShareModal()">&times;</button></div><div class="modal-body"><p class="terminal-text">Share<strong>${safeName}</strong>with another DandDy user.</p><p class="terminal-text-small terminal-text-dim"style="margin-top: 0.5rem;">Enter their email address.If they have a DandDy account,they'll see this character the next time they log in and can add it to their collection.</p><div style="margin-top: 1rem;"><label class="terminal-text-small modal-section-label"for="shareEmailInput">Email address:</label><input type="email"id="shareEmailInput"class="terminal-input"placeholder="friend@example.com"><p id="shareEmailError"class="terminal-text-small"style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p></div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"id="shareCancel">CANCEL</button><button class="terminal-btn terminal-btn-primary"id="shareSend">SEND</button></div></div></div>`;
 
     getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('shareModal');
@@ -14041,7 +7726,7 @@ async function openShareModal(characterId) {
         try {
             await CharacterCloudStorage.shareCharacter(characterId, email);
             close();
-            showNotification(`${safeName} shared with ${email}`);
+            showNotification(`${safeName}shared with ${email}`);
         } catch (error) {
             sendBtn.disabled = false;
             sendBtn.textContent = 'SEND';
@@ -14092,7 +7777,7 @@ function showPendingSharesModal(shares) {
     if (existing) existing.remove();
 
     const shareCount = shares.length;
-    const title = shareCount === 1 ? 'CHARACTER SHARED WITH YOU' : `${shareCount} CHARACTERS SHARED WITH YOU`;
+    const title = shareCount === 1 ? 'CHARACTER SHARED WITH YOU' : `${shareCount}CHARACTERS SHARED WITH YOU`;
 
     // Build share cards HTML
     const shareCardsHtml = shares.map((share, index) => {
@@ -14122,66 +7807,17 @@ function showPendingSharesModal(shares) {
         let portraitHtml = '<div class="share-card-portrait-placeholder">No Portrait</div>';
         if (char.original_portrait_url) {
             // Image portrait
-            portraitHtml = `<img class="share-card-portrait-image" src="${Utils.escapeHtml(char.original_portrait_url)}" alt="${safeName} portrait" />`;
+            portraitHtml = `<img class="share-card-portrait-image"src="${Utils.escapeHtml(char.original_portrait_url)}"alt="${safeName} portrait"/>`;
         } else if (char.ascii_portrait) {
             // ASCII portrait fallback
             portraitHtml = `<pre class="share-card-portrait">${Utils.escapeHtml(char.ascii_portrait)}</pre>`;
         }
 
-        return `
-          <div class="pending-share-card" data-share-id="${share.id}" data-index="${index}">
-            <div class="share-card-layout">
-              <div class="share-card-portrait-col">
-                ${portraitHtml}
-              </div>
-              <div class="share-card-info-col">
-                <h3 class="share-card-name">${safeName}</h3>
-                <div class="share-card-stats">
-                  <div class="share-card-stat">
-                    <span class="share-card-label">Race</span>
-                    <span class="share-card-value">${safeRace}</span>
-                  </div>
-                  <div class="share-card-stat">
-                    <span class="share-card-label">Class</span>
-                    <span class="share-card-value">${safeClass}</span>
-                  </div>
-                  <div class="share-card-stat">
-                    <span class="share-card-label">Level</span>
-                    <span class="share-card-value">${level}</span>
-                  </div>
-                </div>
-                <p class="share-card-from">
-                  From: ${fromEmail} · ${dateStr}
-                </p>
-                <div class="share-card-actions">
-                  <button class="terminal-btn pending-share-ignore" data-share-id="${share.id}">IGNORE</button>
-                  <button class="terminal-btn pending-share-accept" data-share-id="${share.id}">ADD CHARACTER</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
+        return `<div class="pending-share-card"data-share-id="${share.id}"data-index="${index}"><div class="share-card-layout"><div class="share-card-portrait-col">${portraitHtml}</div><div class="share-card-info-col"><h3 class="share-card-name">${safeName}</h3><div class="share-card-stats"><div class="share-card-stat"><span class="share-card-label">Race</span><span class="share-card-value">${safeRace}</span></div><div class="share-card-stat"><span class="share-card-label">Class</span><span class="share-card-value">${safeClass}</span></div><div class="share-card-stat"><span class="share-card-label">Level</span><span class="share-card-value">${level}</span></div></div><p class="share-card-from">From:${fromEmail}· ${dateStr}</p><div class="share-card-actions"><button class="terminal-btn pending-share-ignore"data-share-id="${share.id}">IGNORE</button><button class="terminal-btn pending-share-accept"data-share-id="${share.id}">ADD CHARACTER</button></div></div></div></div>`;
     }).join('');
 
-    const modalHtml = `
-      <div id="pendingSharesModal" class="modal show">
-        <div class="modal-content pending-shares-modal">
-          <div class="modal-header">
-            <h2 class="modal-title">↓ ${title}</h2>
-            <button class="modal-close" onclick="closePendingSharesModal()">&times;</button>
-          </div>
-          <div class="modal-body">
-            <p class="terminal-text-small terminal-text-dim" style="margin-bottom: 1rem;">
-              ${shareCount === 1 ? 'Someone shared a character with you!' : 'Other users have shared characters with you!'} 
-              Add them to your collection or ignore to dismiss.
-            </p>
-            <div class="pending-shares-list">
-              ${shareCardsHtml}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+    const modalHtml = `<div id="pendingSharesModal"class="modal show"><div class="modal-content pending-shares-modal"><div class="modal-header"><h2 class="modal-title">↓ ${title}</h2><button class="modal-close"onclick="closePendingSharesModal()">&times;</button></div><div class="modal-body"><p class="terminal-text-small terminal-text-dim"style="margin-bottom: 1rem;">${shareCount===1?'Someone shared a character with you!':'Other users have shared characters with you!'}
+Add them to your collection or ignore to dismiss.</p><div class="pending-shares-list">${shareCardsHtml}</div></div></div></div>`;
 
     getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('pendingSharesModal');
@@ -14526,16 +8162,15 @@ async function generatePortraitForCharacter(id) {
     currentPortraitCharacterId = id;
     
     // Build default prompt:
-    // Show only the CHARACTER DESCRIPTION in the modal (not the full prompt with
-    // style instructions). This matches the builder behavior and prevents
-    // style/pose/scene instructions from compounding on each regeneration.
-    // The rendering instructions (Pose/STYLE/Scene) are added fresh when the
-    // user clicks "Generate" based on their selected style dropdown.
+    // Use the stored characterDescription from the active portrait version if available.
+    // This preserves the exact prompt the user used (or was auto-generated) for the
+    // current portrait, allowing them to regenerate with a different style.
+    // Fall back to buildCharacterDescription() for older portraits without this field.
     let defaultPrompt = '';
     let activeStyle = null;
     
     try {
-        // Get the style from the active portrait version (if any)
+        // Get the characterDescription and style from the active portrait version (if any)
         try {
             const metadata = character.portraitMetadata || {};
             const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
@@ -14544,6 +8179,10 @@ async function generatePortraitForCharacter(id) {
                 let active =
                     (activeId && versions.find((v) => v && v.id === activeId)) ||
                     versions[versions.length - 1];
+                // Get the characterDescription from the active version if available
+                if (active && active.characterDescription) {
+                    defaultPrompt = active.characterDescription;
+                }
                 // Get the style from the active version if available
                 if (active && active.style) {
                     activeStyle = active.style;
@@ -14553,12 +8192,14 @@ async function generatePortraitForCharacter(id) {
             // Non-fatal – continue to fallback below.
         }
 
-        // Always use just the character description (no style/pose/scene instructions)
-        // This prevents style instructions from compounding on each regeneration.
-        if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
-            defaultPrompt = AIService.buildCharacterDescription(character);
-        } else {
-            defaultPrompt = `${character.race}\u0020${character.class}`;
+        // Fallback: if no stored characterDescription, generate one from character data
+        // This handles older portraits that don't have characterDescription stored.
+        if (!defaultPrompt) {
+            if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
+                defaultPrompt = AIService.buildCharacterDescription(character);
+            } else {
+                defaultPrompt = `${character.race}\u0020${character.class}`;
+            }
         }
     } catch (e) {
         defaultPrompt = `${character.race}\u0020${character.class}`;
@@ -14750,31 +8391,7 @@ async function confirmGeneratePortrait() {
            // Fallback: inline markup if the shared helper is unavailable.
            let textEl = portraitEl.querySelector('.portrait-placeholder-text');
            if (!textEl) {
-               portraitEl.innerHTML = `
-                    <div class="portrait-placeholder-content">
-                        <div class="portrait-placeholder-cube-container">
-                            <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-                                <i></i>
-                                <i></i>
-                                <i></i>
-                                <i></i>
-                                <i></i>
-                                <i></i>
-                            </div>
-                        </div>
-                        <div class="portrait-placeholder-text" data-dots="${dotCount}">
-                            <span class="portrait-placeholder-message">${baseMessage}</span>
-                            <span class="portrait-placeholder-dots">
-                                <span class="dot dot-1">.</span>
-                                <span class="dot dot-2">.</span>
-                                <span class="dot dot-3">.</span>
-                            </span>
-                            <div class="portrait-placeholder-subtext">
-                                ${subtext}
-                            </div>
-                        </div>
-                    </div>
-                `;
+               portraitEl.innerHTML = `<div class="portrait-placeholder-content"><div class="portrait-placeholder-cube-container"><div class="portrait-placeholder-cube portrait-placeholder-cube--generating"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div class="portrait-placeholder-text"data-dots="${dotCount}"><span class="portrait-placeholder-message">${baseMessage}</span><span class="portrait-placeholder-dots"><span class="dot dot-1">.</span><span class="dot dot-2">.</span><span class="dot dot-3">.</span></span><div class="portrait-placeholder-subtext">${subtext}</div></div></div>`;
                 textEl = portraitEl.querySelector('.portrait-placeholder-text');
            } else {
                textEl.setAttribute('data-dots', String(dotCount));
@@ -14838,7 +8455,7 @@ async function confirmGeneratePortrait() {
                 'Create a high-contrast black-and-white fantasy illustration.',
                 'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
                 'Include some controlled, directional hatching to define form (light mid-tone texture only).',
-                `Pose: ${posePrompt}`,
+                `Pose:${posePrompt}`,
                 // cameraPrompt,
                 'Background should be simple, entirely black, and free of symbols or text.',
                 'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
@@ -14855,7 +8472,7 @@ async function confirmGeneratePortrait() {
         let fullPrompt = [customPrompt, ...renderingInstructions].join(' ');
         
         if (fullPrompt.length > MAX_PROMPT_LENGTH) {
-            console.warn(`Portrait prompt exceeds ${MAX_PROMPT_LENGTH} chars (${fullPrompt.length}), truncating...`);
+            console.warn(`Portrait prompt exceeds ${MAX_PROMPT_LENGTH}chars(${fullPrompt.length}),truncating...`);
             // Try to keep the custom prompt intact and reduce style instructions
             const styleInstructionsText = renderingInstructions.join(' ');
             const availableForStyle = MAX_PROMPT_LENGTH - customPrompt.length - 50; // 50 chars buffer
@@ -14869,7 +8486,7 @@ async function confirmGeneratePortrait() {
                 const minimalStyle = 'High-contrast black-and-white fantasy ink illustration.';
                 fullPrompt = minimalStyle + ' ' + customPrompt.substring(0, MAX_PROMPT_LENGTH - minimalStyle.length - 1);
             }
-            console.log(`Truncated prompt length: ${fullPrompt.length}`);
+            console.log(`Truncated prompt length:${fullPrompt.length}`);
         }
         
         // Generate custom portrait with full prompt
@@ -14962,6 +8579,7 @@ async function confirmGeneratePortrait() {
                 {
                     source: 'custom-ai',
                     prompt: fullPrompt,
+                    characterDescription: customPrompt,
                     style: managerStyle,
                     model: generationModel,
                     quality: generationQuality,
@@ -15117,7 +8735,7 @@ async function confirmGeneratePortrait() {
 
             // Debug: Log the character state being applied
             if (window.DEBUG_PORTRAITS) {
-                console.log(`🖼️ [PORTRAIT DEBUG] After generation - updating AppState`, {
+                console.log(`🖼️[PORTRAIT DEBUG]After generation-updating AppState`, {
                     characterId: idStr,
                     characterName: nextCharacter.name,
                     newPortraitUrl: updates.originalPortraitUrl,
@@ -15149,7 +8767,7 @@ async function confirmGeneratePortrait() {
             // Debug: Verify the AppState update
             if (window.DEBUG_PORTRAITS) {
                 const verifyChar = AppState.characters.find(c => c && String(c.id) === idStr);
-                console.log(`🖼️ [PORTRAIT DEBUG] AppState AFTER in-place update`, {
+                console.log(`🖼️[PORTRAIT DEBUG]AppState AFTER in-place update`, {
                     characterId: idStr,
                     portraitUrl: verifyChar?.originalPortraitUrl,
                     activeVersionId: verifyChar?.portraitMetadata?.activeVersionId,
@@ -15168,7 +8786,7 @@ async function confirmGeneratePortrait() {
         // Since we already updated AppState.characters in-place above, we just
         // need to re-apply filters (which handles sorting) and re-render.
         if (window.DEBUG_PORTRAITS) {
-            console.log(`🖼️ [PORTRAIT DEBUG] Re-sorting grid (no storage reload)`, {
+            console.log(`🖼️[PORTRAIT DEBUG]Re-sorting grid(no storage reload)`, {
                 characterId: portraitCharacterId,
                 timestamp: new Date().toISOString()
             });
@@ -15193,7 +8811,7 @@ async function confirmGeneratePortrait() {
         // Debug: Verify the character data is still correct after re-render
         if (window.DEBUG_PORTRAITS) {
             const charAfterRender = AppState.characters.find(c => c && String(c.id) === idStr);
-            console.log(`🖼️ [PORTRAIT DEBUG] AppState AFTER re-render (no reload)`, {
+            console.log(`🖼️[PORTRAIT DEBUG]AppState AFTER re-render(no reload)`, {
                 characterId: idStr,
                 portraitUrl: charAfterRender?.originalPortraitUrl,
                 activeVersionId: charAfterRender?.portraitMetadata?.activeVersionId,
@@ -15368,7 +8986,7 @@ async function duplicateCharacter(id) {
         if (duplicate) {
             await AppState.loadCharacters();
             UI.render();
-            showNotification(`Created: ${duplicate.name}`);
+            showNotification(`Created:${duplicate.name}`);
         }
     });
 }
@@ -15381,7 +8999,7 @@ async function exportCharacter(id) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${character.name || 'character'}.json`;
+        a.download = `${character.name||'character'}.json`;
         a.click();
         URL.revokeObjectURL(url);
         showNotification('Character exported!');
@@ -15568,7 +9186,7 @@ async function handleOverwriteCharacter(existingId, importData) {
         await AppState.loadCharacters();
         UI.render();
         closeImportModal();
-        showNotification(`Replaced: ${result.name}`);
+        showNotification(`Replaced:${result.name}`);
         setTimeout(() => viewCharacter(result.id), 100);
     }
 }
@@ -15583,17 +9201,17 @@ async function handleKeepBothCharacters(importData) {
     // Find a unique name by adding (Copy N)
     const existing = await CharacterStorage.getAll();
     let copyNumber = 1;
-    let newName = `${originalName} (Copy)`;
+    let newName = `${originalName}(Copy)`;
     
     while (existing.some(c => c.name === newName)) {
         copyNumber++;
-        newName = `${originalName} (Copy ${copyNumber})`;
+        newName = `${originalName}(Copy ${copyNumber})`;
     }
     
     character.name = newName;
     
     // For "keep both", treat this as a new logical character: give it a new UID
-    const newUid = `danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const newUid = `danddy_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
     if (!character.metadata) character.metadata = {};
     character.metadata.characterUid = newUid;
     character.characterUid = newUid;
@@ -15607,7 +9225,7 @@ async function handleKeepBothCharacters(importData) {
         await AppState.loadCharacters();
         UI.render();
         closeImportModal();
-        showNotification(`Imported as: ${result.name}`);
+        showNotification(`Imported as:${result.name}`);
         setTimeout(() => viewCharacter(result.id), 100);
     }
 }
@@ -15668,7 +9286,7 @@ async function importCharacter() {
                 UI.render();
                 console.log('🚪 MODAL: Calling closeImportModal()');
                 closeImportModal();
-                showNotification(`Imported: ${result.name}`);
+                showNotification(`Imported:${result.name}`);
                 // Auto-select the imported character
                 setTimeout(() => viewCharacter(result.id), 100);
             } else {
@@ -15798,14 +9416,7 @@ function showNotification(rawMessage, duration = 4000) {
         toast.setAttribute('aria-live', 'polite');
 
         // Inner structure: message + dismiss "X" pinned to the right in its own wrapper
-        toast.innerHTML = `
-            <span class="toast-message"></span>
-            <div class="toast-dismiss-wrapper">
-                <button type="button" class="toast-dismiss" aria-label="Dismiss notification">
-                    <span class="toast-dismiss-icon">&times;</span>
-                </button>
-            </div>
-        `;
+        toast.innerHTML = `<span class="toast-message"></span><div class="toast-dismiss-wrapper"><button type="button"class="toast-dismiss"aria-label="Dismiss notification"><span class="toast-dismiss-icon">&times;</span></button></div>`;
 
         const container = document.querySelector('.terminal-frame') || document.body;
         container.appendChild(toast);
@@ -15983,23 +9594,7 @@ function showConfirmDialog(message, onConfirm) {
     if (existing) existing.remove();
 
     const escapedMessage = Utils.escapeHtml(message).replace(/\n/g, '<br>');
-    const modalHtml = `
-      <div id="genericConfirmModal" class="modal show">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h2 class="modal-title">CONFIRM</h2>
-            <button class="modal-close" onclick="closeGenericConfirmModal()">&times;</button>
-          </div>
-          <div class="modal-body">
-            <p class="terminal-text">${escapedMessage}</p>
-          </div>
-          <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" id="genericConfirmCancel">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" id="genericConfirmOk">OK</button>
-          </div>
-        </div>
-      </div>
-    `;
+    const modalHtml = `<div id="genericConfirmModal"class="modal show"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">CONFIRM</h2><button class="modal-close"onclick="closeGenericConfirmModal()">&times;</button></div><div class="modal-body"><p class="terminal-text">${escapedMessage}</p></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"id="genericConfirmCancel">CANCEL</button><button class="terminal-btn terminal-btn-primary"id="genericConfirmOk">OK</button></div></div></div>`;
 
     getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('genericConfirmModal');
@@ -16089,22 +9684,7 @@ function showLevelChangeDialog(oldLevel, newLevel) {
         const levelText = Math.abs(levelDiff) === 1 ? 'level' : 'levels';
 
         // Create new content for level change dialog
-        const levelChangeHtml = `
-          <div class="modal-header">
-            <h2 class="modal-title">↑︎ LEVEL CHANGE</h2>
-            <button class="modal-close" id="levelChangeClose">&times;</button>
-          </div>
-          <div class="modal-body">
-            <p class="terminal-text level-change-text">You're changing from<strong>Level\u00A0${oldLevel}</strong>to<strong>Level\u00A0${newLevel}</strong>\u00A0(${Math.abs(levelDiff)}\u00A0${levelText}\u00A0${direction}).</p>
-            <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">
-              Would you like to automatically recalculate stats&nbsp;(HP,&nbsp;Proficiency Bonus)&nbsp;for the new level, or update them manually?
-            </p>
-          </div>
-          <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">
-            <button class="terminal-btn" id="levelChangeManual">KEEP MANUAL</button>
-            <button class="terminal-btn terminal-btn-primary" id="levelChangeAuto">AUTO-CALCULATE</button>
-          </div>
-        `;
+        const levelChangeHtml = `<div class="modal-header"><h2 class="modal-title">↑︎ LEVEL CHANGE</h2><button class="modal-close"id="levelChangeClose">&times;</button></div><div class="modal-body"><p class="terminal-text level-change-text">You're changing from<strong>Level\u00A0${oldLevel}</strong>to<strong>Level\u00A0${newLevel}</strong>\u00A0(${Math.abs(levelDiff)}\u00A0${levelText}\u00A0${direction}).</p><p class="terminal-text-small"style="margin-top: 0.75rem; opacity: 0.8;">Would you like to automatically recalculate stats&nbsp;(HP,&nbsp;Proficiency Bonus)&nbsp;for the new level,or update them manually?</p></div><div class="modal-footer"style="flex-wrap: wrap; gap: 0.5rem;"><button class="terminal-btn"id="levelChangeManual">KEEP MANUAL</button><button class="terminal-btn terminal-btn-primary"id="levelChangeAuto">AUTO-CALCULATE</button></div>`;
 
         // Animate transition to level change dialog
         animateModalContentSwap(modalContent, levelChangeHtml, () => {
@@ -16125,19 +9705,7 @@ function showLevelChangeDialog(oldLevel, newLevel) {
                     });
                 } else if (result === 'auto') {
                     // Show cube loader while "calculating", then proceed with save
-                    const loadingHtml = `
-                      <div class="modal-header">
-                        <h2 class="modal-title">↑︎ LEVEL CHANGE</h2>
-                      </div>
-                      <div class="modal-body" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px;">
-                        <div class="panel-loading-cube-container">
-                          <div class="panel-loading-cube">
-                            <i></i><i></i><i></i><i></i><i></i><i></i>
-                          </div>
-                        </div>
-                        <p class="terminal-text-small" style="margin-top: 1rem; opacity: 0.8;">Calculating stats for Level ${newLevel}...</p>
-                      </div>
-                    `;
+                    const loadingHtml = `<div class="modal-header"><h2 class="modal-title">↑︎ LEVEL CHANGE</h2></div><div class="modal-body"style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px;"><div class="panel-loading-cube-container"><div class="panel-loading-cube"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><p class="terminal-text-small"style="margin-top: 1rem; opacity: 0.8;">Calculating stats for Level ${newLevel}...</p></div>`;
                     
                     animateModalContentSwap(modalContent, loadingHtml, () => {
                         // Show loader briefly, then resolve to proceed with save
@@ -16243,26 +9811,10 @@ function showAlertDialog(message, options) {
     const escapedMessage = Utils.escapeHtml(message).replace(/\n/g, '<br>');
     const actionLabel = options && options.actionLabel;
     const actionButtonHtml = actionLabel
-        ? `<button class="terminal-btn terminal-btn-secondary" id="genericAlertAction">${Utils.escapeHtml(actionLabel)}</button>`
+        ? `<button class="terminal-btn terminal-btn-secondary"id="genericAlertAction">${Utils.escapeHtml(actionLabel)}</button>`
         : '';
     
-    const modalHtml = `
-      <div id="genericAlertModal" class="modal show">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h2 class="modal-title">NOTICE</h2>
-            <button class="modal-close" onclick="closeGenericAlertModal()">&times;</button>
-          </div>
-          <div class="modal-body">
-            <p class="terminal-text">${escapedMessage}</p>
-          </div>
-          <div class="modal-footer modal-footer-end">
-            ${actionButtonHtml}
-            <button class="terminal-btn terminal-btn-primary" id="genericAlertOk">OK</button>
-          </div>
-        </div>
-      </div>
-    `;
+    const modalHtml = `<div id="genericAlertModal"class="modal show"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">NOTICE</h2><button class="modal-close"onclick="closeGenericAlertModal()">&times;</button></div><div class="modal-body"><p class="terminal-text">${escapedMessage}</p></div><div class="modal-footer modal-footer-end">${actionButtonHtml}<button class="terminal-btn terminal-btn-primary"id="genericAlertOk">OK</button></div></div></div>`;
 
     getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('genericAlertModal');
@@ -16841,7 +10393,7 @@ async function handlePasswordResetRequest() {
     // simplify local testing and optionally auto-fill the token field.
     if (result.debugToken && tokenInput) {
         tokenInput.value = result.debugToken;
-        message += `\n\nDebug reset token (dev only): ${result.debugToken}`;
+        message += `\n\nDebug reset token(dev only):${result.debugToken}`;
     }
 
     messageEl.textContent = message;
@@ -17002,22 +10554,22 @@ async function startMigration() {
         const results = await window.MigrationService.migrateToCloud({ includeDemoCharacters: false });
         
         if (results.success > 0) {
-            statusEl.textContent = `✓ Migrated ${results.success} character(s) successfully!`;
+            statusEl.textContent = `✓ Migrated ${results.success}character(s)successfully!`;
             
             if (results.failed > 0) {
-                statusEl.textContent += `\n⚠️ ${results.failed} character(s) failed to migrate.`;
+                statusEl.textContent += `\n⚠️ ${results.failed}character(s)failed to migrate.`;
             }
             
             // Clear local storage after successful migration
             if (results.failed === 0) {
                 setTimeout(() => {
                     window.MigrationService.clearLocalStorage();
-                    showNotification(`✓ Migrated ${results.success} characters to cloud`);
+                    showNotification(`✓ Migrated ${results.success}characters to cloud`);
                     closeMigrationModal();
                 }, 2000);
             } else {
                 setTimeout(() => {
-                    showNotification(`⚠️ Migration completed with ${results.failed} error(s)`);
+                    showNotification(`⚠️ Migration completed with ${results.failed}error(s)`);
                     closeMigrationModal();
                 }, 3000);
             }
@@ -17053,7 +10605,7 @@ function showDemoMigrationModal() {
         listEl.innerHTML = demoChars.map(char => {
             const raceName = char.raceData?.name || char.race || '?';
             const className = char.classData?.name || char.class || '?';
-            return `<li><span class="demo-char-name">${Utils.escapeHtml(char.name)}</span> <span class="demo-char-info">– Level ${char.level} ${raceName} ${className}</span></li>`;
+            return `<li><span class="demo-char-name">${Utils.escapeHtml(char.name)}</span><span class="demo-char-info">– Level ${char.level}${raceName}${className}</span></li>`;
         }).join('');
     }
     
@@ -17103,7 +10655,7 @@ async function migrateDemoCharacters() {
         }
         
         if (successCount > 0) {
-            showNotification(`✓ Added ${successCount} sample character(s) to your account`);
+            showNotification(`✓ Added ${successCount}sample character(s)to your account`);
         }
         
         closeDemoMigrationModal();
@@ -17187,7 +10739,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             let timeoutId;
             const timeoutPromise = new Promise((resolve) => {
                 timeoutId = setTimeout(() => {
-                    console.warn(`[Boot] ${label} timed out after ${ms}ms; continuing in guest mode.`);
+                    console.warn(`[Boot]${label}timed out after ${ms}ms;continuing in guest mode.`);
                     resolve(false);
                 }, ms);
             });
@@ -17457,7 +11009,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 dateModified: 'Date modified',
             };
             const currentLabel = sortLabels[AppState.sortMode] || 'Date modified';
-            sortToggleBtn.textContent = `Sort: ${currentLabel}`;
+            sortToggleBtn.textContent = `Sort:${currentLabel}`;
 
             // Keep the listbox selection state in sync with the trigger label.
             // This ensures the option marked as selected in the listbox always
@@ -17577,113 +11129,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Hover behavior for character cards:
-    // - Adds/removes a visual `is-hovered` class
-    // - Does NOT change focus or update the character sheet
-    // - Clears keyboard focus when mouse takes over
-    const characterGrid = document.getElementById('characterGrid');
-    if (characterGrid) {
-        characterGrid.addEventListener('mouseover', (e) => {
-            const card = e.target.closest('.character-card');
-
-            // Clear previous hover states
-            document.querySelectorAll('.character-card.is-hovered').forEach(el => {
-                if (el !== card) {
-                    el.classList.remove('is-hovered');
-                }
-            });
-
-            if (card) {
-                card.classList.add('is-hovered');
-                // Clear keyboard focus from all cards when mouse is active
-                if (typeof KeyboardNav !== 'undefined' && KeyboardNav.clearAll) {
-                    KeyboardNav.clearAll();
-                }
-            }
-        });
-
-        characterGrid.addEventListener('mouseleave', () => {
-            document.querySelectorAll('.character-card.is-hovered').forEach(el => {
-                el.classList.remove('is-hovered');
-            });
-        });
-    }
-    
-    // Keyboard navigation (only after splash is dismissed)
-    window.addEventListener('keydown', (e) => {
-        if (splashActive) return; // Don't interfere with splash screen
-
-        // If any modal is open, handle ESC and Cmd+Enter inside that modal only
-        const openModal = document.querySelector('.modal.show');
-        if (openModal) {
-            const modalId = openModal.id;
-
-            // ESC closes whichever modal is active (with dirty check for form modals)
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                
-                // Check if discard confirmation is showing - if so, close it
-                const discardOverlay = openModal.querySelector('.modal-discard-confirm.show');
-                if (discardOverlay) {
-                    discardOverlay.classList.remove('show');
-                    return;
-                }
-                
-                // Use ModalManager for universal close behavior (handles dirty check)
-                ModalManager.requestClose(modalId);
-                return;
-            }
-
-            // Cmd+Enter (mac-style) triggers the primary CTA in the active modal
-            if (e.key === 'Enter' && e.metaKey) {
-                const primaryBtn = openModal.querySelector('.modal-footer .terminal-btn-primary');
-                if (primaryBtn && !primaryBtn.disabled) {
-                    e.preventDefault();
-                    primaryBtn.click();
-                }
-                return;
-            }
-
-            // When a modal is open, don't process global shortcuts
-            return;
-        }
-
-        // Handle keyboard shortcuts when in form elements
-        const inFormElement = document.activeElement && (
-            document.activeElement.tagName === 'INPUT' ||
-            document.activeElement.tagName === 'TEXTAREA' ||
-            document.activeElement.tagName === 'SELECT'
-        );
-        
-        if (inFormElement) {
-            // Escape to return to character grid from search
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                document.activeElement.blur();
-                KeyboardNav.focusFirstCard();
-            }
-            return; // Don't process other keys when in form
-        }
-
-        // Keyboard shortcuts (when not in form elements)
-        if (e.key === '/' || (e.key === 'f' && e.ctrlKey)) {
-            // "/" or Ctrl+F to focus search
-            e.preventDefault();
-            KeyboardNav.focusSearch();
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            KeyboardNav.moveUp();
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            KeyboardNav.moveDown();
-        } else if (e.key === 'ArrowLeft') {
-            e.preventDefault();
-            KeyboardNav.moveLeft();
-        } else if (e.key === 'ArrowRight') {
-            e.preventDefault();
-            KeyboardNav.moveRight();
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            KeyboardNav.select();
-        }
-    });
-});
+    // - Adds/removes a visual `is-hovered`class
+const characterGrid=document.getElementById('characterGrid');if(characterGrid){characterGrid.addEventListener('mouseover',(e)=>{const card=e.target.closest('.character-card');document.querySelectorAll('.character-card.is-hovered').forEach(el=>{if(el!==card){el.classList.remove('is-hovered');}});if(card){card.classList.add('is-hovered');if(typeof KeyboardNav!=='undefined'&&KeyboardNav.clearAll){KeyboardNav.clearAll();}}});characterGrid.addEventListener('mouseleave',()=>{document.querySelectorAll('.character-card.is-hovered').forEach(el=>{el.classList.remove('is-hovered');});});}
+window.addEventListener('keydown',(e)=>{if(splashActive)return;const openModal=document.querySelector('.modal.show');if(openModal){const modalId=openModal.id;if(e.key==='Escape'){e.preventDefault();const discardOverlay=openModal.querySelector('.modal-discard-confirm.show');if(discardOverlay){discardOverlay.classList.remove('show');return;}
+ModalManager.requestClose(modalId);return;}
+if(e.key==='Enter'&&e.metaKey){const primaryBtn=openModal.querySelector('.modal-footer .terminal-btn-primary');if(primaryBtn&&!primaryBtn.disabled){e.preventDefault();primaryBtn.click();}
+return;}
+return;}
+const inFormElement=document.activeElement&&(document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='TEXTAREA'||document.activeElement.tagName==='SELECT');if(inFormElement){if(e.key==='Escape'){e.preventDefault();document.activeElement.blur();KeyboardNav.focusFirstCard();}
+return;}
+if(e.key==='/'||(e.key==='f'&&e.ctrlKey)){e.preventDefault();KeyboardNav.focusSearch();}else if(e.key==='ArrowUp'){e.preventDefault();KeyboardNav.moveUp();}else if(e.key==='ArrowDown'){e.preventDefault();KeyboardNav.moveDown();}else if(e.key==='ArrowLeft'){e.preventDefault();KeyboardNav.moveLeft();}else if(e.key==='ArrowRight'){e.preventDefault();KeyboardNav.moveRight();}else if(e.key==='Enter'){e.preventDefault();KeyboardNav.select();}});});

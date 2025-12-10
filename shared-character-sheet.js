@@ -2449,7 +2449,7 @@ const PortraitHistory = (window.PortraitHistory = {
    * @param {Object} character
    * @param {string} asciiArt
    * @param {string|null} imageUrl
-   * @param {Object} extra - { source, prompt, style, model, quality }
+   * @param {Object} extra - { source, prompt, style, model, quality, characterDescription }
    */
   addVersion(character, asciiArt, imageUrl, extra = {}) {
     if (!character) {
@@ -2472,6 +2472,7 @@ const PortraitHistory = (window.PortraitHistory = {
       url: imageUrl || null,
       source: extra.source || 'custom-ai',
       prompt: extra.prompt || null,
+      characterDescription: extra.characterDescription || null,
       style: extra.style || null,
       model: extra.model || null,
       quality: extra.quality || null,

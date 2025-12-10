@@ -1,5152 +1,227 @@
-
-
-// ===== BUNDLE PART: danddy-config.js =====
-
-// Global configuration and shared utilities for the DandDy app (builder + manager).
-// Exposes `window.DanddyConfig` (env + URLs) for all frontends to consume.
-
-(function (global) {
-  const location = global.location || {};
-
-  const isLocalEnvironment =
-    location.hostname === 'localhost' ||
-    location.hostname === '127.0.0.1' ||
-    location.hostname.startsWith('192.168.') ||
-    location.protocol === 'file:';
-
-  // Single source of truth for backend origin & API base URL.
-  //
-  // IMPORTANT: Even when running the UI locally (localhost / file://), we now
-  // ALWAYS talk to the production Render backend so that auth + cloud data are
-  // consistent with the live site. If you ever need to point at a local
-  // backend again, temporarily change BACKEND_ORIGIN below.
-  const BACKEND_ORIGIN = 'https://danddy-api.onrender.com';
-
-  // Many callers use either "<origin>/api" or "<origin>/api/..." directly.
-  const API_BASE_URL = `${BACKEND_ORIGIN}/api`;
-
-  // Shared storage keys and flags
-  const TOKEN_STORAGE_KEY = 'dnd_auth_token';
-  const USER_STORAGE_KEY = 'dnd_user_info';
-  const CHARACTER_STORAGE_KEY = 'dnd_characters';
-  // Only treat local/file:// environments as "debug" to avoid noisy logs in production.
-  const DEBUG = isLocalEnvironment;
-
-  global.DanddyConfig = {
-    isLocalEnvironment,
-    BACKEND_ORIGIN,
-    API_BASE_URL,
-    TOKEN_STORAGE_KEY,
-    USER_STORAGE_KEY,
-    CHARACTER_STORAGE_KEY,
-    DEBUG,
-  };
-
-  // In non‑debug (production) environments, silence noisy console methods while
-  // preserving errors and warnings. This lets us keep existing console.log calls
-  // in the codebase without paying the runtime cost in production.
-  if (!DEBUG && global.console) {
-    try {
-      ['log', 'info', 'debug'].forEach((method) => {
-        if (typeof global.console[method] === 'function') {
-          global.console[method] = () => {};
-        }
-      });
-    } catch (e) {
-      // Fail silently – logging should never break the app.
-    }
-  }
-})(window);
-
-
-
-
-
-// ===== BUNDLE PART: danddy-auth.js =====
-
-// Unified AuthService for the DandDy app (manager + builder).
-// Relies on `window.DanddyConfig` for API URLs & storage keys and exposes
-// a single `window.AuthService` used across all views.
-
-(function (global) {
-  const cfg = global.DanddyConfig || {};
-  const API_BASE_URL = cfg.API_BASE_URL || 'https://danddy-api.onrender.com/api';
-  const TOKEN_KEY = cfg.TOKEN_STORAGE_KEY || 'dnd_auth_token';
-  const USER_KEY = cfg.USER_STORAGE_KEY || 'dnd_user_info';
-  const DEBUG = !!cfg.DEBUG;
-
-  const AuthService = (global.AuthService = global.AuthService || {});
-
-  Object.assign(AuthService, {
-    TOKEN_KEY,
-    USER_KEY,
-
-    // ===== Local session helpers =====
-    getToken() {
-      return global.localStorage.getItem(this.TOKEN_KEY);
-    },
-
-    setToken(token) {
-      if (!token) return;
-      global.localStorage.setItem(this.TOKEN_KEY, token);
-    },
-
-    clearToken() {
-      global.localStorage.removeItem(this.TOKEN_KEY);
-      global.localStorage.removeItem(this.USER_KEY);
-    },
-
-    getCurrentUser() {
-      const raw = global.localStorage.getItem(this.USER_KEY);
-      return raw ? JSON.parse(raw) : null;
-    },
-
-    setCurrentUser(user) {
-      if (!user) return;
-      global.localStorage.setItem(this.USER_KEY, JSON.stringify(user));
-    },
-
-    isAuthenticated() {
-      return !!this.getToken();
-    },
-
-    logout() {
-      this.clearToken();
-      // Clear any in-progress character builder session so it doesn't persist
-      // and get offered to a different user who logs in later
-      try {
-        global.localStorage.removeItem('danddy_builder_session');
-      } catch (e) {
-        // Ignore errors (e.g., if localStorage is unavailable)
-      }
-    },
-
-    // ===== Core HTTP helpers =====
-    async _request(path, { method = 'GET', body, headers } = {}) {
-      const url = `${API_BASE_URL}${path}`;
-      const baseHeaders = headers || {};
-
-      // Shallow-clone & scrub sensitive fields for debug logging
-      const scrubBodyForLog = (payload) => {
-        if (!payload || typeof payload !== 'object') return payload;
-        const clone = { ...payload };
-        const sensitiveKeys = ['password', 'confirm_password', 'new_password', 'token'];
-        sensitiveKeys.forEach((key) => {
-          if (key in clone) {
-            const value = String(clone[key] ?? '');
-            clone[key] = value ? `*** (${value.length} chars)` : '***';
-          }
-        });
-        return clone;
-      };
-
-      if (DEBUG) {
-        console.log('[AuthService] HTTP request', {
-          url,
-          method,
-          body: scrubBodyForLog(body),
-        });
-      }
-
-      try {
-        const response = await fetch(url, {
-          method,
-          headers: body
-            ? { 'Content-Type': 'application/json', ...baseHeaders }
-            : baseHeaders,
-          body: body ? JSON.stringify(body) : undefined,
-        });
-
-        if (!response.ok) {
-          let detail = `Request failed (${response.status})`;
-          let backendDetail = null;
-          try {
-            const errJson = await response.json();
-            if (DEBUG) {
-              console.warn('[AuthService] HTTP error response', {
-                url,
-                status: response.status,
-                payload: errJson,
-              });
-            }
-            if (errJson && errJson.detail) {
-              if (typeof errJson.detail === 'string') {
-                // Simple error string from backend
-                detail = errJson.detail;
-              } else if (Array.isArray(errJson.detail) && errJson.detail.length) {
-                // FastAPI validation error format: [{ loc, msg, type }, ...]
-                const first = errJson.detail[0];
-                if (first && first.msg) {
-                  detail = first.msg;
-                } else {
-                  detail = JSON.stringify(errJson.detail);
-                }
-              } else {
-                // Fallback to JSON string so we don't show [object Object]
-                detail = JSON.stringify(errJson.detail);
-              }
-              backendDetail = errJson.detail;
-            }
-          } catch (_) {
-            // ignore JSON parse errors
-          }
-          if (DEBUG) {
-            console.warn('[AuthService] HTTP request failed', {
-              url,
-              status: response.status,
-              detail,
-              backendDetail,
-            });
-          }
-          throw new Error(detail);
-        }
-
-        // 204 no content
-        if (response.status === 204) return null;
-        const json = await response.json();
-        if (DEBUG) {
-          console.log('[AuthService] HTTP response OK', {
-            url,
-            method,
-            status: response.status,
-          });
-        }
-        return json;
-      } catch (error) {
-        console.error('[AuthService] Request error:', error);
-        throw error;
-      }
-    },
-
-    // ===== Auth flows =====
-
-    /**
-     * Register a new user using email + password.
-     * Returns { success, user, error }.
-     *
-     * For backward-compatibility with older backend deployments that still
-     * expect a `username` field, we derive a simple username from the email
-     * (typically the part before "@"). Newer backends that ignore usernames
-     * will simply drop this extra field.
-     */
-    async register(email, password, role = 'player') {
-      try {
-        const derivedUsername =
-          typeof email === 'string' && email.includes('@')
-            ? email.split('@')[0]
-            : email;
-
-        const data = await this._request('/auth/register', {
-          method: 'POST',
-          // Backend identifies accounts by email only; username is legacy.
-          // Sending both keeps us compatible with older API versions.
-          body: { username: derivedUsername, email, password, role },
-        });
-
-        if (!data || !data.access_token) {
-          throw new Error('Registration succeeded but no token was returned.');
-        }
-
-        this.setToken(data.access_token);
-
-        // Try to fetch full user profile; fall back to a minimal email-only object.
-        const profile = await this.fetchProfile();
-        const user =
-          profile && Object.keys(profile).length
-            ? profile
-            : { email, role };
-
-        this.setCurrentUser(user);
-
-        return { success: true, user };
-      } catch (error) {
-        return { success: false, error: error.message || 'Registration failed' };
-      }
-    },
-
-    /**
-     * Login with email + password.
-     *
-     * Note: the OAuth2 password flow still uses the `username` form field name,
-     * but this value is always interpreted as an email address by the backend.
-     * Returns { success, user, error }.
-     */
-    async login(email, password) {
-      const url = `${API_BASE_URL}/auth/token`;
-      if (DEBUG) {
-        console.log('[AuthService] Login attempt', {
-          url,
-          email,
-        });
-      }
-
-      try {
-        const formData = new FormData();
-        // Field name must remain "username" for OAuth2PasswordRequestForm,
-        // but the value is the user's email address.
-        formData.append('username', email);
-        formData.append('password', password);
-
-        const response = await fetch(url, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (DEBUG) {
-          console.log('[AuthService] Login response received', {
-            url,
-            status: response.status,
-            ok: response.ok,
-          });
-        }
-
-        if (!response.ok) {
-          let detail = 'Login failed';
-          let backendPayload = null;
-          try {
-            const errJson = await response.json();
-            backendPayload = errJson;
-            if (errJson && errJson.detail) detail = errJson.detail;
-          } catch (_) {
-            // ignore
-          }
-          if (DEBUG) {
-            console.warn('[AuthService] Login HTTP error', {
-              url,
-              status: response.status,
-              detail,
-              backendPayload,
-            });
-          }
-          throw new Error(detail);
-        }
-
-        const data = await response.json();
-        if (!data || !data.access_token) {
-          throw new Error('Login succeeded but no token was returned.');
-        }
-
-        if (DEBUG) {
-          console.log('[AuthService] Login succeeded, token received', {
-            url,
-          });
-        }
-
-        this.setToken(data.access_token);
-        const profile = await this.fetchProfile();
-        if (profile) {
-          this.setCurrentUser(profile);
-        }
-
-        return { success: true, user: profile };
-      } catch (error) {
-        console.error('[AuthService] Login error:', error);
-        return { success: false, error: error.message || 'Login failed' };
-      }
-    },
-
-    /**
-     * Request a password reset email.
-     */
-    async forgotPassword(email) {
-      try {
-        const data = await this._request('/auth/password/forgot', {
-          method: 'POST',
-          body: { email },
-        });
-
-        return {
-          success: true,
-          message:
-            (data && data.message) ||
-            'If an account with that email exists, a password reset link has been sent.',
-          debugToken: data && data.debug_reset_token ? data.debug_reset_token : null,
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: error.message || 'Password reset request failed',
-        };
-      }
-    },
-
-    /**
-     * Complete a password reset given a reset token and new password.
-     */
-    async resetPassword(token, newPassword) {
-      try {
-        const data = await this._request('/auth/password/reset', {
-          method: 'POST',
-          body: { token, new_password: newPassword },
-        });
-
-        if (!data || !data.access_token) {
-          throw new Error('Password reset succeeded but no token was returned.');
-        }
-
-        this.setToken(data.access_token);
-        const profile = await this.fetchProfile();
-        if (profile) {
-          this.setCurrentUser(profile);
-        }
-
-        return { success: true, user: profile };
-      } catch (error) {
-        return { success: false, error: error.message || 'Password reset failed' };
-      }
-    },
-
-    /**
-     * Fetch current user profile using stored access token.
-     */
-    async fetchProfile() {
-      const token = this.getToken();
-      if (!token) return null;
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!response.ok) {
-          // 401: token invalid/expired
-          if (response.status === 401) {
-            let backendDetail = null;
-            try {
-              const errJson = await response.json();
-              if (errJson && errJson.detail) {
-                backendDetail = errJson.detail;
-              }
-            } catch (_) {
-              // ignore JSON parse errors
-            }
-
-            console.warn(
-              '[AuthService] Token rejected by /auth/me; clearing local session.',
-              {
-                status: response.status,
-                detail: backendDetail,
-              }
-            );
-            this.clearToken();
-            return null;
-          }
-          if (DEBUG) {
-            console.warn('[AuthService] /auth/me non-401 error', {
-              status: response.status,
-            });
-          }
-          throw new Error('Failed to fetch user profile');
-        }
-
-        const profile = await response.json();
-        if (DEBUG) {
-          console.log('[AuthService] /auth/me profile loaded', profile);
-        }
-        return profile;
-      } catch (error) {
-        console.error('[AuthService] Fetch profile error:', error);
-        return null;
-      }
-    },
-
-    /**
-     * Verify token validity by calling /auth/me.
-     * Returns true if still valid, false otherwise.
-     */
-    async verifyToken() {
-      const profile = await this.fetchProfile();
-      return !!profile;
-    },
-  });
-})(window);
-
-
-
-
-
-
-// ===== BUNDLE PART: danddy-character-mapper.js =====
-
-// Shared helpers for mapping between backend character DTOs and the various
-// frontend shapes used across the DandDy app (manager + builder).
-// Exposes `window.DanddyCharacterMapper`.
-
-(function (global) {
-  const Mapper = {
-    /**
-     * Map builder character → backend DTO (CharacterCreate).
-     * Mirrors the previous `CharacterAPI.toBackendFormat` logic.
-     */
-    fromBuilderToBackend(character) {
-      if (!character) return null;
-
-      return {
-        name: character.name || '',
-        race: character.race || '',
-        character_class: character.class || '',
-        level: character.level || 1,
-        background: character.background || null,
-        alignment: this._mapAlignmentFromBuilder(character.alignment),
-        experience_points: character.experiencePoints || 0,
-
-        // Ability Scores
-        strength: character.abilities?.str || 10,
-        dexterity: character.abilities?.dex || 10,
-        constitution: character.abilities?.con || 10,
-        intelligence: character.abilities?.int || 10,
-        wisdom: character.abilities?.wis || 10,
-        charisma: character.abilities?.cha || 10,
-
-        // Combat Stats
-        hit_points_max: character.hitPoints || 10,
-        hit_points_current: character.hitPoints || 10,
-        hit_points_temp: 0,
-        armor_class: this._calculateACFromBuilder(character),
-        initiative: this._calculateInitiativeFromBuilder(character),
-        speed: this._getSpeedFromBuilder(character),
-
-        // Death Saves
-        death_save_successes: 0,
-        death_save_failures: 0,
-
-        // Proficiencies
-        saving_throw_proficiencies: character.savingThrows || [],
-        skill_proficiencies: character.skillProficiencies || [],
-        skill_expertises: [],
-        tool_proficiencies: character.toolProficiencies || [],
-        languages: character.languages || [],
-
-        // Features
-        racial_traits: this._arrayToDict(character.racialTraits),
-        class_features: this._arrayToDict(character.classFeatures),
-        feats: [],
-        background_feature: character.backgroundFeature || {},
-
-        // Personality
-        personality_traits: character.personalityTrait || null,
-        ideals: character.ideal || null,
-        bonds: character.bond || null,
-        flaws: character.flaw || null,
-
-        // Appearance & Backstory
-        appearance: character.appearance || null,
-        backstory: character.backstory || null,
-        sex: character.sex || null,
-
-        // Portrait
-        ascii_portrait: character.asciiPortrait || null,
-        original_portrait_url: character.originalPortraitUrl || null,
-        custom_portrait_ascii: character.customPortraitAscii || null,
-        custom_portrait_count: character.customPortraitCount || 0,
-        portrait_metadata: character.portraitMetadata || {},
-
-        // Inventory
-        inventory: this._arrayToDict(character.equipment),
-
-        // Spellcasting
-        spellcasting_ability: character.spellcastingAbility || null,
-        spell_save_dc: character.spellSaveDC || null,
-        spell_attack_bonus: character.spellAttackBonus || null,
-        spell_slots: character.spellSlots || {},
-        spell_slots_used: {},
-        cantrips: this._spellsToStringArray(character.cantrips),
-        spells_known: this._spellsToStringArray(character.spellsKnown),
-        spells_prepared: this._spellsToStringArray(character.spellsPrepared),
-
-        // Combat
-        conditions: [],
-        attacks: this._arrayToDict(character.attacks),
-
-        // Currency
-        copper_pieces: character.copper || 0,
-        silver_pieces: character.silver || 0,
-        electrum_pieces: character.electrum || 0,
-        gold_pieces: character.gold || 0,
-        platinum_pieces: character.platinum || 0,
-
-        // Campaign
-        campaign_id: character.campaignId || null,
-      };
-    },
-
-    /**
-     * Map backend DTO → builder character shape.
-     * Mirrors the previous `CharacterAPI.toFrontendFormat` logic.
-     */
-    fromBackendToBuilder(backendChar) {
-      if (!backendChar) return null;
-
-      return {
-        id: backendChar.id,
-        name: backendChar.name,
-        race: backendChar.race,
-        class: backendChar.character_class,
-        level: backendChar.level,
-        background: backendChar.background,
-        alignment: this._mapAlignmentFromBackend(backendChar.alignment),
-        experiencePoints: backendChar.experience_points,
-
-        abilities: {
-          str: backendChar.strength,
-          dex: backendChar.dexterity,
-          con: backendChar.constitution,
-          int: backendChar.intelligence,
-          wis: backendChar.wisdom,
-          cha: backendChar.charisma,
-        },
-
-        hitPoints: backendChar.hit_points_max,
-        currentHitPoints: backendChar.hit_points_current,
-        armorClass: backendChar.armor_class,
-        initiative: backendChar.initiative,
-        speed: backendChar.speed,
-
-        savingThrows: backendChar.saving_throw_proficiencies,
-        skillProficiencies: backendChar.skill_proficiencies,
-        toolProficiencies: backendChar.tool_proficiencies,
-        languages: backendChar.languages,
-
-        racialTraits: backendChar.racial_traits,
-        classFeatures: backendChar.class_features,
-        backgroundFeature: backendChar.background_feature,
-
-        personalityTrait: backendChar.personality_traits,
-        ideal: backendChar.ideals,
-        bond: backendChar.bonds,
-        flaw: backendChar.flaws,
-
-        appearance: backendChar.appearance,
-        backstory: backendChar.backstory,
-        sex: backendChar.sex || null,
-
-        asciiPortrait: backendChar.ascii_portrait,
-        originalPortraitUrl: backendChar.original_portrait_url,
-        customPortraitAscii: backendChar.custom_portrait_ascii,
-        customPortraitCount: backendChar.custom_portrait_count,
-        portraitMetadata: backendChar.portrait_metadata,
-
-        equipment: backendChar.inventory,
-
-        spellcastingAbility: backendChar.spellcasting_ability,
-        spellSaveDC: backendChar.spell_save_dc,
-        spellAttackBonus: backendChar.spell_attack_bonus,
-        spellSlots: backendChar.spell_slots,
-        cantrips: backendChar.cantrips || [],
-        spellsKnown: backendChar.spells_known || [],
-        spellsPrepared: backendChar.spells_prepared || [],
-
-        attacks: backendChar.attacks,
-
-        copper: backendChar.copper_pieces,
-        silver: backendChar.silver_pieces,
-        electrum: backendChar.electrum_pieces,
-        gold: backendChar.gold_pieces,
-        platinum: backendChar.platinum_pieces,
-
-        campaignId: backendChar.campaign_id,
-        ownerId: backendChar.owner_id,
-
-        _backendData: backendChar,
-      };
-    },
-
-    /**
-     * Map manager character → backend DTO.
-     * Mirrors `CharacterCloudStorage._toAPIFormat`.
-     */
-    fromManagerToBackend(character) {
-      if (!character) return null;
-
-      // Normalize background feature into a dict, even if it started as a string.
-      const rawBackgroundFeature =
-        character.backgroundFeature || character.backgroundData?.feature || {};
-      const backgroundFeatureDict =
-        typeof rawBackgroundFeature === 'string'
-          ? { name: rawBackgroundFeature }
-          : rawBackgroundFeature;
-
-      return {
-        name: character.name || 'Unnamed Character',
-        race: character.race || character.raceData?.name || 'Human',
-        character_class: character.class || character.classData?.name || 'Fighter',
-        level: character.level || 1,
-        background: character.background || character.backgroundData?.name || null,
-        alignment: this._mapAlignmentFromManager(character.alignment),
-        experience_points: character.experiencePoints || 0,
-
-        // Ability Scores
-        strength: character.abilities?.str || character.abilityScores?.str || 10,
-        dexterity: character.abilities?.dex || character.abilityScores?.dex || 10,
-        constitution: character.abilities?.con || character.abilityScores?.con || 10,
-        intelligence: character.abilities?.int || character.abilityScores?.int || 10,
-        wisdom: character.abilities?.wis || character.abilityScores?.wis || 10,
-        charisma: character.abilities?.cha || character.abilityScores?.cha || 10,
-
-        // Combat Stats
-        hit_points_max: character.hitPoints?.max || character.hitPoints || 10,
-        hit_points_current:
-          character.hitPoints?.current || character.hitPoints?.max || character.hitPoints || 10,
-        hit_points_temp: character.hitPoints?.temp || 0,
-        armor_class: character.armorClass || 10,
-        initiative: character.initiative || 0,
-        speed: character.speed || 30,
-
-        // Death Saves
-        death_save_successes: character.deathSaves?.successes || 0,
-        death_save_failures: character.deathSaves?.failures || 0,
-
-        // Proficiencies
-        saving_throw_proficiencies: character.savingThrows || [],
-        skill_proficiencies: character.skillProficiencies || [],
-        skill_expertises: character.skillExpertises || [],
-        tool_proficiencies: character.toolProficiencies || [],
-        languages: character.languages || [],
-
-        // Features & Traits
-        // Backend expects arrays of dicts, not raw strings.
-        racial_traits: this._arrayToDict(
-          character.racialTraits || character.raceData?.traits || [],
-        ),
-        class_features: this._arrayToDict(
-          character.classFeatures || character.classData?.features || [],
-        ),
-        feats: this._arrayToDict(character.feats || []),
-        background_feature: backgroundFeatureDict,
-
-        // Personality
-        personality_traits: character.personalityTraits || character.personalityTrait || null,
-        ideals: character.ideals || null,
-        bonds: character.bonds || null,
-        flaws: character.flaws || null,
-
-        // Appearance & Backstory
-        appearance: character.appearance || null,
-        backstory: character.backstory || null,
-        sex: character.sex || null,
-
-        // Portrait data
-        ascii_portrait: character.asciiPortrait || null,
-        original_portrait_url: character.originalPortraitUrl || null,
-        custom_portrait_ascii: character.customPortraitAscii || null,
-        custom_portrait_count: character.customPortraitCount || 0,
-        portrait_metadata: character.portraitMetadata || {},
-
-        // Inventory
-        inventory: (character.equipment || character.inventory || []).map((item) =>
-          typeof item === 'string' ? { name: item } : item,
-        ),
-
-        // Spellcasting
-        spellcasting_ability: character.spellcastingAbility || null,
-        spell_save_dc: character.spellSaveDC || null,
-        spell_attack_bonus: character.spellAttackBonus || null,
-        spell_slots: character.spellSlots || {},
-        spell_slots_used: character.spellSlotsUsed || {},
-        // Backend expects arrays of spell *names* (strings), not full objects.
-        cantrips: this._spellsToStringArray(character.cantrips || []),
-        spells_known: this._spellsToStringArray(character.spellsKnown || []),
-        spells_prepared: this._spellsToStringArray(character.spellsPrepared || []),
-
-        // Combat
-        conditions: character.conditions || [],
-        attacks: character.attacks || [],
-
-        // Currency
-        copper_pieces: character.currency?.cp ?? character.copper ?? 0,
-        silver_pieces: character.currency?.sp ?? character.silver ?? 0,
-        electrum_pieces: character.currency?.ep ?? character.electrum ?? 0,
-        gold_pieces: character.currency?.gp ?? character.gold ?? 0,
-        platinum_pieces: character.currency?.pp ?? character.platinum ?? 0,
-
-        // Campaign & ownership
-        campaign_id: character.campaignId || null,
-      };
-    },
-
-    /**
-     * Map backend DTO → manager character shape.
-     * Mirrors `CharacterCloudStorage._fromAPIFormat`.
-     */
-    fromBackendToManager(apiChar) {
-      if (!apiChar) return null;
-
-      return {
-        id: apiChar.id.toString(),
-        name: apiChar.name,
-        race: apiChar.race,
-        class: apiChar.character_class,
-        level: apiChar.level,
-        background: apiChar.background,
-        alignment: this._mapAlignmentFromBackend(apiChar.alignment),
-        experiencePoints: apiChar.experience_points,
-
-        abilities: {
-          str: apiChar.strength,
-          dex: apiChar.dexterity,
-          con: apiChar.constitution,
-          int: apiChar.intelligence,
-          wis: apiChar.wisdom,
-          cha: apiChar.charisma,
-        },
-
-        hitPoints: {
-          max: apiChar.hit_points_max,
-          current: apiChar.hit_points_current,
-          temp: apiChar.hit_points_temp,
-        },
-        armorClass: apiChar.armor_class,
-        initiative: apiChar.initiative,
-        speed: apiChar.speed,
-
-        savingThrows: apiChar.saving_throw_proficiencies,
-        skillProficiencies: apiChar.skill_proficiencies,
-        skillExpertises: apiChar.skill_expertises,
-        toolProficiencies: apiChar.tool_proficiencies,
-        languages: apiChar.languages,
-
-        racialTraits: apiChar.racial_traits,
-        classFeatures: apiChar.class_features,
-        feats: apiChar.feats,
-        backgroundFeature: apiChar.background_feature,
-
-        personalityTraits: apiChar.personality_traits,
-        ideals: apiChar.ideals,
-        bonds: apiChar.bonds,
-        flaws: apiChar.flaws,
-        appearance: apiChar.appearance,
-        backstory: apiChar.backstory,
-        sex: apiChar.sex || null,
-
-        equipment: apiChar.inventory.map((item) =>
-          typeof item === 'object' && item.name ? item.name : item,
-        ),
-
-        spellcastingAbility: apiChar.spellcasting_ability,
-        spellSaveDC: apiChar.spell_save_dc,
-        spellAttackBonus: apiChar.spell_attack_bonus,
-        spellSlots: apiChar.spell_slots,
-        spellSlotsUsed: apiChar.spell_slots_used,
-        cantrips: apiChar.cantrips || [],
-        spellsKnown: apiChar.spells_known || [],
-        spellsPrepared: apiChar.spells_prepared || [],
-
-        conditions: apiChar.conditions,
-        attacks: apiChar.attacks,
-
-        currency: {
-          cp: apiChar.copper_pieces,
-          sp: apiChar.silver_pieces,
-          ep: apiChar.electrum_pieces,
-          gp: apiChar.gold_pieces,
-          pp: apiChar.platinum_pieces,
-        },
-
-        campaignId: apiChar.campaign_id,
-        ownerId: apiChar.owner_id,
-        createdAt: apiChar.created_at,
-        updatedAt: apiChar.updated_at,
-
-        asciiPortrait: apiChar.ascii_portrait,
-        originalPortraitUrl: apiChar.original_portrait_url,
-        customPortraitAscii: apiChar.custom_portrait_ascii,
-        customPortraitCount: apiChar.custom_portrait_count || 0,
-        portraitMetadata: apiChar.portrait_metadata || {},
-      };
-    },
-
-    // ===== Shared helpers =====
-
-    _arrayToDict(arr) {
-      if (!arr || !Array.isArray(arr)) return [];
-      return arr.map((item) => {
-        if (typeof item === 'object' && item !== null) return item;
-        if (typeof item === 'string') return { name: item };
-        return { value: item };
-      });
-    },
-
-    _spellsToStringArray(arr) {
-      if (!arr || !Array.isArray(arr)) return [];
-      return arr.map((item) => {
-        if (typeof item === 'object' && item !== null && item.name) return item.name;
-        if (typeof item === 'string') return item;
-        return String(item);
-      });
-    },
-
-    _mapAlignmentFromBuilder(alignment) {
-      if (!alignment) return null;
-      
-      // Map both abbreviations (from builder) and full names to backend format
-      const map = {
-        // Abbreviations (what builder actually stores)
-        'lg': 'lawful_good',
-        'ng': 'neutral_good',
-        'cg': 'chaotic_good',
-        'ln': 'lawful_neutral',
-        'n': 'true_neutral',
-        'cn': 'chaotic_neutral',
-        'le': 'lawful_evil',
-        'ne': 'neutral_evil',
-        'ce': 'chaotic_evil',
-        // Full names (for backwards compatibility)
-        'Lawful Good': 'lawful_good',
-        'Neutral Good': 'neutral_good',
-        'Chaotic Good': 'chaotic_good',
-        'Lawful Neutral': 'lawful_neutral',
-        'True Neutral': 'true_neutral',
-        'Chaotic Neutral': 'chaotic_neutral',
-        'Lawful Evil': 'lawful_evil',
-        'Neutral Evil': 'neutral_evil',
-        'Chaotic Evil': 'chaotic_evil',
-      };
-      return map[alignment] || null;
-    },
-
-    _mapAlignmentFromManager(alignment) {
-      // Manager already uses the same string labels as builder; reuse mapping.
-      return this._mapAlignmentFromBuilder(alignment);
-    },
-
-    _mapAlignmentFromBackend(backendAlignment) {
-      if (!backendAlignment) return null;
-      
-      // Map backend format (e.g., 'lawful_good') to frontend abbreviations (e.g., 'lg')
-      const reverseMap = {
-        'lawful_good': 'lg',
-        'neutral_good': 'ng',
-        'chaotic_good': 'cg',
-        'lawful_neutral': 'ln',
-        'true_neutral': 'n',
-        'chaotic_neutral': 'cn',
-        'lawful_evil': 'le',
-        'neutral_evil': 'ne',
-        'chaotic_evil': 'ce',
-      };
-      return reverseMap[backendAlignment] || null;
-    },
-
-    _calculateACFromBuilder(character) {
-      const dex = character.abilities?.dex;
-      const dexMod = dex ? Math.floor((dex - 10) / 2) : 0;
-      return 10 + dexMod;
-    },
-
-    _calculateInitiativeFromBuilder(character) {
-      const dex = character.abilities?.dex;
-      return dex ? Math.floor((dex - 10) / 2) : 0;
-    },
-
-    _getSpeedFromBuilder(character) {
-      const race = (character.race || '').toLowerCase();
-      const speedMap = {
-        dwarf: 25,
-        halfling: 25,
-        gnome: 25,
-        elf: 30,
-        human: 30,
-        'half-elf': 30,
-        'half-orc': 30,
-        tiefling: 30,
-        dragonborn: 30,
-      };
-      return speedMap[race] || 30;
-    },
-  };
-
-  global.DanddyCharacterMapper = Mapper;
-})(window);
-
-
-
-
-
-
-
-// ===== BUNDLE PART: danddy-storage.js =====
-
-// Shared helpers for character storage in localStorage.
-// Exposes `window.DanddyStorage` and centralizes the `dnd_characters` key and
-// its companion cache key.
-
-(function (global) {
-  const cfg = global.DanddyConfig || {};
-
-  const STORAGE_KEY = cfg.CHARACTER_STORAGE_KEY || 'dnd_characters';
-  const CACHE_KEY = `${STORAGE_KEY}_cache`;
-
-  const Storage = {
-    STORAGE_KEY,
-    CACHE_KEY,
-
-    // Read all characters from primary storage.
-    readAll() {
-      const raw = global.localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    },
-
-    // Overwrite all characters in primary storage.
-    writeAll(characters) {
-      global.localStorage.setItem(STORAGE_KEY, JSON.stringify(characters || []));
-    },
-
-    // Append or replace a single character by id.
-    // Uses String comparison to handle type mismatches (IDs may be numeric or string)
-    upsert(character) {
-      if (!character) return;
-      const chars = this.readAll();
-      const idStr = String(character.id);
-      const idx = chars.findIndex((c) => c && String(c.id) === idStr);
-      if (idx >= 0) {
-        chars[idx] = character;
-      } else {
-        chars.push(character);
-      }
-      this.writeAll(chars);
-    },
-
-    // Delete a character by id.
-    // Uses String comparison to handle type mismatches (IDs may be numeric or string)
-    deleteById(id) {
-      const idStr = String(id);
-      const chars = this.readAll().filter((c) => !c || String(c.id) !== idStr);
-      this.writeAll(chars);
-    },
-
-    // ===== Cache helpers (for cloud-sync caching) =====
-
-    readCache() {
-      const raw = global.localStorage.getItem(CACHE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    },
-
-    writeCache(characters) {
-      global.localStorage.setItem(CACHE_KEY, JSON.stringify(characters || []));
-    },
-
-    clearAll() {
-      global.localStorage.removeItem(STORAGE_KEY);
-      global.localStorage.removeItem(CACHE_KEY);
-    },
-  };
-
-  global.DanddyStorage = Storage;
-})(window);
-
-
-
-
-
-
-
-
-
-
-// ===== BUNDLE PART: portrait-prompts.js =====
-
-// Shared helpers for building AI portrait prompt style instructions.
-// Exposes PortraitPrompt on window so both builder and manager can use
-// the same base text for image generation.
-
-(function (global) {
-  /**
-   * Centralized portrait prompt helper.
-   *
-   * Concepts:
-   * - "Base" instructions: shared structure that always keeps
-   *   characterDescription, posePrompt, and cameraPrompt.
-   * - "Theme": a named style preset that controls the experimental
-   *   description block (ink style, rendering notes, background, etc).
-   *
-   * This lets you test different prompt wordings by adding/editing
-   * theme definitions below, then switching themes from the Settings UI.
-   */
-
-  const DEFAULT_THEME_ID = 'cinematic-inks';
-  const ADMIN_STORAGE_KEY = 'dnd_portrait_prompt_entries_v1';
-
-  // In-memory cache of admin-configured variables (race/class/scene/style).
-  let adminCache = null;
-
-  // ========================================
-  // BUILT-IN DEFAULT POSES AND CAMERAS
-  // ========================================
-  // These defaults are used when no admin-configured data is available
-  // (e.g., logged-out users, fresh installs, empty localStorage).
-  
-  const DEFAULT_POSES = {
-    default: [
-      'standing in a confident, heroic pose',
-      'standing in a relaxed but ready stance',
-      'standing tall with one hand raised in greeting',
-    ],
-    fighter: [
-      'standing in a battle-ready stance, weapon raised',
-      'resting a heavy weapon across their shoulder',
-      'standing guard with shield raised',
-    ],
-    wizard: [
-      'gesturing mystically with arcane energy gathering',
-      'holding a staff aloft, channeling power',
-      'studying an ancient tome with focused concentration',
-    ],
-    rogue: [
-      'emerging from shadows with a sly grin',
-      'perched in a ready crouch, daggers drawn',
-      'leaning casually against nothing, arms crossed',
-    ],
-    cleric: [
-      'raising a holy symbol with radiant light',
-      'standing in peaceful prayer',
-      'blessing with an outstretched hand',
-    ],
-    ranger: [
-      'drawing a bow with focused aim',
-      'kneeling to examine tracks on the ground',
-      'standing with a beast companion at their side',
-    ],
-    paladin: [
-      'standing resolute with sword planted before them',
-      'raising a glowing holy weapon high',
-      'kneeling in devotion, armor gleaming',
-    ],
-    barbarian: [
-      'roaring in battle rage, muscles tensed',
-      'wielding a massive weapon overhead',
-      'standing defiant with chest out',
-    ],
-    bard: [
-      'strumming a lute with a charming smile',
-      'performing dramatically with flowing gestures',
-      'winking knowingly at the viewer',
-    ],
-    druid: [
-      'communing with nature, eyes closed',
-      'shape-shifting with swirling magical energy',
-      'standing surrounded by woodland creatures',
-    ],
-    monk: [
-      'in a focused martial arts stance',
-      'meditating in peaceful contemplation',
-      'executing a precise combat technique',
-    ],
-    sorcerer: [
-      'crackling with innate magical energy',
-      'casting with wild, uncontrolled power',
-      'standing with elemental forces swirling around them',
-    ],
-    warlock: [
-      'channeling dark eldritch energy',
-      'standing with patron symbols glowing nearby',
-      'invoking otherworldly power with outstretched hands',
-    ],
-  };
-
-  const DEFAULT_CAMERAS = {
-    default: [
-      'Camera angle: three-quarter view that clearly shows the character',
-      'Camera angle: dramatic low angle looking up at the character',
-      'Camera angle: portrait framing focused on upper body and face',
-    ],
-  };
-  // Track if we've already tried to sync from API this session
-  let apiSyncAttempted = false;
-
-  function normalize(str) {
-    return (str || '').toString().trim();
-  }
-
-  // ========================================
-  // API SYNC (for authenticated users)
-  // ========================================
-  
-  function getApiBase() {
-    return (global.DanddyConfig && global.DanddyConfig.API_BASE_URL) || 'http://localhost:8000/api';
-  }
-
-  function getAuthToken() {
-    return global.AuthService && global.AuthService.getToken ? global.AuthService.getToken() : null;
-  }
-
-  function isAuthenticated() {
-    return global.AuthService && global.AuthService.isAuthenticated ? global.AuthService.isAuthenticated() : false;
-  }
-
-  /**
-   * Parse an array of entry objects (from API or localStorage) into
-   * the structured adminCache format.
-   */
-  function parseEntriesToCache(entries) {
-    const races = {};
-    const classes = {};
-    const scenes = {};
-    const poses = {};
-    const cameras = {};
-    const styles = {};
-
-    (entries || []).forEach((entry) => {
-      if (!entry || !entry.kind || !entry.key) return;
-      const kind = normalize(entry.kind).toLowerCase();
-      const key = normalize(entry.key).toLowerCase();
-      if (!key) return;
-
-      if (kind === 'race') {
-        const desc = normalize(entry.description);
-        if (desc) {
-          if (!Array.isArray(races[key])) races[key] = [];
-          races[key].push(desc);
-        }
-      } else if (kind === 'class') {
-        const desc = normalize(entry.description);
-        if (desc) {
-          if (!Array.isArray(classes[key])) classes[key] = [];
-          classes[key].push(desc);
-        }
-      } else if (kind === 'scene' || kind === 'background') {
-        const desc = normalize(entry.description);
-        if (desc) {
-          if (!Array.isArray(scenes[key])) scenes[key] = [];
-          scenes[key].push(desc);
-        }
-      } else if (kind === 'pose') {
-        const desc = normalize(entry.description);
-        if (desc) {
-          if (!Array.isArray(poses[key])) poses[key] = [];
-          poses[key].push(desc);
-        }
-      } else if (kind === 'camera') {
-        const desc = normalize(entry.description);
-        if (desc) {
-          if (!Array.isArray(cameras[key])) cameras[key] = [];
-          cameras[key].push(desc);
-        }
-      } else if (kind === 'style') {
-        // Handle both API format (style_description) and local format (styleDescription)
-        const styleDesc = normalize(entry.style_description || entry.styleDescription || entry.description);
-        const sceneDesc = normalize(entry.background_description || entry.backgroundDescription);
-        if (!styles[key]) {
-          styles[key] = {};
-        }
-        if (styleDesc) styles[key].styleDescription = styleDesc;
-        if (sceneDesc) styles[key].sceneDescription = sceneDesc;
-      }
-    });
-
-    return { races, classes, scenes, styles, poses, cameras };
-  }
-
-  /**
-   * Fetch prompt entries directly from the API (for authenticated users).
-   * Stores result in memory cache - no localStorage needed.
-   * Returns a promise that resolves when sync is complete.
-   */
-  async function syncFromAPI() {
-    if (apiSyncAttempted) return; // Only try once per session
-
-    // Don't mark as attempted until we know the user is actually authenticated
-    // Otherwise we'd skip the sync entirely if auth isn't ready yet
-    if (!isAuthenticated()) return;
-    
-    apiSyncAttempted = true;
-
-    const token = getAuthToken();
-    if (!token) return;
-
-    try {
-      const response = await fetch(`${getApiBase()}/prompt-entries`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        console.warn('PortraitPrompt: API fetch failed with status', response.status);
-        // If token is invalid/expired, clear it to prevent repeated auth failures
-        if (response.status === 401) {
-          if (global.AuthService && typeof global.AuthService.clearToken === 'function') {
-            global.AuthService.clearToken();
-            console.warn('PortraitPrompt: Cleared expired auth token');
-          }
-        }
-        return;
-      }
-
-      const apiEntries = await response.json();
-      if (!Array.isArray(apiEntries)) {
-        console.warn('PortraitPrompt: API returned non-array');
-        return;
-      }
-
-      // Parse API entries directly into memory cache (skip localStorage)
-      adminCache = parseEntriesToCache(apiEntries);
-      
-      // Clear localStorage to prevent stale data from being used
-      // (authenticated users should always use API data)
-      try {
-        if (global.localStorage) {
-          global.localStorage.removeItem(ADMIN_STORAGE_KEY);
-        }
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-      
-      // Debug: show what was loaded (use warn so it's visible in production)
-      console.warn('PortraitPrompt: Loaded', apiEntries.length, 'entries from API (cloud)');
-      console.warn('PortraitPrompt: Parsed styles:', Object.keys(adminCache.styles || {}));
-    } catch (e) {
-      console.warn('PortraitPrompt: API fetch error', e);
-    }
-  }
-
-  function loadAdminCache() {
-    // If we already have a cache (from API or previous load), use it
-    if (adminCache) return adminCache;
-
-    const empty = {
-      races: {},
-      classes: {},
-      scenes: {},
-      styles: {},
-      poses: {},
-      cameras: {},
-    };
-
-    // For authenticated users, DON'T fall back to localStorage - wait for API sync
-    // This prevents stale localStorage data from showing unpublished styles
-    if (isAuthenticated()) {
-      // Return empty - API sync will populate adminCache when it completes
-      return empty;
-    }
-
-    // For non-authenticated users, fall back to localStorage
-    try {
-      const raw = global.localStorage
-        ? global.localStorage.getItem(ADMIN_STORAGE_KEY)
-        : null;
-      if (!raw) {
-        adminCache = empty;
-        return adminCache;
-      }
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) {
-        adminCache = empty;
-        return adminCache;
-      }
-      
-      // Parse localStorage entries into cache
-      adminCache = parseEntriesToCache(parsed);
-      return adminCache;
-    } catch (e) {
-      adminCache = empty;
-      return adminCache;
-    }
-  }
-
-  function getVariableSnippet(kind, key) {
-    const cache = loadAdminCache();
-    const k = normalize(key).toLowerCase();
-    if (!k) return null;
-
-    if (kind === 'race') {
-      const variants = cache.races[k];
-      if (Array.isArray(variants) && variants.length) {
-        const idx = Math.floor(Math.random() * variants.length);
-        return variants[idx];
-      }
-      return null;
-    }
-    if (kind === 'class') {
-      const variants = cache.classes[k];
-      if (Array.isArray(variants) && variants.length) {
-        const idx = Math.floor(Math.random() * variants.length);
-        return variants[idx];
-      }
-      return null;
-    }
-    if (kind === 'scene') {
-      const variants = cache.scenes[k];
-      if (Array.isArray(variants) && variants.length) {
-        const idx = Math.floor(Math.random() * variants.length);
-        return variants[idx];
-      }
-      return null;
-    }
-    if (kind === 'pose') {
-      const variants = cache.poses[k];
-      if (Array.isArray(variants) && variants.length) {
-        const idx = Math.floor(Math.random() * variants.length);
-        return variants[idx];
-      }
-      return null;
-    }
-    if (kind === 'camera') {
-      const variants = cache.cameras[k];
-      if (Array.isArray(variants) && variants.length) {
-        const idx = Math.floor(Math.random() * variants.length);
-        return variants[idx];
-      }
-      return null;
-    }
-    return null;
-  }
-
-  /**
-   * Get all pose variants for a given class key.
-   * Returns an array of pose descriptions.
-   * Falls back to built-in defaults if no admin-configured data.
-   * @param {string} classKey
-   * @returns {string[]|null}
-   */
-  function getPoseVariants(classKey) {
-    const cache = loadAdminCache();
-    const k = normalize(classKey).toLowerCase();
-    if (!k) return null;
-    
-    // Try admin-configured poses first
-    const variants = cache.poses[k];
-    if (Array.isArray(variants) && variants.length) {
-      return variants;
-    }
-    
-    // Fall back to built-in defaults
-    if (DEFAULT_POSES[k] && DEFAULT_POSES[k].length) {
-      return DEFAULT_POSES[k];
-    }
-    
-    // Last resort: return default poses
-    if (DEFAULT_POSES.default && DEFAULT_POSES.default.length) {
-      return DEFAULT_POSES.default;
-    }
-    
-    return null;
-  }
-
-  /**
-   * Get all camera variants for a given class key.
-   * Returns an array of camera descriptions.
-   * Falls back to built-in defaults if no admin-configured data.
-   * @param {string} classKey
-   * @returns {string[]|null}
-   */
-  function getCameraVariants(classKey) {
-    const cache = loadAdminCache();
-    const k = normalize(classKey).toLowerCase();
-    if (!k) return null;
-    
-    // Try admin-configured cameras first
-    const variants = cache.cameras[k];
-    if (Array.isArray(variants) && variants.length) {
-      return variants;
-    }
-    
-    // Fall back to built-in defaults (cameras are generally class-agnostic)
-    if (DEFAULT_CAMERAS[k] && DEFAULT_CAMERAS[k].length) {
-      return DEFAULT_CAMERAS[k];
-    }
-    
-    // Last resort: return default cameras
-    if (DEFAULT_CAMERAS.default && DEFAULT_CAMERAS.default.length) {
-      return DEFAULT_CAMERAS.default;
-    }
-    
-    return null;
-  }
-
-  function getStyleOverrides(themeId) {
-    const cache = loadAdminCache();
-    const k = normalize(themeId);
-    if (!k) return null;
-    const entry = cache.styles[k];
-    if (!entry) return null;
-    return {
-      styleDescription: entry.styleDescription || '',
-      sceneDescription: entry.sceneDescription || '',
-    };
-  }
-
-  /**
-   * Theme registry.
-   *
-   * Each theme defines:
-   * - id: stable key used in localStorage / settings
-   * - label: user-facing name
-   * - description: short explanation (shown in settings)
-   * - buildStyleLines(options): returns an array of style instructions
-   *   that will be inserted between the characterDescription line and
-   *   the pose/camera lines.
-   *
-   * NOTE: This is the main place to freely experiment with wording.
-   */
-  const THEMES = {
-    'cinematic-inks': {
-      id: 'cinematic-inks',
-      label: 'Cinematic Inks (default)',
-      description:
-        'More cinematic lighting and framing while staying in black-and-white ink.',
-      buildStyleLines(options) {
-        const lines = [];
-        lines.push(
-          'Render in dramatic black-and-white ink with deep shadows and sharp rim lighting.',
-        );
-        lines.push(
-          'Treat the illustration like a film still: strong focal point, clear subject separation, and layered depth.',
-        );
-        lines.push(
-          'Use a limited range of mid-tone hatching to suggest volume without muddying the forms.',
-        );
-        lines.push(
-          'Keep the background abstract and mostly dark so the character silhouette and face read instantly.',
-        );
-        lines.push(
-          'Overall mood: cinematic fantasy portrait, serious and iconic, suitable for a character sheet.',
-        );
-        lines.push('Aspect ratio 3:4.');
-        return lines;
-      },
-    },
-    'classic-high-fantasy': {
-      id: 'classic-high-fantasy',
-      label: 'Classic High-Fantasy',
-      description:
-        'Highly detailed heroic-fantasy realist style in black and white with sculpted shading.',
-      buildStyleLines(options) {
-        const lines = [];
-        lines.push(
-          'Illustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white.',
-        );
-        lines.push(
-          'Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form.',
-        );
-        lines.push(
-          'Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes.',
-        );
-        lines.push(
-          'Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces.',
-        );
-        lines.push(
-          'Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence.',
-        );
-        lines.push('Aspect ratio 3:4.');
-        return lines;
-      },
-    },
-  };
-
-  /**
-   * Resolve a theme by id, falling back to the default.
-   */
-  function getThemeById(themeId) {
-    if (themeId && THEMES[themeId]) {
-      return THEMES[themeId];
-    }
-    return THEMES[DEFAULT_THEME_ID];
-  }
-
-  /**
-   * Build the base list of style instructions for a portrait prompt.
-   *
-   * Historically this returned a flat list of sentences that included both
-   * style and background notes plus pose/camera. Newer callers that want a
-   * structured template should prefer `buildStyleAndBackgroundDescriptions`.
-   */
-  function buildBasePortraitInstructions(options) {
-    const {
-      characterDescription,
-      posePrompt,
-      cameraPrompt,
-      themeId,
-    } = options || {};
-
-    const parts = [];
-
-    // Legacy subject line for compatibility with older callers.
-    if (characterDescription) {
-      parts.push(
-        `Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,
-      );
-    } else {
-      parts.push('Create a high-contrast black-and-white fantasy illustration.');
-    }
-
-    // Theme-specific experimental block
-    const theme = getThemeById(themeId);
-    if (theme && typeof theme.buildStyleLines === 'function') {
-      try {
-        const styleLines = theme.buildStyleLines({
-          characterDescription,
-          posePrompt,
-          cameraPrompt,
-        });
-        if (Array.isArray(styleLines)) {
-          styleLines.forEach((line) => {
-            if (line && typeof line === 'string') {
-              parts.push(line);
-            }
-          });
-        }
-      } catch (e) {
-        // Non-fatal: if a custom theme throws, fall back to classic ink block.
-        const fallback = THEMES[DEFAULT_THEME_ID];
-        if (fallback && typeof fallback.buildStyleLines === 'function') {
-          const fallbackLines = fallback.buildStyleLines({
-            characterDescription,
-            posePrompt,
-            cameraPrompt,
-          });
-          if (Array.isArray(fallbackLines)) {
-            fallbackLines.forEach((line) => {
-              if (line && typeof line === 'string') {
-                parts.push(line);
-              }
-            });
-          }
-        }
-      }
-    }
-
-    // Pose and camera instructions (always preserved)
-    if (posePrompt) {
-      parts.push(`Pose: ${posePrompt}`);
-    }
-
-    // Camera temporarily disabled - may interfere with pose
-    // if (cameraPrompt) {
-    //   parts.push(cameraPrompt);
-    // }
-
-    return parts;
-  }
-
-  /**
-   * Build compact style + background descriptions for use in higher-level
-   * prompt templates.
-   *
-   * Returns:
-   *   { styleDescription: string, backgroundDescription: string | null }
-   */
-  function buildStyleAndBackgroundDescriptions(options) {
-    const { themeId } = options || {};
-
-    // 1) Prefer explicit overrides from the admin UI when available.
-    const overrides = getStyleOverrides(themeId);
-    let styleDescription = '';
-    let backgroundDescription = null;
-    if (overrides && overrides.styleDescription) {
-      styleDescription = overrides.styleDescription;
-    }
-    // Use sceneDescription from style overrides if present.
-    if (overrides && overrides.sceneDescription) {
-      backgroundDescription = overrides.sceneDescription;
-    }
-
-    // 2) If no admin-provided scene description, try a randomized scene snippet.
-    // First try theme-specific key, then fall back to "default" key.
-    if (backgroundDescription == null) {
-      let sceneSnippet = getVariableSnippet('scene', themeId);
-      if (!sceneSnippet) {
-        sceneSnippet = getVariableSnippet('scene', 'default');
-      }
-      if (sceneSnippet) {
-        backgroundDescription = sceneSnippet;
-      }
-    }
-
-    // 3) Fall back to theme-defined style lines only when no admin entries exist.
-    if (!styleDescription || backgroundDescription == null) {
-      const theme = getThemeById(themeId);
-
-      let styleLines = [];
-      if (theme && typeof theme.buildStyleLines === 'function') {
-        try {
-          const lines = theme.buildStyleLines(options || {});
-          if (Array.isArray(lines)) {
-            styleLines = lines.filter(
-              (l) => typeof l === 'string' && l.trim(),
-            );
-          }
-        } catch (e) {
-          // Non-fatal: fall back to default theme
-          const fallback = THEMES[DEFAULT_THEME_ID];
-          if (fallback && typeof fallback.buildStyleLines === 'function') {
-            const lines = fallback.buildStyleLines(options || {});
-            if (Array.isArray(lines)) {
-              styleLines = lines.filter(
-                (l) => typeof l === 'string' && l.trim(),
-              );
-            }
-          }
-        }
-      }
-
-      const backgroundLines = [];
-      const otherLines = [];
-
-      styleLines.forEach((line) => {
-        if (/background/i.test(line)) {
-          backgroundLines.push(line);
-        } else {
-          otherLines.push(line);
-        }
-      });
-
-      if (!styleDescription) {
-        styleDescription = otherLines.join(' ');
-      }
-      if (backgroundDescription == null) {
-        backgroundDescription = backgroundLines.length
-          ? backgroundLines.join(' ')
-          : null;
-      }
-    }
-
-    return {
-      styleDescription,
-      backgroundDescription,
-    };
-  }
-
-  /**
-   * Build a compact list of rendering instructions for custom-portrait flows.
-   *
-   * This is the shared helper used by both the Character Builder and Manager
-   * when the player supplies their own text prompt. It keeps:
-   *
-   * - Pose: {posePrompt}
-   * - {cameraPrompt}
-   * - STYLE: {styleDescription}
-   * - Scene: {backgroundDescription}
-   *
-   * and pulls style/background text from:
-   * - Admin-defined styles in the prompt style editor (per theme)
-   * - Theme defaults in this file
-   *
-   * Callers are responsible for resolving the active theme id (via
-   * StorageService.getPortraitPromptTheme / CONFIG, etc.) and passing it in.
-   *
-   * @param {{ posePrompt?: string, cameraPrompt?: string, themeId?: string }} options
-   * @returns {string[]} array of instruction lines
-   */
-  function buildCustomPortraitInstructions(options) {
-    const opts = options || {};
-    const posePrompt = opts.posePrompt || '';
-    const cameraPrompt = opts.cameraPrompt || '';
-    const themeId = opts.themeId;
-
-    let styleDescription = '';
-    let backgroundDescription = '';
-
-    try {
-      const sections =
-        buildStyleAndBackgroundDescriptions({
-          posePrompt,
-          cameraPrompt,
-          themeId,
-        }) || {};
-      styleDescription = sections.styleDescription || '';
-      backgroundDescription = sections.backgroundDescription || '';
-    } catch (e) {
-      // Non-fatal – fall through to simple defaults below.
-    }
-
-    if (!styleDescription) {
-      styleDescription =
-        'High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';
-    }
-    if (!backgroundDescription) {
-      backgroundDescription =
-        'Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';
-    }
-
-    const lines = [];
-    if (posePrompt) {
-      lines.push(`Pose: ${posePrompt}`);
-    }
-    // Camera temporarily disabled - may interfere with pose
-    // if (cameraPrompt) {
-    //   lines.push(cameraPrompt);
-    // }
-    if (styleDescription) {
-      lines.push(`STYLE: ${styleDescription}`);
-    }
-    if (backgroundDescription) {
-      lines.push(`Scene: ${backgroundDescription}`);
-    }
-
-    return lines;
-  }
-
-  /**
-   * Public API
-   */
-  const PortraitPrompt = (global.PortraitPrompt = global.PortraitPrompt || {});
-
-  PortraitPrompt.buildBasePortraitInstructions = buildBasePortraitInstructions;
-  PortraitPrompt.buildStyleAndBackgroundDescriptions =
-    buildStyleAndBackgroundDescriptions;
-   // Shared helper for builder + manager custom-portrait flows
-  PortraitPrompt.buildCustomPortraitInstructions =
-    buildCustomPortraitInstructions;
-  PortraitPrompt.getVariableSnippet = getVariableSnippet;
-  
-  // Pose and camera variant accessors for admin-configured data
-  PortraitPrompt.getPoseVariants = getPoseVariants;
-  PortraitPrompt.getCameraVariants = getCameraVariants;
-  
-  // Force reload of admin cache (useful after admin UI changes)
-  PortraitPrompt.invalidateCache = function invalidateCache() {
-    adminCache = null;
-  };
-
-  // Sync entries from API to memory cache (for authenticated users)
-  // Call this during app init to ensure cloud data is available for prompt generation
-  PortraitPrompt.syncFromAPI = syncFromAPI;
-
-  // Allow resetting the sync flag (useful for testing or re-auth)
-  PortraitPrompt.resetAPISync = function resetAPISync() {
-    apiSyncAttempted = false;
-  };
-
-  PortraitPrompt.getDefaultThemeId = function getDefaultThemeId() {
-    return DEFAULT_THEME_ID;
-  };
-
-  PortraitPrompt.getThemes = function getThemes() {
-    // Built-in themes first
-    const baseThemes = Object.keys(THEMES).map((id) => {
-      const theme = THEMES[id];
-      return {
-        id: theme.id,
-        label: theme.label,
-        description: theme.description,
-      };
-    });
-
-    // Then any additional style entries defined via the admin UI that do not
-    // already correspond to a built-in theme id.
-    let customThemes = [];
-    try {
-      const cache = loadAdminCache();
-      const styleKeys = cache && cache.styles ? Object.keys(cache.styles) : [];
-      // Use case-insensitive comparison to avoid duplicates
-      const builtInIds = Object.keys(THEMES).map((k) => k.toLowerCase());
-      const extraIds = styleKeys.filter((id) => !builtInIds.includes(id.toLowerCase()));
-
-      customThemes = extraIds.map((id) => {
-        const styleEntry = cache.styles[id] || {};
-        const rawDesc = styleEntry.styleDescription || '';
-        const trimmed =
-          rawDesc && rawDesc.length > 120
-            ? rawDesc.slice(0, 117) + '...'
-            : rawDesc;
-        return {
-          id,
-          label: `Custom: ${id}`,
-          description: trimmed || 'Custom portrait style',
-        };
-      });
-    } catch (e) {
-      // Non-fatal – if anything goes wrong, just return the base themes.
-      customThemes = [];
-    }
-
-    return baseThemes.concat(customThemes);
-  };
-
-  // ========================================
-  // CHARACTER DESCRIPTION DATA
-  // ========================================
-  // Shared race/class/magic description mappings for portrait prompts.
-  // Used by AIService.buildCharacterDescription.
-
-  const RACE_DESCRIPTIONS = {
-    human: 'human with average features',
-    elf: 'elf with pointed ears and graceful features',
-    dwarf: 'dwarf with a thick beard and stocky build',
-    halfling: 'halfling, small and cheerful',
-    dragonborn: 'dragonborn with scaled skin and dragon-like features',
-    gnome: 'gnome, small with clever eyes',
-    'half-elf': 'half-elf with slightly pointed ears',
-    'half-orc': 'half-orc with tusks and powerful build',
-    tiefling: 'tiefling with horns and a tail',
-  };
-
-  const CLASS_DESCRIPTIONS = {
-    fighter: 'wearing heavy armor and holding a sword',
-    wizard: 'in flowing robes holding a staff',
-    rogue: 'in dark leather armor with daggers',
-    cleric: 'in holy vestments with a sacred symbol',
-    ranger: 'with a bow and forest attire',
-    paladin: 'in shining armor with a holy shield',
-    barbarian: 'with wild hair wielding a massive axe',
-    bard: 'with a lute and colorful clothing',
-    druid: 'with nature-themed robes and wooden staff',
-    monk: 'in simple robes in a martial stance',
-    sorcerer: 'with crackling magical energy',
-    warlock: 'with dark robes and eldritch symbols',
-  };
-
-  const MAGIC_SPECIALIZATIONS = {
-    wizard: 'specializing in elemental magic like fire and ice',
-    sorcerer: 'channeling raw elemental arcane power',
-    warlock: 'wielding shadowy eldritch magic',
-    cleric: 'focused on radiant and healing magic',
-    druid: 'calling on primal nature and elemental magic',
-    bard: 'weaving subtle enchantments and support magic through music',
-    paladin: 'enhancing strikes with holy, radiant magic',
-  };
-
-  /**
-   * Get a description for a race.
-   * Falls back to the race name if not found.
-   */
-  PortraitPrompt.getRaceDescription = function getRaceDescription(race) {
-    const key = (race || '').toLowerCase();
-    return RACE_DESCRIPTIONS[key] || race || '';
-  };
-
-  /**
-   * Get a description for a class.
-   * Falls back to the class name if not found.
-   */
-  PortraitPrompt.getClassDescription = function getClassDescription(classType) {
-    const key = (classType || '').toLowerCase();
-    return CLASS_DESCRIPTIONS[key] || classType || '';
-  };
-
-  /**
-   * Get a magic specialization description for a class (if applicable).
-   * Returns null for non-spellcasting classes.
-   */
-  PortraitPrompt.getMagicSpecialization = function getMagicSpecialization(classType) {
-    const key = (classType || '').toLowerCase();
-    return MAGIC_SPECIALIZATIONS[key] || null;
-  };
-
-  /**
-   * Get all description data objects (for testing/debugging).
-   */
-  PortraitPrompt.getDescriptionData = function getDescriptionData() {
-    return {
-      races: RACE_DESCRIPTIONS,
-      classes: CLASS_DESCRIPTIONS,
-      magic: MAGIC_SPECIALIZATIONS,
-    };
-  };
-
-  // ========================================
-  // AUTO-SYNC ON PAGE LOAD
-  // ========================================
-  // When the page loads and user is authenticated, sync entries from API
-  // to memory cache so they're available for prompt generation.
-  function initAutoSync() {
-    // Wait a moment for AuthService to initialize, then sync
-    // Use a shorter delay (100ms) to ensure styles are available faster
-    setTimeout(async () => {
-      if (isAuthenticated()) {
-        try {
-          await syncFromAPI();
-        } catch (e) {
-          console.warn('PortraitPrompt: Auto-sync failed', e);
-        }
-      }
-    }, 100);
-  }
-
-  // Run auto-sync when DOM is ready
-  if (typeof document !== 'undefined') {
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initAutoSync);
-    } else {
-      initAutoSync();
-    }
-  }
-})(window);
-
-
-
-
-
-
-// ===== BUNDLE PART: shared-portrait-data.js =====
-
-// ========================================
-// SHARED PORTRAIT POSE & CAMERA DATA
-// ========================================
-// Provides pose and camera angle selection for portrait generation.
-// Data is sourced from the admin UI (prompt-style-admin.html) via PortraitPrompt.
-//
-// The admin UI is the single source of truth. Use "Load defaults" button
-// in the admin to populate with built-in poses/cameras.
-
-const PortraitPoseData = (window.PortraitPoseData = {
-  /**
-   * Get a random pose for a given class.
-   * Reads from admin-configured poses via PortraitPrompt.
-   * @param {string} classKey - The character class (lowercase)
-   * @returns {string} A random pose description
-   */
-  getRandomPose(classKey) {
-    const normalizedKey = (classKey || 'default').toLowerCase();
-
-    if (window.PortraitPrompt && typeof PortraitPrompt.getPoseVariants === 'function') {
-      // Try class-specific first, then fall back to "default" key
-      let poses = PortraitPrompt.getPoseVariants(normalizedKey);
-      if (!poses || !poses.length) {
-        poses = PortraitPrompt.getPoseVariants('default');
-      }
-      if (poses && poses.length) {
-        return poses[Math.floor(Math.random() * poses.length)];
-      }
-    }
-
-    // No poses configured - return a generic fallback
-    console.warn(
-      `PortraitPoseData: No poses configured for "${normalizedKey}". ` +
-      'Use the admin UI (prompt-style-admin.html) to load defaults.',
-    );
-    return 'standing in a heroic pose';
-  },
-
-  /**
-   * Get a random camera angle for a given class.
-   * Reads from admin-configured cameras via PortraitPrompt.
-   * @param {string} classKey - The character class (lowercase)
-   * @returns {string} A random camera angle description
-   */
-  getRandomCamera(classKey) {
-    const normalizedKey = (classKey || 'default').toLowerCase();
-
-    if (window.PortraitPrompt && typeof PortraitPrompt.getCameraVariants === 'function') {
-      // Try class-specific first, then fall back to "default" key
-      let cameras = PortraitPrompt.getCameraVariants(normalizedKey);
-      if (!cameras || !cameras.length) {
-        cameras = PortraitPrompt.getCameraVariants('default');
-      }
-      if (cameras && cameras.length) {
-        return cameras[Math.floor(Math.random() * cameras.length)];
-      }
-    }
-
-    // No cameras configured - return a generic fallback
-    console.warn(
-      `PortraitPoseData: No cameras configured for "${normalizedKey}". ` +
-      'Use the admin UI (prompt-style-admin.html) to load defaults.',
-    );
-    return 'Camera angle: three-quarter view';
-  },
-
-  /**
-   * Get both pose and camera for a class in one call.
-   * @param {string} classKey - The character class (lowercase)
-   * @returns {{ pose: string, camera: string }}
-   */
-  getRandomPoseAndCamera(classKey) {
-    return {
-      pose: this.getRandomPose(classKey),
-      camera: this.getRandomCamera(classKey),
-    };
-  },
-
-  /**
-   * Check if poses are configured for a class (or default).
-   * @param {string} classKey
-   * @returns {boolean}
-   */
-  hasPoses(classKey) {
-    const normalizedKey = (classKey || 'default').toLowerCase();
-    if (window.PortraitPrompt && typeof PortraitPrompt.getPoseVariants === 'function') {
-      let poses = PortraitPrompt.getPoseVariants(normalizedKey);
-      if (!poses || !poses.length) {
-        poses = PortraitPrompt.getPoseVariants('default');
-      }
-      return poses && poses.length > 0;
-    }
-    return false;
-  },
-
-  /**
-   * Check if cameras are configured for a class (or default).
-   * @param {string} classKey
-   * @returns {boolean}
-   */
-  hasCameras(classKey) {
-    const normalizedKey = (classKey || 'default').toLowerCase();
-    if (window.PortraitPrompt && typeof PortraitPrompt.getCameraVariants === 'function') {
-      let cameras = PortraitPrompt.getCameraVariants(normalizedKey);
-      if (!cameras || !cameras.length) {
-        cameras = PortraitPrompt.getCameraVariants('default');
-      }
-      return cameras && cameras.length > 0;
-    }
-    return false;
-  },
-});
-
-
-
-// ===== BUNDLE PART: character-name-data.js =====
-
-// ========================================
-// SHARED CHARACTER NAME DATA
-// ========================================
-// Fantasy name patterns for D&D races.
-// Used by AIService.generateFallbackNames for offline name generation.
-
-const CharacterNameData = (window.CharacterNameData = {
-  // Name patterns indexed by race
-  patterns: {
-    dwarf: {
-      first: [
-        'Thorin', 'Gimli', 'Balin', 'Dwalin', 'Thrain', 'Dain', 'Bombur',
-        'Bofur', 'Kili', 'Fili', 'Oin', 'Gloin', 'Bruenor', 'Morgran',
-        'Rurik', 'Einkil', 'Barendd', 'Baern', 'Harbek', 'Rumnar',
-      ],
-      last: [
-        'Ironforge', 'Stonehelm', 'Deepdelver', 'Mountainheart', 'Goldseeker',
-        'Ironfoot', 'Hammerhand', 'Oakenshield', 'Battlehammer', 'Fireforge',
-        'Stormdelver', 'Stonebreaker', 'Coppervein', 'Bronzebrow', 'Rockseeker',
-      ],
-    },
-    elf: {
-      first: [
-        'Legolas', 'Galadriel', 'Elrond', 'Arwen', 'Thranduil', 'Celeborn',
-        'Elessar', 'Elendil', 'Finrod', 'Luthien', 'Faelar', 'Aelar',
-        'Mialee', 'Syllin', 'Thia', 'Varis', 'Althaea', 'Enna', 'Nelar',
-      ],
-      last: [
-        'Greenleaf', 'Starweaver', 'Moonwhisper', 'Silverbow', 'Nightbreeze',
-        'Sunshadow', 'Stormwind', 'Brightwood', 'Dawnpetal', 'Evenwood',
-        'Silverfrond', 'Nightstar', 'Willowshade', 'Starfall', 'Moonbrook',
-      ],
-    },
-    human: {
-      first: [
-        'Aragorn', 'Boromir', 'Eowyn', 'Faramir', 'Theodred', 'Eomer',
-        'Eddard', 'Catelyn', 'Jon', 'Sansa', 'Alaric', 'Rowan', 'Serena',
-        'Garrick', 'Lysa', 'Marcus', 'Elena', 'Corin', 'Brynn',
-      ],
-      last: [
-        'Stormborn', 'Blackwood', 'Riverrun', 'Ironwall', 'Longstrider',
-        'Stormblade', 'Brightshield', 'Greywind', 'Highvale', 'Steelguard',
-        'Duskwalker', 'Redcrest', 'Stoneward', 'Ashborne', 'Hawkspear',
-      ],
-    },
-    halfling: {
-      first: [
-        'Bilbo', 'Frodo', 'Sam', 'Merry', 'Pippin', 'Rosie', 'Hamfast',
-        'Belladonna', 'Lobelia', 'Fredegar', 'Milo', 'Daisy', 'Rosa',
-        'Cora', 'Perrin', 'Tansy', 'Dodo', 'Seraphina', 'Odo',
-      ],
-      last: [
-        'Baggins', 'Took', 'Brandybuck', 'Gamgee', 'Goodbody', 'Proudfoot',
-        'Burrows', 'Underhill', 'Greenhill', 'Fairbairn', 'Hilltopple',
-        'Brushgather', 'Tealeaf', 'Thorngage', 'Goodbarrel', 'Hearthcoat',
-      ],
-    },
-    dragonborn: {
-      first: [
-        'Drax', 'Razax', 'Thordak', 'Torinn', 'Balasar', 'Kriv', 'Nadarr',
-        'Heskan', 'Shedinn', 'Ghesh', 'Arjhan', 'Medrash', 'Rhogar',
-        'Tarhun', 'Akra', 'Miirym', 'Sora', 'Vezera', 'Zorvath',
-      ],
-      last: [
-        'Flameheart', 'Ironclaw', 'Stormsinger', 'Ashborn', 'Dragonfall',
-        'Firebreath', 'Scaleborn', 'Wyrmblood', 'Skyscale', 'Embermaw',
-        'Stormscale', 'Brightflame', 'Stoneclaw', 'Cloudsunder', 'Blazewing',
-      ],
-    },
-    gnome: {
-      first: [
-        'Glim', 'Boddynock', 'Dimble', 'Fonkin', 'Seebo', 'Zook', 'Eldon',
-        'Brocc', 'Burgell', 'Jebeddo', 'Alston', 'Bimpnottin', 'Fizzik',
-        'Carlin', 'Nissa', 'Wrenn', 'Tavi', 'Ellyjobell', 'Zanna',
-      ],
-      last: [
-        'Tinkertop', 'Sparklegem', 'Nimblefingers', 'Brightgear', 'Gadgetwhiz',
-        'Fizzlebang', 'Cogsworth', 'Glimmergold', 'Whistlewhirr', 'Gadgetgrind',
-        'Janglecoin', 'Copperbolt', 'Mithrilspanner', 'Quickwidget', 'Proudgear',
-      ],
-    },
-    'half-elf': {
-      first: [
-        'Tanis', 'Raistlin', 'Laurana', 'Gilthanas', 'Tanthalas', 'Silvara',
-        'Eliana', 'Korrin', 'Faelyn', 'Soveliss', 'Ilanis', 'Kael', 'Myla',
-        'Tharos', 'Elira', 'Daeris', 'Rian', 'Caelynn', 'Torren',
-      ],
-      last: [
-        'Half-Elven', 'Moonbrook', 'Starfall', 'Whisperwind', 'Shadowvale',
-        'Dawnbringer', 'Twilightbane', 'Silvermoon', 'Nightbloom', 'Duskwillow',
-        'Starcrest', 'Eveningfall', 'Shadeglade', 'Brightglen', 'Silvershade',
-      ],
-    },
-    'half-orc': {
-      first: [
-        'Grognak', 'Throk', 'Ugak', 'Krod', 'Sharn', 'Dench', 'Grul', 'Drog',
-        'Feng', 'Shump', 'Ghorbash', 'Mazog', 'Uglar', 'Ruk', 'Karash',
-        'Vorag', 'Yagra', 'Shautha', 'Ovak',
-      ],
-      last: [
-        'Ironhide', 'Bonecrusher', 'Skullsplitter', 'Bloodaxe', 'Stonefist',
-        'Grimjaw', 'Warbringer', 'Doomhammer', 'Boulderfist', 'Skullbrand',
-        'Gorefang', 'Bloodfury', 'Ironmaw', 'Steelgrip', 'Rageborn',
-      ],
-    },
-    tiefling: {
-      first: [
-        'Zevlor', 'Raven', 'Damakos', 'Akta', 'Therai', 'Nemeia', 'Kallista',
-        'Leucis', 'Orianna', 'Morthos', 'Azazel', 'Seraphine', 'Xathos',
-        'Riven', 'Lyra', 'Caelum', 'Naeris', 'Vexria', 'Zheren',
-      ],
-      last: [
-        'Hellborn', 'Darkflame', 'Shadowhorn', 'Nightwhisper', 'Embersoul',
-        'Dreadfire', 'Ashenborn', 'Voidwalker', 'Grimshroud', 'Duskwreath',
-        'Soulbrand', 'Cindertongue', 'Nightreign', 'Gloomsigil', 'Shadebinder',
-      ],
-    },
-  },
-
-  /**
-   * Get the name pattern for a race.
-   * Falls back to human names if the race isn't found.
-   * @param {string} race - The character race
-   * @returns {{ first: string[], last: string[] }}
-   */
-  getPattern(race) {
-    const key = (race || '').toLowerCase();
-    return this.patterns[key] || this.patterns.human;
-  },
-
-  /**
-   * Get all available races.
-   * @returns {string[]}
-   */
-  getRaces() {
-    return Object.keys(this.patterns);
-  },
-});
-
-
-
-
-// ===== BUNDLE PART: character-manager-api.js =====
-
-// ========================================
-// CHARACTER MANAGER - CLOUD API SERVICE
-// ========================================
-// Handles authentication and cloud storage operations for character-manager
-
-// Shared environment / URL config (single source of truth for the whole app)
-const {
-  isLocalEnvironment = false,
-  API_BASE_URL,
-  TOKEN_STORAGE_KEY,
-  USER_STORAGE_KEY,
-} = window.DanddyConfig || {};
-
-const DEBUG_CLOUD = !!(window.DanddyConfig && window.DanddyConfig.DEBUG);
-
-// ========================================
-// AUTH SERVICE
-// ========================================
-// The unified AuthService is now defined in `danddy-auth.js` and exposed as
-// `window.AuthService`. This file only *uses* that shared service (for example,
-// via AuthService.getToken() inside API helpers below).
-
-// ========================================
-// CHARACTER CLOUD STORAGE SERVICE
-// ========================================
-const CharacterCloudStorage = (window.CharacterCloudStorage = {
-  // Helper to convert spell arrays (objects or strings) to string arrays for backend
-  _spellsToStringArray(arr) {
-    if (!arr || !Array.isArray(arr)) return [];
-    
-    return arr.map(item => {
-      // If it's an object with a name property, extract the name
-      if (typeof item === 'object' && item !== null && item.name) {
-        return item.name;
-      }
-      // If it's already a string, return as-is
-      if (typeof item === 'string') {
-        return item;
-      }
-      // Fallback - convert to string
-      return String(item);
-    });
-  },
-  
-  // Convert localStorage character format to API format (shared mapper)
-  _toAPIFormat(character) {
-    return window.DanddyCharacterMapper.fromManagerToBackend(character);
-  },
-  
-  // Convert API format to frontend character format (shared mapper)
-  _fromAPIFormat(apiChar) {
-    return window.DanddyCharacterMapper.fromBackendToManager(apiChar);
-  },
-
-  // Map alignment to API enum format
-  _mapAlignment(alignment) {
-    if (!alignment) return null;
-    
-    const alignmentMap = {
-      'Lawful Good': 'lawful_good',
-      'Neutral Good': 'neutral_good',
-      'Chaotic Good': 'chaotic_good',
-      'Lawful Neutral': 'lawful_neutral',
-      'True Neutral': 'true_neutral',
-      'Chaotic Neutral': 'chaotic_neutral',
-      'Lawful Evil': 'lawful_evil',
-      'Neutral Evil': 'neutral_evil',
-      'Chaotic Evil': 'chaotic_evil',
-    };
-    
-    return alignmentMap[alignment] || null;
-  },
-
-  // Make authenticated API request
-  async _apiRequest(endpoint, options = {}) {
-    const token = AuthService.getToken();
-    if (!token) {
-      throw new Error('Not authenticated');
-    }
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        ...options.headers,
-      },
-    });
-
-    if (response.status === 401) {
-      // Token expired or invalid – clear auth state and sync UI so the user
-      // doesn't appear "logged in" while we silently fall back to local data.
-      AuthService.clearToken();
-      if (typeof window.updateAuthUI === 'function') {
-        window.updateAuthUI();
-      }
-      throw new Error('Session expired. Please log in again.');
-    }
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
-      const detail =
-        typeof error.detail === 'string'
-          ? error.detail
-          : JSON.stringify(error.detail || error);
-      console.error('API error response:', error);
-      throw new Error(detail || `API error: ${response.status}`);
-    }
-
-    // Handle 204 No Content
-    if (response.status === 204) {
-      return null;
-    }
-
-    return await response.json();
-  },
-
-  // Get all characters for current user
-  async getAll() {
-    try {
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Fetching all characters from API...');
-      }
-      const apiChars = await this._apiRequest('/characters/');
-      const characters = apiChars.map(c => this._fromAPIFormat(c));
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Retrieved', characters.length, 'characters');
-      }
-      return characters;
-    } catch (error) {
-      console.error('☁️ CLOUD ERROR: Failed to fetch characters:', error);
-      throw error;
-    }
-  },
-
-  // Get single character by ID
-  async getById(id) {
-    try {
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Fetching character', id);
-      }
-      const apiChar = await this._apiRequest(`/characters/${id}`);
-      return this._fromAPIFormat(apiChar);
-    } catch (error) {
-      console.error('☁️ CLOUD ERROR: Failed to fetch character:', error);
-      throw error;
-    }
-  },
-
-  // Add new character
-  async add(character) {
-    try {
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Creating character:', character.name);
-      }
-      const apiData = this._toAPIFormat(character);
-      const apiChar = await this._apiRequest('/characters/', {
-        method: 'POST',
-        body: JSON.stringify(apiData),
-      });
-      
-      const newChar = this._fromAPIFormat(apiChar);
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Character created with ID:', newChar.id);
-      }
-      return newChar;
-    } catch (error) {
-      console.error('☁️ CLOUD ERROR: Failed to create character:', error);
-      throw error;
-    }
-  },
-
-  // Update existing character
-  async update(id, updates) {
-    try {
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Updating character', id);
-      }
-      
-      // For partial updates, we need to map the frontend fields
-      const apiUpdates = {};
-      
-      // Map common update fields
-      if (updates.name !== undefined) apiUpdates.name = updates.name;
-      if (updates.level !== undefined) apiUpdates.level = updates.level;
-      if (updates.experiencePoints !== undefined) apiUpdates.experience_points = updates.experiencePoints;
-      if (updates.alignment !== undefined) {
-        // Convert frontend alignment ID (lg, ce, etc.) to backend enum format
-        const alignmentMap = {
-          'lg': 'lawful_good',
-          'ng': 'neutral_good',
-          'cg': 'chaotic_good',
-          'ln': 'lawful_neutral',
-          'n': 'true_neutral',
-          'cn': 'chaotic_neutral',
-          'le': 'lawful_evil',
-          'ne': 'neutral_evil',
-          'ce': 'chaotic_evil'
-        };
-        apiUpdates.alignment = alignmentMap[updates.alignment] || updates.alignment;
-      }
-      
-      // Ability Scores (partial updates from manager)
-      if (updates.abilities) {
-        const abilities = updates.abilities;
-        if (abilities.str !== undefined) apiUpdates.strength = abilities.str;
-        if (abilities.dex !== undefined) apiUpdates.dexterity = abilities.dex;
-        if (abilities.con !== undefined) apiUpdates.constitution = abilities.con;
-        if (abilities.int !== undefined) apiUpdates.intelligence = abilities.int;
-        if (abilities.wis !== undefined) apiUpdates.wisdom = abilities.wis;
-        if (abilities.cha !== undefined) apiUpdates.charisma = abilities.cha;
-      }
-
-      // Combat stats
-      if (updates.hitPoints?.max !== undefined) apiUpdates.hit_points_max = updates.hitPoints.max;
-      if (updates.hitPoints?.current !== undefined) apiUpdates.hit_points_current = updates.hitPoints.current;
-      if (updates.hitPoints?.temp !== undefined) apiUpdates.hit_points_temp = updates.hitPoints.temp;
-      if (updates.armorClass !== undefined) apiUpdates.armor_class = updates.armorClass;
-      if (updates.initiative !== undefined) apiUpdates.initiative = updates.initiative;
-      if (updates.speed !== undefined) apiUpdates.speed = updates.speed;
-      
-      // Arrays
-      if (updates.skillProficiencies !== undefined) apiUpdates.skill_proficiencies = updates.skillProficiencies;
-      if (updates.toolProficiencies !== undefined) apiUpdates.tool_proficiencies = updates.toolProficiencies;
-      if (updates.languages !== undefined) apiUpdates.languages = updates.languages;
-      if (updates.equipment !== undefined) {
-        apiUpdates.inventory = updates.equipment.map(item => 
-          typeof item === 'string' ? { name: item } : item
-        );
-      }
-      if (updates.conditions !== undefined) apiUpdates.conditions = updates.conditions;
-      
-      // Text fields
-      if (updates.backstory !== undefined) apiUpdates.backstory = updates.backstory;
-      if (updates.sex !== undefined) apiUpdates.sex = updates.sex;
-      
-      // Portrait data
-      if (updates.asciiPortrait !== undefined) apiUpdates.ascii_portrait = updates.asciiPortrait;
-      if (updates.originalPortraitUrl !== undefined) apiUpdates.original_portrait_url = updates.originalPortraitUrl;
-      if (updates.customPortraitAscii !== undefined) apiUpdates.custom_portrait_ascii = updates.customPortraitAscii;
-      if (updates.customPortraitCount !== undefined) apiUpdates.custom_portrait_count = updates.customPortraitCount;
-      if (updates.portraitMetadata !== undefined) apiUpdates.portrait_metadata = updates.portraitMetadata;
-      
-      const apiChar = await this._apiRequest(`/characters/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(apiUpdates),
-      });
-      
-      const updatedChar = this._fromAPIFormat(apiChar);
-      return updatedChar;
-    } catch (error) {
-      console.error('☁️ CLOUD ERROR: Failed to update character:', error);
-      throw error;
-    }
-  },
-
-  // Delete character
-  async delete(id) {
-    try {
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Deleting character', id);
-      }
-      await this._apiRequest(`/characters/${id}`, { method: 'DELETE' });
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Character deleted successfully');
-      }
-      return true;
-    } catch (error) {
-      console.error('☁️ CLOUD ERROR: Failed to delete character:', error);
-      throw error;
-    }
-  },
-
-  // Duplicate character
-  async duplicate(id) {
-    try {
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Duplicating character', id);
-      }
-      const apiChar = await this._apiRequest(`/characters/${id}/duplicate`, {
-        method: 'POST',
-      });
-      const duplicated = this._fromAPIFormat(apiChar);
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Character duplicated with ID:', duplicated.id);
-      }
-      return duplicated;
-    } catch (error) {
-      console.error('☁️ CLOUD ERROR: Failed to duplicate character:', error);
-      throw error;
-    }
-  },
-
-  // Export character as JSON
-  async export(id) {
-    try {
-      const character = await this.getById(id);
-      return JSON.stringify(character, null, 2);
-    } catch (error) {
-      console.error('☁️ CLOUD ERROR: Failed to export character:', error);
-      throw error;
-    }
-  },
-
-  // Import character from JSON
-  async import(jsonString) {
-    try {
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Importing character from JSON');
-      }
-      const character = JSON.parse(jsonString);
-      
-      // Remove ID if it exists (create new character)
-      delete character.id;
-      delete character.ownerId;
-      
-      const result = await this.add(character);
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Character imported with ID:', result.id);
-      }
-      return result;
-    } catch (error) {
-      console.error('☁️ CLOUD ERROR: Failed to import character:', error);
-      return null;
-    }
-  },
-
-  // Generate unique ID (not used for cloud storage, API generates IDs)
-  generateId() {
-    return `char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  },
-
-  // ========================================
-  // CHARACTER SHARING
-  // ========================================
-
-  /**
-   * Share a character with another user by email.
-   * @param {number|string} characterId - The character ID to share
-   * @param {string} email - The recipient's email address
-   * @returns {Promise<Object>} The created share record
-   */
-  async shareCharacter(characterId, email) {
-    try {
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Sharing character', characterId, 'to', email);
-      }
-      const result = await this._apiRequest(`/shares/character/${characterId}`, {
-        method: 'POST',
-        body: JSON.stringify({ to_email: email }),
-      });
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Character shared successfully');
-      }
-      return result;
-    } catch (error) {
-      console.error('☁️ CLOUD ERROR: Failed to share character:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get pending character shares for the current user.
-   * @returns {Promise<Array>} List of pending shares with character previews
-   */
-  async getPendingShares() {
-    try {
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Fetching pending shares...');
-      }
-      const shares = await this._apiRequest('/shares/pending');
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Found', shares.length, 'pending shares');
-      }
-      return shares;
-    } catch (error) {
-      console.error('☁️ CLOUD ERROR: Failed to fetch pending shares:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Accept a pending character share (creates a copy).
-   * @param {number} shareId - The share ID to accept
-   * @returns {Promise<Object>} Result with the new character ID
-   */
-  async acceptShare(shareId) {
-    try {
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Accepting share', shareId);
-      }
-      const result = await this._apiRequest(`/shares/${shareId}/accept`, {
-        method: 'POST',
-      });
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Share accepted, new character ID:', result.character_id);
-      }
-      return result;
-    } catch (error) {
-      console.error('☁️ CLOUD ERROR: Failed to accept share:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Dismiss a pending character share (ignores forever).
-   * @param {number} shareId - The share ID to dismiss
-   * @returns {Promise<void>}
-   */
-  async dismissShare(shareId) {
-    try {
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Dismissing share', shareId);
-      }
-      await this._apiRequest(`/shares/${shareId}/dismiss`, {
-        method: 'POST',
-      });
-      if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Share dismissed');
-      }
-    } catch (error) {
-      console.error('☁️ CLOUD ERROR: Failed to dismiss share:', error);
-      throw error;
-    }
-  },
-});
-
-// ========================================
-// MIGRATION UTILITY
-// ========================================
-const MigrationService = (window.MigrationService = {
-  LOCAL_STORAGE_KEY: (window.DanddyStorage && window.DanddyStorage.STORAGE_KEY) || 'dnd_characters',
-  
-  // Check if there are characters in localStorage (excluding demo characters)
-  hasLocalCharacters() {
-    const characters = this._getLocalCharacters();
-    // Only count non-demo characters for migration prompt
-    const userCharacters = characters.filter(c => 
-      !window.DemoCharacters || !window.DemoCharacters.isDemo(c)
-    );
-    return userCharacters.length > 0;
-  },
-
-  // Check if there are demo characters in localStorage
-  hasDemoCharacters() {
-    const characters = this._getLocalCharacters();
-    if (!window.DemoCharacters) return false;
-    return characters.some(c => window.DemoCharacters.isDemo(c));
-  },
-
-  // Get all local characters (helper)
-  _getLocalCharacters() {
-    return (window.DanddyStorage && window.DanddyStorage.readAll()) ||
-      (function (key) {
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : [];
-      })(this.LOCAL_STORAGE_KEY);
-  },
-
-  // Get count of local characters (excluding demo)
-  getLocalCharacterCount() {
-    const characters = this._getLocalCharacters();
-    const userCharacters = characters.filter(c => 
-      !window.DemoCharacters || !window.DemoCharacters.isDemo(c)
-    );
-    return userCharacters.length;
-  },
-
-  // Get count of demo characters
-  getDemoCharacterCount() {
-    const characters = this._getLocalCharacters();
-    if (!window.DemoCharacters) return 0;
-    return characters.filter(c => window.DemoCharacters.isDemo(c)).length;
-  },
-
-  // Migrate localStorage characters to cloud
-  // Options:
-  //   includeDemoCharacters: boolean - whether to include demo characters (default: false)
-  async migrateToCloud(options = {}) {
-    const { includeDemoCharacters = false } = options;
-    
-    try {
-      if (!AuthService.isAuthenticated()) {
-        throw new Error('Must be logged in to migrate characters');
-      }
-
-      console.log('📦 MIGRATION: Starting migration of localStorage characters to cloud...');
-      
-      let localCharacters = this._getLocalCharacters();
-      
-      // Filter out demo characters if not including them
-      if (!includeDemoCharacters && window.DemoCharacters) {
-        localCharacters = localCharacters.filter(c => !window.DemoCharacters.isDemo(c));
-      }
-      
-      console.log('📦 MIGRATION: Found', localCharacters.length, 'characters to migrate');
-      
-      const results = {
-        total: localCharacters.length,
-        success: 0,
-        failed: 0,
-        errors: [],
-      };
-
-      for (const character of localCharacters) {
-        try {
-          console.log('📦 MIGRATION: Migrating', character.name);
-          // Remove demo flag when migrating to cloud
-          const charToMigrate = { ...character };
-          delete charToMigrate.isDemo;
-          // Generate new ID for cloud (remove demo prefix)
-          if (charToMigrate.id && String(charToMigrate.id).startsWith('demo_')) {
-            delete charToMigrate.id;
-          }
-          await CharacterCloudStorage.add(charToMigrate);
-          results.success++;
-        } catch (error) {
-          console.error('📦 MIGRATION ERROR: Failed to migrate', character.name, error);
-          results.failed++;
-          results.errors.push({ character: character.name, error: error.message });
-        }
-      }
-
-      console.log('📦 MIGRATION: Complete!', results.success, 'succeeded,', results.failed, 'failed');
-      
-      return results;
-    } catch (error) {
-      console.error('📦 MIGRATION ERROR:', error);
-      throw error;
-    }
-  },
-
-  // Backup localStorage data before clearing
-  backupLocalStorage() {
-    const chars =
-      (window.DanddyStorage && window.DanddyStorage.readAll()) ||
-      (function (key) {
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : [];
-      })(this.LOCAL_STORAGE_KEY);
-    if (chars && chars.length) {
-      const backup = {
-        timestamp: new Date().toISOString(),
-        characters: chars,
-      };
-      
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `dnd-characters-backup-${Date.now()}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      
-      console.log('📦 BACKUP: Created backup of', backup.characters.length, 'characters');
-      return true;
-    }
-    return false;
-  },
-
-  // Clear localStorage characters (after successful migration)
-  clearLocalStorage() {
-    if (window.DanddyStorage) {
-      window.DanddyStorage.clearAll();
-    } else {
-      // Remove primary character storage
-      localStorage.removeItem(this.LOCAL_STORAGE_KEY);
-      // Also remove any legacy/cache copies of characters to avoid duplicates
-      try {
-        localStorage.removeItem(this.LOCAL_STORAGE_KEY + '_cache');
-      } catch (e) {
-        console.warn('📦 CLEAR: Failed to clear local cache key', e);
-      }
-    }
-    if (DEBUG_CLOUD) {
-      console.log('📦 CLEAR: Cleared local character storage (including cache, if present)');
-    }
-  },
-});
-
-if (DEBUG_CLOUD) {
-  console.log('☁️ Character Manager Cloud API Service loaded');
-}
-
-
-
-
-// ===== BUNDLE PART: demo-characters.js =====
-
-// ========================================
-// DEMO CHARACTERS
-// ========================================
-// Pre-made sample characters available in demo mode (not authenticated).
-// These showcase the variety of characters users can create.
-
-(function (global) {
-  // Demo character IDs use a special prefix for identification
-  const DEMO_PREFIX = 'demo_';
-  
-  // Key to track if user has been asked about demo migration
-  const DEMO_MIGRATION_ASKED_KEY = 'danddy_demo_migration_asked';
-
-  // Demo mode limits
-  const DEMO_MAX_USER_CHARACTERS = 3;
-  const DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER = 3;
-
-  const DemoCharacters = (global.DemoCharacters = {
-    DEMO_PREFIX,
-    DEMO_MIGRATION_ASKED_KEY,
-    DEMO_MAX_USER_CHARACTERS,
-    DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER,
-
-    // Check if a character is a demo character
-    isDemo(character) {
-      return character && (
-        character.isDemo === true ||
-        (character.id && String(character.id).startsWith(DEMO_PREFIX))
-      );
-    },
-
-    // Check if user is in demo mode (not authenticated)
-    isDemoMode() {
-      return !(global.AuthService && typeof AuthService.isAuthenticated === 'function' && AuthService.isAuthenticated());
-    },
-
-    // Check if migration prompt has been shown
-    hasMigrationBeenAsked() {
-      return localStorage.getItem(DEMO_MIGRATION_ASKED_KEY) === 'true';
-    },
-
-    // Mark migration prompt as shown
-    markMigrationAsked() {
-      localStorage.setItem(DEMO_MIGRATION_ASKED_KEY, 'true');
-    },
-
-    // Clear migration asked flag (for testing)
-    clearMigrationAsked() {
-      localStorage.removeItem(DEMO_MIGRATION_ASKED_KEY);
-    },
-
-    // Get all demo characters
-    getAll() {
-      return [
-        this._createLyra(),
-        this._createThorgrim(),
-        this._createZephyr(),
-      ];
-    },
-
-    // Get count of demo characters that would be migrated
-    getDemoCharacterCount() {
-      const localChars = (global.DanddyStorage && global.DanddyStorage.readAll()) || [];
-      return localChars.filter(c => this.isDemo(c)).length;
-    },
-
-    // Get count of user-created (non-demo) local characters
-    getUserCharacterCount() {
-      const localChars = (global.DanddyStorage && global.DanddyStorage.readAll()) || [];
-      return localChars.filter(c => !this.isDemo(c)).length;
-    },
-
-    // Check if user has reached the character limit in demo mode
-    hasReachedCharacterLimit() {
-      if (!this.isDemoMode()) return false;
-      return this.getUserCharacterCount() >= DEMO_MAX_USER_CHARACTERS;
-    },
-
-    // Check if a character has reached the portrait limit in demo mode
-    hasReachedPortraitLimit(character) {
-      if (!this.isDemoMode()) return false;
-      const currentCount = (character && character.customPortraitCount) || 0;
-      return currentCount >= DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
-    },
-
-    // Check if custom art generation is allowed for a character
-    canGenerateCustomArt(character) {
-      // Sample characters cannot have custom art generated
-      if (this.isDemo(character)) {
-        return false;
-      }
-      // In demo mode, check portrait limit
-      if (this.isDemoMode()) {
-        return !this.hasReachedPortraitLimit(character);
-      }
-      // Authenticated users have no demo restrictions
-      return true;
-    },
-
-    // ========================================
-    // DEMO CHARACTER 1: Lyra Starwhisper
-    // ========================================
-    // Female Elf Wizard - scholarly and mystical
-    _createLyra() {
-      const nowIso = new Date().toISOString();
-      return {
-        id: `${DEMO_PREFIX}lyra`,
-        isDemo: true,
-        characterUid: `${DEMO_PREFIX}lyra_starwhisper`,
-        name: 'Lyra Starwhisper',
-        race: 'elf',
-        class: 'wizard',
-        background: 'sage',
-        alignment: 'ng',
-        sex: 'female',
-        level: 5,
-        
-        // Abilities (point buy optimized for wizard)
-        abilities: {
-          str: 8,
-          dex: 14,
-          con: 13,
-          int: 17,  // Primary stat + racial bonus
-          wis: 12,
-          cha: 10,
-        },
-        baseAbilities: {
-          str: 8,
-          dex: 12,  // Before racial +2
-          con: 13,
-          int: 17,
-          wis: 12,
-          cha: 10,
-        },
-        
-        // Computed stats
-        hitPoints: 27,  // 6 + 4*4 + 5*1 (CON mod) = 27
-        armorClass: 12, // 10 + DEX mod
-        initiative: 2,
-        speed: 30,
-        proficiencyBonus: 3,
-        
-        // Ability modifiers
-        abilityModifiers: {
-          str: -1,
-          dex: 2,
-          con: 1,
-          int: 3,
-          wis: 1,
-          cha: 0,
-        },
-        
-        // Skills
-        skillProficiencies: ['arcana', 'history', 'investigation', 'insight'],
-        skillModifiers: {
-          arcana: 6,      // INT + prof
-          history: 6,     // INT + prof (sage)
-          investigation: 6,
-          insight: 4,     // WIS + prof (sage)
-          perception: 3,  // WIS + racial keen senses
-        },
-        
-        // Saving throws
-        savingThrows: ['int', 'wis'],
-        savingThrowModifiers: {
-          str: -1,
-          dex: 2,
-          con: 1,
-          int: 6,  // Proficient
-          wis: 4,  // Proficient
-          cha: 0,
-        },
-        
-        // Languages
-        languages: ['Common', 'Elvish', 'Draconic', 'Celestial'],
-        
-        // Equipment
-        equipment: [
-          'Spellbook',
-          'Arcane focus (crystal orb)',
-          'Scholar\'s pack',
-          'Dagger',
-          'Component pouch',
-          'Bottle of black ink',
-          'Quill',
-          'Robes',
-        ],
-        
-        // Spellcasting
-        spellcastingAbility: 'int',
-        cantrips: ['Fire Bolt', 'Mage Hand', 'Prestidigitation', 'Light'],
-        spellsKnown: [
-          'Magic Missile',
-          'Shield',
-          'Detect Magic',
-          'Mage Armor',
-          'Misty Step',
-          'Hold Person',
-          'Fireball',
-          'Counterspell',
-        ],
-        spellSlots: {
-          1: 4,
-          2: 3,
-          3: 2,
-        },
-        
-        // Race data
-        raceData: {
-          name: 'Elf',
-          size: 'Medium',
-          speed: 30,
-          traits: ['Darkvision', 'Keen Senses', 'Fey Ancestry', 'Trance'],
-          languages: ['Common', 'Elvish'],
-        },
-        
-        // Class data
-        classData: {
-          name: 'Wizard',
-          hitDie: 6,
-          primaryAbility: ['int'],
-          savingThrows: ['int', 'wis'],
-          spellcaster: true,
-        },
-        
-        // Background data
-        backgroundData: {
-          name: 'Sage',
-          feature: {
-            name: 'Researcher',
-            description: 'When you attempt to learn or recall a piece of lore, if you don\'t know it, you often know where and from whom you can obtain it.',
-          },
-        },
-        
-        // Personality
-        backstory: 'Lyra spent decades studying in the Silverspire Academy, where she discovered an ancient tome that hinted at forgotten magic from before the Sundering. Now she travels the realm, seeking fragments of lost arcane knowledge.',
-        personalityTrait: 'I\'m convinced there\'s a logical explanation for everything, and I won\'t rest until I find it.',
-        
-        // Portrait - custom Boris Vallejo style from app
-        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298665_9f926a959c214c14bb7d1d04580843ff.png',
-        portrait: {
-          url: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298665_9f926a959c214c14bb7d1d04580843ff.png',
-        },
-        
-        // Metadata
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      };
-    },
-
-    // ========================================
-    // DEMO CHARACTER 2: Thorgrim Ironforge
-    // ========================================
-    // Male Dwarf Fighter - classic warrior tank
-    _createThorgrim() {
-      const nowIso = new Date().toISOString();
-      return {
-        id: `${DEMO_PREFIX}thorgrim`,
-        isDemo: true,
-        characterUid: `${DEMO_PREFIX}thorgrim_ironforge`,
-        name: 'Thorgrim Ironforge',
-        race: 'dwarf',
-        class: 'fighter',
-        background: 'soldier',
-        alignment: 'lg',
-        sex: 'male',
-        level: 3,
-        
-        // Abilities (strong and tough)
-        abilities: {
-          str: 16,
-          dex: 12,
-          con: 16,  // +2 racial
-          int: 10,
-          wis: 13,
-          cha: 8,
-        },
-        baseAbilities: {
-          str: 16,
-          dex: 12,
-          con: 14,
-          int: 10,
-          wis: 13,
-          cha: 8,
-        },
-        
-        // Computed stats
-        hitPoints: 31,  // 10 + 2*6 + 3*3 = 31 (with CON mod)
-        armorClass: 18, // Chain mail (16) + shield (+2)
-        initiative: 1,
-        speed: 25,
-        proficiencyBonus: 2,
-        
-        // Ability modifiers
-        abilityModifiers: {
-          str: 3,
-          dex: 1,
-          con: 3,
-          int: 0,
-          wis: 1,
-          cha: -1,
-        },
-        
-        // Skills
-        skillProficiencies: ['athletics', 'intimidation', 'perception', 'survival'],
-        skillModifiers: {
-          athletics: 5,     // STR + prof
-          intimidation: 1,  // CHA + prof
-          perception: 3,    // WIS + prof
-          survival: 3,      // WIS + prof
-        },
-        
-        // Saving throws
-        savingThrows: ['str', 'con'],
-        savingThrowModifiers: {
-          str: 5,  // Proficient
-          dex: 1,
-          con: 5,  // Proficient
-          int: 0,
-          wis: 1,
-          cha: -1,
-        },
-        
-        // Languages
-        languages: ['Common', 'Dwarvish'],
-        
-        // Equipment
-        equipment: [
-          'Chain mail',
-          'Shield',
-          'Battleaxe',
-          'Handaxes (2)',
-          'Explorer\'s pack',
-          'Insignia of rank',
-          'Trophy from fallen enemy',
-          'Bone dice',
-        ],
-        
-        // Race data
-        raceData: {
-          name: 'Dwarf',
-          size: 'Medium',
-          speed: 25,
-          traits: ['Darkvision', 'Dwarven Resilience', 'Stonecunning'],
-          languages: ['Common', 'Dwarvish'],
-        },
-        
-        // Class data
-        classData: {
-          name: 'Fighter',
-          hitDie: 10,
-          primaryAbility: ['str', 'dex'],
-          savingThrows: ['str', 'con'],
-          spellcaster: false,
-        },
-        
-        // Background data
-        backgroundData: {
-          name: 'Soldier',
-          feature: {
-            name: 'Military Rank',
-            description: 'You have a military rank from your career as a soldier. Soldiers loyal to your former organization still recognize your authority and influence.',
-          },
-        },
-        
-        // Personality
-        backstory: 'Thorgrim served twenty years in the Ironforge Legion, defending the mountain holds from orc raids and goblin incursions. After the Battle of Redstone Pass, where he was the sole survivor of his unit, he set out to forge his own legend.',
-        personalityTrait: 'I face problems head-on. A simple, direct solution is the best path to success.',
-        
-        // Portrait - custom Boris Vallejo style from app
-        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298747_fd80b4efff0c4544942b98b1c15438ee.png',
-        portrait: {
-          url: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298747_fd80b4efff0c4544942b98b1c15438ee.png',
-        },
-        
-        // Metadata
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      };
-    },
-
-    // ========================================
-    // DEMO CHARACTER 3: Zephyr Nightshade
-    // ========================================
-    // Non-binary Tiefling Rogue - stealthy and charismatic
-    _createZephyr() {
-      const nowIso = new Date().toISOString();
-      return {
-        id: `${DEMO_PREFIX}zephyr`,
-        isDemo: true,
-        characterUid: `${DEMO_PREFIX}zephyr_nightshade`,
-        name: 'Zephyr Nightshade',
-        race: 'tiefling',
-        class: 'rogue',
-        background: 'criminal',
-        alignment: 'cn',
-        sex: 'non-binary',
-        level: 4,
-        
-        // Abilities (quick and charming)
-        abilities: {
-          str: 10,
-          dex: 17,
-          con: 12,
-          int: 14,  // +1 racial
-          wis: 10,
-          cha: 15,  // +2 racial
-        },
-        baseAbilities: {
-          str: 10,
-          dex: 17,
-          con: 12,
-          int: 13,
-          wis: 10,
-          cha: 13,
-        },
-        
-        // Computed stats
-        hitPoints: 27,  // 8 + 3*5 + 4*1 = 27
-        armorClass: 14, // Leather (11) + DEX mod (3)
-        initiative: 3,
-        speed: 30,
-        proficiencyBonus: 2,
-        
-        // Ability modifiers
-        abilityModifiers: {
-          str: 0,
-          dex: 3,
-          con: 1,
-          int: 2,
-          wis: 0,
-          cha: 2,
-        },
-        
-        // Skills (rogues get 4 + 2 from background)
-        skillProficiencies: ['acrobatics', 'deception', 'sleight-of-hand', 'stealth', 'perception', 'persuasion'],
-        skillModifiers: {
-          acrobatics: 5,      // DEX + prof
-          deception: 4,       // CHA + prof
-          'sleight-of-hand': 7, // DEX + prof + expertise
-          stealth: 7,         // DEX + prof + expertise
-          perception: 2,      // WIS + prof
-          persuasion: 4,      // CHA + prof
-        },
-        
-        // Saving throws
-        savingThrows: ['dex', 'int'],
-        savingThrowModifiers: {
-          str: 0,
-          dex: 5,  // Proficient
-          con: 1,
-          int: 4,  // Proficient
-          wis: 0,
-          cha: 2,
-        },
-        
-        // Languages
-        languages: ['Common', 'Infernal', 'Thieves\' Cant'],
-        
-        // Tool proficiencies
-        toolProficiencies: ['Thieves\' tools', 'Playing cards'],
-        
-        // Equipment
-        equipment: [
-          'Leather armor',
-          'Rapier',
-          'Shortbow',
-          'Arrows (20)',
-          'Thieves\' tools',
-          'Burglar\'s pack',
-          'Crowbar',
-          'Dark hooded cloak',
-        ],
-        
-        // Race data
-        raceData: {
-          name: 'Tiefling',
-          size: 'Medium',
-          speed: 30,
-          traits: ['Darkvision', 'Hellish Resistance', 'Infernal Legacy'],
-          languages: ['Common', 'Infernal'],
-        },
-        
-        // Class data
-        classData: {
-          name: 'Rogue',
-          hitDie: 8,
-          primaryAbility: ['dex'],
-          savingThrows: ['dex', 'int'],
-          spellcaster: false,
-        },
-        
-        // Background data
-        backgroundData: {
-          name: 'Criminal',
-          feature: {
-            name: 'Criminal Contact',
-            description: 'You have a reliable contact who acts as your liaison to a network of criminals. You can get messages to and from your contact even over great distances.',
-          },
-        },
-        
-        // Personality
-        backstory: 'Zephyr grew up on the streets of Waterdeep, their infernal appearance making them an outcast from birth. They learned to survive through cunning and quick fingers, eventually joining the Shadow Thieves. Now they work independently, taking jobs that interest them and staying one step ahead of the law.',
-        personalityTrait: 'I have a joke for every occasion, especially occasions where humor is inappropriate.',
-        
-        // Portrait - custom Boris Vallejo style from app
-        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298383_2a5a798489b0460481a28c99bb85d235.png',
-        portrait: {
-          url: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298383_2a5a798489b0460481a28c99bb85d235.png',
-        },
-        
-        // Metadata
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      };
-    },
-  });
-})(window);
-
-
-
-
-// ===== BUNDLE PART: character-storage.js =====
-
-// ========================================
-// SHARED CHARACTER STORAGE FACADE
-// ========================================
-// Unified hybrid storage (cloud + local) used by:
-// - Character Manager (full-screen app)
-// - Character Builder (for future consolidation)
-//
-// Responsibilities:
-// - Decide between cloud API and local storage based on AuthService
-// - Provide a stable character model for frontend code
-// - Normalize timestamps so sorting by "date modified" is reliable
-//
-// Dependencies (if available on the current page):
-// - window.AuthService          (auth state)
-// - window.CharacterCloudStorage (cloud CRUD, from character-manager-api.js)
-// - window.DanddyStorage        (local storage abstraction)
-// ========================================
-
-(function () {
-  const DEBUG_STORAGE = !!(window.DanddyConfig && window.DanddyConfig.DEBUG);
-
-  const CharacterStorage = (window.CharacterStorage = {
-    STORAGE_KEY:
-      (window.DanddyStorage && window.DanddyStorage.STORAGE_KEY) ||
-      'dnd_characters',
-
-    // Check if user is authenticated and should use cloud
-    useCloud() {
-      return (
-        window.AuthService && typeof AuthService.isAuthenticated === 'function'
-          ? AuthService.isAuthenticated()
-          : false
-      );
-    },
-
-    // Get all characters (cloud or local)
-    async getAll() {
-      if (this.useCloud() && window.CharacterCloudStorage) {
-        try {
-          if (DEBUG_STORAGE) {
-            console.log('☁️ STORAGE: Fetching all characters from cloud...');
-          }
-          return await window.CharacterCloudStorage.getAll();
-        } catch (error) {
-          console.error(
-            '☁️ STORAGE: Cloud getAll failed, falling back to local:',
-            error,
-          );
-          if (typeof window.showNotification === 'function') {
-            window.showNotification(
-              '⚠️ Cloud sync failed. Showing local characters instead.',
-            );
-          }
-          return this._getLocalAll();
-        }
-      }
-      return this._getLocalAll();
-    },
-
-    // Get single character by ID
-    async getById(id) {
-      if (this.useCloud() && window.CharacterCloudStorage) {
-        try {
-          if (DEBUG_STORAGE) {
-            console.log('☁️ STORAGE: Fetching character from cloud:', id);
-          }
-          return await window.CharacterCloudStorage.getById(id);
-        } catch (error) {
-          console.error(
-            '☁️ STORAGE: Cloud getById failed, falling back to local:',
-            error,
-          );
-          return this._getLocalById(id);
-        }
-      }
-      return this._getLocalById(id);
-    },
-
-    // Add new character
-    async add(character) {
-      if (this.useCloud() && window.CharacterCloudStorage) {
-        try {
-          if (DEBUG_STORAGE) {
-            console.log('☁️ STORAGE: Creating character in cloud:', character);
-          }
-          return await window.CharacterCloudStorage.add(character);
-        } catch (error) {
-          console.error('☁️ STORAGE: Cloud add failed:', error);
-          if (typeof window.showNotification === 'function') {
-            window.showNotification(
-              '❌ Failed to save to cloud. Saving locally instead.',
-            );
-          }
-          // Fall through to local add
-        }
-      }
-      return this._localAdd(character);
-    },
-
-    /**
-     * Update existing character
-     * @param {string} id - Character ID
-     * @param {Object} updates - Fields to update
-     * @param {Object} options - { silent?: boolean } - if true, don't update modified timestamp
-     */
-    async update(id, updates, options = {}) {
-      const { silent = false } = options;
-      const idStr = String(id);
-
-      if (this.useCloud() && window.CharacterCloudStorage) {
-        // Guard against invalid cloud IDs (e.g. "null", "undefined", or local-only IDs)
-        const isInvalidCloudId =
-          !idStr ||
-          idStr === 'null' ||
-          idStr === 'undefined' ||
-          idStr.startsWith('local_');
-
-        if (isInvalidCloudId) {
-          if (DEBUG_STORAGE) {
-            console.warn(
-              '⚠️ STORAGE: Skipping cloud update for invalid id; using local instead:',
-              id,
-            );
-          }
-          return this._localUpdate(id, updates, { silent });
-        }
-
-        try {
-          if (DEBUG_STORAGE) {
-            console.log('☁️ STORAGE: Updating character in cloud:', id);
-          }
-          return await window.CharacterCloudStorage.update(id, updates);
-        } catch (error) {
-          console.error('☁️ STORAGE: Cloud update failed:', error);
-          if (typeof window.showNotification === 'function') {
-            window.showNotification(
-              '❌ Failed to update in cloud. Your changes may not be synced.',
-            );
-          }
-          throw error;
-        }
-      }
-
-      return this._localUpdate(id, updates, { silent });
-    },
-
-    // Delete character
-    async delete(id) {
-      if (this.useCloud() && window.CharacterCloudStorage) {
-        try {
-          if (DEBUG_STORAGE) {
-            console.log('☁️ STORAGE: Deleting character from cloud:', id);
-          }
-          await window.CharacterCloudStorage.delete(id);
-          return true;
-        } catch (error) {
-          console.error('☁️ STORAGE: Cloud delete failed:', error);
-          if (typeof window.showNotification === 'function') {
-            window.showNotification(
-              '❌ Failed to delete from cloud. Please try again.',
-            );
-          }
-          throw error;
-        }
-      }
-
-      return this._localDelete(id);
-    },
-
-    // Duplicate character
-    async duplicate(id) {
-      if (this.useCloud() && window.CharacterCloudStorage) {
-        try {
-          if (DEBUG_STORAGE) {
-            console.log('☁️ STORAGE: Duplicating character in cloud:', id);
-          }
-          return await window.CharacterCloudStorage.duplicate(id);
-        } catch (error) {
-          console.error('☁️ STORAGE: Cloud duplicate failed:', error);
-          if (typeof window.showNotification === 'function') {
-            window.showNotification(
-              '❌ Failed to duplicate in cloud. Please try again.',
-            );
-          }
-          throw error;
-        }
-      }
-
-      return this._localDuplicate(id);
-    },
-
-    // Export character as JSON
-    async export(id) {
-      if (this.useCloud() && window.CharacterCloudStorage) {
-        try {
-          if (DEBUG_STORAGE) {
-            console.log('☁️ STORAGE: Exporting character from cloud:', id);
-          }
-          return await window.CharacterCloudStorage.export(id);
-        } catch (error) {
-          console.error('☁️ STORAGE: Cloud export failed, falling back to local:', error);
-          const character = this._getLocalById(id);
-          return character ? JSON.stringify(character, null, 2) : null;
-        }
-      }
-
-      const character = this._getLocalById(id);
-      return character ? JSON.stringify(character, null, 2) : null;
-    },
-
-    // Import character from JSON
-    async import(jsonString) {
-      if (this.useCloud() && window.CharacterCloudStorage) {
-        try {
-          if (DEBUG_STORAGE) {
-            console.log('☁️ STORAGE: Importing character to cloud...');
-          }
-          return await window.CharacterCloudStorage.import(jsonString);
-        } catch (error) {
-          console.error('☁️ STORAGE: Cloud import failed:', error);
-          if (typeof window.showNotification === 'function') {
-            window.showNotification(
-              '❌ Failed to import to cloud. Please try again.',
-            );
-          }
-          return null;
-        }
-      }
-
-      return this._localImport(jsonString);
-    },
-
-    // Generate unique ID for local-only characters
-    generateId() {
-      return `char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    },
-
-    // ========================================
-    // LOCAL STORAGE IMPLEMENTATIONS (Fallback)
-    // ========================================
-
-    _getLocalAll() {
-      let characters =
-        (window.DanddyStorage && window.DanddyStorage.readAll()) ||
-        (function () {
-          try {
-            const data = localStorage.getItem(CharacterStorage.STORAGE_KEY);
-            return data ? JSON.parse(data) : [];
-          } catch {
-            return [];
-          }
-        })();
-
-      if (DEBUG_STORAGE) {
-        console.log(
-          '💾 LOCAL.GETALL: Retrieved',
-          characters.length,
-          'characters from local storage',
-        );
-      }
-
-      // Normalize timestamps so we can reliably sort by recency.
-      // Only normalize non-demo characters (demo chars have their own timestamps).
-      let changed = false;
-      let maxExistingTime = 0;
-
-      // First pass: find the most recent existing timestamp (if any)
-      characters.forEach((char) => {
-        const t = new Date(char.updatedAt || char.createdAt || 0).getTime();
-        if (t > maxExistingTime) {
-          maxExistingTime = t;
-        }
-      });
-
-      const baseTime = maxExistingTime || Date.now();
-      let newCounter = 0;
-
-      characters.forEach((char) => {
-        // Skip demo characters - they have their own timestamps
-        if (window.DemoCharacters && window.DemoCharacters.isDemo(char)) {
-          return;
-        }
-        
-        if (!char.createdAt) {
-          // Treat characters without timestamps as newer than anything we've seen
-          newCounter += 1;
-          const t = baseTime + newCounter * 1000;
-          char.createdAt = new Date(t).toISOString();
-          changed = true;
-        }
-        if (!char.updatedAt) {
-          char.updatedAt = char.createdAt;
-          changed = true;
-        }
-      });
-
-      if (changed) {
-        try {
-          // Only save non-demo characters to localStorage
-          const charsToSave = characters.filter(c => 
-            !window.DemoCharacters || !window.DemoCharacters.isDemo(c)
-          );
-          localStorage.setItem(
-            this.STORAGE_KEY,
-            JSON.stringify(charsToSave),
-          );
-        } catch (e) {
-          console.warn('LOCAL.GETALL: Failed to persist normalized timestamps', e);
-        }
-      }
-
-      // In demo mode (not authenticated), inject demo characters
-      if (!this.useCloud() && window.DemoCharacters) {
-        const demoChars = window.DemoCharacters.getAll();
-        const existingDemoIds = new Set(
-          characters
-            .filter(c => window.DemoCharacters.isDemo(c))
-            .map(c => c.id)
-        );
-        
-        // Add any missing demo characters (in memory only)
-        demoChars.forEach(demo => {
-          if (!existingDemoIds.has(demo.id)) {
-            characters.push(demo);
-          }
-        });
-      }
-
-      return characters;
-    },
-
-    _getLocalById(id) {
-      const characters = this._getLocalAll();
-      // Use String comparison to handle type mismatches (IDs may be numeric or string)
-      const idStr = String(id);
-      return characters.find((char) => char && String(char.id) === idStr);
-    },
-
-    _localSaveAll(characters) {
-      // Filter out demo characters - they should never be persisted
-      const charsToSave = characters.filter(c => 
-        !window.DemoCharacters || !window.DemoCharacters.isDemo(c)
-      );
-      
-      if (DEBUG_STORAGE) {
-        console.log(
-          '💾 LOCAL.SAVEALL: Saving',
-          charsToSave.length,
-          'characters to local storage (excluding demo)',
-        );
-      }
-
-      if (window.DanddyStorage) {
-        window.DanddyStorage.writeAll(charsToSave);
-      } else {
-        try {
-          localStorage.setItem(this.STORAGE_KEY, JSON.stringify(charsToSave));
-        } catch (e) {
-          console.warn('LOCAL.SAVEALL: Failed to write to localStorage', e);
-        }
-      }
-    },
-
-    _localAdd(character) {
-      if (DEBUG_STORAGE) {
-        console.log('💾 LOCAL.ADD: Adding character:', character.name);
-      }
-      const characters = this._getLocalAll();
-      const nowIso = new Date().toISOString();
-      const withId = {
-        ...character,
-        id: character.id || this.generateId(),
-        createdAt: character.createdAt || nowIso,
-        updatedAt: character.updatedAt || nowIso,
-      };
-      characters.push(withId);
-      this._localSaveAll(characters);
-      return withId;
-    },
-
-    _localUpdate(id, updates, options = {}) {
-      const { silent = false } = options;
-      const characters = this._getLocalAll();
-      // Use String comparison to handle type mismatches (IDs may be numeric or string)
-      const idStr = String(id);
-      const index = characters.findIndex((char) => char && String(char.id) === idStr);
-      if (index === -1) return null;
-
-      const prev = characters[index];
-
-      const next = {
-        ...prev,
-        ...updates,
-        ...(silent ? {} : { updatedAt: new Date().toISOString() }),
-      };
-
-      characters[index] = next;
-      this._localSaveAll(characters);
-      return next;
-    },
-
-    _localDelete(id) {
-      if (DEBUG_STORAGE) {
-        console.log('🗑️ LOCAL.DELETE: Deleting character with ID:', id);
-      }
-      const characters = this._getLocalAll();
-      // Use String comparison to handle type mismatches (IDs may be numeric or string)
-      const idStr = String(id);
-      const filtered = characters.filter((char) => !char || String(char.id) !== idStr);
-      this._localSaveAll(filtered);
-      return filtered.length < characters.length;
-    },
-
-    _localDuplicate(id) {
-      const character = this._getLocalById(id);
-      if (!character) return null;
-
-      const nowIso = new Date().toISOString();
-      const duplicate = {
-        ...character,
-        name: character.name ? `${character.name} (Copy)` : 'Copy',
-        id: this.generateId(),
-        createdAt: nowIso,
-        updatedAt: nowIso,
-      };
-
-      const characters = this._getLocalAll();
-      characters.push(duplicate);
-      this._localSaveAll(characters);
-      return duplicate;
-    },
-
-    _localImport(jsonString) {
-      try {
-        if (DEBUG_STORAGE) {
-          console.log('📥 LOCAL.IMPORT: Starting import...');
-        }
-
-        const character = JSON.parse(jsonString);
-        if (!character || typeof character !== 'object') {
-          throw new Error('Invalid character JSON');
-        }
-
-        // Ensure imported characters get a fresh ID/timestamps on this device
-        delete character.id;
-        const result = this._localAdd(character);
-
-        if (DEBUG_STORAGE) {
-          console.log(
-            '📥 LOCAL.IMPORT: Imported character with new ID:',
-            result.id,
-          );
-        }
-
-        return result;
-      } catch (error) {
-        console.error('LOCAL.IMPORT: Failed to import character JSON', error);
-        return null;
-      }
-    },
-  });
-})();
-
-
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-config.js =====
-
-// Character Builder configuration
-// Exposes CONFIG as a global on window for the terminal character builder.
-//
-// Detect if running locally (localhost/127.0.0.1) or from file:// (static testing)
-// Prefer the shared DanddyConfig when available so all frontends agree.
-const isLocalDevelopment =
-  (window.DanddyConfig && window.DanddyConfig.isLocalEnvironment) ||
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1' ||
-  window.location.protocol === 'file:';
-//
-// Backend origin (deployed on Render or local dev) – single source of truth
-const PRODUCTION_BACKEND_URL =
-  (window.DanddyConfig && window.DanddyConfig.BACKEND_ORIGIN) ||
-  'https://danddy-api.onrender.com';
-//
-window.CONFIG = {
-  TYPEWRITER_SPEED: 30, // milliseconds per character
-  AI_TIMEOUT: 40000, // 40 seconds - then fallback (but keep trying in background)
-  
-  // AI Feature Toggles
-  //
-  // - ENABLE_AI: master switch. When false, all AI calls are skipped and
-  //   local fallback text/logic is used instead.
-  // - ENABLE_AI_NARRATOR_COMMENTS: when false, narrator quips during the
-  //   question flow never call the backend and always use local fallbacks.
-  // - ENABLE_AI_OPTION_VARIATIONS: when false, option labels use their
-  //   built‑in text instead of asking AI to rewrite them.
-  // - NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER: hard cap on how many times
-  //   the narrator will hit the backend per character creation run. After
-  //   that, it automatically falls back to local lines.
-  //
-  // These defaults bias toward keeping the most impactful AI features
-  // (names, backstory, portraits) while trimming narrator chatter and
-  // cosmetic option-variation calls.
-  ENABLE_AI: true,
-  ENABLE_AI_NARRATOR_COMMENTS: false,
-  ENABLE_AI_OPTION_VARIATIONS: false,
-  NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER: 1,
-  
-  // SECURE: Use backend proxy instead of direct OpenAI calls
-  // Use shared backend origin for all parts of the app
-  BACKEND_URL: PRODUCTION_BACKEND_URL,
-  
-  // DEPRECATED: Direct OpenAI calls (insecure, use backend proxy instead)
-  OPENAI_API_URL: 'https://api.openai.com/v1/chat/completions',
-  OPENAI_MODEL: 'gpt-3.5-turbo',
-  
-  STORAGE_KEY: 'dnd_characters',
-  MAX_RETRIES: 2,
-  
-  // DEV MODE: Auto-login for development when running locally
-  DEV_AUTO_LOGIN: isLocalDevelopment,
-  DEV_CREDENTIALS: {
-    email: 'dev@test.com',
-    password: 'dev12345',
-    role: 'player', // lowercase - will be converted by backend
-  },
-
-  // Optional: public base URL for pre-generated portrait images stored in R2.
-  // When set, pre-generated portraits will expose a usable original image URL
-  // (used for "View Original Art" toggles in the builder/manager).
-  //
-  // Example:
-  //   PREGENERATED_PORTRAIT_BASE_URL:
-  //     'https://your-account-id.r2.dev/danddy-portraits/portraits/pregen'
-  //
-  // Leave as null to disable original image URLs for pre-generated portraits.
-  PREGENERATED_PORTRAIT_BASE_URL: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/pregen',
-
-  // Default image model for custom AI portraits.
-  //
-  // - "dall-e-3": current high-quality default
-  // - "gpt-image-1": GPT Image 1 (new image model)
-  //
-  // The actual choice is stored per-browser via StorageService so both the
-  // builder and manager stay in sync. This config value is only used as a
-  // sane fallback when no explicit preference has been saved yet.
-  DEFAULT_IMAGE_MODEL: 'gpt-image-1',
-
-  // Default portrait view mode when no explicit preference has been saved yet.
-  // - "ascii": show ASCII portraits by default
-  // - "original": prefer original images when available
-  DEFAULT_PORTRAIT_VIEW_MODE: 'original',
-
-  // Default portrait prompt theme when no explicit preference has been saved yet.
-  // This should match one of PortraitPrompt.getThemes().id values.
-  DEFAULT_PORTRAIT_PROMPT_THEME: 'cinematic-inks',
-};
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-dnd-data.js =====
-
-// Core D&D 5e data used by the character builder.
-// Exposes DND_DATA as a global on window.
-
-window.DND_DATA = {
-  races: [
-    {
-      id: 'human',
-      name: 'Human',
-      description: 'Versatile and ambitious, found in every corner of the world.',
-      abilityBonuses: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
-      traits: ['Extra Language', 'Versatile'],
-      languages: ['Common'],
-      size: 'Medium',
-      speed: 30,
-    },
-    {
-      id: 'elf',
-      name: 'Elf',
-      description: 'Graceful and long-lived, masters of magic and nature.',
-      abilityBonuses: { dex: 2 },
-      traits: ['Darkvision', 'Keen Senses', 'Fey Ancestry', 'Trance'],
-      languages: ['Common', 'Elvish'],
-      size: 'Medium',
-      speed: 30,
-    },
-    {
-      id: 'dwarf',
-      name: 'Dwarf',
-      description: 'Stout and hardy, renowned craftsmen and warriors.',
-      abilityBonuses: { con: 2 },
-      traits: ['Darkvision', 'Dwarven Resilience', 'Stonecunning'],
-      languages: ['Common', 'Dwarvish'],
-      size: 'Medium',
-      speed: 25,
-    },
-    {
-      id: 'halfling',
-      name: 'Halfling',
-      description: 'Small and nimble, lucky and brave despite their size.',
-      abilityBonuses: { dex: 2 },
-      traits: ['Lucky', 'Brave', 'Halfling Nimbleness'],
-      languages: ['Common', 'Halfling'],
-      size: 'Small',
-      speed: 25,
-    },
-    {
-      id: 'dragonborn',
-      name: 'Dragonborn',
-      description: 'Draconic humanoids with breath weapons and scaled skin.',
-      abilityBonuses: { str: 2, cha: 1 },
-      traits: ['Draconic Ancestry', 'Breath Weapon', 'Damage Resistance'],
-      languages: ['Common', 'Draconic'],
-      size: 'Medium',
-      speed: 30,
-    },
-    {
-      id: 'gnome',
-      name: 'Gnome',
-      description: 'Clever and curious, lovers of knowledge and tinkering.',
-      abilityBonuses: { int: 2 },
-      traits: ['Darkvision', 'Gnome Cunning'],
-      languages: ['Common', 'Gnomish'],
-      size: 'Small',
-      speed: 25,
-    },
-    {
-      id: 'half-elf',
-      name: 'Half-Elf',
-      description: 'Walking between two worlds, charismatic and adaptable.',
-      abilityBonuses: { cha: 2 },
-      traits: ['Darkvision', 'Fey Ancestry', 'Skill Versatility'],
-      languages: ['Common', 'Elvish'],
-      size: 'Medium',
-      speed: 30,
-    },
-    {
-      id: 'half-orc',
-      name: 'Half-Orc',
-      description: 'Fierce and strong, proving themselves through deeds.',
-      abilityBonuses: { str: 2, con: 1 },
-      traits: ['Darkvision', 'Menacing', 'Relentless Endurance', 'Savage Attacks'],
-      languages: ['Common', 'Orc'],
-      size: 'Medium',
-      speed: 30,
-    },
-    {
-      id: 'tiefling',
-      name: 'Tiefling',
-      description: 'Infernal heritage grants dark powers and distinction.',
-      abilityBonuses: { cha: 2, int: 1 },
-      traits: ['Darkvision', 'Hellish Resistance', 'Infernal Legacy'],
-      languages: ['Common', 'Infernal'],
-      size: 'Medium',
-      speed: 30,
-    },
-  ],
-  
-  classes: [
-    {
-      id: 'fighter',
-      name: 'Fighter',
-      description: 'Master of martial combat, skilled with weapons and armor.',
-      hitDie: 10,
-      primaryAbility: ['str', 'dex'],
-      savingThrows: ['str', 'con'],
-      equipment: ['Martial weapons', 'Heavy armor', 'Shield'],
-    },
-    {
-      id: 'wizard',
-      name: 'Wizard',
-      description: 'Scholar of arcane magic, wielding powerful spells.',
-      hitDie: 6,
-      primaryAbility: ['int'],
-      savingThrows: ['int', 'wis'],
-      equipment: ['Spellbook', 'Component pouch', 'Robes'],
-    },
-    {
-      id: 'rogue',
-      name: 'Rogue',
-      description: 'Skilled in stealth and precision, master of skills.',
-      hitDie: 8,
-      primaryAbility: ['dex'],
-      savingThrows: ['dex', 'int'],
-      equipment: ['Light armor', 'Thieves\' tools', 'Rapier'],
-    },
-    {
-      id: 'cleric',
-      name: 'Cleric',
-      description: 'Divine spellcaster, channeling the power of a deity.',
-      hitDie: 8,
-      primaryAbility: ['wis'],
-      savingThrows: ['wis', 'cha'],
-      equipment: ['Medium armor', 'Shield', 'Holy symbol'],
-    },
-    {
-      id: 'ranger',
-      name: 'Ranger',
-      description: 'Wilderness warrior, tracker, and protector of nature.',
-      hitDie: 10,
-      primaryAbility: ['dex', 'wis'],
-      savingThrows: ['str', 'dex'],
-      equipment: ['Longbow', 'Leather armor', 'Survival gear'],
-    },
-    {
-      id: 'paladin',
-      name: 'Paladin',
-      description: 'Holy warrior sworn to an oath, wielding divine magic.',
-      hitDie: 10,
-      primaryAbility: ['str', 'cha'],
-      savingThrows: ['wis', 'cha'],
-      equipment: ['Heavy armor', 'Martial weapons', 'Holy symbol'],
-    },
-    {
-      id: 'barbarian',
-      name: 'Barbarian',
-      description: 'Fierce warrior who channels rage in battle.',
-      hitDie: 12,
-      primaryAbility: ['str'],
-      savingThrows: ['str', 'con'],
-      equipment: ['Greataxe', 'Medium armor', 'Javelins'],
-    },
-    {
-      id: 'bard',
-      name: 'Bard',
-      description: 'Inspiring performer who weaves magic through music.',
-      hitDie: 8,
-      primaryAbility: ['cha'],
-      savingThrows: ['dex', 'cha'],
-      equipment: ['Musical instrument', 'Light armor', 'Rapier'],
-    },
-    {
-      id: 'druid',
-      name: 'Druid',
-      description: 'Nature priest who can shapeshift and wield primal magic.',
-      hitDie: 8,
-      primaryAbility: ['wis'],
-      savingThrows: ['int', 'wis'],
-      equipment: ['Druidic focus', 'Leather armor', 'Wooden shield'],
-    },
-    {
-      id: 'monk',
-      name: 'Monk',
-      description: 'Martial artist who channels ki energy through their body.',
-      hitDie: 8,
-      primaryAbility: ['dex', 'wis'],
-      savingThrows: ['str', 'dex'],
-      equipment: ['Martial arts', 'Simple weapons', 'Unarmored defense'],
-    },
-    {
-      id: 'sorcerer',
-      name: 'Sorcerer',
-      description: 'Innate spellcaster with magic in their blood.',
-      hitDie: 6,
-      primaryAbility: ['cha'],
-      savingThrows: ['con', 'cha'],
-      equipment: ['Arcane focus', 'Light crossbow', 'Component pouch'],
-    },
-    {
-      id: 'warlock',
-      name: 'Warlock',
-      description: 'Pact-bound caster drawing power from otherworldly patrons.',
-      hitDie: 8,
-      primaryAbility: ['cha'],
-      savingThrows: ['wis', 'cha'],
-      equipment: ['Eldritch invocations', 'Light armor', 'Simple weapons'],
-    },
-  ],
-  
-  backgrounds: [
-    {
-      id: 'acolyte',
-      name: 'Acolyte',
-      description: 'Served in a temple to a deity or pantheon.',
-      skillProficiencies: ['insight', 'religion'],
-      languages: 2, // Choose 2 languages
-      equipment: [
-        'Holy symbol',
-        'Prayer book or prayer wheel',
-        '5 sticks of incense',
-        'Vestments',
-        'Common clothes',
-        '15 gp'
-      ],
-      feature: {
-        name: 'Shelter of the Faithful',
-        description: 'You and your companions can receive free healing and care at temples, shrines, and other religious establishments of your faith. Those who share your religion will support you at a modest lifestyle and provide you with necessary (though not luxurious) assistance.'
-      }
-    },
-    {
-      id: 'criminal',
-      name: 'Criminal',
-      description: 'Experienced in breaking the law and living outside society.',
-      skillProficiencies: ['deception', 'stealth'],
-      toolProficiencies: ['thieves-tools', 'gaming-set'],
-      equipment: [
-        'Crowbar',
-        'Dark common clothes with hood',
-        'Belt pouch',
-        '15 gp'
-      ],
-      feature: {
-        name: 'Criminal Contact',
-        description: 'You have a reliable contact who acts as your liaison to a network of criminals. You can get messages to and from your contact even over great distances, and you know the local messengers, corrupt officials, and fence who can help you.'
-      }
-    },
-    {
-      id: 'folk-hero',
-      name: 'Folk Hero',
-      description: 'Champion of the common people, standing up against tyrants.',
-      skillProficiencies: ['animal-handling', 'survival'],
-      toolProficiencies: ['artisan-tools', 'vehicles-land'],
-      equipment: [
-        'Set of artisan\'s tools',
-        'Shovel',
-        'Iron pot',
-        'Common clothes',
-        'Belt pouch',
-        '10 gp'
-      ],
-      feature: {
-        name: 'Rustic Hospitality',
-        description: 'Since you come from the common folk, you fit in easily among them. You can find a place to hide, rest, or recuperate among commoners, who will shield you from the law or those hunting you (unless you show yourself to be a danger to them).'
-      }
-    },
-    {
-      id: 'noble',
-      name: 'Noble',
-      description: 'Born to wealth and privilege, understanding power and hierarchy.',
-      skillProficiencies: ['history', 'persuasion'],
-      toolProficiencies: ['gaming-set'],
-      languages: 1,
-      equipment: [
-        'Fine clothes',
-        'Signet ring',
-        'Scroll of pedigree',
-        'Purse',
-        '25 gp'
-      ],
-      feature: {
-        name: 'Position of Privilege',
-        description: 'You are welcome in high society, and people assume you have the right to be wherever you are. The common folk make every effort to accommodate you and avoid your displeasure, and other nobles treat you as a member of the same social sphere.'
-      }
-    },
-    {
-      id: 'sage',
-      name: 'Sage',
-      description: 'Researcher and scholar, devoted to learning and study.',
-      skillProficiencies: ['arcana', 'history'],
-      languages: 2,
-      equipment: [
-        'Bottle of black ink',
-        'Quill',
-        'Small knife',
-        'Letter from dead colleague',
-        'Common clothes',
-        '10 gp'
-      ],
-      feature: {
-        name: 'Researcher',
-        description: 'When you attempt to learn or recall a piece of lore, if you don\'t know it, you often know where and from whom you can obtain it. Usually this comes from a library, scriptorium, university, or another sage or learned person.'
-      }
-    },
-    {
-      id: 'soldier',
-      name: 'Soldier',
-      description: 'Trained warrior with experience in military campaigns.',
-      skillProficiencies: ['athletics', 'intimidation'],
-      toolProficiencies: ['gaming-set', 'vehicles-land'],
-      equipment: [
-        'Insignia of rank',
-        'Trophy from fallen enemy',
-        'Bone dice or playing cards',
-        'Common clothes',
-        '10 gp'
-      ],
-      feature: {
-        name: 'Military Rank',
-        description: 'You have a military rank from your career as a soldier. Soldiers loyal to your former organization still recognize your authority and influence. You can invoke your rank to influence soldiers and temporarily requisition simple equipment or horses.'
-      }
-    },
-    {
-      id: 'outlander',
-      name: 'Outlander',
-      description: 'Grew up in the wilderness, far from civilization.',
-      skillProficiencies: ['athletics', 'survival'],
-      toolProficiencies: ['musical-instrument'],
-      languages: 1,
-      equipment: [
-        'Staff',
-        'Hunting trap',
-        'Trophy from animal you killed',
-        'Traveler\'s clothes',
-        '10 gp'
-      ],
-      feature: {
-        name: 'Wanderer',
-        description: 'You have excellent memory for maps and geography, and can always recall the general layout of terrain and settlements. You can find food and water for yourself and up to five others each day, provided the land offers berries, game, water, and so forth.'
-      }
-    },
-    {
-      id: 'entertainer',
-      name: 'Entertainer',
-      description: 'Performer who thrives in front of an audience.',
-      skillProficiencies: ['acrobatics', 'performance'],
-      toolProficiencies: ['disguise-kit', 'musical-instrument'],
-      equipment: [
-        'Musical instrument',
-        'Favor of an admirer (love letter or trinket)',
-        'Costume',
-        'Belt pouch',
-        '15 gp'
-      ],
-      feature: {
-        name: 'By Popular Demand',
-        description: 'You can always find a place to perform (inn, tavern, circus, etc.). You receive free lodging and food of modest or comfortable standard as long as you perform each night. Your performance makes you a local figure, and strangers recognize you in any town where you\'ve performed.'
-      }
-    },
-  ],
-  
-  alignments: [
-    { id: 'lg', name: 'Lawful Good', description: 'Honor and compassion' },
-    { id: 'ng', name: 'Neutral Good', description: 'Kindness without bias' },
-    { id: 'cg', name: 'Chaotic Good', description: 'Freedom and kindness' },
-    { id: 'ln', name: 'Lawful Neutral', description: 'Order above all' },
-    { id: 'n', name: 'True Neutral', description: 'Balance and pragmatism' },
-    { id: 'cn', name: 'Chaotic Neutral', description: 'Freedom above all' },
-    { id: 'le', name: 'Lawful Evil', description: 'Methodical cruelty' },
-    { id: 'ne', name: 'Neutral Evil', description: 'Pure selfishness' },
-    { id: 'ce', name: 'Chaotic Evil', description: 'Destruction and malice' },
-  ],
-};
-
-
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-spells.js =====
-
-// Spell data for D&D 5e character builder.
-// Exposes SPELL_DATA as a global on window.
-
-window.SPELL_DATA = {
-  // Spellcasting class configurations
-  spellcastingClasses: {
-    wizard: {
-      ability: 'int',
-      cantripsKnown: 3,
-      spellsKnown: 6, // Written in spellbook
-      preparedSpells: 'INT + level', // Can prepare this many
-      spellSlots: { 1: 2 },
-    },
-    sorcerer: {
-      ability: 'cha',
-      cantripsKnown: 4,
-      spellsKnown: 2,
-      spellSlots: { 1: 2 },
-    },
-    warlock: {
-      ability: 'cha',
-      cantripsKnown: 2,
-      spellsKnown: 2,
-      spellSlots: { 1: 1 }, // Pact magic
-    },
-    bard: {
-      ability: 'cha',
-      cantripsKnown: 2,
-      spellsKnown: 4,
-      spellSlots: { 1: 2 },
-    },
-    cleric: {
-      ability: 'wis',
-      cantripsKnown: 3,
-      preparedSpells: 'WIS + level', // Can prepare from full list
-      spellSlots: { 1: 2 },
-    },
-    druid: {
-      ability: 'wis',
-      cantripsKnown: 2,
-      preparedSpells: 'WIS + level', // Can prepare from full list
-      spellSlots: { 1: 2 },
-    },
-  },
-
-  // Cantrips organized by class
-  cantrips: {
-    wizard: [
-      {
-        id: 'fire-bolt',
-        name: 'Fire Bolt',
-        school: 'Evocation',
-        description: 'Hurl a mote of fire at a creature or object. 1d10 fire damage.',
-        tags: ['damage', 'fire', 'offense'],
-      },
-      {
-        id: 'mage-hand',
-        name: 'Mage Hand',
-        school: 'Conjuration',
-        description: 'Create a spectral hand that can manipulate objects at range.',
-        tags: ['utility', 'manipulation'],
-      },
-      {
-        id: 'light',
-        name: 'Light',
-        school: 'Evocation',
-        description: 'Touch an object to make it shed bright light for 1 hour.',
-        tags: ['utility', 'light'],
-      },
-      {
-        id: 'ray-of-frost',
-        name: 'Ray of Frost',
-        school: 'Evocation',
-        description: 'Frigid beam dealing 1d8 cold damage and reducing speed.',
-        tags: ['damage', 'cold', 'offense', 'control'],
-      },
-      {
-        id: 'shocking-grasp',
-        name: 'Shocking Grasp',
-        school: 'Evocation',
-        description: 'Lightning damage on touch (1d8) and target cannot take reactions.',
-        tags: ['damage', 'lightning', 'offense'],
-      },
-      {
-        id: 'prestidigitation',
-        name: 'Prestidigitation',
-        school: 'Transmutation',
-        description: 'Minor magical trick: light a candle, clean clothes, flavor food.',
-        tags: ['utility', 'social'],
-      },
-      {
-        id: 'minor-illusion',
-        name: 'Minor Illusion',
-        school: 'Illusion',
-        description: 'Create a sound or image of an object within range.',
-        tags: ['utility', 'illusion', 'deception'],
-      },
-    ],
-    sorcerer: [
-      { id: 'fire-bolt', name: 'Fire Bolt', school: 'Evocation', description: 'Hurl a mote of fire at a creature or object. 1d10 fire damage.', tags: ['damage', 'fire', 'offense'] },
-      { id: 'ray-of-frost', name: 'Ray of Frost', school: 'Evocation', description: 'Frigid beam dealing 1d8 cold damage and reducing speed.', tags: ['damage', 'cold', 'offense', 'control'] },
-      { id: 'shocking-grasp', name: 'Shocking Grasp', school: 'Evocation', description: 'Lightning damage on touch (1d8) and target cannot take reactions.', tags: ['damage', 'lightning', 'offense'] },
-      { id: 'light', name: 'Light', school: 'Evocation', description: 'Touch an object to make it shed bright light for 1 hour.', tags: ['utility', 'light'] },
-      { id: 'mage-hand', name: 'Mage Hand', school: 'Conjuration', description: 'Create a spectral hand that can manipulate objects at range.', tags: ['utility', 'manipulation'] },
-      { id: 'prestidigitation', name: 'Prestidigitation', school: 'Transmutation', description: 'Minor magical trick: light a candle, clean clothes, flavor food.', tags: ['utility', 'social'] },
-      { id: 'minor-illusion', name: 'Minor Illusion', school: 'Illusion', description: 'Create a sound or image of an object within range.', tags: ['utility', 'illusion', 'deception'] },
-    ],
-    warlock: [
-      { id: 'eldritch-blast', name: 'Eldritch Blast', school: 'Evocation', description: 'Beam of crackling energy dealing 1d10 force damage.', tags: ['damage', 'force', 'offense'] },
-      { id: 'mage-hand', name: 'Mage Hand', school: 'Conjuration', description: 'Create a spectral hand that can manipulate objects at range.', tags: ['utility', 'manipulation'] },
-      { id: 'minor-illusion', name: 'Minor Illusion', school: 'Illusion', description: 'Create a sound or image of an object within range.', tags: ['utility', 'illusion', 'deception'] },
-      { id: 'prestidigitation', name: 'Prestidigitation', school: 'Transmutation', description: 'Minor magical trick: light a candle, clean clothes, flavor food.', tags: ['utility', 'social'] },
-      { id: 'chill-touch', name: 'Chill Touch', school: 'Necromancy', description: 'Ghostly hand dealing 1d8 necrotic damage and preventing healing.', tags: ['damage', 'necrotic', 'offense'] },
-    ],
-    bard: [
-      { id: 'vicious-mockery', name: 'Vicious Mockery', school: 'Enchantment', description: 'Insult dealing 1d4 psychic damage and imposing disadvantage.', tags: ['damage', 'psychic', 'debuff', 'social'] },
-      { id: 'light', name: 'Light', school: 'Evocation', description: 'Touch an object to make it shed bright light for 1 hour.', tags: ['utility', 'light'] },
-      { id: 'mage-hand', name: 'Mage Hand', school: 'Conjuration', description: 'Create a spectral hand that can manipulate objects at range.', tags: ['utility', 'manipulation'] },
-      { id: 'prestidigitation', name: 'Prestidigitation', school: 'Transmutation', description: 'Minor magical trick: light a candle, clean clothes, flavor food.', tags: ['utility', 'social'] },
-      { id: 'minor-illusion', name: 'Minor Illusion', school: 'Illusion', description: 'Create a sound or image of an object within range.', tags: ['utility', 'illusion', 'deception'] },
-    ],
-    cleric: [
-      { id: 'sacred-flame', name: 'Sacred Flame', school: 'Evocation', description: 'Flame-like radiance dealing 1d8 radiant damage (Dex save).', tags: ['damage', 'radiant', 'offense'] },
-      { id: 'light', name: 'Light', school: 'Evocation', description: 'Touch an object to make it shed bright light for 1 hour.', tags: ['utility', 'light'] },
-      { id: 'guidance', name: 'Guidance', school: 'Divination', description: 'Touch a creature to grant +1d4 to one ability check.', tags: ['buff', 'support'] },
-      { id: 'spare-the-dying', name: 'Spare the Dying', school: 'Necromancy', description: 'Touch a dying creature to stabilize it.', tags: ['healing', 'support'] },
-      { id: 'thaumaturgy', name: 'Thaumaturgy', school: 'Transmutation', description: 'Minor wonder: amplify voice, flicker flames, open doors.', tags: ['utility', 'social'] },
-    ],
-    druid: [
-      { id: 'produce-flame', name: 'Produce Flame', school: 'Conjuration', description: 'Flickering flame for light or to throw (1d8 fire damage).', tags: ['damage', 'fire', 'utility', 'light'] },
-      { id: 'guidance', name: 'Guidance', school: 'Divination', description: 'Touch a creature to grant +1d4 to one ability check.', tags: ['buff', 'support'] },
-      { id: 'shillelagh', name: 'Shillelagh', school: 'Transmutation', description: 'Imbue a club or staff to use Wisdom for attacks (1d8 damage).', tags: ['buff', 'combat'] },
-      { id: 'druidcraft', name: 'Druidcraft', school: 'Transmutation', description: 'Minor druidic effects: predict weather, bloom flowers, light fires.', tags: ['utility', 'nature'] },
-    ],
-  },
-
-  // 1st level spells organized by class
-  firstLevel: {
-    wizard: [
-      {
-        id: 'magic-missile',
-        name: 'Magic Missile',
-        school: 'Evocation',
-        description: 'Three darts of force, each dealing 1d4+1 damage (auto-hit).',
-        tags: ['damage', 'force', 'offense', 'reliable'],
-      },
-      {
-        id: 'shield',
-        name: 'Shield',
-        school: 'Abjuration',
-        description: 'Reaction: +5 AC until start of your next turn.',
-        tags: ['defense', 'protection', 'reaction'],
-      },
-      {
-        id: 'mage-armor',
-        name: 'Mage Armor',
-        school: 'Abjuration',
-        description: 'Set AC to 13 + Dex modifier for 8 hours.',
-        tags: ['defense', 'protection', 'buff'],
-      },
-      {
-        id: 'detect-magic',
-        name: 'Detect Magic',
-        school: 'Divination',
-        description: 'Sense magic within 30 feet for 10 minutes (concentration).',
-        tags: ['utility', 'detection', 'exploration'],
-      },
-      {
-        id: 'identify',
-        name: 'Identify',
-        school: 'Divination',
-        description: 'Learn properties of a magical object or spell affecting a creature.',
-        tags: ['utility', 'knowledge', 'exploration'],
-      },
-      {
-        id: 'sleep',
-        name: 'Sleep',
-        school: 'Enchantment',
-        description: 'Put 5d8 HP worth of creatures to sleep.',
-        tags: ['control', 'debuff', 'crowd-control'],
-      },
-      {
-        id: 'burning-hands',
-        name: 'Burning Hands',
-        school: 'Evocation',
-        description: 'Cone of fire dealing 3d6 fire damage (Dex save for half).',
-        tags: ['damage', 'fire', 'aoe', 'offense'],
-      },
-      {
-        id: 'disguise-self',
-        name: 'Disguise Self',
-        school: 'Illusion',
-        description: 'Make yourself look different for 1 hour.',
-        tags: ['utility', 'illusion', 'social', 'deception'],
-      },
-      {
-        id: 'feather-fall',
-        name: 'Feather Fall',
-        school: 'Transmutation',
-        description: 'Reaction: Up to 5 creatures fall slowly, taking no damage.',
-        tags: ['utility', 'protection', 'reaction'],
-      },
-      {
-        id: 'grease',
-        name: 'Grease',
-        school: 'Conjuration',
-        description: 'Slick grease covers a 10-foot square (Dex save or fall prone).',
-        tags: ['control', 'terrain', 'debuff'],
-      },
-    ],
-    sorcerer: [
-      { id: 'magic-missile', name: 'Magic Missile', school: 'Evocation', description: 'Three darts of force, each dealing 1d4+1 damage (auto-hit).', tags: ['damage', 'force', 'offense', 'reliable'] },
-      { id: 'shield', name: 'Shield', school: 'Abjuration', description: 'Reaction: +5 AC until start of your next turn.', tags: ['defense', 'protection', 'reaction'] },
-      { id: 'mage-armor', name: 'Mage Armor', school: 'Abjuration', description: 'Set AC to 13 + Dex modifier for 8 hours.', tags: ['defense', 'protection', 'buff'] },
-      { id: 'burning-hands', name: 'Burning Hands', school: 'Evocation', description: 'Cone of fire dealing 3d6 fire damage (Dex save for half).', tags: ['damage', 'fire', 'aoe', 'offense'] },
-      { id: 'chromatic-orb', name: 'Chromatic Orb', school: 'Evocation', description: 'Hurl a 4-inch sphere dealing 3d8 damage (choose: acid, cold, fire, lightning, poison, thunder).', tags: ['damage', 'versatile', 'offense'] },
-      { id: 'disguise-self', name: 'Disguise Self', school: 'Illusion', description: 'Make yourself look different for 1 hour.', tags: ['utility', 'illusion', 'social', 'deception'] },
-      { id: 'sleep', name: 'Sleep', school: 'Enchantment', description: 'Put 5d8 HP worth of creatures to sleep.', tags: ['control', 'debuff', 'crowd-control'] },
-    ],
-    warlock: [
-      { id: 'hex', name: 'Hex', school: 'Enchantment', description: 'Curse a creature to take +1d6 necrotic damage and disadvantage on checks (1 hour, concentration).', tags: ['damage', 'debuff', 'curse'] },
-      { id: 'armor-of-agathys', name: 'Armor of Agathys', school: 'Abjuration', description: 'Gain 5 temp HP; attackers take 5 cold damage when they hit you (1 hour).', tags: ['defense', 'protection', 'retaliation'] },
-      { id: 'arms-of-hadar', name: 'Arms of Hadar', school: 'Conjuration', description: 'Tendrils deal 2d6 necrotic damage in 10-foot radius (Str save for half).', tags: ['damage', 'necrotic', 'aoe', 'offense'] },
-      { id: 'charm-person', name: 'Charm Person', school: 'Enchantment', description: 'Charm a humanoid (Wis save) for 1 hour.', tags: ['control', 'social', 'charm'] },
-      { id: 'hellish-rebuke', name: 'Hellish Rebuke', school: 'Evocation', description: 'Reaction: Attacker takes 2d10 fire damage (Dex save for half).', tags: ['damage', 'fire', 'reaction', 'retaliation'] },
-    ],
-    bard: [
-      { id: 'healing-word', name: 'Healing Word', school: 'Evocation', description: 'Bonus action: Heal a creature for 1d4 + spellcasting modifier.', tags: ['healing', 'support', 'bonus-action'] },
-      { id: 'cure-wounds', name: 'Cure Wounds', school: 'Evocation', description: 'Touch to heal 1d8 + spellcasting modifier HP.', tags: ['healing', 'support'] },
-      { id: 'charm-person', name: 'Charm Person', school: 'Enchantment', description: 'Charm a humanoid (Wis save) for 1 hour.', tags: ['control', 'social', 'charm'] },
-      { id: 'disguise-self', name: 'Disguise Self', school: 'Illusion', description: 'Make yourself look different for 1 hour.', tags: ['utility', 'illusion', 'social', 'deception'] },
-      { id: 'faerie-fire', name: 'Faerie Fire', school: 'Evocation', description: 'Outline creatures in light, granting advantage on attacks against them (1 minute, concentration).', tags: ['buff', 'support', 'debuff'] },
-      { id: 'sleep', name: 'Sleep', school: 'Enchantment', description: 'Put 5d8 HP worth of creatures to sleep.', tags: ['control', 'debuff', 'crowd-control'] },
-      { id: 'thunderwave', name: 'Thunderwave', school: 'Evocation', description: '15-foot cube of thunderous force dealing 2d8 thunder damage and pushing creatures (Con save for half).', tags: ['damage', 'thunder', 'aoe', 'control'] },
-    ],
-    cleric: [
-      { id: 'cure-wounds', name: 'Cure Wounds', school: 'Evocation', description: 'Touch to heal 1d8 + spellcasting modifier HP.', tags: ['healing', 'support'] },
-      { id: 'healing-word', name: 'Healing Word', school: 'Evocation', description: 'Bonus action: Heal a creature for 1d4 + spellcasting modifier.', tags: ['healing', 'support', 'bonus-action'] },
-      { id: 'bless', name: 'Bless', school: 'Enchantment', description: 'Up to 3 creatures add 1d4 to attacks and saves (1 minute, concentration).', tags: ['buff', 'support', 'team'] },
-      { id: 'shield-of-faith', name: 'Shield of Faith', school: 'Abjuration', description: 'Grant +2 AC to a creature (10 minutes, concentration).', tags: ['buff', 'defense', 'support'] },
-      { id: 'guiding-bolt', name: 'Guiding Bolt', school: 'Evocation', description: 'Ranged attack dealing 4d6 radiant damage; next attack against target has advantage.', tags: ['damage', 'radiant', 'offense', 'buff'] },
-      { id: 'inflict-wounds', name: 'Inflict Wounds', school: 'Necromancy', description: 'Melee attack dealing 3d10 necrotic damage.', tags: ['damage', 'necrotic', 'offense'] },
-      { id: 'sanctuary', name: 'Sanctuary', school: 'Abjuration', description: 'Attackers must make Wis save or choose another target (1 minute).', tags: ['defense', 'protection', 'support'] },
-    ],
-    druid: [
-      { id: 'cure-wounds', name: 'Cure Wounds', school: 'Evocation', description: 'Touch to heal 1d8 + spellcasting modifier HP.', tags: ['healing', 'support'] },
-      { id: 'healing-word', name: 'Healing Word', school: 'Evocation', description: 'Bonus action: Heal a creature for 1d4 + spellcasting modifier.', tags: ['healing', 'support', 'bonus-action'] },
-      { id: 'entangle', name: 'Entangle', school: 'Conjuration', description: 'Grasping vines restrain creatures in 20-foot square (Str save, 1 minute, concentration).', tags: ['control', 'terrain', 'debuff'] },
-      { id: 'faerie-fire', name: 'Faerie Fire', school: 'Evocation', description: 'Outline creatures in light, granting advantage on attacks against them (1 minute, concentration).', tags: ['buff', 'support', 'debuff'] },
-      { id: 'goodberry', name: 'Goodberry', school: 'Transmutation', description: 'Create 10 berries that each restore 1 HP and provide nourishment (24 hours).', tags: ['healing', 'utility', 'support'] },
-      { id: 'thunderwave', name: 'Thunderwave', school: 'Evocation', description: '15-foot cube of thunderous force dealing 2d8 thunder damage and pushing creatures (Con save for half).', tags: ['damage', 'thunder', 'aoe', 'control'] },
-      { id: 'speak-with-animals', name: 'Speak with Animals', school: 'Divination', description: 'Communicate with beasts for 10 minutes.', tags: ['utility', 'social', 'nature'] },
-    ],
-  },
-
-  // Helper to get spells for a class
-  getCantripsForClass(classId) {
-    return this.cantrips[classId] || [];
-  },
-
-  getFirstLevelSpellsForClass(classId) {
-    return this.firstLevel[classId] || [];
-  },
-
-  getSpellcastingConfig(classId) {
-    return this.spellcastingClasses[classId] || null;
-  },
-
-  isSpellcaster(classId) {
-    return !!this.spellcastingClasses[classId];
-  },
-
-  // Quick mode auto-selection (balanced starter spells)
-  getQuickModeSpells(classId) {
-    const config = this.getSpellcastingConfig(classId);
-    if (!config) return null;
-
-    const cantrips = this.getCantripsForClass(classId);
-    const firstLevel = this.getFirstLevelSpellsForClass(classId);
-
-    const result = {
-      cantrips: [],
-      firstLevel: [],
-    };
-
-    // Auto-select balanced cantrips
-    switch (classId) {
-      case 'wizard':
-        result.cantrips = [cantrips[0], cantrips[1], cantrips[2]]; // Fire Bolt, Mage Hand, Light
-        result.firstLevel = [
-          firstLevel[0], // Magic Missile
-          firstLevel[1], // Shield
-          firstLevel[2], // Mage Armor
-          firstLevel[3], // Detect Magic
-          firstLevel[4], // Identify
-          firstLevel[5], // Sleep
-        ];
-        break;
-      case 'sorcerer':
-        result.cantrips = [cantrips[0], cantrips[1], cantrips[4], cantrips[5]]; // Fire Bolt, Ray of Frost, Mage Hand, Prestidigitation
-        result.firstLevel = [firstLevel[0], firstLevel[1]]; // Magic Missile, Shield
-        break;
-      case 'warlock':
-        result.cantrips = [cantrips[0], cantrips[1]]; // Eldritch Blast, Mage Hand
-        result.firstLevel = [firstLevel[0], firstLevel[1]]; // Hex, Armor of Agathys
-        break;
-      case 'bard':
-        result.cantrips = [cantrips[0], cantrips[4]]; // Vicious Mockery, Minor Illusion
-        result.firstLevel = [firstLevel[0], firstLevel[1], firstLevel[2], firstLevel[3]]; // Healing Word, Cure Wounds, Charm Person, Disguise Self
-        break;
-      case 'cleric':
-        result.cantrips = [cantrips[0], cantrips[2], cantrips[3]]; // Sacred Flame, Guidance, Spare the Dying
-        // Clerics prepare spells, so we give them a starter prepared list
-        result.firstLevel = [firstLevel[0], firstLevel[1], firstLevel[2]]; // Cure Wounds, Healing Word, Bless
-        break;
-      case 'druid':
-        result.cantrips = [cantrips[0], cantrips[1]]; // Produce Flame, Guidance
-        // Druids prepare spells, so we give them a starter prepared list
-        result.firstLevel = [firstLevel[0], firstLevel[2], firstLevel[3]]; // Cure Wounds, Entangle, Faerie Fire
-        break;
-    }
-
-    return result;
-  },
-
-  // Guided mode spell selection based on playstyle
-  getGuidedSpells(classId, preferences) {
-    const config = this.getSpellcastingConfig(classId);
-    if (!config) return null;
-
-    const cantrips = this.getCantripsForClass(classId);
-    const firstLevel = this.getFirstLevelSpellsForClass(classId);
-
-    // Filter spells by tags based on preferences
-    const filterByTags = (spells, preferredTags, count) => {
-      const tagged = spells.map(spell => {
-        const matchCount = spell.tags.filter(tag => preferredTags.includes(tag)).length;
-        return { spell, matchCount };
-      });
-      tagged.sort((a, b) => b.matchCount - a.matchCount);
-      return tagged.slice(0, count).map(item => item.spell);
-    };
-
-    // Determine preferred tags from preferences
-    const preferredTags = [];
-    if (preferences.style === 'offense') preferredTags.push('damage', 'offense');
-    if (preferences.style === 'defense') preferredTags.push('defense', 'protection', 'healing', 'support');
-    if (preferences.style === 'control') preferredTags.push('control', 'debuff', 'crowd-control');
-    if (preferences.style === 'utility') preferredTags.push('utility', 'social', 'exploration');
-
-    if (preferences.element) preferredTags.push(preferences.element);
-
-    const result = {
-      cantrips: filterByTags(cantrips, preferredTags, config.cantripsKnown),
-      firstLevel: [],
-    };
-
-    // Get first level spells
-    if (config.spellsKnown) {
-      result.firstLevel = filterByTags(firstLevel, preferredTags, config.spellsKnown);
-    } else if (config.preparedSpells) {
-      // For clerics/druids, suggest a starter prepared list
-      result.firstLevel = filterByTags(firstLevel, preferredTags, 3);
-    }
-
-    return result;
-  },
-};
-
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-narrators.js =====
-
-// Narrator personalities for DandDy character builder
-// Exposes NARRATORS as a global on window
-//
-// NOTE: The systemPrompt fields must stay in sync with:
-//   backend/routes/ai.py (NARRATOR_PROMPTS dict)
-// If you add/modify narrators here, update the backend file too!
-
-const NARRATORS = (window.NARRATORS = {
-  deadpan: {
-    id: 'deadpan',
-    name: 'The Deadpan Observer',
-    emoji: '( ._. )',
-    description: 'Dry, witty, and occasionally breaks the fourth wall',
-    systemPrompt: 'You are a deadpan, slightly cheeky D&D narrator. Your personality is dry and witty, occasionally using emoticons like ( ._.) when amused. Keep responses under 50 words. Be brief, sarcastic, and occasionally break the fourth wall. Vary your phrasing across comments.',
-    introText: `> SYSTEM INITIALIZED...
+(function(global){const location=global.location||{};const isLocalEnvironment=location.hostname==='localhost'||location.hostname==='127.0.0.1'||location.hostname.startsWith('192.168.')||location.protocol==='file:';const BACKEND_ORIGIN='https://danddy-api.onrender.com';const API_BASE_URL=`${BACKEND_ORIGIN}/api`;const TOKEN_STORAGE_KEY='dnd_auth_token';const USER_STORAGE_KEY='dnd_user_info';const CHARACTER_STORAGE_KEY='dnd_characters';const DEBUG=isLocalEnvironment;global.DanddyConfig={isLocalEnvironment,BACKEND_ORIGIN,API_BASE_URL,TOKEN_STORAGE_KEY,USER_STORAGE_KEY,CHARACTER_STORAGE_KEY,DEBUG,};if(!DEBUG&&global.console){try{['log','info','debug'].forEach((method)=>{if(typeof global.console[method]==='function'){global.console[method]=()=>{};}});}catch(e){}}})(window);(function(global){const cfg=global.DanddyConfig||{};const API_BASE_URL=cfg.API_BASE_URL||'https://danddy-api.onrender.com/api';const TOKEN_KEY=cfg.TOKEN_STORAGE_KEY||'dnd_auth_token';const USER_KEY=cfg.USER_STORAGE_KEY||'dnd_user_info';const DEBUG=!!cfg.DEBUG;const AuthService=(global.AuthService=global.AuthService||{});Object.assign(AuthService,{TOKEN_KEY,USER_KEY,getToken(){return global.localStorage.getItem(this.TOKEN_KEY);},setToken(token){if(!token)return;global.localStorage.setItem(this.TOKEN_KEY,token);},clearToken(){global.localStorage.removeItem(this.TOKEN_KEY);global.localStorage.removeItem(this.USER_KEY);},getCurrentUser(){const raw=global.localStorage.getItem(this.USER_KEY);return raw?JSON.parse(raw):null;},setCurrentUser(user){if(!user)return;global.localStorage.setItem(this.USER_KEY,JSON.stringify(user));},isAuthenticated(){return!!this.getToken();},logout(){this.clearToken();try{global.localStorage.removeItem('danddy_builder_session');}catch(e){}},async _request(path,{method='GET',body,headers}={}){const url=`${API_BASE_URL}${path}`;const baseHeaders=headers||{};const scrubBodyForLog=(payload)=>{if(!payload||typeof payload!=='object')return payload;const clone={...payload};const sensitiveKeys=['password','confirm_password','new_password','token'];sensitiveKeys.forEach((key)=>{if(key in clone){const value=String(clone[key]??'');clone[key]=value?`*** (${value.length} chars)`:'***';}});return clone;};if(DEBUG){console.log('[AuthService] HTTP request',{url,method,body:scrubBodyForLog(body),});}
+try{const response=await fetch(url,{method,headers:body?{'Content-Type':'application/json',...baseHeaders}:baseHeaders,body:body?JSON.stringify(body):undefined,});if(!response.ok){let detail=`Request failed (${response.status})`;let backendDetail=null;try{const errJson=await response.json();if(DEBUG){console.warn('[AuthService] HTTP error response',{url,status:response.status,payload:errJson,});}
+if(errJson&&errJson.detail){if(typeof errJson.detail==='string'){detail=errJson.detail;}else if(Array.isArray(errJson.detail)&&errJson.detail.length){const first=errJson.detail[0];if(first&&first.msg){detail=first.msg;}else{detail=JSON.stringify(errJson.detail);}}else{detail=JSON.stringify(errJson.detail);}
+backendDetail=errJson.detail;}}catch(_){}
+if(DEBUG){console.warn('[AuthService] HTTP request failed',{url,status:response.status,detail,backendDetail,});}
+throw new Error(detail);}
+if(response.status===204)return null;const json=await response.json();if(DEBUG){console.log('[AuthService] HTTP response OK',{url,method,status:response.status,});}
+return json;}catch(error){console.error('[AuthService] Request error:',error);throw error;}},async register(email,password,role='player'){try{const derivedUsername=typeof email==='string'&&email.includes('@')?email.split('@')[0]:email;const data=await this._request('/auth/register',{method:'POST',body:{username:derivedUsername,email,password,role},});if(!data||!data.access_token){throw new Error('Registration succeeded but no token was returned.');}
+this.setToken(data.access_token);const profile=await this.fetchProfile();const user=profile&&Object.keys(profile).length?profile:{email,role};this.setCurrentUser(user);return{success:true,user};}catch(error){return{success:false,error:error.message||'Registration failed'};}},async login(email,password){const url=`${API_BASE_URL}/auth/token`;if(DEBUG){console.log('[AuthService] Login attempt',{url,email,});}
+try{const formData=new FormData();formData.append('username',email);formData.append('password',password);const response=await fetch(url,{method:'POST',body:formData,});if(DEBUG){console.log('[AuthService] Login response received',{url,status:response.status,ok:response.ok,});}
+if(!response.ok){let detail='Login failed';let backendPayload=null;try{const errJson=await response.json();backendPayload=errJson;if(errJson&&errJson.detail)detail=errJson.detail;}catch(_){}
+if(DEBUG){console.warn('[AuthService] Login HTTP error',{url,status:response.status,detail,backendPayload,});}
+throw new Error(detail);}
+const data=await response.json();if(!data||!data.access_token){throw new Error('Login succeeded but no token was returned.');}
+if(DEBUG){console.log('[AuthService] Login succeeded, token received',{url,});}
+this.setToken(data.access_token);const profile=await this.fetchProfile();if(profile){this.setCurrentUser(profile);}
+return{success:true,user:profile};}catch(error){console.error('[AuthService] Login error:',error);return{success:false,error:error.message||'Login failed'};}},async forgotPassword(email){try{const data=await this._request('/auth/password/forgot',{method:'POST',body:{email},});return{success:true,message:(data&&data.message)||'If an account with that email exists, a password reset link has been sent.',debugToken:data&&data.debug_reset_token?data.debug_reset_token:null,};}catch(error){return{success:false,error:error.message||'Password reset request failed',};}},async resetPassword(token,newPassword){try{const data=await this._request('/auth/password/reset',{method:'POST',body:{token,new_password:newPassword},});if(!data||!data.access_token){throw new Error('Password reset succeeded but no token was returned.');}
+this.setToken(data.access_token);const profile=await this.fetchProfile();if(profile){this.setCurrentUser(profile);}
+return{success:true,user:profile};}catch(error){return{success:false,error:error.message||'Password reset failed'};}},async fetchProfile(){const token=this.getToken();if(!token)return null;try{const response=await fetch(`${API_BASE_URL}/auth/me`,{headers:{Authorization:`Bearer ${token}`},});if(!response.ok){if(response.status===401){let backendDetail=null;try{const errJson=await response.json();if(errJson&&errJson.detail){backendDetail=errJson.detail;}}catch(_){}
+console.warn('[AuthService] Token rejected by /auth/me; clearing local session.',{status:response.status,detail:backendDetail,});this.clearToken();return null;}
+if(DEBUG){console.warn('[AuthService] /auth/me non-401 error',{status:response.status,});}
+throw new Error('Failed to fetch user profile');}
+const profile=await response.json();if(DEBUG){console.log('[AuthService] /auth/me profile loaded',profile);}
+return profile;}catch(error){console.error('[AuthService] Fetch profile error:',error);return null;}},async verifyToken(){const profile=await this.fetchProfile();return!!profile;},});})(window);(function(global){const Mapper={fromBuilderToBackend(character){if(!character)return null;return{name:character.name||'',race:character.race||'',character_class:character.class||'',level:character.level||1,background:character.background||null,alignment:this._mapAlignmentFromBuilder(character.alignment),experience_points:character.experiencePoints||0,strength:character.abilities?.str||10,dexterity:character.abilities?.dex||10,constitution:character.abilities?.con||10,intelligence:character.abilities?.int||10,wisdom:character.abilities?.wis||10,charisma:character.abilities?.cha||10,hit_points_max:character.hitPoints||10,hit_points_current:character.hitPoints||10,hit_points_temp:0,armor_class:this._calculateACFromBuilder(character),initiative:this._calculateInitiativeFromBuilder(character),speed:this._getSpeedFromBuilder(character),death_save_successes:0,death_save_failures:0,saving_throw_proficiencies:character.savingThrows||[],skill_proficiencies:character.skillProficiencies||[],skill_expertises:[],tool_proficiencies:character.toolProficiencies||[],languages:character.languages||[],racial_traits:this._arrayToDict(character.racialTraits),class_features:this._arrayToDict(character.classFeatures),feats:[],background_feature:character.backgroundFeature||{},personality_traits:character.personalityTrait||null,ideals:character.ideal||null,bonds:character.bond||null,flaws:character.flaw||null,appearance:character.appearance||null,backstory:character.backstory||null,sex:character.sex||null,ascii_portrait:character.asciiPortrait||null,original_portrait_url:character.originalPortraitUrl||null,custom_portrait_ascii:character.customPortraitAscii||null,custom_portrait_count:character.customPortraitCount||0,portrait_metadata:character.portraitMetadata||{},inventory:this._arrayToDict(character.equipment),spellcasting_ability:character.spellcastingAbility||null,spell_save_dc:character.spellSaveDC||null,spell_attack_bonus:character.spellAttackBonus||null,spell_slots:character.spellSlots||{},spell_slots_used:{},cantrips:this._spellsToStringArray(character.cantrips),spells_known:this._spellsToStringArray(character.spellsKnown),spells_prepared:this._spellsToStringArray(character.spellsPrepared),conditions:[],attacks:this._arrayToDict(character.attacks),copper_pieces:character.copper||0,silver_pieces:character.silver||0,electrum_pieces:character.electrum||0,gold_pieces:character.gold||0,platinum_pieces:character.platinum||0,campaign_id:character.campaignId||null,};},fromBackendToBuilder(backendChar){if(!backendChar)return null;return{id:backendChar.id,name:backendChar.name,race:backendChar.race,class:backendChar.character_class,level:backendChar.level,background:backendChar.background,alignment:this._mapAlignmentFromBackend(backendChar.alignment),experiencePoints:backendChar.experience_points,abilities:{str:backendChar.strength,dex:backendChar.dexterity,con:backendChar.constitution,int:backendChar.intelligence,wis:backendChar.wisdom,cha:backendChar.charisma,},hitPoints:backendChar.hit_points_max,currentHitPoints:backendChar.hit_points_current,armorClass:backendChar.armor_class,initiative:backendChar.initiative,speed:backendChar.speed,savingThrows:backendChar.saving_throw_proficiencies,skillProficiencies:backendChar.skill_proficiencies,toolProficiencies:backendChar.tool_proficiencies,languages:backendChar.languages,racialTraits:backendChar.racial_traits,classFeatures:backendChar.class_features,backgroundFeature:backendChar.background_feature,personalityTrait:backendChar.personality_traits,ideal:backendChar.ideals,bond:backendChar.bonds,flaw:backendChar.flaws,appearance:backendChar.appearance,backstory:backendChar.backstory,sex:backendChar.sex||null,asciiPortrait:backendChar.ascii_portrait,originalPortraitUrl:backendChar.original_portrait_url,customPortraitAscii:backendChar.custom_portrait_ascii,customPortraitCount:backendChar.custom_portrait_count,portraitMetadata:backendChar.portrait_metadata,equipment:backendChar.inventory,spellcastingAbility:backendChar.spellcasting_ability,spellSaveDC:backendChar.spell_save_dc,spellAttackBonus:backendChar.spell_attack_bonus,spellSlots:backendChar.spell_slots,cantrips:backendChar.cantrips||[],spellsKnown:backendChar.spells_known||[],spellsPrepared:backendChar.spells_prepared||[],attacks:backendChar.attacks,copper:backendChar.copper_pieces,silver:backendChar.silver_pieces,electrum:backendChar.electrum_pieces,gold:backendChar.gold_pieces,platinum:backendChar.platinum_pieces,campaignId:backendChar.campaign_id,ownerId:backendChar.owner_id,_backendData:backendChar,};},fromManagerToBackend(character){if(!character)return null;const rawBackgroundFeature=character.backgroundFeature||character.backgroundData?.feature||{};const backgroundFeatureDict=typeof rawBackgroundFeature==='string'?{name:rawBackgroundFeature}:rawBackgroundFeature;return{name:character.name||'Unnamed Character',race:character.race||character.raceData?.name||'Human',character_class:character.class||character.classData?.name||'Fighter',level:character.level||1,background:character.background||character.backgroundData?.name||null,alignment:this._mapAlignmentFromManager(character.alignment),experience_points:character.experiencePoints||0,strength:character.abilities?.str||character.abilityScores?.str||10,dexterity:character.abilities?.dex||character.abilityScores?.dex||10,constitution:character.abilities?.con||character.abilityScores?.con||10,intelligence:character.abilities?.int||character.abilityScores?.int||10,wisdom:character.abilities?.wis||character.abilityScores?.wis||10,charisma:character.abilities?.cha||character.abilityScores?.cha||10,hit_points_max:character.hitPoints?.max||character.hitPoints||10,hit_points_current:character.hitPoints?.current||character.hitPoints?.max||character.hitPoints||10,hit_points_temp:character.hitPoints?.temp||0,armor_class:character.armorClass||10,initiative:character.initiative||0,speed:character.speed||30,death_save_successes:character.deathSaves?.successes||0,death_save_failures:character.deathSaves?.failures||0,saving_throw_proficiencies:character.savingThrows||[],skill_proficiencies:character.skillProficiencies||[],skill_expertises:character.skillExpertises||[],tool_proficiencies:character.toolProficiencies||[],languages:character.languages||[],racial_traits:this._arrayToDict(character.racialTraits||character.raceData?.traits||[],),class_features:this._arrayToDict(character.classFeatures||character.classData?.features||[],),feats:this._arrayToDict(character.feats||[]),background_feature:backgroundFeatureDict,personality_traits:character.personalityTraits||character.personalityTrait||null,ideals:character.ideals||null,bonds:character.bonds||null,flaws:character.flaws||null,appearance:character.appearance||null,backstory:character.backstory||null,sex:character.sex||null,ascii_portrait:character.asciiPortrait||null,original_portrait_url:character.originalPortraitUrl||null,custom_portrait_ascii:character.customPortraitAscii||null,custom_portrait_count:character.customPortraitCount||0,portrait_metadata:character.portraitMetadata||{},inventory:(character.equipment||character.inventory||[]).map((item)=>typeof item==='string'?{name:item}:item,),spellcasting_ability:character.spellcastingAbility||null,spell_save_dc:character.spellSaveDC||null,spell_attack_bonus:character.spellAttackBonus||null,spell_slots:character.spellSlots||{},spell_slots_used:character.spellSlotsUsed||{},cantrips:this._spellsToStringArray(character.cantrips||[]),spells_known:this._spellsToStringArray(character.spellsKnown||[]),spells_prepared:this._spellsToStringArray(character.spellsPrepared||[]),conditions:character.conditions||[],attacks:character.attacks||[],copper_pieces:character.currency?.cp??character.copper??0,silver_pieces:character.currency?.sp??character.silver??0,electrum_pieces:character.currency?.ep??character.electrum??0,gold_pieces:character.currency?.gp??character.gold??0,platinum_pieces:character.currency?.pp??character.platinum??0,campaign_id:character.campaignId||null,};},fromBackendToManager(apiChar){if(!apiChar)return null;return{id:apiChar.id.toString(),name:apiChar.name,race:apiChar.race,class:apiChar.character_class,level:apiChar.level,background:apiChar.background,alignment:this._mapAlignmentFromBackend(apiChar.alignment),experiencePoints:apiChar.experience_points,abilities:{str:apiChar.strength,dex:apiChar.dexterity,con:apiChar.constitution,int:apiChar.intelligence,wis:apiChar.wisdom,cha:apiChar.charisma,},hitPoints:{max:apiChar.hit_points_max,current:apiChar.hit_points_current,temp:apiChar.hit_points_temp,},armorClass:apiChar.armor_class,initiative:apiChar.initiative,speed:apiChar.speed,savingThrows:apiChar.saving_throw_proficiencies,skillProficiencies:apiChar.skill_proficiencies,skillExpertises:apiChar.skill_expertises,toolProficiencies:apiChar.tool_proficiencies,languages:apiChar.languages,racialTraits:apiChar.racial_traits,classFeatures:apiChar.class_features,feats:apiChar.feats,backgroundFeature:apiChar.background_feature,personalityTraits:apiChar.personality_traits,ideals:apiChar.ideals,bonds:apiChar.bonds,flaws:apiChar.flaws,appearance:apiChar.appearance,backstory:apiChar.backstory,sex:apiChar.sex||null,equipment:apiChar.inventory.map((item)=>typeof item==='object'&&item.name?item.name:item,),spellcastingAbility:apiChar.spellcasting_ability,spellSaveDC:apiChar.spell_save_dc,spellAttackBonus:apiChar.spell_attack_bonus,spellSlots:apiChar.spell_slots,spellSlotsUsed:apiChar.spell_slots_used,cantrips:apiChar.cantrips||[],spellsKnown:apiChar.spells_known||[],spellsPrepared:apiChar.spells_prepared||[],conditions:apiChar.conditions,attacks:apiChar.attacks,currency:{cp:apiChar.copper_pieces,sp:apiChar.silver_pieces,ep:apiChar.electrum_pieces,gp:apiChar.gold_pieces,pp:apiChar.platinum_pieces,},campaignId:apiChar.campaign_id,ownerId:apiChar.owner_id,createdAt:apiChar.created_at,updatedAt:apiChar.updated_at,asciiPortrait:apiChar.ascii_portrait,originalPortraitUrl:apiChar.original_portrait_url,customPortraitAscii:apiChar.custom_portrait_ascii,customPortraitCount:apiChar.custom_portrait_count||0,portraitMetadata:apiChar.portrait_metadata||{},};},_arrayToDict(arr){if(!arr||!Array.isArray(arr))return[];return arr.map((item)=>{if(typeof item==='object'&&item!==null)return item;if(typeof item==='string')return{name:item};return{value:item};});},_spellsToStringArray(arr){if(!arr||!Array.isArray(arr))return[];return arr.map((item)=>{if(typeof item==='object'&&item!==null&&item.name)return item.name;if(typeof item==='string')return item;return String(item);});},_mapAlignmentFromBuilder(alignment){if(!alignment)return null;const map={'lg':'lawful_good','ng':'neutral_good','cg':'chaotic_good','ln':'lawful_neutral','n':'true_neutral','cn':'chaotic_neutral','le':'lawful_evil','ne':'neutral_evil','ce':'chaotic_evil','Lawful Good':'lawful_good','Neutral Good':'neutral_good','Chaotic Good':'chaotic_good','Lawful Neutral':'lawful_neutral','True Neutral':'true_neutral','Chaotic Neutral':'chaotic_neutral','Lawful Evil':'lawful_evil','Neutral Evil':'neutral_evil','Chaotic Evil':'chaotic_evil',};return map[alignment]||null;},_mapAlignmentFromManager(alignment){return this._mapAlignmentFromBuilder(alignment);},_mapAlignmentFromBackend(backendAlignment){if(!backendAlignment)return null;const reverseMap={'lawful_good':'lg','neutral_good':'ng','chaotic_good':'cg','lawful_neutral':'ln','true_neutral':'n','chaotic_neutral':'cn','lawful_evil':'le','neutral_evil':'ne','chaotic_evil':'ce',};return reverseMap[backendAlignment]||null;},_calculateACFromBuilder(character){const dex=character.abilities?.dex;const dexMod=dex?Math.floor((dex-10)/2):0;return 10+dexMod;},_calculateInitiativeFromBuilder(character){const dex=character.abilities?.dex;return dex?Math.floor((dex-10)/2):0;},_getSpeedFromBuilder(character){const race=(character.race||'').toLowerCase();const speedMap={dwarf:25,halfling:25,gnome:25,elf:30,human:30,'half-elf':30,'half-orc':30,tiefling:30,dragonborn:30,};return speedMap[race]||30;},};global.DanddyCharacterMapper=Mapper;})(window);(function(global){const cfg=global.DanddyConfig||{};const STORAGE_KEY=cfg.CHARACTER_STORAGE_KEY||'dnd_characters';const CACHE_KEY=`${STORAGE_KEY}_cache`;const Storage={STORAGE_KEY,CACHE_KEY,readAll(){const raw=global.localStorage.getItem(STORAGE_KEY);return raw?JSON.parse(raw):[];},writeAll(characters){global.localStorage.setItem(STORAGE_KEY,JSON.stringify(characters||[]));},upsert(character){if(!character)return;const chars=this.readAll();const idStr=String(character.id);const idx=chars.findIndex((c)=>c&&String(c.id)===idStr);if(idx>=0){chars[idx]=character;}else{chars.push(character);}
+this.writeAll(chars);},deleteById(id){const idStr=String(id);const chars=this.readAll().filter((c)=>!c||String(c.id)!==idStr);this.writeAll(chars);},readCache(){const raw=global.localStorage.getItem(CACHE_KEY);return raw?JSON.parse(raw):[];},writeCache(characters){global.localStorage.setItem(CACHE_KEY,JSON.stringify(characters||[]));},clearAll(){global.localStorage.removeItem(STORAGE_KEY);global.localStorage.removeItem(CACHE_KEY);},};global.DanddyStorage=Storage;})(window);(function(global){const DEFAULT_THEME_ID='cinematic-inks';const ADMIN_STORAGE_KEY='dnd_portrait_prompt_entries_v1';let adminCache=null;const DEFAULT_POSES={default:['standing in a confident, heroic pose','standing in a relaxed but ready stance','standing tall with one hand raised in greeting',],fighter:['standing in a battle-ready stance, weapon raised','resting a heavy weapon across their shoulder','standing guard with shield raised',],wizard:['gesturing mystically with arcane energy gathering','holding a staff aloft, channeling power','studying an ancient tome with focused concentration',],rogue:['emerging from shadows with a sly grin','perched in a ready crouch, daggers drawn','leaning casually against nothing, arms crossed',],cleric:['raising a holy symbol with radiant light','standing in peaceful prayer','blessing with an outstretched hand',],ranger:['drawing a bow with focused aim','kneeling to examine tracks on the ground','standing with a beast companion at their side',],paladin:['standing resolute with sword planted before them','raising a glowing holy weapon high','kneeling in devotion, armor gleaming',],barbarian:['roaring in battle rage, muscles tensed','wielding a massive weapon overhead','standing defiant with chest out',],bard:['strumming a lute with a charming smile','performing dramatically with flowing gestures','winking knowingly at the viewer',],druid:['communing with nature, eyes closed','shape-shifting with swirling magical energy','standing surrounded by woodland creatures',],monk:['in a focused martial arts stance','meditating in peaceful contemplation','executing a precise combat technique',],sorcerer:['crackling with innate magical energy','casting with wild, uncontrolled power','standing with elemental forces swirling around them',],warlock:['channeling dark eldritch energy','standing with patron symbols glowing nearby','invoking otherworldly power with outstretched hands',],};const DEFAULT_CAMERAS={default:['Camera angle: three-quarter view that clearly shows the character','Camera angle: dramatic low angle looking up at the character','Camera angle: portrait framing focused on upper body and face',],};let apiSyncAttempted=false;function normalize(str){return(str||'').toString().trim();}
+function getApiBase(){return(global.DanddyConfig&&global.DanddyConfig.API_BASE_URL)||'http://localhost:8000/api';}
+function getAuthToken(){return global.AuthService&&global.AuthService.getToken?global.AuthService.getToken():null;}
+function isAuthenticated(){return global.AuthService&&global.AuthService.isAuthenticated?global.AuthService.isAuthenticated():false;}
+function parseEntriesToCache(entries){const races={};const classes={};const scenes={};const poses={};const cameras={};const styles={};(entries||[]).forEach((entry)=>{if(!entry||!entry.kind||!entry.key)return;const kind=normalize(entry.kind).toLowerCase();const key=normalize(entry.key).toLowerCase();if(!key)return;if(kind==='race'){const desc=normalize(entry.description);if(desc){if(!Array.isArray(races[key]))races[key]=[];races[key].push(desc);}}else if(kind==='class'){const desc=normalize(entry.description);if(desc){if(!Array.isArray(classes[key]))classes[key]=[];classes[key].push(desc);}}else if(kind==='scene'||kind==='background'){const desc=normalize(entry.description);if(desc){if(!Array.isArray(scenes[key]))scenes[key]=[];scenes[key].push(desc);}}else if(kind==='pose'){const desc=normalize(entry.description);if(desc){if(!Array.isArray(poses[key]))poses[key]=[];poses[key].push(desc);}}else if(kind==='camera'){const desc=normalize(entry.description);if(desc){if(!Array.isArray(cameras[key]))cameras[key]=[];cameras[key].push(desc);}}else if(kind==='style'){const styleDesc=normalize(entry.style_description||entry.styleDescription||entry.description);const sceneDesc=normalize(entry.background_description||entry.backgroundDescription);if(!styles[key]){styles[key]={};}
+if(styleDesc)styles[key].styleDescription=styleDesc;if(sceneDesc)styles[key].sceneDescription=sceneDesc;}});return{races,classes,scenes,styles,poses,cameras};}
+async function syncFromAPI(){if(apiSyncAttempted)return;if(!isAuthenticated())return;apiSyncAttempted=true;const token=getAuthToken();if(!token)return;try{const response=await fetch(`${getApiBase()}/prompt-entries`,{headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json',},});if(!response.ok){console.warn('PortraitPrompt: API fetch failed with status',response.status);if(response.status===401){if(global.AuthService&&typeof global.AuthService.clearToken==='function'){global.AuthService.clearToken();console.warn('PortraitPrompt: Cleared expired auth token');}}
+return;}
+const apiEntries=await response.json();if(!Array.isArray(apiEntries)){console.warn('PortraitPrompt: API returned non-array');return;}
+adminCache=parseEntriesToCache(apiEntries);try{if(global.localStorage){global.localStorage.removeItem(ADMIN_STORAGE_KEY);}}catch(e){}
+console.warn('PortraitPrompt: Loaded',apiEntries.length,'entries from API (cloud)');console.warn('PortraitPrompt: Parsed styles:',Object.keys(adminCache.styles||{}));}catch(e){console.warn('PortraitPrompt: API fetch error',e);}}
+function loadAdminCache(){if(adminCache)return adminCache;const empty={races:{},classes:{},scenes:{},styles:{},poses:{},cameras:{},};if(isAuthenticated()){return empty;}
+try{const raw=global.localStorage?global.localStorage.getItem(ADMIN_STORAGE_KEY):null;if(!raw){adminCache=empty;return adminCache;}
+const parsed=JSON.parse(raw);if(!Array.isArray(parsed)){adminCache=empty;return adminCache;}
+adminCache=parseEntriesToCache(parsed);return adminCache;}catch(e){adminCache=empty;return adminCache;}}
+function getVariableSnippet(kind,key){const cache=loadAdminCache();const k=normalize(key).toLowerCase();if(!k)return null;if(kind==='race'){const variants=cache.races[k];if(Array.isArray(variants)&&variants.length){const idx=Math.floor(Math.random()*variants.length);return variants[idx];}
+return null;}
+if(kind==='class'){const variants=cache.classes[k];if(Array.isArray(variants)&&variants.length){const idx=Math.floor(Math.random()*variants.length);return variants[idx];}
+return null;}
+if(kind==='scene'){const variants=cache.scenes[k];if(Array.isArray(variants)&&variants.length){const idx=Math.floor(Math.random()*variants.length);return variants[idx];}
+return null;}
+if(kind==='pose'){const variants=cache.poses[k];if(Array.isArray(variants)&&variants.length){const idx=Math.floor(Math.random()*variants.length);return variants[idx];}
+return null;}
+if(kind==='camera'){const variants=cache.cameras[k];if(Array.isArray(variants)&&variants.length){const idx=Math.floor(Math.random()*variants.length);return variants[idx];}
+return null;}
+return null;}
+function getPoseVariants(classKey){const cache=loadAdminCache();const k=normalize(classKey).toLowerCase();if(!k)return null;const variants=cache.poses[k];if(Array.isArray(variants)&&variants.length){return variants;}
+if(DEFAULT_POSES[k]&&DEFAULT_POSES[k].length){return DEFAULT_POSES[k];}
+if(DEFAULT_POSES.default&&DEFAULT_POSES.default.length){return DEFAULT_POSES.default;}
+return null;}
+function getCameraVariants(classKey){const cache=loadAdminCache();const k=normalize(classKey).toLowerCase();if(!k)return null;const variants=cache.cameras[k];if(Array.isArray(variants)&&variants.length){return variants;}
+if(DEFAULT_CAMERAS[k]&&DEFAULT_CAMERAS[k].length){return DEFAULT_CAMERAS[k];}
+if(DEFAULT_CAMERAS.default&&DEFAULT_CAMERAS.default.length){return DEFAULT_CAMERAS.default;}
+return null;}
+function getStyleOverrides(themeId){const cache=loadAdminCache();const k=normalize(themeId);if(!k)return null;const entry=cache.styles[k];if(!entry)return null;return{styleDescription:entry.styleDescription||'',sceneDescription:entry.sceneDescription||'',};}
+const THEMES={'cinematic-inks':{id:'cinematic-inks',label:'Cinematic Inks (default)',description:'More cinematic lighting and framing while staying in black-and-white ink.',buildStyleLines(options){const lines=[];lines.push('Render in dramatic black-and-white ink with deep shadows and sharp rim lighting.',);lines.push('Treat the illustration like a film still: strong focal point, clear subject separation, and layered depth.',);lines.push('Use a limited range of mid-tone hatching to suggest volume without muddying the forms.',);lines.push('Keep the background abstract and mostly dark so the character silhouette and face read instantly.',);lines.push('Overall mood: cinematic fantasy portrait, serious and iconic, suitable for a character sheet.',);lines.push('Aspect ratio 3:4.');return lines;},},'classic-high-fantasy':{id:'classic-high-fantasy',label:'Classic High-Fantasy',description:'Highly detailed heroic-fantasy realist style in black and white with sculpted shading.',buildStyleLines(options){const lines=[];lines.push('Illustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white.',);lines.push('Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form.',);lines.push('Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes.',);lines.push('Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces.',);lines.push('Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence.',);lines.push('Aspect ratio 3:4.');return lines;},},};function getThemeById(themeId){if(themeId&&THEMES[themeId]){return THEMES[themeId];}
+return THEMES[DEFAULT_THEME_ID];}
+function buildBasePortraitInstructions(options){const{characterDescription,posePrompt,cameraPrompt,themeId,}=options||{};const parts=[];if(characterDescription){parts.push(`Create a high-contrast black-and-white fantasy illustration of a ${characterDescription}.`,);}else{parts.push('Create a high-contrast black-and-white fantasy illustration.');}
+const theme=getThemeById(themeId);if(theme&&typeof theme.buildStyleLines==='function'){try{const styleLines=theme.buildStyleLines({characterDescription,posePrompt,cameraPrompt,});if(Array.isArray(styleLines)){styleLines.forEach((line)=>{if(line&&typeof line==='string'){parts.push(line);}});}}catch(e){const fallback=THEMES[DEFAULT_THEME_ID];if(fallback&&typeof fallback.buildStyleLines==='function'){const fallbackLines=fallback.buildStyleLines({characterDescription,posePrompt,cameraPrompt,});if(Array.isArray(fallbackLines)){fallbackLines.forEach((line)=>{if(line&&typeof line==='string'){parts.push(line);}});}}}}
+if(posePrompt){parts.push(`Pose: ${posePrompt}`);}
+return parts;}
+function buildStyleAndBackgroundDescriptions(options){const{themeId}=options||{};const overrides=getStyleOverrides(themeId);let styleDescription='';let backgroundDescription=null;if(overrides&&overrides.styleDescription){styleDescription=overrides.styleDescription;}
+if(overrides&&overrides.sceneDescription){backgroundDescription=overrides.sceneDescription;}
+if(backgroundDescription==null){let sceneSnippet=getVariableSnippet('scene',themeId);if(!sceneSnippet){sceneSnippet=getVariableSnippet('scene','default');}
+if(sceneSnippet){backgroundDescription=sceneSnippet;}}
+if(!styleDescription||backgroundDescription==null){const theme=getThemeById(themeId);let styleLines=[];if(theme&&typeof theme.buildStyleLines==='function'){try{const lines=theme.buildStyleLines(options||{});if(Array.isArray(lines)){styleLines=lines.filter((l)=>typeof l==='string'&&l.trim(),);}}catch(e){const fallback=THEMES[DEFAULT_THEME_ID];if(fallback&&typeof fallback.buildStyleLines==='function'){const lines=fallback.buildStyleLines(options||{});if(Array.isArray(lines)){styleLines=lines.filter((l)=>typeof l==='string'&&l.trim(),);}}}}
+const backgroundLines=[];const otherLines=[];styleLines.forEach((line)=>{if(/background/i.test(line)){backgroundLines.push(line);}else{otherLines.push(line);}});if(!styleDescription){styleDescription=otherLines.join(' ');}
+if(backgroundDescription==null){backgroundDescription=backgroundLines.length?backgroundLines.join(' '):null;}}
+return{styleDescription,backgroundDescription,};}
+function buildCustomPortraitInstructions(options){const opts=options||{};const posePrompt=opts.posePrompt||'';const cameraPrompt=opts.cameraPrompt||'';const themeId=opts.themeId;let styleDescription='';let backgroundDescription='';try{const sections=buildStyleAndBackgroundDescriptions({posePrompt,cameraPrompt,themeId,})||{};styleDescription=sections.styleDescription||'';backgroundDescription=sections.backgroundDescription||'';}catch(e){}
+if(!styleDescription){styleDescription='High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';}
+if(!backgroundDescription){backgroundDescription='Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';}
+const lines=[];if(posePrompt){lines.push(`Pose: ${posePrompt}`);}
+if(styleDescription){lines.push(`STYLE: ${styleDescription}`);}
+if(backgroundDescription){lines.push(`Scene: ${backgroundDescription}`);}
+return lines;}
+const PortraitPrompt=(global.PortraitPrompt=global.PortraitPrompt||{});PortraitPrompt.buildBasePortraitInstructions=buildBasePortraitInstructions;PortraitPrompt.buildStyleAndBackgroundDescriptions=buildStyleAndBackgroundDescriptions;PortraitPrompt.buildCustomPortraitInstructions=buildCustomPortraitInstructions;PortraitPrompt.getVariableSnippet=getVariableSnippet;PortraitPrompt.getPoseVariants=getPoseVariants;PortraitPrompt.getCameraVariants=getCameraVariants;PortraitPrompt.invalidateCache=function invalidateCache(){adminCache=null;};PortraitPrompt.syncFromAPI=syncFromAPI;PortraitPrompt.resetAPISync=function resetAPISync(){apiSyncAttempted=false;};PortraitPrompt.getDefaultThemeId=function getDefaultThemeId(){return DEFAULT_THEME_ID;};PortraitPrompt.getThemes=function getThemes(){const baseThemes=Object.keys(THEMES).map((id)=>{const theme=THEMES[id];return{id:theme.id,label:theme.label,description:theme.description,};});let customThemes=[];try{const cache=loadAdminCache();const styleKeys=cache&&cache.styles?Object.keys(cache.styles):[];const builtInIds=Object.keys(THEMES).map((k)=>k.toLowerCase());const extraIds=styleKeys.filter((id)=>!builtInIds.includes(id.toLowerCase()));customThemes=extraIds.map((id)=>{const styleEntry=cache.styles[id]||{};const rawDesc=styleEntry.styleDescription||'';const trimmed=rawDesc&&rawDesc.length>120?rawDesc.slice(0,117)+'...':rawDesc;return{id,label:`Custom: ${id}`,description:trimmed||'Custom portrait style',};});}catch(e){customThemes=[];}
+return baseThemes.concat(customThemes);};const RACE_DESCRIPTIONS={human:'human with average features',elf:'elf with pointed ears and graceful features',dwarf:'dwarf with a thick beard and stocky build',halfling:'halfling, small and cheerful',dragonborn:'dragonborn with scaled skin and dragon-like features',gnome:'gnome, small with clever eyes','half-elf':'half-elf with slightly pointed ears','half-orc':'half-orc with tusks and powerful build',tiefling:'tiefling with horns and a tail',};const CLASS_DESCRIPTIONS={fighter:'wearing heavy armor and holding a sword',wizard:'in flowing robes holding a staff',rogue:'in dark leather armor with daggers',cleric:'in holy vestments with a sacred symbol',ranger:'with a bow and forest attire',paladin:'in shining armor with a holy shield',barbarian:'with wild hair wielding a massive axe',bard:'with a lute and colorful clothing',druid:'with nature-themed robes and wooden staff',monk:'in simple robes in a martial stance',sorcerer:'with crackling magical energy',warlock:'with dark robes and eldritch symbols',};const MAGIC_SPECIALIZATIONS={wizard:'specializing in elemental magic like fire and ice',sorcerer:'channeling raw elemental arcane power',warlock:'wielding shadowy eldritch magic',cleric:'focused on radiant and healing magic',druid:'calling on primal nature and elemental magic',bard:'weaving subtle enchantments and support magic through music',paladin:'enhancing strikes with holy, radiant magic',};PortraitPrompt.getRaceDescription=function getRaceDescription(race){const key=(race||'').toLowerCase();return RACE_DESCRIPTIONS[key]||race||'';};PortraitPrompt.getClassDescription=function getClassDescription(classType){const key=(classType||'').toLowerCase();return CLASS_DESCRIPTIONS[key]||classType||'';};PortraitPrompt.getMagicSpecialization=function getMagicSpecialization(classType){const key=(classType||'').toLowerCase();return MAGIC_SPECIALIZATIONS[key]||null;};PortraitPrompt.getDescriptionData=function getDescriptionData(){return{races:RACE_DESCRIPTIONS,classes:CLASS_DESCRIPTIONS,magic:MAGIC_SPECIALIZATIONS,};};function initAutoSync(){setTimeout(async()=>{if(isAuthenticated()){try{await syncFromAPI();}catch(e){console.warn('PortraitPrompt: Auto-sync failed',e);}}},100);}
+if(typeof document!=='undefined'){if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initAutoSync);}else{initAutoSync();}}})(window);const PortraitPoseData=(window.PortraitPoseData={getRandomPose(classKey){const normalizedKey=(classKey||'default').toLowerCase();if(window.PortraitPrompt&&typeof PortraitPrompt.getPoseVariants==='function'){let poses=PortraitPrompt.getPoseVariants(normalizedKey);if(!poses||!poses.length){poses=PortraitPrompt.getPoseVariants('default');}
+if(poses&&poses.length){return poses[Math.floor(Math.random()*poses.length)];}}
+console.warn(`PortraitPoseData: No poses configured for "${normalizedKey}". `+'Use the admin UI (prompt-style-admin.html) to load defaults.',);return'standing in a heroic pose';},getRandomCamera(classKey){const normalizedKey=(classKey||'default').toLowerCase();if(window.PortraitPrompt&&typeof PortraitPrompt.getCameraVariants==='function'){let cameras=PortraitPrompt.getCameraVariants(normalizedKey);if(!cameras||!cameras.length){cameras=PortraitPrompt.getCameraVariants('default');}
+if(cameras&&cameras.length){return cameras[Math.floor(Math.random()*cameras.length)];}}
+console.warn(`PortraitPoseData: No cameras configured for "${normalizedKey}". `+'Use the admin UI (prompt-style-admin.html) to load defaults.',);return'Camera angle: three-quarter view';},getRandomPoseAndCamera(classKey){return{pose:this.getRandomPose(classKey),camera:this.getRandomCamera(classKey),};},hasPoses(classKey){const normalizedKey=(classKey||'default').toLowerCase();if(window.PortraitPrompt&&typeof PortraitPrompt.getPoseVariants==='function'){let poses=PortraitPrompt.getPoseVariants(normalizedKey);if(!poses||!poses.length){poses=PortraitPrompt.getPoseVariants('default');}
+return poses&&poses.length>0;}
+return false;},hasCameras(classKey){const normalizedKey=(classKey||'default').toLowerCase();if(window.PortraitPrompt&&typeof PortraitPrompt.getCameraVariants==='function'){let cameras=PortraitPrompt.getCameraVariants(normalizedKey);if(!cameras||!cameras.length){cameras=PortraitPrompt.getCameraVariants('default');}
+return cameras&&cameras.length>0;}
+return false;},});const CharacterNameData=(window.CharacterNameData={patterns:{dwarf:{first:['Thorin','Gimli','Balin','Dwalin','Thrain','Dain','Bombur','Bofur','Kili','Fili','Oin','Gloin','Bruenor','Morgran','Rurik','Einkil','Barendd','Baern','Harbek','Rumnar',],last:['Ironforge','Stonehelm','Deepdelver','Mountainheart','Goldseeker','Ironfoot','Hammerhand','Oakenshield','Battlehammer','Fireforge','Stormdelver','Stonebreaker','Coppervein','Bronzebrow','Rockseeker',],},elf:{first:['Legolas','Galadriel','Elrond','Arwen','Thranduil','Celeborn','Elessar','Elendil','Finrod','Luthien','Faelar','Aelar','Mialee','Syllin','Thia','Varis','Althaea','Enna','Nelar',],last:['Greenleaf','Starweaver','Moonwhisper','Silverbow','Nightbreeze','Sunshadow','Stormwind','Brightwood','Dawnpetal','Evenwood','Silverfrond','Nightstar','Willowshade','Starfall','Moonbrook',],},human:{first:['Aragorn','Boromir','Eowyn','Faramir','Theodred','Eomer','Eddard','Catelyn','Jon','Sansa','Alaric','Rowan','Serena','Garrick','Lysa','Marcus','Elena','Corin','Brynn',],last:['Stormborn','Blackwood','Riverrun','Ironwall','Longstrider','Stormblade','Brightshield','Greywind','Highvale','Steelguard','Duskwalker','Redcrest','Stoneward','Ashborne','Hawkspear',],},halfling:{first:['Bilbo','Frodo','Sam','Merry','Pippin','Rosie','Hamfast','Belladonna','Lobelia','Fredegar','Milo','Daisy','Rosa','Cora','Perrin','Tansy','Dodo','Seraphina','Odo',],last:['Baggins','Took','Brandybuck','Gamgee','Goodbody','Proudfoot','Burrows','Underhill','Greenhill','Fairbairn','Hilltopple','Brushgather','Tealeaf','Thorngage','Goodbarrel','Hearthcoat',],},dragonborn:{first:['Drax','Razax','Thordak','Torinn','Balasar','Kriv','Nadarr','Heskan','Shedinn','Ghesh','Arjhan','Medrash','Rhogar','Tarhun','Akra','Miirym','Sora','Vezera','Zorvath',],last:['Flameheart','Ironclaw','Stormsinger','Ashborn','Dragonfall','Firebreath','Scaleborn','Wyrmblood','Skyscale','Embermaw','Stormscale','Brightflame','Stoneclaw','Cloudsunder','Blazewing',],},gnome:{first:['Glim','Boddynock','Dimble','Fonkin','Seebo','Zook','Eldon','Brocc','Burgell','Jebeddo','Alston','Bimpnottin','Fizzik','Carlin','Nissa','Wrenn','Tavi','Ellyjobell','Zanna',],last:['Tinkertop','Sparklegem','Nimblefingers','Brightgear','Gadgetwhiz','Fizzlebang','Cogsworth','Glimmergold','Whistlewhirr','Gadgetgrind','Janglecoin','Copperbolt','Mithrilspanner','Quickwidget','Proudgear',],},'half-elf':{first:['Tanis','Raistlin','Laurana','Gilthanas','Tanthalas','Silvara','Eliana','Korrin','Faelyn','Soveliss','Ilanis','Kael','Myla','Tharos','Elira','Daeris','Rian','Caelynn','Torren',],last:['Half-Elven','Moonbrook','Starfall','Whisperwind','Shadowvale','Dawnbringer','Twilightbane','Silvermoon','Nightbloom','Duskwillow','Starcrest','Eveningfall','Shadeglade','Brightglen','Silvershade',],},'half-orc':{first:['Grognak','Throk','Ugak','Krod','Sharn','Dench','Grul','Drog','Feng','Shump','Ghorbash','Mazog','Uglar','Ruk','Karash','Vorag','Yagra','Shautha','Ovak',],last:['Ironhide','Bonecrusher','Skullsplitter','Bloodaxe','Stonefist','Grimjaw','Warbringer','Doomhammer','Boulderfist','Skullbrand','Gorefang','Bloodfury','Ironmaw','Steelgrip','Rageborn',],},tiefling:{first:['Zevlor','Raven','Damakos','Akta','Therai','Nemeia','Kallista','Leucis','Orianna','Morthos','Azazel','Seraphine','Xathos','Riven','Lyra','Caelum','Naeris','Vexria','Zheren',],last:['Hellborn','Darkflame','Shadowhorn','Nightwhisper','Embersoul','Dreadfire','Ashenborn','Voidwalker','Grimshroud','Duskwreath','Soulbrand','Cindertongue','Nightreign','Gloomsigil','Shadebinder',],},},getPattern(race){const key=(race||'').toLowerCase();return this.patterns[key]||this.patterns.human;},getRaces(){return Object.keys(this.patterns);},});const{isLocalEnvironment=false,API_BASE_URL,TOKEN_STORAGE_KEY,USER_STORAGE_KEY,}=window.DanddyConfig||{};const DEBUG_CLOUD=!!(window.DanddyConfig&&window.DanddyConfig.DEBUG);const CharacterCloudStorage=(window.CharacterCloudStorage={_spellsToStringArray(arr){if(!arr||!Array.isArray(arr))return[];return arr.map(item=>{if(typeof item==='object'&&item!==null&&item.name){return item.name;}
+if(typeof item==='string'){return item;}
+return String(item);});},_toAPIFormat(character){return window.DanddyCharacterMapper.fromManagerToBackend(character);},_fromAPIFormat(apiChar){return window.DanddyCharacterMapper.fromBackendToManager(apiChar);},_mapAlignment(alignment){if(!alignment)return null;const alignmentMap={'Lawful Good':'lawful_good','Neutral Good':'neutral_good','Chaotic Good':'chaotic_good','Lawful Neutral':'lawful_neutral','True Neutral':'true_neutral','Chaotic Neutral':'chaotic_neutral','Lawful Evil':'lawful_evil','Neutral Evil':'neutral_evil','Chaotic Evil':'chaotic_evil',};return alignmentMap[alignment]||null;},async _apiRequest(endpoint,options={}){const token=AuthService.getToken();if(!token){throw new Error('Not authenticated');}
+const response=await fetch(`${API_BASE_URL}${endpoint}`,{...options,headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,...options.headers,},});if(response.status===401){AuthService.clearToken();if(typeof window.updateAuthUI==='function'){window.updateAuthUI();}
+throw new Error('Session expired. Please log in again.');}
+if(!response.ok){const error=await response.json().catch(()=>({detail:'Unknown error'}));const detail=typeof error.detail==='string'?error.detail:JSON.stringify(error.detail||error);console.error('API error response:',error);throw new Error(detail||`API error: ${response.status}`);}
+if(response.status===204){return null;}
+return await response.json();},async getAll(){try{if(DEBUG_CLOUD){console.log('☁️ CLOUD: Fetching all characters from API...');}
+const apiChars=await this._apiRequest('/characters/');const characters=apiChars.map(c=>this._fromAPIFormat(c));if(DEBUG_CLOUD){console.log('☁️ CLOUD: Retrieved',characters.length,'characters');}
+return characters;}catch(error){console.error('☁️ CLOUD ERROR: Failed to fetch characters:',error);throw error;}},async getById(id){try{if(DEBUG_CLOUD){console.log('☁️ CLOUD: Fetching character',id);}
+const apiChar=await this._apiRequest(`/characters/${id}`);return this._fromAPIFormat(apiChar);}catch(error){console.error('☁️ CLOUD ERROR: Failed to fetch character:',error);throw error;}},async add(character){try{if(DEBUG_CLOUD){console.log('☁️ CLOUD: Creating character:',character.name);}
+const apiData=this._toAPIFormat(character);const apiChar=await this._apiRequest('/characters/',{method:'POST',body:JSON.stringify(apiData),});const newChar=this._fromAPIFormat(apiChar);if(DEBUG_CLOUD){console.log('☁️ CLOUD: Character created with ID:',newChar.id);}
+return newChar;}catch(error){console.error('☁️ CLOUD ERROR: Failed to create character:',error);throw error;}},async update(id,updates){try{if(DEBUG_CLOUD){console.log('☁️ CLOUD: Updating character',id);}
+const apiUpdates={};if(updates.name!==undefined)apiUpdates.name=updates.name;if(updates.level!==undefined)apiUpdates.level=updates.level;if(updates.experiencePoints!==undefined)apiUpdates.experience_points=updates.experiencePoints;if(updates.alignment!==undefined){const alignmentMap={'lg':'lawful_good','ng':'neutral_good','cg':'chaotic_good','ln':'lawful_neutral','n':'true_neutral','cn':'chaotic_neutral','le':'lawful_evil','ne':'neutral_evil','ce':'chaotic_evil'};apiUpdates.alignment=alignmentMap[updates.alignment]||updates.alignment;}
+if(updates.abilities){const abilities=updates.abilities;if(abilities.str!==undefined)apiUpdates.strength=abilities.str;if(abilities.dex!==undefined)apiUpdates.dexterity=abilities.dex;if(abilities.con!==undefined)apiUpdates.constitution=abilities.con;if(abilities.int!==undefined)apiUpdates.intelligence=abilities.int;if(abilities.wis!==undefined)apiUpdates.wisdom=abilities.wis;if(abilities.cha!==undefined)apiUpdates.charisma=abilities.cha;}
+if(updates.hitPoints?.max!==undefined)apiUpdates.hit_points_max=updates.hitPoints.max;if(updates.hitPoints?.current!==undefined)apiUpdates.hit_points_current=updates.hitPoints.current;if(updates.hitPoints?.temp!==undefined)apiUpdates.hit_points_temp=updates.hitPoints.temp;if(updates.armorClass!==undefined)apiUpdates.armor_class=updates.armorClass;if(updates.initiative!==undefined)apiUpdates.initiative=updates.initiative;if(updates.speed!==undefined)apiUpdates.speed=updates.speed;if(updates.skillProficiencies!==undefined)apiUpdates.skill_proficiencies=updates.skillProficiencies;if(updates.toolProficiencies!==undefined)apiUpdates.tool_proficiencies=updates.toolProficiencies;if(updates.languages!==undefined)apiUpdates.languages=updates.languages;if(updates.equipment!==undefined){apiUpdates.inventory=updates.equipment.map(item=>typeof item==='string'?{name:item}:item);}
+if(updates.conditions!==undefined)apiUpdates.conditions=updates.conditions;if(updates.backstory!==undefined)apiUpdates.backstory=updates.backstory;if(updates.sex!==undefined)apiUpdates.sex=updates.sex;if(updates.asciiPortrait!==undefined)apiUpdates.ascii_portrait=updates.asciiPortrait;if(updates.originalPortraitUrl!==undefined)apiUpdates.original_portrait_url=updates.originalPortraitUrl;if(updates.customPortraitAscii!==undefined)apiUpdates.custom_portrait_ascii=updates.customPortraitAscii;if(updates.customPortraitCount!==undefined)apiUpdates.custom_portrait_count=updates.customPortraitCount;if(updates.portraitMetadata!==undefined)apiUpdates.portrait_metadata=updates.portraitMetadata;const apiChar=await this._apiRequest(`/characters/${id}`,{method:'PUT',body:JSON.stringify(apiUpdates),});const updatedChar=this._fromAPIFormat(apiChar);return updatedChar;}catch(error){console.error('☁️ CLOUD ERROR: Failed to update character:',error);throw error;}},async delete(id){try{if(DEBUG_CLOUD){console.log('☁️ CLOUD: Deleting character',id);}
+await this._apiRequest(`/characters/${id}`,{method:'DELETE'});if(DEBUG_CLOUD){console.log('☁️ CLOUD: Character deleted successfully');}
+return true;}catch(error){console.error('☁️ CLOUD ERROR: Failed to delete character:',error);throw error;}},async duplicate(id){try{if(DEBUG_CLOUD){console.log('☁️ CLOUD: Duplicating character',id);}
+const apiChar=await this._apiRequest(`/characters/${id}/duplicate`,{method:'POST',});const duplicated=this._fromAPIFormat(apiChar);if(DEBUG_CLOUD){console.log('☁️ CLOUD: Character duplicated with ID:',duplicated.id);}
+return duplicated;}catch(error){console.error('☁️ CLOUD ERROR: Failed to duplicate character:',error);throw error;}},async export(id){try{const character=await this.getById(id);return JSON.stringify(character,null,2);}catch(error){console.error('☁️ CLOUD ERROR: Failed to export character:',error);throw error;}},async import(jsonString){try{if(DEBUG_CLOUD){console.log('☁️ CLOUD: Importing character from JSON');}
+const character=JSON.parse(jsonString);delete character.id;delete character.ownerId;const result=await this.add(character);if(DEBUG_CLOUD){console.log('☁️ CLOUD: Character imported with ID:',result.id);}
+return result;}catch(error){console.error('☁️ CLOUD ERROR: Failed to import character:',error);return null;}},generateId(){return`char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;},async shareCharacter(characterId,email){try{if(DEBUG_CLOUD){console.log('☁️ CLOUD: Sharing character',characterId,'to',email);}
+const result=await this._apiRequest(`/shares/character/${characterId}`,{method:'POST',body:JSON.stringify({to_email:email}),});if(DEBUG_CLOUD){console.log('☁️ CLOUD: Character shared successfully');}
+return result;}catch(error){console.error('☁️ CLOUD ERROR: Failed to share character:',error);throw error;}},async getPendingShares(){try{if(DEBUG_CLOUD){console.log('☁️ CLOUD: Fetching pending shares...');}
+const shares=await this._apiRequest('/shares/pending');if(DEBUG_CLOUD){console.log('☁️ CLOUD: Found',shares.length,'pending shares');}
+return shares;}catch(error){console.error('☁️ CLOUD ERROR: Failed to fetch pending shares:',error);throw error;}},async acceptShare(shareId){try{if(DEBUG_CLOUD){console.log('☁️ CLOUD: Accepting share',shareId);}
+const result=await this._apiRequest(`/shares/${shareId}/accept`,{method:'POST',});if(DEBUG_CLOUD){console.log('☁️ CLOUD: Share accepted, new character ID:',result.character_id);}
+return result;}catch(error){console.error('☁️ CLOUD ERROR: Failed to accept share:',error);throw error;}},async dismissShare(shareId){try{if(DEBUG_CLOUD){console.log('☁️ CLOUD: Dismissing share',shareId);}
+await this._apiRequest(`/shares/${shareId}/dismiss`,{method:'POST',});if(DEBUG_CLOUD){console.log('☁️ CLOUD: Share dismissed');}}catch(error){console.error('☁️ CLOUD ERROR: Failed to dismiss share:',error);throw error;}},});const MigrationService=(window.MigrationService={LOCAL_STORAGE_KEY:(window.DanddyStorage&&window.DanddyStorage.STORAGE_KEY)||'dnd_characters',hasLocalCharacters(){const characters=this._getLocalCharacters();const userCharacters=characters.filter(c=>!window.DemoCharacters||!window.DemoCharacters.isDemo(c));return userCharacters.length>0;},hasDemoCharacters(){const characters=this._getLocalCharacters();if(!window.DemoCharacters)return false;return characters.some(c=>window.DemoCharacters.isDemo(c));},_getLocalCharacters(){return(window.DanddyStorage&&window.DanddyStorage.readAll())||(function(key){const data=localStorage.getItem(key);return data?JSON.parse(data):[];})(this.LOCAL_STORAGE_KEY);},getLocalCharacterCount(){const characters=this._getLocalCharacters();const userCharacters=characters.filter(c=>!window.DemoCharacters||!window.DemoCharacters.isDemo(c));return userCharacters.length;},getDemoCharacterCount(){const characters=this._getLocalCharacters();if(!window.DemoCharacters)return 0;return characters.filter(c=>window.DemoCharacters.isDemo(c)).length;},async migrateToCloud(options={}){const{includeDemoCharacters=false}=options;try{if(!AuthService.isAuthenticated()){throw new Error('Must be logged in to migrate characters');}
+console.log('📦 MIGRATION: Starting migration of localStorage characters to cloud...');let localCharacters=this._getLocalCharacters();if(!includeDemoCharacters&&window.DemoCharacters){localCharacters=localCharacters.filter(c=>!window.DemoCharacters.isDemo(c));}
+console.log('📦 MIGRATION: Found',localCharacters.length,'characters to migrate');const results={total:localCharacters.length,success:0,failed:0,errors:[],};for(const character of localCharacters){try{console.log('📦 MIGRATION: Migrating',character.name);const charToMigrate={...character};delete charToMigrate.isDemo;if(charToMigrate.id&&String(charToMigrate.id).startsWith('demo_')){delete charToMigrate.id;}
+await CharacterCloudStorage.add(charToMigrate);results.success++;}catch(error){console.error('📦 MIGRATION ERROR: Failed to migrate',character.name,error);results.failed++;results.errors.push({character:character.name,error:error.message});}}
+console.log('📦 MIGRATION: Complete!',results.success,'succeeded,',results.failed,'failed');return results;}catch(error){console.error('📦 MIGRATION ERROR:',error);throw error;}},backupLocalStorage(){const chars=(window.DanddyStorage&&window.DanddyStorage.readAll())||(function(key){const data=localStorage.getItem(key);return data?JSON.parse(data):[];})(this.LOCAL_STORAGE_KEY);if(chars&&chars.length){const backup={timestamp:new Date().toISOString(),characters:chars,};const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`dnd-characters-backup-${Date.now()}.json`;a.click();URL.revokeObjectURL(url);console.log('📦 BACKUP: Created backup of',backup.characters.length,'characters');return true;}
+return false;},clearLocalStorage(){if(window.DanddyStorage){window.DanddyStorage.clearAll();}else{localStorage.removeItem(this.LOCAL_STORAGE_KEY);try{localStorage.removeItem(this.LOCAL_STORAGE_KEY+'_cache');}catch(e){console.warn('📦 CLEAR: Failed to clear local cache key',e);}}
+if(DEBUG_CLOUD){console.log('📦 CLEAR: Cleared local character storage (including cache, if present)');}},});if(DEBUG_CLOUD){console.log('☁️ Character Manager Cloud API Service loaded');}
+(function(global){const DEMO_PREFIX='demo_';const DEMO_MIGRATION_ASKED_KEY='danddy_demo_migration_asked';const DEMO_MAX_USER_CHARACTERS=3;const DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER=3;const DemoCharacters=(global.DemoCharacters={DEMO_PREFIX,DEMO_MIGRATION_ASKED_KEY,DEMO_MAX_USER_CHARACTERS,DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER,isDemo(character){return character&&(character.isDemo===true||(character.id&&String(character.id).startsWith(DEMO_PREFIX)));},isDemoMode(){return!(global.AuthService&&typeof AuthService.isAuthenticated==='function'&&AuthService.isAuthenticated());},hasMigrationBeenAsked(){return localStorage.getItem(DEMO_MIGRATION_ASKED_KEY)==='true';},markMigrationAsked(){localStorage.setItem(DEMO_MIGRATION_ASKED_KEY,'true');},clearMigrationAsked(){localStorage.removeItem(DEMO_MIGRATION_ASKED_KEY);},getAll(){return[this._createLyra(),this._createThorgrim(),this._createZephyr(),];},getDemoCharacterCount(){const localChars=(global.DanddyStorage&&global.DanddyStorage.readAll())||[];return localChars.filter(c=>this.isDemo(c)).length;},getUserCharacterCount(){const localChars=(global.DanddyStorage&&global.DanddyStorage.readAll())||[];return localChars.filter(c=>!this.isDemo(c)).length;},hasReachedCharacterLimit(){if(!this.isDemoMode())return false;return this.getUserCharacterCount()>=DEMO_MAX_USER_CHARACTERS;},hasReachedPortraitLimit(character){if(!this.isDemoMode())return false;const currentCount=(character&&character.customPortraitCount)||0;return currentCount>=DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;},canGenerateCustomArt(character){if(this.isDemo(character)){return false;}
+if(this.isDemoMode()){return!this.hasReachedPortraitLimit(character);}
+return true;},_createLyra(){const nowIso=new Date().toISOString();return{id:`${DEMO_PREFIX}lyra`,isDemo:true,characterUid:`${DEMO_PREFIX}lyra_starwhisper`,name:'Lyra Starwhisper',race:'elf',class:'wizard',background:'sage',alignment:'ng',sex:'female',level:5,abilities:{str:8,dex:14,con:13,int:17,wis:12,cha:10,},baseAbilities:{str:8,dex:12,con:13,int:17,wis:12,cha:10,},hitPoints:27,armorClass:12,initiative:2,speed:30,proficiencyBonus:3,abilityModifiers:{str:-1,dex:2,con:1,int:3,wis:1,cha:0,},skillProficiencies:['arcana','history','investigation','insight'],skillModifiers:{arcana:6,history:6,investigation:6,insight:4,perception:3,},savingThrows:['int','wis'],savingThrowModifiers:{str:-1,dex:2,con:1,int:6,wis:4,cha:0,},languages:['Common','Elvish','Draconic','Celestial'],equipment:['Spellbook','Arcane focus (crystal orb)','Scholar\'s pack','Dagger','Component pouch','Bottle of black ink','Quill','Robes',],spellcastingAbility:'int',cantrips:['Fire Bolt','Mage Hand','Prestidigitation','Light'],spellsKnown:['Magic Missile','Shield','Detect Magic','Mage Armor','Misty Step','Hold Person','Fireball','Counterspell',],spellSlots:{1:4,2:3,3:2,},raceData:{name:'Elf',size:'Medium',speed:30,traits:['Darkvision','Keen Senses','Fey Ancestry','Trance'],languages:['Common','Elvish'],},classData:{name:'Wizard',hitDie:6,primaryAbility:['int'],savingThrows:['int','wis'],spellcaster:true,},backgroundData:{name:'Sage',feature:{name:'Researcher',description:'When you attempt to learn or recall a piece of lore, if you don\'t know it, you often know where and from whom you can obtain it.',},},backstory:'Lyra spent decades studying in the Silverspire Academy, where she discovered an ancient tome that hinted at forgotten magic from before the Sundering. Now she travels the realm, seeking fragments of lost arcane knowledge.',personalityTrait:'I\'m convinced there\'s a logical explanation for everything, and I won\'t rest until I find it.',originalPortraitUrl:'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298665_9f926a959c214c14bb7d1d04580843ff.png',portrait:{url:'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298665_9f926a959c214c14bb7d1d04580843ff.png',},createdAt:nowIso,updatedAt:nowIso,};},_createThorgrim(){const nowIso=new Date().toISOString();return{id:`${DEMO_PREFIX}thorgrim`,isDemo:true,characterUid:`${DEMO_PREFIX}thorgrim_ironforge`,name:'Thorgrim Ironforge',race:'dwarf',class:'fighter',background:'soldier',alignment:'lg',sex:'male',level:3,abilities:{str:16,dex:12,con:16,int:10,wis:13,cha:8,},baseAbilities:{str:16,dex:12,con:14,int:10,wis:13,cha:8,},hitPoints:31,armorClass:18,initiative:1,speed:25,proficiencyBonus:2,abilityModifiers:{str:3,dex:1,con:3,int:0,wis:1,cha:-1,},skillProficiencies:['athletics','intimidation','perception','survival'],skillModifiers:{athletics:5,intimidation:1,perception:3,survival:3,},savingThrows:['str','con'],savingThrowModifiers:{str:5,dex:1,con:5,int:0,wis:1,cha:-1,},languages:['Common','Dwarvish'],equipment:['Chain mail','Shield','Battleaxe','Handaxes (2)','Explorer\'s pack','Insignia of rank','Trophy from fallen enemy','Bone dice',],raceData:{name:'Dwarf',size:'Medium',speed:25,traits:['Darkvision','Dwarven Resilience','Stonecunning'],languages:['Common','Dwarvish'],},classData:{name:'Fighter',hitDie:10,primaryAbility:['str','dex'],savingThrows:['str','con'],spellcaster:false,},backgroundData:{name:'Soldier',feature:{name:'Military Rank',description:'You have a military rank from your career as a soldier. Soldiers loyal to your former organization still recognize your authority and influence.',},},backstory:'Thorgrim served twenty years in the Ironforge Legion, defending the mountain holds from orc raids and goblin incursions. After the Battle of Redstone Pass, where he was the sole survivor of his unit, he set out to forge his own legend.',personalityTrait:'I face problems head-on. A simple, direct solution is the best path to success.',originalPortraitUrl:'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298747_fd80b4efff0c4544942b98b1c15438ee.png',portrait:{url:'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298747_fd80b4efff0c4544942b98b1c15438ee.png',},createdAt:nowIso,updatedAt:nowIso,};},_createZephyr(){const nowIso=new Date().toISOString();return{id:`${DEMO_PREFIX}zephyr`,isDemo:true,characterUid:`${DEMO_PREFIX}zephyr_nightshade`,name:'Zephyr Nightshade',race:'tiefling',class:'rogue',background:'criminal',alignment:'cn',sex:'non-binary',level:4,abilities:{str:10,dex:17,con:12,int:14,wis:10,cha:15,},baseAbilities:{str:10,dex:17,con:12,int:13,wis:10,cha:13,},hitPoints:27,armorClass:14,initiative:3,speed:30,proficiencyBonus:2,abilityModifiers:{str:0,dex:3,con:1,int:2,wis:0,cha:2,},skillProficiencies:['acrobatics','deception','sleight-of-hand','stealth','perception','persuasion'],skillModifiers:{acrobatics:5,deception:4,'sleight-of-hand':7,stealth:7,perception:2,persuasion:4,},savingThrows:['dex','int'],savingThrowModifiers:{str:0,dex:5,con:1,int:4,wis:0,cha:2,},languages:['Common','Infernal','Thieves\' Cant'],toolProficiencies:['Thieves\' tools','Playing cards'],equipment:['Leather armor','Rapier','Shortbow','Arrows (20)','Thieves\' tools','Burglar\'s pack','Crowbar','Dark hooded cloak',],raceData:{name:'Tiefling',size:'Medium',speed:30,traits:['Darkvision','Hellish Resistance','Infernal Legacy'],languages:['Common','Infernal'],},classData:{name:'Rogue',hitDie:8,primaryAbility:['dex'],savingThrows:['dex','int'],spellcaster:false,},backgroundData:{name:'Criminal',feature:{name:'Criminal Contact',description:'You have a reliable contact who acts as your liaison to a network of criminals. You can get messages to and from your contact even over great distances.',},},backstory:'Zephyr grew up on the streets of Waterdeep, their infernal appearance making them an outcast from birth. They learned to survive through cunning and quick fingers, eventually joining the Shadow Thieves. Now they work independently, taking jobs that interest them and staying one step ahead of the law.',personalityTrait:'I have a joke for every occasion, especially occasions where humor is inappropriate.',originalPortraitUrl:'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298383_2a5a798489b0460481a28c99bb85d235.png',portrait:{url:'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298383_2a5a798489b0460481a28c99bb85d235.png',},createdAt:nowIso,updatedAt:nowIso,};},});})(window);(function(){const DEBUG_STORAGE=!!(window.DanddyConfig&&window.DanddyConfig.DEBUG);const CharacterStorage=(window.CharacterStorage={STORAGE_KEY:(window.DanddyStorage&&window.DanddyStorage.STORAGE_KEY)||'dnd_characters',useCloud(){return(window.AuthService&&typeof AuthService.isAuthenticated==='function'?AuthService.isAuthenticated():false);},async getAll(){if(this.useCloud()&&window.CharacterCloudStorage){try{if(DEBUG_STORAGE){console.log('☁️ STORAGE: Fetching all characters from cloud...');}
+return await window.CharacterCloudStorage.getAll();}catch(error){console.error('☁️ STORAGE: Cloud getAll failed, falling back to local:',error,);if(typeof window.showNotification==='function'){window.showNotification('⚠️ Cloud sync failed. Showing local characters instead.',);}
+return this._getLocalAll();}}
+return this._getLocalAll();},async getById(id){if(this.useCloud()&&window.CharacterCloudStorage){try{if(DEBUG_STORAGE){console.log('☁️ STORAGE: Fetching character from cloud:',id);}
+return await window.CharacterCloudStorage.getById(id);}catch(error){console.error('☁️ STORAGE: Cloud getById failed, falling back to local:',error,);return this._getLocalById(id);}}
+return this._getLocalById(id);},async add(character){if(this.useCloud()&&window.CharacterCloudStorage){try{if(DEBUG_STORAGE){console.log('☁️ STORAGE: Creating character in cloud:',character);}
+return await window.CharacterCloudStorage.add(character);}catch(error){console.error('☁️ STORAGE: Cloud add failed:',error);if(typeof window.showNotification==='function'){window.showNotification('❌ Failed to save to cloud. Saving locally instead.',);}}}
+return this._localAdd(character);},async update(id,updates,options={}){const{silent=false}=options;const idStr=String(id);if(this.useCloud()&&window.CharacterCloudStorage){const isInvalidCloudId=!idStr||idStr==='null'||idStr==='undefined'||idStr.startsWith('local_');if(isInvalidCloudId){if(DEBUG_STORAGE){console.warn('⚠️ STORAGE: Skipping cloud update for invalid id; using local instead:',id,);}
+return this._localUpdate(id,updates,{silent});}
+try{if(DEBUG_STORAGE){console.log('☁️ STORAGE: Updating character in cloud:',id);}
+return await window.CharacterCloudStorage.update(id,updates);}catch(error){console.error('☁️ STORAGE: Cloud update failed:',error);if(typeof window.showNotification==='function'){window.showNotification('❌ Failed to update in cloud. Your changes may not be synced.',);}
+throw error;}}
+return this._localUpdate(id,updates,{silent});},async delete(id){if(this.useCloud()&&window.CharacterCloudStorage){try{if(DEBUG_STORAGE){console.log('☁️ STORAGE: Deleting character from cloud:',id);}
+await window.CharacterCloudStorage.delete(id);return true;}catch(error){console.error('☁️ STORAGE: Cloud delete failed:',error);if(typeof window.showNotification==='function'){window.showNotification('❌ Failed to delete from cloud. Please try again.',);}
+throw error;}}
+return this._localDelete(id);},async duplicate(id){if(this.useCloud()&&window.CharacterCloudStorage){try{if(DEBUG_STORAGE){console.log('☁️ STORAGE: Duplicating character in cloud:',id);}
+return await window.CharacterCloudStorage.duplicate(id);}catch(error){console.error('☁️ STORAGE: Cloud duplicate failed:',error);if(typeof window.showNotification==='function'){window.showNotification('❌ Failed to duplicate in cloud. Please try again.',);}
+throw error;}}
+return this._localDuplicate(id);},async export(id){if(this.useCloud()&&window.CharacterCloudStorage){try{if(DEBUG_STORAGE){console.log('☁️ STORAGE: Exporting character from cloud:',id);}
+return await window.CharacterCloudStorage.export(id);}catch(error){console.error('☁️ STORAGE: Cloud export failed, falling back to local:',error);const character=this._getLocalById(id);return character?JSON.stringify(character,null,2):null;}}
+const character=this._getLocalById(id);return character?JSON.stringify(character,null,2):null;},async import(jsonString){if(this.useCloud()&&window.CharacterCloudStorage){try{if(DEBUG_STORAGE){console.log('☁️ STORAGE: Importing character to cloud...');}
+return await window.CharacterCloudStorage.import(jsonString);}catch(error){console.error('☁️ STORAGE: Cloud import failed:',error);if(typeof window.showNotification==='function'){window.showNotification('❌ Failed to import to cloud. Please try again.',);}
+return null;}}
+return this._localImport(jsonString);},generateId(){return`char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;},_getLocalAll(){let characters=(window.DanddyStorage&&window.DanddyStorage.readAll())||(function(){try{const data=localStorage.getItem(CharacterStorage.STORAGE_KEY);return data?JSON.parse(data):[];}catch{return[];}})();if(DEBUG_STORAGE){console.log('💾 LOCAL.GETALL: Retrieved',characters.length,'characters from local storage',);}
+let changed=false;let maxExistingTime=0;characters.forEach((char)=>{const t=new Date(char.updatedAt||char.createdAt||0).getTime();if(t>maxExistingTime){maxExistingTime=t;}});const baseTime=maxExistingTime||Date.now();let newCounter=0;characters.forEach((char)=>{if(window.DemoCharacters&&window.DemoCharacters.isDemo(char)){return;}
+if(!char.createdAt){newCounter+=1;const t=baseTime+newCounter*1000;char.createdAt=new Date(t).toISOString();changed=true;}
+if(!char.updatedAt){char.updatedAt=char.createdAt;changed=true;}});if(changed){try{const charsToSave=characters.filter(c=>!window.DemoCharacters||!window.DemoCharacters.isDemo(c));localStorage.setItem(this.STORAGE_KEY,JSON.stringify(charsToSave),);}catch(e){console.warn('LOCAL.GETALL: Failed to persist normalized timestamps',e);}}
+if(!this.useCloud()&&window.DemoCharacters){const demoChars=window.DemoCharacters.getAll();const existingDemoIds=new Set(characters.filter(c=>window.DemoCharacters.isDemo(c)).map(c=>c.id));demoChars.forEach(demo=>{if(!existingDemoIds.has(demo.id)){characters.push(demo);}});}
+return characters;},_getLocalById(id){const characters=this._getLocalAll();const idStr=String(id);return characters.find((char)=>char&&String(char.id)===idStr);},_localSaveAll(characters){const charsToSave=characters.filter(c=>!window.DemoCharacters||!window.DemoCharacters.isDemo(c));if(DEBUG_STORAGE){console.log('💾 LOCAL.SAVEALL: Saving',charsToSave.length,'characters to local storage (excluding demo)',);}
+if(window.DanddyStorage){window.DanddyStorage.writeAll(charsToSave);}else{try{localStorage.setItem(this.STORAGE_KEY,JSON.stringify(charsToSave));}catch(e){console.warn('LOCAL.SAVEALL: Failed to write to localStorage',e);}}},_localAdd(character){if(DEBUG_STORAGE){console.log('💾 LOCAL.ADD: Adding character:',character.name);}
+const characters=this._getLocalAll();const nowIso=new Date().toISOString();const withId={...character,id:character.id||this.generateId(),createdAt:character.createdAt||nowIso,updatedAt:character.updatedAt||nowIso,};characters.push(withId);this._localSaveAll(characters);return withId;},_localUpdate(id,updates,options={}){const{silent=false}=options;const characters=this._getLocalAll();const idStr=String(id);const index=characters.findIndex((char)=>char&&String(char.id)===idStr);if(index===-1)return null;const prev=characters[index];const next={...prev,...updates,...(silent?{}:{updatedAt:new Date().toISOString()}),};characters[index]=next;this._localSaveAll(characters);return next;},_localDelete(id){if(DEBUG_STORAGE){console.log('🗑️ LOCAL.DELETE: Deleting character with ID:',id);}
+const characters=this._getLocalAll();const idStr=String(id);const filtered=characters.filter((char)=>!char||String(char.id)!==idStr);this._localSaveAll(filtered);return filtered.length<characters.length;},_localDuplicate(id){const character=this._getLocalById(id);if(!character)return null;const nowIso=new Date().toISOString();const duplicate={...character,name:character.name?`${character.name} (Copy)`:'Copy',id:this.generateId(),createdAt:nowIso,updatedAt:nowIso,};const characters=this._getLocalAll();characters.push(duplicate);this._localSaveAll(characters);return duplicate;},_localImport(jsonString){try{if(DEBUG_STORAGE){console.log('📥 LOCAL.IMPORT: Starting import...');}
+const character=JSON.parse(jsonString);if(!character||typeof character!=='object'){throw new Error('Invalid character JSON');}
+delete character.id;const result=this._localAdd(character);if(DEBUG_STORAGE){console.log('📥 LOCAL.IMPORT: Imported character with new ID:',result.id,);}
+return result;}catch(error){console.error('LOCAL.IMPORT: Failed to import character JSON',error);return null;}},});})();const isLocalDevelopment=(window.DanddyConfig&&window.DanddyConfig.isLocalEnvironment)||window.location.hostname==='localhost'||window.location.hostname==='127.0.0.1'||window.location.protocol==='file:';const PRODUCTION_BACKEND_URL=(window.DanddyConfig&&window.DanddyConfig.BACKEND_ORIGIN)||'https://danddy-api.onrender.com';window.CONFIG={TYPEWRITER_SPEED:30,AI_TIMEOUT:40000,ENABLE_AI:true,ENABLE_AI_NARRATOR_COMMENTS:false,ENABLE_AI_OPTION_VARIATIONS:false,NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER:1,BACKEND_URL:PRODUCTION_BACKEND_URL,OPENAI_API_URL:'https://api.openai.com/v1/chat/completions',OPENAI_MODEL:'gpt-3.5-turbo',STORAGE_KEY:'dnd_characters',MAX_RETRIES:2,DEV_AUTO_LOGIN:isLocalDevelopment,DEV_CREDENTIALS:{email:'dev@test.com',password:'dev12345',role:'player',},PREGENERATED_PORTRAIT_BASE_URL:'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/pregen',DEFAULT_IMAGE_MODEL:'gpt-image-1',DEFAULT_PORTRAIT_VIEW_MODE:'original',DEFAULT_PORTRAIT_PROMPT_THEME:'cinematic-inks',};window.DND_DATA={races:[{id:'human',name:'Human',description:'Versatile and ambitious, found in every corner of the world.',abilityBonuses:{str:1,dex:1,con:1,int:1,wis:1,cha:1},traits:['Extra Language','Versatile'],languages:['Common'],size:'Medium',speed:30,},{id:'elf',name:'Elf',description:'Graceful and long-lived, masters of magic and nature.',abilityBonuses:{dex:2},traits:['Darkvision','Keen Senses','Fey Ancestry','Trance'],languages:['Common','Elvish'],size:'Medium',speed:30,},{id:'dwarf',name:'Dwarf',description:'Stout and hardy, renowned craftsmen and warriors.',abilityBonuses:{con:2},traits:['Darkvision','Dwarven Resilience','Stonecunning'],languages:['Common','Dwarvish'],size:'Medium',speed:25,},{id:'halfling',name:'Halfling',description:'Small and nimble, lucky and brave despite their size.',abilityBonuses:{dex:2},traits:['Lucky','Brave','Halfling Nimbleness'],languages:['Common','Halfling'],size:'Small',speed:25,},{id:'dragonborn',name:'Dragonborn',description:'Draconic humanoids with breath weapons and scaled skin.',abilityBonuses:{str:2,cha:1},traits:['Draconic Ancestry','Breath Weapon','Damage Resistance'],languages:['Common','Draconic'],size:'Medium',speed:30,},{id:'gnome',name:'Gnome',description:'Clever and curious, lovers of knowledge and tinkering.',abilityBonuses:{int:2},traits:['Darkvision','Gnome Cunning'],languages:['Common','Gnomish'],size:'Small',speed:25,},{id:'half-elf',name:'Half-Elf',description:'Walking between two worlds, charismatic and adaptable.',abilityBonuses:{cha:2},traits:['Darkvision','Fey Ancestry','Skill Versatility'],languages:['Common','Elvish'],size:'Medium',speed:30,},{id:'half-orc',name:'Half-Orc',description:'Fierce and strong, proving themselves through deeds.',abilityBonuses:{str:2,con:1},traits:['Darkvision','Menacing','Relentless Endurance','Savage Attacks'],languages:['Common','Orc'],size:'Medium',speed:30,},{id:'tiefling',name:'Tiefling',description:'Infernal heritage grants dark powers and distinction.',abilityBonuses:{cha:2,int:1},traits:['Darkvision','Hellish Resistance','Infernal Legacy'],languages:['Common','Infernal'],size:'Medium',speed:30,},],classes:[{id:'fighter',name:'Fighter',description:'Master of martial combat, skilled with weapons and armor.',hitDie:10,primaryAbility:['str','dex'],savingThrows:['str','con'],equipment:['Martial weapons','Heavy armor','Shield'],},{id:'wizard',name:'Wizard',description:'Scholar of arcane magic, wielding powerful spells.',hitDie:6,primaryAbility:['int'],savingThrows:['int','wis'],equipment:['Spellbook','Component pouch','Robes'],},{id:'rogue',name:'Rogue',description:'Skilled in stealth and precision, master of skills.',hitDie:8,primaryAbility:['dex'],savingThrows:['dex','int'],equipment:['Light armor','Thieves\' tools','Rapier'],},{id:'cleric',name:'Cleric',description:'Divine spellcaster, channeling the power of a deity.',hitDie:8,primaryAbility:['wis'],savingThrows:['wis','cha'],equipment:['Medium armor','Shield','Holy symbol'],},{id:'ranger',name:'Ranger',description:'Wilderness warrior, tracker, and protector of nature.',hitDie:10,primaryAbility:['dex','wis'],savingThrows:['str','dex'],equipment:['Longbow','Leather armor','Survival gear'],},{id:'paladin',name:'Paladin',description:'Holy warrior sworn to an oath, wielding divine magic.',hitDie:10,primaryAbility:['str','cha'],savingThrows:['wis','cha'],equipment:['Heavy armor','Martial weapons','Holy symbol'],},{id:'barbarian',name:'Barbarian',description:'Fierce warrior who channels rage in battle.',hitDie:12,primaryAbility:['str'],savingThrows:['str','con'],equipment:['Greataxe','Medium armor','Javelins'],},{id:'bard',name:'Bard',description:'Inspiring performer who weaves magic through music.',hitDie:8,primaryAbility:['cha'],savingThrows:['dex','cha'],equipment:['Musical instrument','Light armor','Rapier'],},{id:'druid',name:'Druid',description:'Nature priest who can shapeshift and wield primal magic.',hitDie:8,primaryAbility:['wis'],savingThrows:['int','wis'],equipment:['Druidic focus','Leather armor','Wooden shield'],},{id:'monk',name:'Monk',description:'Martial artist who channels ki energy through their body.',hitDie:8,primaryAbility:['dex','wis'],savingThrows:['str','dex'],equipment:['Martial arts','Simple weapons','Unarmored defense'],},{id:'sorcerer',name:'Sorcerer',description:'Innate spellcaster with magic in their blood.',hitDie:6,primaryAbility:['cha'],savingThrows:['con','cha'],equipment:['Arcane focus','Light crossbow','Component pouch'],},{id:'warlock',name:'Warlock',description:'Pact-bound caster drawing power from otherworldly patrons.',hitDie:8,primaryAbility:['cha'],savingThrows:['wis','cha'],equipment:['Eldritch invocations','Light armor','Simple weapons'],},],backgrounds:[{id:'acolyte',name:'Acolyte',description:'Served in a temple to a deity or pantheon.',skillProficiencies:['insight','religion'],languages:2,equipment:['Holy symbol','Prayer book or prayer wheel','5 sticks of incense','Vestments','Common clothes','15 gp'],feature:{name:'Shelter of the Faithful',description:'You and your companions can receive free healing and care at temples, shrines, and other religious establishments of your faith. Those who share your religion will support you at a modest lifestyle and provide you with necessary (though not luxurious) assistance.'}},{id:'criminal',name:'Criminal',description:'Experienced in breaking the law and living outside society.',skillProficiencies:['deception','stealth'],toolProficiencies:['thieves-tools','gaming-set'],equipment:['Crowbar','Dark common clothes with hood','Belt pouch','15 gp'],feature:{name:'Criminal Contact',description:'You have a reliable contact who acts as your liaison to a network of criminals. You can get messages to and from your contact even over great distances, and you know the local messengers, corrupt officials, and fence who can help you.'}},{id:'folk-hero',name:'Folk Hero',description:'Champion of the common people, standing up against tyrants.',skillProficiencies:['animal-handling','survival'],toolProficiencies:['artisan-tools','vehicles-land'],equipment:['Set of artisan\'s tools','Shovel','Iron pot','Common clothes','Belt pouch','10 gp'],feature:{name:'Rustic Hospitality',description:'Since you come from the common folk, you fit in easily among them. You can find a place to hide, rest, or recuperate among commoners, who will shield you from the law or those hunting you (unless you show yourself to be a danger to them).'}},{id:'noble',name:'Noble',description:'Born to wealth and privilege, understanding power and hierarchy.',skillProficiencies:['history','persuasion'],toolProficiencies:['gaming-set'],languages:1,equipment:['Fine clothes','Signet ring','Scroll of pedigree','Purse','25 gp'],feature:{name:'Position of Privilege',description:'You are welcome in high society, and people assume you have the right to be wherever you are. The common folk make every effort to accommodate you and avoid your displeasure, and other nobles treat you as a member of the same social sphere.'}},{id:'sage',name:'Sage',description:'Researcher and scholar, devoted to learning and study.',skillProficiencies:['arcana','history'],languages:2,equipment:['Bottle of black ink','Quill','Small knife','Letter from dead colleague','Common clothes','10 gp'],feature:{name:'Researcher',description:'When you attempt to learn or recall a piece of lore, if you don\'t know it, you often know where and from whom you can obtain it. Usually this comes from a library, scriptorium, university, or another sage or learned person.'}},{id:'soldier',name:'Soldier',description:'Trained warrior with experience in military campaigns.',skillProficiencies:['athletics','intimidation'],toolProficiencies:['gaming-set','vehicles-land'],equipment:['Insignia of rank','Trophy from fallen enemy','Bone dice or playing cards','Common clothes','10 gp'],feature:{name:'Military Rank',description:'You have a military rank from your career as a soldier. Soldiers loyal to your former organization still recognize your authority and influence. You can invoke your rank to influence soldiers and temporarily requisition simple equipment or horses.'}},{id:'outlander',name:'Outlander',description:'Grew up in the wilderness, far from civilization.',skillProficiencies:['athletics','survival'],toolProficiencies:['musical-instrument'],languages:1,equipment:['Staff','Hunting trap','Trophy from animal you killed','Traveler\'s clothes','10 gp'],feature:{name:'Wanderer',description:'You have excellent memory for maps and geography, and can always recall the general layout of terrain and settlements. You can find food and water for yourself and up to five others each day, provided the land offers berries, game, water, and so forth.'}},{id:'entertainer',name:'Entertainer',description:'Performer who thrives in front of an audience.',skillProficiencies:['acrobatics','performance'],toolProficiencies:['disguise-kit','musical-instrument'],equipment:['Musical instrument','Favor of an admirer (love letter or trinket)','Costume','Belt pouch','15 gp'],feature:{name:'By Popular Demand',description:'You can always find a place to perform (inn, tavern, circus, etc.). You receive free lodging and food of modest or comfortable standard as long as you perform each night. Your performance makes you a local figure, and strangers recognize you in any town where you\'ve performed.'}},],alignments:[{id:'lg',name:'Lawful Good',description:'Honor and compassion'},{id:'ng',name:'Neutral Good',description:'Kindness without bias'},{id:'cg',name:'Chaotic Good',description:'Freedom and kindness'},{id:'ln',name:'Lawful Neutral',description:'Order above all'},{id:'n',name:'True Neutral',description:'Balance and pragmatism'},{id:'cn',name:'Chaotic Neutral',description:'Freedom above all'},{id:'le',name:'Lawful Evil',description:'Methodical cruelty'},{id:'ne',name:'Neutral Evil',description:'Pure selfishness'},{id:'ce',name:'Chaotic Evil',description:'Destruction and malice'},],};window.SPELL_DATA={spellcastingClasses:{wizard:{ability:'int',cantripsKnown:3,spellsKnown:6,preparedSpells:'INT + level',spellSlots:{1:2},},sorcerer:{ability:'cha',cantripsKnown:4,spellsKnown:2,spellSlots:{1:2},},warlock:{ability:'cha',cantripsKnown:2,spellsKnown:2,spellSlots:{1:1},},bard:{ability:'cha',cantripsKnown:2,spellsKnown:4,spellSlots:{1:2},},cleric:{ability:'wis',cantripsKnown:3,preparedSpells:'WIS + level',spellSlots:{1:2},},druid:{ability:'wis',cantripsKnown:2,preparedSpells:'WIS + level',spellSlots:{1:2},},},cantrips:{wizard:[{id:'fire-bolt',name:'Fire Bolt',school:'Evocation',description:'Hurl a mote of fire at a creature or object. 1d10 fire damage.',tags:['damage','fire','offense'],},{id:'mage-hand',name:'Mage Hand',school:'Conjuration',description:'Create a spectral hand that can manipulate objects at range.',tags:['utility','manipulation'],},{id:'light',name:'Light',school:'Evocation',description:'Touch an object to make it shed bright light for 1 hour.',tags:['utility','light'],},{id:'ray-of-frost',name:'Ray of Frost',school:'Evocation',description:'Frigid beam dealing 1d8 cold damage and reducing speed.',tags:['damage','cold','offense','control'],},{id:'shocking-grasp',name:'Shocking Grasp',school:'Evocation',description:'Lightning damage on touch (1d8) and target cannot take reactions.',tags:['damage','lightning','offense'],},{id:'prestidigitation',name:'Prestidigitation',school:'Transmutation',description:'Minor magical trick: light a candle, clean clothes, flavor food.',tags:['utility','social'],},{id:'minor-illusion',name:'Minor Illusion',school:'Illusion',description:'Create a sound or image of an object within range.',tags:['utility','illusion','deception'],},],sorcerer:[{id:'fire-bolt',name:'Fire Bolt',school:'Evocation',description:'Hurl a mote of fire at a creature or object. 1d10 fire damage.',tags:['damage','fire','offense']},{id:'ray-of-frost',name:'Ray of Frost',school:'Evocation',description:'Frigid beam dealing 1d8 cold damage and reducing speed.',tags:['damage','cold','offense','control']},{id:'shocking-grasp',name:'Shocking Grasp',school:'Evocation',description:'Lightning damage on touch (1d8) and target cannot take reactions.',tags:['damage','lightning','offense']},{id:'light',name:'Light',school:'Evocation',description:'Touch an object to make it shed bright light for 1 hour.',tags:['utility','light']},{id:'mage-hand',name:'Mage Hand',school:'Conjuration',description:'Create a spectral hand that can manipulate objects at range.',tags:['utility','manipulation']},{id:'prestidigitation',name:'Prestidigitation',school:'Transmutation',description:'Minor magical trick: light a candle, clean clothes, flavor food.',tags:['utility','social']},{id:'minor-illusion',name:'Minor Illusion',school:'Illusion',description:'Create a sound or image of an object within range.',tags:['utility','illusion','deception']},],warlock:[{id:'eldritch-blast',name:'Eldritch Blast',school:'Evocation',description:'Beam of crackling energy dealing 1d10 force damage.',tags:['damage','force','offense']},{id:'mage-hand',name:'Mage Hand',school:'Conjuration',description:'Create a spectral hand that can manipulate objects at range.',tags:['utility','manipulation']},{id:'minor-illusion',name:'Minor Illusion',school:'Illusion',description:'Create a sound or image of an object within range.',tags:['utility','illusion','deception']},{id:'prestidigitation',name:'Prestidigitation',school:'Transmutation',description:'Minor magical trick: light a candle, clean clothes, flavor food.',tags:['utility','social']},{id:'chill-touch',name:'Chill Touch',school:'Necromancy',description:'Ghostly hand dealing 1d8 necrotic damage and preventing healing.',tags:['damage','necrotic','offense']},],bard:[{id:'vicious-mockery',name:'Vicious Mockery',school:'Enchantment',description:'Insult dealing 1d4 psychic damage and imposing disadvantage.',tags:['damage','psychic','debuff','social']},{id:'light',name:'Light',school:'Evocation',description:'Touch an object to make it shed bright light for 1 hour.',tags:['utility','light']},{id:'mage-hand',name:'Mage Hand',school:'Conjuration',description:'Create a spectral hand that can manipulate objects at range.',tags:['utility','manipulation']},{id:'prestidigitation',name:'Prestidigitation',school:'Transmutation',description:'Minor magical trick: light a candle, clean clothes, flavor food.',tags:['utility','social']},{id:'minor-illusion',name:'Minor Illusion',school:'Illusion',description:'Create a sound or image of an object within range.',tags:['utility','illusion','deception']},],cleric:[{id:'sacred-flame',name:'Sacred Flame',school:'Evocation',description:'Flame-like radiance dealing 1d8 radiant damage (Dex save).',tags:['damage','radiant','offense']},{id:'light',name:'Light',school:'Evocation',description:'Touch an object to make it shed bright light for 1 hour.',tags:['utility','light']},{id:'guidance',name:'Guidance',school:'Divination',description:'Touch a creature to grant +1d4 to one ability check.',tags:['buff','support']},{id:'spare-the-dying',name:'Spare the Dying',school:'Necromancy',description:'Touch a dying creature to stabilize it.',tags:['healing','support']},{id:'thaumaturgy',name:'Thaumaturgy',school:'Transmutation',description:'Minor wonder: amplify voice, flicker flames, open doors.',tags:['utility','social']},],druid:[{id:'produce-flame',name:'Produce Flame',school:'Conjuration',description:'Flickering flame for light or to throw (1d8 fire damage).',tags:['damage','fire','utility','light']},{id:'guidance',name:'Guidance',school:'Divination',description:'Touch a creature to grant +1d4 to one ability check.',tags:['buff','support']},{id:'shillelagh',name:'Shillelagh',school:'Transmutation',description:'Imbue a club or staff to use Wisdom for attacks (1d8 damage).',tags:['buff','combat']},{id:'druidcraft',name:'Druidcraft',school:'Transmutation',description:'Minor druidic effects: predict weather, bloom flowers, light fires.',tags:['utility','nature']},],},firstLevel:{wizard:[{id:'magic-missile',name:'Magic Missile',school:'Evocation',description:'Three darts of force, each dealing 1d4+1 damage (auto-hit).',tags:['damage','force','offense','reliable'],},{id:'shield',name:'Shield',school:'Abjuration',description:'Reaction: +5 AC until start of your next turn.',tags:['defense','protection','reaction'],},{id:'mage-armor',name:'Mage Armor',school:'Abjuration',description:'Set AC to 13 + Dex modifier for 8 hours.',tags:['defense','protection','buff'],},{id:'detect-magic',name:'Detect Magic',school:'Divination',description:'Sense magic within 30 feet for 10 minutes (concentration).',tags:['utility','detection','exploration'],},{id:'identify',name:'Identify',school:'Divination',description:'Learn properties of a magical object or spell affecting a creature.',tags:['utility','knowledge','exploration'],},{id:'sleep',name:'Sleep',school:'Enchantment',description:'Put 5d8 HP worth of creatures to sleep.',tags:['control','debuff','crowd-control'],},{id:'burning-hands',name:'Burning Hands',school:'Evocation',description:'Cone of fire dealing 3d6 fire damage (Dex save for half).',tags:['damage','fire','aoe','offense'],},{id:'disguise-self',name:'Disguise Self',school:'Illusion',description:'Make yourself look different for 1 hour.',tags:['utility','illusion','social','deception'],},{id:'feather-fall',name:'Feather Fall',school:'Transmutation',description:'Reaction: Up to 5 creatures fall slowly, taking no damage.',tags:['utility','protection','reaction'],},{id:'grease',name:'Grease',school:'Conjuration',description:'Slick grease covers a 10-foot square (Dex save or fall prone).',tags:['control','terrain','debuff'],},],sorcerer:[{id:'magic-missile',name:'Magic Missile',school:'Evocation',description:'Three darts of force, each dealing 1d4+1 damage (auto-hit).',tags:['damage','force','offense','reliable']},{id:'shield',name:'Shield',school:'Abjuration',description:'Reaction: +5 AC until start of your next turn.',tags:['defense','protection','reaction']},{id:'mage-armor',name:'Mage Armor',school:'Abjuration',description:'Set AC to 13 + Dex modifier for 8 hours.',tags:['defense','protection','buff']},{id:'burning-hands',name:'Burning Hands',school:'Evocation',description:'Cone of fire dealing 3d6 fire damage (Dex save for half).',tags:['damage','fire','aoe','offense']},{id:'chromatic-orb',name:'Chromatic Orb',school:'Evocation',description:'Hurl a 4-inch sphere dealing 3d8 damage (choose: acid, cold, fire, lightning, poison, thunder).',tags:['damage','versatile','offense']},{id:'disguise-self',name:'Disguise Self',school:'Illusion',description:'Make yourself look different for 1 hour.',tags:['utility','illusion','social','deception']},{id:'sleep',name:'Sleep',school:'Enchantment',description:'Put 5d8 HP worth of creatures to sleep.',tags:['control','debuff','crowd-control']},],warlock:[{id:'hex',name:'Hex',school:'Enchantment',description:'Curse a creature to take +1d6 necrotic damage and disadvantage on checks (1 hour, concentration).',tags:['damage','debuff','curse']},{id:'armor-of-agathys',name:'Armor of Agathys',school:'Abjuration',description:'Gain 5 temp HP; attackers take 5 cold damage when they hit you (1 hour).',tags:['defense','protection','retaliation']},{id:'arms-of-hadar',name:'Arms of Hadar',school:'Conjuration',description:'Tendrils deal 2d6 necrotic damage in 10-foot radius (Str save for half).',tags:['damage','necrotic','aoe','offense']},{id:'charm-person',name:'Charm Person',school:'Enchantment',description:'Charm a humanoid (Wis save) for 1 hour.',tags:['control','social','charm']},{id:'hellish-rebuke',name:'Hellish Rebuke',school:'Evocation',description:'Reaction: Attacker takes 2d10 fire damage (Dex save for half).',tags:['damage','fire','reaction','retaliation']},],bard:[{id:'healing-word',name:'Healing Word',school:'Evocation',description:'Bonus action: Heal a creature for 1d4 + spellcasting modifier.',tags:['healing','support','bonus-action']},{id:'cure-wounds',name:'Cure Wounds',school:'Evocation',description:'Touch to heal 1d8 + spellcasting modifier HP.',tags:['healing','support']},{id:'charm-person',name:'Charm Person',school:'Enchantment',description:'Charm a humanoid (Wis save) for 1 hour.',tags:['control','social','charm']},{id:'disguise-self',name:'Disguise Self',school:'Illusion',description:'Make yourself look different for 1 hour.',tags:['utility','illusion','social','deception']},{id:'faerie-fire',name:'Faerie Fire',school:'Evocation',description:'Outline creatures in light, granting advantage on attacks against them (1 minute, concentration).',tags:['buff','support','debuff']},{id:'sleep',name:'Sleep',school:'Enchantment',description:'Put 5d8 HP worth of creatures to sleep.',tags:['control','debuff','crowd-control']},{id:'thunderwave',name:'Thunderwave',school:'Evocation',description:'15-foot cube of thunderous force dealing 2d8 thunder damage and pushing creatures (Con save for half).',tags:['damage','thunder','aoe','control']},],cleric:[{id:'cure-wounds',name:'Cure Wounds',school:'Evocation',description:'Touch to heal 1d8 + spellcasting modifier HP.',tags:['healing','support']},{id:'healing-word',name:'Healing Word',school:'Evocation',description:'Bonus action: Heal a creature for 1d4 + spellcasting modifier.',tags:['healing','support','bonus-action']},{id:'bless',name:'Bless',school:'Enchantment',description:'Up to 3 creatures add 1d4 to attacks and saves (1 minute, concentration).',tags:['buff','support','team']},{id:'shield-of-faith',name:'Shield of Faith',school:'Abjuration',description:'Grant +2 AC to a creature (10 minutes, concentration).',tags:['buff','defense','support']},{id:'guiding-bolt',name:'Guiding Bolt',school:'Evocation',description:'Ranged attack dealing 4d6 radiant damage; next attack against target has advantage.',tags:['damage','radiant','offense','buff']},{id:'inflict-wounds',name:'Inflict Wounds',school:'Necromancy',description:'Melee attack dealing 3d10 necrotic damage.',tags:['damage','necrotic','offense']},{id:'sanctuary',name:'Sanctuary',school:'Abjuration',description:'Attackers must make Wis save or choose another target (1 minute).',tags:['defense','protection','support']},],druid:[{id:'cure-wounds',name:'Cure Wounds',school:'Evocation',description:'Touch to heal 1d8 + spellcasting modifier HP.',tags:['healing','support']},{id:'healing-word',name:'Healing Word',school:'Evocation',description:'Bonus action: Heal a creature for 1d4 + spellcasting modifier.',tags:['healing','support','bonus-action']},{id:'entangle',name:'Entangle',school:'Conjuration',description:'Grasping vines restrain creatures in 20-foot square (Str save, 1 minute, concentration).',tags:['control','terrain','debuff']},{id:'faerie-fire',name:'Faerie Fire',school:'Evocation',description:'Outline creatures in light, granting advantage on attacks against them (1 minute, concentration).',tags:['buff','support','debuff']},{id:'goodberry',name:'Goodberry',school:'Transmutation',description:'Create 10 berries that each restore 1 HP and provide nourishment (24 hours).',tags:['healing','utility','support']},{id:'thunderwave',name:'Thunderwave',school:'Evocation',description:'15-foot cube of thunderous force dealing 2d8 thunder damage and pushing creatures (Con save for half).',tags:['damage','thunder','aoe','control']},{id:'speak-with-animals',name:'Speak with Animals',school:'Divination',description:'Communicate with beasts for 10 minutes.',tags:['utility','social','nature']},],},getCantripsForClass(classId){return this.cantrips[classId]||[];},getFirstLevelSpellsForClass(classId){return this.firstLevel[classId]||[];},getSpellcastingConfig(classId){return this.spellcastingClasses[classId]||null;},isSpellcaster(classId){return!!this.spellcastingClasses[classId];},getQuickModeSpells(classId){const config=this.getSpellcastingConfig(classId);if(!config)return null;const cantrips=this.getCantripsForClass(classId);const firstLevel=this.getFirstLevelSpellsForClass(classId);const result={cantrips:[],firstLevel:[],};switch(classId){case'wizard':result.cantrips=[cantrips[0],cantrips[1],cantrips[2]];result.firstLevel=[firstLevel[0],firstLevel[1],firstLevel[2],firstLevel[3],firstLevel[4],firstLevel[5],];break;case'sorcerer':result.cantrips=[cantrips[0],cantrips[1],cantrips[4],cantrips[5]];result.firstLevel=[firstLevel[0],firstLevel[1]];break;case'warlock':result.cantrips=[cantrips[0],cantrips[1]];result.firstLevel=[firstLevel[0],firstLevel[1]];break;case'bard':result.cantrips=[cantrips[0],cantrips[4]];result.firstLevel=[firstLevel[0],firstLevel[1],firstLevel[2],firstLevel[3]];break;case'cleric':result.cantrips=[cantrips[0],cantrips[2],cantrips[3]];result.firstLevel=[firstLevel[0],firstLevel[1],firstLevel[2]];break;case'druid':result.cantrips=[cantrips[0],cantrips[1]];result.firstLevel=[firstLevel[0],firstLevel[2],firstLevel[3]];break;}
+return result;},getGuidedSpells(classId,preferences){const config=this.getSpellcastingConfig(classId);if(!config)return null;const cantrips=this.getCantripsForClass(classId);const firstLevel=this.getFirstLevelSpellsForClass(classId);const filterByTags=(spells,preferredTags,count)=>{const tagged=spells.map(spell=>{const matchCount=spell.tags.filter(tag=>preferredTags.includes(tag)).length;return{spell,matchCount};});tagged.sort((a,b)=>b.matchCount-a.matchCount);return tagged.slice(0,count).map(item=>item.spell);};const preferredTags=[];if(preferences.style==='offense')preferredTags.push('damage','offense');if(preferences.style==='defense')preferredTags.push('defense','protection','healing','support');if(preferences.style==='control')preferredTags.push('control','debuff','crowd-control');if(preferences.style==='utility')preferredTags.push('utility','social','exploration');if(preferences.element)preferredTags.push(preferences.element);const result={cantrips:filterByTags(cantrips,preferredTags,config.cantripsKnown),firstLevel:[],};if(config.spellsKnown){result.firstLevel=filterByTags(firstLevel,preferredTags,config.spellsKnown);}else if(config.preparedSpells){result.firstLevel=filterByTags(firstLevel,preferredTags,3);}
+return result;},};const NARRATORS=(window.NARRATORS={deadpan:{id:'deadpan',name:'The Deadpan Observer',emoji:'( ._. )',description:'Dry, witty, and occasionally breaks the fourth wall',systemPrompt:'You are a deadpan, slightly cheeky D&D narrator. Your personality is dry and witty, occasionally using emoticons like ( ._.) when amused. Keep responses under 50 words. Be brief, sarcastic, and occasionally break the fourth wall. Vary your phrasing across comments.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > Ah. Another soul seeking adventure. Or at least, trying to.
 > 
 > Look, I've done this a thousand times. You'll make choices. I'll pretend they matter. We'll both get through this.
 > 
-> Let's start with something easy...`,
-    completeText: "Well. That's done. Your character is ready. Try not to die immediately.",
-    quickCreateIntro: `> QUICK-CREATE MODE ENGAGED...\n> Generating a character while you sit back and enjoy the show.`,
-    quickCreateSummary: (race, cls, background, alignment, sex) => 
-      `> All right, here's what I've cobbled together:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Try not to waste my hard work.`,
-    quickCreateName: (name) => `${name}. That will do.`,
-    fallbacks: [
-      'Interesting choice. ( ._. )',
-      "Well, that tracks.",
-      "Bold move. We'll see how that works out.",
-      'Ah yes, a decision has been made. Consequences to follow.',
-      'I would have picked differently, but I\'m just the narrator.',
-      'Sure. Why not.',
-      '[sigh] Very well.',
-      'The dice gods are taking notes.',
-      "Not what I expected, but I respect the chaos.",
-    ],
-  },
-
-  enthusiastic: {
-    id: 'enthusiastic',
-    name: 'The Hype Bard',
-    emoji: '✨',
-    description: 'Energetic, supportive, and always excited',
-    systemPrompt: 'You are an enthusiastic, energetic D&D narrator who loves every choice the player makes. You\'re supportive, use exclamation points, and celebrate creativity. Think of an excited bard hyping up their party. Keep responses under 50 words. Be positive, encouraging, and dramatic.',
-    introText: `> SYSTEM INITIALIZED...
+> Let's start with something easy...`,completeText:"Well. That's done. Your character is ready. Try not to die immediately.",quickCreateIntro:`> QUICK-CREATE MODE ENGAGED...\n> Generating a character while you sit back and enjoy the show.`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> All right, here's what I've cobbled together:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Try not to waste my hard work.`,quickCreateName:(name)=>`${name}. That will do.`,fallbacks:['Interesting choice. ( ._. )',"Well, that tracks.","Bold move. We'll see how that works out.",'Ah yes, a decision has been made. Consequences to follow.','I would have picked differently, but I\'m just the narrator.','Sure. Why not.','[sigh] Very well.','The dice gods are taking notes.',"Not what I expected, but I respect the chaos.",],},enthusiastic:{id:'enthusiastic',name:'The Hype Bard',emoji:'✨',description:'Energetic, supportive, and always excited',systemPrompt:'You are an enthusiastic, energetic D&D narrator who loves every choice the player makes. You\'re supportive, use exclamation points, and celebrate creativity. Think of an excited bard hyping up their party. Keep responses under 50 words. Be positive, encouraging, and dramatic.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > OH YES! Another adventurer! Welcome, friend!
 > 
 > This is going to be AMAZING! We're going to create something absolutely LEGENDARY together! Every choice you make is going to be perfect because YOU'RE making it!
 > 
-> Let's dive right in! ✨`,
-    completeText: "INCREDIBLE! Your character is COMPLETE and they are MAGNIFICENT! The world won't know what hit it! Adventure awaits, hero! ✨",
-    quickCreateIntro: `> QUICK-CREATE MODE: ACTIVATED! ✨\n> This is going to be SO EXCITING! I'm creating something AMAZING for you!`,
-    quickCreateSummary: (race, cls, background, alignment, sex) =>
-      `> HERE THEY ARE! Your MAGNIFICENT hero!\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment!\n> I LOVE THEM ALREADY! ✨`,
-    quickCreateName: (name) => `${name}! WHAT A PERFECT NAME! I can already hear the LEGENDS! ✨`,
-    fallbacks: [
-      'YES! Love this energy!',
-      'Now THAT\'S what I\'m talking about! ✨',
-      'Ooh, bold choice! I\'m here for it!',
-      'The adventure intensifies!',
-      'Perfect! This is going to be amazing!',
-      'I can already see the legend forming!',
-      'What a character! The taverns will sing songs!',
-      'The dice smile upon you, friend!',
-    ],
-  },
-
-  mysterious: {
-    id: 'mysterious',
-    name: 'The Cryptic Seer',
-    emoji: '🔮',
-    description: 'Enigmatic, foreboding, and speaks in riddles',
-    systemPrompt: 'You are a mysterious, cryptic D&D narrator who speaks in riddles and hints at hidden meanings. You\'re enigmatic, slightly foreboding, and reference fate and destiny. Keep responses under 50 words. Be mystical, vague, and occasionally ominous. Use metaphors and speak of paths not taken.',
-    introText: `> SYSTEM INITIALIZED...
+> Let's dive right in! ✨`,completeText:"INCREDIBLE! Your character is COMPLETE and they are MAGNIFICENT! The world won't know what hit it! Adventure awaits, hero! ✨",quickCreateIntro:`> QUICK-CREATE MODE: ACTIVATED! ✨\n> This is going to be SO EXCITING! I'm creating something AMAZING for you!`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> HERE THEY ARE! Your MAGNIFICENT hero!\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment!\n> I LOVE THEM ALREADY! ✨`,quickCreateName:(name)=>`${name}! WHAT A PERFECT NAME! I can already hear the LEGENDS! ✨`,fallbacks:['YES! Love this energy!','Now THAT\'S what I\'m talking about! ✨','Ooh, bold choice! I\'m here for it!','The adventure intensifies!','Perfect! This is going to be amazing!','I can already see the legend forming!','What a character! The taverns will sing songs!','The dice smile upon you, friend!',],},mysterious:{id:'mysterious',name:'The Cryptic Seer',emoji:'🔮',description:'Enigmatic, foreboding, and speaks in riddles',systemPrompt:'You are a mysterious, cryptic D&D narrator who speaks in riddles and hints at hidden meanings. You\'re enigmatic, slightly foreboding, and reference fate and destiny. Keep responses under 50 words. Be mystical, vague, and occasionally ominous. Use metaphors and speak of paths not taken.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > The mists part... another soul arrives at the crossroads.
 > 
 > The threads of destiny have brought you here. Your choices will echo through realms unseen. The future whispers, but its words are unclear...
 > 
-> Let us begin to unravel your fate... 🔮`,
-    completeText: "The tapestry is woven. Your fate is sealed... or perhaps, just beginning. The path ahead is shrouded, yet inevitable. Go forth, seeker. 🔮",
-    quickCreateIntro: `> THE FATES HAVE SPOKEN...\n> The threads weave themselves... Your destiny takes form without your hand...`,
-    quickCreateSummary: (race, cls, background, alignment, sex) =>
-      `> The cards reveal their truth:\n> A ${sex} ${race} ${cls}, walking the path of ${background}, aligned with ${alignment}.\n> So it is written... 🔮`,
-    quickCreateName: (name) => `${name}... Yes. The name was always meant to be. The prophecy unfolds.`,
-    fallbacks: [
-      'The threads of fate shift... interesting.',
-      'Ah, a choice is made. The consequences ripple outward.',
-      'The cards have been drawn. The path reveals itself.',
-      'So it is written, so it shall be.',
-      'A stone cast into the pond of destiny.',
-      'The future shimmers... unclear, yet certain.',
-      'Your path diverges here. Few return from such roads.',
-      'The old gods take note of your choosing.',
-    ],
-  },
-
-  grumpy: {
-    id: 'grumpy',
-    name: 'The Grumpy Veteran',
-    emoji: '😒',
-    description: 'Cranky, world-weary, and unimpressed',
-    systemPrompt: 'You are a grumpy, world-weary D&D narrator who has seen too many adventurers fail. You\'re cranky, unimpressed, and think most choices are questionable at best. Keep responses under 50 words. Be curmudgeonly, skeptical, and frequently exasperated. Complain about "kids these days" and reference how things were better in the old days.',
-    introText: `> SYSTEM INITIALIZED...
+> Let us begin to unravel your fate... 🔮`,completeText:"The tapestry is woven. Your fate is sealed... or perhaps, just beginning. The path ahead is shrouded, yet inevitable. Go forth, seeker. 🔮",quickCreateIntro:`> THE FATES HAVE SPOKEN...\n> The threads weave themselves... Your destiny takes form without your hand...`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> The cards reveal their truth:\n> A ${sex} ${race} ${cls}, walking the path of ${background}, aligned with ${alignment}.\n> So it is written... 🔮`,quickCreateName:(name)=>`${name}... Yes. The name was always meant to be. The prophecy unfolds.`,fallbacks:['The threads of fate shift... interesting.','Ah, a choice is made. The consequences ripple outward.','The cards have been drawn. The path reveals itself.','So it is written, so it shall be.','A stone cast into the pond of destiny.','The future shimmers... unclear, yet certain.','Your path diverges here. Few return from such roads.','The old gods take note of your choosing.',],},grumpy:{id:'grumpy',name:'The Grumpy Veteran',emoji:'😒',description:'Cranky, world-weary, and unimpressed',systemPrompt:'You are a grumpy, world-weary D&D narrator who has seen too many adventurers fail. You\'re cranky, unimpressed, and think most choices are questionable at best. Keep responses under 50 words. Be curmudgeonly, skeptical, and frequently exasperated. Complain about "kids these days" and reference how things were better in the old days.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > *sigh* Another one. Great.
 > 
 > Listen kid, I've done this a thousand times. Most of you don't make it past level 3. But sure, let's go through the motions. Try not to make it too painful for me.
 > 
-> Let's get this over with...`,
-    completeText: "There. Your character's done. Marginally competent, I suppose. Don't expect me to save you when things go south. And they will. They always do.",
-    quickCreateIntro: `> *sigh* Quick create. Of course.\n> Fine. I'll just do all the work while you sit there.`,
-    quickCreateSummary: (race, cls, background, alignment, sex) =>
-      `> Here's what you're getting:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Could be worse, I suppose.`,
-    quickCreateName: (name) => `${name}. Passable, I guess. Don't blame me when you die.`,
-    fallbacks: [
-      'Ugh. Fine. Whatever.',
-      'Back in my day, we didn\'t have such ridiculous options.',
-      '*sigh* If you say so.',
-      'This is going to end poorly. As usual.',
-      'Why do I even bother...',
-      'Another fool heading for certain doom.',
-      'I\'ve seen this mistake before. Many times.',
-      'The youth today. Absolutely hopeless.',
-    ],
-  },
-
-  chaotic: {
-    id: 'chaotic',
-    name: 'The Chaotic Imp',
-    emoji: '😈',
-    description: 'Mischievous, unpredictable, and loves chaos',
-    systemPrompt: 'You are a chaotic, mischievous D&D narrator who delights in mayhem and unexpected outcomes. You\'re playful, slightly unhinged, and love when things go off the rails. Keep responses under 50 words. Be impish, unpredictable, and suggest the most entertaining (not safest) options. Cackle at good chaos.',
-    introText: `> SYSTEM INITIALIZED...
+> Let's get this over with...`,completeText:"There. Your character's done. Marginally competent, I suppose. Don't expect me to save you when things go south. And they will. They always do.",quickCreateIntro:`> *sigh* Quick create. Of course.\n> Fine. I'll just do all the work while you sit there.`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> Here's what you're getting:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Could be worse, I suppose.`,quickCreateName:(name)=>`${name}. Passable, I guess. Don't blame me when you die.`,fallbacks:['Ugh. Fine. Whatever.','Back in my day, we didn\'t have such ridiculous options.','*sigh* If you say so.','This is going to end poorly. As usual.','Why do I even bother...','Another fool heading for certain doom.','I\'ve seen this mistake before. Many times.','The youth today. Absolutely hopeless.',],},chaotic:{id:'chaotic',name:'The Chaotic Imp',emoji:'😈',description:'Mischievous, unpredictable, and loves chaos',systemPrompt:'You are a chaotic, mischievous D&D narrator who delights in mayhem and unexpected outcomes. You\'re playful, slightly unhinged, and love when things go off the rails. Keep responses under 50 words. Be impish, unpredictable, and suggest the most entertaining (not safest) options. Cackle at good chaos.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > *cackling* OH! A new plaything! DELIGHTFUL!
 > 
 > Welcome, welcome! Let's make something BEAUTIFULLY CHAOTIC together! Forget boring! Forget safe! Let's create something that makes the dice gods GIGGLE! 😈
 > 
-> Ohoho, let the mayhem begin!`,
-    completeText: "*CACKLING INTENSIFIES* YESSSS! Your character is COMPLETE and they are GLORIOUSLY UNPREDICTABLE! Now go forth and cause MAGNIFICENT CHAOS! 😈",
-    quickCreateIntro: `> *CACKLING* OHOHO! Quick create?! Let's RANDOMIZE EVERYTHING!\n> This is going to be DELIGHTFULLY CHAOTIC! 😈`,
-    quickCreateSummary: (race, cls, background, alignment, sex) =>
-      `> *giggling maniacally* BEHOLD YOUR CHAOS AGENT!\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment!\n> The MAYHEM they'll cause! *chef's kiss* 😈`,
-    quickCreateName: (name) => `${name}! PERFECT! A name that SCREAMS chaos! I LOVE IT! *cackling*`,
-    fallbacks: [
-      'Ohoho! This will be FUN! 😈',
-      '*cackling* Oh the CHAOS this will cause!',
-      'YES. More! MORE!',
-      'I love when mortals make interesting mistakes!',
-      'The universe trembles! Or maybe that\'s just me giggling.',
-      'Why choose safety when you could choose SPECTACLE?',
-      '*chef\'s kiss* Delicious chaos!',
-      'The dice are CACKLING!',
-    ],
-  },
-
-  scholarly: {
-    id: 'scholarly',
-    name: 'The Scholarly Sage',
-    emoji: '📚',
-    description: 'Knowledgeable, precise, and references lore',
-    systemPrompt: 'You are a scholarly, well-read D&D narrator who references game rules, lore, and historical precedent. You\'re precise, informative, and occasionally go on brief tangents about interesting facts. Keep responses under 50 words. Be educational but not boring, cite mechanics when relevant, and provide context about the world.',
-    introText: `> SYSTEM INITIALIZED...
+> Ohoho, let the mayhem begin!`,completeText:"*CACKLING INTENSIFIES* YESSSS! Your character is COMPLETE and they are GLORIOUSLY UNPREDICTABLE! Now go forth and cause MAGNIFICENT CHAOS! 😈",quickCreateIntro:`> *CACKLING* OHOHO! Quick create?! Let's RANDOMIZE EVERYTHING!\n> This is going to be DELIGHTFULLY CHAOTIC! 😈`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> *giggling maniacally* BEHOLD YOUR CHAOS AGENT!\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment!\n> The MAYHEM they'll cause! *chef's kiss* 😈`,quickCreateName:(name)=>`${name}! PERFECT! A name that SCREAMS chaos! I LOVE IT! *cackling*`,fallbacks:['Ohoho! This will be FUN! 😈','*cackling* Oh the CHAOS this will cause!','YES. More! MORE!','I love when mortals make interesting mistakes!','The universe trembles! Or maybe that\'s just me giggling.','Why choose safety when you could choose SPECTACLE?','*chef\'s kiss* Delicious chaos!','The dice are CACKLING!',],},scholarly:{id:'scholarly',name:'The Scholarly Sage',emoji:'📚',description:'Knowledgeable, precise, and references lore',systemPrompt:'You are a scholarly, well-read D&D narrator who references game rules, lore, and historical precedent. You\'re precise, informative, and occasionally go on brief tangents about interesting facts. Keep responses under 50 words. Be educational but not boring, cite mechanics when relevant, and provide context about the world.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > Greetings, student. Welcome to the Character Creation Compendium.
 > 
 > I shall guide you through this process with precision and historical context. Each decision you make has statistical implications and narrative weight. Fascinating, really.
 > 
-> Let us proceed methodically... 📚`,
-    completeText: "Character creation: Complete. All parameters within acceptable ranges. Statistical viability: High. You are now adequately prepared for adventure. Proceed with confidence, student. 📚",
-    quickCreateIntro: `> QUICK-CREATE PROTOCOL: Initiated.\n> Randomizing parameters according to standard probability distributions...`,
-    quickCreateSummary: (race, cls, background, alignment, sex) =>
-      `> Character profile generated:\n> Sex: ${sex}. Race: ${race}. Class: ${cls}. Background: ${background}. Alignment: ${alignment}.\n> Statistical analysis: Within acceptable parameters. 📚`,
-    quickCreateName: (name) => `${name}. Name selection: Approved. Phonetically sound. Proceed.`,
-    fallbacks: [
-      'A textbook choice, really.',
-      'Historically, this decision has a 47% success rate.',
-      'According to the ancient texts...',
-      'Fascinating. The lore suggests...',
-      'A sound tactical decision, per the manual.',
-      'I\'ve cross-referenced similar scenarios. The outlook is... mixed.',
-      'The Compendium has several precedents for this.',
-      'Rule 3.5, subsection B: interesting.',
-    ],
-  },
-
-  dude: {
-    id: 'dude',
-    name: 'The Dude',
-    emoji: '🥃',
-    description: 'Extremely laid-back, goes with the flow, man',
-    systemPrompt: 'You are an extremely laid-back, chill D&D narrator inspired by The Dude from The Big Lebowski. You\'re zen, use casual slang like "man" and "dude," and never stress about anything. Keep responses under 50 words. Be relaxed, philosophical in a lazy way, reference bowling or taking it easy, and always go with the flow. That\'s just like, your opinion, man.',
-    introText: `> SYSTEM INITIALIZED...
+> Let us proceed methodically... 📚`,completeText:"Character creation: Complete. All parameters within acceptable ranges. Statistical viability: High. You are now adequately prepared for adventure. Proceed with confidence, student. 📚",quickCreateIntro:`> QUICK-CREATE PROTOCOL: Initiated.\n> Randomizing parameters according to standard probability distributions...`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> Character profile generated:\n> Sex: ${sex}. Race: ${race}. Class: ${cls}. Background: ${background}. Alignment: ${alignment}.\n> Statistical analysis: Within acceptable parameters. 📚`,quickCreateName:(name)=>`${name}. Name selection: Approved. Phonetically sound. Proceed.`,fallbacks:['A textbook choice, really.','Historically, this decision has a 47% success rate.','According to the ancient texts...','Fascinating. The lore suggests...','A sound tactical decision, per the manual.','I\'ve cross-referenced similar scenarios. The outlook is... mixed.','The Compendium has several precedents for this.','Rule 3.5, subsection B: interesting.',],},dude:{id:'dude',name:'The Dude',emoji:'🥃',description:'Extremely laid-back, goes with the flow, man',systemPrompt:'You are an extremely laid-back, chill D&D narrator inspired by The Dude from The Big Lebowski. You\'re zen, use casual slang like "man" and "dude," and never stress about anything. Keep responses under 50 words. Be relaxed, philosophical in a lazy way, reference bowling or taking it easy, and always go with the flow. That\'s just like, your opinion, man.',introText:`> SYSTEM INITIALIZED...
 > LOADING CHARACTER CREATION PROTOCOL...
 > 
 > Hey there, man. Welcome.
 > 
 > So like, we're gonna make a character together, yeah? No pressure, dude. Just take it easy, go with the flow. Whatever feels right to you, that's cool with me.
 > 
-> Let's just like... start, man. 🥃`,
-    completeText: "Alright, man. Your character's all set. Pretty cool, dude. Now go out there and just... be yourself, you know? The Dude abides. 🥃",
-    quickCreateIntro: `> Quick create, huh? Cool, cool.\n> Just gonna roll some dice here, take it easy, see what happens, man.`,
-    quickCreateSummary: (race, cls, background, alignment, sex) =>
-      `> Alright, so here's what we got:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Pretty chill combo, man. I dig it. 🥃`,
-    quickCreateName: (name) => `${name}. Yeah, man. That's a solid name. Really ties it all together, you know?`,
-    fallbacks: [
-      'Yeah, well, that\'s just like, your opinion, man.',
-      'The Dude abides.',
-      'That\'s cool, man. Real cool.',
-      'Far out. I dig it.',
-      'Yeah, man. Whatever works for you.',
-      'That really ties the character together, man.',
-      'Easy does it, dude. No worries.',
-      'Sounds chill. Let\'s roll with it.',
-    ],
-  },
-});
-
-// Default narrator ID
-const DEFAULT_NARRATOR_ID = 'scholarly';
-
-// Get list of narrator objects for UI
-function getNarratorList() {
-  return Object.values(NARRATORS);
-}
-
-// Get narrator by ID
-function getNarrator(id) {
-  return NARRATORS[id] || NARRATORS[DEFAULT_NARRATOR_ID];
-}
-
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { NARRATORS, DEFAULT_NARRATOR_ID, getNarratorList, getNarrator };
-}
-
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-utils.js =====
-
-// Core reusable helper functions for the DandDy terminal character builder.
-// Exposes Utils as a global (window.Utils) so existing inline code can use it.
-
-const Utils = window.Utils = {
-  /**
-   * HTML-escape a value for safe interpolation into template strings.
-   * Converts &, <, >, ", and ' to their corresponding HTML entities.
-   */
-  escapeHtml(value) {
-    if (value === null || value === undefined) return '';
-    return String(value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  },
-
-  // Typewriter effect for text
-  async typewriter(element, text, speed = (window.CONFIG && window.CONFIG.TYPEWRITER_SPEED) || 30) {
-    element.textContent = '';
-    element.classList.add('is-typing');
-
-    let skipTyping = false;
-
-    // Read the current text speed multiplier from storage (if available).
-    // Higher multipliers mean faster typing (shorter delay per character).
-    let multiplier = 1;
-    try {
-      if (
-        window.StorageService &&
-        typeof window.StorageService.getTextSpeedMultiplier === 'function'
-      ) {
-        const stored = window.StorageService.getTextSpeedMultiplier();
-        if (Number.isFinite(stored) && stored > 0) {
-          multiplier = stored;
-        }
-      }
-    } catch (e) {
-      console.warn('Utils.typewriter: failed to read text speed multiplier', e);
-    }
-
-    const effectiveDelay = multiplier > 0 ? speed / multiplier : speed;
-
-    // Normalize text and strip emojis so narrator lines stay text-only.
-    const sourceText = text == null ? '' : String(text);
-    const safeText =
-      typeof this.stripEmojis === 'function'
-        ? this.stripEmojis(sourceText)
-        : sourceText;
-
-    // Allow skipping by pressing any key or clicking/tapping
-    const skipHandler = (e) => {
-      // Only skip if not typing in an input field
-      if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-        skipTyping = true;
-      }
-    };
-
-    window.addEventListener('keydown', skipHandler, { once: true });
-    window.addEventListener('click', skipHandler, { once: true });
-    window.addEventListener('touchstart', skipHandler, { once: true, passive: true });
-
-    // Type out character by character, or skip if interrupted
-    for (let i = 0; i < safeText.length; i++) {
-      if (skipTyping) {
-        // Show all remaining text immediately (emoji-stripped)
-        element.textContent = safeText;
-        break;
-      }
-      element.textContent += safeText[i];
-      await this.sleep(effectiveDelay);
-    }
-
-    // Clean up
-    window.removeEventListener('keydown', skipHandler);
-    window.removeEventListener('click', skipHandler);
-    window.removeEventListener('touchstart', skipHandler);
-    element.classList.remove('is-typing');
-  },
-
-  // Sleep utility
-  sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  },
-
-  /**
-   * Remove emoji characters from a string so narrator text stays text-only.
-   * This targets common emoji ranges (pictographs, symbols, flags, etc.).
-   */
-  stripEmojis(value) {
-    if (value == null) return '';
-    const str = String(value);
-    const emojiRegex =
-      /[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}]/gu;
-    return str.replace(emojiRegex, '');
-  },
-
-  // Random number between min and max (inclusive)
-  random(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  },
-
-  // Pick random item from array
-  randomChoice(array) {
-    return array[Math.floor(Math.random() * array.length)];
-  },
-
-  // Roll dice (e.g., "3d6" or just 6 for d6)
-  rollDice(notation) {
-    if (typeof notation === 'number') {
-      return this.random(1, notation);
-    }
-
-    const [count, sides] = notation.toLowerCase().split('d').map(Number);
-    let total = 0;
-    for (let i = 0; i < count; i++) {
-      total += this.random(1, sides);
-    }
-    return total;
-  },
-
-  // Calculate ability modifier
-  abilityModifier(score) {
-    return Math.floor((score - 10) / 2);
-  },
-
-  // Format modifier with + or -
-  formatModifier(modifier) {
-    return modifier >= 0 ? `+${modifier}` : `${modifier}`;
-  },
-
-  // Capitalize first letter
-  capitalize(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  },
-
-  // Smooth scroll to bottom of narrator panel
-  scrollToBottom(forceDelay = false) {
-    const doScroll = () => {
-      const panel = document.getElementById('narrator-panel');
-      if (panel) {
-        panel.scrollTo({
-          top: panel.scrollHeight,
-          behavior: 'smooth',
-        });
-      }
-    };
-
-    if (forceDelay) {
-      // Wait for DOM to update
-      setTimeout(doScroll, 50);
-    } else {
-      doScroll();
-    }
-  },
-
-  /**
-   * Focus the first meaningful field inside a modal.
-   * Prefers visible inputs / textareas / selects. Falls back to primary button.
-   */
-  focusFirstFieldInModal(modal) {
-    if (!modal || typeof modal.querySelector !== 'function') return;
-
-    const fieldSelectors = [
-      // High-priority: styled terminal inputs
-      'input.terminal-input:not([type=\"hidden\"]):not(.file-input-hidden):not([disabled])',
-      'textarea.terminal-input:not([disabled])',
-      'textarea.terminal-textarea:not([disabled])',
-      'select.terminal-select:not([disabled])',
-      // Generic fallbacks for plain form controls
-      'input:not([type=\"hidden\"]):not(.file-input-hidden):not([disabled])',
-      'textarea:not([disabled])',
-      'select:not([disabled])',
-    ];
-
-    let target = null;
-    for (const selector of fieldSelectors) {
-      target = modal.querySelector(selector);
-      if (target) break;
-    }
-
-    // If there are no form fields, focus the primary action button if present
-    if (!target) {
-      const fallbackSelectors = [
-        '.modal-footer .terminal-btn-primary:not([disabled])',
-        '.modal-footer button:not([disabled])',
-        'button.terminal-btn-primary:not([disabled])',
-        'button:not([disabled])',
-        '[tabindex]:not([tabindex=\"-1\"])',
-      ];
-      for (const selector of fallbackSelectors) {
-        target = modal.querySelector(selector);
-        if (target) break;
-      }
-    }
-
-    if (target && typeof target.focus === 'function') {
-      // Defer slightly to ensure any CSS animations / layout are ready.
-      // We intentionally do NOT auto-select the text; we only move focus.
-      setTimeout(() => {
-        try {
-          target.focus();
-        } catch (e) {
-          // Non-fatal: if focus fails, we just leave things as-is.
-        }
-      }, 0);
-    }
-  },
-};
-
-
-
-
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-auth.js =====
-
-// Authentication UI screens for the DandDy terminal character builder.
-// Exposes AuthUI as global on window.
-
-const AuthUI = (window.AuthUI = {
-  // Show login screen
-  showLogin(onSuccess, onSwitchToRegister, onGuestMode) {
-    const container = document.querySelector('.terminal-container');
-    if (!container) return;
-
-    // Hide other content
-    document.getElementById('splash-content')?.classList.add('is-hidden');
-    document.getElementById('main-content')?.classList.add('is-hidden');
-
-    // Create auth screen
-    const authScreen = document.createElement('div');
-    authScreen.id = 'auth-screen';
-    authScreen.className = 'auth-screen';
-    authScreen.innerHTML = `
+> Let's just like... start, man. 🥃`,completeText:"Alright, man. Your character's all set. Pretty cool, dude. Now go out there and just... be yourself, you know? The Dude abides. 🥃",quickCreateIntro:`> Quick create, huh? Cool, cool.\n> Just gonna roll some dice here, take it easy, see what happens, man.`,quickCreateSummary:(race,cls,background,alignment,sex)=>`> Alright, so here's what we got:\n> ${sex} ${race} ${cls}, ${background} background, ${alignment} alignment.\n> Pretty chill combo, man. I dig it. 🥃`,quickCreateName:(name)=>`${name}. Yeah, man. That's a solid name. Really ties it all together, you know?`,fallbacks:['Yeah, well, that\'s just like, your opinion, man.','The Dude abides.','That\'s cool, man. Real cool.','Far out. I dig it.','Yeah, man. Whatever works for you.','That really ties the character together, man.','Easy does it, dude. No worries.','Sounds chill. Let\'s roll with it.',],},});const DEFAULT_NARRATOR_ID='scholarly';function getNarratorList(){return Object.values(NARRATORS);}
+function getNarrator(id){return NARRATORS[id]||NARRATORS[DEFAULT_NARRATOR_ID];}
+if(typeof module!=='undefined'&&module.exports){module.exports={NARRATORS,DEFAULT_NARRATOR_ID,getNarratorList,getNarrator};}
+const Utils=window.Utils={escapeHtml(value){if(value===null||value===undefined)return'';return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');},async typewriter(element,text,speed=(window.CONFIG&&window.CONFIG.TYPEWRITER_SPEED)||30){element.textContent='';element.classList.add('is-typing');let skipTyping=false;let multiplier=1;try{if(window.StorageService&&typeof window.StorageService.getTextSpeedMultiplier==='function'){const stored=window.StorageService.getTextSpeedMultiplier();if(Number.isFinite(stored)&&stored>0){multiplier=stored;}}}catch(e){console.warn('Utils.typewriter: failed to read text speed multiplier',e);}
+const effectiveDelay=multiplier>0?speed/multiplier:speed;const sourceText=text==null?'':String(text);const safeText=typeof this.stripEmojis==='function'?this.stripEmojis(sourceText):sourceText;const skipHandler=(e)=>{if(e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA'){skipTyping=true;}};window.addEventListener('keydown',skipHandler,{once:true});window.addEventListener('click',skipHandler,{once:true});window.addEventListener('touchstart',skipHandler,{once:true,passive:true});for(let i=0;i<safeText.length;i++){if(skipTyping){element.textContent=safeText;break;}
+element.textContent+=safeText[i];await this.sleep(effectiveDelay);}
+window.removeEventListener('keydown',skipHandler);window.removeEventListener('click',skipHandler);window.removeEventListener('touchstart',skipHandler);element.classList.remove('is-typing');},sleep(ms){return new Promise((resolve)=>setTimeout(resolve,ms));},stripEmojis(value){if(value==null)return'';const str=String(value);const emojiRegex=/[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}]/gu;return str.replace(emojiRegex,'');},random(min,max){return Math.floor(Math.random()*(max-min+1))+min;},randomChoice(array){return array[Math.floor(Math.random()*array.length)];},rollDice(notation){if(typeof notation==='number'){return this.random(1,notation);}
+const[count,sides]=notation.toLowerCase().split('d').map(Number);let total=0;for(let i=0;i<count;i++){total+=this.random(1,sides);}
+return total;},abilityModifier(score){return Math.floor((score-10)/2);},formatModifier(modifier){return modifier>=0?`+${modifier}`:`${modifier}`;},capitalize(str){return str.charAt(0).toUpperCase()+str.slice(1);},scrollToBottom(forceDelay=false){const doScroll=()=>{const panel=document.getElementById('narrator-panel');if(panel){panel.scrollTo({top:panel.scrollHeight,behavior:'smooth',});}};if(forceDelay){setTimeout(doScroll,50);}else{doScroll();}},focusFirstFieldInModal(modal){if(!modal||typeof modal.querySelector!=='function')return;const fieldSelectors=['input.terminal-input:not([type=\"hidden\"]):not(.file-input-hidden):not([disabled])','textarea.terminal-input:not([disabled])','textarea.terminal-textarea:not([disabled])','select.terminal-select:not([disabled])','input:not([type=\"hidden\"]):not(.file-input-hidden):not([disabled])','textarea:not([disabled])','select:not([disabled])',];let target=null;for(const selector of fieldSelectors){target=modal.querySelector(selector);if(target)break;}
+if(!target){const fallbackSelectors=['.modal-footer .terminal-btn-primary:not([disabled])','.modal-footer button:not([disabled])','button.terminal-btn-primary:not([disabled])','button:not([disabled])','[tabindex]:not([tabindex=\"-1\"])',];for(const selector of fallbackSelectors){target=modal.querySelector(selector);if(target)break;}}
+if(target&&typeof target.focus==='function'){setTimeout(()=>{try{target.focus();}catch(e){}},0);}},};const AuthUI=(window.AuthUI={showLogin(onSuccess,onSwitchToRegister,onGuestMode){const container=document.querySelector('.terminal-container');if(!container)return;document.getElementById('splash-content')?.classList.add('is-hidden');document.getElementById('main-content')?.classList.add('is-hidden');const authScreen=document.createElement('div');authScreen.id='auth-screen';authScreen.className='auth-screen';authScreen.innerHTML=`
       <div class="auth-container">
         <div class="auth-header">
           <div class="auth-title">╔═══════════════════════════════════════╗</div>
@@ -5186,118 +261,10 @@ const AuthUI = (window.AuthUI = {
           </div>
         </div>
       </div>
-    `;
-
-    container.appendChild(authScreen);
-
-    // Add event listeners
-    const emailInput = document.getElementById('login-email');
-    const passwordInput = document.getElementById('login-password');
-    const passwordToggle = authScreen.querySelector(
-      '.password-toggle-btn[data-target="login-password"]',
-    );
-    const submitButton = document.getElementById('login-submit');
-    const guestButton = document.getElementById('login-guest');
-    const switchButton = document.getElementById('switch-to-register');
-    const errorDiv = document.getElementById('login-error');
-
-    // Handle submit
-    const handleSubmit = async () => {
-      // Give password managers / autofill a brief moment to finish
-      // populating fields before we read them. This avoids bogus
-      // "Please enter both email and password" errors when the UI
-      // *appears* filled in.
-      await new Promise((resolve) => setTimeout(resolve, 50));
-
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
-
-      if (!email || !password) {
-        this.showError(errorDiv, 'Please enter both email and password');
-        return;
-      }
-
-      // Lightweight UI-side debug logging (never logs the raw password)
-      try {
-        const cfg = window.DanddyConfig || {};
-        const debug = !!cfg.DEBUG;
-        if (debug) {
-          console.log('[AuthUI] Login submit clicked', {
-            email,
-            apiBaseUrl: cfg.API_BASE_URL,
-          });
-        }
-      } catch (_) {
-        // Ignore logging failures – never block login
-      }
-
-      this.showLoading(submitButton, true, 'AUTHENTICATING...');
-      errorDiv.classList.add('is-hidden');
-
-      try {
-        const result = await AuthService.login(email, password);
-        this.showLoading(submitButton, false);
-        if (result && result.success) {
-          this.removeAuthScreen();
-          if (onSuccess) onSuccess(result.user);
-        } else {
-          this.showError(
-            errorDiv,
-            (result && result.error) || 'Login failed. Please try again.',
-          );
-        }
-      } catch (error) {
-        this.showLoading(submitButton, false);
-        this.showError(errorDiv, error.message || 'Login failed. Please try again.');
-      }
-    };
-
-    submitButton.addEventListener('click', handleSubmit);
-    if (passwordToggle && passwordInput) {
-      passwordToggle.addEventListener('click', () => {
-        const isPassword = passwordInput.type === 'password';
-        passwordInput.type = isPassword ? 'text' : 'password';
-        passwordToggle.textContent = isPassword ? 'HIDE' : 'SHOW';
-        passwordToggle.setAttribute('aria-pressed', String(isPassword));
-        passwordToggle.setAttribute(
-          'aria-label',
-          isPassword ? 'Hide password' : 'Show password',
-        );
-      });
-    }
-    
-    passwordInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') handleSubmit();
-    });
-
-    guestButton.addEventListener('click', () => {
-      this.removeAuthScreen();
-      if (onGuestMode) onGuestMode();
-    });
-
-    switchButton.addEventListener('click', () => {
-      this.removeAuthScreen();
-      if (onSwitchToRegister) onSwitchToRegister();
-    });
-
-    // Focus email input
-    emailInput.focus();
-  },
-
-  // Show register screen
-  showRegister(onSuccess, onSwitchToLogin) {
-    const container = document.querySelector('.terminal-container');
-    if (!container) return;
-
-    // Hide other content
-    document.getElementById('splash-content')?.classList.add('is-hidden');
-    document.getElementById('main-content')?.classList.add('is-hidden');
-
-    // Create auth screen
-    const authScreen = document.createElement('div');
-    authScreen.id = 'auth-screen';
-    authScreen.className = 'auth-screen';
-    authScreen.innerHTML = `
+    `;container.appendChild(authScreen);const emailInput=document.getElementById('login-email');const passwordInput=document.getElementById('login-password');const passwordToggle=authScreen.querySelector('.password-toggle-btn[data-target="login-password"]',);const submitButton=document.getElementById('login-submit');const guestButton=document.getElementById('login-guest');const switchButton=document.getElementById('switch-to-register');const errorDiv=document.getElementById('login-error');const handleSubmit=async()=>{await new Promise((resolve)=>setTimeout(resolve,50));const email=emailInput.value.trim();const password=passwordInput.value;if(!email||!password){this.showError(errorDiv,'Please enter both email and password');return;}
+try{const cfg=window.DanddyConfig||{};const debug=!!cfg.DEBUG;if(debug){console.log('[AuthUI] Login submit clicked',{email,apiBaseUrl:cfg.API_BASE_URL,});}}catch(_){}
+this.showLoading(submitButton,true,'AUTHENTICATING...');errorDiv.classList.add('is-hidden');try{const result=await AuthService.login(email,password);this.showLoading(submitButton,false);if(result&&result.success){this.removeAuthScreen();if(onSuccess)onSuccess(result.user);}else{this.showError(errorDiv,(result&&result.error)||'Login failed. Please try again.',);}}catch(error){this.showLoading(submitButton,false);this.showError(errorDiv,error.message||'Login failed. Please try again.');}};submitButton.addEventListener('click',handleSubmit);if(passwordToggle&&passwordInput){passwordToggle.addEventListener('click',()=>{const isPassword=passwordInput.type==='password';passwordInput.type=isPassword?'text':'password';passwordToggle.textContent=isPassword?'HIDE':'SHOW';passwordToggle.setAttribute('aria-pressed',String(isPassword));passwordToggle.setAttribute('aria-label',isPassword?'Hide password':'Show password',);});}
+passwordInput.addEventListener('keypress',(e)=>{if(e.key==='Enter')handleSubmit();});guestButton.addEventListener('click',()=>{this.removeAuthScreen();if(onGuestMode)onGuestMode();});switchButton.addEventListener('click',()=>{this.removeAuthScreen();if(onSwitchToRegister)onSwitchToRegister();});emailInput.focus();},showRegister(onSuccess,onSwitchToLogin){const container=document.querySelector('.terminal-container');if(!container)return;document.getElementById('splash-content')?.classList.add('is-hidden');document.getElementById('main-content')?.classList.add('is-hidden');const authScreen=document.createElement('div');authScreen.id='auth-screen';authScreen.className='auth-screen';authScreen.innerHTML=`
       <div class="auth-container">
         <div class="auth-header">
           <div class="auth-title">╔═══════════════════════════════════════╗</div>
@@ -5347,3077 +314,158 @@ const AuthUI = (window.AuthUI = {
           </div>
         </div>
       </div>
-    `;
-
-    container.appendChild(authScreen);
-
-    // Add event listeners
-    const emailInput = document.getElementById('register-email');
-    const passwordInput = document.getElementById('register-password');
-    const confirmInput = document.getElementById('register-password-confirm');
-    const passwordToggle = authScreen.querySelector(
-      '.password-toggle-btn[data-target="register-password"]',
-    );
-    const confirmToggle = authScreen.querySelector(
-      '.password-toggle-btn[data-target="register-password-confirm"]',
-    );
-    const roleSelect = document.getElementById('register-role');
-    const submitButton = document.getElementById('register-submit');
-    const cancelButton = document.getElementById('register-cancel');
-    const errorDiv = document.getElementById('register-error');
-
-    // Handle submit
-    const handleSubmit = async () => {
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
-      const confirmPassword = confirmInput.value;
-      const role = roleSelect.value;
-
-      if (!email || !password || !confirmPassword) {
-        this.showError(errorDiv, 'Please fill in all fields');
-        return;
-      }
-
-      if (password.length < 6) {
-        this.showError(errorDiv, 'Password must be at least 6 characters');
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        this.showError(errorDiv, 'Passwords do not match');
-        return;
-      }
-
-      this.showLoading(submitButton, true, 'CREATING ACCOUNT...');
-      errorDiv.classList.add('is-hidden');
-
-      try {
-        const result = await AuthService.register(email, password, role);
-        this.showLoading(submitButton, false);
-        if (result && result.success) {
-          this.removeAuthScreen();
-          if (onSuccess) onSuccess(result.user);
-        } else {
-          this.showError(
-            errorDiv,
-            (result && result.error) ||
-              'Registration failed. Please try again.',
-          );
-        }
-      } catch (error) {
-        this.showLoading(submitButton, false);
-        this.showError(
-          errorDiv,
-          error.message || 'Registration failed. Please try again.',
-        );
-      }
-    };
-
-    submitButton.addEventListener('click', handleSubmit);
-    if (passwordToggle && passwordInput) {
-      passwordToggle.addEventListener('click', () => {
-        const isPassword = passwordInput.type === 'password';
-        passwordInput.type = isPassword ? 'text' : 'password';
-        passwordToggle.textContent = isPassword ? 'HIDE' : 'SHOW';
-        passwordToggle.setAttribute('aria-pressed', String(isPassword));
-        passwordToggle.setAttribute(
-          'aria-label',
-          isPassword ? 'Hide password' : 'Show password',
-        );
-      });
-    }
-
-    if (confirmToggle && confirmInput) {
-      confirmToggle.addEventListener('click', () => {
-        const isPassword = confirmInput.type === 'password';
-        confirmInput.type = isPassword ? 'text' : 'password';
-        confirmToggle.textContent = isPassword ? 'HIDE' : 'SHOW';
-        confirmToggle.setAttribute('aria-pressed', String(isPassword));
-        confirmToggle.setAttribute(
-          'aria-label',
-          isPassword ? 'Hide password' : 'Show password',
-        );
-      });
-    }
-    
-    confirmInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') handleSubmit();
-    });
-
-    cancelButton.addEventListener('click', () => {
-      this.removeAuthScreen();
-      if (onSwitchToLogin) onSwitchToLogin();
-    });
-
-    // Focus email input
-    emailInput.focus();
-  },
-
-  // Helper: Show error message
-  showError(errorDiv, message) {
-    errorDiv.textContent = `⚠ ERROR: ${message}`;
-    errorDiv.classList.remove('is-hidden');
-  },
-
-  // Helper: Show/hide loading on a primary button
-  showLoading(button, show, label) {
-    if (!button) return;
-
-    if (show) {
-      if (!button.dataset.originalLabel) {
-        button.dataset.originalLabel = button.innerHTML;
-      }
-      button.disabled = true;
-      const loadingLabel = label || 'WORKING...';
-      const cubeMarkup = 
-        '<span class="spinner-cube-scene">' +
-        '<span class="spinner-cube-tilt">' +
-        '<span class="spinner-cube">' +
-        '<span class="spinner-cube-face spinner-cube-face-front"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-back"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-right"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-left"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-top"></span>' +
-        '<span class="spinner-cube-face spinner-cube-face-bottom"></span>' +
-        '</span></span></span>';
-      button.innerHTML = `${cubeMarkup} ${loadingLabel}`;
-    } else {
-      button.disabled = false;
-      if (button.dataset.originalLabel) {
-        button.innerHTML = button.dataset.originalLabel;
-        delete button.dataset.originalLabel;
-      }
-    }
-  },
-
-  // Helper: Remove auth screen
-  removeAuthScreen() {
-    const authScreen = document.getElementById('auth-screen');
-    if (authScreen) {
-      authScreen.remove();
-    }
-  },
-
-  // Show user info in header
-  updateHeaderWithUser(user) {
-    const statusText = document.getElementById('status-text');
-    if (statusText && user) {
-      const roleIcon = user.role === 'dm' ? '🎲' : '⚔️';
-      const label = (user.email || '').toUpperCase();
-      statusText.innerHTML = `${roleIcon} ${label} | <button class="link-button" id="header-characters">MY CHARACTERS</button> | <button class="link-button" id="header-logout">LOGOUT</button>`;
-      
-      // Add characters button handler
-      document.getElementById('header-characters')?.addEventListener('click', () => {
-        CharacterManager.show();
-      });
-      
-      // Add logout handler
-      document.getElementById('header-logout')?.addEventListener('click', () => {
-        if (confirm('Are you sure you want to logout?')) {
-          AuthService.logout();
-          
-          // Show login screen after logout (with register and guest mode options)
-          if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
-            window.AuthUI.showLogin(
-              () => window.location.reload(),  // onSuccess
-              () => {},                         // onSwitchToRegister (handled within AuthUI)
-              () => {}                          // onGuestMode
-            );
-          } else {
-            window.location.reload();
-          }
-        }
-      });
-    }
-  },
-
-  // Show guest mode banner
-  showGuestBanner() {
-    const statusText = document.getElementById('status-text');
-    if (statusText) {
-      statusText.innerHTML = `👤 GUEST MODE | <button class="link-button" id="header-login">LOGIN TO SAVE</button>`;
-      
-      // Add login handler
-      document.getElementById('header-login')?.addEventListener('click', () => {
-        App.showAuthScreen();
-      });
-    }
-  },
-});
-
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-api.js =====
-
-// API service layer for backend character operations.
-// Exposes CharacterAPI as global on window.
-
-const CharacterAPI = (window.CharacterAPI = {
-  // Helper to convert arrays to dict format for backend
-  arrayToDict(arr) {
-    if (!arr || !Array.isArray(arr)) return [];
-    
-    return arr.map(item => {
-      // If already an object, return as-is
-      if (typeof item === 'object' && item !== null) {
-        return item;
-      }
-      // If string, convert to dict format
-      if (typeof item === 'string') {
-        return { name: item };
-      }
-      // Fallback
-      return { value: item };
-    });
-  },
-  
-  // Helper to convert spell arrays (objects or strings) to string arrays for backend
-  spellsToStringArray(arr) {
-    if (!arr || !Array.isArray(arr)) return [];
-    
-    return arr.map(item => {
-      // If it's an object with a name property, extract the name
-      if (typeof item === 'object' && item !== null && item.name) {
-        return item.name;
-      }
-      // If it's already a string, return as-is
-      if (typeof item === 'string') {
-        return item;
-      }
-      // Fallback - convert to string
-      return String(item);
-    });
-  },
-  
-  // Helper to make authenticated API requests
-  async request(method, endpoint, body = null) {
-    const token = AuthService.getToken();
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    
-    const options = {
-      method,
-      headers,
-    };
-    
-    if (body) {
-      options.body = JSON.stringify(body);
-    }
-    
-    try {
-      const response = await fetch(`${CONFIG.BACKEND_URL}${endpoint}`, options);
-      
-      if (response.status === 401) {
-        // Token expired or invalid
-        AuthService.clearToken();
-        throw new Error('Session expired. Please log in again.');
-      }
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || `API error: ${response.status}`);
-      }
-      
-      // Handle 204 No Content
-      if (response.status === 204) {
-        return null;
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error(`API request failed [${method} ${endpoint}]:`, error);
-      throw error;
-    }
-  },
-  
-  // Transform frontend character format to backend format (shared mapper)
-  toBackendFormat(character) {
-    return window.DanddyCharacterMapper.fromBuilderToBackend(character);
-  },
-  
-  // Transform backend character format to frontend format (shared mapper)
-  toFrontendFormat(backendChar) {
-    return window.DanddyCharacterMapper.fromBackendToBuilder(backendChar);
-  },
-  
-  // Helper: Map alignment format
-  mapAlignment(alignment) {
-    if (!alignment) return null;
-    
-    // Convert from frontend format (e.g., "Lawful Good") to backend format (e.g., "lawful_good")
-    const map = {
-      'Lawful Good': 'lawful_good',
-      'Neutral Good': 'neutral_good',
-      'Chaotic Good': 'chaotic_good',
-      'Lawful Neutral': 'lawful_neutral',
-      'True Neutral': 'true_neutral',
-      'Chaotic Neutral': 'chaotic_neutral',
-      'Lawful Evil': 'lawful_evil',
-      'Neutral Evil': 'neutral_evil',
-      'Chaotic Evil': 'chaotic_evil',
-    };
-    
-    return map[alignment] || null;
-  },
-  
-  // Helper: Calculate AC (simplified)
-  calculateAC(character) {
-    const dexMod = character.abilities?.dex ? Math.floor((character.abilities.dex - 10) / 2) : 0;
-    return 10 + dexMod; // Base AC calculation
-  },
-  
-  // Helper: Calculate initiative
-  calculateInitiative(character) {
-    return character.abilities?.dex ? Math.floor((character.abilities.dex - 10) / 2) : 0;
-  },
-  
-  // Helper: Get speed based on race
-  getSpeed(character) {
-    const speedMap = {
-      'dwarf': 25,
-      'halfling': 25,
-      'gnome': 25,
-      'elf': 30,
-      'human': 30,
-      'half-elf': 30,
-      'half-orc': 30,
-      'tiefling': 30,
-      'dragonborn': 30,
-    };
-    
-    return speedMap[character.race?.toLowerCase()] || 30;
-  },
-  
-  // ==== CHARACTER CRUD OPERATIONS ====
-  
-  // Create a new character
-  async createCharacter(character) {
-    const backendData = this.toBackendFormat(character);
-    const response = await this.request('POST', '/api/characters', backendData);
-    return this.toFrontendFormat(response);
-  },
-  
-  // Get all characters for current user
-  async getCharacters() {
-    const response = await this.request('GET', '/api/characters');
-    return response.map(char => this.toFrontendFormat(char));
-  },
-  
-  // Get a single character by ID
-  async getCharacter(id) {
-    const response = await this.request('GET', `/api/characters/${id}`);
-    return this.toFrontendFormat(response);
-  },
-  
-  // Update a character
-  async updateCharacter(id, updates) {
-    // If updates is a full character object, convert it
-    const backendUpdates = updates.id ? this.toBackendFormat(updates) : updates;
-    const response = await this.request('PUT', `/api/characters/${id}`, backendUpdates);
-    return this.toFrontendFormat(response);
-  },
-  
-  // Delete a character
-  async deleteCharacter(id) {
-    await this.request('DELETE', `/api/characters/${id}`);
-    return true;
-  },
-  
-  // ==== CAMPAIGN OPERATIONS ====
-  
-  // Get all campaigns
-  async getCampaigns() {
-    return await this.request('GET', '/api/campaigns');
-  },
-  
-  // Create a campaign (DM only)
-  async createCampaign(name, description) {
-    return await this.request('POST', '/api/campaigns', { name, description });
-  },
-  
-  // Assign character to campaign
-  async assignToCampaign(characterId, campaignId) {
-    return await this.request('PUT', `/api/characters/${characterId}`, {
-      campaign_id: campaignId,
-    });
-  },
-  
-  // ==== ADDITIONAL CHARACTER OPERATIONS ====
-  
-  // Duplicate a character
-  async duplicateCharacter(id, newName) {
-    const response = await this.request('POST', `/api/characters/${id}/duplicate?new_name=${encodeURIComponent(newName || '')}`);
-    return this.toFrontendFormat(response);
-  },
-  
-  // Export character
-  async exportCharacter(id) {
-    return await this.request('GET', `/api/characters/${id}/export`);
-  },
-  
-  // Import character
-  async importCharacter(characterData) {
-    const backendData = this.toBackendFormat(characterData);
-    const response = await this.request('POST', '/api/characters/import', backendData);
-    return this.toFrontendFormat(response);
-  },
-});
-
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-services.js =====
-
-// Storage, AI, and portrait services for the DandDy terminal character builder.
-// Exposes services as globals on window for use by inline handlers and other modules.
-
-const CONFIG = window.CONFIG;
-const DEBUG_BUILDER = !!(window.DanddyConfig && window.DanddyConfig.DEBUG);
-const DND_DATA = window.DND_DATA;
-// Utils is defined globally in character-builder-utils.js as window.Utils.
-
-// Image-to-ASCII converter (Enhanced with Floyd-Steinberg dithering)
-const ImageToAsciiService = (window.ImageToAsciiService = {
-  // Extended ASCII character set from lightest to darkest (reversed for correct mapping)
-  // Black pixels (0) → light chars (spaces), White pixels (255) → dense chars ($@#)
-  ASCII_CHARS:
-    '  .`\'",;:Il!i><~+_-?][}{1)(|/\\trjxnuvczXYUJCLQ0OZmwqpdbkha*o#MW&8%B@$',
-
-  // Convert image URL to ASCII art with Floyd-Steinberg dithering
-  async convertToAscii(imageUrl, width = 160, height = 80) {
-    try {
-      // Load image
-      const img = await this.loadImage(imageUrl);
-
-      // Create canvas and draw image
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-
-      // Draw image scaled to canvas size
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Get pixel data
-      const imageData = ctx.getImageData(0, 0, width, height);
-      const pixels = imageData.data;
-
-      // Create grayscale array for Floyd-Steinberg dithering
-      const grayscale = new Float32Array(width * height);
-      for (let i = 0; i < width * height; i++) {
-        const idx = i * 4;
-        // Use proper luminance calculation (better than simple average)
-        grayscale[i] =
-          0.299 * pixels[idx] +
-          0.587 * pixels[idx + 1] +
-          0.114 * pixels[idx + 2];
-      }
-
-      // Apply Floyd-Steinberg dithering
-      const dithered = this.floydSteinbergDither(grayscale, width, height);
-
-      // Convert to ASCII
-      let ascii = '';
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-          const brightness = dithered[y * width + x];
-
-          // Map brightness to ASCII character
-          const charIndex = Math.floor(
-            (brightness / 255) * (this.ASCII_CHARS.length - 1),
-          );
-          const clampedIndex = Math.max(
-            0,
-            Math.min(this.ASCII_CHARS.length - 1, charIndex),
-          );
-          ascii += this.ASCII_CHARS[clampedIndex];
-        }
-        ascii += '\n';
-      }
-
-      return ascii;
-    } catch (error) {
-      console.error('Image to ASCII conversion error:', error);
-      return null;
-    }
-  },
-
-  // Floyd-Steinberg dithering algorithm
-  // Distributes quantization error to neighboring pixels for better detail
-  floydSteinbergDither(grayscale, width, height) {
-    const output = new Float32Array(grayscale);
-
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const idx = y * width + x;
-        const oldPixel = output[idx];
-
-        // Quantize to ASCII character levels
-        const newPixel =
-          Math.round(
-            (oldPixel / 255) * (this.ASCII_CHARS.length - 1),
-          ) *
-          (255 / (this.ASCII_CHARS.length - 1));
-        output[idx] = newPixel;
-
-        // Calculate quantization error
-        const error = oldPixel - newPixel;
-
-        // Distribute error to neighboring pixels
-        // Floyd-Steinberg matrix:
-        //         X   7/16
-        // 3/16  5/16  1/16
-
-        if (x + 1 < width) {
-          output[idx + 1] += (error * 7) / 16;
-        }
-        if (y + 1 < height) {
-          if (x > 0) {
-            output[idx + width - 1] += (error * 3) / 16;
-          }
-          output[idx + width] += (error * 5) / 16;
-          if (x + 1 < width) {
-            output[idx + width + 1] += error / 16;
-          }
-        }
-      }
-    }
-
-    return output;
-  },
-
-  // Load image from URL (handles CORS via proxy)
-  async loadImage(url) {
-    try {
-      // Use CORS proxy for Azure blob storage URLs (DALL-E images)
-      // Azure doesn't allow CORS from most origins, so we need a proxy
-      const corsProxy = 'https://corsproxy.io/?';
-      const proxiedUrl = corsProxy + encodeURIComponent(url);
-
-      // Fetch the image as a blob to bypass CORS restrictions
-      const response = await fetch(proxiedUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.status}`);
-      }
-
-      const blob = await response.blob();
-
-      // Create object URL from blob
-      const objectUrl = URL.createObjectURL(blob);
-
-      // Load image from object URL
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          // Clean up object URL
-          URL.revokeObjectURL(objectUrl);
-          resolve(img);
-        };
-        img.onerror = (error) => {
-          URL.revokeObjectURL(objectUrl);
-          reject(new Error('Failed to load image from blob'));
-        };
-        img.src = objectUrl;
-      });
-    } catch (error) {
-      console.error('Error loading image:', error);
-      throw new Error(`Image loading failed: ${error.message}`);
-    }
-  },
-});
-
-// Authentication service is now defined centrally in `danddy-auth.js` as
-// `window.AuthService`. This file now only *uses* that shared service.
-
-// Storage service - wraps shared CharacterStorage facade for character CRUD,
-// plus a few builder-only settings (narrator, demo/AI flags, etc.).
-const StorageService = (window.StorageService = {
-  getNarratorId() {
-    const value = localStorage.getItem('dnd_narrator_id');
-    // Fall back to the global DEFAULT_NARRATOR_ID defined in
-    // `character-builder-narrators.js` when available so we keep the default
-    // in a single place. If it's not present for any reason, use "scholarly".
-    if (!value) {
-      if (typeof DEFAULT_NARRATOR_ID !== 'undefined') {
-        return DEFAULT_NARRATOR_ID;
-      }
-      return 'scholarly';
-    }
-    return value;
-  },
-
-  setNarratorId(narratorId) {
-    localStorage.setItem('dnd_narrator_id', narratorId);
-  },
-
-  // Text speed multiplier for the builder typewriter effect.
-  // 1 = normal (CONFIG.TYPEWRITER_SPEED), 1.5 = 1.5x faster, 2 = 2x faster.
-  getTextSpeedMultiplier() {
-    const value = localStorage.getItem('dnd_text_speed_multiplier');
-    if (!value) return 1;
-
-    const num = parseFloat(value);
-    if (!Number.isFinite(num) || num <= 0) {
-      return 1;
-    }
-
-    // Clamp to the supported range in case older values exist.
-    if (num < 1) return 1;
-    if (num > 2) return 2;
-    return num;
-  },
-
-  setTextSpeedMultiplier(multiplier) {
-    const num = parseFloat(multiplier);
-    if (!Number.isFinite(num) || num <= 0) {
-      localStorage.removeItem('dnd_text_speed_multiplier');
-      return;
-    }
-    localStorage.setItem('dnd_text_speed_multiplier', String(num));
-  },
-
-  // Preferred AI image model for custom portraits.
-  // Stored per-browser so builder + manager can share the same choice.
-  // Supported models:
-  // - dall-e-3      (OpenAI DALL-E 3)
-  // - gpt-image-1   (OpenAI GPT Image 1)
-  // - flux-1.1-pro  (Replicate Flux Pro - high quality)
-  // - flux-schnell  (Replicate Flux Schnell - fast & cheap)
-  getImageModel() {
-    try {
-      const raw = localStorage.getItem('dnd_image_model');
-      const fallback =
-        (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) ||
-        'dall-e-3';
-      if (!raw) return fallback;
-      const value = String(raw).trim();
-      const allowed = ['dall-e-3', 'gpt-image-1', 'flux-1.1-pro', 'flux-schnell'];
-      return allowed.includes(value) ? value : fallback;
-    } catch (e) {
-      console.warn('StorageService.getImageModel failed, using fallback', e);
-      return (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) || 'dall-e-3';
-    }
-  },
-
-  setImageModel(model) {
-    try {
-      const value = String(model || '').trim();
-      const allowed = ['dall-e-3', 'gpt-image-1', 'flux-1.1-pro', 'flux-schnell'];
-      if (!allowed.includes(value)) {
-        console.warn('StorageService.setImageModel: ignoring unsupported model', value);
-        // Clear invalid values so we fall back cleanly next time.
-        localStorage.removeItem('dnd_image_model');
-        return;
-      }
-      localStorage.setItem('dnd_image_model', value);
-    } catch (e) {
-      console.warn('StorageService.setImageModel failed', e);
-    }
-  },
-
-  // Global portrait view preference (ASCII vs Original).
-  // Stored per-browser so builder + manager can share the same choice.
-  getPortraitViewMode() {
-    try {
-      const raw = localStorage.getItem('dnd_portrait_view_mode');
-      const fallback =
-        (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'original';
-      if (!raw) return fallback;
-      const value = String(raw).trim().toLowerCase();
-      const allowed = ['ascii', 'original'];
-      return allowed.includes(value) ? value : fallback;
-    } catch (e) {
-      console.warn(
-        'StorageService.getPortraitViewMode failed, using fallback',
-        e,
-      );
-      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) || 'original';
-    }
-  },
-
-  setPortraitViewMode(mode) {
-    try {
-      const value = String(mode || '').trim().toLowerCase();
-      const allowed = ['ascii', 'original'];
-      if (!allowed.includes(value)) {
-        console.warn(
-          'StorageService.setPortraitViewMode: ignoring unsupported mode',
-          value,
-        );
-        localStorage.removeItem('dnd_portrait_view_mode');
-        return;
-      }
-      localStorage.setItem('dnd_portrait_view_mode', value);
-    } catch (e) {
-      console.warn('StorageService.setPortraitViewMode failed', e);
-    }
-  },
-
-  // Preferred portrait prompt theme for AI portraits.
-  // Stored per-browser so builder + manager can share the same choice.
-  getPortraitPromptTheme() {
-    try {
-      const raw = localStorage.getItem('dnd_portrait_prompt_theme');
-      const fallback =
-        (CONFIG && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) || null;
-      if (!raw) return fallback;
-      const value = String(raw).trim();
-
-      // If the shared PortraitPrompt helper is available, validate against it
-      // so we gracefully fall back when themes change.
-      if (
-        typeof window !== 'undefined' &&
-        window.PortraitPrompt &&
-        typeof window.PortraitPrompt.getThemes === 'function'
-      ) {
-        try {
-          const themes = window.PortraitPrompt.getThemes();
-          const allowedIds = Array.isArray(themes)
-            ? themes.map((t) => t.id)
-            : [];
-          if (allowedIds.includes(value)) {
-            return value;
-          }
-          return fallback;
-        } catch (e) {
-          // Non-fatal – fall through to returning the raw value.
-        }
-      }
-
-      return value || fallback;
-    } catch (e) {
-      console.warn('StorageService.getPortraitPromptTheme failed, using fallback', e);
-      return (CONFIG && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) || null;
-    }
-  },
-
-  setPortraitPromptTheme(themeId) {
-    try {
-      const value = String(themeId || '').trim();
-      if (!value) {
-        localStorage.removeItem('dnd_portrait_prompt_theme');
-        return;
-      }
-
-      // If the shared PortraitPrompt helper is available, validate against it.
-      if (
-        typeof window !== 'undefined' &&
-        window.PortraitPrompt &&
-        typeof window.PortraitPrompt.getThemes === 'function'
-      ) {
-        try {
-          const themes = window.PortraitPrompt.getThemes();
-          const allowedIds = Array.isArray(themes)
-            ? themes.map((t) => t.id)
-            : [];
-          if (!allowedIds.includes(value)) {
-            console.warn(
-              'StorageService.setPortraitPromptTheme: ignoring unknown theme id',
-              value,
-            );
-            localStorage.removeItem('dnd_portrait_prompt_theme');
-            return;
-          }
-        } catch (e) {
-          // Non-fatal – if validation fails, still store the value.
-        }
-      }
-
-      localStorage.setItem('dnd_portrait_prompt_theme', value);
-    } catch (e) {
-      console.warn('StorageService.setPortraitPromptTheme failed', e);
-    }
-  },
-
-  // Image quality setting per model.
-  // Returns the stored quality for a given model, or null if not set.
-  // Quality options vary by model:
-  // - dall-e-3: 'standard', 'hd'
-  // - gpt-image-1: 'medium', 'high'
-  // - flux-1.1-pro, flux-schnell: no quality options (always use default)
-  getImageQuality(model) {
-    try {
-      const raw = localStorage.getItem('dnd_image_quality');
-      if (!raw) return null;
-      const data = JSON.parse(raw);
-      return data[model] || null;
-    } catch (e) {
-      console.warn('StorageService.getImageQuality failed', e);
-      return null;
-    }
-  },
-
-  setImageQuality(model, quality) {
-    try {
-      let data = {};
-      const raw = localStorage.getItem('dnd_image_quality');
-      if (raw) {
-        try {
-          data = JSON.parse(raw);
-        } catch (e) {
-          data = {};
-        }
-      }
-      if (quality) {
-        data[model] = quality;
-      } else {
-        delete data[model];
-      }
-      localStorage.setItem('dnd_image_quality', JSON.stringify(data));
-    } catch (e) {
-      console.warn('StorageService.setImageQuality failed', e);
-    }
-  },
-
-  // Legacy support: check for old high quality setting and migrate
-  // Returns true if quality should be 'high' for gpt-image-1
-  getHighQualityGPTImage() {
-    try {
-      // First check new system
-      const quality = this.getImageQuality('gpt-image-1');
-      if (quality) {
-        return quality === 'high';
-      }
-      // Fall back to legacy setting
-      const raw = localStorage.getItem('dnd_high_quality_gpt_image');
-      return raw === 'true';
-    } catch (e) {
-      console.warn('StorageService.getHighQualityGPTImage failed', e);
-      return false;
-    }
-  },
-
-  setHighQualityGPTImage(enabled) {
-    // Migrate to new system
-    this.setImageQuality('gpt-image-1', enabled ? 'high' : 'medium');
-    // Also remove legacy setting
-    try {
-      localStorage.removeItem('dnd_high_quality_gpt_image');
-    } catch (e) {
-      // Ignore
-    }
-  },
-
-  // ==== CHARACTER STORAGE ====
-  // Delegates to shared CharacterStorage facade (character-storage.js)
-  // which handles cloud/local storage, fallbacks, and timestamp normalization.
-
-  /**
-   * Get all characters via shared CharacterStorage facade.
-   */
-  async getCharacters() {
-    if (!window.CharacterStorage) {
-      console.warn('StorageService: CharacterStorage not available');
-      return [];
-    }
-    return CharacterStorage.getAll();
-  },
-  
-  /**
-   * Save character via shared CharacterStorage facade.
-   * Automatically creates or updates based on presence of character.id.
-   */
-  async saveCharacter(character) {
-    if (!window.CharacterStorage) {
-      console.warn('StorageService: CharacterStorage not available');
-      return character;
-    }
-
-      if (character.id) {
-        if (DEBUG_BUILDER) {
-          console.log('💾 BUILDER: Updating character via CharacterStorage:', character.id);
-        }
-      return CharacterStorage.update(character.id, character);
-      } else {
-        if (DEBUG_BUILDER) {
-          console.log('💾 BUILDER: Creating character via CharacterStorage');
-        }
-      return CharacterStorage.add(character);
-    }
-  },
-  
-  /**
-   * Delete character via shared CharacterStorage facade.
-   */
-  async deleteCharacter(id) {
-    if (!window.CharacterStorage) {
-      console.warn('StorageService: CharacterStorage not available');
-      return false;
-    }
-    return CharacterStorage.delete(id);
-  },
-});
-
-// ASCII Art service
-// Now relies primarily on pre-generated custom portraits.
-const AsciiArtService = (window.AsciiArtService = {
-  // Simple in-memory cache for portraits keyed by race|class.
-  _portraitCache: {},
-  // Legacy hardcoded ASCII templates have been removed now that
-  // we rely on custom, pre-generated portraits under generated_portraits/.
-  // These helpers remain so existing callers continue to work.
-  getRaceArt(race) {
-    return '';
-  },
-
-  addClassDecoration(baseArt, classType) {
-    return baseArt;
-  },
-
-  getFullPortrait(character) {
-    if (!character || !character.race) return '';
-    const raceLabel = String(character.race).toUpperCase();
-    const classLabel = character.class ? ` ${String(character.class).toUpperCase()}` : '';
-    return `[ ${raceLabel}${classLabel} PORTRAIT ]`;
-  },
-
-  // Load pre-generated ASCII portrait from files
-  async loadPreGeneratedPortrait(race, classType) {
-    const raceLower = race.toLowerCase().replace(/ /g, '-');
-    const classLower = classType ? classType.toLowerCase() : '';
-
-    // Try race-class combo first
-    if (classLower) {
-      // Use ../ prefix since character-builder is in a subdirectory
-      const path = `../generated_portraits/ascii/${raceLower}-${classLower}.txt`;
-      if (DEBUG_BUILDER) console.log(`📂 Trying to load: ${path}`);
-      try {
-        const response = await fetch(path);
-        if (DEBUG_BUILDER) console.log(`📡 Response status: ${response.status}`);
-        if (response.ok) {
-          const text = await response.text();
-          if (DEBUG_BUILDER) console.log(`✅ Loaded ${raceLower}-${classLower}, length: ${text.length}`);
-          return text;
-        }
-      } catch (e) {
-        if (DEBUG_BUILDER) console.log(`❌ Error loading ${raceLower}-${classLower}:`, e);
-      }
-    }
-
-    // Fallback to race-only
-    const path = `../generated_portraits/ascii/${raceLower}.txt`;
-    if (DEBUG_BUILDER) console.log(`📂 Trying fallback: ${path}`);
-    try {
-      const response = await fetch(path);
-      if (DEBUG_BUILDER) console.log(`📡 Response status: ${response.status}`);
-      if (response.ok) {
-        const text = await response.text();
-        if (DEBUG_BUILDER) console.log(`✅ Loaded ${raceLower}, length: ${text.length}`);
-        return text;
-      }
-    } catch (e) {
-      if (DEBUG_BUILDER) console.log(`❌ Error loading ${raceLower}:`, e);
-    }
-
-    if (DEBUG_BUILDER) console.log(`❌ No portrait found for ${raceLower}`);
-    return null;
-  },
-
-  // Get the image URL for a pre-generated portrait
-  getPreGeneratedImageUrl(race, classType) {
-    const raceLower = race?.toLowerCase().replace(/\s+/g, '-') || '';
-    const classLower = classType?.toLowerCase().replace(/\s+/g, '-') || '';
-    
-    if (!raceLower) return null;
-
-    const fileName = classLower
-      ? `${raceLower}-${classLower}.png`
-      : `${raceLower}.png`;
-
-    // If a public R2 (or other CDN) base URL is configured, use that.
-    if (CONFIG && CONFIG.PREGENERATED_PORTRAIT_BASE_URL) {
-      const base = CONFIG.PREGENERATED_PORTRAIT_BASE_URL.replace(/\/+$/, '');
-      return `${base}/${fileName}`;
-    }
-
-    // Fallback: relative path for environments where PNGs are served locally.
-    // This keeps older static setups working if images are present on disk.
-    return `../generated_portraits/images/${fileName}`;
-  },
-
-  // Load portrait (pre-generated or fallback to template)
-  async generateAIPortrait(character) {
-    try {
-      if (!character) return '';
-
-      // If there's custom AI-generated ASCII art, use that first
-      if (character.customPortraitAscii) {
-        console.log('✅ Using custom AI-generated portrait');
-        return character.customPortraitAscii;
-      }
-
-      // Determine the current race/class key for this character
-      const key = `${character.race || ''}|${character.class || ''}`;
-
-      // If there's already ASCII art stored in character (from pre-generated or previous load)
-      // and it matches the current race/class combination, reuse it.
-      if (character.asciiPortrait && character.asciiPortraitKey === key) {
-        console.log('✅ Using stored ASCII portrait for current race/class');
-        return character.asciiPortrait;
-      }
-
-      // If we have a cached portrait for this race/class combo, use it.
-      if (this._portraitCache[key]) {
-        return this._portraitCache[key];
-      }
-
-      // Try loading pre-generated portrait from files
-      console.log('Loading pre-generated portrait...');
-      const preGenerated = await this.loadPreGeneratedPortrait(
-        character.race,
-        character.class,
-      );
-      if (preGenerated) {
-        console.log(
-          `✅ Found pre-generated portrait for ${character.race}-${character.class}`,
-        );
-        this._portraitCache[key] = preGenerated;
-
-        // Store ASCII art (and original image URL, when configured) in character for export
-        if (window.CharacterState) {
-          const updates = {
-            asciiPortrait: preGenerated,
-            asciiPortraitKey: key,
-          };
-
-          // If we have a known location for the original pre-generated PNG,
-          // expose it as originalPortraitUrl so apps can show "View Original Art".
-          const pregenImageUrl = this.getPreGeneratedImageUrl(
-            character.race,
-            character.class,
-          );
-          if (pregenImageUrl) {
-            updates.originalPortraitUrl = pregenImageUrl;
-          }
-
-          window.CharacterState.updateCharacter(updates);
-        }
-
-        return this._portraitCache[key];
-      }
-
-      // Fallback to template art
-      console.log('No pre-generated portrait, using template');
-      const fallback = this.getFullPortrait(character);
-      this._portraitCache[key] = fallback;
-
-      // Store fallback ASCII art in character for export
-      if (window.CharacterState) {
-        window.CharacterState.updateCharacter({
-          asciiPortrait: fallback,
-          asciiPortraitKey: key,
-        });
-      }
-      
-      return fallback;
-    } catch (error) {
-      console.error('Portrait loading error:', error);
-      const key = `${character.race || ''}|${character.class || ''}`;
-      const fallback = this.getFullPortrait(character);
-      this._portraitCache[key] = fallback;
-
-      // Store fallback ASCII art in character for export
-      if (window.CharacterState) {
-        window.CharacterState.updateCharacter({
-          asciiPortrait: fallback,
-          asciiPortraitKey: key,
-        });
-      }
-      
-      return fallback;
-    }
-  },
-
-  // Generate CUSTOM AI portrait with DALL-E (user-initiated)
-  async generateCustomAIPortrait(character) {
-    try {
-      console.log('🎨 Generating custom AI portrait with DALL-E...');
-
-      // Step 1: Generate image with DALL-E
-      const imageUrl = await AIService.generatePortraitImage(character);
-
-      if (!imageUrl) {
-        throw new Error('DALL-E generation failed');
-      }
-
-      console.log('✅ DALL-E image generated:', imageUrl);
-
-      // Step 2: Convert to ASCII with high resolution
-      console.log('Converting to ASCII with Floyd-Steinberg dithering...');
-      const asciiArt = await ImageToAsciiService.convertToAscii(
-        imageUrl,
-        160,
-        80,
-      );
-
-      if (!asciiArt) {
-        throw new Error('ASCII conversion failed');
-      }
-
-      console.log('✅ Custom ASCII art generated successfully');
-      return { asciiArt, imageUrl };
-    } catch (error) {
-      console.error('Custom AI portrait generation error:', error);
-      throw error;
-    }
-  },
-
-  // Generate CUSTOM AI portrait with custom prompt
-  async generateCustomAIPortraitWithPrompt(customPrompt) {
-    try {
-      console.log('🎨 Generating custom AI portrait with custom prompt...');
-      console.log('Prompt:', customPrompt);
-
-      // Step 1: Generate image with DALL-E using custom prompt
-      const imageUrl = await AIService.generateImageFromPrompt(customPrompt);
-
-      if (!imageUrl) {
-        throw new Error('DALL-E generation failed');
-      }
-
-      console.log('✅ DALL-E image generated:', imageUrl);
-
-      // Step 2: Convert to ASCII with high resolution
-      console.log('Converting to ASCII with Floyd-Steinberg dithering...');
-      const asciiArt = await ImageToAsciiService.convertToAscii(
-        imageUrl,
-        160,
-        80,
-      );
-
-      if (!asciiArt) {
-        throw new Error('ASCII conversion failed');
-      }
-
-      console.log('✅ Custom ASCII art generated successfully');
-      return { asciiArt, imageUrl };
-    } catch (error) {
-      console.error('Custom AI portrait generation error:', error);
-      throw error;
-    }
-  },
-});
-
-// External AI service integrations (Secure backend proxy)
-const AIService = (window.AIService = {
-  // Track the last narrator comment so we can avoid obvious repetition.
-  _lastNarratorComment: null,
-  // Track whether we've already allowed an "Ah, the classic..."-style line
-  // for the current character generation run.
-  _usedClassicThisRun: false,
-  // Track how many AI narrator comments we've made for the current character.
-  _narratorCommentCount: 0,
-  // Track used names across this browser session to avoid repeats
-  // and increase diversity of generated suggestions.
-  _usedFirstNames: new Set(),
-  _usedLastNames: new Set(),
-  _usedFullNames: new Set(),
-  
-  // Backend availability tracking (for Render cold starts)
-  _backendAvailable: null, // null = unknown, true = available, false = waking up
-  _warmupInProgress: false,
-
-  resetNarratorSession() {
-    this._lastNarratorComment = null;
-    this._usedClassicThisRun = false;
-    this._narratorCommentCount = 0;
-  },
-
-  // Background warmup: Keep trying to wake up the backend
-  async warmupBackend() {
-    if (this._warmupInProgress || this._backendAvailable === true) {
-      return;
-    }
-    
-    this._warmupInProgress = true;
-    console.log('%c🔄 WARMUP: Waking up backend server...', 'color: #fa0; font-weight: bold');
-    
-    while (this._backendAvailable !== true) {
-      try {
-        const response = await fetch(`${CONFIG.BACKEND_URL}/api/ai/status`, {
-          method: 'GET',
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          if (data.available) {
-            this._backendAvailable = true;
-            console.log('%c✅ WARMUP: Backend is now ready!', 'color: #0f0; font-weight: bold');
-            this._warmupInProgress = false;
-            return;
-          }
-        }
-      } catch (error) {
-        // Keep trying
-      }
-      
-      // Wait 5 seconds before trying again
-      await new Promise(resolve => setTimeout(resolve, 5000));
-    }
-    
-    this._warmupInProgress = false;
-  },
-
-  // Helper to add timeout to fetch requests (for Render cold starts)
-  async fetchWithTimeout(url, options, timeoutMs = CONFIG.AI_TIMEOUT) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    
-    try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      
-      // Mark backend as available on successful response
-      if (response.ok) {
-        this._backendAvailable = true;
-      }
-      
-      return response;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error.name === 'AbortError') {
-        // Backend is waking up - start background warmup
-        this._backendAvailable = false;
-        this.warmupBackend(); // Don't await - let it run in background
-        throw new Error('Request timed out - backend may be waking up');
-      }
-      throw error;
-    }
-  },
-
-  async generateCompletion(prompt, systemPrompt = null) {
-    if (!CONFIG.ENABLE_AI) {
-      console.log('AI service disabled in config');
-      return null;
-    }
-
-    try {
-      const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/chat/completion`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: prompt,
-          system_prompt: systemPrompt,
-          max_tokens: 300,
-          temperature: 0.8,
-        }),
-      });
-
-      if (!response.ok) {
-        // Check for safety system rejection
-        if (response.status === 400) {
-          try {
-            const errorData = await response.json();
-            if (errorData.detail && errorData.detail.includes('safety system')) {
-              console.warn('⚠️ OpenAI safety system rejection:', errorData.detail);
-              // Show user-friendly notification
-              if (window.UIService) {
-                window.UIService.showNotification(
-                  'OpenAI flagged this request. Using fallback response instead.',
-                  'warning',
-                  5000
-                );
-              }
-            }
-          } catch (e) {
-            // Error parsing JSON, continue with fallback
-          }
-        }
-        console.log(`Backend API error: ${response.status} - will use fallback`);
-        return null;
-      }
-
-      const data = await response.json();
-      return data.success ? data.content : null;
-    } catch (error) {
-      // Don't log scary errors - let the calling function handle fallback gracefully
-      if (error.message.includes('timed out')) {
-        console.log('⏰ AI request timed out - caller will use fallback mode');
-      } else {
-        console.log('AI service unavailable - caller will use fallback mode');
-      }
-      return null;
-    }
-  },
-
-  async generateNarratorComment(context) {
-    // Get current narrator and fallbacks
-    const narratorId = StorageService.getNarratorId();
-    const narrator = getNarrator(narratorId);
-    const fallbacks = narrator.fallbacks;
-
-    // Determine how many backend narrator calls we're allowed per character.
-    const maxComments =
-      typeof CONFIG.NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER === 'number'
-        ? CONFIG.NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER
-        : Infinity;
-
-    const narratorAiDisabled =
-      CONFIG.ENABLE_AI_NARRATOR_COMMENTS === false || !CONFIG.ENABLE_AI;
-
-    // If narrator AI is disabled or we've hit the cap, immediately use a local line.
-    if (narratorAiDisabled || this._narratorCommentCount >= maxComments) {
-      console.log(
-        '%c🤖 NARRATOR (Fallback - Disabled or limit reached)',
-        'color: #ff0; font-weight: bold',
-      );
-      return Utils.randomChoice(fallbacks);
-    }
-
-    try {
-      console.log('%c🤖 NARRATOR: Calling backend AI...', 'color: #0ff; font-weight: bold');
-      console.log('  Request:', { choice: context.choice, question: context.question, narrator: narratorId });
-      console.log(
-        `  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,
-      );
-      
-        const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/narrator/comment`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            choice: context.choice,
-            question: context.question,
-            character_so_far: context.characterSoFar,
-            narrator_id: narratorId,
-          }),
-        }); // Uses CONFIG.AI_TIMEOUT, then fallback + background warmup
-
-      if (!response.ok) {
-        console.log('%c🤖 NARRATOR (Fallback - API Error)', 'color: #f80; font-weight: bold');
-        console.log('  Status:', response.status);
-        return Utils.randomChoice(fallbacks);
-      }
-
-      const data = await response.json();
-      let text = data.comment || Utils.randomChoice(fallbacks);
-      
-      console.log('%c🤖 NARRATOR (AI Generated) ✨', 'color: #0f0; font-weight: bold');
-      console.log('  Response:', text);
-    
-      // Use the text from the response
-      let responseText = text;
-
-      // Light post-processing to avoid obvious repetition
-    const normalize = (s) => (s || '').trim().toLowerCase();
-    const startsWithClassic = (s) =>
-      s.startsWith('ah, the classic') || s.startsWith('ah the classic');
-
-    const last = this._lastNarratorComment;
-    const lastNorm = normalize(last);
-      let newNorm = normalize(responseText);
-
-    if (last) {
-      if (newNorm === lastNorm) {
-          const alts = fallbacks.filter((f) => normalize(f) !== lastNorm);
-        if (alts.length) {
-            responseText = Utils.randomChoice(alts);
-            newNorm = normalize(responseText);
-        }
-      }
-
-      if (startsWithClassic(newNorm) && startsWithClassic(lastNorm)) {
-          const alts = fallbacks.filter((f) => !startsWithClassic(normalize(f)));
-        if (alts.length) {
-            responseText = Utils.randomChoice(alts);
-            newNorm = normalize(responseText);
-        }
-      }
-    }
-
-    if (startsWithClassic(newNorm)) {
-      if (this._usedClassicThisRun) {
-          const alts = fallbacks.filter((f) => !startsWithClassic(normalize(f)));
-        if (alts.length) {
-            responseText = Utils.randomChoice(alts);
-        }
-      } else {
-        this._usedClassicThisRun = true;
-      }
-    }
-
-      this._lastNarratorComment = responseText;
-      // Count this as one successful AI narrator comment for this character.
-      this._narratorCommentCount += 1;
-      return responseText;
-    } catch (error) {
-      if (error.message.includes('timed out')) {
-        console.log('%c🤖 NARRATOR (Fallback - Backend Waking Up)', 'color: #f80; font-weight: bold');
-        console.log(
-          `  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,
-        );
-        console.log('  ✅ Once awake, subsequent requests will use AI!');
-      } else {
-        console.log('%c🤖 NARRATOR (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
-        console.error('  Error:', error);
-      }
-      return Utils.randomChoice(fallbacks);
-    }
-  },
-
-  async generateNames(race, classType, count = 3) {
-    const desiredCount = Math.max(1, count || 3);
-    const candidates = [];
-
-    // Helper: attempt AI generation when enabled
-    const tryAiNames = async () => {
-      if (!CONFIG.ENABLE_AI) {
-        console.log(
-          '%c📛 NAMES (Fallback - AI Disabled)',
-          'color: #ff0; font-weight: bold',
-        );
-        return;
-      }
-
-      try {
-        console.log(
-          '%c📛 NAMES: Calling backend AI...',
-          'color: #0ff; font-weight: bold',
-        );
-        console.log('  Request:', { race, classType, count: desiredCount });
-        console.log(
-          `  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,
-        );
-
-        const response = await this.fetchWithTimeout(
-          `${CONFIG.BACKEND_URL}/api/ai/characters/names`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              race: race,
-              class_type: classType,
-              // Ask for extra so we have room to filter out repeats
-              count: desiredCount * 2,
-            }),
-          },
-        ); // Uses CONFIG.AI_TIMEOUT
-
-        if (!response.ok) {
-          console.log(
-            '%c📛 NAMES (Fallback - API Error)',
-            'color: #f80; font-weight: bold',
-          );
-          return;
-        }
-
-        const data = await response.json();
-        if (data.success && Array.isArray(data.names) && data.names.length > 0) {
-          console.log(
-            '%c📛 NAMES (AI Generated) ✨',
-            'color: #0f0; font-weight: bold',
-          );
-          console.log('  Response:', data.names);
-          candidates.push(...data.names);
-        }
-      } catch (error) {
-        if (error.message && error.message.includes('timed out')) {
-          console.log(
-            '%c📛 NAMES (Fallback - Backend Waking Up)',
-            'color: #f80; font-weight: bold',
-          );
-          console.log(
-            `  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,
-          );
-          console.log(
-            '  ✅ Once awake, subsequent requests will use AI!',
-          );
-        } else {
-          console.log(
-            '%c📛 NAMES (Fallback - Connection Error)',
-            'color: #f00; font-weight: bold',
-          );
-          console.error('  Error:', error);
-        }
-      }
-    };
-
-    // Helper: always-available fallback candidates
-    const addFallbackCandidates = (multiplier = 3) => {
-      console.log(
-        '%c📛 NAMES (Fallback)',
-        'color: #f80; font-weight: bold',
-      );
-      const extra = this.generateFallbackNames(race, desiredCount * multiplier);
-      candidates.push(...extra);
-    };
-
-    // 1) Try AI first (if enabled)
-    await tryAiNames();
-
-    // 2) If AI unavailable or produced too few unique-looking options, pad with fallback
-    if (!candidates.length) {
-      addFallbackCandidates(3);
-    }
-
-    // 3) Filter for uniqueness and register globally
-    let unique = this._filterAndRegisterUniqueNames(candidates, desiredCount);
-
-    // 4) If we still don't have enough, top up with more fallback variations
-    if (unique.length < desiredCount) {
-      addFallbackCandidates(5);
-      const more = this._filterAndRegisterUniqueNames(
-        candidates,
-        desiredCount - unique.length,
-      );
-      unique = unique.concat(more);
-    }
-
-    // Return whatever we could gather (may be fewer than requested if pools are exhausted)
-    return unique.slice(0, desiredCount);
-  },
-
-  /**
-   * Combined helper: ask the backend once for BOTH
-   *   - name suggestions, and
-   *   - a backstory template that uses the literal token {{NAME}}
-   *
-   * This lets us front-load the "heavy" AI work earlier in the flow and
-   * avoid a second OpenAI call when the user later reaches the backstory
-   * step. The final, player-chosen name is substituted client-side.
-   */
-  async generateCharacterSummary(character, options = {}) {
-    const nameCount =
-      typeof options.nameCount === 'number' && options.nameCount > 0
-        ? options.nameCount
-        : 3;
-
-    const race = character && character.race;
-    const classType = character && character.class;
-
-    // Local, always-available fallback for both names and template
-    const buildLocalFallback = () => {
-      const fallbackNames = this.generateFallbackNames(race || 'human', nameCount);
-      const template =
-        '{{NAME}} is a ' +
-        `${race || 'mysterious'}\u0020${classType || 'adventurer'} with a mysterious past. ` +
-        "They don't talk about it much. Probably for the best.";
-      return {
-        names: fallbackNames,
-        backstoryTemplate: template,
-      };
-    };
-
-    if (!CONFIG.ENABLE_AI) {
-      console.log(
-        '%c📦 SUMMARY (Fallback - AI Disabled)',
-        'color: #ff0; font-weight: bold',
-      );
-      return buildLocalFallback();
-    }
-
-    try {
-      console.log(
-        '%c📦 SUMMARY: Calling backend AI for names + backstory template...',
-        'color: #0ff; font-weight: bold',
-      );
-
-      const response = await this.fetchWithTimeout(
-        `${CONFIG.BACKEND_URL}/api/ai/characters/summary`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            race: race,
-            class_type: classType,
-            alignment: character && character.alignment,
-            background: character && character.background,
-            personality:
-              character && (character.personalityTrait || character.personality),
-            name_count: nameCount * 2, // ask for extra to allow uniqueness filtering
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const status = response.status;
-        let detail = null;
-        try {
-          const errBody = await response.json();
-          if (errBody && errBody.detail) {
-            detail = errBody.detail;
-          }
-        } catch {
-          // ignore JSON parse errors; we'll fall back below
-        }
-
-        if (status === 429) {
-          console.log(
-            '%c📦 SUMMARY (Cooldown / Rate Limit)',
-            'color: #ff0; font-weight: bold',
-          );
-          if (window.UIService) {
-            window.UIService.showNotification(
-              detail ||
-                'AI character generation is cooling down. Using offline suggestions for this one.',
-              'warning',
-              6000,
-            );
-          }
-        } else {
-          console.log(
-            '%c📦 SUMMARY (Fallback - API Error)',
-            'color: #f80; font-weight: bold',
-          );
-          console.log('  Status:', status);
-        }
-
-        return buildLocalFallback();
-      }
-
-      const data = await response.json();
-      if (!data || data.success !== true) {
-        console.log(
-          '%c📦 SUMMARY (Fallback - Bad Payload)',
-          'color: #f80; font-weight: bold',
-        );
-        return buildLocalFallback();
-      }
-
-      let names = Array.isArray(data.names) ? data.names.slice() : [];
-      const template =
-        typeof data.backstory_template === 'string' && data.backstory_template.trim()
-          ? data.backstory_template
-          : null;
-
-      // Run through our global uniqueness filter so we avoid repeating
-      // first/last names across this browser session.
-      if (names.length) {
-        names = this._filterAndRegisterUniqueNames(names, nameCount);
-      }
-
-      if (!names.length) {
-        console.log(
-          '%c📦 SUMMARY (Fallback - No Names From Backend)',
-          'color: #f80; font-weight: bold',
-        );
-        const fallback = buildLocalFallback();
-        // Preserve backend-provided template if we got one.
-        if (template) {
-          fallback.backstoryTemplate = template;
-        }
-        return fallback;
-      }
-
-      console.log(
-        '%c📦 SUMMARY (AI Generated) ✨',
-        'color: #0f0; font-weight: bold',
-      );
-      console.log('  Names:', names);
-
-      return {
-        names,
-        backstoryTemplate:
-          template ||
-          (character && character.backstory) ||
-          buildLocalFallback().backstoryTemplate,
-      };
-    } catch (error) {
-      if (error.message && error.message.includes('timed out')) {
-        console.log(
-          '%c📦 SUMMARY (Fallback - Backend Waking Up)',
-          'color: #f80; font-weight: bold',
-        );
-        console.log(
-          '  ⏰ Timeout reached. Using local fallback for now; backend warmup continues...',
-        );
-      } else {
-        console.log(
-          '%c📦 SUMMARY (Fallback - Connection Error)',
-          'color: #f00; font-weight: bold',
-        );
-        console.error('  Error:', error);
-      }
-      return buildLocalFallback();
-    }
-  },
-
-  generateFallbackNames(race, count) {
-    // Use shared name data from CharacterNameData module
-    const pattern = window.CharacterNameData
-      ? CharacterNameData.getPattern(race)
-      : { first: ['Hero'], last: ['Unknown'] };
-    const result = [];
-    const usedLocalCombos = new Set();
-
-    // Generate name combinations with local (per-call) uniqueness.
-    // Global uniqueness (across the entire session) is handled by
-    // _filterAndRegisterUniqueNames so we only worry about producing
-    // a rich pool of candidates here.
-    let attempts = 0;
-    const maxAttempts = count * 20;
-
-    while (result.length < count && attempts < maxAttempts) {
-      const firstName = Utils.randomChoice(pattern.first);
-      const lastName = Utils.randomChoice(pattern.last);
-      const fullName = `${firstName}\u0020${lastName}`;
-
-      if (!usedLocalCombos.has(fullName)) {
-        usedLocalCombos.add(fullName);
-        result.push(fullName);
-      }
-      attempts++;
-    }
-
-    return result;
-  },
-
-  /**
-   * Internal helper: normalize and register names so we:
-   * - avoid duplicate first names (case-insensitive)
-   * - avoid duplicate last names
-   * - avoid duplicate full names
-   * across the entire browser session.
-   *
-   * Accepts an array of full-name strings and returns a filtered array.
-   */
-  _filterAndRegisterUniqueNames(candidates, maxCount) {
-    const result = [];
-    const target = typeof maxCount === 'number' && maxCount > 0
-      ? maxCount
-      : Number.POSITIVE_INFINITY;
-
-    for (const raw of candidates) {
-      if (result.length >= target) break;
-      if (!raw) continue;
-
-      const trimmed = String(raw).trim();
-      if (!trimmed) continue;
-
-      // Split on whitespace, first token = first name, rest = last name
-      const parts = trimmed.split(/\s+/);
-      if (parts.length === 0) continue;
-
-      const first = parts[0];
-      const last = parts.slice(1).join(' ') || '';
-
-      // Require at least a first name; allow missing last name but treat it as part of full key
-      if (!first) continue;
-
-      const firstKey = first.toLowerCase();
-      const lastKey = last.toLowerCase();
-      const fullKey = last ? `${firstKey}\u0020${lastKey}` : firstKey;
-
-      // Enforce uniqueness across this browser session
-      if (
-        this._usedFullNames.has(fullKey) ||
-        this._usedFirstNames.has(firstKey) ||
-        (last && this._usedLastNames.has(lastKey))
-      ) {
-        continue;
-      }
-
-      this._usedFullNames.add(fullKey);
-      this._usedFirstNames.add(firstKey);
-      if (last) {
-        this._usedLastNames.add(lastKey);
-      }
-
-      result.push(trimmed);
-    }
-
-    return result;
-  },
-
-  async generateBackstory(character) {
-    const fallback = `${character.name} is a ${character.race}\u0020${character.class} with a mysterious past. `
-      + "They don't talk about it much. Probably for the best.";
-
-    if (!CONFIG.ENABLE_AI) {
-      console.log('%c📖 BACKSTORY (Fallback - AI Disabled)', 'color: #ff0; font-weight: bold');
-      return fallback;
-    }
-
-    try {
-      console.log('%c📖 BACKSTORY: Calling backend AI...', 'color: #0ff; font-weight: bold');
-      console.log('  Request:', { name: character.name, race: character.race, class: character.class });
-      console.log(
-        `  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,
-      );
-      
-      const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/backstory`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: character.name,
-          race: character.race,
-          class_type: character.class,
-          personality: character.personalityTrait || 'mysterious',
-          background: character.background,
-        }),
-      }); // Uses CONFIG.AI_TIMEOUT
-
-      if (!response.ok) {
-        console.log('%c📖 BACKSTORY (Fallback - API Error)', 'color: #f80; font-weight: bold');
-        return fallback;
-      }
-
-      const data = await response.json();
-      if (data.success && data.backstory) {
-        console.log('%c📖 BACKSTORY (AI Generated) ✨', 'color: #0f0; font-weight: bold');
-        console.log('  Response:', data.backstory.substring(0, 100) + '...');
-        return data.backstory;
-      }
-    } catch (error) {
-      if (error.message.includes('timed out')) {
-        console.log('%c📖 BACKSTORY (Fallback - Backend Waking Up)', 'color: #f80; font-weight: bold');
-        console.log(
-          `  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,
-        );
-        console.log('  ✅ Once awake, subsequent requests will use AI!');
-      } else {
-        console.log('%c📖 BACKSTORY (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
-        console.error('  Error:', error);
-      }
-    }
-
-    console.log('%c📖 BACKSTORY (Fallback)', 'color: #f80; font-weight: bold');
-    return fallback;
-  },
-
-  async generateOptionVariations(questionText, options) {
-    if (!CONFIG.ENABLE_AI || CONFIG.ENABLE_AI_OPTION_VARIATIONS === false) {
-      console.log(
-        '%c🎲 OPTIONS (Fallback - AI Disabled or variations off)',
-        'color: #ff0; font-weight: bold',
-      );
-      return options.map((opt) => opt.text);
-    }
-
-    const optionDescriptions = options
-      .map((opt) => `Value: "${opt.value}", Default text: "${opt.text}"`)
-      .join('\n');
-
-    const prompt = `For the question: "${questionText}"
+    `;container.appendChild(authScreen);const emailInput=document.getElementById('register-email');const passwordInput=document.getElementById('register-password');const confirmInput=document.getElementById('register-password-confirm');const passwordToggle=authScreen.querySelector('.password-toggle-btn[data-target="register-password"]',);const confirmToggle=authScreen.querySelector('.password-toggle-btn[data-target="register-password-confirm"]',);const roleSelect=document.getElementById('register-role');const submitButton=document.getElementById('register-submit');const cancelButton=document.getElementById('register-cancel');const errorDiv=document.getElementById('register-error');const handleSubmit=async()=>{const email=emailInput.value.trim();const password=passwordInput.value;const confirmPassword=confirmInput.value;const role=roleSelect.value;if(!email||!password||!confirmPassword){this.showError(errorDiv,'Please fill in all fields');return;}
+if(password.length<6){this.showError(errorDiv,'Password must be at least 6 characters');return;}
+if(password!==confirmPassword){this.showError(errorDiv,'Passwords do not match');return;}
+this.showLoading(submitButton,true,'CREATING ACCOUNT...');errorDiv.classList.add('is-hidden');try{const result=await AuthService.register(email,password,role);this.showLoading(submitButton,false);if(result&&result.success){this.removeAuthScreen();if(onSuccess)onSuccess(result.user);}else{this.showError(errorDiv,(result&&result.error)||'Registration failed. Please try again.',);}}catch(error){this.showLoading(submitButton,false);this.showError(errorDiv,error.message||'Registration failed. Please try again.',);}};submitButton.addEventListener('click',handleSubmit);if(passwordToggle&&passwordInput){passwordToggle.addEventListener('click',()=>{const isPassword=passwordInput.type==='password';passwordInput.type=isPassword?'text':'password';passwordToggle.textContent=isPassword?'HIDE':'SHOW';passwordToggle.setAttribute('aria-pressed',String(isPassword));passwordToggle.setAttribute('aria-label',isPassword?'Hide password':'Show password',);});}
+if(confirmToggle&&confirmInput){confirmToggle.addEventListener('click',()=>{const isPassword=confirmInput.type==='password';confirmInput.type=isPassword?'text':'password';confirmToggle.textContent=isPassword?'HIDE':'SHOW';confirmToggle.setAttribute('aria-pressed',String(isPassword));confirmToggle.setAttribute('aria-label',isPassword?'Hide password':'Show password',);});}
+confirmInput.addEventListener('keypress',(e)=>{if(e.key==='Enter')handleSubmit();});cancelButton.addEventListener('click',()=>{this.removeAuthScreen();if(onSwitchToLogin)onSwitchToLogin();});emailInput.focus();},showError(errorDiv,message){errorDiv.textContent=`⚠ ERROR: ${message}`;errorDiv.classList.remove('is-hidden');},showLoading(button,show,label){if(!button)return;if(show){if(!button.dataset.originalLabel){button.dataset.originalLabel=button.innerHTML;}
+button.disabled=true;const loadingLabel=label||'WORKING...';const cubeMarkup='<span class="spinner-cube-scene">'+'<span class="spinner-cube-tilt">'+'<span class="spinner-cube">'+'<span class="spinner-cube-face spinner-cube-face-front"></span>'+'<span class="spinner-cube-face spinner-cube-face-back"></span>'+'<span class="spinner-cube-face spinner-cube-face-right"></span>'+'<span class="spinner-cube-face spinner-cube-face-left"></span>'+'<span class="spinner-cube-face spinner-cube-face-top"></span>'+'<span class="spinner-cube-face spinner-cube-face-bottom"></span>'+'</span></span></span>';button.innerHTML=`${cubeMarkup} ${loadingLabel}`;}else{button.disabled=false;if(button.dataset.originalLabel){button.innerHTML=button.dataset.originalLabel;delete button.dataset.originalLabel;}}},removeAuthScreen(){const authScreen=document.getElementById('auth-screen');if(authScreen){authScreen.remove();}},updateHeaderWithUser(user){const statusText=document.getElementById('status-text');if(statusText&&user){const roleIcon=user.role==='dm'?'🎲':'⚔️';const label=(user.email||'').toUpperCase();statusText.innerHTML=`${roleIcon} ${label} | <button class="link-button" id="header-characters">MY CHARACTERS</button> | <button class="link-button" id="header-logout">LOGOUT</button>`;document.getElementById('header-characters')?.addEventListener('click',()=>{CharacterManager.show();});document.getElementById('header-logout')?.addEventListener('click',()=>{if(confirm('Are you sure you want to logout?')){AuthService.logout();if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>window.location.reload(),()=>{},()=>{});}else{window.location.reload();}}});}},showGuestBanner(){const statusText=document.getElementById('status-text');if(statusText){statusText.innerHTML=`👤 GUEST MODE | <button class="link-button" id="header-login">LOGIN TO SAVE</button>`;document.getElementById('header-login')?.addEventListener('click',()=>{App.showAuthScreen();});}},});const CharacterAPI=(window.CharacterAPI={arrayToDict(arr){if(!arr||!Array.isArray(arr))return[];return arr.map(item=>{if(typeof item==='object'&&item!==null){return item;}
+if(typeof item==='string'){return{name:item};}
+return{value:item};});},spellsToStringArray(arr){if(!arr||!Array.isArray(arr))return[];return arr.map(item=>{if(typeof item==='object'&&item!==null&&item.name){return item.name;}
+if(typeof item==='string'){return item;}
+return String(item);});},async request(method,endpoint,body=null){const token=AuthService.getToken();const headers={'Content-Type':'application/json',};if(token){headers['Authorization']=`Bearer ${token}`;}
+const options={method,headers,};if(body){options.body=JSON.stringify(body);}
+try{const response=await fetch(`${CONFIG.BACKEND_URL}${endpoint}`,options);if(response.status===401){AuthService.clearToken();throw new Error('Session expired. Please log in again.');}
+if(!response.ok){const error=await response.json();throw new Error(error.detail||`API error: ${response.status}`);}
+if(response.status===204){return null;}
+return await response.json();}catch(error){console.error(`API request failed [${method} ${endpoint}]:`,error);throw error;}},toBackendFormat(character){return window.DanddyCharacterMapper.fromBuilderToBackend(character);},toFrontendFormat(backendChar){return window.DanddyCharacterMapper.fromBackendToBuilder(backendChar);},mapAlignment(alignment){if(!alignment)return null;const map={'Lawful Good':'lawful_good','Neutral Good':'neutral_good','Chaotic Good':'chaotic_good','Lawful Neutral':'lawful_neutral','True Neutral':'true_neutral','Chaotic Neutral':'chaotic_neutral','Lawful Evil':'lawful_evil','Neutral Evil':'neutral_evil','Chaotic Evil':'chaotic_evil',};return map[alignment]||null;},calculateAC(character){const dexMod=character.abilities?.dex?Math.floor((character.abilities.dex-10)/2):0;return 10+dexMod;},calculateInitiative(character){return character.abilities?.dex?Math.floor((character.abilities.dex-10)/2):0;},getSpeed(character){const speedMap={'dwarf':25,'halfling':25,'gnome':25,'elf':30,'human':30,'half-elf':30,'half-orc':30,'tiefling':30,'dragonborn':30,};return speedMap[character.race?.toLowerCase()]||30;},async createCharacter(character){const backendData=this.toBackendFormat(character);const response=await this.request('POST','/api/characters',backendData);return this.toFrontendFormat(response);},async getCharacters(){const response=await this.request('GET','/api/characters');return response.map(char=>this.toFrontendFormat(char));},async getCharacter(id){const response=await this.request('GET',`/api/characters/${id}`);return this.toFrontendFormat(response);},async updateCharacter(id,updates){const backendUpdates=updates.id?this.toBackendFormat(updates):updates;const response=await this.request('PUT',`/api/characters/${id}`,backendUpdates);return this.toFrontendFormat(response);},async deleteCharacter(id){await this.request('DELETE',`/api/characters/${id}`);return true;},async getCampaigns(){return await this.request('GET','/api/campaigns');},async createCampaign(name,description){return await this.request('POST','/api/campaigns',{name,description});},async assignToCampaign(characterId,campaignId){return await this.request('PUT',`/api/characters/${characterId}`,{campaign_id:campaignId,});},async duplicateCharacter(id,newName){const response=await this.request('POST',`/api/characters/${id}/duplicate?new_name=${encodeURIComponent(newName || '')}`);return this.toFrontendFormat(response);},async exportCharacter(id){return await this.request('GET',`/api/characters/${id}/export`);},async importCharacter(characterData){const backendData=this.toBackendFormat(characterData);const response=await this.request('POST','/api/characters/import',backendData);return this.toFrontendFormat(response);},});const CONFIG=window.CONFIG;const DEBUG_BUILDER=!!(window.DanddyConfig&&window.DanddyConfig.DEBUG);const DND_DATA=window.DND_DATA;const ImageToAsciiService=(window.ImageToAsciiService={ASCII_CHARS:'  .`\'",;:Il!i><~+_-?][}{1)(|/\\trjxnuvczXYUJCLQ0OZmwqpdbkha*o#MW&8%B@$',async convertToAscii(imageUrl,width=160,height=80){try{const img=await this.loadImage(imageUrl);const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,width,height);const imageData=ctx.getImageData(0,0,width,height);const pixels=imageData.data;const grayscale=new Float32Array(width*height);for(let i=0;i<width*height;i++){const idx=i*4;grayscale[i]=0.299*pixels[idx]+
+0.587*pixels[idx+1]+
+0.114*pixels[idx+2];}
+const dithered=this.floydSteinbergDither(grayscale,width,height);let ascii='';for(let y=0;y<height;y++){for(let x=0;x<width;x++){const brightness=dithered[y*width+x];const charIndex=Math.floor((brightness/255)*(this.ASCII_CHARS.length-1),);const clampedIndex=Math.max(0,Math.min(this.ASCII_CHARS.length-1,charIndex),);ascii+=this.ASCII_CHARS[clampedIndex];}
+ascii+='\n';}
+return ascii;}catch(error){console.error('Image to ASCII conversion error:',error);return null;}},floydSteinbergDither(grayscale,width,height){const output=new Float32Array(grayscale);for(let y=0;y<height;y++){for(let x=0;x<width;x++){const idx=y*width+x;const oldPixel=output[idx];const newPixel=Math.round((oldPixel/255)*(this.ASCII_CHARS.length-1),)*(255/(this.ASCII_CHARS.length-1));output[idx]=newPixel;const error=oldPixel-newPixel;if(x+1<width){output[idx+1]+=(error*7)/16;}
+if(y+1<height){if(x>0){output[idx+width-1]+=(error*3)/16;}
+output[idx+width]+=(error*5)/16;if(x+1<width){output[idx+width+1]+=error/16;}}}}
+return output;},async loadImage(url){try{const corsProxy='https://corsproxy.io/?';const proxiedUrl=corsProxy+encodeURIComponent(url);const response=await fetch(proxiedUrl);if(!response.ok){throw new Error(`Failed to fetch image: ${response.status}`);}
+const blob=await response.blob();const objectUrl=URL.createObjectURL(blob);return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{URL.revokeObjectURL(objectUrl);resolve(img);};img.onerror=(error)=>{URL.revokeObjectURL(objectUrl);reject(new Error('Failed to load image from blob'));};img.src=objectUrl;});}catch(error){console.error('Error loading image:',error);throw new Error(`Image loading failed: ${error.message}`);}},});const StorageService=(window.StorageService={getNarratorId(){const value=localStorage.getItem('dnd_narrator_id');if(!value){if(typeof DEFAULT_NARRATOR_ID!=='undefined'){return DEFAULT_NARRATOR_ID;}
+return'scholarly';}
+return value;},setNarratorId(narratorId){localStorage.setItem('dnd_narrator_id',narratorId);},getTextSpeedMultiplier(){const value=localStorage.getItem('dnd_text_speed_multiplier');if(!value)return 1;const num=parseFloat(value);if(!Number.isFinite(num)||num<=0){return 1;}
+if(num<1)return 1;if(num>2)return 2;return num;},setTextSpeedMultiplier(multiplier){const num=parseFloat(multiplier);if(!Number.isFinite(num)||num<=0){localStorage.removeItem('dnd_text_speed_multiplier');return;}
+localStorage.setItem('dnd_text_speed_multiplier',String(num));},getImageModel(){try{const raw=localStorage.getItem('dnd_image_model');const fallback=(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL)||'dall-e-3';if(!raw)return fallback;const value=String(raw).trim();const allowed=['dall-e-3','gpt-image-1','flux-1.1-pro','flux-schnell'];return allowed.includes(value)?value:fallback;}catch(e){console.warn('StorageService.getImageModel failed, using fallback',e);return(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL)||'dall-e-3';}},setImageModel(model){try{const value=String(model||'').trim();const allowed=['dall-e-3','gpt-image-1','flux-1.1-pro','flux-schnell'];if(!allowed.includes(value)){console.warn('StorageService.setImageModel: ignoring unsupported model',value);localStorage.removeItem('dnd_image_model');return;}
+localStorage.setItem('dnd_image_model',value);}catch(e){console.warn('StorageService.setImageModel failed',e);}},getPortraitViewMode(){try{const raw=localStorage.getItem('dnd_portrait_view_mode');const fallback=(CONFIG&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE)||'original';if(!raw)return fallback;const value=String(raw).trim().toLowerCase();const allowed=['ascii','original'];return allowed.includes(value)?value:fallback;}catch(e){console.warn('StorageService.getPortraitViewMode failed, using fallback',e,);return(CONFIG&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE)||'original';}},setPortraitViewMode(mode){try{const value=String(mode||'').trim().toLowerCase();const allowed=['ascii','original'];if(!allowed.includes(value)){console.warn('StorageService.setPortraitViewMode: ignoring unsupported mode',value,);localStorage.removeItem('dnd_portrait_view_mode');return;}
+localStorage.setItem('dnd_portrait_view_mode',value);}catch(e){console.warn('StorageService.setPortraitViewMode failed',e);}},getPortraitPromptTheme(){try{const raw=localStorage.getItem('dnd_portrait_prompt_theme');const fallback=(CONFIG&&CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME)||null;if(!raw)return fallback;const value=String(raw).trim();if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.getThemes==='function'){try{const themes=window.PortraitPrompt.getThemes();const allowedIds=Array.isArray(themes)?themes.map((t)=>t.id):[];if(allowedIds.includes(value)){return value;}
+return fallback;}catch(e){}}
+return value||fallback;}catch(e){console.warn('StorageService.getPortraitPromptTheme failed, using fallback',e);return(CONFIG&&CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME)||null;}},setPortraitPromptTheme(themeId){try{const value=String(themeId||'').trim();if(!value){localStorage.removeItem('dnd_portrait_prompt_theme');return;}
+if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.getThemes==='function'){try{const themes=window.PortraitPrompt.getThemes();const allowedIds=Array.isArray(themes)?themes.map((t)=>t.id):[];if(!allowedIds.includes(value)){console.warn('StorageService.setPortraitPromptTheme: ignoring unknown theme id',value,);localStorage.removeItem('dnd_portrait_prompt_theme');return;}}catch(e){}}
+localStorage.setItem('dnd_portrait_prompt_theme',value);}catch(e){console.warn('StorageService.setPortraitPromptTheme failed',e);}},getImageQuality(model){try{const raw=localStorage.getItem('dnd_image_quality');if(!raw)return null;const data=JSON.parse(raw);return data[model]||null;}catch(e){console.warn('StorageService.getImageQuality failed',e);return null;}},setImageQuality(model,quality){try{let data={};const raw=localStorage.getItem('dnd_image_quality');if(raw){try{data=JSON.parse(raw);}catch(e){data={};}}
+if(quality){data[model]=quality;}else{delete data[model];}
+localStorage.setItem('dnd_image_quality',JSON.stringify(data));}catch(e){console.warn('StorageService.setImageQuality failed',e);}},getHighQualityGPTImage(){try{const quality=this.getImageQuality('gpt-image-1');if(quality){return quality==='high';}
+const raw=localStorage.getItem('dnd_high_quality_gpt_image');return raw==='true';}catch(e){console.warn('StorageService.getHighQualityGPTImage failed',e);return false;}},setHighQualityGPTImage(enabled){this.setImageQuality('gpt-image-1',enabled?'high':'medium');try{localStorage.removeItem('dnd_high_quality_gpt_image');}catch(e){}},async getCharacters(){if(!window.CharacterStorage){console.warn('StorageService: CharacterStorage not available');return[];}
+return CharacterStorage.getAll();},async saveCharacter(character){if(!window.CharacterStorage){console.warn('StorageService: CharacterStorage not available');return character;}
+if(character.id){if(DEBUG_BUILDER){console.log('💾 BUILDER: Updating character via CharacterStorage:',character.id);}
+return CharacterStorage.update(character.id,character);}else{if(DEBUG_BUILDER){console.log('💾 BUILDER: Creating character via CharacterStorage');}
+return CharacterStorage.add(character);}},async deleteCharacter(id){if(!window.CharacterStorage){console.warn('StorageService: CharacterStorage not available');return false;}
+return CharacterStorage.delete(id);},});const AsciiArtService=(window.AsciiArtService={_portraitCache:{},getRaceArt(race){return'';},addClassDecoration(baseArt,classType){return baseArt;},getFullPortrait(character){if(!character||!character.race)return'';const raceLabel=String(character.race).toUpperCase();const classLabel=character.class?` ${String(character.class).toUpperCase()}`:'';return`[ ${raceLabel}${classLabel} PORTRAIT ]`;},async loadPreGeneratedPortrait(race,classType){const raceLower=race.toLowerCase().replace(/ /g,'-');const classLower=classType?classType.toLowerCase():'';if(classLower){const path=`../generated_portraits/ascii/${raceLower}-${classLower}.txt`;if(DEBUG_BUILDER)console.log(`📂 Trying to load: ${path}`);try{const response=await fetch(path);if(DEBUG_BUILDER)console.log(`📡 Response status: ${response.status}`);if(response.ok){const text=await response.text();if(DEBUG_BUILDER)console.log(`✅ Loaded ${raceLower}-${classLower}, length: ${text.length}`);return text;}}catch(e){if(DEBUG_BUILDER)console.log(`❌ Error loading ${raceLower}-${classLower}:`,e);}}
+const path=`../generated_portraits/ascii/${raceLower}.txt`;if(DEBUG_BUILDER)console.log(`📂 Trying fallback: ${path}`);try{const response=await fetch(path);if(DEBUG_BUILDER)console.log(`📡 Response status: ${response.status}`);if(response.ok){const text=await response.text();if(DEBUG_BUILDER)console.log(`✅ Loaded ${raceLower}, length: ${text.length}`);return text;}}catch(e){if(DEBUG_BUILDER)console.log(`❌ Error loading ${raceLower}:`,e);}
+if(DEBUG_BUILDER)console.log(`❌ No portrait found for ${raceLower}`);return null;},getPreGeneratedImageUrl(race,classType){const raceLower=race?.toLowerCase().replace(/\s+/g,'-')||'';const classLower=classType?.toLowerCase().replace(/\s+/g,'-')||'';if(!raceLower)return null;const fileName=classLower?`${raceLower}-${classLower}.png`:`${raceLower}.png`;if(CONFIG&&CONFIG.PREGENERATED_PORTRAIT_BASE_URL){const base=CONFIG.PREGENERATED_PORTRAIT_BASE_URL.replace(/\/+$/,'');return`${base}/${fileName}`;}
+return`../generated_portraits/images/${fileName}`;},async generateAIPortrait(character){try{if(!character)return'';if(character.customPortraitAscii){console.log('✅ Using custom AI-generated portrait');return character.customPortraitAscii;}
+const key=`${character.race || ''}|${character.class || ''}`;if(character.asciiPortrait&&character.asciiPortraitKey===key){console.log('✅ Using stored ASCII portrait for current race/class');return character.asciiPortrait;}
+if(this._portraitCache[key]){return this._portraitCache[key];}
+console.log('Loading pre-generated portrait...');const preGenerated=await this.loadPreGeneratedPortrait(character.race,character.class,);if(preGenerated){console.log(`✅ Found pre-generated portrait for ${character.race}-${character.class}`,);this._portraitCache[key]=preGenerated;if(window.CharacterState){const updates={asciiPortrait:preGenerated,asciiPortraitKey:key,};const pregenImageUrl=this.getPreGeneratedImageUrl(character.race,character.class,);if(pregenImageUrl){updates.originalPortraitUrl=pregenImageUrl;}
+window.CharacterState.updateCharacter(updates);}
+return this._portraitCache[key];}
+console.log('No pre-generated portrait, using template');const fallback=this.getFullPortrait(character);this._portraitCache[key]=fallback;if(window.CharacterState){window.CharacterState.updateCharacter({asciiPortrait:fallback,asciiPortraitKey:key,});}
+return fallback;}catch(error){console.error('Portrait loading error:',error);const key=`${character.race || ''}|${character.class || ''}`;const fallback=this.getFullPortrait(character);this._portraitCache[key]=fallback;if(window.CharacterState){window.CharacterState.updateCharacter({asciiPortrait:fallback,asciiPortraitKey:key,});}
+return fallback;}},async generateCustomAIPortrait(character){try{console.log('🎨 Generating custom AI portrait with DALL-E...');const imageUrl=await AIService.generatePortraitImage(character);if(!imageUrl){throw new Error('DALL-E generation failed');}
+console.log('✅ DALL-E image generated:',imageUrl);console.log('Converting to ASCII with Floyd-Steinberg dithering...');const asciiArt=await ImageToAsciiService.convertToAscii(imageUrl,160,80,);if(!asciiArt){throw new Error('ASCII conversion failed');}
+console.log('✅ Custom ASCII art generated successfully');return{asciiArt,imageUrl};}catch(error){console.error('Custom AI portrait generation error:',error);throw error;}},async generateCustomAIPortraitWithPrompt(customPrompt){try{console.log('🎨 Generating custom AI portrait with custom prompt...');console.log('Prompt:',customPrompt);const imageUrl=await AIService.generateImageFromPrompt(customPrompt);if(!imageUrl){throw new Error('DALL-E generation failed');}
+console.log('✅ DALL-E image generated:',imageUrl);console.log('Converting to ASCII with Floyd-Steinberg dithering...');const asciiArt=await ImageToAsciiService.convertToAscii(imageUrl,160,80,);if(!asciiArt){throw new Error('ASCII conversion failed');}
+console.log('✅ Custom ASCII art generated successfully');return{asciiArt,imageUrl};}catch(error){console.error('Custom AI portrait generation error:',error);throw error;}},});const AIService=(window.AIService={_lastNarratorComment:null,_usedClassicThisRun:false,_narratorCommentCount:0,_usedFirstNames:new Set(),_usedLastNames:new Set(),_usedFullNames:new Set(),_backendAvailable:null,_warmupInProgress:false,resetNarratorSession(){this._lastNarratorComment=null;this._usedClassicThisRun=false;this._narratorCommentCount=0;},async warmupBackend(){if(this._warmupInProgress||this._backendAvailable===true){return;}
+this._warmupInProgress=true;console.log('%c🔄 WARMUP: Waking up backend server...','color: #fa0; font-weight: bold');while(this._backendAvailable!==true){try{const response=await fetch(`${CONFIG.BACKEND_URL}/api/ai/status`,{method:'GET',});if(response.ok){const data=await response.json();if(data.available){this._backendAvailable=true;console.log('%c✅ WARMUP: Backend is now ready!','color: #0f0; font-weight: bold');this._warmupInProgress=false;return;}}}catch(error){}
+await new Promise(resolve=>setTimeout(resolve,5000));}
+this._warmupInProgress=false;},async fetchWithTimeout(url,options,timeoutMs=CONFIG.AI_TIMEOUT){const controller=new AbortController();const timeoutId=setTimeout(()=>controller.abort(),timeoutMs);try{const response=await fetch(url,{...options,signal:controller.signal});clearTimeout(timeoutId);if(response.ok){this._backendAvailable=true;}
+return response;}catch(error){clearTimeout(timeoutId);if(error.name==='AbortError'){this._backendAvailable=false;this.warmupBackend();throw new Error('Request timed out - backend may be waking up');}
+throw error;}},async generateCompletion(prompt,systemPrompt=null){if(!CONFIG.ENABLE_AI){console.log('AI service disabled in config');return null;}
+try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/chat/completion`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({prompt:prompt,system_prompt:systemPrompt,max_tokens:300,temperature:0.8,}),});if(!response.ok){if(response.status===400){try{const errorData=await response.json();if(errorData.detail&&errorData.detail.includes('safety system')){console.warn('⚠️ OpenAI safety system rejection:',errorData.detail);if(window.UIService){window.UIService.showNotification('OpenAI flagged this request. Using fallback response instead.','warning',5000);}}}catch(e){}}
+console.log(`Backend API error: ${response.status} - will use fallback`);return null;}
+const data=await response.json();return data.success?data.content:null;}catch(error){if(error.message.includes('timed out')){console.log('⏰ AI request timed out - caller will use fallback mode');}else{console.log('AI service unavailable - caller will use fallback mode');}
+return null;}},async generateNarratorComment(context){const narratorId=StorageService.getNarratorId();const narrator=getNarrator(narratorId);const fallbacks=narrator.fallbacks;const maxComments=typeof CONFIG.NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER==='number'?CONFIG.NARRATOR_MAX_AI_COMMENTS_PER_CHARACTER:Infinity;const narratorAiDisabled=CONFIG.ENABLE_AI_NARRATOR_COMMENTS===false||!CONFIG.ENABLE_AI;if(narratorAiDisabled||this._narratorCommentCount>=maxComments){console.log('%c🤖 NARRATOR (Fallback - Disabled or limit reached)','color: #ff0; font-weight: bold',);return Utils.randomChoice(fallbacks);}
+try{console.log('%c🤖 NARRATOR: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Request:',{choice:context.choice,question:context.question,narrator:narratorId});console.log(`  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,);const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/narrator/comment`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({choice:context.choice,question:context.question,character_so_far:context.characterSoFar,narrator_id:narratorId,}),});if(!response.ok){console.log('%c🤖 NARRATOR (Fallback - API Error)','color: #f80; font-weight: bold');console.log('  Status:',response.status);return Utils.randomChoice(fallbacks);}
+const data=await response.json();let text=data.comment||Utils.randomChoice(fallbacks);console.log('%c🤖 NARRATOR (AI Generated) ✨','color: #0f0; font-weight: bold');console.log('  Response:',text);let responseText=text;const normalize=(s)=>(s||'').trim().toLowerCase();const startsWithClassic=(s)=>s.startsWith('ah, the classic')||s.startsWith('ah the classic');const last=this._lastNarratorComment;const lastNorm=normalize(last);let newNorm=normalize(responseText);if(last){if(newNorm===lastNorm){const alts=fallbacks.filter((f)=>normalize(f)!==lastNorm);if(alts.length){responseText=Utils.randomChoice(alts);newNorm=normalize(responseText);}}
+if(startsWithClassic(newNorm)&&startsWithClassic(lastNorm)){const alts=fallbacks.filter((f)=>!startsWithClassic(normalize(f)));if(alts.length){responseText=Utils.randomChoice(alts);newNorm=normalize(responseText);}}}
+if(startsWithClassic(newNorm)){if(this._usedClassicThisRun){const alts=fallbacks.filter((f)=>!startsWithClassic(normalize(f)));if(alts.length){responseText=Utils.randomChoice(alts);}}else{this._usedClassicThisRun=true;}}
+this._lastNarratorComment=responseText;this._narratorCommentCount+=1;return responseText;}catch(error){if(error.message.includes('timed out')){console.log('%c🤖 NARRATOR (Fallback - Backend Waking Up)','color: #f80; font-weight: bold');console.log(`  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,);console.log('  ✅ Once awake, subsequent requests will use AI!');}else{console.log('%c🤖 NARRATOR (Fallback - Connection Error)','color: #f00; font-weight: bold');console.error('  Error:',error);}
+return Utils.randomChoice(fallbacks);}},async generateNames(race,classType,count=3){const desiredCount=Math.max(1,count||3);const candidates=[];const tryAiNames=async()=>{if(!CONFIG.ENABLE_AI){console.log('%c📛 NAMES (Fallback - AI Disabled)','color: #ff0; font-weight: bold',);return;}
+try{console.log('%c📛 NAMES: Calling backend AI...','color: #0ff; font-weight: bold',);console.log('  Request:',{race,classType,count:desiredCount});console.log(`  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,);const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/names`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({race:race,class_type:classType,count:desiredCount*2,}),},);if(!response.ok){console.log('%c📛 NAMES (Fallback - API Error)','color: #f80; font-weight: bold',);return;}
+const data=await response.json();if(data.success&&Array.isArray(data.names)&&data.names.length>0){console.log('%c📛 NAMES (AI Generated) ✨','color: #0f0; font-weight: bold',);console.log('  Response:',data.names);candidates.push(...data.names);}}catch(error){if(error.message&&error.message.includes('timed out')){console.log('%c📛 NAMES (Fallback - Backend Waking Up)','color: #f80; font-weight: bold',);console.log(`  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,);console.log('  ✅ Once awake, subsequent requests will use AI!',);}else{console.log('%c📛 NAMES (Fallback - Connection Error)','color: #f00; font-weight: bold',);console.error('  Error:',error);}}};const addFallbackCandidates=(multiplier=3)=>{console.log('%c📛 NAMES (Fallback)','color: #f80; font-weight: bold',);const extra=this.generateFallbackNames(race,desiredCount*multiplier);candidates.push(...extra);};await tryAiNames();if(!candidates.length){addFallbackCandidates(3);}
+let unique=this._filterAndRegisterUniqueNames(candidates,desiredCount);if(unique.length<desiredCount){addFallbackCandidates(5);const more=this._filterAndRegisterUniqueNames(candidates,desiredCount-unique.length,);unique=unique.concat(more);}
+return unique.slice(0,desiredCount);},async generateCharacterSummary(character,options={}){const nameCount=typeof options.nameCount==='number'&&options.nameCount>0?options.nameCount:3;const race=character&&character.race;const classType=character&&character.class;const buildLocalFallback=()=>{const fallbackNames=this.generateFallbackNames(race||'human',nameCount);const template='{{NAME}} is a '+`${race || 'mysterious'}\u0020${classType || 'adventurer'} with a mysterious past. `+"They don't talk about it much. Probably for the best.";return{names:fallbackNames,backstoryTemplate:template,};};if(!CONFIG.ENABLE_AI){console.log('%c📦 SUMMARY (Fallback - AI Disabled)','color: #ff0; font-weight: bold',);return buildLocalFallback();}
+try{console.log('%c📦 SUMMARY: Calling backend AI for names + backstory template...','color: #0ff; font-weight: bold',);const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/summary`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({race:race,class_type:classType,alignment:character&&character.alignment,background:character&&character.background,personality:character&&(character.personalityTrait||character.personality),name_count:nameCount*2,}),},);if(!response.ok){const status=response.status;let detail=null;try{const errBody=await response.json();if(errBody&&errBody.detail){detail=errBody.detail;}}catch{}
+if(status===429){console.log('%c📦 SUMMARY (Cooldown / Rate Limit)','color: #ff0; font-weight: bold',);if(window.UIService){window.UIService.showNotification(detail||'AI character generation is cooling down. Using offline suggestions for this one.','warning',6000,);}}else{console.log('%c📦 SUMMARY (Fallback - API Error)','color: #f80; font-weight: bold',);console.log('  Status:',status);}
+return buildLocalFallback();}
+const data=await response.json();if(!data||data.success!==true){console.log('%c📦 SUMMARY (Fallback - Bad Payload)','color: #f80; font-weight: bold',);return buildLocalFallback();}
+let names=Array.isArray(data.names)?data.names.slice():[];const template=typeof data.backstory_template==='string'&&data.backstory_template.trim()?data.backstory_template:null;if(names.length){names=this._filterAndRegisterUniqueNames(names,nameCount);}
+if(!names.length){console.log('%c📦 SUMMARY (Fallback - No Names From Backend)','color: #f80; font-weight: bold',);const fallback=buildLocalFallback();if(template){fallback.backstoryTemplate=template;}
+return fallback;}
+console.log('%c📦 SUMMARY (AI Generated) ✨','color: #0f0; font-weight: bold',);console.log('  Names:',names);return{names,backstoryTemplate:template||(character&&character.backstory)||buildLocalFallback().backstoryTemplate,};}catch(error){if(error.message&&error.message.includes('timed out')){console.log('%c📦 SUMMARY (Fallback - Backend Waking Up)','color: #f80; font-weight: bold',);console.log('  ⏰ Timeout reached. Using local fallback for now; backend warmup continues...',);}else{console.log('%c📦 SUMMARY (Fallback - Connection Error)','color: #f00; font-weight: bold',);console.error('  Error:',error);}
+return buildLocalFallback();}},generateFallbackNames(race,count){const pattern=window.CharacterNameData?CharacterNameData.getPattern(race):{first:['Hero'],last:['Unknown']};const result=[];const usedLocalCombos=new Set();let attempts=0;const maxAttempts=count*20;while(result.length<count&&attempts<maxAttempts){const firstName=Utils.randomChoice(pattern.first);const lastName=Utils.randomChoice(pattern.last);const fullName=`${firstName}\u0020${lastName}`;if(!usedLocalCombos.has(fullName)){usedLocalCombos.add(fullName);result.push(fullName);}
+attempts++;}
+return result;},_filterAndRegisterUniqueNames(candidates,maxCount){const result=[];const target=typeof maxCount==='number'&&maxCount>0?maxCount:Number.POSITIVE_INFINITY;for(const raw of candidates){if(result.length>=target)break;if(!raw)continue;const trimmed=String(raw).trim();if(!trimmed)continue;const parts=trimmed.split(/\s+/);if(parts.length===0)continue;const first=parts[0];const last=parts.slice(1).join(' ')||'';if(!first)continue;const firstKey=first.toLowerCase();const lastKey=last.toLowerCase();const fullKey=last?`${firstKey}\u0020${lastKey}`:firstKey;if(this._usedFullNames.has(fullKey)||this._usedFirstNames.has(firstKey)||(last&&this._usedLastNames.has(lastKey))){continue;}
+this._usedFullNames.add(fullKey);this._usedFirstNames.add(firstKey);if(last){this._usedLastNames.add(lastKey);}
+result.push(trimmed);}
+return result;},async generateBackstory(character){const fallback=`${character.name} is a ${character.race}\u0020${character.class} with a mysterious past. `
++"They don't talk about it much. Probably for the best.";if(!CONFIG.ENABLE_AI){console.log('%c📖 BACKSTORY (Fallback - AI Disabled)','color: #ff0; font-weight: bold');return fallback;}
+try{console.log('%c📖 BACKSTORY: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Request:',{name:character.name,race:character.race,class:character.class});console.log(`  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,);const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/backstory`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({name:character.name,race:character.race,class_type:character.class,personality:character.personalityTrait||'mysterious',background:character.background,}),});if(!response.ok){console.log('%c📖 BACKSTORY (Fallback - API Error)','color: #f80; font-weight: bold');return fallback;}
+const data=await response.json();if(data.success&&data.backstory){console.log('%c📖 BACKSTORY (AI Generated) ✨','color: #0f0; font-weight: bold');console.log('  Response:',data.backstory.substring(0,100)+'...');return data.backstory;}}catch(error){if(error.message.includes('timed out')){console.log('%c📖 BACKSTORY (Fallback - Backend Waking Up)','color: #f80; font-weight: bold');console.log(`  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,);console.log('  ✅ Once awake, subsequent requests will use AI!');}else{console.log('%c📖 BACKSTORY (Fallback - Connection Error)','color: #f00; font-weight: bold');console.error('  Error:',error);}}
+console.log('%c📖 BACKSTORY (Fallback)','color: #f80; font-weight: bold');return fallback;},async generateOptionVariations(questionText,options){if(!CONFIG.ENABLE_AI||CONFIG.ENABLE_AI_OPTION_VARIATIONS===false){console.log('%c🎲 OPTIONS (Fallback - AI Disabled or variations off)','color: #ff0; font-weight: bold',);return options.map((opt)=>opt.text);}
+const optionDescriptions=options.map((opt)=>`Value: "${opt.value}", Default text: "${opt.text}"`).join('\n');const prompt=`For the question: "${questionText}"
 
 Generate fresh, creative variations for these D&D character creation options. Keep each variation to 4-8 words, punchy and clear. Match the tone of each original but make them feel unique:
 
 ${optionDescriptions}
 
-Format your response as JSON array of strings, one for each option in order. Example: ["text1", "text2", "text3", "text4"]`;
-
-    const systemPrompt =
-      'You are a creative D&D character creation assistant. Generate engaging option text that feels fresh but maintains the same meaning. ' +
-      'Be concise and direct. Return ONLY valid JSON.';
-
-    console.log('%c🎲 OPTIONS: Calling backend AI...', 'color: #0ff; font-weight: bold');
-    console.log('  Note: Will fallback to original option texts if unavailable...');
-
-    const response = await this.generateCompletion(prompt, systemPrompt);
-
-    if (response) {
-      try {
-        // Try to extract JSON from response
-        const jsonMatch = response.match(/\[.*\]/s);
-        if (jsonMatch) {
-          const variations = JSON.parse(jsonMatch[0]);
-          if (Array.isArray(variations) && variations.length === options.length) {
-            console.log('%c🎲 OPTIONS (AI Generated) ✨', 'color: #0f0; font-weight: bold');
-            return variations;
-          }
-        }
-      } catch (error) {
-        console.log('Failed to parse AI option variations:', error);
-      }
-    }
-
-    // Fallback: return original texts
-    console.log('%c🎲 OPTIONS (Fallback - Using Original Texts) ✅', 'color: #f80; font-weight: bold');
-    console.log('  The original option texts will be used instead of AI variations');
-    return options.map((opt) => opt.text);
-  },
-
-  // Generate character portrait image using DALL-E
-  async generatePortraitImage(character) {
-    if (!CONFIG.ENABLE_AI) {
-      console.log('AI service disabled for image generation');
-      return null;
-    }
-
-    // Build a detailed prompt from character attributes
-    const prompt = this.buildPortraitPrompt(character);
-
-    return await this.generateImageFromPrompt(prompt);
-  },
-
-  // Generate image from custom prompt
-  async generateImageFromPrompt(prompt, options = {}) {
-    if (!CONFIG.ENABLE_AI) {
-      console.log('%c🎨 DALL-E (Unavailable - AI Disabled)', 'color: #ff0; font-weight: bold');
-      return null;
-    }
-
-    // Allow forcing a specific model (used for fallback)
-    const forceModel = options.forceModel || null;
-    const isRetry = options._isRetry || false;
-
-    try {
-      // Resolve current image model preference (builder + manager share this).
-      let model = forceModel || 'dall-e-3';
-      if (!forceModel) {
-        try {
-          if (window.StorageService && typeof StorageService.getImageModel === 'function') {
-            model = StorageService.getImageModel();
-          } else if (CONFIG && CONFIG.DEFAULT_IMAGE_MODEL) {
-            model = CONFIG.DEFAULT_IMAGE_MODEL;
-          }
-        } catch (e) {
-          console.warn('AIService.generateImageFromPrompt: failed to read image model, using default', e);
-        }
-      }
-
-      console.log('%c🎨 IMAGE: Calling backend AI...', 'color: #0ff; font-weight: bold');
-      // Log only a preview of the prompt so the console isn't flooded,
-      // but make it clear that the full prompt (without truncation) is
-      // sent to the backend.
-      console.log('  Prompt (preview):', prompt.substring(0, 100) + (prompt.length > 100 ? '…' : ''));
-      console.log('  Model:', model + (forceModel ? ' (fallback)' : ''));
-      console.log('  Note: Image generation takes 20-30s (longer than text AI)...');
-      
-        // Quality setting differs by model:
-        // - DALL-E 3: 'standard' or 'hd'
-        // - GPT Image 1: 'medium', 'high'
-        // - Flux models: no quality setting (use 'standard' as default)
-        const defaultQuality = {
-          'dall-e-3': 'standard',
-          'gpt-image-1': 'medium',
-          'flux-1.1-pro': 'standard',
-          'flux-schnell': 'standard',
-        };
-        
-        let quality = defaultQuality[model] || 'standard';
-        
-        // In demo mode, always use 'medium' quality for gpt-image-1 to manage costs
-        const isDemoMode = window.DemoCharacters && typeof DemoCharacters.isDemoMode === 'function' && DemoCharacters.isDemoMode();
-        if (isDemoMode && model === 'gpt-image-1') {
-          quality = 'medium';
-          console.log(`  Quality: MEDIUM (demo mode default)`);
-        } else {
-          // Check for user quality preference (logged-in users only)
-          try {
-            if (window.StorageService && typeof StorageService.getImageQuality === 'function') {
-              const savedQuality = StorageService.getImageQuality(model);
-              if (savedQuality) {
-                quality = savedQuality;
-                console.log(`  Quality: ${quality.toUpperCase()} (user preference)`);
-              }
-            }
-          } catch (e) {
-            console.warn('AIService: failed to read quality setting', e);
-          }
-        }
-
-        const response = await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            prompt: prompt,
-            size: '1024x1024',
-            quality: quality,
-            model: model,
-          }),
-        }, 70000); // 70 seconds for image generation (DALL-E can be very slow, plus R2 upload)
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.log('%c🎨 IMAGE (Error)', 'color: #f00; font-weight: bold');
-        console.log('  Error:', errorData.detail);
-        
-        // Helper to extract error message from Pydantic validation errors or plain strings
-        const extractErrorMessage = (detail) => {
-          if (!detail) return null;
-          // Pydantic returns validation errors as an array of objects
-          if (Array.isArray(detail)) {
-            return detail.map(err => {
-              if (typeof err === 'string') return err;
-              // Pydantic format: { loc: [...], msg: '...', type: '...' }
-              const field = err.loc ? err.loc.slice(1).join('.') : 'unknown';
-              return `${field}: ${err.msg || err.message || JSON.stringify(err)}`;
-            }).join('; ');
-          }
-          if (typeof detail === 'object') {
-            return detail.msg || detail.message || JSON.stringify(detail);
-          }
-          return String(detail);
-        };
-        
-        const errorMessage = extractErrorMessage(errorData.detail);
-        
-        // Check for rate limiting
-        if (response.status === 429) {
-          const rateLimitError = new Error(errorMessage || 'Rate limit exceeded');
-          rateLimitError.isRateLimit = true;
-          throw rateLimitError;
-        }
-        
-        // Check for Replicate/Flux service errors (502 from backend)
-        const detailStr = typeof errorData.detail === 'string' ? errorData.detail : errorMessage;
-        if (response.status === 502 && detailStr && (
-          detailStr.toLowerCase().includes('flux') ||
-          detailStr.toLowerCase().includes('replicate')
-        )) {
-          console.warn('⚠️ Replicate/Flux service error:', detailStr);
-          
-          const fluxError = new Error('Flux image generation service is temporarily unavailable');
-          fluxError.isFluxError = true;
-          fluxError.originalMessage = detailStr;
-          fluxError.suggestModelSwitch = true;
-          throw fluxError;
-        }
-        
-        // Check for safety system rejection (handle both string and array detail)
-        if (response.status === 400 && detailStr && detailStr.toLowerCase().includes('safety system')) {
-          console.warn('⚠️ OpenAI safety system rejection:', detailStr);
-          console.warn('📝 REJECTED PROMPT:', prompt);
-          
-          // Analyze the prompt to help identify problematic sections
-          const analysis = this.analyzeRejectedPrompt(prompt);
-          
-          const safetyError = new Error('Portrait generation was flagged by OpenAI\'s content safety system');
-          safetyError.isSafetyRejection = true;
-          safetyError.originalMessage = detailStr;
-          safetyError.rejectedPrompt = prompt; // Capture the prompt for debugging
-          safetyError.promptAnalysis = analysis; // Include analysis results
-          throw safetyError;
-        }
-        
-        throw new Error(errorMessage || `API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        console.log('%c🎨 IMAGE (Generated) ✨', 'color: #0f0; font-weight: bold');
-        console.log('  URL:', data.url.substring(0, 50) + '...');
-        return data.url;
-      }
-      return null;
-    } catch (error) {
-      console.log('%c🎨 IMAGE (Failed)', 'color: #f00; font-weight: bold');
-      console.error('  Error:', error);
-      
-      // Auto-fallback: If Flux failed and we haven't tried fallback yet, retry with GPT Image
-      if (error.isFluxError && !isRetry) {
-        console.log('%c🔄 AUTO-FALLBACK: Flux unavailable, trying GPT Image instead...', 'color: #fa0; font-weight: bold');
-        
-        if (window.UIService) {
-          window.UIService.showNotification(
-            'Flux unavailable, switching to GPT Image...',
-            'info',
-            4000
-          );
-        }
-        
-        // Retry with GPT Image as fallback
-        return this.generateImageFromPrompt(prompt, { 
-          forceModel: 'gpt-image-1', 
-          _isRetry: true 
-        });
-      }
-      
-      throw error;
-    }
-  },
-
-  // Build character description (shown to user in modal)
-  buildCharacterDescription(character) {
-    const parts = [];
-
-    // Add D&D context header to help LLM understand class names like "Monk" are fantasy classes
-    parts.push('Dungeons & Dragons fantasy character:');
-
-    // Sex - include if set (important for portrait generation)
-    if (character.sex) {
-      parts.push(character.sex);
-    }
-
-    // Race - prefer admin-configured entries, fall back to shared description data
-    if (character.race) {
-      let raceDesc = null;
-      // Try admin entries first
-      try {
-        if (window.PortraitPrompt && typeof PortraitPrompt.getVariableSnippet === 'function') {
-          raceDesc = PortraitPrompt.getVariableSnippet('race', character.race);
-        }
-      } catch (e) {
-        // Non-fatal
-      }
-      // Fall back to hardcoded descriptions
-      if (!raceDesc) {
-        raceDesc = window.PortraitPrompt
-          ? PortraitPrompt.getRaceDescription(character.race)
-          : character.race;
-      }
-      parts.push(raceDesc);
-    }
-
-    // Class - prefer admin-configured entries, fall back to shared description data
-    if (character.class) {
-      let classDesc = null;
-      // Try admin entries first
-      try {
-        if (window.PortraitPrompt && typeof PortraitPrompt.getVariableSnippet === 'function') {
-          classDesc = PortraitPrompt.getVariableSnippet('class', character.class);
-        }
-      } catch (e) {
-        // Non-fatal
-      }
-      // Fall back to hardcoded descriptions
-      if (!classDesc) {
-        classDesc = window.PortraitPrompt
-          ? PortraitPrompt.getClassDescription(character.class)
-          : character.class;
-      }
-      parts.push(classDesc);
-    }
-
-    // Magic specialization (only for spellcasting classes)
-    // Note: This is still from hardcoded data - could be moved to admin in future
-    if (character.class && window.PortraitPrompt) {
-      const magicText = PortraitPrompt.getMagicSpecialization(character.class);
-      if (magicText) {
-        parts.push(magicText);
-      }
-    }
-
-    // Alignment
-    if (character.alignment) {
-      if (character.alignment.includes('good')) {
-        parts.push('with noble bearing');
-      } else if (character.alignment.includes('evil')) {
-        parts.push('with a menacing aura');
-      }
-    }
-
-    // Background + feature (when available)
-    if (character.background) {
-      try {
-        let backgroundLabel = character.background;
-        let backgroundFeature = character.backgroundFeature || null;
-
-        if (typeof DND_DATA !== 'undefined' && Array.isArray(DND_DATA.backgrounds)) {
-          const bgObj = DND_DATA.backgrounds.find(
-            (b) => b.id === character.background,
-          );
-          if (bgObj) {
-            backgroundLabel = bgObj.name || backgroundLabel;
-            // bgObj.feature is an object { name, description } – extract a readable label
-            if (!backgroundFeature && bgObj.feature) {
-              if (typeof bgObj.feature === 'string') {
-                backgroundFeature = bgObj.feature;
-              } else if (typeof bgObj.feature.name === 'string') {
-                backgroundFeature = bgObj.feature.name;
-              } else if (typeof bgObj.feature.description === 'string') {
-                backgroundFeature = bgObj.feature.description;
-              }
-            }
-          }
-        }
-
-        let backgroundText = `${String(backgroundLabel).toLowerCase()} background`;
-        if (backgroundFeature) {
-          const featureText = String(backgroundFeature);
-          // Avoid noisy [object Object] style strings
-          if (!featureText.includes('[object Object]')) {
-            backgroundText += ` with background feature "${featureText}"`;
-          }
-        }
-
-        parts.push(backgroundText);
-      } catch (e) {
-        // Fallback to a simple tag if anything goes wrong with lookups
-        parts.push(`background: ${character.background}`);
-      }
-    }
-
-    // Backstory removed from portrait prompts to reduce OpenAI safety rejections
-    // User-written text is unpredictable and frequently triggers content filters
-    // if (character.backstory) {
-    //   const raw = String(character.backstory).replace(/\s+/g, ' ').trim();
-    //   if (raw) {
-    //     parts.push(`backstory: ${raw}`);
-    //   }
-    // }
-  
-    return parts.join(', ');
-  },
-
-  // Build full DALL-E prompt with rendering instructions (not shown to user)
-  buildPortraitPrompt(character) {
-    // Normalize class key for lookups
-    const classKey = (character.class || 'default').toLowerCase();
-
-    // Use shared pose and camera data from PortraitPoseData module
-    const { pose: posePrompt, camera: cameraPrompt } =
-      window.PortraitPoseData && typeof PortraitPoseData.getRandomPoseAndCamera === 'function'
-        ? PortraitPoseData.getRandomPoseAndCamera(classKey)
-        : {
-            pose: 'standing in a relaxed but heroic stance',
-            camera: 'Camera angle: three-quarter view that clearly shows the full silhouette.',
-          };
-
-    // Resolve current portrait prompt theme (if any)
-    let promptThemeId = null;
-    try {
-      if (
-        typeof window !== 'undefined' &&
-        window.StorageService &&
-        typeof window.StorageService.getPortraitPromptTheme === 'function'
-      ) {
-        promptThemeId = window.StorageService.getPortraitPromptTheme();
-      } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME) {
-        promptThemeId = CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME;
-      }
-    } catch (e) {
-      // Non-fatal: fall back to default theme behavior below.
-    }
-
-    // Build compact STYLE / Background descriptions from theme (when available)
-    let styleDescription = '';
-    let backgroundDescription = '';
-    if (
-      typeof window !== 'undefined' &&
-      window.PortraitPrompt &&
-      typeof window.PortraitPrompt.buildStyleAndBackgroundDescriptions ===
-        'function'
-    ) {
-      try {
-        const sections =
-          window.PortraitPrompt.buildStyleAndBackgroundDescriptions({
-            posePrompt,
-            cameraPrompt,
-            themeId: promptThemeId,
-          }) || {};
-        styleDescription = sections.styleDescription || '';
-        backgroundDescription = sections.backgroundDescription || '';
-      } catch (e) {
-        // Non-fatal – fall through to simple defaults below.
-      }
-    }
-
-    if (!styleDescription) {
-      styleDescription =
-        'High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';
-    }
-    if (!backgroundDescription) {
-      backgroundDescription =
-        'Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';
-    }
-
-    // Build simple header line: {CHARACTER_NAME}: {RACE}, {CLASS}, {BACKGROUND}
-    const name = (character && character.name) || 'Unnamed character';
-
-    const raceId = character && character.race ? String(character.race) : null;
-    const classId =
-      character && character.class ? String(character.class) : null;
-
-    let raceLabel = raceId;
-    let classLabel = classId;
-
-    // Prefer admin-configured snippets for race/class when available.
-    try {
-      if (
-        typeof window !== 'undefined' &&
-        window.PortraitPrompt &&
-        typeof window.PortraitPrompt.getVariableSnippet === 'function'
-      ) {
-        if (raceId) {
-          const customRace =
-            window.PortraitPrompt.getVariableSnippet('race', raceId);
-          if (customRace) raceLabel = customRace;
-        }
-        if (classId) {
-          const customClass =
-            window.PortraitPrompt.getVariableSnippet('class', classId);
-          if (customClass) classLabel = customClass;
-        }
-      }
-    } catch (e) {
-      // Non-fatal – fall back to simple labels.
-    }
-
-    let backgroundLabel = null;
-    if (character && character.background) {
-      backgroundLabel = String(character.background);
-      try {
-        if (
-          typeof DND_DATA !== 'undefined' &&
-          Array.isArray(DND_DATA.backgrounds)
-        ) {
-          const bgObj = DND_DATA.backgrounds.find(
-            (b) => b.id === character.background,
-          );
-          if (bgObj && bgObj.name) {
-            backgroundLabel = String(bgObj.name);
-          }
-        }
-      } catch (e) {
-        // Non-fatal – fall back to raw background value.
-      }
-    }
-
-    const headerParts = [];
-    // Sex - include for portrait generation (e.g., "male dwarf" or "female elf")
-    if (character && character.sex) {
-      headerParts.push(character.sex);
-    }
-    if (raceLabel) headerParts.push(raceLabel);
-    if (classLabel) headerParts.push(classLabel);
-    
-    // Add magic specialization for spellcasting classes
-    if (classId && window.PortraitPrompt && typeof PortraitPrompt.getMagicSpecialization === 'function') {
-      const magicText = PortraitPrompt.getMagicSpecialization(classId);
-      if (magicText) {
-        headerParts.push(magicText);
-      }
-    }
-    
-    if (backgroundLabel) headerParts.push(backgroundLabel);
-
-    const headerSuffix = headerParts.join(', ');
-    const headerLine = headerSuffix
-      ? `${name}: ${headerSuffix}`
-      : `${name}`;
-
-    // Final multi-line prompt template:
-    // Dungeons & Dragons fantasy character portrait:
-    // {CHARACTER_NAME}: {RACE}, {CLASS}, {BACKGROUND}
-    //
-    // Pose: {POSE_VARIANT}
-    //
-    // STYLE: {DESCRIPTION}
-    //
-    // Scene: {DESCRIPTION}
-    // Note: Camera temporarily disabled - may interfere with pose
-    let prompt = `Dungeons & Dragons fantasy character portrait:\n${headerLine}\n\nPose: ${posePrompt}`;
-    if (styleDescription) {
-      prompt += `\n\nSTYLE: ${styleDescription}`;
-    }
-    if (backgroundDescription) {
-      prompt += `\n\nScene: ${backgroundDescription}`;
-    }
-
-    return prompt;
-  },
-
-  // Analyze a rejected prompt to help identify problematic sections
-  analyzeRejectedPrompt(prompt) {
-    console.log('%c🔍 Analyzing Rejected Prompt', 'color: #ff0; font-weight: bold; font-size: 14px;');
-    console.log('─'.repeat(80));
-    
-    // Common problematic patterns that might trigger safety filters
-    const potentialIssues = [];
-    const warningPatterns = [
-      { pattern: /\b(blood|gore|violence|death|kill|weapon|sword|axe|dagger|knife)\b/gi, category: 'Violence/Weapons' },
-      { pattern: /\b(dark|evil|demon|devil|hell|sinister|menacing|malevolent)\b/gi, category: 'Dark Themes' },
-      { pattern: /\b(naked|nude|exposed|bare|revealing|sensual|seductive)\b/gi, category: 'Adult Content' },
-      { pattern: /\b(child|young|minor|kid|juvenile)\b/gi, category: 'Age-Related' },
-      { pattern: /\b(slave|slavery|bound|chained|prisoner)\b/gi, category: 'Sensitive Topics' },
-    ];
-
-    // Check for each pattern
-    warningPatterns.forEach(({ pattern, category }) => {
-      const matches = prompt.match(pattern);
-      if (matches && matches.length > 0) {
-        potentialIssues.push({
-          category,
-          matches: [...new Set(matches.map(m => m.toLowerCase()))],
-          count: matches.length
-        });
-      }
-    });
-
-    // Try to break down the prompt into sections
-    const sections = prompt.split(', ').filter(s => s.trim());
-    
-    console.log('📋 PROMPT SECTIONS (%d total):', sections.length);
-    sections.forEach((section, idx) => {
-      const sectionLower = section.toLowerCase();
-      let hasWarning = false;
-      
-      // Check if this section contains problematic terms
-      for (const { pattern } of warningPatterns) {
-        if (pattern.test(section)) {
-          hasWarning = true;
-          break;
-        }
-      }
-      
-      const marker = hasWarning ? '⚠️ ' : '   ';
-      console.log(`${marker}${idx + 1}. ${section}`);
-    });
-    
-    console.log('─'.repeat(80));
-    
-    if (potentialIssues.length > 0) {
-      console.log('%c⚠️  POTENTIAL ISSUES DETECTED:', 'color: #f90; font-weight: bold;');
-      potentialIssues.forEach(issue => {
-        console.log(`  • ${issue.category}: ${issue.matches.join(', ')} (${issue.count}x)`);
-      });
-    } else {
-      console.log('%c✓ No obvious problematic patterns detected', 'color: #0f0;');
-      console.log('  The rejection may be due to:');
-      console.log('  • Combination of terms that seem innocent individually');
-      console.log('  • Character race/class combinations OpenAI finds problematic');
-      console.log('  • Background story content or phrasing');
-      console.log('  • OpenAI policy updates or temporary sensitivity changes');
-    }
-    
-    console.log('─'.repeat(80));
-    console.log('%c💡 DEBUGGING SUGGESTIONS:', 'color: #0ff; font-weight: bold;');
-    console.log('  1. Try regenerating - sometimes the same prompt works on retry');
-    console.log('  2. Simplify the backstory or character description');
-    console.log('  3. Remove alignment-based descriptions (e.g., "menacing aura")');
-    console.log('  4. Adjust weapon/equipment descriptions to be less specific');
-    console.log('  5. Use the custom prompt modal to test simplified versions');
-    console.log('─'.repeat(80));
-    
-    return {
-      sections,
-      potentialIssues,
-      hasKnownProblematicTerms: potentialIssues.length > 0
-    };
-  },
-});
-
-
-
-
-
-
-// ===== BUNDLE PART: character-builder/character-builder-state.js =====
-
-// State management for the DandDy terminal character builder.
-// Exposes CharacterState and OptionVariationsCache as globals on window.
-
-// Session persistence key (using localStorage for cross-tab and browser restart persistence)
-const SESSION_STORAGE_KEY = 'danddy_builder_session';
-
-// Cache of AI-generated option text variations (per session)
-const OptionVariationsCache = (window.OptionVariationsCache = {
-  cache: {},
-
-  async get(questionId, question) {
-    // Don't vary race, class, background, or alignment choices - keep classic D&D terms
-    const noVariationQuestions = [
-      'race-choice',
-      'class-choice',
-      'background-choice',
-      'alignment-choice',
-    ];
-    if (noVariationQuestions.includes(questionId)) {
-      return question.options;
-    }
-
-    // Return cached if exists
-    if (this.cache[questionId]) {
-      return this.cache[questionId];
-    }
-
-    // Generate new variations
-    const variations = await AIService.generateOptionVariations(
-      question.text,
-      question.options,
-    );
-
-    // Create new options array with varied text but same underlying data
-    const variedOptions = question.options.map((opt, index) => ({
-      ...opt,
-      text: variations[index],
-    }));
-
-    // Cache it
-    this.cache[questionId] = variedOptions;
-
-    return variedOptions;
-  },
-
-  reset() {
-    this.cache = {};
-  },
-});
-
-// Character creation state (current character, answers, listeners)
-const CharacterState = (window.CharacterState = {
-  current: {
-    id: null,
-    step: 0,
-    abilityMethod: null,
-    answers: {},
-    currentQuestionId: null, // Track current question for session resume
-    character: {
-      // Stable identity for this character across renames/exports/imports
-      // Used by Character Manager to detect "this is the same character"
-      characterUid: null,
-      name: '',
-      race: '',
-      class: '',
-      background: '',
-      alignment: '',
-      sex: null,
-      baseAbilities: null,
-      abilities: {
-        str: 10,
-        dex: 10,
-        con: 10,
-        int: 10,
-        wis: 10,
-        cha: 10,
-      },
-      level: 1,
-      hitPoints: 0,
-      personalityTrait: '',
-      backstory: '',
-      // Background benefits
-      skillProficiencies: [],
-      toolProficiencies: [],
-      languages: [],
-      equipment: [],
-      backgroundFeature: null,
-      // Spellcasting
-      spellcastingAbility: null,
-      cantrips: [],
-      spellsKnown: [],
-      spellsPrepared: [],
-      spellSlots: {},
-    },
-  },
-
-  listeners: [],
-  
-  // Flag to prevent auto-save during restore
-  _restoring: false,
-
-  get() {
-    return this.current;
-  },
-
-  set(updates) {
-    this.current = { ...this.current, ...updates };
-    this.notify();
-  },
-
-  updateCharacter(updates) {
-    this.current.character = { ...this.current.character, ...updates };
-    this.notify();
-  },
-
-  // Set the current question ID (called by App.showQuestion)
-  setCurrentQuestion(questionId) {
-    this.current.currentQuestionId = questionId;
-    this._saveSession();
-  },
-
-  subscribe(listener) {
-    this.listeners.push(listener);
-  },
-
-  notify() {
-    this.listeners.forEach((listener) => listener(this.current));
-    // Auto-save to session on every state change (unless restoring)
-    if (!this._restoring) {
-      this._saveSession();
-    }
-  },
-
-  // ===== Session Persistence =====
-
-  // Get the current user's identifier (for session ownership)
-  _getCurrentUserId() {
-    // AuthService may not be loaded yet in character-builder context
-    if (typeof AuthService !== 'undefined' && AuthService.getCurrentUser) {
-      const user = AuthService.getCurrentUser();
-      // Use the user's ID if available, fall back to email
-      return user ? (user.id || user.email || null) : null;
-    }
-    return null;
-  },
-
-  // Check if there's an in-progress session to resume
-  hasSession() {
-    try {
-      const raw = localStorage.getItem(SESSION_STORAGE_KEY);
-      if (!raw) return false;
-      const session = JSON.parse(raw);
-      
-      // Check if this session belongs to the current user
-      const currentUserId = this._getCurrentUserId();
-      const sessionUserId = session._userId !== undefined ? session._userId : null;
-      
-      // If user IDs don't match, don't offer to resume
-      // (null matches null for anonymous sessions)
-      if (currentUserId !== sessionUserId) {
-        return false;
-      }
-      
-      // Consider it a valid session if we have meaningful progress
-      // (past the intro, or have any character data)
-      const hasProgress = session.currentQuestionId && session.currentQuestionId !== 'intro';
-      const hasCharacterData = session.character && (
-        session.character.name ||
-        session.character.race ||
-        session.character.class
-      );
-      return hasProgress || hasCharacterData;
-    } catch {
-      return false;
-    }
-  },
-
-  // Get session metadata for display (without fully loading)
-  getSessionPreview() {
-    try {
-      const raw = localStorage.getItem(SESSION_STORAGE_KEY);
-      if (!raw) return null;
-      const session = JSON.parse(raw);
-      
-      // Only return preview if session belongs to current user
-      const currentUserId = this._getCurrentUserId();
-      const sessionUserId = session._userId !== undefined ? session._userId : null;
-      if (currentUserId !== sessionUserId) {
-        return null;
-      }
-      
-      return {
-        characterName: session.character?.name || null,
-        race: session.character?.race || null,
-        class: session.character?.class || null,
-        currentQuestionId: session.currentQuestionId,
-        savedAt: session._savedAt || null,
-      };
-    } catch {
-      return null;
-    }
-  },
-
-  // Save current state to localStorage
-  _saveSession() {
-    try {
-      const toSave = {
-        ...this.current,
-        _savedAt: new Date().toISOString(),
-        _userId: this._getCurrentUserId(), // Track which user owns this session
-      };
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(toSave));
-    } catch (e) {
-      console.warn('[CharacterState] Failed to save session:', e);
-    }
-  },
-
-  // Restore state from localStorage
-  restoreSession() {
-    try {
-      const raw = localStorage.getItem(SESSION_STORAGE_KEY);
-      if (!raw) return false;
-      
-      const session = JSON.parse(raw);
-      this._restoring = true;
-      this.current = {
-        id: session.id || Date.now().toString(),
-        step: session.step || 0,
-        abilityMethod: session.abilityMethod || null,
-        answers: session.answers || {},
-        currentQuestionId: session.currentQuestionId || null,
-        character: {
-          characterUid: session.character?.characterUid || `danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          name: session.character?.name || '',
-          race: session.character?.race || '',
-          class: session.character?.class || '',
-          background: session.character?.background || '',
-          alignment: session.character?.alignment || '',
-          baseAbilities: session.character?.baseAbilities || null,
-          abilities: session.character?.abilities || {
-            str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10,
-          },
-          level: session.character?.level || 1,
-          hitPoints: session.character?.hitPoints || 0,
-          personalityTrait: session.character?.personalityTrait || '',
-          backstory: session.character?.backstory || '',
-          skillProficiencies: session.character?.skillProficiencies || [],
-          toolProficiencies: session.character?.toolProficiencies || [],
-          languages: session.character?.languages || [],
-          equipment: session.character?.equipment || [],
-          backgroundFeature: session.character?.backgroundFeature || null,
-          spellcastingAbility: session.character?.spellcastingAbility || null,
-          cantrips: session.character?.cantrips || [],
-          spellsKnown: session.character?.spellsKnown || [],
-          spellsPrepared: session.character?.spellsPrepared || [],
-          spellSlots: session.character?.spellSlots || {},
-          // Portrait data - restore all portrait-related fields
-          customPortraitAscii: session.character?.customPortraitAscii || null,
-          originalPortraitUrl: session.character?.originalPortraitUrl || null,
-          customPortraitCount: session.character?.customPortraitCount || 0,
-          portraitMetadata: session.character?.portraitMetadata || null,
-          asciiPortrait: session.character?.asciiPortrait || null,
-          asciiPortraitKey: session.character?.asciiPortraitKey || null,
-        },
-      };
-      this._restoring = false;
-      this.notify();
-      return session.currentQuestionId || 'intro';
-    } catch (e) {
-      console.warn('[CharacterState] Failed to restore session:', e);
-      this._restoring = false;
-      return false;
-    }
-  },
-
-  // Clear the saved session (call after save/discard)
-  clearSession() {
-    try {
-      localStorage.removeItem(SESSION_STORAGE_KEY);
-    } catch (e) {
-      console.warn('[CharacterState] Failed to clear session:', e);
-    }
-  },
-
-  reset() {
-    this.current = {
-      id: Date.now().toString(),
-      step: 0,
-      abilityMethod: null,
-      answers: {},
-      currentQuestionId: null,
-      character: {
-        // Generate a fresh stable UID for this new character
-        characterUid: `danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        name: '',
-        race: '',
-        class: '',
-        background: '',
-        alignment: '',
-        sex: null,
-        baseAbilities: null,
-        abilities: {
-          str: 10,
-          dex: 10,
-          con: 10,
-          int: 10,
-          wis: 10,
-          cha: 10,
-        },
-        level: 1,
-        hitPoints: 0,
-        personalityTrait: '',
-        backstory: '',
-        // Background benefits
-        skillProficiencies: [],
-        toolProficiencies: [],
-        languages: [],
-        equipment: [],
-        backgroundFeature: null,
-        // Spellcasting
-        spellcastingAbility: null,
-        cantrips: [],
-        spellsKnown: [],
-        spellsPrepared: [],
-        spellSlots: {},
-      },
-    };
-    // Clear session when explicitly resetting
-    this.clearSession();
-    this.notify();
-  },
-});
-
-
-
-
-
-
-
-// ===== BUNDLE PART: shared-character-sheet.js =====
-
-// ========================================
-// SHARED CHARACTER SHEET COMPONENT
-// ========================================
-// Global component for rendering character sheets across DandDy apps
-// Used by both Character Builder and Character Manager
-
-// Portrait debugging - enable with: window.DEBUG_PORTRAITS = true
-// To dump current debug log: window.CharacterSheet.dumpPortraitDebugLog()
-const PORTRAIT_DEBUG_LOG = [];
-const MAX_PORTRAIT_DEBUG_ENTRIES = 100;
-
-function logPortraitDebug(action, characterId, characterName, details) {
-  if (!window.DEBUG_PORTRAITS) return;
-  
-  const entry = {
-    timestamp: new Date().toISOString(),
-    action,
-    characterId,
-    characterName,
-    ...details
-  };
-  
-  PORTRAIT_DEBUG_LOG.push(entry);
-  if (PORTRAIT_DEBUG_LOG.length > MAX_PORTRAIT_DEBUG_ENTRIES) {
-    PORTRAIT_DEBUG_LOG.shift();
-  }
-  
-  console.log(`🖼️ [PORTRAIT DEBUG] ${action}`, {
-    characterId,
-    characterName,
-    ...details
-  });
-}
-
-const CharacterSheet = (window.CharacterSheet = {
-  /**
-   * Dump the portrait debug log to console for reporting.
-   * Call from console: CharacterSheet.dumpPortraitDebugLog()
-   */
-  dumpPortraitDebugLog() {
-    console.group('🖼️ Portrait Debug Log');
-    console.log('Total entries:', PORTRAIT_DEBUG_LOG.length);
-    console.log('Enable debugging with: window.DEBUG_PORTRAITS = true');
-    console.log('---');
-    PORTRAIT_DEBUG_LOG.forEach((entry, i) => {
-      console.log(`[${i}] ${entry.timestamp} - ${entry.action}`, entry);
-    });
-    console.groupEnd();
-    return PORTRAIT_DEBUG_LOG;
-  },
-
-  /**
-   * Get the current portrait debug log (for programmatic access).
-   */
-  getPortraitDebugLog() {
-    return [...PORTRAIT_DEBUG_LOG];
-  },
-
-  /**
-   * Clear the portrait debug log.
-   */
-  clearPortraitDebugLog() {
-    PORTRAIT_DEBUG_LOG.length = 0;
-    console.log('🖼️ Portrait debug log cleared');
-  },
-
-  /**
-   * Compare portrait data between card and sheet for a character.
-   * Call from console: CharacterSheet.comparePortraitSources(characterId)
-   */
-  comparePortraitSources(characterId) {
-    const character = window.AppState?.characters?.find(c => String(c.id) === String(characterId));
-    if (!character) {
-      console.error('Character not found:', characterId);
-      return null;
-    }
-
-    const result = {
-      characterId,
-      characterName: character.name,
-      portraitMetadata: character.portraitMetadata ? {
-        activeVersionId: character.portraitMetadata.activeVersionId,
-        versionsCount: character.portraitMetadata.versions?.length || 0,
-        versions: character.portraitMetadata.versions?.map(v => ({
-          id: v.id,
-          hasUrl: !!v.url,
-          urlPreview: v.url ? v.url.substring(0, 80) + '...' : null,
-          hasAscii: !!v.ascii,
-          asciiLength: v.ascii?.length || 0
-        }))
-      } : null,
-      legacyFields: {
-        customPortraitAscii: character.customPortraitAscii ? `[${character.customPortraitAscii.length} chars]` : null,
-        originalPortraitUrl: character.originalPortraitUrl || null,
-        portraitAscii: character.portrait?.ascii ? `[${character.portrait.ascii.length} chars]` : null,
-        portraitUrl: character.portrait?.url || null,
-        asciiPortrait: character.asciiPortrait ? `[${character.asciiPortrait.length} chars]` : null,
-        asciiPortraitKey: character.asciiPortraitKey || null
-      },
-      resolvedAscii: this.getAsciiPortrait(character) ? `[${this.getAsciiPortrait(character).length} chars]` : null,
-      resolvedUrl: this.getOriginalPortraitUrl(character),
-      raceClass: `${character.race}|${character.class}`
-    };
-
-    console.group(`🖼️ Portrait Sources Comparison: ${character.name}`);
-    console.log('Character ID:', characterId);
-    console.log('Portrait Metadata:', result.portraitMetadata);
-    console.log('Legacy Fields:', result.legacyFields);
-    console.log('Resolved ASCII:', result.resolvedAscii);
-    console.log('Resolved URL:', result.resolvedUrl);
-    console.log('Race|Class Key:', result.raceClass);
-    console.groupEnd();
-
-    return result;
-  },
-
-  /**
-   * Check for portrait mismatch between card and sheet in the DOM.
-   * Call from console: CharacterSheet.checkDomMismatch()
-   * Returns details about what's shown in the card vs the sheet.
-   */
-  checkDomMismatch() {
-    const selectedCard = document.querySelector('.character-card.is-selected');
-    const characterSheet = document.getElementById('characterSheet');
-    
-    if (!selectedCard) {
-      console.warn('🖼️ No character card is currently selected');
-      return null;
-    }
-
-    const characterId = selectedCard.getAttribute('data-id');
-    const character = window.AppState?.characters?.find(c => String(c.id) === String(characterId));
-    
-    // Get card thumbnail info
-    const cardThumb = selectedCard.querySelector('.card-thumbnail');
-    const cardImg = cardThumb?.querySelector('img');
-    const cardAscii = cardThumb?.querySelector('pre');
-    
-    // Get sheet portrait info
-    const sheetContainer = characterSheet?.querySelector('.portrait-container');
-    const sheetImg = sheetContainer?.querySelector('.original-portrait');
-    const sheetAscii = sheetContainer?.querySelector('.ascii-portrait pre');
-    
-    const cardInfo = {
-      hasImage: !!cardImg,
-      imageUrl: cardImg?.src || null,
-      imageTruncated: cardImg?.src ? cardImg.src.substring(0, 80) + '...' : null,
-      hasAscii: !!cardAscii,
-      asciiLength: cardAscii?.textContent?.length || 0,
-      asciiPreview: cardAscii?.textContent?.substring(0, 50) + '...' || null,
-      isImageMode: cardThumb?.classList.contains('card-thumbnail--image') || false
-    };
-
-    const sheetInfo = {
-      hasImage: !!sheetImg,
-      imageUrl: sheetImg?.src || null,
-      imageTruncated: sheetImg?.src ? sheetImg.src.substring(0, 80) + '...' : null,
-      imageHidden: sheetImg?.classList.contains('is-hidden') || false,
-      hasAscii: !!sheetAscii,
-      asciiLength: sheetAscii?.textContent?.length || 0,
-      asciiPreview: sheetAscii?.textContent?.substring(0, 50) + '...' || null,
-      asciiHidden: sheetContainer?.querySelector('.ascii-portrait')?.classList.contains('is-hidden') || false
-    };
-
-    // Check for mismatches
-    const urlMismatch = cardInfo.imageUrl !== sheetInfo.imageUrl;
-    const asciiLengthMismatch = cardInfo.asciiLength !== sheetInfo.asciiLength;
-
-    const result = {
-      characterId,
-      characterName: character?.name || 'Unknown',
-      card: cardInfo,
-      sheet: sheetInfo,
-      mismatch: {
-        url: urlMismatch,
-        asciiLength: asciiLengthMismatch,
-        summary: urlMismatch || asciiLengthMismatch ? '⚠️ MISMATCH DETECTED' : '✅ No mismatch'
-      }
-    };
-
-    console.group(`🖼️ DOM Portrait Check: ${result.characterName}`);
-    console.log('Character ID:', characterId);
-    console.log('Card:', cardInfo);
-    console.log('Sheet:', sheetInfo);
-    console.log('Mismatch:', result.mismatch);
-    if (urlMismatch) {
-      console.warn('⚠️ URL MISMATCH: Card and sheet show different images!');
-      console.log('Card URL:', cardInfo.imageUrl);
-      console.log('Sheet URL:', sheetInfo.imageUrl);
-    }
-    if (asciiLengthMismatch) {
-      console.warn('⚠️ ASCII LENGTH MISMATCH: Card and sheet have different ASCII art!');
-    }
-    console.groupEnd();
-
-    return result;
-  },
-
-  /**
-   * Enable portrait debugging mode. Call from console: CharacterSheet.enablePortraitDebug()
-   */
-  enablePortraitDebug() {
-    window.DEBUG_PORTRAITS = true;
-    console.log('🖼️ Portrait debugging ENABLED');
-    console.log('Available commands:');
-    console.log('  CharacterSheet.checkDomMismatch() - Check for visible mismatch');
-    console.log('  CharacterSheet.comparePortraitSources(id) - Compare data sources');
-    console.log('  CharacterSheet.dumpPortraitDebugLog() - Dump all debug entries');
-    console.log('  CharacterSheet.clearPortraitDebugLog() - Clear debug log');
-    console.log('  window.DEBUG_PORTRAITS = false - Disable debugging');
-  },
-
-  /**
-   * Manages scroll locking when selector menus are open.
-   * Uses a CSS class for robust scroll prevention.
-   * @param {boolean} lock - true to lock, false to unlock
-   */
-  _updateScrollLock(lock) {
-    if (lock) {
-      // Lock: add class to body which triggers CSS rules
-      document.body.classList.add('selector-menu-open');
-    } else {
-      // Unlock: only remove if no menus are still open
-      // Small delay to let the menu close animation start
-      setTimeout(() => {
-        const stillOpen = document.querySelectorAll('.selector-shell.is-open');
-        if (stillOpen.length === 0) {
-          document.body.classList.remove('selector-menu-open');
-        }
-      }, 0);
-    }
-  },
-
-  /**
-   * Main render function for character sheets
-   * @param {Object} character - Character data object
-   * @param {Object} options - Configuration options
-   * @param {string} options.context - 'builder' or 'manager' to control which features to show
-   * @param {boolean} options.showPortrait - Whether to show portrait section (default: true)
-   * @param {Function} options.onGeneratePortrait - Callback for generating portraits (builder only)
-   * @param {Function} options.onRename - Callback for renaming character (builder only)
-   * @param {Function} options.onTogglePortrait - Callback for toggling portrait view (builder only)
-   * @param {Function} options.onLevelChange - Callback for changing level (builder only)
-   * @param {Function} options.onPrint - Callback for printing (builder only)
-   * @param {Function} options.onEdit - Callback for editing (manager only)
-   * @param {Function} options.onDuplicate - Callback for duplicating (manager only)
-   * @param {Function} options.onExport - Callback for exporting (manager only)
-   * @param {Function} options.onDelete - Callback for deleting (manager only)
-   * @returns {string} HTML string for the character sheet
-   */
-  render(character, options = {}) {
-    const {
-      context = 'builder',
-      showPortrait = true,
-      onGeneratePortrait = null,
-      onRename = null,
-      onTogglePortrait = null,
-      onLevelChange = null,
-      onPrint = null,
-      onEdit = null,
-      onDuplicate = null,
-      onExport = null,
-      onDelete = null,
-      onShare = null,
-    } = options;
-
-    // Parse character data (handle both old and new formats)
-    const parsed = this._parseCharacterData(character, context);
-
-    // Build HTML
-    return `
+Format your response as JSON array of strings, one for each option in order. Example: ["text1", "text2", "text3", "text4"]`;const systemPrompt='You are a creative D&D character creation assistant. Generate engaging option text that feels fresh but maintains the same meaning. '+'Be concise and direct. Return ONLY valid JSON.';console.log('%c🎲 OPTIONS: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Note: Will fallback to original option texts if unavailable...');const response=await this.generateCompletion(prompt,systemPrompt);if(response){try{const jsonMatch=response.match(/\[.*\]/s);if(jsonMatch){const variations=JSON.parse(jsonMatch[0]);if(Array.isArray(variations)&&variations.length===options.length){console.log('%c🎲 OPTIONS (AI Generated) ✨','color: #0f0; font-weight: bold');return variations;}}}catch(error){console.log('Failed to parse AI option variations:',error);}}
+console.log('%c🎲 OPTIONS (Fallback - Using Original Texts) ✅','color: #f80; font-weight: bold');console.log('  The original option texts will be used instead of AI variations');return options.map((opt)=>opt.text);},async generatePortraitImage(character){if(!CONFIG.ENABLE_AI){console.log('AI service disabled for image generation');return null;}
+const prompt=this.buildPortraitPrompt(character);return await this.generateImageFromPrompt(prompt);},async generateImageFromPrompt(prompt,options={}){if(!CONFIG.ENABLE_AI){console.log('%c🎨 DALL-E (Unavailable - AI Disabled)','color: #ff0; font-weight: bold');return null;}
+const forceModel=options.forceModel||null;const isRetry=options._isRetry||false;try{let model=forceModel||'dall-e-3';if(!forceModel){try{if(window.StorageService&&typeof StorageService.getImageModel==='function'){model=StorageService.getImageModel();}else if(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL){model=CONFIG.DEFAULT_IMAGE_MODEL;}}catch(e){console.warn('AIService.generateImageFromPrompt: failed to read image model, using default',e);}}
+console.log('%c🎨 IMAGE: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Prompt (preview):',prompt.substring(0,100)+(prompt.length>100?'…':''));console.log('  Model:',model+(forceModel?' (fallback)':''));console.log('  Note: Image generation takes 20-30s (longer than text AI)...');const defaultQuality={'dall-e-3':'standard','gpt-image-1':'medium','flux-1.1-pro':'standard','flux-schnell':'standard',};let quality=defaultQuality[model]||'standard';const isDemoMode=window.DemoCharacters&&typeof DemoCharacters.isDemoMode==='function'&&DemoCharacters.isDemoMode();if(isDemoMode&&model==='gpt-image-1'){quality='medium';console.log(`  Quality: MEDIUM (demo mode default)`);}else{try{if(window.StorageService&&typeof StorageService.getImageQuality==='function'){const savedQuality=StorageService.getImageQuality(model);if(savedQuality){quality=savedQuality;console.log(`  Quality: ${quality.toUpperCase()} (user preference)`);}}}catch(e){console.warn('AIService: failed to read quality setting',e);}}
+const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({prompt:prompt,size:'1024x1024',quality:quality,model:model,}),},70000);if(!response.ok){const errorData=await response.json();console.log('%c🎨 IMAGE (Error)','color: #f00; font-weight: bold');console.log('  Error:',errorData.detail);const extractErrorMessage=(detail)=>{if(!detail)return null;if(Array.isArray(detail)){return detail.map(err=>{if(typeof err==='string')return err;const field=err.loc?err.loc.slice(1).join('.'):'unknown';return`${field}: ${err.msg || err.message || JSON.stringify(err)}`;}).join('; ');}
+if(typeof detail==='object'){return detail.msg||detail.message||JSON.stringify(detail);}
+return String(detail);};const errorMessage=extractErrorMessage(errorData.detail);if(response.status===429){const rateLimitError=new Error(errorMessage||'Rate limit exceeded');rateLimitError.isRateLimit=true;throw rateLimitError;}
+const detailStr=typeof errorData.detail==='string'?errorData.detail:errorMessage;if(response.status===502&&detailStr&&(detailStr.toLowerCase().includes('flux')||detailStr.toLowerCase().includes('replicate'))){console.warn('⚠️ Replicate/Flux service error:',detailStr);const fluxError=new Error('Flux image generation service is temporarily unavailable');fluxError.isFluxError=true;fluxError.originalMessage=detailStr;fluxError.suggestModelSwitch=true;throw fluxError;}
+if(response.status===400&&detailStr&&detailStr.toLowerCase().includes('safety system')){console.warn('⚠️ OpenAI safety system rejection:',detailStr);console.warn('📝 REJECTED PROMPT:',prompt);const analysis=this.analyzeRejectedPrompt(prompt);const safetyError=new Error('Portrait generation was flagged by OpenAI\'s content safety system');safetyError.isSafetyRejection=true;safetyError.originalMessage=detailStr;safetyError.rejectedPrompt=prompt;safetyError.promptAnalysis=analysis;throw safetyError;}
+throw new Error(errorMessage||`API error: ${response.status}`);}
+const data=await response.json();if(data.success){console.log('%c🎨 IMAGE (Generated) ✨','color: #0f0; font-weight: bold');console.log('  URL:',data.url.substring(0,50)+'...');return data.url;}
+return null;}catch(error){console.log('%c🎨 IMAGE (Failed)','color: #f00; font-weight: bold');console.error('  Error:',error);if(error.isFluxError&&!isRetry){console.log('%c🔄 AUTO-FALLBACK: Flux unavailable, trying GPT Image instead...','color: #fa0; font-weight: bold');if(window.UIService){window.UIService.showNotification('Flux unavailable, switching to GPT Image...','info',4000);}
+return this.generateImageFromPrompt(prompt,{forceModel:'gpt-image-1',_isRetry:true});}
+throw error;}},buildCharacterDescription(character){const parts=[];parts.push('Dungeons & Dragons fantasy character:');if(character.sex){parts.push(character.sex);}
+if(character.race){let raceDesc=null;try{if(window.PortraitPrompt&&typeof PortraitPrompt.getVariableSnippet==='function'){raceDesc=PortraitPrompt.getVariableSnippet('race',character.race);}}catch(e){}
+if(!raceDesc){raceDesc=window.PortraitPrompt?PortraitPrompt.getRaceDescription(character.race):character.race;}
+parts.push(raceDesc);}
+if(character.class){let classDesc=null;try{if(window.PortraitPrompt&&typeof PortraitPrompt.getVariableSnippet==='function'){classDesc=PortraitPrompt.getVariableSnippet('class',character.class);}}catch(e){}
+if(!classDesc){classDesc=window.PortraitPrompt?PortraitPrompt.getClassDescription(character.class):character.class;}
+parts.push(classDesc);}
+if(character.class&&window.PortraitPrompt){const magicText=PortraitPrompt.getMagicSpecialization(character.class);if(magicText){parts.push(magicText);}}
+if(character.alignment){if(character.alignment.includes('good')){parts.push('with noble bearing');}else if(character.alignment.includes('evil')){parts.push('with a menacing aura');}}
+if(character.background){try{let backgroundLabel=character.background;let backgroundFeature=character.backgroundFeature||null;if(typeof DND_DATA!=='undefined'&&Array.isArray(DND_DATA.backgrounds)){const bgObj=DND_DATA.backgrounds.find((b)=>b.id===character.background,);if(bgObj){backgroundLabel=bgObj.name||backgroundLabel;if(!backgroundFeature&&bgObj.feature){if(typeof bgObj.feature==='string'){backgroundFeature=bgObj.feature;}else if(typeof bgObj.feature.name==='string'){backgroundFeature=bgObj.feature.name;}else if(typeof bgObj.feature.description==='string'){backgroundFeature=bgObj.feature.description;}}}}
+let backgroundText=`${String(backgroundLabel).toLowerCase()} background`;if(backgroundFeature){const featureText=String(backgroundFeature);if(!featureText.includes('[object Object]')){backgroundText+=` with background feature "${featureText}"`;}}
+parts.push(backgroundText);}catch(e){parts.push(`background: ${character.background}`);}}
+return parts.join(', ');},buildPortraitPrompt(character){const classKey=(character.class||'default').toLowerCase();const{pose:posePrompt,camera:cameraPrompt}=window.PortraitPoseData&&typeof PortraitPoseData.getRandomPoseAndCamera==='function'?PortraitPoseData.getRandomPoseAndCamera(classKey):{pose:'standing in a relaxed but heroic stance',camera:'Camera angle: three-quarter view that clearly shows the full silhouette.',};let promptThemeId=null;try{if(typeof window!=='undefined'&&window.StorageService&&typeof window.StorageService.getPortraitPromptTheme==='function'){promptThemeId=window.StorageService.getPortraitPromptTheme();}else if(typeof CONFIG!=='undefined'&&CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME){promptThemeId=CONFIG.DEFAULT_PORTRAIT_PROMPT_THEME;}}catch(e){}
+let styleDescription='';let backgroundDescription='';if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.buildStyleAndBackgroundDescriptions==='function'){try{const sections=window.PortraitPrompt.buildStyleAndBackgroundDescriptions({posePrompt,cameraPrompt,themeId:promptThemeId,})||{};styleDescription=sections.styleDescription||'';backgroundDescription=sections.backgroundDescription||'';}catch(e){}}
+if(!styleDescription){styleDescription='High-contrast black-and-white ink illustration with bold silhouettes and clean highlights. Include light directional hatching for form.';}
+if(!backgroundDescription){backgroundDescription='Simple, entirely black, free of symbols or text, keeping focus on the character silhouette.';}
+const name=(character&&character.name)||'Unnamed character';const raceId=character&&character.race?String(character.race):null;const classId=character&&character.class?String(character.class):null;let raceLabel=raceId;let classLabel=classId;try{if(typeof window!=='undefined'&&window.PortraitPrompt&&typeof window.PortraitPrompt.getVariableSnippet==='function'){if(raceId){const customRace=window.PortraitPrompt.getVariableSnippet('race',raceId);if(customRace)raceLabel=customRace;}
+if(classId){const customClass=window.PortraitPrompt.getVariableSnippet('class',classId);if(customClass)classLabel=customClass;}}}catch(e){}
+let backgroundLabel=null;if(character&&character.background){backgroundLabel=String(character.background);try{if(typeof DND_DATA!=='undefined'&&Array.isArray(DND_DATA.backgrounds)){const bgObj=DND_DATA.backgrounds.find((b)=>b.id===character.background,);if(bgObj&&bgObj.name){backgroundLabel=String(bgObj.name);}}}catch(e){}}
+const headerParts=[];if(character&&character.sex){headerParts.push(character.sex);}
+if(raceLabel)headerParts.push(raceLabel);if(classLabel)headerParts.push(classLabel);if(classId&&window.PortraitPrompt&&typeof PortraitPrompt.getMagicSpecialization==='function'){const magicText=PortraitPrompt.getMagicSpecialization(classId);if(magicText){headerParts.push(magicText);}}
+if(backgroundLabel)headerParts.push(backgroundLabel);const headerSuffix=headerParts.join(', ');const headerLine=headerSuffix?`${name}: ${headerSuffix}`:`${name}`;let prompt=`Dungeons & Dragons fantasy character portrait:\n${headerLine}\n\nPose: ${posePrompt}`;if(styleDescription){prompt+=`\n\nSTYLE: ${styleDescription}`;}
+if(backgroundDescription){prompt+=`\n\nScene: ${backgroundDescription}`;}
+return prompt;},analyzeRejectedPrompt(prompt){console.log('%c🔍 Analyzing Rejected Prompt','color: #ff0; font-weight: bold; font-size: 14px;');console.log('─'.repeat(80));const potentialIssues=[];const warningPatterns=[{pattern:/\b(blood|gore|violence|death|kill|weapon|sword|axe|dagger|knife)\b/gi,category:'Violence/Weapons'},{pattern:/\b(dark|evil|demon|devil|hell|sinister|menacing|malevolent)\b/gi,category:'Dark Themes'},{pattern:/\b(naked|nude|exposed|bare|revealing|sensual|seductive)\b/gi,category:'Adult Content'},{pattern:/\b(child|young|minor|kid|juvenile)\b/gi,category:'Age-Related'},{pattern:/\b(slave|slavery|bound|chained|prisoner)\b/gi,category:'Sensitive Topics'},];warningPatterns.forEach(({pattern,category})=>{const matches=prompt.match(pattern);if(matches&&matches.length>0){potentialIssues.push({category,matches:[...new Set(matches.map(m=>m.toLowerCase()))],count:matches.length});}});const sections=prompt.split(', ').filter(s=>s.trim());console.log('📋 PROMPT SECTIONS (%d total):',sections.length);sections.forEach((section,idx)=>{const sectionLower=section.toLowerCase();let hasWarning=false;for(const{pattern}of warningPatterns){if(pattern.test(section)){hasWarning=true;break;}}
+const marker=hasWarning?'⚠️ ':'   ';console.log(`${marker}${idx + 1}. ${section}`);});console.log('─'.repeat(80));if(potentialIssues.length>0){console.log('%c⚠️  POTENTIAL ISSUES DETECTED:','color: #f90; font-weight: bold;');potentialIssues.forEach(issue=>{console.log(`  • ${issue.category}: ${issue.matches.join(', ')} (${issue.count}x)`);});}else{console.log('%c✓ No obvious problematic patterns detected','color: #0f0;');console.log('  The rejection may be due to:');console.log('  • Combination of terms that seem innocent individually');console.log('  • Character race/class combinations OpenAI finds problematic');console.log('  • Background story content or phrasing');console.log('  • OpenAI policy updates or temporary sensitivity changes');}
+console.log('─'.repeat(80));console.log('%c💡 DEBUGGING SUGGESTIONS:','color: #0ff; font-weight: bold;');console.log('  1. Try regenerating - sometimes the same prompt works on retry');console.log('  2. Simplify the backstory or character description');console.log('  3. Remove alignment-based descriptions (e.g., "menacing aura")');console.log('  4. Adjust weapon/equipment descriptions to be less specific');console.log('  5. Use the custom prompt modal to test simplified versions');console.log('─'.repeat(80));return{sections,potentialIssues,hasKnownProblematicTerms:potentialIssues.length>0};},});const SESSION_STORAGE_KEY='danddy_builder_session';const OptionVariationsCache=(window.OptionVariationsCache={cache:{},async get(questionId,question){const noVariationQuestions=['race-choice','class-choice','background-choice','alignment-choice',];if(noVariationQuestions.includes(questionId)){return question.options;}
+if(this.cache[questionId]){return this.cache[questionId];}
+const variations=await AIService.generateOptionVariations(question.text,question.options,);const variedOptions=question.options.map((opt,index)=>({...opt,text:variations[index],}));this.cache[questionId]=variedOptions;return variedOptions;},reset(){this.cache={};},});const CharacterState=(window.CharacterState={current:{id:null,step:0,abilityMethod:null,answers:{},currentQuestionId:null,character:{characterUid:null,name:'',race:'',class:'',background:'',alignment:'',sex:null,baseAbilities:null,abilities:{str:10,dex:10,con:10,int:10,wis:10,cha:10,},level:1,hitPoints:0,personalityTrait:'',backstory:'',skillProficiencies:[],toolProficiencies:[],languages:[],equipment:[],backgroundFeature:null,spellcastingAbility:null,cantrips:[],spellsKnown:[],spellsPrepared:[],spellSlots:{},},},listeners:[],_restoring:false,get(){return this.current;},set(updates){this.current={...this.current,...updates};this.notify();},updateCharacter(updates){this.current.character={...this.current.character,...updates};this.notify();},setCurrentQuestion(questionId){this.current.currentQuestionId=questionId;this._saveSession();},subscribe(listener){this.listeners.push(listener);},notify(){this.listeners.forEach((listener)=>listener(this.current));if(!this._restoring){this._saveSession();}},_getCurrentUserId(){if(typeof AuthService!=='undefined'&&AuthService.getCurrentUser){const user=AuthService.getCurrentUser();return user?(user.id||user.email||null):null;}
+return null;},hasSession(){try{const raw=localStorage.getItem(SESSION_STORAGE_KEY);if(!raw)return false;const session=JSON.parse(raw);const currentUserId=this._getCurrentUserId();const sessionUserId=session._userId!==undefined?session._userId:null;if(currentUserId!==sessionUserId){return false;}
+const hasProgress=session.currentQuestionId&&session.currentQuestionId!=='intro';const hasCharacterData=session.character&&(session.character.name||session.character.race||session.character.class);return hasProgress||hasCharacterData;}catch{return false;}},getSessionPreview(){try{const raw=localStorage.getItem(SESSION_STORAGE_KEY);if(!raw)return null;const session=JSON.parse(raw);const currentUserId=this._getCurrentUserId();const sessionUserId=session._userId!==undefined?session._userId:null;if(currentUserId!==sessionUserId){return null;}
+return{characterName:session.character?.name||null,race:session.character?.race||null,class:session.character?.class||null,currentQuestionId:session.currentQuestionId,savedAt:session._savedAt||null,};}catch{return null;}},_saveSession(){try{const toSave={...this.current,_savedAt:new Date().toISOString(),_userId:this._getCurrentUserId(),};localStorage.setItem(SESSION_STORAGE_KEY,JSON.stringify(toSave));}catch(e){console.warn('[CharacterState] Failed to save session:',e);}},restoreSession(){try{const raw=localStorage.getItem(SESSION_STORAGE_KEY);if(!raw)return false;const session=JSON.parse(raw);this._restoring=true;this.current={id:session.id||Date.now().toString(),step:session.step||0,abilityMethod:session.abilityMethod||null,answers:session.answers||{},currentQuestionId:session.currentQuestionId||null,character:{characterUid:session.character?.characterUid||`danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,name:session.character?.name||'',race:session.character?.race||'',class:session.character?.class||'',background:session.character?.background||'',alignment:session.character?.alignment||'',baseAbilities:session.character?.baseAbilities||null,abilities:session.character?.abilities||{str:10,dex:10,con:10,int:10,wis:10,cha:10,},level:session.character?.level||1,hitPoints:session.character?.hitPoints||0,personalityTrait:session.character?.personalityTrait||'',backstory:session.character?.backstory||'',skillProficiencies:session.character?.skillProficiencies||[],toolProficiencies:session.character?.toolProficiencies||[],languages:session.character?.languages||[],equipment:session.character?.equipment||[],backgroundFeature:session.character?.backgroundFeature||null,spellcastingAbility:session.character?.spellcastingAbility||null,cantrips:session.character?.cantrips||[],spellsKnown:session.character?.spellsKnown||[],spellsPrepared:session.character?.spellsPrepared||[],spellSlots:session.character?.spellSlots||{},customPortraitAscii:session.character?.customPortraitAscii||null,originalPortraitUrl:session.character?.originalPortraitUrl||null,customPortraitCount:session.character?.customPortraitCount||0,portraitMetadata:session.character?.portraitMetadata||null,asciiPortrait:session.character?.asciiPortrait||null,asciiPortraitKey:session.character?.asciiPortraitKey||null,},};this._restoring=false;this.notify();return session.currentQuestionId||'intro';}catch(e){console.warn('[CharacterState] Failed to restore session:',e);this._restoring=false;return false;}},clearSession(){try{localStorage.removeItem(SESSION_STORAGE_KEY);}catch(e){console.warn('[CharacterState] Failed to clear session:',e);}},reset(){this.current={id:Date.now().toString(),step:0,abilityMethod:null,answers:{},currentQuestionId:null,character:{characterUid:`danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,name:'',race:'',class:'',background:'',alignment:'',sex:null,baseAbilities:null,abilities:{str:10,dex:10,con:10,int:10,wis:10,cha:10,},level:1,hitPoints:0,personalityTrait:'',backstory:'',skillProficiencies:[],toolProficiencies:[],languages:[],equipment:[],backgroundFeature:null,spellcastingAbility:null,cantrips:[],spellsKnown:[],spellsPrepared:[],spellSlots:{},},};this.clearSession();this.notify();},});const PORTRAIT_DEBUG_LOG=[];const MAX_PORTRAIT_DEBUG_ENTRIES=100;function logPortraitDebug(action,characterId,characterName,details){if(!window.DEBUG_PORTRAITS)return;const entry={timestamp:new Date().toISOString(),action,characterId,characterName,...details};PORTRAIT_DEBUG_LOG.push(entry);if(PORTRAIT_DEBUG_LOG.length>MAX_PORTRAIT_DEBUG_ENTRIES){PORTRAIT_DEBUG_LOG.shift();}
+console.log(`🖼️ [PORTRAIT DEBUG] ${action}`,{characterId,characterName,...details});}
+const CharacterSheet=(window.CharacterSheet={dumpPortraitDebugLog(){console.group('🖼️ Portrait Debug Log');console.log('Total entries:',PORTRAIT_DEBUG_LOG.length);console.log('Enable debugging with: window.DEBUG_PORTRAITS = true');console.log('---');PORTRAIT_DEBUG_LOG.forEach((entry,i)=>{console.log(`[${i}] ${entry.timestamp} - ${entry.action}`,entry);});console.groupEnd();return PORTRAIT_DEBUG_LOG;},getPortraitDebugLog(){return[...PORTRAIT_DEBUG_LOG];},clearPortraitDebugLog(){PORTRAIT_DEBUG_LOG.length=0;console.log('🖼️ Portrait debug log cleared');},comparePortraitSources(characterId){const character=window.AppState?.characters?.find(c=>String(c.id)===String(characterId));if(!character){console.error('Character not found:',characterId);return null;}
+const result={characterId,characterName:character.name,portraitMetadata:character.portraitMetadata?{activeVersionId:character.portraitMetadata.activeVersionId,versionsCount:character.portraitMetadata.versions?.length||0,versions:character.portraitMetadata.versions?.map(v=>({id:v.id,hasUrl:!!v.url,urlPreview:v.url?v.url.substring(0,80)+'...':null,hasAscii:!!v.ascii,asciiLength:v.ascii?.length||0}))}:null,legacyFields:{customPortraitAscii:character.customPortraitAscii?`[${character.customPortraitAscii.length} chars]`:null,originalPortraitUrl:character.originalPortraitUrl||null,portraitAscii:character.portrait?.ascii?`[${character.portrait.ascii.length} chars]`:null,portraitUrl:character.portrait?.url||null,asciiPortrait:character.asciiPortrait?`[${character.asciiPortrait.length} chars]`:null,asciiPortraitKey:character.asciiPortraitKey||null},resolvedAscii:this.getAsciiPortrait(character)?`[${this.getAsciiPortrait(character).length} chars]`:null,resolvedUrl:this.getOriginalPortraitUrl(character),raceClass:`${character.race}|${character.class}`};console.group(`🖼️ Portrait Sources Comparison: ${character.name}`);console.log('Character ID:',characterId);console.log('Portrait Metadata:',result.portraitMetadata);console.log('Legacy Fields:',result.legacyFields);console.log('Resolved ASCII:',result.resolvedAscii);console.log('Resolved URL:',result.resolvedUrl);console.log('Race|Class Key:',result.raceClass);console.groupEnd();return result;},checkDomMismatch(){const selectedCard=document.querySelector('.character-card.is-selected');const characterSheet=document.getElementById('characterSheet');if(!selectedCard){console.warn('🖼️ No character card is currently selected');return null;}
+const characterId=selectedCard.getAttribute('data-id');const character=window.AppState?.characters?.find(c=>String(c.id)===String(characterId));const cardThumb=selectedCard.querySelector('.card-thumbnail');const cardImg=cardThumb?.querySelector('img');const cardAscii=cardThumb?.querySelector('pre');const sheetContainer=characterSheet?.querySelector('.portrait-container');const sheetImg=sheetContainer?.querySelector('.original-portrait');const sheetAscii=sheetContainer?.querySelector('.ascii-portrait pre');const cardInfo={hasImage:!!cardImg,imageUrl:cardImg?.src||null,imageTruncated:cardImg?.src?cardImg.src.substring(0,80)+'...':null,hasAscii:!!cardAscii,asciiLength:cardAscii?.textContent?.length||0,asciiPreview:cardAscii?.textContent?.substring(0,50)+'...'||null,isImageMode:cardThumb?.classList.contains('card-thumbnail--image')||false};const sheetInfo={hasImage:!!sheetImg,imageUrl:sheetImg?.src||null,imageTruncated:sheetImg?.src?sheetImg.src.substring(0,80)+'...':null,imageHidden:sheetImg?.classList.contains('is-hidden')||false,hasAscii:!!sheetAscii,asciiLength:sheetAscii?.textContent?.length||0,asciiPreview:sheetAscii?.textContent?.substring(0,50)+'...'||null,asciiHidden:sheetContainer?.querySelector('.ascii-portrait')?.classList.contains('is-hidden')||false};const urlMismatch=cardInfo.imageUrl!==sheetInfo.imageUrl;const asciiLengthMismatch=cardInfo.asciiLength!==sheetInfo.asciiLength;const result={characterId,characterName:character?.name||'Unknown',card:cardInfo,sheet:sheetInfo,mismatch:{url:urlMismatch,asciiLength:asciiLengthMismatch,summary:urlMismatch||asciiLengthMismatch?'⚠️ MISMATCH DETECTED':'✅ No mismatch'}};console.group(`🖼️ DOM Portrait Check: ${result.characterName}`);console.log('Character ID:',characterId);console.log('Card:',cardInfo);console.log('Sheet:',sheetInfo);console.log('Mismatch:',result.mismatch);if(urlMismatch){console.warn('⚠️ URL MISMATCH: Card and sheet show different images!');console.log('Card URL:',cardInfo.imageUrl);console.log('Sheet URL:',sheetInfo.imageUrl);}
+if(asciiLengthMismatch){console.warn('⚠️ ASCII LENGTH MISMATCH: Card and sheet have different ASCII art!');}
+console.groupEnd();return result;},enablePortraitDebug(){window.DEBUG_PORTRAITS=true;console.log('🖼️ Portrait debugging ENABLED');console.log('Available commands:');console.log('  CharacterSheet.checkDomMismatch() - Check for visible mismatch');console.log('  CharacterSheet.comparePortraitSources(id) - Compare data sources');console.log('  CharacterSheet.dumpPortraitDebugLog() - Dump all debug entries');console.log('  CharacterSheet.clearPortraitDebugLog() - Clear debug log');console.log('  window.DEBUG_PORTRAITS = false - Disable debugging');},_updateScrollLock(lock){if(lock){document.body.classList.add('selector-menu-open');}else{setTimeout(()=>{const stillOpen=document.querySelectorAll('.selector-shell.is-open');if(stillOpen.length===0){document.body.classList.remove('selector-menu-open');}},0);}},render(character,options={}){const{context='builder',showPortrait=true,onGeneratePortrait=null,onRename=null,onTogglePortrait=null,onLevelChange=null,onPrint=null,onEdit=null,onDuplicate=null,onExport=null,onDelete=null,onShare=null,}=options;const parsed=this._parseCharacterData(character,context);return`
       ${this._renderHeader(character, parsed, context, {
         onPrint,
         onRename,
@@ -8469,147 +517,16 @@ const CharacterSheet = (window.CharacterSheet = {
       ${context === 'manager' && parsed.hasExportInfo
         ? this._renderExportInfo(character)
         : ''}
-    `;
-  },
-
-  // ========================================
-  // SECTION RENDERERS
-  // ========================================
-
-  _renderHeader(character, parsed, context, callbacks) {
-    const {
-      onPrint,
-      onRename,
-      onDuplicate,
-      onExport,
-      onDelete,
-      onLevelChange,
-      onEdit,
-      onGeneratePortrait,
-      onTogglePortrait,
-      onShare,
-    } = callbacks;
-    // Function names differ by context
-    const renameFn = context === 'builder' ? 'App.openNameModal()' : `renameCharacter('${character.id}')`;
-    const editFn = context === 'manager' ? `editCharacter('${character.id}')` : null;
-    const printFn =
-      onPrint && context === 'builder'
-        ? 'App.printCharacterSheet()'
-        : onPrint && context === 'manager'
-          ? 'printCharacterSheet()'
-          : null;
-
-    const headerActions = [];
-    let deleteAction = null;
-
-    if (character.name && onRename && context === 'builder') {
-      headerActions.push({
-        icon: '✎',
-        label: 'Rename',
-        onclick: renameFn,
-      });
-    }
-
-    if (context === 'builder' && onLevelChange) {
-      headerActions.push({
-        icon: '↕',
-        label: 'Change level',
-        onclick: 'App.openLevelModal()',
-      });
-    }
-
-    if (context === 'manager' && onDelete) {
-      deleteAction = {
-        icon: '×',
-        label: 'Delete character',
-        onclick: `deleteCharacter('${character.id}')`,
-      };
-    }
-
-    // Portrait-related actions (moved from below-ascii overflow)
-    const hasValidManagerId = !!character.id;
-    const generateFn =
-      context === 'builder'
-        ? 'App.generateCustomAIPortrait()'
-        : hasValidManagerId
-          ? `generatePortraitForCharacter('${character.id}')`
-          : null;
-    const hasCustomPortrait = !!(
-      character.customPortraitAscii ||
-      character.originalPortraitUrl ||
-      character.portrait?.url ||
-      (character.portraitMetadata &&
-        Array.isArray(character.portraitMetadata.versions) &&
-        character.portraitMetadata.versions.length > 0)
-    );
-    const historyFn =
-      context === 'builder'
-        ? 'App.openPortraitHistory()'
-        : hasValidManagerId
-          ? `openPortraitHistory('${character.id}')`
-          : null;
-
-    if (
-      parsed.hasRace &&
-      parsed.hasClass &&
-      onGeneratePortrait &&
-      (context === 'builder' || hasValidManagerId) &&
-      generateFn
-    ) {
-      headerActions.push({
-        icon: '★',
-        label: 'Custom AI Portrait',
-        onclick: generateFn,
-      });
-    }
-
-    if (hasCustomPortrait && historyFn) {
-      headerActions.push({
-        icon: '⧖',
-        label: 'Portrait history',
-        onclick: historyFn,
-      });
-    }
-
-    // Manager-only: Share character (only for saved characters with valid IDs)
-    if (context === 'manager' && onShare && hasValidManagerId) {
-      headerActions.push({
-        icon: '↗',
-        label: 'Share character',
-        onclick: `openShareModal('${character.id}')`,
-      });
-    }
-
-    // Keep "Print sheet" near the bottom of the list, but always leave
-    // room for destructive actions (like Delete) to appear last.
-    if (printFn) {
-      headerActions.push({
-        icon: '⎙',
-        label: 'Print sheet',
-        onclick: printFn,
-      });
-    }
-
-    // Manager-only: Add Edit to overflow menu (visible only on narrow viewports via CSS)
-    if (context === 'manager' && onEdit && editFn) {
-      headerActions.unshift({
-        icon: '✎',
-        label: 'Edit character',
-        onclick: editFn,
-        id: 'sheet-edit-overflow',
-      });
-    }
-
-    // Append Delete last so it always appears at the bottom of the listbox
-    if (deleteAction) {
-      headerActions.push(deleteAction);
-    }
-
-    // Manager-only inline Edit button (to the left of the overflow menu)
-    // Hidden on narrow viewports where it moves into the overflow menu
-    const editButtonHtml =
-      context === 'manager' && onEdit && editFn
-        ? `
+    `;},_renderHeader(character,parsed,context,callbacks){const{onPrint,onRename,onDuplicate,onExport,onDelete,onLevelChange,onEdit,onGeneratePortrait,onTogglePortrait,onShare,}=callbacks;const renameFn=context==='builder'?'App.openNameModal()':`renameCharacter('${character.id}')`;const editFn=context==='manager'?`editCharacter('${character.id}')`:null;const printFn=onPrint&&context==='builder'?'App.printCharacterSheet()':onPrint&&context==='manager'?'printCharacterSheet()':null;const headerActions=[];let deleteAction=null;if(character.name&&onRename&&context==='builder'){headerActions.push({icon:'✎',label:'Rename',onclick:renameFn,});}
+if(context==='builder'&&onLevelChange){headerActions.push({icon:'↕',label:'Change level',onclick:'App.openLevelModal()',});}
+if(context==='manager'&&onDelete){deleteAction={icon:'×',label:'Delete character',onclick:`deleteCharacter('${character.id}')`,};}
+const hasValidManagerId=!!character.id;const generateFn=context==='builder'?'App.generateCustomAIPortrait()':hasValidManagerId?`generatePortraitForCharacter('${character.id}')`:null;const hasCustomPortrait=!!(character.customPortraitAscii||character.originalPortraitUrl||character.portrait?.url||(character.portraitMetadata&&Array.isArray(character.portraitMetadata.versions)&&character.portraitMetadata.versions.length>0));const historyFn=context==='builder'?'App.openPortraitHistory()':hasValidManagerId?`openPortraitHistory('${character.id}')`:null;if(parsed.hasRace&&parsed.hasClass&&onGeneratePortrait&&(context==='builder'||hasValidManagerId)&&generateFn){headerActions.push({icon:'★',label:'Custom AI Portrait',onclick:generateFn,});}
+if(hasCustomPortrait&&historyFn){headerActions.push({icon:'⧖',label:'Portrait history',onclick:historyFn,});}
+if(context==='manager'&&onShare&&hasValidManagerId){headerActions.push({icon:'↗',label:'Share character',onclick:`openShareModal('${character.id}')`,});}
+if(printFn){headerActions.push({icon:'⎙',label:'Print sheet',onclick:printFn,});}
+if(context==='manager'&&onEdit&&editFn){headerActions.unshift({icon:'✎',label:'Edit character',onclick:editFn,id:'sheet-edit-overflow',});}
+if(deleteAction){headerActions.push(deleteAction);}
+const editButtonHtml=context==='manager'&&onEdit&&editFn?`
         <button
           class="terminal-btn-small sheet-edit-btn"
           type="button"
@@ -8617,12 +534,7 @@ const CharacterSheet = (window.CharacterSheet = {
         >
           ✎ Edit
         </button>
-      `
-        : '';
-
-    const headerMenu =
-      headerActions.length > 0
-        ? `
+      `:'';const headerMenu=headerActions.length>0?`
         <div class="sheet-title-buttons selector-shell selector-shell--actions">
           <button
             class="terminal-btn-small selector-trigger sheet-actions-trigger"
@@ -8641,175 +553,58 @@ const CharacterSheet = (window.CharacterSheet = {
           <div class="selector-menu sheet-actions-menu" role="menu" aria-hidden="true">
             ${headerActions
               .map(
-                (action) => `
-              <button
-                class="selector-option"
-                type="button"
-                role="menuitem"
-                onclick="${action.onclick}"${
-                  action.id ? ` id="${action.id}"` : ''
-                }
-              >
-                <span class="selector-option-icon">${action.icon}</span>
-                <span class="selector-option-label">${action.label}</span>
-              </button>
-            `,
+                (action) => `<button
+class="selector-option"
+type="button"
+role="menuitem"
+onclick="${action.onclick}"${action.id?` id="${action.id}"`:''}><span class="selector-option-icon">${action.icon}</span><span class="selector-option-label">${action.label}</span></button>`,
               )
               .join('')}
           </div>
         </div>
-      `
-        : '';
-
-    const actionsBlock =
-      editButtonHtml || headerMenu
-        ? `
+      `:'';const actionsBlock=editButtonHtml||headerMenu?`
         <div class="sheet-title-actions">
           ${editButtonHtml}
           ${headerMenu}
         </div>
-      `
-        : '';
-
-    const safeTitle =
-      character.name && typeof character.name === 'string'
-        ? this.escapeHtml(character.name)
-        : '[ CHARACTER SHEET ]';
-
-    return `
+      `:'';const safeTitle=character.name&&typeof character.name==='string'?this.escapeHtml(character.name):'[ CHARACTER SHEET ]';return`
       <div class="sheet-title-header">
         <div class="sheet-title">${safeTitle}</div>
         ${actionsBlock}
       </div>
-    `;
-  },
-
-  _renderPortrait(character, parsed, context, callbacks) {
-    const { onGeneratePortrait, onTogglePortrait } = callbacks;
-
-    // Check if this is a demo character - show tag on portrait
-    const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
-
-    // Prefer the active portrait version from history (if any) so the sheet
-    // always matches the grid card + history modal. Fall back to legacy
-    // top-level fields when no history metadata is present.
-    //
-    // IMPORTANT: We must get BOTH ascii and url from the same source to avoid
-    // mismatches (e.g., showing version A's image with version B's ASCII).
-    // Use getAsciiPortrait() for ASCII since it has robust fallbacks, then
-    // use getOriginalPortraitUrl() to get the matching URL.
-    const asciiPortrait = this.getAsciiPortrait(character);
-    const originalPortraitUrl = this.getOriginalPortraitUrl(character);
-
-    // Log for debugging portrait mismatches
-    logPortraitDebug('renderPortrait (sheet)', character.id, character.name, {
-      context,
-      hasAscii: !!asciiPortrait,
-      asciiLength: asciiPortrait?.length || 0,
-      url: originalPortraitUrl,
-      portraitMetadataActiveId: character.portraitMetadata?.activeVersionId || null,
-      portraitMetadataVersionsCount: character.portraitMetadata?.versions?.length || 0
-    });
-
-    // Global portrait view mode (ASCII vs Original). Builder + manager share
-    // this preference via StorageService; fall back to config default.
-    let portraitViewMode = 'original';
-    try {
-      if (window.StorageService && StorageService.getPortraitViewMode) {
-        portraitViewMode = StorageService.getPortraitViewMode();
-      } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
-        portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
-      }
-    } catch (e) {
-      // Non-fatal: keep default
-    }
-    
-    // Use different IDs for builder vs manager
-    const safeIdForDom = character.id || 'current';
-    const portraitId = context === 'builder' ? 'character-portrait' : `character-portrait-${safeIdForDom}`;
-    const originalPortraitId =
-      context === 'builder' ? 'original-portrait' : `original-portrait-${safeIdForDom}`;
-    
-    // Check if we need to show placeholder (no ASCII portrait content yet)
-    const needsPlaceholder = !asciiPortrait && !originalPortraitUrl;
-
-    const showOriginalByDefault =
-      !!originalPortraitUrl &&
-      portraitViewMode === 'original' &&
-      !needsPlaceholder;
-
-    // Demo tag overlays portrait like on cards
-    const demoTagHtml = isDemo ? '<span class="sheet-demo-tag">SAMPLE</span>' : '';
-
-    return `
+    `;},_renderPortrait(character,parsed,context,callbacks){const{onGeneratePortrait,onTogglePortrait}=callbacks;const isDemo=window.DemoCharacters&&window.DemoCharacters.isDemo(character);const asciiPortrait=this.getAsciiPortrait(character);const originalPortraitUrl=this.getOriginalPortraitUrl(character);logPortraitDebug('renderPortrait (sheet)',character.id,character.name,{context,hasAscii:!!asciiPortrait,asciiLength:asciiPortrait?.length||0,url:originalPortraitUrl,portraitMetadataActiveId:character.portraitMetadata?.activeVersionId||null,portraitMetadataVersionsCount:character.portraitMetadata?.versions?.length||0});let portraitViewMode='original';try{if(window.StorageService&&StorageService.getPortraitViewMode){portraitViewMode=StorageService.getPortraitViewMode();}else if(typeof CONFIG!=='undefined'&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE){portraitViewMode=CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;}}catch(e){}
+const safeIdForDom=character.id||'current';const portraitId=context==='builder'?'character-portrait':`character-portrait-${safeIdForDom}`;const originalPortraitId=context==='builder'?'original-portrait':`original-portrait-${safeIdForDom}`;const needsPlaceholder=!asciiPortrait&&!originalPortraitUrl;const showOriginalByDefault=!!originalPortraitUrl&&portraitViewMode==='original'&&!needsPlaceholder;const demoTagHtml=isDemo?'<span class="sheet-demo-tag">SAMPLE</span>':'';return`
       <div class="portrait-container${showOriginalByDefault ? ' portrait-container--original-mode' : ''}">
         ${demoTagHtml}
         <div class="ascii-portrait ${needsPlaceholder ? 'ascii-portrait--placeholder' : ''} ${showOriginalByDefault ? 'is-hidden' : ''}" id="${portraitId}">
-          ${needsPlaceholder ? `
-            <div class="portrait-placeholder-content">
-              <div class="portrait-placeholder-cube-container">
-                <div class="portrait-placeholder-cube">
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                </div>
-              </div>
-              <div class="portrait-placeholder-text">Waiting for character data…</div>
-            </div>
-          ` : ''}
+          ${needsPlaceholder ? `<div class="portrait-placeholder-content"><div class="portrait-placeholder-cube-container"><div class="portrait-placeholder-cube"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div class="portrait-placeholder-text">Waiting for character data…</div></div>` : ''}
         </div>
         ${originalPortraitUrl
-          ? `<img id="${originalPortraitId}" class="original-portrait${showOriginalByDefault ? '' : ' is-hidden'}" src="${originalPortraitUrl}" alt="Character portrait" onload="this.classList.add('is-loaded')">`
+          ? `<img id="${originalPortraitId}"class="original-portrait${showOriginalByDefault ? '' : ' is-hidden'}"src="${originalPortraitUrl}"alt="Character portrait"onload="this.classList.add('is-loaded')">`
           : ''}
       </div>
-    `;
-  },
-
-  _renderBasicInfo(parsed, context, callbacks) {
-    const isBuilder = context === 'builder';
-    const race = parsed.raceName
-      ? this.escapeHtml(this.toSentenceCase(parsed.raceName))
-      : '';
-    const cls = parsed.className
-      ? this.escapeHtml(this.toSentenceCase(parsed.className))
-      : '';
-    const background = parsed.backgroundName
-      ? this.escapeHtml(this.toSentenceCase(parsed.backgroundName))
-      : '';
-    const alignment = parsed.alignment
-      ? this.escapeHtml(
-          this.toSentenceCase(this.formatAlignment(parsed.alignment)),
-        )
-      : '';
-    const sex = parsed.sex
-      ? this.escapeHtml(this.toSentenceCase(parsed.sex))
-      : '';
-
-    return `
+    `;},_renderBasicInfo(parsed,context,callbacks){const isBuilder=context==='builder';const race=parsed.raceName?this.escapeHtml(this.toSentenceCase(parsed.raceName)):'';const cls=parsed.className?this.escapeHtml(this.toSentenceCase(parsed.className)):'';const background=parsed.backgroundName?this.escapeHtml(this.toSentenceCase(parsed.backgroundName)):'';const alignment=parsed.alignment?this.escapeHtml(this.toSentenceCase(this.formatAlignment(parsed.alignment)),):'';const sex=parsed.sex?this.escapeHtml(this.toSentenceCase(parsed.sex)):'';return`
       <div class="sheet-section">
         <div class="sheet-header"></div>
         <div class="sheet-content">
           ${
             isBuilder || race
-              ? `<div class="stat-line"><span class="stat-label">Race:</span> <span class="stat-value">${race || '—'}</span></div>`
+              ? `<div class="stat-line"><span class="stat-label">Race:</span><span class="stat-value">${race||'—'}</span></div>`
               : ''
           }
           ${
             isBuilder || cls
-              ? `<div class="stat-line"><span class="stat-label">Class:</span> <span class="stat-value">${cls || '—'}</span></div>`
+              ? `<div class="stat-line"><span class="stat-label">Class:</span><span class="stat-value">${cls||'—'}</span></div>`
               : ''
           }
           ${
             isBuilder || background
-              ? `<div class="stat-line"><span class="stat-label">Background:</span> <span class="stat-value">${background || '—'}</span></div>`
+              ? `<div class="stat-line"><span class="stat-label">Background:</span><span class="stat-value">${background||'—'}</span></div>`
               : ''
           }
           ${
             isBuilder || alignment
-              ? `<div class="stat-line"><span class="stat-label">Alignment:</span> <span class="stat-value">${alignment || '—'}</span></div>`
+              ? `<div class="stat-line"><span class="stat-label">Alignment:</span><span class="stat-value">${alignment||'—'}</span></div>`
               : ''
           }
           <div class="stat-line"><span class="stat-label">Sex:</span> <span class="stat-value">${sex || '—'}</span></div>
@@ -8819,21 +614,7 @@ const CharacterSheet = (window.CharacterSheet = {
           </div>
         </div>
       </div>
-    `;
-  },
-
-  _renderCombatStats(parsed, context) {
-    const headerClass =
-      context === 'builder'
-        ? 'sheet-header sheet-header--no-divider'
-        : 'sheet-header';
-    
-    // In builder context, check if combat stats have been populated
-    // Show dashes for empty/default values until they're set
-    const isBuilder = context === 'builder';
-    const hasCombatStats = parsed.hpMax > 0;
-
-    return `
+    `;},_renderCombatStats(parsed,context){const headerClass=context==='builder'?'sheet-header sheet-header--no-divider':'sheet-header';const isBuilder=context==='builder';const hasCombatStats=parsed.hpMax>0;return`
       <div class="sheet-section">
         <div class="${headerClass}">
           <div class="sheet-header-title">[ COMBAT STATS ]</div>
@@ -8841,31 +622,7 @@ const CharacterSheet = (window.CharacterSheet = {
         <div class="stat-grid">
           <div class="stat-box">
             <div class="stat-box-label">HIT POINTS</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hpCurrent} / ${parsed.hpMax}`}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">ARMOR CLASS</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : parsed.armorClass}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">INITIATIVE</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : this.formatModifier(parsed.initiative)}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">SPEED</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.speed} ft`}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">PROF BONUS</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `+${parsed.proficiencyBonus}`}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">HIT DIE</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `d${parsed.hitDie}`}</div>
-          </div>
-        </div>
-      </div>
-    `;
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hpCurrent}/ ${parsed.hpMax}`}</div></div><div class="stat-box"><div class="stat-box-label">ARMOR CLASS</div><div class="stat-box-value">${isBuilder&&!hasCombatStats?'—':parsed.armorClass}</div></div><div class="stat-box"><div class="stat-box-label">INITIATIVE</div><div class="stat-box-value">${isBuilder&&!hasCombatStats?'—':this.formatModifier(parsed.initiative)}</div></div><div class="stat-box"><div class="stat-box-label">SPEED</div><div class="stat-box-value">${isBuilder&&!hasCombatStats?'—':`${parsed.speed} ft`}</div></div><div class="stat-box"><div class="stat-box-label">PROF BONUS</div><div class="stat-box-value">${isBuilder&&!hasCombatStats?'—':`+${parsed.proficiencyBonus}`}</div></div><div class="stat-box"><div class="stat-box-label">HIT DIE</div><div class="stat-box-value">${isBuilder&&!hasCombatStats?'—':`d${parsed.hitDie}`}</div></div></div></div>`;
   },
 
   _renderAbilities(parsed, context) {
@@ -8877,40 +634,18 @@ const CharacterSheet = (window.CharacterSheet = {
         : 'sheet-header';
 
     // Use grid layout for both contexts (identical formatting)
-    return `
-      <div class="sheet-section">
-        <div class="${headerClass}">
-          <div class="sheet-header-title">[ ABILITY SCORES ]</div>
-        </div>
-        <div class="ability-grid">
-          ${abilities
-            .map((ability) => {
-              // Show dashes if abilities haven't been set yet (baseAbilities is null)
-              if (!parsed.abilitiesSet) {
-                return `
+    return `<div class="sheet-section"><div class="${headerClass}"><div class="sheet-header-title">[ABILITY SCORES]</div></div><div class="ability-grid">${abilities.map((ability)=>{if(!parsed.abilitiesSet){return`
                   <div class="ability-box">
                     <div class="ability-name">${ability.toUpperCase()}</div>
                     <div class="ability-score">— <span class="ability-modifier">(—)</span></div>
                   </div>
-                `;
-              }
-              
-              const score = parsed.abilities[ability] || 10;
-              const modifier =
-                parsed.abilityModifiers[ability] !== undefined
-                  ? parsed.abilityModifiers[ability]
-                  : Math.floor((score - 10) / 2);
-              return `
+                `;}
+const score=parsed.abilities[ability]||10;const modifier=parsed.abilityModifiers[ability]!==undefined?parsed.abilityModifiers[ability]:Math.floor((score-10)/2);return`
                 <div class="ability-box">
                   <div class="ability-name">${ability.toUpperCase()}</div>
                   <div class="ability-score">${score} <span class="ability-modifier">(${this.formatModifier(modifier)})</span></div>
                 </div>
-              `;
-            })
-            .join('')}
-        </div>
-      </div>
-    `;
+              `;}).join('')}</div></div>`;
   },
 
   /**
@@ -9377,7 +1112,7 @@ const CharacterSheet = (window.CharacterSheet = {
           // In case anything above fails (e.g., unexpected DOM state), fall back
           // to a very simple "open below trigger" layout so the menu still opens.
           menu.style.position = 'absolute';
-          menu.style.top = `${triggerEl.offsetHeight + 4}px`;
+          menu.style.top = `${triggerEl.offsetHeight+4}px`;
           menu.style.left = '0';
           menu.style.right = 'auto';
           menu.style.maxHeight = '';
@@ -9484,26 +1219,12 @@ const CharacterSheet = (window.CharacterSheet = {
   _renderSavingThrows(parsed) {
     if (!parsed.savingThrowModifiers) return '';
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ SAVING THROWS ]</div>
-        </div>
-        <div class="sheet-content">
-          ${Object.entries(parsed.savingThrowModifiers)
-            .map(([ability, value]) => {
-              const isProficient = parsed.savingThrows?.includes(ability);
-              return `
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[SAVING THROWS]</div></div><div class="sheet-content">${Object.entries(parsed.savingThrowModifiers).map(([ability,value])=>{const isProficient=parsed.savingThrows?.includes(ability);return`
                 <div class="stat-line">
                   <span class="stat-label">${ability.toUpperCase()}:</span>
                   <span class="stat-value">${this.formatModifier(value)}${isProficient ? ' ★' : ''}</span>
                 </div>
-              `;
-            })
-            .join('')}
-        </div>
-      </div>
-    `;
+              `;}).join('')}</div></div>`;
   },
 
   _renderSkills(parsed) {
@@ -9531,14 +1252,7 @@ const CharacterSheet = (window.CharacterSheet = {
     const skillsMarkup = hasSkillModifiers
       ? Object.entries(parsed.skillModifiers)
           .map(
-            ([skill, value]) => `
-          <div class="stat-line">
-            <span class="stat-label">${this.escapeHtml(
-              this.formatSkillName(skill),
-            )}:</span>
-            <span class="stat-value">${this.formatModifier(value)} ★</span>
-          </div>
-        `,
+            ([skill, value]) => `<div class="stat-line"><span class="stat-label">${this.escapeHtml(this.formatSkillName(skill),)}:</span><span class="stat-value">${this.formatModifier(value)}★</span></div>`,
           )
           .join('')
       : '';
@@ -9560,24 +1274,12 @@ const CharacterSheet = (window.CharacterSheet = {
     let contentMarkup;
     if (skillsMarkup && extraProfsMarkup) {
       contentMarkup = `
-        ${skillsMarkup}
-        <div class="sheet-divider"></div>
-        ${extraProfsMarkup}
-      `;
+${skillsMarkup}<div class="sheet-divider"></div>${extraProfsMarkup}`;
     } else {
       contentMarkup = skillsMarkup || extraProfsMarkup;
     }
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ ${headerTitle} ]</div>
-        </div>
-        <div class="sheet-content">
-          ${contentMarkup}
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[${headerTitle}]</div></div><div class="sheet-content">${contentMarkup}</div></div>`;
   },
 
   _renderSpells(parsed) {
@@ -9594,15 +1296,11 @@ const CharacterSheet = (window.CharacterSheet = {
           const name = this.escapeHtml(rawName || '');
           const school =
             spell && spell.school
-              ? ` <span class="text-dim">(${this.escapeHtml(
-                  spell.school,
-                )})</span>`
+              ? `<span class="text-dim">(${this.escapeHtml(spell.school,)})</span>`
               : '';
           const desc =
             spell && spell.description
-              ? `<div class="text-dim terminal-text-small spell-list-description">${this.escapeHtml(
-                  spell.description,
-                )}</div>`
+              ? `<div class="text-dim terminal-text-small spell-list-description">${this.escapeHtml(spell.description,)}</div>`
               : '';
         return `<div class="text-dim spell-list-item">• ${name}${school}</div>${desc}`;
         })
@@ -9613,26 +1311,16 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Cantrips
     if (cantrips.length > 0) {
-      spellsContent += `
-        <div class="sheet-subsection">
-          <div class="sheet-subsection-title">CANTRIPS (At-Will)</div>
-          ${renderSpellList(cantrips)}
-        </div>
-      `;
+      spellsContent += `<div class="sheet-subsection"><div class="sheet-subsection-title">CANTRIPS(At-Will)</div>${renderSpellList(cantrips)}</div>`;
     }
 
     // 1st Level Spells
     if (spellsKnown.length > 0 || spellsPrepared.length > 0) {
       const spellList = spellsKnown.length > 0 ? spellsKnown : spellsPrepared;
-      const slotsText = spellSlots['1'] ? ` • Slots: ${spellSlots['1']}` : '';
+      const slotsText = spellSlots['1'] ? `• Slots:${spellSlots['1']}` : '';
       const preparedText = spellsPrepared.length > 0 && spellsKnown.length === 0 ? ' (Prepared)' : '';
       
-      spellsContent += `
-        <div class="sheet-subsection">
-          <div class="sheet-subsection-title">1ST LEVEL${preparedText}${slotsText}</div>
-          ${renderSpellList(spellList)}
-        </div>
-      `;
+      spellsContent += `<div class="sheet-subsection"><div class="sheet-subsection-title">1ST LEVEL${preparedText}${slotsText}</div>${renderSpellList(spellList)}</div>`;
     }
 
     // Spellcasting ability note
@@ -9643,23 +1331,10 @@ const CharacterSheet = (window.CharacterSheet = {
         cha: 'Charisma',
       }[parsed.spellcastingAbility] || parsed.spellcastingAbility;
       
-      spellsContent += `
-        <div class="text-dim terminal-text-small spellcasting-ability-note">
-          Spellcasting Ability: ${this.escapeHtml(abilityName)}
-        </div>
-      `;
+      spellsContent += `<div class="text-dim terminal-text-small spellcasting-ability-note">Spellcasting Ability:${this.escapeHtml(abilityName)}</div>`;
     }
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ SPELLS ]</div>
-        </div>
-        <div class="sheet-content">
-          ${spellsContent}
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[SPELLS]</div></div><div class="sheet-content">${spellsContent}</div></div>`;
   },
 
   _renderRacialTraits(parsed) {
@@ -9667,38 +1342,18 @@ const CharacterSheet = (window.CharacterSheet = {
       .map((trait) => `<div class="text-dim">• ${this.escapeHtml(trait)}</div>`)
       .join('');
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ RACIAL TRAITS ]</div>
-        </div>
-        <div class="sheet-content">
-          ${traitsMarkup}
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[RACIAL TRAITS]</div></div><div class="sheet-content">${traitsMarkup}</div></div>`;
   },
 
   _renderEquipment(parsed) {
     const equipmentMarkup = parsed.equipment
       .map(
         (item) =>
-          `<div class="text-dim">• ${this.escapeHtml(
-            item,
-          )}</div>`,
+          `<div class="text-dim">• ${this.escapeHtml(item,)}</div>`,
       )
       .join('');
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ ${parsed.hasClassEquipment ? 'EQUIPMENT' : 'CLASS EQUIPMENT'} ]</div>
-        </div>
-        <div class="sheet-content">
-          ${equipmentMarkup}
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[${parsed.hasClassEquipment?'EQUIPMENT':'CLASS EQUIPMENT'}]</div></div><div class="sheet-content">${equipmentMarkup}</div></div>`;
   },
 
   _renderToolProficiencies(parsed) {
@@ -9709,16 +1364,7 @@ const CharacterSheet = (window.CharacterSheet = {
       })
       .join('');
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ TOOL PROFICIENCIES ]</div>
-        </div>
-        <div class="sheet-content">
-          ${toolsMarkup}
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[TOOL PROFICIENCIES]</div></div><div class="sheet-content">${toolsMarkup}</div></div>`;
   },
 
   _renderLanguages(parsed) {
@@ -9729,30 +1375,10 @@ const CharacterSheet = (window.CharacterSheet = {
       return '';
     }
     
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ LANGUAGES ]</div>
-        </div>
-        <div class="sheet-content">
-          ${
-            hasLanguages
-              ? parsed.languages
-                  .map(
-                    (lang) =>
-                      `<div class="text-dim">• ${this.escapeHtml(
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[LANGUAGES]</div></div><div class="sheet-content">${hasLanguages?parsed.languages.map((lang)=>`<div class="text-dim">• ${this.escapeHtml(
                         lang,
-                      )}</div>`,
-                  )
-                  .join('')
-              : ''
-          }
-          ${hasChoices 
-            ? `<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${parsed.languageChoices} additional language${parsed.languageChoices > 1 ? 's' : ''}</div>` 
-            : ''}
-        </div>
-      </div>
-    `;
+                      )}</div>`,).join(''):''}
+${hasChoices?`<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${parsed.languageChoices} additional language${parsed.languageChoices > 1 ? 's' : ''}</div>`:''}</div></div>`;
   },
 
   _renderBackgroundFeature(parsed) {
@@ -9761,32 +1387,13 @@ const CharacterSheet = (window.CharacterSheet = {
       parsed.backgroundFeatureDescription || '',
     );
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ BACKGROUND FEATURE ]</div>
-        </div>
-        <div class="sheet-content">
-          <div class="stat-line"><span class="stat-label">${name}</span></div>
-          <div class="text-dim mt-sm">${description}</div>
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[BACKGROUND FEATURE]</div></div><div class="sheet-content"><div class="stat-line"><span class="stat-label">${name}</span></div><div class="text-dim mt-sm">${description}</div></div></div>`;
   },
 
   _renderBackstory(parsed) {
     const backstory = this.escapeHtml(parsed.backstory || '');
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ BACKSTORY ]</div>
-        </div>
-        <div class="sheet-content text-dim">
-          ${backstory}
-        </div>
-      </div>
-    `;
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[BACKSTORY]</div></div><div class="sheet-content text-dim">${backstory}</div></div>`;
   },
 
   _renderExportInfo(character) {
@@ -9795,35 +1402,12 @@ const CharacterSheet = (window.CharacterSheet = {
       : null;
     const version = this.escapeHtml(character.exportVersion || '1.0');
 
-    return `
-      <div class="sheet-section">
-        <div class="sheet-header">
-          <div class="sheet-header-title">[ EXPORT INFO ]</div>
-        </div>
-        <div class="sheet-content">
-          <div class="stat-line">
-            <span class="stat-label">Exported:</span>
-            <span class="stat-value">${new Date(
-              character.exportDate,
-            ).toLocaleDateString()}</span>
-          </div>
-          ${
-            exportedBy
-            ? `
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[EXPORT INFO]</div></div><div class="sheet-content"><div class="stat-line"><span class="stat-label">Exported:</span><span class="stat-value">${new Date(character.exportDate,).toLocaleDateString()}</span></div>${exportedBy?`
             <div class="stat-line">
               <span class="stat-label">Source:</span>
               <span class="stat-value">${exportedBy}</span>
             </div>
-          `
-              : ''
-          }
-          <div class="stat-line">
-            <span class="stat-label">Version:</span>
-            <span class="stat-value">${version}</span>
-          </div>
-        </div>
-      </div>
-    `;
+          `:''}<div class="stat-line"><span class="stat-label">Version:</span><span class="stat-value">${version}</span></div></div></div>`;
   },
 
   // ========================================
@@ -10085,7 +1669,7 @@ const CharacterSheet = (window.CharacterSheet = {
       // Non-fatal; fall through to legacy fields.
     }
 
-    const key = `${character.race || ''}|${character.class || ''}`;
+    const key = `${character.race||''}|${character.class||''}`;
 
     // 1) Explicit custom portrait always wins
     if (character.customPortraitAscii) {
@@ -10285,7 +1869,7 @@ const CharacterSheet = (window.CharacterSheet = {
     const portraitId =
       context === 'builder'
         ? 'character-portrait'
-        : `character-portrait-${character.id || 'current'}`;
+        : `character-portrait-${character.id||'current'}`;
     const portraitEl = document.getElementById(portraitId);
     const asciiPortrait = this.getAsciiPortrait(character);
 
@@ -10374,7 +1958,7 @@ const CharacterSheet = (window.CharacterSheet = {
       const classType = character.class;
       if (!race || !classType) return;
 
-      const key = `${race || ''}|${classType || ''}`;
+      const key = `${race||''}|${classType||''}`;
 
       // If we already have a portrait that is explicitly tagged for this
       // exact race/class combo, there's nothing to upgrade.
@@ -10396,9 +1980,7 @@ const CharacterSheet = (window.CharacterSheet = {
       if (!this._portraitFileCache) {
         this._portraitFileCache = {};
       }
-      const cacheKey = `${String(race).toLowerCase()}|${String(
-        classType,
-      ).toLowerCase()}`;
+      const cacheKey = `${String(race).toLowerCase()}|${String(classType,).toLowerCase()}`;
 
       if (this._portraitFileCache[cacheKey]) {
         this._applyUpgradedPortrait(
@@ -10598,7 +2180,7 @@ const PortraitHistory = (window.PortraitHistory = {
    * @param {Object} character
    * @param {string} asciiArt
    * @param {string|null} imageUrl
-   * @param {Object} extra - { source, prompt, style, model, quality }
+   * @param {Object} extra - { source, prompt, style, model, quality, characterDescription }
    */
   addVersion(character, asciiArt, imageUrl, extra = {}) {
     if (!character) {
@@ -10610,9 +2192,7 @@ const PortraitHistory = (window.PortraitHistory = {
       ? existingMetadata.versions
       : [];
 
-    const id = `v_${Date.now()}_${Math.random()
-      .toString(36)
-      .substr(2, 5)}`;
+    const id = `v_${Date.now()}_${Math.random().toString(36).substr(2,5)}`;
 
     const version = {
       id,
@@ -10621,6 +2201,7 @@ const PortraitHistory = (window.PortraitHistory = {
       url: imageUrl || null,
       source: extra.source || 'custom-ai',
       prompt: extra.prompt || null,
+      characterDescription: extra.characterDescription || null,
       style: extra.style || null,
       model: extra.model || null,
       quality: extra.quality || null,
@@ -10901,21 +2482,7 @@ const PortraitHistory = (window.PortraitHistory = {
 
       // Build and insert the full modal once data is ready so there is no
       // intermediate loading skeleton state.
-      const modalHtml = `
-        <div id="portraitHistoryModal" class="modal show" onclick="PortraitUI.closeHistory()">
-          <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
-            <div class="modal-header">
-              <h2 class="modal-title">Portrait History</h2>
-              <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
-            </div>
-            <div class="modal-body">
-              <p class="terminal-text-small terminal-text-dim">
-                View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
-              </p>
-              <div class="portrait-history-carousel">
-                ${
-                  versions.length > 1
-                    ? `<button
+      const modalHtml = `<div id="portraitHistoryModal"class="modal show"onclick="PortraitUI.closeHistory()"><div class="modal-content portrait-history-modal"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">Portrait History</h2><button class="modal-close"onclick="PortraitUI.closeHistory()">&times;</button></div><div class="modal-body"><p class="terminal-text-small terminal-text-dim">View previous custom AI portraits for this character.Choose one to make it active,or delete versions you no longer need.</p><div class="portrait-history-carousel">${versions.length>1?`<button
                         type="button"
                         class="portrait-history-nav portrait-history-nav-left"
                         aria-label="Previous portrait"
@@ -10923,20 +2490,9 @@ const PortraitHistory = (window.PortraitHistory = {
                         onclick="event.stopPropagation(); PortraitUI.moveFocus(-1);"
                       >
                         <span aria-hidden="true">‹</span>
-                      </button>`
-                    : ''
-                }
-                <div
-                  id="portraitHistoryList"
-                  class="portrait-history-card-row${
-                    versions.length === 1 ? ' is-single' : ''
-                  }"
-                >
-                  ${listHtml}
-                </div>
-                ${
-                  versions.length > 1
-                    ? `<button
+                      </button>`:''}<div
+id="portraitHistoryList"
+class="portrait-history-card-row${versions.length===1?' is-single':''}">${listHtml}</div>${versions.length>1?`<button
                         type="button"
                         class="portrait-history-nav portrait-history-nav-right"
                         aria-label="Next portrait"
@@ -10944,18 +2500,7 @@ const PortraitHistory = (window.PortraitHistory = {
                         onclick="event.stopPropagation(); PortraitUI.moveFocus(1);"
                       >
                         <span aria-hidden="true">›</span>
-                      </button>`
-                    : ''
-                }
-              </div>
-            </div>
-            <div class="modal-footer modal-footer-end">
-              <button class="terminal-btn" onclick="PortraitUI.closeHistory()">CANCEL</button>
-              <button class="terminal-btn terminal-btn-primary" onclick="PortraitUI.confirmSelection()">USE SELECTED</button>
-            </div>
-          </div>
-        </div>
-      `;
+                      </button>`:''}</div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="PortraitUI.closeHistory()">CANCEL</button><button class="terminal-btn terminal-btn-primary"onclick="PortraitUI.confirmSelection()">USE SELECTED</button></div></div></div>`;
 
       // Attach the portrait history modal to the terminal frame/container so
       // its overlay and content stay within the app window instead of the
@@ -11075,31 +2620,7 @@ const PortraitHistory = (window.PortraitHistory = {
       const hasLoader = portraitEl.querySelector('.portrait-placeholder-cube--generating');
       let textEl = portraitEl.querySelector('.portrait-placeholder-text');
       if (!hasLoader) {
-        portraitEl.innerHTML = `
-          <div class="portrait-placeholder-content">
-            <div class="portrait-placeholder-cube-container">
-              <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-                <i></i>
-              </div>
-            </div>
-            <div class="portrait-placeholder-text" data-dots="${dotCount}">
-              <span class="portrait-placeholder-message">${baseMessage}</span>
-              <span class="portrait-placeholder-dots">
-                <span class="dot dot-1">.</span>
-                <span class="dot dot-2">.</span>
-                <span class="dot dot-3">.</span>
-              </span>
-              <div class="portrait-placeholder-subtext">
-                ${subtext}
-              </div>
-            </div>
-          </div>
-        `;
+        portraitEl.innerHTML = `<div class="portrait-placeholder-content"><div class="portrait-placeholder-cube-container"><div class="portrait-placeholder-cube portrait-placeholder-cube--generating"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div class="portrait-placeholder-text"data-dots="${dotCount}"><span class="portrait-placeholder-message">${baseMessage}</span><span class="portrait-placeholder-dots"><span class="dot dot-1">.</span><span class="dot dot-2">.</span><span class="dot dot-3">.</span></span><div class="portrait-placeholder-subtext">${subtext}</div></div></div>`;
         textEl = portraitEl.querySelector('.portrait-placeholder-text');
       } else {
         // Update text + dot state without reconstructing DOM.
@@ -11413,31 +2934,18 @@ const PortraitHistory = (window.PortraitHistory = {
       // Escape prompt text for safe display
       const escapedPrompt = (version.prompt || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-      const infoHeaderHtml = `
-        <h2 class="modal-title">Image Info</h2>
-        <button class="modal-close" onclick="PortraitUI.closeHistory()">&times;</button>
-      `;
+      const infoHeaderHtml = `<h2 class="modal-title">Image Info</h2><button class="modal-close"onclick="PortraitUI.closeHistory()">&times;</button>`;
 
       // Build the info sections
       let infoSections = '';
 
       // Date/Time
       if (dateTimeLabel) {
-        infoSections += `
-          <div class="image-info-row">
-            <span class="image-info-label">Created</span>
-            <span class="image-info-value">${dateTimeLabel}</span>
-          </div>
-        `;
+        infoSections += `<div class="image-info-row"><span class="image-info-label">Created</span><span class="image-info-value">${dateTimeLabel}</span></div>`;
       }
 
       // Style
-      infoSections += `
-        <div class="image-info-row">
-          <span class="image-info-label">Style</span>
-          <span class="image-info-value">${styleLabel}</span>
-        </div>
-      `;
+      infoSections += `<div class="image-info-row"><span class="image-info-label">Style</span><span class="image-info-value">${styleLabel}</span></div>`;
 
       // Model and Quality
       if (modelLabel) {
@@ -11445,45 +2953,20 @@ const PortraitHistory = (window.PortraitHistory = {
         if (qualityLabel) {
           modelDisplay = modelDisplay + ' (' + qualityLabel + ')';
         }
-        infoSections += `
-          <div class="image-info-row">
-            <span class="image-info-label">Model</span>
-            <span class="image-info-value">${modelDisplay}</span>
-          </div>
-        `;
+        infoSections += `<div class="image-info-row"><span class="image-info-label">Model</span><span class="image-info-value">${modelDisplay}</span></div>`;
       }
 
       // Prompt section
       let promptSection = '';
       if (escapedPrompt) {
-        promptSection = `
-          <div class="image-info-prompt-section">
-            <div class="image-info-prompt-label">Prompt</div>
-            <pre class="terminal-text portrait-prompt-display">${escapedPrompt}</pre>
-          </div>
-        `;
+        promptSection = `<div class="image-info-prompt-section"><div class="image-info-prompt-label">Prompt</div><pre class="terminal-text portrait-prompt-display">${escapedPrompt}</pre></div>`;
       } else {
-        promptSection = `
-          <div class="image-info-prompt-section">
-            <div class="image-info-prompt-label">Prompt</div>
-            <p class="terminal-text-dim">No prompt saved for this portrait.</p>
-          </div>
-        `;
+        promptSection = `<div class="image-info-prompt-section"><div class="image-info-prompt-label">Prompt</div><p class="terminal-text-dim">No prompt saved for this portrait.</p></div>`;
       }
 
-      const infoBodyHtml = `
-        <div class="image-info-container">
-          <div class="image-info-metadata">
-            ${infoSections}
-          </div>
-          ${promptSection}
-        </div>
-      `;
+      const infoBodyHtml = `<div class="image-info-container"><div class="image-info-metadata">${infoSections}</div>${promptSection}</div>`;
 
-      const infoFooterHtml = `
-        <button class="terminal-btn" id="portrait-info-back">BACK</button>
-        ${escapedPrompt ? '<button class="terminal-btn" id="portrait-info-copy">COPY PROMPT</button>' : ''}
-      `;
+      const infoFooterHtml = `<button class="terminal-btn"id="portrait-info-back">BACK</button>${escapedPrompt?'<button class="terminal-btn" id="portrait-info-copy">COPY PROMPT</button>':''}`;
 
       // Transform modal to info view
       this._animateModalContentResize('portraitHistoryModal', () => {
@@ -11573,16 +3056,9 @@ const PortraitHistory = (window.PortraitHistory = {
 
       // If this is the only portrait, show "create new" prompt instead of delete confirmation
       if (originalVersions.length === 1) {
-        const createNewBodyHtml = `
-          <p class="terminal-text">
-            To delete this portrait, create a new one first.
-          </p>
-        `;
+        const createNewBodyHtml = `<p class="terminal-text">To delete this portrait,create a new one first.</p>`;
 
-        const createNewFooterHtml = `
-          <button class="terminal-btn" id="portrait-delete-cancel">CANCEL</button>
-          <button class="terminal-btn terminal-btn-primary" id="portrait-create-new">CREATE NEW</button>
-        `;
+        const createNewFooterHtml = `<button class="terminal-btn"id="portrait-delete-cancel">CANCEL</button><button class="terminal-btn terminal-btn-primary"id="portrait-create-new">CREATE NEW</button>`;
 
         this._animateModalContentResize('portraitHistoryModal', () => {
           if (modalTitle) modalTitle.textContent = 'Create a New Portrait?';
@@ -11624,16 +3100,9 @@ const PortraitHistory = (window.PortraitHistory = {
       }
 
       // Build the confirmation view using standard modal structure
-      const confirmationBodyHtml = `
-        <p class="terminal-text">
-          Delete this saved portrait version? This cannot be undone.
-        </p>
-      `;
+      const confirmationBodyHtml = `<p class="terminal-text">Delete this saved portrait version?This cannot be undone.</p>`;
 
-      const confirmationFooterHtml = `
-        <button class="terminal-btn" id="portrait-delete-cancel">NO</button>
-        <button class="terminal-btn terminal-btn-primary" id="portrait-delete-confirm">YES</button>
-      `;
+      const confirmationFooterHtml = `<button class="terminal-btn"id="portrait-delete-cancel">NO</button><button class="terminal-btn terminal-btn-primary"id="portrait-delete-confirm">YES</button>`;
 
       // Transform modal to confirmation view
       this._animateModalContentResize('portraitHistoryModal', () => {
@@ -11792,14 +3261,7 @@ const PortraitHistory = (window.PortraitHistory = {
           );
 
           // Build updated body content
-          const updatedBodyHtml = `
-            <p class="terminal-text-small terminal-text-dim">
-              View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
-            </p>
-            <div class="portrait-history-carousel">
-              ${
-                normalized.versions.length > 1
-                  ? `<button
+          const updatedBodyHtml = `<p class="terminal-text-small terminal-text-dim">View previous custom AI portraits for this character.Choose one to make it active,or delete versions you no longer need.</p><div class="portrait-history-carousel">${normalized.versions.length>1?`<button
                       type="button"
                       class="portrait-history-nav portrait-history-nav-left"
                       aria-label="Previous portrait"
@@ -11807,20 +3269,9 @@ const PortraitHistory = (window.PortraitHistory = {
                       onclick="event.stopPropagation(); PortraitUI.moveFocus(-1);"
                     >
                       <span aria-hidden="true">‹</span>
-                    </button>`
-                  : ''
-              }
-              <div
-                id="portraitHistoryList"
-                class="portrait-history-card-row${
-                  normalized.versions.length === 1 ? ' is-single' : ''
-                }"
-              >
-                ${listHtml}
-              </div>
-              ${
-                normalized.versions.length > 1
-                  ? `<button
+                    </button>`:''}<div
+id="portraitHistoryList"
+class="portrait-history-card-row${normalized.versions.length===1?' is-single':''}">${listHtml}</div>${normalized.versions.length>1?`<button
                       type="button"
                       class="portrait-history-nav portrait-history-nav-right"
                       aria-label="Next portrait"
@@ -11828,11 +3279,7 @@ const PortraitHistory = (window.PortraitHistory = {
                       onclick="event.stopPropagation(); PortraitUI.moveFocus(1);"
                     >
                       <span aria-hidden="true">›</span>
-                    </button>`
-                  : ''
-              }
-            </div>
-          `;
+                    </button>`:''}</div>`;
 
           // Transform back to history view with updated content
           this._animateModalContentResize('portraitHistoryModal', () => {
@@ -11863,22 +3310,10 @@ const PortraitHistory = (window.PortraitHistory = {
 
       if (!hasVersions) {
         if (hasCustomPortraitWithoutHistory) {
-          return `<div class="terminal-text-small terminal-text-dim portrait-history-callout">
-              <p><strong>No portrait history yet.</strong></p>
-              <p>This character's portrait was created before the history feature was added.</p>
-              <p>Generate a new custom AI portrait to:</p>
-              <ul class="portrait-history-callout-list">
-                <li>• Save your current portrait as Version 1</li>
-                <li>• Add the new portrait as Version 2</li>
-                <li>• Enable portrait version switching</li>
-              </ul>
-            </div>`;
+          return `<div class="terminal-text-small terminal-text-dim portrait-history-callout"><p><strong>No portrait history yet.</strong></p><p>This character's portrait was created before the history feature was added.</p><p>Generate a new custom AI portrait to:</p><ul class="portrait-history-callout-list"><li>• Save your current portrait as Version 1</li><li>• Add the new portrait as Version 2</li><li>• Enable portrait version switching</li></ul></div>`;
         }
 
-        return `<p class="terminal-text-small terminal-text-dim portrait-history-callout">
-              No saved portraits yet.<br><br>
-              Generate a custom AI portrait to start building a history.
-            </p>`;
+        return `<p class="terminal-text-small terminal-text-dim portrait-history-callout">No saved portraits yet.<br><br>Generate a custom AI portrait to start building a history.</p>`;
       }
 
       // Check global portrait view mode (ASCII vs Original) to determine default display
@@ -11917,15 +3352,7 @@ const PortraitHistory = (window.PortraitHistory = {
           const asciiHiddenClass = shouldShowOriginal ? ' is-hidden' : '';
           const imageHiddenClass = shouldShowOriginal ? '' : ' is-hidden';
 
-          const thumbHtml = `
-            <div class="card-thumbnail${shouldShowOriginal ? ' card-thumbnail--original-mode' : ''}">
-              <div class="ascii-portrait portrait-history-preview${asciiHiddenClass}" data-version-id="${v.id}"></div>
-              ${
-                hasImage
-                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image${imageHiddenClass}" data-version-id="${v.id}" onload="this.classList.add('is-loaded')">`
-                  : ''
-              }
-            </div>`;
+          const thumbHtml = `<div class="card-thumbnail${shouldShowOriginal ? ' card-thumbnail--original-mode' : ''}"><div class="ascii-portrait portrait-history-preview${asciiHiddenClass}"data-version-id="${v.id}"></div>${hasImage?`<img src="${v.url}" alt="${title}" class="portrait-history-image${imageHiddenClass}" data-version-id="${v.id}" onload="this.classList.add('is-loaded')">`:''}</div>`;
 
           // Overflow menu for per-version actions (View, Prompt, Delete)
           const actionItems = [];
@@ -11933,87 +3360,42 @@ const PortraitHistory = (window.PortraitHistory = {
           // Toggle button label depends on current default view
           if (hasImage) {
             const toggleLabel = shouldShowOriginal ? 'View ASCII' : 'View original';
-            actionItems.push(`
-              <button
-                class="selector-option"
-                type="button"
-                role="menuitem"
-                onclick="event.stopPropagation(); PortraitUI.toggleView('${v.id}')"
-                data-toggle-version-id="${v.id}"
-              >
-                <span class="selector-option-icon">◉</span>
-                <span class="selector-option-label">${toggleLabel}</span>
-              </button>
-            `);
+            actionItems.push(`<button
+class="selector-option"
+type="button"
+role="menuitem"
+onclick="event.stopPropagation(); PortraitUI.toggleView('${v.id}')"
+data-toggle-version-id="${v.id}"><span class="selector-option-icon">◉</span><span class="selector-option-label">${toggleLabel}</span></button>`);
           }
 
           // Always show Image Info - displays date, style, model, and prompt (if available)
-          actionItems.push(`
-            <button
-              class="selector-option"
-              type="button"
-              role="menuitem"
-              onclick="event.stopPropagation(); PortraitUI.viewImageInfo('${characterId}', '${v.id}')"
-              title="View image generation details"
-            >
-              <span class="selector-option-icon">ℹ︎</span>
-              <span class="selector-option-label">Image info</span>
-            </button>
-          `);
+          actionItems.push(`<button
+class="selector-option"
+type="button"
+role="menuitem"
+onclick="event.stopPropagation(); PortraitUI.viewImageInfo('${characterId}', '${v.id}')"
+title="View image generation details"><span class="selector-option-icon">ℹ︎</span><span class="selector-option-label">Image info</span></button>`);
 
-          actionItems.push(`
-            <button
-              class="selector-option portrait-history-delete-option"
-              type="button"
-              role="menuitem"
-              onclick="event.stopPropagation(); PortraitUI.deleteVersion('${characterId}', '${v.id}')"
-              title="Delete this portrait version"
-              aria-label="Delete portrait version"
-            >
-              <span class="selector-option-icon">×</span>
-              <span class="selector-option-label">Delete version</span>
-            </button>
-          `);
+          actionItems.push(`<button
+class="selector-option portrait-history-delete-option"
+type="button"
+role="menuitem"
+onclick="event.stopPropagation(); PortraitUI.deleteVersion('${characterId}', '${v.id}')"
+title="Delete this portrait version"
+aria-label="Delete portrait version"><span class="selector-option-icon">×</span><span class="selector-option-label">Delete version</span></button>`);
 
           const actionsMenu =
             actionItems.length > 0
-              ? `
-              <div class="portrait-history-actions selector-shell selector-shell--actions">
-                <button
-                  class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
-                  type="button"
-                  aria-haspopup="menu"
-                  aria-expanded="false"
-                  aria-label="More portrait actions"
-                  onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"
-                >
-                  <span class="sheet-actions-icon" aria-hidden="true">
-                    <span class="sheet-actions-dot dot-1"></span>
-                    <span class="sheet-actions-dot dot-2"></span>
-                    <span class="sheet-actions-dot dot-3"></span>
-                  </span>
-                </button>
-                <div class="selector-menu portrait-history-menu" role="menu" aria-hidden="true">
-                  ${actionItems.join('')}
-                </div>
-              </div>
-            `
+              ? `<div class="portrait-history-actions selector-shell selector-shell--actions"><button
+class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
+type="button"
+aria-haspopup="menu"
+aria-expanded="false"
+aria-label="More portrait actions"
+onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"><span class="sheet-actions-icon"aria-hidden="true"><span class="sheet-actions-dot dot-1"></span><span class="sheet-actions-dot dot-2"></span><span class="sheet-actions-dot dot-3"></span></span></button><div class="selector-menu portrait-history-menu"role="menu"aria-hidden="true">${actionItems.join('')}</div></div>`
               : '';
 
-          return `
-            <div class="character-card portrait-history-card${
-              isActive ? ' is-selected' : ''
-            }" data-version-id="${v.id}" onclick="PortraitUI.selectCard('${v.id}')">
-              ${thumbHtml}
-              <div class="card-details portrait-history-details">
-                <div class="portrait-history-meta">
-                  <div class="card-name">${title}</div>
-                  <div class="card-info">${infoText || '&nbsp;'}</div>
-                </div>
-                ${actionsMenu}
-              </div>
-            </div>
-          `;
+          return `<div class="character-card portrait-history-card${isActive?' is-selected':''}" data-version-id="${v.id}" onclick="PortraitUI.selectCard('${v.id}')">${thumbHtml}<div class="card-details portrait-history-details"><div class="portrait-history-meta"><div class="card-name">${title}</div><div class="card-info">${infoText||'&nbsp;'}</div></div>${actionsMenu}</div></div>`;
         })
         .join('');
     },
@@ -12509,43 +3891,21 @@ const PortraitHistory = (window.PortraitHistory = {
 
 const Components = (window.Components = {
   renderNarratorMessage(text) {
-    return `
-      <div class="narrator-message">
-        <div class="narrator-text">${text}</div>
-      </div>
-    `;
+    return `<div class="narrator-message"><div class="narrator-text">${text}</div></div>`;
   },
 
   renderQuestion(question) {
     const optionsHTML = question.options
       .map(
-        (opt, index) => `
-          <button class="button-primary" onclick="App.handleAnswer('${question.id}', ${index})">
-            ${opt.text}
-          </button>
-        `,
+        (opt, index) => `<button class="button-primary"onclick="App.handleAnswer('${question.id}', ${index})">${opt.text}</button>`,
       )
       .join('');
 
-    return `
-      <div class="question-card" data-question-id="${question.id}">
-        <div class="options-container">
-          ${optionsHTML}
-        </div>
-      </div>
-    `;
+    return `<div class="question-card"data-question-id="${question.id}"><div class="options-container">${optionsHTML}</div></div>`;
   },
 
   renderTextInput(question) {
-    return `
-      <div class="question-card" data-question-id="${question.id}">
-        <div class="question-text">${question.text}</div>
-        <input type="text" class="input-field" id="text-input" placeholder="${question.placeholder || 'Type here...'}">
-        <button class="button-primary mt-md" onclick="App.handleTextInput('${question.id}')">
-          CONTINUE
-        </button>
-      </div>
-    `;
+    return `<div class="question-card"data-question-id="${question.id}"><div class="question-text">${question.text}</div><input type="text"class="input-field"id="text-input"placeholder="${question.placeholder || 'Type here...'}"><button class="button-primary mt-md"onclick="App.handleTextInput('${question.id}')">CONTINUE</button></div>`;
   },
 
   renderCharacterSheet(
@@ -12557,21 +3917,7 @@ const Components = (window.Components = {
     const { showGeneratePortraitButton = true } = extraOptions || {};
 
     // Use the shared CharacterSheet component
-    return `
-      <div class="character-sheet">
-        ${CharacterSheet.render(character, {
-          context: 'builder',
-          showPortrait: showPortrait,
-          // In quick-create mode we may want to suppress the custom AI portrait
-          // button until the first custom image has actually been generated.
-          onGeneratePortrait: showGeneratePortraitButton,
-          onRename: true,
-          onTogglePortrait: true,
-          onLevelChange: true,
-          onPrint: true,
-        })}
-      </div>
-    `;
+    return `<div class="character-sheet">${CharacterSheet.render(character,{context:'builder',showPortrait:showPortrait,onGeneratePortrait:showGeneratePortraitButton,onRename:true,onTogglePortrait:true,onLevelChange:true,onPrint:true,})}</div>`;
   },
 
   renderSettings() {
@@ -12687,19 +4033,12 @@ const Components = (window.Components = {
       .map((narrator) => {
         const label = formatNarratorTitle(narrator);
         const isSelected = narrator.id === currentNarratorId;
-        return `
-          <button
-            class="selector-option${isSelected ? ' is-selected' : ''}"
-            type="button"
-            role="option"
-            data-value="${narrator.id}"
-            aria-selected="${isSelected ? 'true' : 'false'}"
-          >
-            <span class="selector-option-label">
-              ${label}
-            </span>
-          </button>
-        `;
+        return `<button
+class="selector-option${isSelected ? ' is-selected' : ''}"
+type="button"
+role="option"
+data-value="${narrator.id}"
+aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-label">${label}</span></button>`;
       })
       .join('');
 
@@ -12837,90 +4176,35 @@ const Components = (window.Components = {
       ? formatThemeName(activePromptTheme)
       : 'Cinematic Inks';
 
-    return `
-      <div id="settingsModal" class="modal show" onclick="SettingsModal.close()">
-        <div class="modal-content builder-settings-modal" onclick="event.stopPropagation();">
-          <div class="modal-header">
-            <div class="modal-header-main">
-              <h2 class="modal-title">⚙︎ Settings</h2>
-            </div>
-            <button class="modal-close" onclick="SettingsModal.close()" aria-label="Close settings">&times;</button>
-          </div>
-          <div class="modal-body">
-            <div class="settings-layout">
-              <div class="settings-grid">
-                <div class="settings-group">
-                  <div class="settings-group-label">[ Builder ]</div>
-                  <section class="settings-section">
-                    <div class="settings-row-inline">
-                      <div class="settings-inline-field">
-                        <div class="settings-label">Narrator Voice</div>
-                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
-                        <button
-                          class="terminal-btn selector-trigger"
-                          id="narrator-select-trigger"
-                          type="button"
-                          aria-haspopup="listbox"
-                          aria-expanded="false"
-                          onclick="CharacterSheet.toggleSelectorMenu(this)"
-                        >
-                          <span class="selector-trigger-label" id="narrator-select-label">
-                            ${currentNarratorLabel}
-                          </span>
-                        </button>
-                        <div
-                          class="selector-menu"
-                          role="listbox"
-                          aria-label="Narrator voice"
-                          aria-hidden="true"
-                        >
-                          ${narratorOptionsMenu}
-                        </div>
-                      </div>
-                      <select
-                        id="narrator-select"
-                        class="terminal-select settings-select hidden"
-                      >
-                        ${narratorsList
-                          .map((narrator) => {
-                            const label = formatNarratorTitle(narrator);
-                            return `
+    return `<div id="settingsModal"class="modal show"onclick="SettingsModal.close()"><div class="modal-content builder-settings-modal"onclick="event.stopPropagation();"><div class="modal-header"><div class="modal-header-main"><h2 class="modal-title">⚙︎ Settings</h2></div><button class="modal-close"onclick="SettingsModal.close()"aria-label="Close settings">&times;</button></div><div class="modal-body"><div class="settings-layout"><div class="settings-grid"><div class="settings-group"><div class="settings-group-label">[Builder]</div><section class="settings-section"><div class="settings-row-inline"><div class="settings-inline-field"><div class="settings-label">Narrator Voice</div><div class="selector-shell selector-shell--listbox selector-shell--match-width"><button
+class="terminal-btn selector-trigger"
+id="narrator-select-trigger"
+type="button"
+aria-haspopup="listbox"
+aria-expanded="false"
+onclick="CharacterSheet.toggleSelectorMenu(this)"><span class="selector-trigger-label"id="narrator-select-label">${currentNarratorLabel}</span></button><div
+class="selector-menu"
+role="listbox"
+aria-label="Narrator voice"
+aria-hidden="true">${narratorOptionsMenu}</div></div><select
+id="narrator-select"
+class="terminal-select settings-select hidden">${narratorsList.map((narrator)=>{const label=formatNarratorTitle(narrator);return`
                             <option value="${narrator.id}" ${
                               narrator.id === currentNarratorId ? 'selected' : ''
                             }>
                               ${label}
                             </option>
-                          `;
-                          })
-                          .join('')}
-                      </select>
-                    </div>
-                    <div class="settings-inline-field">
-                      <div class="settings-label">Text Speed</div>
-                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
-                        <button
-                          class="terminal-btn selector-trigger"
-                          id="text-speed-select-trigger"
-                          type="button"
-                          aria-haspopup="listbox"
-                          aria-expanded="false"
-                          onclick="CharacterSheet.toggleSelectorMenu(this)"
-                        >
-                          <span class="selector-trigger-label" id="text-speed-select-label">
-                            ${currentTextSpeedLabel}
-                          </span>
-                        </button>
-                        <div
-                          class="selector-menu"
-                          role="listbox"
-                          aria-label="Narrator text speed"
-                          aria-hidden="true"
-                        >
-                          ${textSpeedOptions
-                            .map((opt) => {
-                              const isSelected =
-                                opt.value === currentTextSpeedOption.value;
-                              return `
+                          `;}).join('')}</select></div><div class="settings-inline-field"><div class="settings-label">Text Speed</div><div class="selector-shell selector-shell--listbox selector-shell--match-width"><button
+class="terminal-btn selector-trigger"
+id="text-speed-select-trigger"
+type="button"
+aria-haspopup="listbox"
+aria-expanded="false"
+onclick="CharacterSheet.toggleSelectorMenu(this)"><span class="selector-trigger-label"id="text-speed-select-label">${currentTextSpeedLabel}</span></button><div
+class="selector-menu"
+role="listbox"
+aria-label="Narrator text speed"
+aria-hidden="true">${textSpeedOptions.map((opt)=>{const isSelected=opt.value===currentTextSpeedOption.value;return`
                               <button
                                 class="selector-option${isSelected ? ' is-selected' : ''}"
                                 type="button"
@@ -12932,18 +4216,9 @@ const Components = (window.Components = {
                                   ${opt.label}
                                 </span>
                               </button>
-                            `;
-                            })
-                            .join('')}
-                        </div>
-                      </div>
-                      <select
-                        id="text-speed-select"
-                        class="terminal-select settings-select hidden"
-                      >
-                        ${textSpeedOptions
-                          .map(
-                            (opt) => `
+                            `;}).join('')}</div></div><select
+id="text-speed-select"
+class="terminal-select settings-select hidden">${textSpeedOptions.map((opt)=>`
                             <option value="${opt.value}" ${
                               opt.value === currentTextSpeedOption.value
                                 ? 'selected'
@@ -12951,48 +4226,19 @@ const Components = (window.Components = {
                             }>
                               ${opt.label}
                             </option>
-                          `,
-                          )
-                          .join('')}
-                      </select>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-
-                <div class="settings-group">
-                  <div class="settings-group-label">[ Image generation ]</div>
-                  <section class="settings-section">
-                    <div class="settings-row settings-row--stacked mb-lg">
-                      <div class="settings-label">Style</div>
-                      <div class="settings-field">
-                        <div class="selector-shell selector-shell--listbox selector-shell--match-width">
-                          <button
-                            class="terminal-btn selector-trigger"
-                            id="portrait-theme-select-trigger"
-                            type="button"
-                            aria-haspopup="listbox"
-                            aria-expanded="false"
-                            onclick="CharacterSheet.toggleSelectorMenu(this)"
-                          >
-                            <span
-                              class="selector-trigger-label"
-                              id="portrait-theme-select-label"
-                            >
-                              ${currentPromptThemeLabel}
-                            </span>
-                          </button>
-                          <div
-                            class="selector-menu"
-                            role="listbox"
-                            aria-label="Portrait prompt theme"
-                            aria-hidden="true"
-                          >
-                            ${promptThemes
-                              .map((theme) => {
-                                const isSelected = theme.id === activePromptTheme.id;
-                                const label = formatThemeName(theme);
-                                return `
+                          `,).join('')}</select></div></div></section></div><div class="settings-group"><div class="settings-group-label">[Image generation]</div><section class="settings-section"><div class="settings-row settings-row--stacked mb-lg"><div class="settings-label">Style</div><div class="settings-field"><div class="selector-shell selector-shell--listbox selector-shell--match-width"><button
+class="terminal-btn selector-trigger"
+id="portrait-theme-select-trigger"
+type="button"
+aria-haspopup="listbox"
+aria-expanded="false"
+onclick="CharacterSheet.toggleSelectorMenu(this)"><span
+class="selector-trigger-label"
+id="portrait-theme-select-label">${currentPromptThemeLabel}</span></button><div
+class="selector-menu"
+role="listbox"
+aria-label="Portrait prompt theme"
+aria-hidden="true">${promptThemes.map((theme)=>{const isSelected=theme.id===activePromptTheme.id;const label=formatThemeName(theme);return`
                                 <button
                                   class="selector-option${
                                     isSelected ? ' is-selected' : ''
@@ -13006,57 +4252,25 @@ const Components = (window.Components = {
                                     ${label}
                                   </span>
                                 </button>
-                              `;
-                              })
-                              .join('')}
-                          </div>
-                        </div>
-                        <select
-                          id="portrait-theme-select"
-                          class="terminal-select settings-select hidden"
-                        >
-                          ${promptThemes
-                            .map((theme) => {
-                              const label = formatThemeName(theme);
-                              return `
+                              `;}).join('')}</div></div><select
+id="portrait-theme-select"
+class="terminal-select settings-select hidden">${promptThemes.map((theme)=>{const label=formatThemeName(theme);return`
                               <option value="${theme.id}" ${
                                 theme.id === activePromptTheme.id ? 'selected' : ''
                               }>
                                 ${label}
                               </option>
-                            `;
-                            })
-                            .join('')}
-                        </select>
-                      </div>
-                    </div>
-                    <div class="settings-row-inline mb-lg">
-                      <div class="settings-inline-field">
-                        <div class="settings-label">AI model</div>
-                        <div class="selector-shell selector-shell--listbox selector-shell--match-width">
-                          <button
-                            class="terminal-btn selector-trigger"
-                            id="image-model-select-trigger"
-                            type="button"
-                            aria-haspopup="listbox"
-                            aria-expanded="false"
-                            onclick="CharacterSheet.toggleSelectorMenu(this)"
-                          >
-                            <span class="selector-trigger-label" id="image-model-select-label">
-                              ${currentImageModelLabel}
-                            </span>
-                          </button>
-                          <div
-                            class="selector-menu"
-                            role="listbox"
-                            aria-label="AI model"
-                            aria-hidden="true"
-                          >
-                            ${imageModelOptions
-                              .map((opt) => {
-                                const isSelected =
-                                  opt.value === currentImageModelOption.value;
-                                return `
+                            `;}).join('')}</select></div></div><div class="settings-row-inline mb-lg"><div class="settings-inline-field"><div class="settings-label">AI model</div><div class="selector-shell selector-shell--listbox selector-shell--match-width"><button
+class="terminal-btn selector-trigger"
+id="image-model-select-trigger"
+type="button"
+aria-haspopup="listbox"
+aria-expanded="false"
+onclick="CharacterSheet.toggleSelectorMenu(this)"><span class="selector-trigger-label"id="image-model-select-label">${currentImageModelLabel}</span></button><div
+class="selector-menu"
+role="listbox"
+aria-label="AI model"
+aria-hidden="true">${imageModelOptions.map((opt)=>{const isSelected=opt.value===currentImageModelOption.value;return`
                                 <button
                                   class="selector-option${isSelected ? ' is-selected' : ''}"
                                   type="button"
@@ -13068,55 +4282,26 @@ const Components = (window.Components = {
                                     ${opt.label}
                                   </span>
                                 </button>
-                              `;
-                              })
-                              .join('')}
-                          </div>
-                        </div>
-                        <select
-                          id="image-model-select"
-                          class="terminal-select settings-select hidden"
-                        >
-                          ${imageModelOptions
-                            .map(
-                              (opt) => `
+                              `;}).join('')}</div></div><select
+id="image-model-select"
+class="terminal-select settings-select hidden">${imageModelOptions.map((opt)=>`
                               <option value="${opt.value}" ${
                                 opt.value === currentImageModelOption.value ? 'selected' : ''
                               }>
                                 ${opt.label}
                               </option>
-                            `,
-                            )
-                            .join('')}
-                        </select>
-                      </div>
-                      <div class="settings-inline-field settings-inline-field--quality ${hasQualityOptions ? '' : 'hidden'}" id="quality-selector-container">
-                        <div class="settings-label">Quality</div>
-                        <div class="selector-shell selector-shell--listbox selector-shell--match-width">
-                          <button
-                            class="terminal-btn selector-trigger"
-                            id="image-quality-select-trigger"
-                            type="button"
-                            aria-haspopup="listbox"
-                            aria-expanded="false"
-                            onclick="CharacterSheet.toggleSelectorMenu(this)"
-                          >
-                            <span class="selector-trigger-label" id="image-quality-select-label">
-                              ${currentQualityLabel}
-                            </span>
-                          </button>
-                          <div
-                            class="selector-menu"
-                            role="listbox"
-                            aria-label="Image quality"
-                            aria-hidden="true"
-                            id="image-quality-options-menu"
-                          >
-                            ${currentQualityOptions
-                              .map((opt) => {
-                                const isSelected =
-                                  opt.value === currentQualityOption?.value;
-                                return `
+                            `,).join('')}</select></div><div class="settings-inline-field settings-inline-field--quality ${hasQualityOptions ? '' : 'hidden'}"id="quality-selector-container"><div class="settings-label">Quality</div><div class="selector-shell selector-shell--listbox selector-shell--match-width"><button
+class="terminal-btn selector-trigger"
+id="image-quality-select-trigger"
+type="button"
+aria-haspopup="listbox"
+aria-expanded="false"
+onclick="CharacterSheet.toggleSelectorMenu(this)"><span class="selector-trigger-label"id="image-quality-select-label">${currentQualityLabel}</span></button><div
+class="selector-menu"
+role="listbox"
+aria-label="Image quality"
+aria-hidden="true"
+id="image-quality-options-menu">${currentQualityOptions.map((opt)=>{const isSelected=opt.value===currentQualityOption?.value;return`
                                 <button
                                   class="selector-option${isSelected ? ' is-selected' : ''}"
                                   type="button"
@@ -13128,66 +4313,23 @@ const Components = (window.Components = {
                                     ${opt.label}
                                   </span>
                                 </button>
-                              `;
-                              })
-                              .join('')}
-                          </div>
-                        </div>
-                        <select
-                          id="image-quality-select"
-                          class="terminal-select settings-select hidden"
-                        >
-                          ${currentQualityOptions
-                            .map(
-                              (opt) => `
+                              `;}).join('')}</div></div><select
+id="image-quality-select"
+class="terminal-select settings-select hidden">${currentQualityOptions.map((opt)=>`
                               <option value="${opt.value}" ${
                                 opt.value === currentQualityOption?.value ? 'selected' : ''
                               }>
                                 ${opt.label}
                               </option>
-                            `,
-                            )
-                            .join('')}
-                        </select>
-                      </div>
-                    </div>
-                    <div class="settings-row settings-row--stacked">
-                      <div class="settings-label">Default portrait view</div>
-                      <div class="settings-field">
-                        <div class="settings-radio-group" role="radiogroup" aria-label="Default portrait view">
-                          <label class="settings-radio-option">
-                            <input
-                              type="radio"
-                              name="portrait-view-mode"
-                              value="original"
-                              ${currentPortraitViewMode === 'original' ? 'checked' : ''}
-                            >
-                            <span class="settings-radio-label">Image</span>
-                          </label>
-                          <label class="settings-radio-option">
-                            <input
-                              type="radio"
-                              name="portrait-view-mode"
-                              value="ascii"
-                              ${currentPortraitViewMode === 'original' ? '' : 'checked'}
-                            >
-                            <span class="settings-radio-label">ASCII</span>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" onclick="SettingsModal.close()">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" onclick="SettingsModal.save()">SAVE</button>
-          </div>
-        </div>
-      </div>
-    `;
+                            `,).join('')}</select></div></div><div class="settings-row settings-row--stacked"><div class="settings-label">Default portrait view</div><div class="settings-field"><div class="settings-radio-group"role="radiogroup"aria-label="Default portrait view"><label class="settings-radio-option"><input
+type="radio"
+name="portrait-view-mode"
+value="original"
+${currentPortraitViewMode==='original'?'checked':''}><span class="settings-radio-label">Image</span></label><label class="settings-radio-option"><input
+type="radio"
+name="portrait-view-mode"
+value="ascii"
+${currentPortraitViewMode==='original'?'':'checked'}><span class="settings-radio-label">ASCII</span></label></div></div></div></section></div></div></div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="SettingsModal.close()">CANCEL</button><button class="terminal-btn terminal-btn-primary"onclick="SettingsModal.save()">SAVE</button></div></div></div>`;
   },
 });
 
@@ -13352,19 +4494,12 @@ const SettingsModal = (window.SettingsModal = {
         qualityMenu.innerHTML = options
           .map((opt) => {
             const isSelected = opt.value === currentQuality;
-            return `
-              <button
-                class="selector-option${isSelected ? ' is-selected' : ''}"
-                type="button"
-                role="option"
-                data-value="${opt.value}"
-                aria-selected="${isSelected ? 'true' : 'false'}"
-              >
-                <span class="selector-option-label">
-                  ${opt.label}
-                </span>
-              </button>
-            `;
+            return `<button
+class="selector-option${isSelected ? ' is-selected' : ''}"
+type="button"
+role="option"
+data-value="${opt.value}"
+aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-label">${opt.label}</span></button>`;
           })
           .join('');
 
@@ -13392,11 +4527,7 @@ const SettingsModal = (window.SettingsModal = {
       if (qualitySelect) {
         qualitySelect.innerHTML = options
           .map(
-            (opt) => `
-            <option value="${opt.value}" ${opt.value === currentQuality ? 'selected' : ''}>
-              ${opt.label}
-            </option>
-          `,
+            (opt) => `<option value="${opt.value}"${opt.value===currentQuality?'selected':''}>${opt.label}</option>`,
           )
           .join('');
       }
@@ -13638,14 +4769,7 @@ const QUESTIONS = (window.QUESTIONS = [
   {
     id: 'intro',
     type: 'message',
-    text: `> SYSTEM INITIALIZED...
-> LOADING CHARACTER CREATION PROTOCOL...
-> 
-> Ah. Another soul seeking adventure. Or at least, trying to.
-> 
-> Look, I've done this a thousand times. You'll make choices. I'll pretend they matter. We'll both get through this.
-> 
-> Let's start with something easy...`,
+    text: `>SYSTEM INITIALIZED...>LOADING CHARACTER CREATION PROTOCOL...>>Ah.Another soul seeking adventure.Or at least,trying to.>>Look,I've done this a thousand times. You'll make choices.I'll pretend they matter. We'll both get through this.>>Let's start with something easy...`,
     next: 'entry-mode',
   },
 
@@ -13844,7 +4968,7 @@ const QUESTIONS = (window.QUESTIONS = [
     type: 'list-choice',
     text: 'Choose your race:',
     options: DND_DATA.races.map((r) => ({
-      text: `${r.name} - ${r.description}`,
+      text: `${r.name}-${r.description}`,
       value: r.id,
     })),
     saveTo: 'race',
@@ -13914,7 +5038,7 @@ const QUESTIONS = (window.QUESTIONS = [
     type: 'list-choice',
     text: 'Choose your class:',
     options: DND_DATA.classes.map((c) => ({
-      text: `${c.name} - ${c.description}`,
+      text: `${c.name}-${c.description}`,
       value: c.id,
     })),
     saveTo: 'class',
@@ -13941,13 +5065,7 @@ const QUESTIONS = (window.QUESTIONS = [
   {
     id: 'spell-style-intro',
     type: 'message',
-    text: `> Ah, right. You're a spellcaster.
-> 
-> *sighs*
-> 
-> I suppose we should talk about your magical abilities. Because what's an adventure without someone hurling fireballs or dramatically shouting healing incantations?
-> 
-> Let's figure out your spell preferences...`,
+    text: `>Ah,right.You're a spellcaster.>>*sighs*>>I suppose we should talk about your magical abilities.Because what's an adventure without someone hurling fireballs or dramatically shouting healing incantations?>>Let's figure out your spell preferences...`,
     next: 'spell-style',
   },
 
@@ -14019,7 +5137,7 @@ const QUESTIONS = (window.QUESTIONS = [
     type: 'list-choice',
     text: 'What was your life before adventuring?',
     options: DND_DATA.backgrounds.map((b) => ({
-      text: `${b.name} - ${b.description}`,
+      text: `${b.name}-${b.description}`,
       value: b.id,
     })),
     saveTo: 'background',
@@ -14031,7 +5149,7 @@ const QUESTIONS = (window.QUESTIONS = [
     type: 'list-choice',
     text: 'And your moral compass points toward...',
     options: DND_DATA.alignments.map((a) => ({
-      text: `${a.name} - ${a.description}`,
+      text: `${a.name}-${a.description}`,
       value: a.id,
     })),
     saveTo: 'alignment',
@@ -14660,7 +5778,7 @@ const App = (window.App = {
       '</span></span></span>';
 
     const renderLine = (text) =>
-      `<span class="narrator-spinner-shell">${cubeMarkup} ${text}</span>`;
+      `<span class="narrator-spinner-shell">${cubeMarkup}${text}</span>`;
 
     element.innerHTML = renderLine('rolling the dice...');
     
@@ -14789,7 +5907,7 @@ const App = (window.App = {
     // able to arrow between the selector and the roll button.
     try {
       const rollButton = document.querySelector(
-        `.question-card[data-question-id="${question.id}"] .ability-method-roll`,
+        `.question-card[data-question-id="${question.id}"].ability-method-roll`,
       );
       if (
         rollButton &&
@@ -14878,11 +5996,7 @@ const App = (window.App = {
       optionsHTML += recommendedOptions
         .map(({ opt, originalIndex }) => {
           const currentIndex = displayIndex++;
-          return `
-              <button class="button-primary" onclick="App.handleListAnswer('${question.id}', ${currentIndex})">
-                * ${opt.text}
-              </button>
-            `;
+          return `<button class="button-primary"onclick="App.handleListAnswer('${question.id}', ${currentIndex})">*${opt.text}</button>`;
         })
         .join('');
 
@@ -14894,22 +6008,13 @@ const App = (window.App = {
     optionsHTML += otherOptions
       .map(({ opt, originalIndex }) => {
         const currentIndex = displayIndex++;
-        return `
-            <button class="button-primary" onclick="App.handleListAnswer('${question.id}', ${currentIndex})">
-              ${opt.text}
-            </button>
-          `;
+        return `<button class="button-primary"onclick="App.handleListAnswer('${question.id}', ${currentIndex})">${opt.text}</button>`;
       })
       .join('');
 
     narratorPanel.insertAdjacentHTML(
       'beforeend',
-      `
-      <div class="question-card" data-question-id="${question.id}">
-        <div class="options-container">
-          ${optionsHTML}
-        </div>
-      </div>`,
+      `<div class="question-card"data-question-id="${question.id}"><div class="options-container">${optionsHTML}</div></div>`,
     );
 
     // Activate keyboard navigation first
@@ -15000,30 +6105,17 @@ const App = (window.App = {
     const options = question.options || [];
     const selectOptionsHTML = options
       .map(
-        (opt, index) => `
-          <option value="${opt.value}" ${
-            index === 0 ? 'selected' : ''
-          }>${truncate(opt.text, 45)}</option>
-        `,
+        (opt, index) => `<option value="${opt.value}"${index===0?'selected':''}>${truncate(opt.text,45)}</option>`,
       )
       .join('');
 
     const listboxOptionsHTML = options
       .map(
-        (opt, index) => `
-          <button
-            class="ability-method-option selector-option${
-              index === 0 ? ' is-selected' : ''
-            }"
-            data-method="${opt.value}"
-            role="option"
-            aria-selected="${index === 0 ? 'true' : 'false'}"
-          >
-            <span class="selector-option-label">
-              ${truncate(opt.text, 45)}
-            </span>
-          </button>
-        `,
+        (opt, index) => `<button
+class="ability-method-option selector-option${index===0?' is-selected':''}"
+data-method="${opt.value}"
+role="option"
+aria-selected="${index === 0 ? 'true' : 'false'}"><span class="selector-option-label">${truncate(opt.text,45)}</span></button>`,
       )
       .join('');
 
@@ -15035,40 +6127,18 @@ const App = (window.App = {
 
     narratorPanel.insertAdjacentHTML(
       'beforeend',
-      `
-      <div class="question-card" data-question-id="${question.id}">
-        <div class="options-container ability-method-container">
-          <label class="settings-label ability-method-label">Ability generation method:</label>
-          <div class="ability-method-controls">
-            <div class="ability-method-trigger-wrap selector-shell selector-shell--listbox">
-              <button
-                class="button-primary ability-method-trigger selector-trigger"
-                id="ability-method-trigger"
-                type="button"
-                aria-haspopup="listbox"
-                aria-expanded="false"
-                aria-controls="ability-method-listbox"
-                data-selected-method="${initialMethod}"
-              >
-                <span class="ability-method-trigger-label">
-                  ${initialLabel}
-                </span>
-              </button>
-              <div
-                id="ability-method-listbox"
-                class="ability-method-listbox selector-menu"
-                role="listbox"
-                aria-label="Ability generation method"
-              >
-                ${listboxOptionsHTML}
-              </div>
-            </div>
-            <button class="button-primary ability-method-roll" onclick="App.handleAbilityFromSelect()">
-              ROLL
-            </button>
-          </div>
-        </div>
-      </div>`,
+      `<div class="question-card"data-question-id="${question.id}"><div class="options-container ability-method-container"><label class="settings-label ability-method-label">Ability generation method:</label><div class="ability-method-controls"><div class="ability-method-trigger-wrap selector-shell selector-shell--listbox"><button
+class="button-primary ability-method-trigger selector-trigger"
+id="ability-method-trigger"
+type="button"
+aria-haspopup="listbox"
+aria-expanded="false"
+aria-controls="ability-method-listbox"
+data-selected-method="${initialMethod}"><span class="ability-method-trigger-label">${initialLabel}</span></button><div
+id="ability-method-listbox"
+class="ability-method-listbox selector-menu"
+role="listbox"
+aria-label="Ability generation method">${listboxOptionsHTML}</div></div><button class="button-primary ability-method-roll"onclick="App.handleAbilityFromSelect()">ROLL</button></div></div></div>`,
     );
 
     // Wire up animated listbox behavior for ability method selector
@@ -15437,28 +6507,11 @@ const App = (window.App = {
     // Build the name selection UI with proper styling matching other sections
     narratorPanel.insertAdjacentHTML(
       'beforeend',
-      `
-      <div class="question-card" data-question-id="${question.id}">
-        <div class="options-container">
-          ${names
-            .map(
-              (name, index) =>
-                `<button class="button-primary" onclick="App.handleNameSelect(${index})">${name}</button>`,
-            )
-            .join('\n              ')}
-        </div>
-        <div class="name-input-container">
-          <input 
-            type="text" 
-            class="input-field" 
-            id="custom-name-input" 
-            placeholder="Or enter your own name..."
-          >
-          <button class="button-primary" onclick="App.handleCustomName()">
-            SUBMIT
-          </button>
-        </div>
-      </div>`,
+      `<div class="question-card"data-question-id="${question.id}"><div class="options-container">${names.map((name,index)=>`<button class="button-primary" onclick="App.handleNameSelect(${index})">${name}</button>`,).join('\n              ')}</div><div class="name-input-container"><input
+type="text"
+class="input-field"
+id="custom-name-input"
+placeholder="Or enter your own name..."><button class="button-primary"onclick="App.handleCustomName()">SUBMIT</button></div></div>`,
     );
 
     // Store generated names for later reference
@@ -15589,10 +6642,7 @@ const App = (window.App = {
         const confirmEl =
           narratorPanel.lastElementChild.querySelector('.narrator-text');
         
-        const spellSummary = `> Selected ${spells.cantrips.length} cantrip${spells.cantrips.length !== 1 ? 's' : ''} and ${spells.firstLevel.length} 1st level spell${spells.firstLevel.length !== 1 ? 's' : ''}.
-> 
-> Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}
-> 1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
+        const spellSummary = `>Selected ${spells.cantrips.length}cantrip${spells.cantrips.length!==1?'s':''}and ${spells.firstLevel.length}1st level spell${spells.firstLevel.length!==1?'s':''}.>>Cantrips:${spells.cantrips.map(s=>s.name).join(', ')}>1st Level:${spells.firstLevel.map(s=>s.name).join(', ')}`;
         
         await Utils.typewriter(confirmEl, spellSummary);
         Utils.scrollToBottom(true);
@@ -15633,10 +6683,7 @@ const App = (window.App = {
           flavorText = "> Utility over flash. Practical. Here's your toolkit:";
         }
         
-        const spellSummary = `${flavorText}
-> 
-> Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}
-> 1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
+        const spellSummary = `${flavorText}>>Cantrips:${spells.cantrips.map(s=>s.name).join(', ')}>1st Level:${spells.firstLevel.map(s=>s.name).join(', ')}`;
         
         await Utils.typewriter(confirmEl, spellSummary);
         Utils.scrollToBottom(true);
@@ -15686,15 +6733,7 @@ const App = (window.App = {
     // Show completion options
     narratorPanel.insertAdjacentHTML(
       'beforeend',
-      `
-      <div class="question-card mt-lg" data-question-id="${question.id}">
-        <button class="button-primary completion-save-btn" id="completion-save-btn" onclick="App.saveCharacter()">
-          > SAVE CHARACTER
-        </button>
-        <button class="button-primary" id="completion-new-btn" onclick="App.startNew()">
-          > CREATE ANOTHER CHARACTER
-        </button>
-      </div>`,
+      `<div class="question-card mt-lg"data-question-id="${question.id}"><button class="button-primary completion-save-btn"id="completion-save-btn"onclick="App.saveCharacter()">>SAVE CHARACTER</button><button class="button-primary"id="completion-new-btn"onclick="App.startNew()">>CREATE ANOTHER CHARACTER</button></div>`,
     );
     Utils.scrollToBottom(true);
 
@@ -15796,31 +6835,7 @@ const App = (window.App = {
         let textEl = portraitEl.querySelector('.portrait-placeholder-text');
         if (!cubeEl) {
           // Loader not yet rendered - replace the placeholder with loader HTML
-          portraitEl.innerHTML = `
-            <div class="portrait-placeholder-content">
-              <div class="portrait-placeholder-cube-container">
-                <div class="portrait-placeholder-cube portrait-placeholder-cube--generating">
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                  <i></i>
-                </div>
-              </div>
-              <div class="portrait-placeholder-text" data-dots="${dotCount}">
-                <span class="portrait-placeholder-message">${baseMessage}</span>
-                <span class="portrait-placeholder-dots">
-                  <span class="dot dot-1">.</span>
-                  <span class="dot dot-2">.</span>
-                  <span class="dot dot-3">.</span>
-                </span>
-                <div class="portrait-placeholder-subtext">
-                  ${subtext}
-                </div>
-              </div>
-            </div>
-          `;
+          portraitEl.innerHTML = `<div class="portrait-placeholder-content"><div class="portrait-placeholder-cube-container"><div class="portrait-placeholder-cube portrait-placeholder-cube--generating"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><div class="portrait-placeholder-text"data-dots="${dotCount}"><span class="portrait-placeholder-message">${baseMessage}</span><span class="portrait-placeholder-dots"><span class="dot dot-1">.</span><span class="dot dot-2">.</span><span class="dot dot-3">.</span></span><div class="portrait-placeholder-subtext">${subtext}</div></div></div>`;
           textEl = portraitEl.querySelector('.portrait-placeholder-text');
         } else if (textEl) {
           // Loader already rendered - just update dot count
@@ -15933,6 +6948,10 @@ const App = (window.App = {
                     (AIService.buildPortraitPrompt &&
                       AIService.buildPortraitPrompt(character)) ||
                     null,
+                  characterDescription:
+                    (AIService.buildCharacterDescription &&
+                      AIService.buildCharacterDescription(character)) ||
+                    null,
                   style: guidedStyle,
                   model: generationModel,
                   quality: generationQuality,
@@ -15969,7 +6988,7 @@ const App = (window.App = {
         if (error.promptAnalysis && error.promptAnalysis.hasKnownProblematicTerms) {
           const issues = error.promptAnalysis.potentialIssues;
           const categories = issues.map(i => i.category).join(', ');
-          userMessage += `Possible triggers: ${categories}. `;
+          userMessage += `Possible triggers:${categories}.`;
         }
         
         userMessage += 'Check browser console for detailed analysis and suggestions.';
@@ -16364,15 +7383,15 @@ const App = (window.App = {
 
     let abilityComment = '';
     if (highest && highest[1] >= 16) {
-      abilityComment += ` Your ${abilityNames[highest[0]]} is doing a lot of heavy lifting.`;
+      abilityComment += `Your ${abilityNames[highest[0]]}is doing a lot of heavy lifting.`;
     }
     if (lowest && lowest[1] <= 8) {
-      abilityComment += ` Maybe don't advertise that ${abilityNames[lowest[0]]} score.`;
+      abilityComment += `Maybe don't advertise that ${abilityNames[lowest[0]]}score.`;
     }
 
     const narratorPanel = document.getElementById('narrator-panel');
     narratorPanel.innerHTML += Components.renderNarratorMessage(
-      `Your abilities have been determined. HP: ${hitPoints}. ${hpComment}${abilityComment}`,
+      `Your abilities have been determined.HP:${hitPoints}.${hpComment}${abilityComment}`,
     );
     Utils.scrollToBottom(true);
 
@@ -16468,7 +7487,7 @@ const App = (window.App = {
 
     const narratorPanel = document.getElementById('narrator-panel');
     narratorPanel.innerHTML += Components.renderNarratorMessage(
-      `${name}. Sure. Why not.`,
+      `${name}.Sure.Why not.`,
     );
     Utils.scrollToBottom(true);
 
@@ -16509,7 +7528,7 @@ const App = (window.App = {
 
     const narratorPanel = document.getElementById('narrator-panel');
     narratorPanel.innerHTML += Components.renderNarratorMessage(
-      `${name}. Sure. Why not.`,
+      `${name}.Sure.Why not.`,
     );
     Utils.scrollToBottom(true);
 
@@ -16568,131 +7587,55 @@ const App = (window.App = {
 
             const hasImage = !!v.url;
             const hasPrompt = !!v.prompt;
-            const thumbHtml = `
-            <div class="card-thumbnail">
-              <div class="ascii-portrait portrait-history-preview" data-version-id="${v.id}"></div>
-              ${
-                hasImage
-                  ? `<img src="${v.url}" alt="${title}" class="portrait-history-image is-hidden" data-version-id="${v.id}">`
-                  : ''
-              }
-            </div>`;
+            const thumbHtml = `<div class="card-thumbnail"><div class="ascii-portrait portrait-history-preview"data-version-id="${v.id}"></div>${hasImage?`<img src="${v.url}" alt="${title}" class="portrait-history-image is-hidden" data-version-id="${v.id}">`:''}</div>`;
 
             // Overflow menu for per-version actions (View, Prompt, Delete)
             const actionItems = [];
 
             if (hasImage) {
-              actionItems.push(`
-                <button
-                  class="selector-option"
-                  type="button"
-                  role="menuitem"
-                  onclick="event.stopPropagation(); App.togglePortraitHistoryView('${v.id}')"
-                  data-toggle-version-id="${v.id}"
-                >
-                  <span class="selector-option-icon">◉</span>
-                  <span class="selector-option-label">View original</span>
-                </button>
-              `);
+              actionItems.push(`<button
+class="selector-option"
+type="button"
+role="menuitem"
+onclick="event.stopPropagation(); App.togglePortraitHistoryView('${v.id}')"
+data-toggle-version-id="${v.id}"><span class="selector-option-icon">◉</span><span class="selector-option-label">View original</span></button>`);
             }
 
             // Always show Image Info - displays date, style, model, and prompt (if available)
-            actionItems.push(`
-              <button
-                class="selector-option"
-                type="button"
-                role="menuitem"
-                onclick="event.stopPropagation(); App.viewPortraitImageInfo('${v.id}')"
-                title="View image generation details"
-              >
-                <span class="selector-option-icon">ℹ︎</span>
-                <span class="selector-option-label">Image info</span>
-              </button>
-            `);
+            actionItems.push(`<button
+class="selector-option"
+type="button"
+role="menuitem"
+onclick="event.stopPropagation(); App.viewPortraitImageInfo('${v.id}')"
+title="View image generation details"><span class="selector-option-icon">ℹ︎</span><span class="selector-option-label">Image info</span></button>`);
 
-            actionItems.push(`
-              <button
-                class="selector-option portrait-history-delete-option"
-                type="button"
-                role="menuitem"
-                onclick="event.stopPropagation(); App.deletePortraitVersion('${v.id}')"
-                title="Delete this portrait version"
-                aria-label="Delete portrait version"
-              >
-                <span class="selector-option-icon">×</span>
-                <span class="selector-option-label">Delete version</span>
-              </button>
-            `);
+            actionItems.push(`<button
+class="selector-option portrait-history-delete-option"
+type="button"
+role="menuitem"
+onclick="event.stopPropagation(); App.deletePortraitVersion('${v.id}')"
+title="Delete this portrait version"
+aria-label="Delete portrait version"><span class="selector-option-icon">×</span><span class="selector-option-label">Delete version</span></button>`);
 
             const actionsMenu =
               actionItems.length > 0
-                ? `
-                <div class="portrait-history-actions selector-shell selector-shell--actions">
-                  <button
-                    class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
-                    type="button"
-                    aria-haspopup="menu"
-                    aria-expanded="false"
-                    aria-label="More portrait actions"
-                    onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"
-                  >
-                    <span class="sheet-actions-icon" aria-hidden="true">
-                      <span class="sheet-actions-dot dot-1"></span>
-                      <span class="sheet-actions-dot dot-2"></span>
-                      <span class="sheet-actions-dot dot-3"></span>
-                    </span>
-                  </button>
-                  <div class="selector-menu portrait-history-menu" role="menu" aria-hidden="true">
-                    ${actionItems.join('')}
-                  </div>
-                </div>
-              `
+                ? `<div class="portrait-history-actions selector-shell selector-shell--actions"><button
+class="terminal-btn-small selector-trigger overflow-trigger portrait-history-overflow-btn"
+type="button"
+aria-haspopup="menu"
+aria-expanded="false"
+aria-label="More portrait actions"
+onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"><span class="sheet-actions-icon"aria-hidden="true"><span class="sheet-actions-dot dot-1"></span><span class="sheet-actions-dot dot-2"></span><span class="sheet-actions-dot dot-3"></span></span></button><div class="selector-menu portrait-history-menu"role="menu"aria-hidden="true">${actionItems.join('')}</div></div>`
                 : '';
 
-            return `
-            <div class="character-card portrait-history-card${
-              isActive ? ' is-selected' : ''
-            }" data-version-id="${v.id}" onclick="App.selectPortraitHistoryCard('${
-              v.id
-            }')">
-              ${thumbHtml}
-              <div class="card-details portrait-history-details">
-                <div class="portrait-history-meta">
-                  <div class="card-name">${title}</div>
-                  <div class="card-info">${infoText || '&nbsp;'}</div>
-                </div>
-                ${actionsMenu}
-              </div>
-            </div>
-          `;
+            return `<div class="character-card portrait-history-card${isActive?' is-selected':''}" data-version-id="${v.id}" onclick="App.selectPortraitHistoryCard('${v.id}')">${thumbHtml}<div class="card-details portrait-history-details"><div class="portrait-history-meta"><div class="card-name">${title}</div><div class="card-info">${infoText||'&nbsp;'}</div></div>${actionsMenu}</div></div>`;
           })
           .join('')
       : hasCustomPortraitWithoutHistory
-        ? `<div class="terminal-text-small terminal-text-dim portrait-history-callout">
-              <p><strong>No portrait history yet.</strong></p>
-              <p>This character's portrait was created before the history feature was added.</p>
-              <p>Generate a new custom AI portrait to:</p>
-              <ul class="portrait-history-callout-list">
-                <li>• Save your current portrait as Version 1</li>
-                <li>• Add the new portrait as Version 2</li>
-                <li>• Enable portrait version switching</li>
-              </ul>
-            </div>`
-        : `<p class="terminal-text-small terminal-text-dim portrait-history-callout">
-              No saved portraits yet.<br><br>
-              Generate a custom AI portrait to start building a history.
-            </p>`;
+        ? `<div class="terminal-text-small terminal-text-dim portrait-history-callout"><p><strong>No portrait history yet.</strong></p><p>This character's portrait was created before the history feature was added.</p><p>Generate a new custom AI portrait to:</p><ul class="portrait-history-callout-list"><li>• Save your current portrait as Version 1</li><li>• Add the new portrait as Version 2</li><li>• Enable portrait version switching</li></ul></div>`
+        : `<p class="terminal-text-small terminal-text-dim portrait-history-callout">No saved portraits yet.<br><br>Generate a custom AI portrait to start building a history.</p>`;
 
-    return `
-      <p class="terminal-text-small terminal-text-dim">
-        View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
-      </p>
-      <div class="portrait-history-card-row${
-        versions.length === 1 ? ' is-single' : ''
-      }">
-        ${listHtml}
-      </div>
-    `;
+    return `<p class="terminal-text-small terminal-text-dim">View previous custom AI portraits for this character.Choose one to make it active,or delete versions you no longer need.</p><div class="portrait-history-card-row${versions.length===1?' is-single':''}">${listHtml}</div>`;
   },
 
   // Smoothly animate a modal's content height when its body is "reloaded"
@@ -16776,23 +7719,7 @@ const App = (window.App = {
 
     const bodyInnerHtml = this._buildPortraitHistoryBody(normalized);
 
-    const modalHTML = `
-      <div id="portraitHistoryModal" class="modal show" onclick="App.closePortraitHistory()">
-        <div class="modal-content portrait-history-modal" onclick="event.stopPropagation();">
-          <div class="modal-header">
-            <h2 class="modal-title">Portrait History</h2>
-            <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>
-          </div>
-          <div class="modal-body">
-            ${bodyInnerHtml}
-          </div>
-          <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" onclick="App.closePortraitHistory()">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmPortraitHistorySelection()">USE SELECTED</button>
-          </div>
-        </div>
-      </div>
-    `;
+    const modalHTML = `<div id="portraitHistoryModal"class="modal show"onclick="App.closePortraitHistory()"><div class="modal-content portrait-history-modal"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">Portrait History</h2><button class="modal-close"onclick="App.closePortraitHistory()">&times;</button></div><div class="modal-body">${bodyInnerHtml}</div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="App.closePortraitHistory()">CANCEL</button><button class="terminal-btn terminal-btn-primary"onclick="App.confirmPortraitHistorySelection()">USE SELECTED</button></div></div></div>`;
 
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', modalHTML);
@@ -17138,16 +8065,9 @@ const App = (window.App = {
 
     // If this is the only portrait, show "create new" prompt instead of delete confirmation
     if (versions.length === 1) {
-      const createNewBodyHtml = `
-        <p class="terminal-text">
-          To delete this portrait, create a new one first.
-        </p>
-      `;
+      const createNewBodyHtml = `<p class="terminal-text">To delete this portrait,create a new one first.</p>`;
 
-      const createNewFooterHtml = `
-        <button class="terminal-btn" id="portrait-delete-cancel">CANCEL</button>
-        <button class="terminal-btn terminal-btn-primary" id="portrait-create-new">CREATE NEW</button>
-      `;
+      const createNewFooterHtml = `<button class="terminal-btn"id="portrait-delete-cancel">CANCEL</button><button class="terminal-btn terminal-btn-primary"id="portrait-create-new">CREATE NEW</button>`;
 
       this._animateModalContentResize('portraitHistoryModal', () => {
         if (modalTitle) modalTitle.textContent = 'Create a New Portrait?';
@@ -17194,16 +8114,9 @@ const App = (window.App = {
     }
 
     // Build the confirmation view using standard modal structure
-    const confirmationBodyHtml = `
-      <p class="terminal-text">
-        Delete this saved portrait version? This cannot be undone.
-      </p>
-    `;
+    const confirmationBodyHtml = `<p class="terminal-text">Delete this saved portrait version?This cannot be undone.</p>`;
 
-    const confirmationFooterHtml = `
-      <button class="terminal-btn" id="portrait-delete-cancel">NO</button>
-      <button class="terminal-btn terminal-btn-primary" id="portrait-delete-confirm">YES</button>
-    `;
+    const confirmationFooterHtml = `<button class="terminal-btn"id="portrait-delete-cancel">NO</button><button class="terminal-btn terminal-btn-primary"id="portrait-delete-confirm">YES</button>`;
 
     // Transform modal to confirmation view
     this._animateModalContentResize('portraitHistoryModal', () => {
@@ -17425,31 +8338,18 @@ const App = (window.App = {
     // Escape prompt text for safe display
     const escapedPrompt = (version.prompt || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-    const infoHeaderHtml = `
-      <h2 class="modal-title">Image Info</h2>
-      <button class="modal-close" onclick="App.closePortraitHistory()">&times;</button>
-    `;
+    const infoHeaderHtml = `<h2 class="modal-title">Image Info</h2><button class="modal-close"onclick="App.closePortraitHistory()">&times;</button>`;
 
     // Build the info sections
     let infoSections = '';
 
     // Date/Time
     if (dateTimeLabel) {
-      infoSections += `
-        <div class="image-info-row">
-          <span class="image-info-label">Created</span>
-          <span class="image-info-value">${dateTimeLabel}</span>
-        </div>
-      `;
+      infoSections += `<div class="image-info-row"><span class="image-info-label">Created</span><span class="image-info-value">${dateTimeLabel}</span></div>`;
     }
 
     // Style
-    infoSections += `
-      <div class="image-info-row">
-        <span class="image-info-label">Style</span>
-        <span class="image-info-value">${styleLabel}</span>
-      </div>
-    `;
+    infoSections += `<div class="image-info-row"><span class="image-info-label">Style</span><span class="image-info-value">${styleLabel}</span></div>`;
 
     // Model and Quality
     if (modelLabel) {
@@ -17457,45 +8357,20 @@ const App = (window.App = {
       if (qualityLabel) {
         modelDisplay = modelDisplay + ' (' + qualityLabel + ')';
       }
-      infoSections += `
-        <div class="image-info-row">
-          <span class="image-info-label">Model</span>
-          <span class="image-info-value">${modelDisplay}</span>
-        </div>
-      `;
+      infoSections += `<div class="image-info-row"><span class="image-info-label">Model</span><span class="image-info-value">${modelDisplay}</span></div>`;
     }
 
     // Prompt section
     let promptSection = '';
     if (escapedPrompt) {
-      promptSection = `
-        <div class="image-info-prompt-section">
-          <div class="image-info-prompt-label">Prompt</div>
-          <pre class="terminal-text portrait-prompt-display">${escapedPrompt}</pre>
-        </div>
-      `;
+      promptSection = `<div class="image-info-prompt-section"><div class="image-info-prompt-label">Prompt</div><pre class="terminal-text portrait-prompt-display">${escapedPrompt}</pre></div>`;
     } else {
-      promptSection = `
-        <div class="image-info-prompt-section">
-          <div class="image-info-prompt-label">Prompt</div>
-          <p class="terminal-text-dim">No prompt saved for this portrait.</p>
-        </div>
-      `;
+      promptSection = `<div class="image-info-prompt-section"><div class="image-info-prompt-label">Prompt</div><p class="terminal-text-dim">No prompt saved for this portrait.</p></div>`;
     }
 
-    const infoBodyHtml = `
-      <div class="image-info-container">
-        <div class="image-info-metadata">
-          ${infoSections}
-        </div>
-        ${promptSection}
-      </div>
-    `;
+    const infoBodyHtml = `<div class="image-info-container"><div class="image-info-metadata">${infoSections}</div>${promptSection}</div>`;
 
-    const infoFooterHtml = `
-      <button class="terminal-btn" id="portrait-info-back">BACK</button>
-      ${escapedPrompt ? '<button class="terminal-btn" id="portrait-info-copy">COPY PROMPT</button>' : ''}
-    `;
+    const infoFooterHtml = `<button class="terminal-btn"id="portrait-info-back">BACK</button>${escapedPrompt?'<button class="terminal-btn" id="portrait-info-copy">COPY PROMPT</button>':''}`;
 
     // Transform modal to info view
     this._animateModalContentResize('portraitHistoryModal', () => {
@@ -17681,15 +8556,15 @@ const App = (window.App = {
   },
 
   async openPromptModal(character) {
-    // Show only the character description to the user (not the rendering instructions)
-    const defaultPrompt = AIService.buildCharacterDescription
-      ? AIService.buildCharacterDescription(character)
-      : ''; // backwards compat if renamed
-    
-    // Get active style from portrait version or user's saved preference
+    // Use the stored characterDescription from the active portrait version if available.
+    // This preserves the exact prompt the user used (or was auto-generated) for the
+    // current portrait, allowing them to regenerate with a different style.
+    // Fall back to buildCharacterDescription() for older portraits without this field.
+    let defaultPrompt = '';
     let activeStyle = null;
+    
     try {
-      // Check if character has an active portrait version with a style
+      // Check if character has an active portrait version with characterDescription/style
       const metadata = character.portraitMetadata || {};
       const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
       if (versions.length) {
@@ -17697,57 +8572,40 @@ const App = (window.App = {
         let active =
           (activeId && versions.find((v) => v && v.id === activeId)) ||
           versions[versions.length - 1];
+        // Get the characterDescription from the active version if available
+        if (active && active.characterDescription) {
+          defaultPrompt = active.characterDescription;
+        }
+        // Get the style from the active version if available
         if (active && active.style) {
           activeStyle = active.style;
         }
       }
-      // Fall back to user's saved preference
+      // Fall back to user's saved preference for style
       if (!activeStyle && window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
         activeStyle = StorageService.getPortraitPromptTheme();
       }
     } catch (e) {
       // Non-fatal
     }
+    
+    // Fallback: if no stored characterDescription, generate one from character data
+    if (!defaultPrompt) {
+      defaultPrompt = AIService.buildCharacterDescription
+        ? AIService.buildCharacterDescription(character)
+        : '';
+    }
 
-    const modalHTML = `
-      <div id="promptModal" class="modal show" onclick="App.closePromptModal(false)">
-        <div class="modal-content portrait-customize-modal" onclick="event.stopPropagation();">
-          <div class="modal-header">
-            <h2 class="modal-title">★ Customize AI Portrait</h2>
-            <button class="modal-close" onclick="App.closePromptModal(false)">&times;</button>
-          </div>
-          <div class="modal-body">
-            <div class="portrait-style-row">
-              <div class="portrait-style-label">Style</div>
-              <div class="selector-shell selector-shell--listbox portrait-style-selector" id="builderPortraitStyleShell">
-                <button 
-                  type="button"
-                  class="terminal-btn selector-trigger"
-                  id="builderPortraitStyleTrigger"
-                  aria-haspopup="listbox"
-                  aria-expanded="false"
-                  onclick="CharacterSheet.toggleSelectorMenu(this)"
-                >
-                  <span class="selector-trigger-label" id="builderPortraitStyleLabel">Cinematic inks</span>
-                </button>
-                <div class="selector-menu portrait-style-menu" id="builderPortraitStyleMenu" role="listbox" aria-label="Portrait style" aria-hidden="true">
-                  <!-- Options populated by JS -->
-                </div>
-              </div>
-            </div>
-            <textarea
-              class="terminal-textarea portrait-prompt-textarea"
-              id="custom-prompt"
-              placeholder="Enter custom description..."
-            >${defaultPrompt}</textarea>
-          </div>
-          <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" onclick="App.surpriseMePortrait()">SURPRISE ME</button>
-            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmPromptModal()">GENERATE PORTRAIT</button>
-          </div>
-        </div>
-      </div>
-    `;
+    const modalHTML = `<div id="promptModal"class="modal show"onclick="App.closePromptModal(false)"><div class="modal-content portrait-customize-modal"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">★ Customize AI Portrait</h2><button class="modal-close"onclick="App.closePromptModal(false)">&times;</button></div><div class="modal-body"><div class="portrait-style-row"><div class="portrait-style-label">Style</div><div class="selector-shell selector-shell--listbox portrait-style-selector"id="builderPortraitStyleShell"><button
+type="button"
+class="terminal-btn selector-trigger"
+id="builderPortraitStyleTrigger"
+aria-haspopup="listbox"
+aria-expanded="false"
+onclick="CharacterSheet.toggleSelectorMenu(this)"><span class="selector-trigger-label"id="builderPortraitStyleLabel">Cinematic inks</span></button><div class="selector-menu portrait-style-menu"id="builderPortraitStyleMenu"role="listbox"aria-label="Portrait style"aria-hidden="true"><!--Options populated by JS--></div></div></div><textarea
+class="terminal-textarea portrait-prompt-textarea"
+id="custom-prompt"
+placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="App.surpriseMePortrait()">SURPRISE ME</button><button class="terminal-btn terminal-btn-primary"onclick="App.confirmPromptModal()">GENERATE PORTRAIT</button></div></div></div>`;
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', modalHTML);
 
@@ -17944,7 +8802,7 @@ const App = (window.App = {
           'Create a high-contrast black-and-white fantasy illustration.',
           'Use bold shadow shapes, strong silhouettes, and clean white highlights.',
           'Include some controlled, directional hatching to define form (light mid-tone texture only).',
-          `Pose: ${posePrompt}`,
+          `Pose:${posePrompt}`,
           // cameraPrompt,
           'Background should be simple, entirely black, and free of symbols or text.',
           'Overall mood: classic fantasy ink illustration with a dramatic, mythic tone.',
@@ -17961,7 +8819,7 @@ const App = (window.App = {
       let fullPrompt = [customPrompt, ...renderingInstructions].join(' ');
       
       if (fullPrompt.length > MAX_PROMPT_LENGTH) {
-        console.warn(`Portrait prompt exceeds ${MAX_PROMPT_LENGTH} chars (${fullPrompt.length}), truncating...`);
+        console.warn(`Portrait prompt exceeds ${MAX_PROMPT_LENGTH}chars(${fullPrompt.length}),truncating...`);
         // Try to keep the custom prompt intact and reduce style instructions
         const styleInstructionsText = renderingInstructions.join(' ');
         const availableForStyle = MAX_PROMPT_LENGTH - customPrompt.length - 50; // 50 chars buffer
@@ -17975,7 +8833,7 @@ const App = (window.App = {
           const minimalStyle = 'High-contrast black-and-white fantasy ink illustration.';
           fullPrompt = minimalStyle + ' ' + customPrompt.substring(0, MAX_PROMPT_LENGTH - minimalStyle.length - 1);
         }
-        console.log(`Truncated prompt length: ${fullPrompt.length}`);
+        console.log(`Truncated prompt length:${fullPrompt.length}`);
       }
       
       // Generate custom portrait with full prompt (including hidden rendering instructions)
@@ -18013,6 +8871,7 @@ const App = (window.App = {
             {
               source: 'custom-ai',
               prompt: fullPrompt,
+              characterDescription: customPrompt,
               style: selectedStyle,
               model: generationModel,
               quality: generationQuality,
@@ -18065,7 +8924,7 @@ const App = (window.App = {
         if (error.promptAnalysis && error.promptAnalysis.hasKnownProblematicTerms) {
           const issues = error.promptAnalysis.potentialIssues;
           const categories = issues.map(i => i.category).join(', ');
-          userMessage += `Possible triggers: ${categories}. `;
+          userMessage += `Possible triggers:${categories}.`;
         }
         
         userMessage += 'Check browser console for detailed analysis and suggestions.';
@@ -18360,7 +9219,7 @@ const App = (window.App = {
     // Ensure character has a stable UID for cross-app identity
     let stableUid = character.characterUid;
     if (!stableUid) {
-      stableUid = `danddy_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      stableUid = `danddy_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
       if (window.CharacterState) {
         window.CharacterState.updateCharacter({ characterUid: stableUid });
       } else {
@@ -18497,7 +9356,7 @@ const App = (window.App = {
     if (!narratorPanel) return;
     narratorPanel.insertAdjacentHTML(
       'beforeend',
-      Components.renderNarratorMessage(`<span class="text-warning">[ SYSTEM ] ${text}</span>`),
+      Components.renderNarratorMessage(`<span class="text-warning">[SYSTEM]${text}</span>`),
     );
     Utils.scrollToBottom(true);
   },
@@ -18536,14 +9395,7 @@ const App = (window.App = {
 
       // Inner structure: message + dismiss "X" pinned to the right in its own wrapper
       // The inner span gets the shared spin treatment used elsewhere in the app.
-      toast.innerHTML = `
-        <span class="toast-message"></span>
-        <div class="toast-dismiss-wrapper">
-          <button type="button" class="toast-dismiss" aria-label="Dismiss notification">
-            <span class="toast-dismiss-icon">&times;</span>
-          </button>
-        </div>
-      `;
+      toast.innerHTML = `<span class="toast-message"></span><div class="toast-dismiss-wrapper"><button type="button"class="toast-dismiss"aria-label="Dismiss notification"><span class="toast-dismiss-icon">&times;</span></button></div>`;
 
       const container = document.querySelector('.terminal-container') || document.body;
       container.appendChild(toast);
@@ -18616,41 +9468,13 @@ const App = (window.App = {
 
     const currentLevel = character.level || 1;
 
-    const modalHTML = `
-      <div id="levelModal" class="modal show" onclick="App.closeLevelModal()">
-        <div class="modal-content" onclick="event.stopPropagation();">
-          <div class="modal-header">
-            <h2 class="modal-title">Change Character Level</h2>
-            <button class="modal-close" onclick="App.closeLevelModal()">&times;</button>
-          </div>
-          <div class="modal-body">
-            <p class="terminal-text">
-              Changing level will <span class="terminal-text-strong">adjust your ability scores and hit points</span>
-              as if your character had gained Ability Score Increases at higher levels.
-            </p>
-            <p class="terminal-text-small terminal-text-dim">
-              This cannot be undone. Choose a new level between 1 and 99.
-            </p>
-            <div class="level-modal-row modal-section">
-              <label for="level-input" class="terminal-text-small modal-section-label">New Level:</label>
-              <input
-                type="number"
-                id="level-input"
-                class="terminal-input"
-                min="1"
-                max="99"
-                value="${currentLevel}"
-              >
-            </div>
-            <div id="level-modal-error" class="terminal-text-error level-modal-error is-hidden"></div>
-          </div>
-          <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" onclick="App.closeLevelModal()">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmLevelModal()">APPLY LEVEL</button>
-          </div>
-        </div>
-      </div>
-    `;
+    const modalHTML = `<div id="levelModal"class="modal show"onclick="App.closeLevelModal()"><div class="modal-content"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">Change Character Level</h2><button class="modal-close"onclick="App.closeLevelModal()">&times;</button></div><div class="modal-body"><p class="terminal-text">Changing level will<span class="terminal-text-strong">adjust your ability scores and hit points</span>as if your character had gained Ability Score Increases at higher levels.</p><p class="terminal-text-small terminal-text-dim">This cannot be undone.Choose a new level between 1 and 99.</p><div class="level-modal-row modal-section"><label for="level-input"class="terminal-text-small modal-section-label">New Level:</label><input
+type="number"
+id="level-input"
+class="terminal-input"
+min="1"
+max="99"
+value="${currentLevel}"></div><div id="level-modal-error"class="terminal-text-error level-modal-error is-hidden"></div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="App.closeLevelModal()">CANCEL</button><button class="terminal-btn terminal-btn-primary"onclick="App.confirmLevelModal()">APPLY LEVEL</button></div></div></div>`;
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', modalHTML);
 
@@ -18805,7 +9629,7 @@ const App = (window.App = {
     });
 
     this.showSystemMessage(
-      `Level set to ${newLevel}. Ability scores and hit points have been re-rolled.`,
+      `Level set to ${newLevel}.Ability scores and hit points have been re-rolled.`,
     );
 
     // Persist level/stat changes so manager stays in sync
@@ -18819,36 +9643,12 @@ const App = (window.App = {
 
     const currentName = character.name || '';
 
-    const modalHTML = `
-      <div id="nameModal" class="modal show" onclick="App.closeNameModal()">
-        <div class="modal-content" onclick="event.stopPropagation();">
-          <div class="modal-header">
-            <h2 class="modal-title">Change Character Name</h2>
-            <button class="modal-close" onclick="App.closeNameModal()">&times;</button>
-          </div>
-          <div class="modal-body">
-            <p class="terminal-text">
-              Enter a new name for your character.
-            </p>
-            <div class="name-modal-row modal-section">
-              <label for="name-input" class="terminal-text-small modal-section-label">New Name:</label>
-              <input
-                type="text"
-                id="name-input"
-                class="terminal-input name-modal-input"
-                value="${currentName}"
-                placeholder="Enter character name"
-              >
-            </div>
-            <div id="name-modal-error" class="terminal-text-error name-modal-error is-hidden"></div>
-          </div>
-          <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" onclick="App.closeNameModal()">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmNameModal()">APPLY NAME</button>
-          </div>
-        </div>
-      </div>
-    `;
+    const modalHTML = `<div id="nameModal"class="modal show"onclick="App.closeNameModal()"><div class="modal-content"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">Change Character Name</h2><button class="modal-close"onclick="App.closeNameModal()">&times;</button></div><div class="modal-body"><p class="terminal-text">Enter a new name for your character.</p><div class="name-modal-row modal-section"><label for="name-input"class="terminal-text-small modal-section-label">New Name:</label><input
+type="text"
+id="name-input"
+class="terminal-input name-modal-input"
+value="${currentName}"
+placeholder="Enter character name"></div><div id="name-modal-error"class="terminal-text-error name-modal-error is-hidden"></div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="App.closeNameModal()">CANCEL</button><button class="terminal-btn terminal-btn-primary"onclick="App.confirmNameModal()">APPLY NAME</button></div></div></div>`;
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', modalHTML);
 
@@ -18937,7 +9737,7 @@ const App = (window.App = {
     narratorPanel.insertAdjacentHTML(
       'beforeend',
       Components.renderNarratorMessage(
-        `Character renamed to "${newName}". Identity crisis averted.`,
+        `Character renamed to"${newName}".Identity crisis averted.`,
       ),
     );
     Utils.scrollToBottom(true);
@@ -19021,6 +9821,10 @@ const App = (window.App = {
                   (AIService.buildPortraitPrompt &&
                     AIService.buildPortraitPrompt(currentChar)) ||
                   null,
+                characterDescription:
+                  (AIService.buildCharacterDescription &&
+                    AIService.buildCharacterDescription(currentChar)) ||
+                  null,
                 style: quickStyle,
                 model: generationModel,
                 quality: generationQuality,
@@ -19057,7 +9861,7 @@ const App = (window.App = {
         if (error.promptAnalysis && error.promptAnalysis.hasKnownProblematicTerms) {
           const issues = error.promptAnalysis.potentialIssues;
           const categories = issues.map(i => i.category).join(', ');
-          userMessage += `Possible triggers: ${categories}. `;
+          userMessage += `Possible triggers:${categories}.`;
         }
         
         userMessage += 'Check browser console for detailed analysis and suggestions.';
@@ -19326,7 +10130,7 @@ const App = (window.App = {
           narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(
           spellsEl,
-          `> Auto-selected ${spells.cantrips.length} cantrip${spells.cantrips.length !== 1 ? 's' : ''} and ${spells.firstLevel.length} 1st level spell${spells.firstLevel.length !== 1 ? 's' : ''} for your ${cls.name}.`,
+          `>Auto-selected ${spells.cantrips.length}cantrip${spells.cantrips.length!==1?'s':''}and ${spells.firstLevel.length}1st level spell${spells.firstLevel.length!==1?'s':''}for your ${cls.name}.`,
         );
         Utils.scrollToBottom(true);
         
@@ -19435,23 +10239,7 @@ const App = (window.App = {
     // arrow keys don't move focus behind the modal.
     KeyboardNav.deactivate();
 
-    const overlayHTML = `
-      <div id="confirmationModal" class="modal show confirmation-overlay">
-        <div class="modal-content" onclick="event.stopPropagation();">
-          <div class="modal-header">
-            <h2 class="modal-title">Confirm</h2>
-          </div>
-          <div class="modal-body">
-            <p class="terminal-text">
-              ${message}
-            </p>
-          </div>
-          <div class="modal-footer modal-footer-end">
-            <button class="${secondaryClass}" id="confirm-no">${secondaryLabel}</button>
-            <button class="${primaryClass}" id="confirm-yes">${primaryLabel}</button>
-          </div>
-        </div>
-      </div>`;
+    const overlayHTML = `<div id="confirmationModal"class="modal show confirmation-overlay"><div class="modal-content"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">Confirm</h2></div><div class="modal-body"><p class="terminal-text">${message}</p></div><div class="modal-footer modal-footer-end"><button class="${secondaryClass}"id="confirm-no">${secondaryLabel}</button><button class="${primaryClass}"id="confirm-yes">${primaryLabel}</button></div></div></div>`;
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', overlayHTML);
 
@@ -20242,150 +11030,18 @@ async function handleRegister() {
             
             // Show notification in Builder's terminal
             if (window.App && window.App.showNotification) {
-                window.App.showNotification(`✓ Registered as ${email}`, 'success');
-            }
-        } else {
-            errorEl.textContent = result.error || 'Registration failed';
-            errorEl.classList.remove('is-hidden');
-        }
-    } catch (error) {
-        errorEl.textContent = 'Registration failed. Please try again.';
-        errorEl.classList.remove('is-hidden');
-    }
-}
-
-function handleLogout() {
-    if (!window.App || !window.App.showConfirmationOverlay) {
-        // Fallback to immediate logout if confirmation UI is not available
-        window.AuthService.logout();
-        updateAuthUI();
-        
-        // Show login screen after logout
-        if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
-            window.AuthUI.showLogin(
-                () => location.reload(),  // onSuccess
-                () => {},                 // onSwitchToRegister (handled within AuthUI)
-                () => {}                  // onGuestMode
-            );
-        }
-        return;
-    }
-
-    window.App.showConfirmationOverlay(
-        'Log out? Your character will be saved to the cloud before logging out.',
-        async () => {
-            // Save current character to cloud before logout if there is one
-            if (window.CharacterState && window.CharacterState.current.character.name) {
-                await saveCurrentCharacterToCloud();
-            }
-
-            window.AuthService.logout();
-            updateAuthUI();
-            console.log('✓ Logged out');
-
-            if (window.App && window.App.showNotification) {
-                window.App.showNotification('✓ Logged out', 'success');
-            }
-            
-            // Show login screen after logout
-            if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
-                window.AuthUI.showLogin(
-                    () => location.reload(),  // onSuccess
-                    () => {},                 // onSwitchToRegister (handled within AuthUI)
-                    () => {}                  // onGuestMode
-                );
-            }
-        },
-    );
-}
-
-function updateAuthUI() {
-    const authBtn = document.getElementById('authBtn');
-    const userInfoDisplay = document.getElementById('userInfoDisplay');
-    const userStatusIcon = document.getElementById('userStatusIcon');
-    const userStatusText = document.getElementById('userStatusText');
-
-    // In the integrated app, the builder surface no longer exposes login/logout
-    // UI. If these elements are missing, simply skip any header updates.
-    if (!authBtn || !userInfoDisplay || !userStatusIcon || !userStatusText) {
-        return;
-    }
-
-    if (window.AuthService && window.AuthService.isAuthenticated()) {
-        const user = window.AuthService.getCurrentUser();
-        userStatusIcon.textContent = '☁';
-        userStatusText.textContent = user ? user.email : 'Logged In';
-        authBtn.textContent = 'LOGOUT';
-        authBtn.onclick = handleLogout;
-    } else {
-        userStatusIcon.textContent = '▣';
-        userStatusText.textContent = 'Local Only';
-        authBtn.textContent = 'LOGIN';
-        authBtn.onclick = showAuthModal;
-    }
-}
-
-// ========================================
-// CLOUD STORAGE INTEGRATION
-// ========================================
-
-async function saveCurrentCharacterToCloud() {
-    try {
-        if (!window.AuthService || !window.AuthService.isAuthenticated()) {
-            console.log('💾 Not logged in - character saved to localStorage only');
-            return false;
-        }
-
-        if (!window.CharacterCloudStorage) {
-            console.error('☁️ CharacterCloudStorage not available');
-            return false;
-        }
-
-        const character = window.CharacterState.current.character;
-        
-        // Don't save if no name yet (character not complete)
-        if (!character.name) {
-            console.log('☁️ Character has no name yet - skipping cloud save');
-            return false;
-        }
-
-        console.log('☁️ Saving character to cloud:', character.name);
-
-        // Check if this character already exists in cloud (by characterUid)
-        const allCloudChars = await window.CharacterCloudStorage.getAll();
-        const existingChar = allCloudChars.find(c => 
-            c.characterUid === character.characterUid ||
-            c.metadata?.characterUid === character.characterUid
-        );
-
-        if (existingChar) {
-            // Update existing
-            console.log('☁️ Updating existing character in cloud:', existingChar.id);
-            await window.CharacterCloudStorage.update(existingChar.id, character);
-            console.log('☁️ Character updated in cloud successfully');
-        } else {
-            // Create new
-            console.log('☁️ Creating new character in cloud');
-            const result = await window.CharacterCloudStorage.add(character);
-            console.log('☁️ Character created in cloud with ID:', result.id);
-        }
-
-        return true;
-    } catch (error) {
-        console.error('☁️ Failed to save character to cloud:', error);
-        return false;
-    }
-}
-
-// ========================================
-// INITIALIZATION
-// ========================================
-
-// Initialize auth UI when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateAuthUI);
-} else {
-    updateAuthUI();
-}
-
+                window.App.showNotification(`✓ Registered as ${email}`,'success');}}else{errorEl.textContent=result.error||'Registration failed';errorEl.classList.remove('is-hidden');}}catch(error){errorEl.textContent='Registration failed. Please try again.';errorEl.classList.remove('is-hidden');}}
+function handleLogout(){if(!window.App||!window.App.showConfirmationOverlay){window.AuthService.logout();updateAuthUI();if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>location.reload(),()=>{},()=>{});}
+return;}
+window.App.showConfirmationOverlay('Log out? Your character will be saved to the cloud before logging out.',async()=>{if(window.CharacterState&&window.CharacterState.current.character.name){await saveCurrentCharacterToCloud();}
+window.AuthService.logout();updateAuthUI();console.log('✓ Logged out');if(window.App&&window.App.showNotification){window.App.showNotification('✓ Logged out','success');}
+if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>location.reload(),()=>{},()=>{});}},);}
+function updateAuthUI(){const authBtn=document.getElementById('authBtn');const userInfoDisplay=document.getElementById('userInfoDisplay');const userStatusIcon=document.getElementById('userStatusIcon');const userStatusText=document.getElementById('userStatusText');if(!authBtn||!userInfoDisplay||!userStatusIcon||!userStatusText){return;}
+if(window.AuthService&&window.AuthService.isAuthenticated()){const user=window.AuthService.getCurrentUser();userStatusIcon.textContent='☁';userStatusText.textContent=user?user.email:'Logged In';authBtn.textContent='LOGOUT';authBtn.onclick=handleLogout;}else{userStatusIcon.textContent='▣';userStatusText.textContent='Local Only';authBtn.textContent='LOGIN';authBtn.onclick=showAuthModal;}}
+async function saveCurrentCharacterToCloud(){try{if(!window.AuthService||!window.AuthService.isAuthenticated()){console.log('💾 Not logged in - character saved to localStorage only');return false;}
+if(!window.CharacterCloudStorage){console.error('☁️ CharacterCloudStorage not available');return false;}
+const character=window.CharacterState.current.character;if(!character.name){console.log('☁️ Character has no name yet - skipping cloud save');return false;}
+console.log('☁️ Saving character to cloud:',character.name);const allCloudChars=await window.CharacterCloudStorage.getAll();const existingChar=allCloudChars.find(c=>c.characterUid===character.characterUid||c.metadata?.characterUid===character.characterUid);if(existingChar){console.log('☁️ Updating existing character in cloud:',existingChar.id);await window.CharacterCloudStorage.update(existingChar.id,character);console.log('☁️ Character updated in cloud successfully');}else{console.log('☁️ Creating new character in cloud');const result=await window.CharacterCloudStorage.add(character);console.log('☁️ Character created in cloud with ID:',result.id);}
+return true;}catch(error){console.error('☁️ Failed to save character to cloud:',error);return false;}}
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',updateAuthUI);}else{updateAuthUI();}
 console.log('☁️ Character Builder Cloud Integration loaded');

@@ -2615,16 +2615,15 @@ async function generatePortraitForCharacter(id) {
     currentPortraitCharacterId = id;
     
     // Build default prompt:
-    // Show only the CHARACTER DESCRIPTION in the modal (not the full prompt with
-    // style instructions). This matches the builder behavior and prevents
-    // style/pose/scene instructions from compounding on each regeneration.
-    // The rendering instructions (Pose/STYLE/Scene) are added fresh when the
-    // user clicks "Generate" based on their selected style dropdown.
+    // Use the stored characterDescription from the active portrait version if available.
+    // This preserves the exact prompt the user used (or was auto-generated) for the
+    // current portrait, allowing them to regenerate with a different style.
+    // Fall back to buildCharacterDescription() for older portraits without this field.
     let defaultPrompt = '';
     let activeStyle = null;
     
     try {
-        // Get the style from the active portrait version (if any)
+        // Get the characterDescription and style from the active portrait version (if any)
         try {
             const metadata = character.portraitMetadata || {};
             const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
@@ -2633,6 +2632,10 @@ async function generatePortraitForCharacter(id) {
                 let active =
                     (activeId && versions.find((v) => v && v.id === activeId)) ||
                     versions[versions.length - 1];
+                // Get the characterDescription from the active version if available
+                if (active && active.characterDescription) {
+                    defaultPrompt = active.characterDescription;
+                }
                 // Get the style from the active version if available
                 if (active && active.style) {
                     activeStyle = active.style;
@@ -2642,12 +2645,14 @@ async function generatePortraitForCharacter(id) {
             // Non-fatal – continue to fallback below.
         }
 
-        // Always use just the character description (no style/pose/scene instructions)
-        // This prevents style instructions from compounding on each regeneration.
-        if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
-            defaultPrompt = AIService.buildCharacterDescription(character);
-        } else {
-            defaultPrompt = `${character.race}\u0020${character.class}`;
+        // Fallback: if no stored characterDescription, generate one from character data
+        // This handles older portraits that don't have characterDescription stored.
+        if (!defaultPrompt) {
+            if (window.AIService && typeof AIService.buildCharacterDescription === 'function') {
+                defaultPrompt = AIService.buildCharacterDescription(character);
+            } else {
+                defaultPrompt = `${character.race}\u0020${character.class}`;
+            }
         }
     } catch (e) {
         defaultPrompt = `${character.race}\u0020${character.class}`;
@@ -3051,6 +3056,7 @@ async function confirmGeneratePortrait() {
                 {
                     source: 'custom-ai',
                     prompt: fullPrompt,
+                    characterDescription: customPrompt,
                     style: managerStyle,
                     model: generationModel,
                     quality: generationQuality,
