@@ -2664,7 +2664,9 @@ async function generatePortraitForCharacter(id) {
             // Non-fatal
         }
     }
-    populatePortraitStyleDropdown(activeStyle);
+    // Await the async dropdown population to ensure API sync completes first
+    // This ensures global/shared styles are loaded for all authenticated users
+    await populatePortraitStyleDropdown(activeStyle);
     
     document.getElementById('portraitPrompt').value = defaultPrompt;
     const promptModal = document.getElementById('portraitPromptModal');

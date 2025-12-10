@@ -290,14 +290,26 @@ function formatStyleLabelBuilder(idOrLabel) {
 /**
  * Populate the style listbox menu in the portrait prompt modal.
  * Uses the same selector pattern as the settings modal and manager.
+ * 
+ * This is now async to properly wait for API sync before fetching themes.
  */
-function populateBuilderPortraitStyleDropdown(activeStyle) {
+async function populateBuilderPortraitStyleDropdown(activeStyle) {
   const menu = document.getElementById('builderPortraitStyleMenu');
   const label = document.getElementById('builderPortraitStyleLabel');
   if (!menu) return null;
 
   // Clear existing options
   menu.innerHTML = '';
+
+  // Wait for API sync to complete before fetching themes
+  // This ensures global styles are loaded for authenticated users
+  if (window.PortraitPrompt && typeof PortraitPrompt.syncFromAPI === 'function') {
+    try {
+      await PortraitPrompt.syncFromAPI();
+    } catch (e) {
+      console.warn('populateBuilderPortraitStyleDropdown: API sync failed', e);
+    }
+  }
 
   // Get available themes from PortraitPrompt
   let themes = [];
@@ -3599,7 +3611,7 @@ const App = (window.App = {
     }
   },
 
-  openPromptModal(character) {
+  async openPromptModal(character) {
     // Show only the character description to the user (not the rendering instructions)
     const defaultPrompt = AIService.buildCharacterDescription
       ? AIService.buildCharacterDescription(character)
@@ -3670,8 +3682,9 @@ const App = (window.App = {
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Populate the style dropdown
-    populateBuilderPortraitStyleDropdown(activeStyle);
+    // Populate the style dropdown (await to ensure API sync completes first)
+    // This ensures global/shared styles are loaded for all authenticated users
+    await populateBuilderPortraitStyleDropdown(activeStyle);
 
     const modal = document.getElementById('promptModal');
     if (modal && Utils.focusFirstFieldInModal) {
