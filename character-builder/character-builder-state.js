@@ -133,12 +133,34 @@ const CharacterState = (window.CharacterState = {
 
   // ===== Session Persistence =====
 
+  // Get the current user's identifier (for session ownership)
+  _getCurrentUserId() {
+    // AuthService may not be loaded yet in character-builder context
+    if (typeof AuthService !== 'undefined' && AuthService.getCurrentUser) {
+      const user = AuthService.getCurrentUser();
+      // Use the user's ID if available, fall back to email
+      return user ? (user.id || user.email || null) : null;
+    }
+    return null;
+  },
+
   // Check if there's an in-progress session to resume
   hasSession() {
     try {
       const raw = localStorage.getItem(SESSION_STORAGE_KEY);
       if (!raw) return false;
       const session = JSON.parse(raw);
+      
+      // Check if this session belongs to the current user
+      const currentUserId = this._getCurrentUserId();
+      const sessionUserId = session._userId !== undefined ? session._userId : null;
+      
+      // If user IDs don't match, don't offer to resume
+      // (null matches null for anonymous sessions)
+      if (currentUserId !== sessionUserId) {
+        return false;
+      }
+      
       // Consider it a valid session if we have meaningful progress
       // (past the intro, or have any character data)
       const hasProgress = session.currentQuestionId && session.currentQuestionId !== 'intro';
@@ -159,6 +181,14 @@ const CharacterState = (window.CharacterState = {
       const raw = localStorage.getItem(SESSION_STORAGE_KEY);
       if (!raw) return null;
       const session = JSON.parse(raw);
+      
+      // Only return preview if session belongs to current user
+      const currentUserId = this._getCurrentUserId();
+      const sessionUserId = session._userId !== undefined ? session._userId : null;
+      if (currentUserId !== sessionUserId) {
+        return null;
+      }
+      
       return {
         characterName: session.character?.name || null,
         race: session.character?.race || null,
@@ -177,6 +207,7 @@ const CharacterState = (window.CharacterState = {
       const toSave = {
         ...this.current,
         _savedAt: new Date().toISOString(),
+        _userId: this._getCurrentUserId(), // Track which user owns this session
       };
       localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(toSave));
     } catch (e) {

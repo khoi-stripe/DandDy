@@ -46,6 +46,13 @@
 
     logout() {
       this.clearToken();
+      // Clear any in-progress character builder session so it doesn't persist
+      // and get offered to a different user who logs in later
+      try {
+        global.localStorage.removeItem('danddy_builder_session');
+      } catch (e) {
+        // Ignore errors (e.g., if localStorage is unavailable)
+      }
     },
 
     // ===== Core HTTP helpers =====

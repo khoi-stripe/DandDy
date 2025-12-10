@@ -2422,8 +2422,10 @@ function formatStyleLabel(idOrLabel) {
  * Populate the style listbox menu in the portrait prompt modal.
  * Uses the same selector pattern as the settings modal.
  * Returns the currently selected/default style ID.
+ * 
+ * This is now async to properly wait for API sync before fetching themes.
  */
-function populatePortraitStyleDropdown(activeStyle) {
+async function populatePortraitStyleDropdown(activeStyle) {
     const menu = document.getElementById('portraitStyleMenu');
     const label = document.getElementById('portraitStyleLabel');
     if (!menu) return null;
@@ -2431,10 +2433,14 @@ function populatePortraitStyleDropdown(activeStyle) {
     // Clear existing options
     menu.innerHTML = '';
 
-    // Trigger API sync if not already done (in case dropdown opened before auto-sync)
+    // Wait for API sync to complete before fetching themes
+    // This ensures global styles are loaded for authenticated users
     if (window.PortraitPrompt && typeof PortraitPrompt.syncFromAPI === 'function') {
-        // Fire and forget - will populate cache for next render
-        PortraitPrompt.syncFromAPI();
+        try {
+            await PortraitPrompt.syncFromAPI();
+        } catch (e) {
+            console.warn('populatePortraitStyleDropdown: API sync failed', e);
+        }
     }
 
     // Get available themes from PortraitPrompt
