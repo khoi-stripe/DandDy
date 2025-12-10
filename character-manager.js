@@ -2199,7 +2199,6 @@ function showPendingSharesModal(shares) {
         const level = char.level || 1;
         const safeBackground = Utils.escapeHtml(toTitleCase(char.background || '—'));
         const fromEmail = Utils.escapeHtml(share.from_email || 'Unknown');
-        const safeAlignment = Utils.escapeHtml(toTitleCase(char.alignment));
         
         // Format sex (title case)
         const safeSex = Utils.escapeHtml(toTitleCase(char.sex));
@@ -2238,10 +2237,6 @@ function showPendingSharesModal(shares) {
                   <div class="share-card-stat">
                     <span class="share-card-label">Level</span>
                     <span class="share-card-value">${level}</span>
-                  </div>
-                  <div class="share-card-stat">
-                    <span class="share-card-label">Alignment</span>
-                    <span class="share-card-value">${safeAlignment}</span>
                   </div>
                 </div>
                 <p class="share-card-from">
