@@ -268,6 +268,16 @@ const Components = (window.Components = {
 
     const currentPromptThemeId = getPortraitPromptTheme();
 
+    // Trigger API sync if not already done (in case settings opened before auto-sync)
+    if (
+      typeof window !== 'undefined' &&
+      window.PortraitPrompt &&
+      typeof window.PortraitPrompt.syncFromAPI === 'function'
+    ) {
+      // Fire and forget - will populate cache for next render
+      window.PortraitPrompt.syncFromAPI();
+    }
+
     let promptThemes = [];
     if (
       typeof window !== 'undefined' &&

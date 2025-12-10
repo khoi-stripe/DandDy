@@ -2071,6 +2071,12 @@ function populatePortraitStyleDropdown(activeStyle) {
     // Clear existing options
     menu.innerHTML = '';
 
+    // Trigger API sync if not already done (in case dropdown opened before auto-sync)
+    if (window.PortraitPrompt && typeof PortraitPrompt.syncFromAPI === 'function') {
+        // Fire and forget - will populate cache for next render
+        PortraitPrompt.syncFromAPI();
+    }
+
     // Get available themes from PortraitPrompt
     let themes = [];
     let defaultThemeId = 'cinematic-inks';

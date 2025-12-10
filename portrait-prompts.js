@@ -871,7 +871,8 @@
   // When the page loads and user is authenticated, sync entries from API
   // to memory cache so they're available for prompt generation.
   function initAutoSync() {
-    // Wait a moment for AuthService to initialize
+    // Wait a moment for AuthService to initialize, then sync
+    // Use a shorter delay (100ms) to ensure styles are available faster
     setTimeout(async () => {
       if (isAuthenticated()) {
         try {
@@ -880,7 +881,7 @@
           console.warn('PortraitPrompt: Auto-sync failed', e);
         }
       }
-    }, 500);
+    }, 100);
   }
 
   // Run auto-sync when DOM is ready
