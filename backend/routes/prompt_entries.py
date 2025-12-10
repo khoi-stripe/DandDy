@@ -83,31 +83,6 @@ def bulk_create_prompt_entries(
     return created_entries
 
 
-@router.get("/global", response_model=List[PromptEntryResponse])
-def get_global_prompt_entries(
-    kind: Optional[str] = Query(None, description="Filter by entry kind (race, class, pose, camera, scene, style)"),
-    db: Session = Depends(get_db),
-):
-    """
-    Get all global (admin-published) prompt entries.
-    This endpoint is PUBLIC - no authentication required.
-    Used by demo mode users to access shared styles, poses, cameras, etc.
-    """
-    query = db.query(PromptEntry).filter(PromptEntry.is_global == True)
-
-    if kind:
-        try:
-            kind_enum = EntryKind(kind)
-            query = query.filter(PromptEntry.kind == kind_enum)
-        except ValueError:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid kind: {kind}. Must be one of: race, class, pose, camera, scene, style",
-            )
-
-    return query.order_by(PromptEntry.kind, PromptEntry.key).all()
-
-
 @router.get("/", response_model=List[PromptEntryResponse])
 def get_prompt_entries(
     kind: Optional[str] = Query(None, description="Filter by entry kind (race, class, pose, camera, scene, style)"),
