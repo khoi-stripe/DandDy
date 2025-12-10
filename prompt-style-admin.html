@@ -254,6 +254,19 @@
     .storage-status.local-fallback .status-local {
       color: #ffcc80;
     }
+    /* Archived entries styling */
+    .archived-row td {
+      opacity: 0.5;
+    }
+    .archived-row:hover td {
+      opacity: 0.75;
+    }
+    .tag-archived {
+      background: #4a3c00 !important;
+      border-color: #a68f00 !important;
+      color: #ffd54f !important;
+      margin-left: 4px;
+    }
   </style>
 </head>
 <body>
@@ -304,6 +317,11 @@
             <option value="camera">Camera</option>
             <option value="scene">Scene</option>
             <option value="style">Style</option>
+          </select>
+          <select id="filterArchived">
+            <option value="active">Active only</option>
+            <option value="archived">Archived only</option>
+            <option value="all">All entries</option>
           </select>
           <input id="filterKey" placeholder="Filter key…" />
           <input id="filterText" placeholder="Filter description…" />

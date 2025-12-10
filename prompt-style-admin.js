@@ -51,8 +51,8 @@
   }
 
   // Fetch all entries from API
-  async function fetchEntriesFromAPI() {
-    const data = await apiRequest('/prompt-entries');
+  async function fetchEntriesFromAPI(includeArchived = true) {
+    const data = await apiRequest(`/prompt-entries?include_archived=${includeArchived}`);
     // Map API response to local format
     return (data || []).map(apiEntryToLocal);
   }
@@ -107,6 +107,7 @@
       styleDescription: apiEntry.style_description || '',
       backgroundDescription: apiEntry.background_description || '',
       isGlobal: apiEntry.is_global || false,
+      isArchived: apiEntry.is_archived || false,
       createdAt: apiEntry.created_at,
       updatedAt: apiEntry.updated_at,
     };
@@ -121,6 +122,7 @@
       style_description: entry.styleDescription || null,
       background_description: entry.backgroundDescription || null,
       is_global: entry.isGlobal || false,
+      is_archived: entry.isArchived || false,
     };
   }
 
@@ -539,11 +541,23 @@
     const kindFilter = $('filterKind')?.value || '';
     const keyFilter = $('filterKey')?.value || '';
     const textFilter = $('filterText')?.value || '';
+    const archivedFilter = $('filterArchived')?.value || 'active';
 
     const filtered = entries.filter((e) => {
       const kindOk = kindFilter ? e.kind === kindFilter : true;
+      
+      // Archive filter
+      let archiveOk = true;
+      if (archivedFilter === 'active') {
+        archiveOk = !e.isArchived;
+      } else if (archivedFilter === 'archived') {
+        archiveOk = e.isArchived;
+      }
+      // 'all' shows everything
+      
       return (
         kindOk &&
+        archiveOk &&
         matchesFilter(e.key, keyFilter) &&
         (matchesFilter(e.description, textFilter) ||
           matchesFilter(e.styleDescription, textFilter))
@@ -564,18 +578,26 @@
     filtered.forEach((entry) => {
       const tr = document.createElement('tr');
       tr.dataset.id = entry.id;
+      if (entry.isArchived) {
+        tr.classList.add('archived-row');
+      }
       const defaultBadge = entry.isDefault ? '<span class="tag-default">default</span>' : '';
       const globalBadge = entry.isGlobal ? '<span class="tag-default" style="background:#1b5e20;border-color:#4caf50;color:#a5d6a7;">global</span>' : '';
+      const archivedBadge = entry.isArchived ? '<span class="tag-default tag-archived">archived</span>' : '';
       const descText = entry.kind === 'style' ? (entry.styleDescription || '') : (entry.description || '');
       // Truncate long descriptions for display
       const truncatedDesc = descText.length > 80 ? descText.slice(0, 77) + '...' : descText;
+      const archiveBtn = entry.isArchived 
+        ? '<button type="button" class="btn btn-secondary btn-xs" data-action="unarchive">Restore</button>'
+        : '<button type="button" class="btn btn-secondary btn-xs" data-action="archive">Archive</button>';
       tr.innerHTML = `
-        <td>${entry.kind}${defaultBadge}${globalBadge}</td>
+        <td>${entry.kind}${defaultBadge}${globalBadge}${archivedBadge}</td>
         <td>${entry.key || ''}</td>
         <td title="${descText.replace(/"/g, '&quot;')}">${truncatedDesc}</td>
         <td>
           <div class="table-actions">
             <button type="button" class="btn btn-secondary btn-xs" data-action="edit">Edit</button>
+            ${archiveBtn}
             <button type="button" class="btn btn-danger btn-xs" data-action="delete">Delete</button>
           </div>
         </td>
@@ -1043,8 +1065,53 @@
 
         if (action === 'edit') {
           loadEntryIntoForm(entry);
+        } else if (action === 'archive' || action === 'unarchive') {
+          const newArchivedState = action === 'archive';
+          const confirmMsg = newArchivedState 
+            ? 'Archive this entry? It will be hidden from normal views but can be restored later.'
+            : 'Restore this entry from the archive?';
+          if (!confirm(confirmMsg)) return;
+          
+          console.log('Archive action:', action, 'newArchivedState:', newArchivedState, 'usingCloud:', usingCloud);
+          
+          // Update via API if using cloud
+          if (usingCloud) {
+            try {
+              console.log('Sending to API:', { ...entry, isArchived: newArchivedState });
+              const updated = await updateEntryViaAPI(id, { ...entry, isArchived: newArchivedState });
+              console.log('API response:', updated);
+              const idx = entries.findIndex((e) => e.id === id);
+              if (idx !== -1) {
+                entries[idx] = updated;
+              }
+              syncLocalCache(entries);
+            } catch (err) {
+              console.error('Failed to update via API:', err);
+              alert('Failed to update in cloud: ' + err.message);
+              return;
+            }
+          } else {
+            const idx = entries.findIndex((e) => e.id === id);
+            console.log('Local storage update, idx:', idx);
+            if (idx !== -1) {
+              entries[idx] = { ...entries[idx], isArchived: newArchivedState, updatedAt: new Date().toISOString() };
+              console.log('Updated entry:', entries[idx]);
+            }
+            saveEntriesToLocalStorage(entries);
+          }
+          renderTable(entries);
+          
+          // Show brief feedback
+          if (newArchivedState) {
+            // Automatically switch to show archived entries so user can see the result
+            const archivedFilter = $('filterArchived');
+            if (archivedFilter && archivedFilter.value === 'active') {
+              archivedFilter.value = 'all';
+              renderTable(entries);
+            }
+          }
         } else if (action === 'delete') {
-          if (!confirm('Delete this record?')) return;
+          if (!confirm('Delete this record permanently? This cannot be undone.')) return;
           
           // Delete via API if using cloud
           if (usingCloud) {
@@ -1072,10 +1139,11 @@
       });
     }
 
-    ['filterKind', 'filterKey', 'filterText'].forEach((id) => {
+    ['filterKind', 'filterKey', 'filterText', 'filterArchived'].forEach((id) => {
       const el = $(id);
       if (!el) return;
       el.addEventListener('input', () => renderTable(entries));
+      el.addEventListener('change', () => renderTable(entries));
     });
 
     const kindInput = $('kindInput');

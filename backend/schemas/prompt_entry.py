@@ -24,6 +24,7 @@ class PromptEntryBase(BaseModel):
 class PromptEntryCreate(PromptEntryBase):
     # Only admins can set is_global=True (enforced in route)
     is_global: bool = False
+    is_archived: bool = False
 
 
 class PromptEntryUpdate(BaseModel):
@@ -33,12 +34,14 @@ class PromptEntryUpdate(BaseModel):
     style_description: Optional[str] = None
     background_description: Optional[str] = None
     is_global: Optional[bool] = None  # Only admins can change this
+    is_archived: Optional[bool] = None
 
 
 class PromptEntryResponse(PromptEntryBase):
     id: int
     owner_id: int
     is_global: bool
+    is_archived: bool
     created_at: datetime
     updated_at: datetime
 

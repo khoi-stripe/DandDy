@@ -27,6 +27,7 @@ class PromptEntry(Base):
         Index("idx_prompt_entries_kind", "kind"),
         Index("idx_prompt_entries_key", "key"),
         Index("idx_prompt_entries_is_global", "is_global"),
+        Index("idx_prompt_entries_is_archived", "is_archived"),
     )
 
     id = Column(Integer, primary_key=True, index=True)
@@ -47,6 +48,9 @@ class PromptEntry(Base):
     
     # If true, this entry is visible to ALL users (admin-published)
     is_global = Column(Boolean, default=False, nullable=False)
+    
+    # If true, this entry is archived and hidden from normal views
+    is_archived = Column(Boolean, default=False, nullable=False)
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

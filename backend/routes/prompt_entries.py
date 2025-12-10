@@ -39,6 +39,7 @@ def create_prompt_entry(
         style_description=entry_data.style_description,
         background_description=entry_data.background_description,
         is_global=entry_is_global,
+        is_archived=entry_data.is_archived,
     )
 
     db.add(new_entry)
@@ -70,6 +71,7 @@ def bulk_create_prompt_entries(
             style_description=entry_data.style_description,
             background_description=entry_data.background_description,
             is_global=entry_is_global,
+            is_archived=entry_data.is_archived,
         )
         db.add(new_entry)
         created_entries.append(new_entry)
@@ -86,12 +88,14 @@ def bulk_create_prompt_entries(
 @router.get("/", response_model=List[PromptEntryResponse])
 def get_prompt_entries(
     kind: Optional[str] = Query(None, description="Filter by entry kind (race, class, pose, camera, scene, style)"),
+    include_archived: bool = Query(False, description="Include archived entries in results"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
     """
     Get prompt entries for the current user.
     Returns: user's own entries + all global entries (admin-published).
+    By default, archived entries are excluded.
     """
     # Get user's own entries OR global entries
     query = db.query(PromptEntry).filter(
@@ -100,6 +104,10 @@ def get_prompt_entries(
             PromptEntry.is_global == True
         )
     )
+    
+    # Filter out archived entries unless explicitly requested
+    if not include_archived:
+        query = query.filter(PromptEntry.is_archived == False)
 
     if kind:
         try:

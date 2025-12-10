@@ -122,6 +122,7 @@ def ensure_prompt_entry_columns():
     Lightweight migration helper for prompt_entries table:
     - Adds background_description column for style entries (scene description)
     - Adds is_global column for admin-published entries
+    - Adds is_archived column for archived entries
     """
     inspector = inspect(engine)
     if not inspector.has_table("prompt_entries"):
@@ -137,6 +138,11 @@ def ensure_prompt_entry_columns():
             conn.execute(text("ALTER TABLE prompt_entries ADD COLUMN is_global BOOLEAN DEFAULT FALSE"))
             # Backfill existing rows to have is_global = false
             conn.execute(text("UPDATE prompt_entries SET is_global = FALSE WHERE is_global IS NULL"))
+
+        if "is_archived" not in existing_cols:
+            conn.execute(text("ALTER TABLE prompt_entries ADD COLUMN is_archived BOOLEAN DEFAULT FALSE"))
+            # Backfill existing rows to have is_archived = false
+            conn.execute(text("UPDATE prompt_entries SET is_archived = FALSE WHERE is_archived IS NULL"))
 
         conn.commit()
 
