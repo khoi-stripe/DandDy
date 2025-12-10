@@ -228,8 +228,17 @@
       // Parse API entries directly into memory cache (skip localStorage)
       adminCache = parseEntriesToCache(apiEntries);
       
+      // Clear localStorage to prevent stale data from being used
+      // (authenticated users should always use API data)
+      try {
+        if (global.localStorage) {
+          global.localStorage.removeItem(ADMIN_STORAGE_KEY);
+        }
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+      
       // Debug: show what was loaded (use warn so it's visible in production)
-      const styleCount = Object.keys(adminCache.styles || {}).length;
       console.warn('PortraitPrompt: Loaded', apiEntries.length, 'entries from API (cloud)');
       console.warn('PortraitPrompt: Parsed styles:', Object.keys(adminCache.styles || {}));
     } catch (e) {
@@ -249,6 +258,13 @@
       poses: {},
       cameras: {},
     };
+
+    // For authenticated users, DON'T fall back to localStorage - wait for API sync
+    // This prevents stale localStorage data from showing unpublished styles
+    if (isAuthenticated()) {
+      // Return empty - API sync will populate adminCache when it completes
+      return empty;
+    }
 
     // For non-authenticated users, fall back to localStorage
     try {
