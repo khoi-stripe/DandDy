@@ -378,22 +378,13 @@ const CharacterSheet = (window.CharacterSheet = {
     }
 
     // Portrait-related actions (moved from below-ascii overflow)
-    const safeIdForDom = character.id || 'current';
     const hasValidManagerId = !!character.id;
-    const toggleBtnId =
-      context === 'builder'
-        ? 'toggle-portrait-btn'
-        : `toggle-portrait-btn-${safeIdForDom}`;
     const generateFn =
       context === 'builder'
         ? 'App.generateCustomAIPortrait()'
         : hasValidManagerId
           ? `generatePortraitForCharacter('${character.id}')`
           : null;
-    const toggleFn =
-      context === 'builder'
-        ? 'App.togglePortraitView()'
-        : `togglePortraitView('${safeIdForDom}')`;
     const hasCustomPortrait = !!(
       character.customPortraitAscii ||
       character.originalPortraitUrl ||
@@ -409,27 +400,6 @@ const CharacterSheet = (window.CharacterSheet = {
           ? `openPortraitHistory('${character.id}')`
           : null;
 
-    // Use the same helper as _renderPortrait to ensure header toggle button
-    // visibility matches the actual portrait being displayed.
-    const originalPortraitUrl = this.getOriginalPortraitUrl(character);
-
-    // Read the global portrait view mode so the overflow toggle label/icon
-    // matches the actual default view (ASCII vs Original). This mirrors the
-    // logic used in _renderPortrait so builder + manager stay in sync.
-    let portraitViewMode = 'original';
-    try {
-      if (window.StorageService && StorageService.getPortraitViewMode) {
-        portraitViewMode = StorageService.getPortraitViewMode();
-      } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
-        portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
-      }
-    } catch (e) {
-      // Non‑fatal: keep default
-    }
-
-    const showOriginalByDefault =
-      !!originalPortraitUrl && portraitViewMode === 'original';
-
     if (
       parsed.hasRace &&
       parsed.hasClass &&
@@ -441,17 +411,6 @@ const CharacterSheet = (window.CharacterSheet = {
         icon: '★',
         label: 'Custom AI Portrait',
         onclick: generateFn,
-      });
-    }
-
-    if (originalPortraitUrl && (onTogglePortrait || context === 'manager')) {
-      const toggleIcon = showOriginalByDefault ? '≡' : '◉';
-      const toggleLabel = showOriginalByDefault ? 'View ASCII Art' : 'View original art';
-      headerActions.push({
-        icon: toggleIcon,
-        label: toggleLabel,
-        onclick: toggleFn,
-        id: toggleBtnId,
       });
     }
 
