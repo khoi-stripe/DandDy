@@ -1282,8 +1282,8 @@ const UI = {
         // Disable search when there are no characters at all
         if (searchInput) {
             searchInput.disabled = total === 0;
-            // Include character count in placeholder
-            if (total === 0) {
+            // Include character count in placeholder (truncate on mobile)
+            if (total === 0 || MobileView.isMobile()) {
                 searchInput.placeholder = 'Search';
             } else {
                 searchInput.placeholder = 'Search ' + total + ' character' + (total !== 1 ? 's' : '');
