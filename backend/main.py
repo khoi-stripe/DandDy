@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from database.database import engine, Base, ensure_timestamp_columns, ensure_prompt_entry_columns, ensure_sex_column
-from routes import auth, characters, campaigns, ai, users, prompt_entries
+from routes import auth, characters, campaigns, ai, users, prompt_entries, shares
 import os
 from dotenv import load_dotenv
 
@@ -69,6 +69,7 @@ app.include_router(campaigns.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(ai.router, prefix="/api/ai")
 app.include_router(prompt_entries.router, prefix="/api")
+app.include_router(shares.router, prefix="/api")
 
 @app.get("/")
 def root():

@@ -1991,3 +1991,104 @@
     background-color: var(--sheet-accent);
     border-radius: 3px;
 }
+
+/* ========================================
+   PENDING SHARES MODAL
+   ======================================== */
+
+.pending-shares-modal {
+    max-width: 500px;
+    width: 90vw;
+}
+
+.pending-shares-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.pending-share-card {
+    border: 1px solid var(--ui-border-color);
+    border-radius: 4px;
+    padding: 1rem;
+    background: var(--terminal-bg);
+    transition: opacity 0.3s ease;
+}
+
+.pending-share-info {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.pending-share-portrait {
+    font-family: var(--terminal-font);
+    font-size: 6px;
+    line-height: 1;
+    color: var(--terminal-primary);
+    margin: 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    max-width: 80px;
+    max-height: 60px;
+}
+
+.pending-share-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.pending-share-name {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--terminal-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pending-share-meta {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.85rem;
+    color: var(--ui-fg-color);
+}
+
+.pending-share-from {
+    margin: 0;
+    font-size: 0.75rem;
+}
+
+.pending-share-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.pending-share-actions .terminal-btn {
+    min-width: 100px;
+}
+
+/* Responsive adjustments for pending shares */
+@media (max-width: 480px) {
+    .pending-share-info {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .pending-share-portrait {
+        max-width: 100%;
+        max-height: 80px;
+    }
+    
+    .pending-share-actions {
+        flex-direction: column;
+    }
+    
+    .pending-share-actions .terminal-btn {
+        width: 100%;
+    }
+}

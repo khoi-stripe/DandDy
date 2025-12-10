@@ -329,6 +329,100 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
   generateId() {
     return `char_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   },
+
+  // ========================================
+  // CHARACTER SHARING
+  // ========================================
+
+  /**
+   * Share a character with another user by email.
+   * @param {number|string} characterId - The character ID to share
+   * @param {string} email - The recipient's email address
+   * @returns {Promise<Object>} The created share record
+   */
+  async shareCharacter(characterId, email) {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Sharing character', characterId, 'to', email);
+      }
+      const result = await this._apiRequest(`/shares/character/${characterId}`, {
+        method: 'POST',
+        body: JSON.stringify({ to_email: email }),
+      });
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Character shared successfully');
+      }
+      return result;
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to share character:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get pending character shares for the current user.
+   * @returns {Promise<Array>} List of pending shares with character previews
+   */
+  async getPendingShares() {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Fetching pending shares...');
+      }
+      const shares = await this._apiRequest('/shares/pending');
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Found', shares.length, 'pending shares');
+      }
+      return shares;
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to fetch pending shares:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Accept a pending character share (creates a copy).
+   * @param {number} shareId - The share ID to accept
+   * @returns {Promise<Object>} Result with the new character ID
+   */
+  async acceptShare(shareId) {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Accepting share', shareId);
+      }
+      const result = await this._apiRequest(`/shares/${shareId}/accept`, {
+        method: 'POST',
+      });
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Share accepted, new character ID:', result.character_id);
+      }
+      return result;
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to accept share:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Dismiss a pending character share (ignores forever).
+   * @param {number} shareId - The share ID to dismiss
+   * @returns {Promise<void>}
+   */
+  async dismissShare(shareId) {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Dismissing share', shareId);
+      }
+      await this._apiRequest(`/shares/${shareId}/dismiss`, {
+        method: 'POST',
+      });
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Share dismissed');
+      }
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to dismiss share:', error);
+      throw error;
+    }
+  },
 });
 
 // ========================================

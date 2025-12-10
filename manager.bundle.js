@@ -715,13 +715,14 @@ console.groupEnd();return result;},enablePortraitDebug(){window.DEBUG_PORTRAITS=
       ${context === 'manager' && parsed.hasExportInfo
         ? this._renderExportInfo(character)
         : ''}
-    `;},_renderHeader(character,parsed,context,callbacks){const{onPrint,onRename,onDuplicate,onExport,onDelete,onLevelChange,onEdit,onGeneratePortrait,onTogglePortrait,}=callbacks;const renameFn=context==='builder'?'App.openNameModal()':`renameCharacter('${character.id}')`;const editFn=context==='manager'?`editCharacter('${character.id}')`:null;const printFn=onPrint&&context==='builder'?'App.printCharacterSheet()':onPrint&&context==='manager'?'printCharacterSheet()':null;const headerActions=[];let deleteAction=null;if(character.name&&onRename&&context==='builder'){headerActions.push({icon:'✎',label:'Rename',onclick:renameFn,});}
+    `;},_renderHeader(character,parsed,context,callbacks){const{onPrint,onRename,onDuplicate,onExport,onDelete,onLevelChange,onEdit,onGeneratePortrait,onTogglePortrait,onShare,}=callbacks;const renameFn=context==='builder'?'App.openNameModal()':`renameCharacter('${character.id}')`;const editFn=context==='manager'?`editCharacter('${character.id}')`:null;const printFn=onPrint&&context==='builder'?'App.printCharacterSheet()':onPrint&&context==='manager'?'printCharacterSheet()':null;const headerActions=[];let deleteAction=null;if(character.name&&onRename&&context==='builder'){headerActions.push({icon:'✎',label:'Rename',onclick:renameFn,});}
 if(context==='builder'&&onLevelChange){headerActions.push({icon:'↕',label:'Change level',onclick:'App.openLevelModal()',});}
 if(context==='manager'&&onDelete){deleteAction={icon:'×',label:'Delete character',onclick:`deleteCharacter('${character.id}')`,};}
 const safeIdForDom=character.id||'current';const hasValidManagerId=!!character.id;const toggleBtnId=context==='builder'?'toggle-portrait-btn':`toggle-portrait-btn-${safeIdForDom}`;const generateFn=context==='builder'?'App.generateCustomAIPortrait()':hasValidManagerId?`generatePortraitForCharacter('${character.id}')`:null;const toggleFn=context==='builder'?'App.togglePortraitView()':`togglePortraitView('${safeIdForDom}')`;const hasCustomPortrait=!!(character.customPortraitAscii||character.originalPortraitUrl||character.portrait?.url||(character.portraitMetadata&&Array.isArray(character.portraitMetadata.versions)&&character.portraitMetadata.versions.length>0));const historyFn=context==='builder'?'App.openPortraitHistory()':hasValidManagerId?`openPortraitHistory('${character.id}')`:null;const originalPortraitUrl=this.getOriginalPortraitUrl(character);let portraitViewMode='original';try{if(window.StorageService&&StorageService.getPortraitViewMode){portraitViewMode=StorageService.getPortraitViewMode();}else if(typeof CONFIG!=='undefined'&&CONFIG.DEFAULT_PORTRAIT_VIEW_MODE){portraitViewMode=CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;}}catch(e){}
 const showOriginalByDefault=!!originalPortraitUrl&&portraitViewMode==='original';if(parsed.hasRace&&parsed.hasClass&&onGeneratePortrait&&(context==='builder'||hasValidManagerId)&&generateFn){headerActions.push({icon:'★',label:'Custom AI Portrait',onclick:generateFn,});}
 if(originalPortraitUrl&&(onTogglePortrait||context==='manager')){const toggleIcon=showOriginalByDefault?'≡':'◉';const toggleLabel=showOriginalByDefault?'View ASCII Art':'View original art';headerActions.push({icon:toggleIcon,label:toggleLabel,onclick:toggleFn,id:toggleBtnId,});}
 if(hasCustomPortrait&&historyFn){headerActions.push({icon:'⧖',label:'Portrait history',onclick:historyFn,});}
+if(context==='manager'&&onShare&&hasValidManagerId){headerActions.push({icon:'↗',label:'Share character',onclick:`openShareModal('${character.id}')`,});}
 if(printFn){headerActions.push({icon:'⎙',label:'Print sheet',onclick:printFn,});}
 if(context==='manager'&&onEdit&&editFn){headerActions.unshift({icon:'✎',label:'Edit character',onclick:editFn,id:'sheet-edit-overflow',});}
 if(deleteAction){headerActions.push(deleteAction);}
@@ -2869,6 +2870,100 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
   // Generate unique ID (not used for cloud storage, API generates IDs)
   generateId() {
     return `char_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
+  },
+
+  // ========================================
+  // CHARACTER SHARING
+  // ========================================
+
+  /**
+   * Share a character with another user by email.
+   * @param {number|string} characterId - The character ID to share
+   * @param {string} email - The recipient's email address
+   * @returns {Promise<Object>} The created share record
+   */
+  async shareCharacter(characterId, email) {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Sharing character', characterId, 'to', email);
+      }
+      const result = await this._apiRequest(`/shares/character/${characterId}`, {
+        method: 'POST',
+        body: JSON.stringify({ to_email: email }),
+      });
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Character shared successfully');
+      }
+      return result;
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to share character:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get pending character shares for the current user.
+   * @returns {Promise<Array>} List of pending shares with character previews
+   */
+  async getPendingShares() {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Fetching pending shares...');
+      }
+      const shares = await this._apiRequest('/shares/pending');
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Found', shares.length, 'pending shares');
+      }
+      return shares;
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to fetch pending shares:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Accept a pending character share (creates a copy).
+   * @param {number} shareId - The share ID to accept
+   * @returns {Promise<Object>} Result with the new character ID
+   */
+  async acceptShare(shareId) {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Accepting share', shareId);
+      }
+      const result = await this._apiRequest(`/shares/${shareId}/accept`, {
+        method: 'POST',
+      });
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Share accepted, new character ID:', result.character_id);
+      }
+      return result;
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to accept share:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Dismiss a pending character share (ignores forever).
+   * @param {number} shareId - The share ID to dismiss
+   * @returns {Promise<void>}
+   */
+  async dismissShare(shareId) {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Dismissing share', shareId);
+      }
+      await this._apiRequest(`/shares/${shareId}/dismiss`, {
+        method: 'POST',
+      });
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Share dismissed');
+      }
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to dismiss share:', error);
+      throw error;
+    }
   },
 });
 
@@ -6860,6 +6955,7 @@ ${thumbnailHtml}<div class="card-details"><div class="card-name">${name}</div><d
             onDelete: true,
             onGeneratePortrait: true,
             onPrint: true,
+            onShare: true,
         });
         
         // Populate ASCII portrait after rendering
@@ -7550,6 +7646,279 @@ async function renameCharacter(id) {
         input.focus();
         input.select();
     }
+}
+
+// ========================================
+// CHARACTER SHARING
+// ========================================
+
+/**
+ * Open the share character modal.
+ * @param {string|number} characterId - The character ID to share
+ */
+async function openShareModal(characterId) {
+    // Must be logged in to share
+    if (!AuthService.isAuthenticated()) {
+        showNotification('Please log in to share characters', 'error');
+        return;
+    }
+
+    const character = await CharacterStorage.getById(characterId);
+    if (!character) {
+        showNotification('Character not found', 'error');
+        return;
+    }
+
+    const existing = document.getElementById('shareModal');
+    if (existing) existing.remove();
+
+    const safeName = Utils.escapeHtml(character.name || 'Unnamed');
+    const modalHtml = `<div id="shareModal"class="modal show"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">↗ SHARE CHARACTER</h2><button class="modal-close"onclick="closeShareModal()">&times;</button></div><div class="modal-body"><p class="terminal-text">Share<strong>${safeName}</strong>with another DandDy user.</p><p class="terminal-text-small terminal-text-dim"style="margin-top: 0.5rem;">Enter their email address.If they have a DandDy account,they'll see this character the next time they log in and can add it to their collection.</p><div style="margin-top: 1rem;"><label class="terminal-text-small modal-section-label"for="shareEmailInput">Email address:</label><input type="email"id="shareEmailInput"class="terminal-input"placeholder="friend@example.com"><p id="shareEmailError"class="terminal-text-small"style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p></div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"id="shareCancel">CANCEL</button><button class="terminal-btn terminal-btn-primary"id="shareSend">SEND</button></div></div></div>`;
+
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('shareModal');
+    const input = document.getElementById('shareEmailInput');
+    const errorEl = document.getElementById('shareEmailError');
+    const cancelBtn = document.getElementById('shareCancel');
+    const sendBtn = document.getElementById('shareSend');
+
+    const close = () => {
+        if (!modal) return;
+        animateModalClose(modal, { removeOnClose: true });
+    };
+
+    const showError = (msg) => {
+        errorEl.textContent = msg;
+        errorEl.style.display = 'block';
+    };
+
+    const clearError = () => {
+        errorEl.style.display = 'none';
+    };
+
+    // Simple email validation
+    const isValidEmail = (email) => {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    };
+
+    cancelBtn.addEventListener('click', close);
+    
+    input.addEventListener('input', clearError);
+
+    sendBtn.addEventListener('click', async () => {
+        const email = input.value.trim().toLowerCase();
+        
+        if (!email) {
+            showError('Please enter an email address');
+            return;
+        }
+        
+        if (!isValidEmail(email)) {
+            showError('Please enter a valid email address');
+            return;
+        }
+
+        // Disable button while processing
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'SENDING...';
+
+        try {
+            await CharacterCloudStorage.shareCharacter(characterId, email);
+            close();
+            showNotification(`${safeName}shared with ${email}`);
+        } catch (error) {
+            sendBtn.disabled = false;
+            sendBtn.textContent = 'SEND';
+            showError(error.message || 'Failed to share character');
+        }
+    });
+
+    // Focus the email input
+    if (typeof focusFirstFieldInModal === 'function') {
+        focusFirstFieldInModal(modal);
+    } else if (input) {
+        input.focus();
+    }
+}
+
+function closeShareModal() {
+    const modal = document.getElementById('shareModal');
+    if (!modal) return;
+    animateModalClose(modal, { removeOnClose: true });
+}
+
+/**
+ * Check for pending shares and show the modal if there are any.
+ * Called after successful login.
+ */
+async function checkPendingShares() {
+    if (!AuthService.isAuthenticated()) return;
+
+    try {
+        const pendingShares = await CharacterCloudStorage.getPendingShares();
+        if (pendingShares && pendingShares.length > 0) {
+            showPendingSharesModal(pendingShares);
+        }
+    } catch (error) {
+        console.error('Failed to check pending shares:', error);
+        // Don't show error to user - this is a background check
+    }
+}
+
+/**
+ * Show the pending shares modal with all pending character shares.
+ * @param {Array} shares - Array of pending share objects
+ */
+function showPendingSharesModal(shares) {
+    if (!shares || shares.length === 0) return;
+
+    const existing = document.getElementById('pendingSharesModal');
+    if (existing) existing.remove();
+
+    const shareCount = shares.length;
+    const title = shareCount === 1 ? 'CHARACTER SHARED WITH YOU' : `${shareCount}CHARACTERS SHARED WITH YOU`;
+
+    // Build share cards HTML
+    const shareCardsHtml = shares.map((share, index) => {
+        const char = share.character;
+        const safeName = Utils.escapeHtml(char.name || 'Unnamed');
+        const safeRace = Utils.escapeHtml(char.race || 'Unknown');
+        const safeClass = Utils.escapeHtml(char.character_class || 'Unknown');
+        const level = char.level || 1;
+        const fromEmail = Utils.escapeHtml(share.from_email || 'Unknown');
+        
+        // Format the date
+        const createdDate = new Date(share.created_at);
+        const dateStr = createdDate.toLocaleDateString();
+
+        // ASCII portrait preview (truncated)
+        let portraitPreview = '';
+        if (char.ascii_portrait) {
+            const lines = char.ascii_portrait.split('\n').slice(0, 8);
+            const truncated = lines.join('\n');
+            portraitPreview = `<pre class="pending-share-portrait">${Utils.escapeHtml(truncated)}</pre>`;
+        }
+
+        return `<div class="pending-share-card"data-share-id="${share.id}"data-index="${index}"><div class="pending-share-info">${portraitPreview}<div class="pending-share-details"><h3 class="pending-share-name">${safeName}</h3><p class="pending-share-meta">Level ${level}${safeRace}${safeClass}</p><p class="pending-share-from terminal-text-dim">From:${fromEmail}· ${dateStr}</p></div></div><div class="pending-share-actions"><button class="terminal-btn pending-share-ignore"data-share-id="${share.id}">IGNORE</button><button class="terminal-btn terminal-btn-primary pending-share-accept"data-share-id="${share.id}">ADD CHARACTER</button></div></div>`;
+    }).join('');
+
+    const modalHtml = `<div id="pendingSharesModal"class="modal show"><div class="modal-content pending-shares-modal"><div class="modal-header"><h2 class="modal-title">↓ ${title}</h2><button class="modal-close"onclick="closePendingSharesModal()">&times;</button></div><div class="modal-body"><p class="terminal-text-small terminal-text-dim"style="margin-bottom: 1rem;">${shareCount===1?'Someone shared a character with you!':'Other users have shared characters with you!'}
+Add them to your collection or ignore to dismiss.</p><div class="pending-shares-list">${shareCardsHtml}</div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="closePendingSharesModal()">CLOSE</button></div></div></div>`;
+
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('pendingSharesModal');
+
+    // Add event listeners for accept/ignore buttons
+    modal.querySelectorAll('.pending-share-accept').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const shareId = e.target.dataset.shareId;
+            await handleAcceptShare(shareId);
+        });
+    });
+
+    modal.querySelectorAll('.pending-share-ignore').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const shareId = e.target.dataset.shareId;
+            await handleDismissShare(shareId);
+        });
+    });
+}
+
+/**
+ * Handle accepting a pending share.
+ * @param {string|number} shareId - The share ID to accept
+ */
+async function handleAcceptShare(shareId) {
+    const card = document.querySelector(`.pending-share-card[data-share-id="${shareId}"]`);
+    const acceptBtn = card?.querySelector('.pending-share-accept');
+    
+    if (acceptBtn) {
+        acceptBtn.disabled = true;
+        acceptBtn.textContent = 'ADDING...';
+    }
+
+    try {
+        const result = await CharacterCloudStorage.acceptShare(shareId);
+        
+        // Remove the card from the modal
+        if (card) {
+            card.style.opacity = '0.5';
+            card.style.pointerEvents = 'none';
+            setTimeout(() => card.remove(), 300);
+        }
+
+        // Check if there are any cards left
+        setTimeout(() => {
+            const remainingCards = document.querySelectorAll('.pending-share-card');
+            if (remainingCards.length === 0) {
+                closePendingSharesModal();
+            }
+        }, 350);
+
+        // Refresh the character list
+        await AppState.loadCharacters();
+        UI.render();
+        
+        showNotification('Character added to your collection!');
+        
+        // View the newly added character
+        if (result && result.character_id) {
+            viewCharacter(result.character_id);
+        }
+    } catch (error) {
+        if (acceptBtn) {
+            acceptBtn.disabled = false;
+            acceptBtn.textContent = 'ADD CHARACTER';
+        }
+        showNotification(error.message || 'Failed to add character', 'error');
+    }
+}
+
+/**
+ * Handle dismissing a pending share.
+ * @param {string|number} shareId - The share ID to dismiss
+ */
+async function handleDismissShare(shareId) {
+    const card = document.querySelector(`.pending-share-card[data-share-id="${shareId}"]`);
+    const ignoreBtn = card?.querySelector('.pending-share-ignore');
+    
+    if (ignoreBtn) {
+        ignoreBtn.disabled = true;
+        ignoreBtn.textContent = 'IGNORING...';
+    }
+
+    try {
+        await CharacterCloudStorage.dismissShare(shareId);
+        
+        // Remove the card from the modal
+        if (card) {
+            card.style.opacity = '0.5';
+            card.style.pointerEvents = 'none';
+            setTimeout(() => card.remove(), 300);
+        }
+
+        // Check if there are any cards left
+        setTimeout(() => {
+            const remainingCards = document.querySelectorAll('.pending-share-card');
+            if (remainingCards.length === 0) {
+                closePendingSharesModal();
+            }
+        }, 350);
+
+        showNotification('Share dismissed');
+    } catch (error) {
+        if (ignoreBtn) {
+            ignoreBtn.disabled = false;
+            ignoreBtn.textContent = 'IGNORE';
+        }
+        showNotification(error.message || 'Failed to dismiss share', 'error');
+    }
+}
+
+function closePendingSharesModal() {
+    const modal = document.getElementById('pendingSharesModal');
+    if (!modal) return;
+    animateModalClose(modal, { removeOnClose: true });
 }
 
 let currentPortraitCharacterId = null;
@@ -9813,6 +10182,9 @@ async function handleLogin() {
                 await AppState.loadCharacters();
                 UI.render();
             }
+            
+            // Check for pending character shares (after a short delay to not overwhelm)
+            setTimeout(() => checkPendingShares(), 500);
         } else {
             errorEl.textContent = (result && result.error) || 'Login failed';
             errorEl.classList.remove('is-hidden');
@@ -9885,6 +10257,9 @@ async function handleRegister() {
                 await AppState.loadCharacters();
                 UI.render();
             }
+            
+            // Check for pending character shares (after a short delay to not overwhelm)
+            setTimeout(() => checkPendingShares(), 500);
         } else {
             errorEl.textContent = result.error || 'Registration failed';
             errorEl.classList.remove('is-hidden');
@@ -10039,6 +10414,9 @@ async function handlePasswordResetConfirm() {
     if (window.AuthService && window.AuthService.isAuthenticated && window.AuthService.isAuthenticated()) {
         await AppState.loadCharacters();
         UI.render();
+        
+        // Check for pending character shares
+        setTimeout(() => checkPendingShares(), 500);
     }
 }
 

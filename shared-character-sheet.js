@@ -336,6 +336,7 @@ const CharacterSheet = (window.CharacterSheet = {
       onEdit,
       onGeneratePortrait,
       onTogglePortrait,
+      onShare,
     } = callbacks;
     // Function names differ by context
     const renameFn = context === 'builder' ? 'App.openNameModal()' : `renameCharacter('${character.id}')`;
@@ -457,6 +458,15 @@ const CharacterSheet = (window.CharacterSheet = {
         icon: '⧖',
         label: 'Portrait history',
         onclick: historyFn,
+      });
+    }
+
+    // Manager-only: Share character (only for saved characters with valid IDs)
+    if (context === 'manager' && onShare && hasValidManagerId) {
+      headerActions.push({
+        icon: '↗',
+        label: 'Share character',
+        onclick: `openShareModal('${character.id}')`,
       });
     }
 
