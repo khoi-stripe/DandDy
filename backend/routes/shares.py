@@ -126,7 +126,8 @@ def get_pending_shares(
                 background=share.character.background,
                 alignment=alignment_value,
                 sex=sex_value,
-                ascii_portrait=share.character.ascii_portrait
+                ascii_portrait=share.character.ascii_portrait,
+                original_portrait_url=share.character.original_portrait_url
             ),
             from_email=share.from_user.email if share.from_user else "Unknown",
             created_at=share.created_at
