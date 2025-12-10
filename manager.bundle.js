@@ -10270,6 +10270,11 @@ async function handleLogin() {
             closeAuthModal();
             updateAuthUI();
             showNotification(`✓ Logged in as ${email}`);
+
+            // Start session monitoring now that user is logged in
+            if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
+                window.AuthService.startSessionMonitor();
+            }
             
             // Check if should migrate user-created characters first
             if (window.MigrationService.hasLocalCharacters()) {
@@ -10345,6 +10350,11 @@ async function handleRegister() {
             closeAuthModal();
             updateAuthUI();
             showNotification(`✓ Registered as ${email}`);
+
+            // Start session monitoring now that user is logged in
+            if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
+                window.AuthService.startSessionMonitor();
+            }
             
             // Check if should migrate user-created characters first
             if (window.MigrationService.hasLocalCharacters()) {
