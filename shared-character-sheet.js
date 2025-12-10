@@ -261,6 +261,7 @@ const CharacterSheet = (window.CharacterSheet = {
       onDuplicate = null,
       onExport = null,
       onDelete = null,
+      onShare = null,
     } = options;
 
     // Parse character data (handle both old and new formats)
@@ -278,6 +279,7 @@ const CharacterSheet = (window.CharacterSheet = {
         onEdit,
         onGeneratePortrait,
         onTogglePortrait,
+        onShare,
       })}
       
       ${showPortrait
