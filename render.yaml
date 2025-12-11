@@ -15,7 +15,7 @@ services:
       - key: PRODUCTION
         value: true
       - key: ALLOWED_ORIGINS
-        value: https://khoi-stripe.github.io
+        value: https://danddy.app,https://khoi-stripe.github.io
       - key: SECRET_KEY
         generateValue: true
       - key: OPENAI_API_KEY
@@ -25,5 +25,5 @@ services:
       - key: EMAIL_FROM
         value: no-reply@danddy.app
       - key: FRONTEND_RESET_BASE
-        value: https://khoi-stripe.github.io/danddy/index.html
+        value: https://danddy.app/index.html
 
