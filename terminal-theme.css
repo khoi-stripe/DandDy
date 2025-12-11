@@ -271,10 +271,8 @@ body::before {
   background-size: 120% 110%;
   background-position: center;
   filter: hue-rotate(0deg);
-  /* Slowly cycle the glow hue and rotate the ellipse */
-  animation: 
-    terminal-glow-hue-cycle 36s linear infinite,
-    terminal-glow-rotate 60s linear infinite;
+  /* Slowly cycle the glow hue (rotation removed) */
+  animation: terminal-glow-hue-cycle 36s linear infinite;
 }
 
 /* ===== TERMINAL FRAME ===== */
