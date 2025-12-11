@@ -148,7 +148,7 @@
             </div>
             <div class="modal-body">
               <p class="terminal-text-small terminal-text-dim">
-                View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
+                View previous custom AI portraits for this character.${' '}Choose one to make it active,${' '}or delete versions you no longer need.
               </p>
               <div class="portrait-history-carousel">
                 ${
@@ -864,7 +864,7 @@
       // Build the confirmation view using standard modal structure
       const confirmationBodyHtml = `
         <p class="terminal-text">
-          Delete this saved portrait version? This cannot be undone.
+          Delete this saved portrait version?${' '}This cannot be undone.
         </p>
       `;
 

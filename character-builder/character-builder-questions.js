@@ -5,14 +5,7 @@ const QUESTIONS = (window.QUESTIONS = [
   {
     id: 'intro',
     type: 'message',
-    text: `> SYSTEM INITIALIZED...
-> LOADING CHARACTER CREATION PROTOCOL...
-> 
-> Ah. Another soul seeking adventure. Or at least, trying to.
-> 
-> Look, I've done this a thousand times. You'll make choices. I'll pretend they matter. We'll both get through this.
-> 
-> Let's start with something easy...`,
+    text: `>  SYSTEM INITIALIZED...\n>  LOADING CHARACTER CREATION PROTOCOL...\n>  \n>  Ah.${' '}Another soul seeking adventure.${' '}Or at least,${' '}trying to.\n>  \n>  Look,${' '}I've done this a thousand times.${' '}You'll make choices.${' '}I'll pretend they matter.${' '}We'll both get through this.\n>  \n>  Let's start with something easy...`,
     next: 'entry-mode',
   },
 
@@ -308,13 +301,7 @@ const QUESTIONS = (window.QUESTIONS = [
   {
     id: 'spell-style-intro',
     type: 'message',
-    text: `> Ah, right. You're a spellcaster.
-> 
-> *sighs*
-> 
-> I suppose we should talk about your magical abilities. Because what's an adventure without someone hurling fireballs or dramatically shouting healing incantations?
-> 
-> Let's figure out your spell preferences...`,
+    text: `>  Ah,${' '}right.${' '}You're a spellcaster.\n>  \n>  *sighs*\n>  \n>  I suppose we should talk about your magical abilities.${' '}Because what's an adventure without someone hurling fireballs or dramatically shouting healing incantations?\n>  \n>  Let's figure out your spell preferences...`,
     next: 'spell-style',
   },
 

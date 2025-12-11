@@ -2064,7 +2064,7 @@ async function openShareModal(characterId) {
           <div class="modal-body">
             <p class="terminal-text">Share${' '}<strong>${safeName}</strong>${' '}with another DandDy user.</p>
             <p class="terminal-text-small terminal-text-dim" style="margin-top: 0.5rem;">
-              Enter their email address.${' '}If they have a DandDy account, they'll see this character the next time they log in and can add it to their collection.
+              Enter their email address.${' '}If they have a DandDy account,${' '}they'll see this character the next time they log in and can add it to their collection.
             </p>
             <div style="margin-top: 1rem;">
               <label class="terminal-text-small modal-section-label" for="shareEmailInput">Email address:</label>
@@ -2130,7 +2130,7 @@ async function openShareModal(characterId) {
         try {
             await CharacterCloudStorage.shareCharacter(characterId, email);
             close();
-            showNotification(`${safeName} shared with ${email}`);
+            showNotification(`${safeName}${' '}shared with ${email}`);
         } catch (error) {
             sendBtn.disabled = false;
             sendBtn.textContent = 'SEND';
@@ -4420,7 +4420,7 @@ function showSessionExpiredModal() {
             <h2 class="modal-title">⚠ SESSION EXPIRED</h2>
           </div>
           <div class="modal-body">
-            <p class="terminal-text">Your login session has expired. Your local changes are safe, but you'll need to log in again to sync with the cloud.</p>
+            <p class="terminal-text">Your login session has expired.${' '}Your local changes are safe,${' '}but you'll need to log in again to sync with the cloud.</p>
           </div>
           <div class="modal-footer modal-footer-end">
             <button class="terminal-btn terminal-btn-secondary" id="sessionExpiredDismiss">CONTINUE OFFLINE</button>

@@ -1520,10 +1520,7 @@ const App = (window.App = {
         const confirmEl =
           narratorPanel.lastElementChild.querySelector('.narrator-text');
         
-        const spellSummary = `> Selected ${spells.cantrips.length} cantrip${spells.cantrips.length !== 1 ? 's' : ''} and ${spells.firstLevel.length} 1st level spell${spells.firstLevel.length !== 1 ? 's' : ''}.
-> 
-> Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}
-> 1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
+        const spellSummary = `>  Selected ${spells.cantrips.length} cantrip${spells.cantrips.length !== 1 ? 's' : ''} and ${spells.firstLevel.length} 1st level spell${spells.firstLevel.length !== 1 ? 's' : ''}.\n>  \n>  Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}\n>  1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
         
         await Utils.typewriter(confirmEl, spellSummary);
         Utils.scrollToBottom(true);
@@ -1555,19 +1552,16 @@ const App = (window.App = {
         
         let flavorText = '';
         if (preferences.style === 'offense') {
-          flavorText = "> Ah, a blaster. How... predictable. Here's your destruction kit:";
+          flavorText = ">  Ah, a blaster. How... predictable. Here's your destruction kit:";
         } else if (preferences.style === 'defense') {
-          flavorText = "> The cautious type, I see. Here are your survival tools:";
+          flavorText = ">  The cautious type, I see. Here are your survival tools:";
         } else if (preferences.style === 'control') {
-          flavorText = "> A tactician. Interesting. Here's your battlefield control suite:";
+          flavorText = ">  A tactician. Interesting. Here's your battlefield control suite:";
         } else {
-          flavorText = "> Utility over flash. Practical. Here's your toolkit:";
+          flavorText = ">  Utility over flash. Practical. Here's your toolkit:";
         }
         
-        const spellSummary = `${flavorText}
-> 
-> Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}
-> 1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
+        const spellSummary = `${flavorText}\n>  \n>  Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}\n>  1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
         
         await Utils.typewriter(confirmEl, spellSummary);
         Utils.scrollToBottom(true);
@@ -1620,10 +1614,10 @@ const App = (window.App = {
       `
       <div class="question-card mt-lg" data-question-id="${question.id}">
         <button class="button-primary completion-save-btn" id="completion-save-btn" onclick="App.saveCharacter()">
-          > SAVE CHARACTER
+          >${' '}SAVE CHARACTER
         </button>
         <button class="button-primary" id="completion-new-btn" onclick="App.startNew()">
-          > CREATE ANOTHER CHARACTER
+          >${' '}CREATE ANOTHER CHARACTER
         </button>
       </div>`,
     );
@@ -2620,7 +2614,7 @@ const App = (window.App = {
 
     return `
       <p class="terminal-text-small terminal-text-dim">
-        View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
+        View previous custom AI portraits for this character.${' '}Choose one to make it active,${' '}or delete versions you no longer need.
       </p>
       <div class="portrait-history-card-row${
         versions.length === 1 ? ' is-single' : ''
@@ -3131,7 +3125,7 @@ const App = (window.App = {
     // Build the confirmation view using standard modal structure
     const confirmationBodyHtml = `
       <p class="terminal-text">
-        Delete this saved portrait version? This cannot be undone.
+        Delete this saved portrait version?${' '}This cannot be undone.
       </p>
     `;
 
@@ -4577,7 +4571,7 @@ const App = (window.App = {
               as if your character had gained Ability Score Increases at higher levels.
             </p>
             <p class="terminal-text-small terminal-text-dim">
-              This cannot be undone. Choose a new level between 1 and 99.
+              This cannot be undone.${' '}Choose a new level between 1 and 99.
             </p>
             <div class="level-modal-row modal-section">
               <label for="level-input" class="terminal-text-small modal-section-label">New Level:</label>
