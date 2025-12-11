@@ -20,4 +20,10 @@ services:
         generateValue: true
       - key: OPENAI_API_KEY
         sync: false  # Set manually in Render dashboard (keep it secret!)
+      - key: POSTMARK_SERVER_TOKEN
+        sync: false  # Set manually in Render dashboard (keep it secret!)
+      - key: EMAIL_FROM
+        value: no-reply@danddy.app
+      - key: FRONTEND_RESET_BASE
+        value: https://khoi-stripe.github.io/danddy/index.html
 

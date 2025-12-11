@@ -37,6 +37,12 @@ const AuthUI = (window.AuthUI = {
             </div>
           </div>
           
+          <div class="auth-footer" style="margin-bottom: 1rem;">
+            <span class="auth-link" id="forgot-password-link" style="cursor: pointer;">
+              Forgot your password? <span class="link-highlight">RESET HERE</span>
+            </span>
+          </div>
+          
           <div id="login-error" class="error-message is-hidden"></div>
           
           <div class="button-group">
@@ -68,6 +74,7 @@ const AuthUI = (window.AuthUI = {
     const submitButton = document.getElementById('login-submit');
     const guestButton = document.getElementById('login-guest');
     const switchButton = document.getElementById('switch-to-register');
+    const forgotPasswordLink = document.getElementById('forgot-password-link');
     const errorDiv = document.getElementById('login-error');
 
     // Handle submit
@@ -148,6 +155,13 @@ const AuthUI = (window.AuthUI = {
       this.removeAuthScreen();
       if (onSwitchToRegister) onSwitchToRegister();
     });
+
+    if (forgotPasswordLink) {
+      forgotPasswordLink.addEventListener('click', () => {
+        // Redirect to character manager's password reset page
+        window.location.href = '../index.html#password-reset';
+      });
+    }
 
     // Focus email input
     emailInput.focus();

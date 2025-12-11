@@ -638,9 +638,9 @@
                         <input type="password" id="loginPassword" class="terminal-input" placeholder="Enter password">                                          
                         <button type="button" class="password-toggle-btn" data-target="loginPassword" aria-label="Show password">SHOW</button>                  
                     </div>
-                    <!-- <p class="terminal-text-small modal-section-label terminal-text-dim">
+                    <p class="terminal-text-small modal-section-label terminal-text-dim">
                         <button class="link-button" type="button" onclick="openPasswordResetFromLogin()">Forgot your password?</button>
-                    </p> -->
+                    </p>
                     <p class="terminal-text-small modal-section-label terminal-text-dim">
                         Don't have an account? <a href="#" onclick="showRegisterForm(); return false;" class="terminal-link">Register here</a>
                     </p>
@@ -677,33 +677,39 @@
     <div id="passwordResetModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">RESET PASSWORD</h2>
+                <h2 class="modal-title" id="passwordResetModalTitle">RESET PASSWORD</h2>
                 <button class="modal-close" onclick="closePasswordResetModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <div id="passwordResetRequestSection">
                     <p class="terminal-text">
-                        Enter the email associated with your account. If an account exists, a reset link will be sent.
+                        Enter your email address and we'll send you a link to reset your password.
                     </p>
                     <p class="terminal-text-small modal-section-label">Email:</p>
-                    <input type="email" id="passwordResetEmail" class="terminal-input" placeholder="Enter email">
+                    <input type="email" id="passwordResetEmail" class="terminal-input" placeholder="you@example.com">
+                    <div id="passwordResetMessage" class="terminal-text-small terminal-text-dim mt-sm"></div>
+                </div>
+                <div id="passwordResetSuccessSection" class="is-hidden" style="text-align: center; padding: 2rem 0;">
+                    <p class="terminal-text" style="font-size: 1.5rem; margin-bottom: 1rem;">✓ Check your email!</p>
+                    <p class="terminal-text">We've sent you a password reset link.</p>
                 </div>
                 <div id="passwordResetConfirmSection" class="is-hidden">
                     <p class="terminal-text">
-                        Check your email for a reset link or token, then paste the token below with your new password.
+                        Enter your new password below.
                     </p>
-                    <p class="terminal-text-small modal-section-label">Reset token:</p>
-                    <input type="text" id="passwordResetToken" class="terminal-input" placeholder="Paste reset token">
+                    <!-- Hidden token field - auto-filled from email link -->
+                    <input type="hidden" id="passwordResetToken">
                     <p class="terminal-text-small modal-section-label">New password:</p>
                     <div class="password-input-wrapper">
                         <input type="password" id="passwordResetNewPassword" class="terminal-input" placeholder="Enter new password">
                         <button type="button" class="password-toggle-btn" data-target="passwordResetNewPassword" aria-label="Show password">SHOW</button>
                     </div>
+                    <div id="passwordResetConfirmMessage" class="terminal-text-small terminal-text-dim mt-sm"></div>
                 </div>
-                <div id="passwordResetMessage" class="terminal-text-small terminal-text-dim mt-sm"></div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="closePasswordResetModal()">CANCEL</button>
+                <button id="passwordResetCancelBtn" class="terminal-btn" onclick="closePasswordResetModal()">CANCEL</button>
+                <button id="passwordResetCloseBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="closePasswordResetModal()">CLOSE</button>
                 <button id="passwordResetRequestBtn" class="terminal-btn terminal-btn-primary" onclick="handlePasswordResetRequest()">SEND RESET LINK</button>
                 <button id="passwordResetConfirmBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handlePasswordResetConfirm()">SET NEW PASSWORD</button>
             </div>

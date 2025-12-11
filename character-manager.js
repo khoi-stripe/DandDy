@@ -4943,23 +4943,37 @@ function showPasswordResetModal() {
     if (!modal) return;
 
     // Reset sections and fields to initial state
+    const modalTitle = document.getElementById('passwordResetModalTitle');
     const requestSection = document.getElementById('passwordResetRequestSection');
+    const successSection = document.getElementById('passwordResetSuccessSection');
     const confirmSection = document.getElementById('passwordResetConfirmSection');
+    const cancelBtn = document.getElementById('passwordResetCancelBtn');
+    const closeBtn = document.getElementById('passwordResetCloseBtn');
     const requestBtn = document.getElementById('passwordResetRequestBtn');
     const confirmBtn = document.getElementById('passwordResetConfirmBtn');
     const messageEl = document.getElementById('passwordResetMessage');
+    const confirmMessageEl = document.getElementById('passwordResetConfirmMessage');
     const emailInput = document.getElementById('passwordResetEmail');
     const tokenInput = document.getElementById('passwordResetToken');
     const newPasswordInput = document.getElementById('passwordResetNewPassword');
 
+    if (modalTitle) modalTitle.textContent = 'RESET PASSWORD';
     if (requestSection) requestSection.classList.remove('is-hidden');
+    if (successSection) successSection.classList.add('is-hidden');
     if (confirmSection) confirmSection.classList.add('is-hidden');
+    if (cancelBtn) cancelBtn.classList.remove('is-hidden');
+    if (closeBtn) closeBtn.classList.add('is-hidden');
     if (requestBtn) requestBtn.classList.remove('is-hidden');
     if (confirmBtn) confirmBtn.classList.add('is-hidden');
     if (messageEl) {
         messageEl.textContent = '';
         messageEl.classList.remove('terminal-text-error');
         messageEl.classList.add('terminal-text-dim');
+    }
+    if (confirmMessageEl) {
+        confirmMessageEl.textContent = '';
+        confirmMessageEl.classList.remove('terminal-text-error');
+        confirmMessageEl.classList.add('terminal-text-dim');
     }
     if (emailInput) emailInput.value = '';
     if (tokenInput) tokenInput.value = '';
@@ -4975,6 +4989,45 @@ function closePasswordResetModal() {
     const modal = document.getElementById('passwordResetModal');
     if (!modal) return;
     modal.classList.remove('show');
+    
+    // Reset to initial state when closing
+    setTimeout(() => {
+        const modalTitle = document.getElementById('passwordResetModalTitle');
+        const requestSection = document.getElementById('passwordResetRequestSection');
+        const successSection = document.getElementById('passwordResetSuccessSection');
+        const confirmSection = document.getElementById('passwordResetConfirmSection');
+        const cancelBtn = document.getElementById('passwordResetCancelBtn');
+        const closeBtn = document.getElementById('passwordResetCloseBtn');
+        const requestBtn = document.getElementById('passwordResetRequestBtn');
+        const confirmBtn = document.getElementById('passwordResetConfirmBtn');
+        const messageEl = document.getElementById('passwordResetMessage');
+        const confirmMessageEl = document.getElementById('passwordResetConfirmMessage');
+        const emailInput = document.getElementById('passwordResetEmail');
+        const tokenInput = document.getElementById('passwordResetToken');
+        const newPasswordInput = document.getElementById('passwordResetNewPassword');
+
+        if (modalTitle) modalTitle.textContent = 'RESET PASSWORD';
+        if (requestSection) requestSection.classList.remove('is-hidden');
+        if (successSection) successSection.classList.add('is-hidden');
+        if (confirmSection) confirmSection.classList.add('is-hidden');
+        if (cancelBtn) cancelBtn.classList.remove('is-hidden');
+        if (closeBtn) closeBtn.classList.add('is-hidden');
+        if (requestBtn) requestBtn.classList.remove('is-hidden');
+        if (confirmBtn) confirmBtn.classList.add('is-hidden');
+        if (messageEl) {
+            messageEl.textContent = '';
+            messageEl.classList.remove('terminal-text-error');
+            messageEl.classList.add('terminal-text-dim');
+        }
+        if (confirmMessageEl) {
+            confirmMessageEl.textContent = '';
+            confirmMessageEl.classList.remove('terminal-text-error');
+            confirmMessageEl.classList.add('terminal-text-dim');
+        }
+        if (emailInput) emailInput.value = '';
+        if (tokenInput) tokenInput.value = '';
+        if (newPasswordInput) newPasswordInput.value = '';
+    }, 300); // Wait for modal close animation
 }
 
 async function handlePasswordResetRequest() {
@@ -5003,43 +5056,67 @@ async function handlePasswordResetRequest() {
         return;
     }
 
-    // Move to the confirm step
+    // Transform modal to success confirmation
+    const modalTitle = document.getElementById('passwordResetModalTitle');
     const requestSection = document.getElementById('passwordResetRequestSection');
+    const successSection = document.getElementById('passwordResetSuccessSection');
     const confirmSection = document.getElementById('passwordResetConfirmSection');
+    const cancelBtn = document.getElementById('passwordResetCancelBtn');
+    const closeBtn = document.getElementById('passwordResetCloseBtn');
     const requestBtn = document.getElementById('passwordResetRequestBtn');
     const confirmBtn = document.getElementById('passwordResetConfirmBtn');
     const tokenInput = document.getElementById('passwordResetToken');
 
-    if (requestSection) requestSection.classList.add('is-hidden');
-    if (confirmSection) confirmSection.classList.remove('is-hidden');
-    if (requestBtn) requestBtn.classList.add('is-hidden');
-    if (confirmBtn) confirmBtn.classList.remove('is-hidden');
-
-    let message = result.message;
-
-    // In development the backend may return a debug token - surface it to
-    // simplify local testing and optionally auto-fill the token field.
+    // In development, the backend may return a debug token for testing
     if (result.debugToken && tokenInput) {
         tokenInput.value = result.debugToken;
-        message += `\n\nDebug reset token (dev only): ${result.debugToken}`;
+        
+        // In dev mode, show the confirm section so developers can test without email
+        if (modalTitle) modalTitle.textContent = 'RESET PASSWORD';
+        if (requestSection) requestSection.classList.add('is-hidden');
+        if (successSection) successSection.classList.add('is-hidden');
+        if (confirmSection) confirmSection.classList.remove('is-hidden');
+        if (cancelBtn) cancelBtn.classList.remove('is-hidden');
+        if (closeBtn) closeBtn.classList.add('is-hidden');
+        if (requestBtn) requestBtn.classList.add('is-hidden');
+        if (confirmBtn) confirmBtn.classList.remove('is-hidden');
+        
+        const confirmMessageEl = document.getElementById('passwordResetConfirmMessage');
+        if (confirmMessageEl) {
+            confirmMessageEl.textContent = '[DEV MODE] Token auto-filled for testing. Enter your new password below.';
+            confirmMessageEl.classList.add('terminal-text-dim');
+        }
+    } else {
+        // Production mode - show success confirmation
+        if (modalTitle) modalTitle.textContent = 'SUCCESS';
+        if (requestSection) requestSection.classList.add('is-hidden');
+        if (successSection) successSection.classList.remove('is-hidden');
+        if (confirmSection) confirmSection.classList.add('is-hidden');
+        if (cancelBtn) cancelBtn.classList.add('is-hidden');
+        if (closeBtn) closeBtn.classList.remove('is-hidden');
+        if (requestBtn) requestBtn.classList.add('is-hidden');
+        if (confirmBtn) confirmBtn.classList.add('is-hidden');
     }
-
-    messageEl.textContent = message;
-    messageEl.classList.remove('terminal-text-error');
-    messageEl.classList.add('terminal-text-dim');
 }
 
 async function handlePasswordResetConfirm() {
     const tokenInput = document.getElementById('passwordResetToken');
     const newPasswordInput = document.getElementById('passwordResetNewPassword');
-    const messageEl = document.getElementById('passwordResetMessage');
+    const messageEl = document.getElementById('passwordResetConfirmMessage');
     if (!tokenInput || !newPasswordInput || !messageEl) return;
 
     const token = tokenInput.value.trim();
     const newPassword = newPasswordInput.value;
 
-    if (!token || !newPassword) {
-        messageEl.textContent = 'Please enter both the reset token and a new password.';
+    if (!token) {
+        messageEl.textContent = 'Invalid reset link. Please request a new password reset.';
+        messageEl.classList.remove('terminal-text-dim');
+        messageEl.classList.add('terminal-text-error');
+        return;
+    }
+
+    if (!newPassword) {
+        messageEl.textContent = 'Please enter a new password.';
         messageEl.classList.remove('terminal-text-dim');
         messageEl.classList.add('terminal-text-error');
         return;
@@ -5747,14 +5824,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Handle password reset token from URL fragment (e.g. when coming from email link)
     try {
         const hash = window.location.hash || '';
+        
+        // Check for password reset modal request
+        if (hash === '#password-reset') {
+            showPasswordResetModal();
+            // Clear hash from URL
+            history.replaceState(
+                null,
+                document.title,
+                window.location.pathname + window.location.search,
+            );
+        }
+        
+        // Check for reset token in hash
         const tokenMatch = hash.match(/reset-token=([^&]+)/);
         if (tokenMatch && tokenMatch[1]) {
             const token = decodeURIComponent(tokenMatch[1]);
             showPasswordResetModal();
+            
+            // Auto-fill the token (hidden field) and switch to password input
             const tokenInput = document.getElementById('passwordResetToken');
             if (tokenInput) {
                 tokenInput.value = token;
             }
+            
+            // Switch to the password reset confirmation section
+            const modalTitle = document.getElementById('passwordResetModalTitle');
+            const requestSection = document.getElementById('passwordResetRequestSection');
+            const successSection = document.getElementById('passwordResetSuccessSection');
+            const confirmSection = document.getElementById('passwordResetConfirmSection');
+            const cancelBtn = document.getElementById('passwordResetCancelBtn');
+            const closeBtn = document.getElementById('passwordResetCloseBtn');
+            const requestBtn = document.getElementById('passwordResetRequestBtn');
+            const confirmBtn = document.getElementById('passwordResetConfirmBtn');
+            
+            if (modalTitle) modalTitle.textContent = 'RESET PASSWORD';
+            if (requestSection) requestSection.classList.add('is-hidden');
+            if (successSection) successSection.classList.add('is-hidden');
+            if (confirmSection) confirmSection.classList.remove('is-hidden');
+            if (cancelBtn) cancelBtn.classList.remove('is-hidden');
+            if (closeBtn) closeBtn.classList.add('is-hidden');
+            if (requestBtn) requestBtn.classList.add('is-hidden');
+            if (confirmBtn) confirmBtn.classList.remove('is-hidden');
+            
+            // Focus on the new password input
+            setTimeout(() => {
+                document.getElementById('passwordResetNewPassword')?.focus();
+            }, 100);
+            
             // Remove token from URL bar for a bit of shoulder-surfing protection
             history.replaceState(
                 null,

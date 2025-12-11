@@ -256,6 +256,12 @@ if(target&&typeof target.focus==='function'){setTimeout(()=>{try{target.focus();
             </div>
           </div>
           
+          <div class="auth-footer" style="margin-bottom: 1rem;">
+            <span class="auth-link" id="forgot-password-link" style="cursor: pointer;">
+              Forgot your password? <span class="link-highlight">RESET HERE</span>
+            </span>
+          </div>
+          
           <div id="login-error" class="error-message is-hidden"></div>
           
           <div class="button-group">
@@ -274,10 +280,11 @@ if(target&&typeof target.focus==='function'){setTimeout(()=>{try{target.focus();
           </div>
         </div>
       </div>
-    `;container.appendChild(authScreen);const emailInput=document.getElementById('login-email');const passwordInput=document.getElementById('login-password');const passwordToggle=authScreen.querySelector('.password-toggle-btn[data-target="login-password"]',);const submitButton=document.getElementById('login-submit');const guestButton=document.getElementById('login-guest');const switchButton=document.getElementById('switch-to-register');const errorDiv=document.getElementById('login-error');const handleSubmit=async()=>{await new Promise((resolve)=>setTimeout(resolve,50));const email=emailInput.value.trim();const password=passwordInput.value;if(!email||!password){this.showError(errorDiv,'Please enter both email and password');return;}
+    `;container.appendChild(authScreen);const emailInput=document.getElementById('login-email');const passwordInput=document.getElementById('login-password');const passwordToggle=authScreen.querySelector('.password-toggle-btn[data-target="login-password"]',);const submitButton=document.getElementById('login-submit');const guestButton=document.getElementById('login-guest');const switchButton=document.getElementById('switch-to-register');const forgotPasswordLink=document.getElementById('forgot-password-link');const errorDiv=document.getElementById('login-error');const handleSubmit=async()=>{await new Promise((resolve)=>setTimeout(resolve,50));const email=emailInput.value.trim();const password=passwordInput.value;if(!email||!password){this.showError(errorDiv,'Please enter both email and password');return;}
 try{const cfg=window.DanddyConfig||{};const debug=!!cfg.DEBUG;if(debug){console.log('[AuthUI] Login submit clicked',{email,apiBaseUrl:cfg.API_BASE_URL,});}}catch(_){}
 this.showLoading(submitButton,true,'AUTHENTICATING...');errorDiv.classList.add('is-hidden');try{const result=await AuthService.login(email,password);this.showLoading(submitButton,false);if(result&&result.success){this.removeAuthScreen();if(onSuccess)onSuccess(result.user);}else{this.showError(errorDiv,(result&&result.error)||'Login failed. Please try again.',);}}catch(error){this.showLoading(submitButton,false);this.showError(errorDiv,error.message||'Login failed. Please try again.');}};submitButton.addEventListener('click',handleSubmit);if(passwordToggle&&passwordInput){passwordToggle.addEventListener('click',()=>{const isPassword=passwordInput.type==='password';passwordInput.type=isPassword?'text':'password';passwordToggle.textContent=isPassword?'HIDE':'SHOW';passwordToggle.setAttribute('aria-pressed',String(isPassword));passwordToggle.setAttribute('aria-label',isPassword?'Hide password':'Show password',);});}
-passwordInput.addEventListener('keypress',(e)=>{if(e.key==='Enter')handleSubmit();});guestButton.addEventListener('click',()=>{this.removeAuthScreen();if(onGuestMode)onGuestMode();});switchButton.addEventListener('click',()=>{this.removeAuthScreen();if(onSwitchToRegister)onSwitchToRegister();});emailInput.focus();},showRegister(onSuccess,onSwitchToLogin){const container=document.querySelector('.terminal-container');if(!container)return;document.getElementById('splash-content')?.classList.add('is-hidden');document.getElementById('main-content')?.classList.add('is-hidden');const authScreen=document.createElement('div');authScreen.id='auth-screen';authScreen.className='auth-screen';authScreen.innerHTML=`
+passwordInput.addEventListener('keypress',(e)=>{if(e.key==='Enter')handleSubmit();});guestButton.addEventListener('click',()=>{this.removeAuthScreen();if(onGuestMode)onGuestMode();});switchButton.addEventListener('click',()=>{this.removeAuthScreen();if(onSwitchToRegister)onSwitchToRegister();});if(forgotPasswordLink){forgotPasswordLink.addEventListener('click',()=>{window.location.href='../index.html#password-reset';});}
+emailInput.focus();},showRegister(onSuccess,onSwitchToLogin){const container=document.querySelector('.terminal-container');if(!container)return;document.getElementById('splash-content')?.classList.add('is-hidden');document.getElementById('main-content')?.classList.add('is-hidden');const authScreen=document.createElement('div');authScreen.id='auth-screen';authScreen.className='auth-screen';authScreen.innerHTML=`
       <div class="auth-container">
         <div class="auth-header">
           <div class="auth-title">╔═══════════════════════════════════════╗</div>
