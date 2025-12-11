@@ -2062,9 +2062,9 @@ async function openShareModal(characterId) {
             <button class="modal-close" onclick="closeShareModal()">&times;</button>
           </div>
           <div class="modal-body">
-            <p class="terminal-text">Share <strong>${safeName}</strong> with another DandDy user.</p>
+            <p class="terminal-text">Share${' '}<strong>${safeName}</strong>${' '}with another DandDy user.</p>
             <p class="terminal-text-small terminal-text-dim" style="margin-top: 0.5rem;">
-              Enter their email address. If they have a DandDy account, they'll see this character the next time they log in and can add it to their collection.
+              Enter their email address.${' '}If they have a DandDy account, they'll see this character the next time they log in and can add it to their collection.
             </p>
             <div style="margin-top: 1rem;">
               <label class="terminal-text-small modal-section-label" for="shareEmailInput">Email address:</label>
