@@ -24,6 +24,8 @@
   position: relative;
   width: 100%;
   aspect-ratio: 3 / 4;
+  /* Prevent subpixel gaps from showing through */
+  overflow: hidden;
 }
 
 /* Only apply teal background when the image is loaded (prevents flash on character switch) */
@@ -44,6 +46,7 @@
   mix-blend-mode: multiply;
   opacity: 0;
   transition: opacity 0.1s ease-in;
+  display: block;
 }
 
 .portrait-container--original-mode .original-portrait.is-loaded {
