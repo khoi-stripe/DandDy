@@ -1520,7 +1520,10 @@ const App = (window.App = {
         const confirmEl =
           narratorPanel.lastElementChild.querySelector('.narrator-text');
         
-        const spellSummary = `>  Selected ${spells.cantrips.length} cantrip${spells.cantrips.length !== 1 ? 's' : ''} and ${spells.firstLevel.length} 1st level spell${spells.firstLevel.length !== 1 ? 's' : ''}.\n>  \n>  Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}\n>  1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
+        const spellSummary = `> Selected ${spells.cantrips.length} cantrip${spells.cantrips.length !== 1 ? 's' : ''} and ${spells.firstLevel.length} 1st level spell${spells.firstLevel.length !== 1 ? 's' : ''}.
+> 
+> Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}
+> 1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
         
         await Utils.typewriter(confirmEl, spellSummary);
         Utils.scrollToBottom(true);
@@ -1552,16 +1555,19 @@ const App = (window.App = {
         
         let flavorText = '';
         if (preferences.style === 'offense') {
-          flavorText = ">  Ah, a blaster. How... predictable. Here's your destruction kit:";
+          flavorText = "> Ah, a blaster. How... predictable. Here's your destruction kit:";
         } else if (preferences.style === 'defense') {
-          flavorText = ">  The cautious type, I see. Here are your survival tools:";
+          flavorText = "> The cautious type, I see. Here are your survival tools:";
         } else if (preferences.style === 'control') {
-          flavorText = ">  A tactician. Interesting. Here's your battlefield control suite:";
+          flavorText = "> A tactician. Interesting. Here's your battlefield control suite:";
         } else {
-          flavorText = ">  Utility over flash. Practical. Here's your toolkit:";
+          flavorText = "> Utility over flash. Practical. Here's your toolkit:";
         }
         
-        const spellSummary = `${flavorText}\n>  \n>  Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}\n>  1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
+        const spellSummary = `${flavorText}
+> 
+> Cantrips: ${spells.cantrips.map(s => s.name).join(', ')}
+> 1st Level: ${spells.firstLevel.map(s => s.name).join(', ')}`;
         
         await Utils.typewriter(confirmEl, spellSummary);
         Utils.scrollToBottom(true);
@@ -1614,10 +1620,10 @@ const App = (window.App = {
       `
       <div class="question-card mt-lg" data-question-id="${question.id}">
         <button class="button-primary completion-save-btn" id="completion-save-btn" onclick="App.saveCharacter()">
-          >${' '}SAVE CHARACTER
+          > SAVE CHARACTER
         </button>
         <button class="button-primary" id="completion-new-btn" onclick="App.startNew()">
-          >${' '}CREATE ANOTHER CHARACTER
+          > CREATE ANOTHER CHARACTER
         </button>
       </div>`,
     );
@@ -1857,10 +1863,6 @@ const App = (window.App = {
                   prompt:
                     (AIService.buildPortraitPrompt &&
                       AIService.buildPortraitPrompt(character)) ||
-                    null,
-                  characterDescription:
-                    (AIService.buildCharacterDescription &&
-                      AIService.buildCharacterDescription(character)) ||
                     null,
                   style: guidedStyle,
                   model: generationModel,
@@ -2614,7 +2616,7 @@ const App = (window.App = {
 
     return `
       <p class="terminal-text-small terminal-text-dim">
-        View previous custom AI portraits for this character.${' '}Choose one to make it active,${' '}or delete versions you no longer need.
+        View previous custom AI portraits for this character. Choose one to make it active, or delete versions you no longer need.
       </p>
       <div class="portrait-history-card-row${
         versions.length === 1 ? ' is-single' : ''
@@ -3125,7 +3127,7 @@ const App = (window.App = {
     // Build the confirmation view using standard modal structure
     const confirmationBodyHtml = `
       <p class="terminal-text">
-        Delete this saved portrait version?${' '}This cannot be undone.
+        Delete this saved portrait version? This cannot be undone.
       </p>
     `;
 
@@ -3513,7 +3515,7 @@ const App = (window.App = {
     if (window.DemoCharacters && !DemoCharacters.canGenerateCustomArt(character)) {
       const limit = DemoCharacters.DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
       this.showSystemMessage(
-        'You\'ve reached the limit of ' + limit + ' custom portraits per character in demo mode. ' +
+        'You\'ve reached the limit of ' + limit + ' custom portraits per character in guest mode. ' +
         '<a href="#" onclick="showAuthModal(); showRegisterForm(); return false;" class="terminal-link">Create a free account</a> to generate unlimited portraits!'
       );
       return;
@@ -3610,15 +3612,15 @@ const App = (window.App = {
   },
 
   async openPromptModal(character) {
-    // Use the stored characterDescription from the active portrait version if available.
-    // This preserves the exact prompt the user used (or was auto-generated) for the
-    // current portrait, allowing them to regenerate with a different style.
-    // Fall back to buildCharacterDescription() for older portraits without this field.
-    let defaultPrompt = '';
-    let activeStyle = null;
+    // Show only the character description to the user (not the rendering instructions)
+    const defaultPrompt = AIService.buildCharacterDescription
+      ? AIService.buildCharacterDescription(character)
+      : ''; // backwards compat if renamed
     
+    // Get active style from portrait version or user's saved preference
+    let activeStyle = null;
     try {
-      // Check if character has an active portrait version with characterDescription/style
+      // Check if character has an active portrait version with a style
       const metadata = character.portraitMetadata || {};
       const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
       if (versions.length) {
@@ -3626,28 +3628,16 @@ const App = (window.App = {
         let active =
           (activeId && versions.find((v) => v && v.id === activeId)) ||
           versions[versions.length - 1];
-        // Get the characterDescription from the active version if available
-        if (active && active.characterDescription) {
-          defaultPrompt = active.characterDescription;
-        }
-        // Get the style from the active version if available
         if (active && active.style) {
           activeStyle = active.style;
         }
       }
-      // Fall back to user's saved preference for style
+      // Fall back to user's saved preference
       if (!activeStyle && window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
         activeStyle = StorageService.getPortraitPromptTheme();
       }
     } catch (e) {
       // Non-fatal
-    }
-    
-    // Fallback: if no stored characterDescription, generate one from character data
-    if (!defaultPrompt) {
-      defaultPrompt = AIService.buildCharacterDescription
-        ? AIService.buildCharacterDescription(character)
-        : '';
     }
 
     const modalHTML = `
@@ -3954,7 +3944,6 @@ const App = (window.App = {
             {
               source: 'custom-ai',
               prompt: fullPrompt,
-              characterDescription: customPrompt,
               style: selectedStyle,
               model: generationModel,
               quality: generationQuality,
@@ -4166,7 +4155,7 @@ const App = (window.App = {
     if (!character.id && window.DemoCharacters && DemoCharacters.hasReachedCharacterLimit()) {
       const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
       this.showSystemMessage(
-        'You\'ve reached the limit of ' + limit + ' characters in demo mode. ' +
+        'You\'ve reached the limit of ' + limit + ' characters in guest mode. ' +
         '<a href="#" onclick="showAuthModal(); showRegisterForm(); return false;" class="terminal-link">Create a free account</a> to save unlimited characters!'
       );
       return;
@@ -4571,7 +4560,7 @@ const App = (window.App = {
               as if your character had gained Ability Score Increases at higher levels.
             </p>
             <p class="terminal-text-small terminal-text-dim">
-              This cannot be undone.${' '}Choose a new level between 1 and 99.
+              This cannot be undone. Choose a new level between 1 and 99.
             </p>
             <div class="level-modal-row modal-section">
               <label for="level-input" class="terminal-text-small modal-section-label">New Level:</label>
@@ -4962,10 +4951,6 @@ const App = (window.App = {
                 prompt:
                   (AIService.buildPortraitPrompt &&
                     AIService.buildPortraitPrompt(currentChar)) ||
-                  null,
-                characterDescription:
-                  (AIService.buildCharacterDescription &&
-                    AIService.buildCharacterDescription(currentChar)) ||
                   null,
                 style: quickStyle,
                 model: generationModel,

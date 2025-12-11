@@ -271,7 +271,7 @@ body::before {
   background-size: 120% 110%;
   background-position: center;
   filter: hue-rotate(0deg);
-  /* Slowly cycle the glow hue (rotation removed) */
+  /* Slowly cycle the glow hue and intensity */
   animation: terminal-glow-hue-cycle 36s linear infinite;
 }
 
@@ -1929,21 +1929,26 @@ body.selector-menu-open .splash-art {
    - Start from terminal green (120°)
    - Rotate hue toward teal (~180°)
    - Then toward yellow (~60°)
-   - Back to green */
+   - Back to green
+   - Intensity varies in sync with color transitions */
 @keyframes terminal-glow-hue-cycle {
   0%, 20% {
     filter: hue-rotate(0deg);
+    opacity: 1;
   }
   33%, 53% {
-    /* Approx. teal/cyan */
+    /* Approx. teal/cyan - slightly dimmer */
     filter: hue-rotate(60deg);
+    opacity: 0.75;
   }
   66%, 86% {
-    /* Approx. yellow */
+    /* Approx. yellow - brightest */
     filter: hue-rotate(-60deg);
+    opacity: 1.2;
   }
   100% {
     filter: hue-rotate(0deg);
+    opacity: 1;
   }
 }
 

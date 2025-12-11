@@ -6947,7 +6947,7 @@ function createNewCharacter() {
     if (window.DemoCharacters && DemoCharacters.hasReachedCharacterLimit()) {
         const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
         showAlertDialog(
-            'You\'ve reached the limit of ' + limit + ' characters in demo mode.',
+            'You\'ve reached the limit of ' + limit + ' characters in guest mode.',
             {
                 actionLabel: 'Create a free account',
                 onAction: () => {
@@ -8087,7 +8087,7 @@ async function generatePortraitForCharacter(id) {
     if (window.DemoCharacters && !DemoCharacters.canGenerateCustomArt(character)) {
         const limit = DemoCharacters.DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
         showAlertDialog(
-            'You\'ve reached the limit of ' + limit + ' custom portraits per character in demo mode.',
+            'You\'ve reached the limit of ' + limit + ' custom portraits per character in guest mode.',
             {
                 actionLabel: 'Create a free account',
                 onAction: () => {
@@ -10903,7 +10903,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Show welcome modal (splash art + three choices) only when not logged in.
     const welcomeModal = document.getElementById('welcomeModal');
-    // Wire welcome modal buttons: LOG IN, CREATE ACCOUNT, DEMO MODE
+    // Wire welcome modal buttons: LOG IN, CREATE ACCOUNT, GUEST MODE
     const welcomeLoginBtn = document.getElementById('welcomeLoginBtn');
     if (welcomeLoginBtn) {
         welcomeLoginBtn.addEventListener('click', () => {

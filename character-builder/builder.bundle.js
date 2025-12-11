@@ -6613,7 +6613,7 @@ placeholder="Or enter your own name..."><button class="button-primary"onclick="A
         const confirmEl =
           narratorPanel.lastElementChild.querySelector('.narrator-text');
         
-        const spellSummary = `>Selected ${spells.cantrips.length}cantrip${spells.cantrips.length!==1?'s':''}and ${spells.firstLevel.length}1st level spell${spells.firstLevel.length!==1?'s':''}.\n>\n>Cantrips:${spells.cantrips.map(s=>s.name).join(', ')}\n>1st Level:${spells.firstLevel.map(s=>s.name).join(', ')}`;
+        const spellSummary = `>Selected ${spells.cantrips.length}cantrip${spells.cantrips.length!==1?'s':''}and ${spells.firstLevel.length}1st level spell${spells.firstLevel.length!==1?'s':''}.>>Cantrips:${spells.cantrips.map(s=>s.name).join(', ')}>1st Level:${spells.firstLevel.map(s=>s.name).join(', ')}`;
         
         await Utils.typewriter(confirmEl, spellSummary);
         Utils.scrollToBottom(true);
@@ -6645,16 +6645,16 @@ placeholder="Or enter your own name..."><button class="button-primary"onclick="A
         
         let flavorText = '';
         if (preferences.style === 'offense') {
-          flavorText = ">  Ah, a blaster. How... predictable. Here's your destruction kit:";
+          flavorText = "> Ah, a blaster. How... predictable. Here's your destruction kit:";
         } else if (preferences.style === 'defense') {
-          flavorText = ">  The cautious type, I see. Here are your survival tools:";
+          flavorText = "> The cautious type, I see. Here are your survival tools:";
         } else if (preferences.style === 'control') {
-          flavorText = ">  A tactician. Interesting. Here's your battlefield control suite:";
+          flavorText = "> A tactician. Interesting. Here's your battlefield control suite:";
         } else {
-          flavorText = ">  Utility over flash. Practical. Here's your toolkit:";
+          flavorText = "> Utility over flash. Practical. Here's your toolkit:";
         }
         
-        const spellSummary = `${flavorText}\n>\n>Cantrips:${spells.cantrips.map(s=>s.name).join(', ')}\n>1st Level:${spells.firstLevel.map(s=>s.name).join(', ')}`;
+        const spellSummary = `${flavorText}>>Cantrips:${spells.cantrips.map(s=>s.name).join(', ')}>1st Level:${spells.firstLevel.map(s=>s.name).join(', ')}`;
         
         await Utils.typewriter(confirmEl, spellSummary);
         Utils.scrollToBottom(true);
@@ -6704,7 +6704,7 @@ placeholder="Or enter your own name..."><button class="button-primary"onclick="A
     // Show completion options
     narratorPanel.insertAdjacentHTML(
       'beforeend',
-      `<div class="question-card mt-lg"data-question-id="${question.id}"><button class="button-primary completion-save-btn"id="completion-save-btn"onclick="App.saveCharacter()">>${' '}SAVE CHARACTER</button><button class="button-primary"id="completion-new-btn"onclick="App.startNew()">>${' '}CREATE ANOTHER CHARACTER</button></div>`,
+      `<div class="question-card mt-lg"data-question-id="${question.id}"><button class="button-primary completion-save-btn"id="completion-save-btn"onclick="App.saveCharacter()">>SAVE CHARACTER</button><button class="button-primary"id="completion-new-btn"onclick="App.startNew()">>CREATE ANOTHER CHARACTER</button></div>`,
     );
     Utils.scrollToBottom(true);
 
@@ -6918,10 +6918,6 @@ placeholder="Or enter your own name..."><button class="button-primary"onclick="A
                   prompt:
                     (AIService.buildPortraitPrompt &&
                       AIService.buildPortraitPrompt(character)) ||
-                    null,
-                  characterDescription:
-                    (AIService.buildCharacterDescription &&
-                      AIService.buildCharacterDescription(character)) ||
                     null,
                   style: guidedStyle,
                   model: generationModel,
@@ -7606,7 +7602,7 @@ onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"><spa
         ? `<div class="terminal-text-small terminal-text-dim portrait-history-callout"><p><strong>No portrait history yet.</strong></p><p>This character's portrait was created before the history feature was added.</p><p>Generate a new custom AI portrait to:</p><ul class="portrait-history-callout-list"><li>• Save your current portrait as Version 1</li><li>• Add the new portrait as Version 2</li><li>• Enable portrait version switching</li></ul></div>`
         : `<p class="terminal-text-small terminal-text-dim portrait-history-callout">No saved portraits yet.<br><br>Generate a custom AI portrait to start building a history.</p>`;
 
-    return `<p class="terminal-text-small terminal-text-dim">View previous custom AI portraits for this character.${' '}Choose one to make it active,${' '}or delete versions you no longer need.</p><div class="portrait-history-card-row${versions.length===1?' is-single':''}">${listHtml}</div>`;
+    return `<p class="terminal-text-small terminal-text-dim">View previous custom AI portraits for this character.Choose one to make it active,or delete versions you no longer need.</p><div class="portrait-history-card-row${versions.length===1?' is-single':''}">${listHtml}</div>`;
   },
 
   // Smoothly animate a modal's content height when its body is "reloaded"
@@ -8085,7 +8081,7 @@ onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"><spa
     }
 
     // Build the confirmation view using standard modal structure
-    const confirmationBodyHtml = `<p class="terminal-text">Delete this saved portrait version?${' '}This cannot be undone.</p>`;
+    const confirmationBodyHtml = `<p class="terminal-text">Delete this saved portrait version?This cannot be undone.</p>`;
 
     const confirmationFooterHtml = `<button class="terminal-btn"id="portrait-delete-cancel">NO</button><button class="terminal-btn terminal-btn-primary"id="portrait-delete-confirm">YES</button>`;
 
@@ -8430,7 +8426,7 @@ onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"><spa
     if (window.DemoCharacters && !DemoCharacters.canGenerateCustomArt(character)) {
       const limit = DemoCharacters.DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
       this.showSystemMessage(
-        'You\'ve reached the limit of ' + limit + ' custom portraits per character in demo mode. ' +
+        'You\'ve reached the limit of ' + limit + ' custom portraits per character in guest mode. ' +
         '<a href="#" onclick="showAuthModal(); showRegisterForm(); return false;" class="terminal-link">Create a free account</a> to generate unlimited portraits!'
       );
       return;
@@ -8527,15 +8523,15 @@ onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"><spa
   },
 
   async openPromptModal(character) {
-    // Use the stored characterDescription from the active portrait version if available.
-    // This preserves the exact prompt the user used (or was auto-generated) for the
-    // current portrait, allowing them to regenerate with a different style.
-    // Fall back to buildCharacterDescription() for older portraits without this field.
-    let defaultPrompt = '';
-    let activeStyle = null;
+    // Show only the character description to the user (not the rendering instructions)
+    const defaultPrompt = AIService.buildCharacterDescription
+      ? AIService.buildCharacterDescription(character)
+      : ''; // backwards compat if renamed
     
+    // Get active style from portrait version or user's saved preference
+    let activeStyle = null;
     try {
-      // Check if character has an active portrait version with characterDescription/style
+      // Check if character has an active portrait version with a style
       const metadata = character.portraitMetadata || {};
       const versions = Array.isArray(metadata.versions) ? metadata.versions : [];
       if (versions.length) {
@@ -8543,28 +8539,16 @@ onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"><spa
         let active =
           (activeId && versions.find((v) => v && v.id === activeId)) ||
           versions[versions.length - 1];
-        // Get the characterDescription from the active version if available
-        if (active && active.characterDescription) {
-          defaultPrompt = active.characterDescription;
-        }
-        // Get the style from the active version if available
         if (active && active.style) {
           activeStyle = active.style;
         }
       }
-      // Fall back to user's saved preference for style
+      // Fall back to user's saved preference
       if (!activeStyle && window.StorageService && typeof StorageService.getPortraitPromptTheme === 'function') {
         activeStyle = StorageService.getPortraitPromptTheme();
       }
     } catch (e) {
       // Non-fatal
-    }
-    
-    // Fallback: if no stored characterDescription, generate one from character data
-    if (!defaultPrompt) {
-      defaultPrompt = AIService.buildCharacterDescription
-        ? AIService.buildCharacterDescription(character)
-        : '';
     }
 
     const modalHTML = `<div id="promptModal"class="modal show"onclick="App.closePromptModal(false)"><div class="modal-content portrait-customize-modal"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">★ Customize AI Portrait</h2><button class="modal-close"onclick="App.closePromptModal(false)">&times;</button></div><div class="modal-body"><div class="portrait-style-row"><div class="portrait-style-label">Style</div><div class="selector-shell selector-shell--listbox portrait-style-selector"id="builderPortraitStyleShell"><button
@@ -8842,7 +8826,6 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
             {
               source: 'custom-ai',
               prompt: fullPrompt,
-              characterDescription: customPrompt,
               style: selectedStyle,
               model: generationModel,
               quality: generationQuality,
@@ -9054,7 +9037,7 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
     if (!character.id && window.DemoCharacters && DemoCharacters.hasReachedCharacterLimit()) {
       const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
       this.showSystemMessage(
-        'You\'ve reached the limit of ' + limit + ' characters in demo mode. ' +
+        'You\'ve reached the limit of ' + limit + ' characters in guest mode. ' +
         '<a href="#" onclick="showAuthModal(); showRegisterForm(); return false;" class="terminal-link">Create a free account</a> to save unlimited characters!'
       );
       return;
@@ -9439,7 +9422,7 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
 
     const currentLevel = character.level || 1;
 
-    const modalHTML = `<div id="levelModal"class="modal show"onclick="App.closeLevelModal()"><div class="modal-content"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">Change Character Level</h2><button class="modal-close"onclick="App.closeLevelModal()">&times;</button></div><div class="modal-body"><p class="terminal-text">Changing level will<span class="terminal-text-strong">adjust your ability scores and hit points</span>as if your character had gained Ability Score Increases at higher levels.</p><p class="terminal-text-small terminal-text-dim">This cannot be undone.${' '}Choose a new level between 1 and 99.</p><div class="level-modal-row modal-section"><label for="level-input"class="terminal-text-small modal-section-label">New Level:</label><input
+    const modalHTML = `<div id="levelModal"class="modal show"onclick="App.closeLevelModal()"><div class="modal-content"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">Change Character Level</h2><button class="modal-close"onclick="App.closeLevelModal()">&times;</button></div><div class="modal-body"><p class="terminal-text">Changing level will<span class="terminal-text-strong">adjust your ability scores and hit points</span>as if your character had gained Ability Score Increases at higher levels.</p><p class="terminal-text-small terminal-text-dim">This cannot be undone.Choose a new level between 1 and 99.</p><div class="level-modal-row modal-section"><label for="level-input"class="terminal-text-small modal-section-label">New Level:</label><input
 type="number"
 id="level-input"
 class="terminal-input"
@@ -9791,10 +9774,6 @@ placeholder="Enter character name"></div><div id="name-modal-error"class="termin
                 prompt:
                   (AIService.buildPortraitPrompt &&
                     AIService.buildPortraitPrompt(currentChar)) ||
-                  null,
-                characterDescription:
-                  (AIService.buildCharacterDescription &&
-                    AIService.buildCharacterDescription(currentChar)) ||
                   null,
                 style: quickStyle,
                 model: generationModel,
