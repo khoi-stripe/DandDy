@@ -5126,30 +5126,32 @@ async function handlePasswordResetConfirm() {
     messageEl.classList.remove('terminal-text-error');
     messageEl.classList.add('terminal-text-dim');
 
-    const result = await window.AuthService.resetPassword(token, newPassword);
+    // Call the password reset API directly (don't use the returned token)
+    try {
+        const response = await fetch(`${window.DanddyConfig.API_BASE_URL}/auth/password/reset`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, new_password: newPassword }),
+        });
 
-    if (!result.success) {
-        messageEl.textContent = result.error || 'Password reset failed. Please check your token and try again.';
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || 'Password reset failed');
+        }
+
+        // Password reset successful - close this modal and open login modal
+        showNotification('✓ Password updated successfully! Please log in with your new password.');
+        closePasswordResetModal();
+        
+        // Open the login modal after a brief delay
+        setTimeout(() => {
+            showLoginForm();
+        }, 300);
+        
+    } catch (error) {
+        messageEl.textContent = error.message || 'Password reset failed. Please try again.';
         messageEl.classList.remove('terminal-text-dim');
         messageEl.classList.add('terminal-text-error');
-        return;
-    }
-
-    // User now has a fresh token and profile; update UI and close the modal.
-    if (typeof updateAuthUI === 'function') {
-        updateAuthUI();
-    }
-
-    showNotification('✓ Password updated. You are now logged in.');
-    closePasswordResetModal();
-
-    // Reload characters from cloud if authenticated
-    if (window.AuthService && window.AuthService.isAuthenticated && window.AuthService.isAuthenticated()) {
-        await AppState.loadCharacters();
-        UI.render();
-        
-        // Check for pending character shares
-        setTimeout(() => checkPendingShares(), 500);
     }
 }
 
