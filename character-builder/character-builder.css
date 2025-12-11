@@ -247,6 +247,8 @@
 .ability-method-trigger-label {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
 }
 
 .ability-method-trigger.is-open {
@@ -689,6 +691,23 @@
   .settings-row-inline {
     flex-direction: column;
     gap: var(--spacing-md);
+  }
+
+  /* Ability method controls - allow wrapping on mobile */
+  .ability-method-controls {
+    flex-wrap: wrap;
+    max-width: 100%;
+  }
+
+  /* Ensure trigger takes full width on small screens */
+  .ability-method-trigger-wrap {
+    min-width: 200px;
+  }
+
+  /* Roll button can stack below if needed */
+  .ability-method-roll {
+    flex: 1;
+    min-width: 100px;
   }
 }
 
