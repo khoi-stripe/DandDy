@@ -1380,7 +1380,23 @@ let _creationQuotaRemaining = null;
  */
 async function updateCreationQuotaState() {
     const btn = document.getElementById('newCharacterBtn');
-    if (!btn) return;
+    const overflowBtn = document.getElementById('overflowNewCharBtn');
+    
+    // Helper to update both buttons
+    const updateButtons = (disabled, title, addClass) => {
+        [btn, overflowBtn].forEach(b => {
+            if (!b) return;
+            b.disabled = disabled;
+            b.title = title;
+            if (addClass) {
+                b.classList.add('is-quota-exhausted');
+            } else {
+                b.classList.remove('is-quota-exhausted');
+            }
+        });
+    };
+
+    if (!btn && !overflowBtn) return;
 
     try {
         // Use AIService if available, otherwise make direct fetch
@@ -1401,8 +1417,7 @@ async function updateCreationQuotaState() {
         if (!quota) {
             // Quota check failed - allow user to proceed (fail open)
             _creationQuotaRemaining = null;
-            btn.disabled = false;
-            btn.title = '';
+            updateButtons(false, '', false);
             return;
         }
 
@@ -1410,27 +1425,20 @@ async function updateCreationQuotaState() {
 
         // If remaining is -1, quota is not enforced (admin/dev mode)
         if (quota.remaining === -1) {
-            btn.disabled = false;
-            btn.title = '';
-            btn.classList.remove('is-quota-exhausted');
+            updateButtons(false, '', false);
             return;
         }
 
         if (quota.remaining === 0) {
-            btn.disabled = true;
-            btn.title = 'Daily character creation limit reached';
-            btn.classList.add('is-quota-exhausted');
+            updateButtons(true, 'Daily character creation limit reached', true);
         } else {
-            btn.disabled = false;
-            btn.title = `${quota.remaining} creation${quota.remaining === 1 ? '' : 's'} remaining today`;
-            btn.classList.remove('is-quota-exhausted');
+            updateButtons(false, `${quota.remaining} creation${quota.remaining === 1 ? '' : 's'} remaining today`, false);
         }
     } catch (e) {
         console.warn('Failed to check creation quota:', e);
         // Fail open - allow user to proceed
         _creationQuotaRemaining = null;
-        btn.disabled = false;
-        btn.title = '';
+        updateButtons(false, '', false);
     }
 }
 
@@ -5899,21 +5907,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.detail && typeof e.detail.remaining === 'number') {
             _creationQuotaRemaining = e.detail.remaining;
             const btn = document.getElementById('newCharacterBtn');
-            if (btn) {
+            const overflowBtn = document.getElementById('overflowNewCharBtn');
+            
+            [btn, overflowBtn].forEach(b => {
+                if (!b) return;
                 if (e.detail.remaining === -1) {
-                    btn.disabled = false;
-                    btn.title = '';
-                    btn.classList.remove('is-quota-exhausted');
+                    b.disabled = false;
+                    b.title = '';
+                    b.classList.remove('is-quota-exhausted');
                 } else if (e.detail.remaining === 0) {
-                    btn.disabled = true;
-                    btn.title = 'Daily character creation limit reached';
-                    btn.classList.add('is-quota-exhausted');
+                    b.disabled = true;
+                    b.title = 'Daily character creation limit reached';
+                    b.classList.add('is-quota-exhausted');
                 } else {
-                    btn.disabled = false;
-                    btn.title = `${e.detail.remaining} creation${e.detail.remaining === 1 ? '' : 's'} remaining today`;
-                    btn.classList.remove('is-quota-exhausted');
+                    b.disabled = false;
+                    b.title = `${e.detail.remaining} creation${e.detail.remaining === 1 ? '' : 's'} remaining today`;
+                    b.classList.remove('is-quota-exhausted');
                 }
-            }
+            });
         }
     });
 
