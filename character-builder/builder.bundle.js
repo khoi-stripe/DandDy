@@ -345,7 +345,9 @@ console.log('✅ DALL-E image generated:',imageUrl);console.log('Converting to A
 console.log('✅ Custom ASCII art generated successfully');return{asciiArt,imageUrl};}catch(error){console.error('Custom AI portrait generation error:',error);throw error;}},});const AIService=(window.AIService={_lastNarratorComment:null,_usedClassicThisRun:false,_narratorCommentCount:0,_usedFirstNames:new Set(),_usedLastNames:new Set(),_usedFullNames:new Set(),_backendAvailable:null,_warmupInProgress:false,resetNarratorSession(){this._lastNarratorComment=null;this._usedClassicThisRun=false;this._narratorCommentCount=0;},async warmupBackend(){if(this._warmupInProgress||this._backendAvailable===true){return;}
 this._warmupInProgress=true;console.log('%c🔄 WARMUP: Waking up backend server...','color: #fa0; font-weight: bold');while(this._backendAvailable!==true){try{const response=await fetch(`${CONFIG.BACKEND_URL}/api/ai/status`,{method:'GET',});if(response.ok){const data=await response.json();if(data.available){this._backendAvailable=true;console.log('%c✅ WARMUP: Backend is now ready!','color: #0f0; font-weight: bold');this._warmupInProgress=false;return;}}}catch(error){}
 await new Promise(resolve=>setTimeout(resolve,5000));}
-this._warmupInProgress=false;},async fetchWithTimeout(url,options,timeoutMs=CONFIG.AI_TIMEOUT){const controller=new AbortController();const timeoutId=setTimeout(()=>controller.abort(),timeoutMs);try{const response=await fetch(url,{...options,signal:controller.signal});clearTimeout(timeoutId);if(response.ok){this._backendAvailable=true;}
+this._warmupInProgress=false;},async fetchWithTimeout(url,options,timeoutMs=CONFIG.AI_TIMEOUT){const controller=new AbortController();const timeoutId=setTimeout(()=>controller.abort(),timeoutMs);try{let finalOptions=options||{};try{const token=window.AuthService&&typeof AuthService.getToken==='function'?AuthService.getToken():null;if(token){const existingHeaders=(finalOptions&&finalOptions.headers)||{};const mergedHeaders={...existingHeaders};if(!mergedHeaders.Authorization&&!mergedHeaders.authorization){mergedHeaders.Authorization=`Bearer ${token}`;}
+finalOptions={...finalOptions,headers:mergedHeaders};}}catch(e){}
+const response=await fetch(url,{...finalOptions,signal:controller.signal});clearTimeout(timeoutId);if(response.ok){this._backendAvailable=true;}
 return response;}catch(error){clearTimeout(timeoutId);if(error.name==='AbortError'){this._backendAvailable=false;this.warmupBackend();throw new Error('Request timed out - backend may be waking up');}
 throw error;}},async generateCompletion(prompt,systemPrompt=null){if(!CONFIG.ENABLE_AI){console.log('AI service disabled in config');return null;}
 try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/chat/completion`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({prompt:prompt,system_prompt:systemPrompt,max_tokens:300,temperature:0.8,}),});if(!response.ok){if(response.status===400){try{const errorData=await response.json();if(errorData.detail&&errorData.detail.includes('safety system')){console.warn('⚠️ OpenAI safety system rejection:',errorData.detail);if(window.UIService){window.UIService.showNotification('OpenAI flagged this request. Using fallback response instead.','warning',5000);}}}catch(e){}}
@@ -390,17 +392,26 @@ Format your response as JSON array of strings, one for each option in order. Exa
 console.log('%c🎲 OPTIONS (Fallback - Using Original Texts) ✅','color: #f80; font-weight: bold');console.log('  The original option texts will be used instead of AI variations');return options.map((opt)=>opt.text);},async generatePortraitImage(character){if(!CONFIG.ENABLE_AI){console.log('AI service disabled for image generation');return null;}
 const prompt=this.buildPortraitPrompt(character);return await this.generateImageFromPrompt(prompt);},async generateImageFromPrompt(prompt,options={}){if(!CONFIG.ENABLE_AI){console.log('%c🎨 DALL-E (Unavailable - AI Disabled)','color: #ff0; font-weight: bold');return null;}
 const forceModel=options.forceModel||null;const isRetry=options._isRetry||false;try{let model=forceModel||'dall-e-3';if(!forceModel){try{if(window.StorageService&&typeof StorageService.getImageModel==='function'){model=StorageService.getImageModel();}else if(CONFIG&&CONFIG.DEFAULT_IMAGE_MODEL){model=CONFIG.DEFAULT_IMAGE_MODEL;}}catch(e){console.warn('AIService.generateImageFromPrompt: failed to read image model, using default',e);}}
+try{if(typeof this.getImageQuotaStatus==='function'){const quota=await this.getImageQuotaStatus();if(quota&&quota.enforced&&quota.remaining===0){const resetAt=quota.reset_at||quota.resetAt||null;const msg=resetAt?`Daily image limit reached. Resets at ${resetAt
+                  .replace('T', ' ')
+                  .replace('+00:00', ' UTC')}.`:'Daily image limit reached. Please try again tomorrow.';if(window.UIService){window.UIService.showNotification(msg,'warning',8000);}
+const rateLimitError=new Error(msg);rateLimitError.isRateLimit=true;rateLimitError.limit=quota.limit;rateLimitError.remaining=quota.remaining;rateLimitError.resetAt=resetAt;throw rateLimitError;}}}catch(quotaErr){}
 console.log('%c🎨 IMAGE: Calling backend AI...','color: #0ff; font-weight: bold');console.log('  Prompt (preview):',prompt.substring(0,100)+(prompt.length>100?'…':''));console.log('  Model:',model+(forceModel?' (fallback)':''));console.log('  Note: Image generation takes 20-30s (longer than text AI)...');const defaultQuality={'dall-e-3':'standard','gpt-image-1':'medium','flux-1.1-pro':'standard','flux-schnell':'standard',};let quality=defaultQuality[model]||'standard';const isDemoMode=window.DemoCharacters&&typeof DemoCharacters.isDemoMode==='function'&&DemoCharacters.isDemoMode();if(isDemoMode&&model==='gpt-image-1'){quality='medium';console.log(`  Quality: MEDIUM (demo mode default)`);}else{try{if(window.StorageService&&typeof StorageService.getImageQuality==='function'){const savedQuality=StorageService.getImageQuality(model);if(savedQuality){quality=savedQuality;console.log(`  Quality: ${quality.toUpperCase()} (user preference)`);}}}catch(e){console.warn('AIService: failed to read quality setting',e);}}
 const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/generate`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({prompt:prompt,size:'1024x1024',quality:quality,model:model,}),},70000);if(!response.ok){const errorData=await response.json();console.log('%c🎨 IMAGE (Error)','color: #f00; font-weight: bold');console.log('  Error:',errorData.detail);const extractErrorMessage=(detail)=>{if(!detail)return null;if(Array.isArray(detail)){return detail.map(err=>{if(typeof err==='string')return err;const field=err.loc?err.loc.slice(1).join('.'):'unknown';return`${field}: ${err.msg || err.message || JSON.stringify(err)}`;}).join('; ');}
 if(typeof detail==='object'){return detail.msg||detail.message||JSON.stringify(detail);}
-return String(detail);};const errorMessage=extractErrorMessage(errorData.detail);if(response.status===429){const rateLimitError=new Error(errorMessage||'Rate limit exceeded');rateLimitError.isRateLimit=true;throw rateLimitError;}
+return String(detail);};const errorMessage=extractErrorMessage(errorData.detail);if(response.status===429){const resetAt=(errorData&&(errorData.reset_at||errorData.resetAt))||null;const remaining=errorData&&typeof errorData.remaining==='number'?errorData.remaining:null;const limit=errorData&&typeof errorData.limit==='number'?errorData.limit:null;const msg=errorMessage||(resetAt?`Daily image limit reached. Resets at ${resetAt
+                  .replace('T', ' ')
+                  .replace('+00:00', ' UTC')}.`:'Daily image limit reached.');if(window.UIService){window.UIService.showNotification(msg,'warning',8000);}
+const rateLimitError=new Error(msg);rateLimitError.isRateLimit=true;rateLimitError.limit=limit;rateLimitError.remaining=remaining;rateLimitError.resetAt=resetAt;throw rateLimitError;}
 const detailStr=typeof errorData.detail==='string'?errorData.detail:errorMessage;if(response.status===502&&detailStr&&(detailStr.toLowerCase().includes('flux')||detailStr.toLowerCase().includes('replicate'))){console.warn('⚠️ Replicate/Flux service error:',detailStr);const fluxError=new Error('Flux image generation service is temporarily unavailable');fluxError.isFluxError=true;fluxError.originalMessage=detailStr;fluxError.suggestModelSwitch=true;throw fluxError;}
 if(response.status===400&&detailStr&&detailStr.toLowerCase().includes('safety system')){console.warn('⚠️ OpenAI safety system rejection:',detailStr);console.warn('📝 REJECTED PROMPT:',prompt);const analysis=this.analyzeRejectedPrompt(prompt);const safetyError=new Error('Portrait generation was flagged by OpenAI\'s content safety system');safetyError.isSafetyRejection=true;safetyError.originalMessage=detailStr;safetyError.rejectedPrompt=prompt;safetyError.promptAnalysis=analysis;throw safetyError;}
 throw new Error(errorMessage||`API error: ${response.status}`);}
-const data=await response.json();if(data.success){console.log('%c🎨 IMAGE (Generated) ✨','color: #0f0; font-weight: bold');console.log('  URL:',data.url.substring(0,50)+'...');return data.url;}
+const data=await response.json();if(data.success){console.log('%c🎨 IMAGE (Generated) ✨','color: #0f0; font-weight: bold');console.log('  URL:',data.url.substring(0,50)+'...');try{const limitStr=response.headers.get('x-danddy-image-limit');const remainingStr=response.headers.get('x-danddy-image-remaining');const resetStr=response.headers.get('x-danddy-image-reset');const quotaInfo={limit:limitStr!=null?parseInt(limitStr,10):null,remaining:remainingStr!=null?parseInt(remainingStr,10):null,resetEpoch:resetStr!=null?parseInt(resetStr,10):null,};window.dispatchEvent(new CustomEvent('danddy:imageQuotaUpdate',{detail:quotaInfo}),);if(window.UIService&&typeof quotaInfo.remaining==='number'&&quotaInfo.remaining>=0&&quotaInfo.remaining<=2){window.UIService.showNotification(`Images left today: ${quotaInfo.remaining}`,'info',5000,);}}catch(e){}
+return data.url;}
 return null;}catch(error){console.log('%c🎨 IMAGE (Failed)','color: #f00; font-weight: bold');console.error('  Error:',error);if(error.isFluxError&&!isRetry){console.log('%c🔄 AUTO-FALLBACK: Flux unavailable, trying GPT Image instead...','color: #fa0; font-weight: bold');if(window.UIService){window.UIService.showNotification('Flux unavailable, switching to GPT Image...','info',4000);}
 return this.generateImageFromPrompt(prompt,{forceModel:'gpt-image-1',_isRetry:true});}
-throw error;}},buildCharacterDescription(character){const parts=[];parts.push('Dungeons & Dragons fantasy character:');if(character.sex){parts.push(character.sex);}
+throw error;}},async getImageQuotaStatus(){try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/quota`,{method:'GET'},10000,);if(!response.ok)return null;const data=await response.json();const normalized={...data,resetAt:data.reset_at||data.resetAt,resetEpoch:data.reset_epoch||data.resetEpoch,};try{window.dispatchEvent(new CustomEvent('danddy:imageQuotaUpdate',{detail:{limit:normalized.limit,remaining:normalized.remaining,resetEpoch:normalized.resetEpoch,},}),);}catch(_){}
+return normalized;}catch(e){return null;}},buildCharacterDescription(character){const parts=[];parts.push('Dungeons & Dragons fantasy character:');if(character.sex){parts.push(character.sex);}
 if(character.race){let raceDesc=null;try{if(window.PortraitPrompt&&typeof PortraitPrompt.getVariableSnippet==='function'){raceDesc=PortraitPrompt.getVariableSnippet('race',character.race);}}catch(e){}
 if(!raceDesc){raceDesc=window.PortraitPrompt?PortraitPrompt.getRaceDescription(character.race):character.race;}
 parts.push(raceDesc);}
@@ -8557,7 +8568,7 @@ class="terminal-btn selector-trigger"
 id="builderPortraitStyleTrigger"
 aria-haspopup="listbox"
 aria-expanded="false"
-onclick="CharacterSheet.toggleSelectorMenu(this)"><span class="selector-trigger-label"id="builderPortraitStyleLabel">Cinematic inks</span></button><div class="selector-menu portrait-style-menu"id="builderPortraitStyleMenu"role="listbox"aria-label="Portrait style"aria-hidden="true"><!--Options populated by JS--></div></div></div><textarea
+onclick="CharacterSheet.toggleSelectorMenu(this)"><span class="selector-trigger-label"id="builderPortraitStyleLabel">Cinematic inks</span></button><div class="selector-menu portrait-style-menu"id="builderPortraitStyleMenu"role="listbox"aria-label="Portrait style"aria-hidden="true"><!--Options populated by JS--></div></div></div><div class="terminal-text-small terminal-text-dim"id="builderImageQuotaLine">Checking image quota…</div><textarea
 class="terminal-textarea portrait-prompt-textarea"
 id="custom-prompt"
 placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="App.surpriseMePortrait()">SURPRISE ME</button><button class="terminal-btn terminal-btn-primary"onclick="App.confirmPromptModal()">GENERATE PORTRAIT</button></div></div></div>`;
@@ -8571,6 +8582,51 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
     const modal = document.getElementById('promptModal');
     if (modal && Utils.focusFirstFieldInModal) {
       Utils.focusFirstFieldInModal(modal);
+    }
+
+    // Populate the quota line (and keep it updated while the modal is open).
+    try {
+      const quotaLine = document.getElementById('builderImageQuotaLine');
+      const updateQuotaLine = (detail) => {
+        const el = document.getElementById('builderImageQuotaLine');
+        if (!el) return;
+        const remaining = detail && typeof detail.remaining === 'number' ? detail.remaining : null;
+        const limit = detail && typeof detail.limit === 'number' ? detail.limit : null;
+
+        if (remaining === -1) {
+          el.textContent = 'Image quota: unlimited (admin/dev)';
+          return;
+        }
+
+        if (remaining === 0 && limit != null) {
+          el.textContent = `Images left today:0/${limit}`;
+          return;
+        }
+
+        if (remaining != null && limit != null) {
+          el.textContent = `Images left today:${remaining}/${limit}`;
+          return;
+        }
+
+        el.textContent = 'Image quota: unavailable';
+      };
+
+      // Store handler so we can remove it on close.
+      this._promptModalQuotaHandler = (e) => updateQuotaLine(e && e.detail);
+      window.addEventListener('danddy:imageQuotaUpdate', this._promptModalQuotaHandler);
+
+      // Initial fetch for current quota status.
+      if (window.AIService && typeof AIService.getImageQuotaStatus === 'function') {
+        const quota = await AIService.getImageQuotaStatus();
+        if (quotaLine && quota) {
+          updateQuotaLine({
+            limit: quota.limit,
+            remaining: quota.remaining,
+          });
+        }
+      }
+    } catch (e) {
+      // Non-fatal
     }
 
     // ESC key to close
@@ -8611,6 +8667,12 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
       if (this._promptModalEscHandler) {
         document.removeEventListener('keydown', this._promptModalEscHandler);
         this._promptModalEscHandler = null;
+      }
+
+      // Remove quota listener
+      if (this._promptModalQuotaHandler) {
+        window.removeEventListener('danddy:imageQuotaUpdate', this._promptModalQuotaHandler);
+        this._promptModalQuotaHandler = null;
       }
       
       // Reset the style selection state

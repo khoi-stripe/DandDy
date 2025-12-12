@@ -2683,6 +2683,50 @@ async function generatePortraitForCharacter(id) {
         // Snapshot form values for dirty checking
         setTimeout(() => ModalManager.snapshotForm('portraitPromptModal'), 50);
     }
+
+    // Populate the quota line (and keep it updated while the modal is open).
+    try {
+        const updateQuotaLine = (detail) => {
+            const el = document.getElementById('managerImageQuotaLine');
+            if (!el) return;
+            const remaining = detail && typeof detail.remaining === 'number' ? detail.remaining : null;
+            const limit = detail && typeof detail.limit === 'number' ? detail.limit : null;
+
+            if (remaining === -1) {
+                el.textContent = 'Image quota: unlimited (admin/dev)';
+                return;
+            }
+
+            if (remaining === 0 && limit != null) {
+                el.textContent = `Images left today: 0 / ${limit}`;
+                return;
+            }
+
+            if (remaining != null && limit != null) {
+                el.textContent = `Images left today: ${remaining} / ${limit}`;
+                return;
+            }
+
+            el.textContent = 'Image quota: unavailable';
+        };
+
+        // Remove any previous handler to avoid duplicates
+        if (window._managerQuotaHandler) {
+            window.removeEventListener('danddy:imageQuotaUpdate', window._managerQuotaHandler);
+        }
+        window._managerQuotaHandler = (e) => updateQuotaLine(e && e.detail);
+        window.addEventListener('danddy:imageQuotaUpdate', window._managerQuotaHandler);
+
+        // Initial fetch
+        if (window.AIService && typeof AIService.getImageQuotaStatus === 'function') {
+            const quota = await AIService.getImageQuotaStatus();
+            if (quota) {
+                updateQuotaLine({ limit: quota.limit, remaining: quota.remaining });
+            }
+        }
+    } catch (e) {
+        // Non-fatal
+    }
 }
 
 function closePortraitPromptModal() {
@@ -2706,6 +2750,14 @@ function closePortraitPromptModal() {
         if (promptInput) promptInput.value = '';
         currentPortraitCharacterId = null;
         currentPortraitStyle = null;
+
+        // Remove quota listener (if set)
+        try {
+            if (window._managerQuotaHandler) {
+                window.removeEventListener('danddy:imageQuotaUpdate', window._managerQuotaHandler);
+                window._managerQuotaHandler = null;
+            }
+        } catch (e) {}
     };
 
     animateModalClose(modal, {

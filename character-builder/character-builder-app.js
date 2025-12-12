@@ -3666,6 +3666,9 @@ const App = (window.App = {
                 </div>
               </div>
             </div>
+            <div class="terminal-text-small terminal-text-dim" id="builderImageQuotaLine">
+              Checking image quota…
+            </div>
             <textarea
               class="terminal-textarea portrait-prompt-textarea"
               id="custom-prompt"
@@ -3689,6 +3692,51 @@ const App = (window.App = {
     const modal = document.getElementById('promptModal');
     if (modal && Utils.focusFirstFieldInModal) {
       Utils.focusFirstFieldInModal(modal);
+    }
+
+    // Populate the quota line (and keep it updated while the modal is open).
+    try {
+      const quotaLine = document.getElementById('builderImageQuotaLine');
+      const updateQuotaLine = (detail) => {
+        const el = document.getElementById('builderImageQuotaLine');
+        if (!el) return;
+        const remaining = detail && typeof detail.remaining === 'number' ? detail.remaining : null;
+        const limit = detail && typeof detail.limit === 'number' ? detail.limit : null;
+
+        if (remaining === -1) {
+          el.textContent = 'Image quota: unlimited (admin/dev)';
+          return;
+        }
+
+        if (remaining === 0 && limit != null) {
+          el.textContent = `Images left today: 0 / ${limit}`;
+          return;
+        }
+
+        if (remaining != null && limit != null) {
+          el.textContent = `Images left today: ${remaining} / ${limit}`;
+          return;
+        }
+
+        el.textContent = 'Image quota: unavailable';
+      };
+
+      // Store handler so we can remove it on close.
+      this._promptModalQuotaHandler = (e) => updateQuotaLine(e && e.detail);
+      window.addEventListener('danddy:imageQuotaUpdate', this._promptModalQuotaHandler);
+
+      // Initial fetch for current quota status.
+      if (window.AIService && typeof AIService.getImageQuotaStatus === 'function') {
+        const quota = await AIService.getImageQuotaStatus();
+        if (quotaLine && quota) {
+          updateQuotaLine({
+            limit: quota.limit,
+            remaining: quota.remaining,
+          });
+        }
+      }
+    } catch (e) {
+      // Non-fatal
     }
 
     // ESC key to close
@@ -3729,6 +3777,12 @@ const App = (window.App = {
       if (this._promptModalEscHandler) {
         document.removeEventListener('keydown', this._promptModalEscHandler);
         this._promptModalEscHandler = null;
+      }
+
+      // Remove quota listener
+      if (this._promptModalQuotaHandler) {
+        window.removeEventListener('danddy:imageQuotaUpdate', this._promptModalQuotaHandler);
+        this._promptModalQuotaHandler = null;
       }
       
       // Reset the style selection state

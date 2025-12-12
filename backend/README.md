@@ -89,6 +89,26 @@ Run with auto-reload:
 uvicorn main:app --reload
 ```
 
+## AI Rate Limiting
+
+The API includes smart rate limiting for AI endpoints to control costs:
+
+- **Development Mode** (default): Unlimited requests for everyone
+- **Production Mode**: Regular users limited, admins unlimited
+- **User-based tracking**: More accurate than IP-based limiting
+- **Admin exemption**: Admins bypass all rate limits
+
+### Quick Setup
+
+Make yourself an admin (recommended):
+```bash
+python make_admin.py your@email.com
+```
+
+For complete details, see:
+- **Quick Start**: `RATE_LIMIT_QUICK_START.md`
+- **Full Documentation**: `RATE_LIMITING.md`
+
 ## Testing
 
 The API can be tested using:

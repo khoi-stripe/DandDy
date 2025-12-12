@@ -2,13 +2,14 @@
 AI Service Routes - Secure proxy for OpenAI API calls
 This prevents exposing API keys to the frontend
 """
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import os
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone, date
 import uuid
 import json
 import base64
@@ -17,7 +18,10 @@ import httpx
 import boto3
 import openai
 import replicate
-from database.database import get_settings
+from sqlalchemy import text
+from database.database import get_settings, engine
+from models.user import User, UserRole
+from utils.auth import get_current_user_optional
 
 router = APIRouter(tags=["AI"])
 
@@ -33,6 +37,9 @@ settings = get_settings()
 OPENAI_API_KEY = settings.openai_api_key
 MAX_REQUESTS_PER_MINUTE = settings.max_requests_per_user_per_minute
 MAX_REQUESTS_PER_DAY = settings.max_requests_per_user_per_day
+
+# Dedicated image generation quota (separate from general AI request limiting).
+IMAGE_DAILY_LIMIT = int(os.getenv("MAX_IMAGES_PER_USER_PER_DAY", "10"))
 
 # Optional: Grafana Loki config for centralized logging
 GRAFANA_LOKI_URL = os.getenv("GRAFANA_LOKI_URL")
@@ -349,14 +356,33 @@ def check_api_key():
         )
 
 
-def get_client_id(request: Request) -> str:
-    """Get a unique identifier for the client (IP address or user ID)"""
-    # In production, use authenticated user ID instead
-    return request.client.host if request.client else "unknown"
+def get_client_id(request: Request, user: Optional[User] = None) -> str:
+    """
+    Get a unique identifier for rate limiting.
+    Prefers authenticated user ID, falls back to IP address for anonymous users.
+    """
+    if user:
+        return f"user:{user.id}"
+    return f"ip:{request.client.host}" if request.client else "ip:unknown"
 
 
-def check_rate_limit(client_id: str):
-    """Simple rate limiting (use Redis in production)"""
+def check_rate_limit(client_id: str, user: Optional[User] = None):
+    """
+    Rate limiting with smart exemptions:
+    - Admins are never rate limited
+    - Development mode bypasses rate limits for easier testing
+    - Regular users get per-minute and per-day limits
+    """
+    # Skip rate limiting for admins
+    if user and user.role == UserRole.ADMIN:
+        print(f"⚡ Rate limit bypassed for admin user: {user.email}")
+        return
+    
+    # Skip rate limiting in development mode (when PRODUCTION env var is not set)
+    if not os.getenv("PRODUCTION"):
+        print(f"🔧 Rate limit bypassed in development mode for: {client_id}")
+        return
+    
     now = datetime.now()
     
     # Clean old entries
@@ -387,7 +413,7 @@ def check_rate_limit(client_id: str):
     _rate_limit_store[client_id].append(now)
 
 
-def check_character_summary_cooldown(client_id: str, cooldown_seconds: int = 20):
+def check_character_summary_cooldown(client_id: str, user: Optional[User] = None, cooldown_seconds: int = 20):
     """
     Enforce a short cooldown between expensive character summary generations
     (names + backstory template) per client.
@@ -395,8 +421,18 @@ def check_character_summary_cooldown(client_id: str, cooldown_seconds: int = 20)
     This is in addition to the general per-minute/day rate limits and is
     specifically tuned to discourage rapid-fire "new character" spam while
     still allowing other lighter AI features to function.
+    
+    Admins and development mode bypass this cooldown.
     """
     if cooldown_seconds <= 0:
+        return
+    
+    # Skip cooldown for admins
+    if user and user.role == UserRole.ADMIN:
+        return
+    
+    # Skip cooldown in development mode
+    if not os.getenv("PRODUCTION"):
         return
 
     now = datetime.now()
@@ -414,6 +450,115 @@ def check_character_summary_cooldown(client_id: str, cooldown_seconds: int = 20)
             )
 
     _character_summary_last_request[client_id] = now
+
+
+def _utc_today() -> date:
+    return datetime.now(timezone.utc).date()
+
+
+def _utc_next_midnight_epoch() -> int:
+    now = datetime.now(timezone.utc)
+    tomorrow = (now + timedelta(days=1)).date()
+    midnight = datetime(tomorrow.year, tomorrow.month, tomorrow.day, tzinfo=timezone.utc)
+    return int(midnight.timestamp())
+
+
+def _utc_next_midnight_iso() -> str:
+    ts = _utc_next_midnight_epoch()
+    return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+
+
+def _image_quota_is_enforced(user: Optional[User]) -> bool:
+    # Admins bypass image quota.
+    if user and user.role == UserRole.ADMIN:
+        return False
+    # Development mode bypasses quotas so local testing is frictionless.
+    if not os.getenv("PRODUCTION"):
+        return False
+    return True
+
+
+def _get_image_usage_count(day_utc: date, subject_key: str) -> int:
+    with engine.connect() as conn:
+        row = conn.execute(
+            text(
+                """
+                SELECT image_count
+                FROM ai_image_usage
+                WHERE day_utc = :day_utc AND subject_key = :subject_key
+                """
+            ),
+            {"day_utc": day_utc, "subject_key": subject_key},
+        ).fetchone()
+        return int(row[0]) if row else 0
+
+
+def _try_increment_image_usage(day_utc: date, subject_key: str, limit: int) -> Optional[int]:
+    """
+    Atomically increments daily usage if still under the limit.
+    Returns the new image_count when allowed; returns None when the cap is reached.
+    """
+    dialect = getattr(engine, "dialect", None)
+    dialect_name = getattr(dialect, "name", "") if dialect else ""
+
+    # Postgres (Supabase): single-statement upsert with a conditional update.
+    if dialect_name in ("postgresql", "postgres"):
+        with engine.begin() as conn:
+            row = conn.execute(
+                text(
+                    """
+                    INSERT INTO ai_image_usage (day_utc, subject_key, image_count, updated_at)
+                    VALUES (:day_utc, :subject_key, 1, CURRENT_TIMESTAMP)
+                    ON CONFLICT (day_utc, subject_key) DO UPDATE
+                    SET image_count = ai_image_usage.image_count + 1,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE ai_image_usage.image_count < :limit
+                    RETURNING image_count
+                    """
+                ),
+                {"day_utc": day_utc, "subject_key": subject_key, "limit": limit},
+            ).fetchone()
+            return int(row[0]) if row else None
+
+    # SQLite (local dev): best-effort transactional check + upsert.
+    with engine.begin() as conn:
+        current = conn.execute(
+            text(
+                """
+                SELECT image_count
+                FROM ai_image_usage
+                WHERE day_utc = :day_utc AND subject_key = :subject_key
+                """
+            ),
+            {"day_utc": day_utc, "subject_key": subject_key},
+        ).fetchone()
+        current_count = int(current[0]) if current else 0
+        if current_count >= limit:
+            return None
+
+        conn.execute(
+            text(
+                """
+                INSERT INTO ai_image_usage (day_utc, subject_key, image_count, updated_at)
+                VALUES (:day_utc, :subject_key, 1, CURRENT_TIMESTAMP)
+                ON CONFLICT(day_utc, subject_key) DO UPDATE SET
+                    image_count = ai_image_usage.image_count + 1,
+                    updated_at = CURRENT_TIMESTAMP
+                """
+            ),
+            {"day_utc": day_utc, "subject_key": subject_key},
+        )
+        row = conn.execute(
+            text(
+                """
+                SELECT image_count
+                FROM ai_image_usage
+                WHERE day_utc = :day_utc AND subject_key = :subject_key
+                """
+            ),
+            {"day_utc": day_utc, "subject_key": subject_key},
+        ).fetchone()
+        return int(row[0]) if row else 1
 
 
 def handle_openai_error(
@@ -497,6 +642,57 @@ async def get_ai_status():
     }
 
 
+@router.get("/images/quota")
+async def get_image_quota(
+    http_request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """
+    Return current daily image quota info so the frontend can display:
+      - used
+      - remaining
+      - reset time
+
+    For admin users and in development mode, quota is not enforced and
+    `remaining` is -1 to signal "unlimited".
+    """
+    client_id = get_client_id(http_request, current_user)
+    subject_key = client_id
+    limit = IMAGE_DAILY_LIMIT
+    reset_epoch = _utc_next_midnight_epoch()
+    reset_iso = _utc_next_midnight_iso()
+
+    enforced = _image_quota_is_enforced(current_user)
+    if not enforced:
+        return {
+            "limit": limit,
+            "used": 0,
+            "remaining": -1,
+            "reset_at": reset_iso,
+            "reset_epoch": reset_epoch,
+            "enforced": False,
+        }
+
+    try:
+        used = _get_image_usage_count(_utc_today(), subject_key)
+    except Exception as e:
+        print("⚠️  Image quota lookup failed:", str(e))
+        raise HTTPException(
+            status_code=503,
+            detail="Image quota system is temporarily unavailable. Please try again later.",
+        )
+
+    remaining = max(0, limit - used)
+    return {
+        "limit": limit,
+        "used": used,
+        "remaining": remaining,
+        "reset_at": reset_iso,
+        "reset_epoch": reset_epoch,
+        "enforced": True,
+    }
+
+
 @router.post("/observability/test")
 async def test_loki_connection():
     """
@@ -563,12 +759,13 @@ async def test_loki_connection():
 @router.post("/chat/completion")
 async def chat_completion(
     request: ChatCompletionRequest,
-    http_request: Request
+    http_request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Generate chat completion (for narrator, names, backstory)"""
     check_api_key()
-    client_id = get_client_id(http_request)
-    check_rate_limit(client_id)
+    client_id = get_client_id(http_request, current_user)
+    check_rate_limit(client_id, current_user)
     
     try:
         messages = []
@@ -763,11 +960,58 @@ async def _generate_with_flux(
 @router.post("/images/generate")
 async def generate_image(
     request: ImageGenerationRequest,
-    http_request: Request
+    http_request: Request,
+    response: Response,
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Generate image using OpenAI (DALL-E, GPT Image) or Replicate (Flux) models."""
-    client_id = get_client_id(http_request)
-    check_rate_limit(client_id)
+    client_id = get_client_id(http_request, current_user)
+    check_rate_limit(client_id, current_user)
+
+    # Enforce a dedicated daily quota for image generation (cost control).
+    subject_key = client_id  # already prefixed with "user:" or "ip:"
+    limit = IMAGE_DAILY_LIMIT
+    reset_epoch = _utc_next_midnight_epoch()
+    reset_iso = _utc_next_midnight_iso()
+
+    enforced = _image_quota_is_enforced(current_user)
+    if enforced:
+        try:
+            used = _try_increment_image_usage(_utc_today(), subject_key, limit)
+        except Exception as e:
+            # Fail closed to protect costs if the quota backend breaks.
+            print("⚠️  Image quota check failed:", str(e))
+            raise HTTPException(
+                status_code=503,
+                detail="Image quota system is temporarily unavailable. Please try again later.",
+            )
+
+        if used is None:
+            # Daily cap reached
+            headers = {
+                "X-Danddy-Image-Limit": str(limit),
+                "X-Danddy-Image-Remaining": "0",
+                "X-Danddy-Image-Reset": str(reset_epoch),
+            }
+            payload = {
+                "detail": "Daily image limit reached.",
+                "limit": limit,
+                "used": limit,
+                "remaining": 0,
+                "reset_at": reset_iso,
+                "reset_epoch": reset_epoch,
+            }
+            return JSONResponse(status_code=429, content=payload, headers=headers)
+
+        remaining = max(0, limit - used)
+        response.headers["X-Danddy-Image-Limit"] = str(limit)
+        response.headers["X-Danddy-Image-Remaining"] = str(remaining)
+        response.headers["X-Danddy-Image-Reset"] = str(reset_epoch)
+    else:
+        # Not enforced (admin or dev). Signal "unlimited" to clients with remaining=-1.
+        response.headers["X-Danddy-Image-Limit"] = str(limit)
+        response.headers["X-Danddy-Image-Remaining"] = "-1"
+        response.headers["X-Danddy-Image-Reset"] = str(reset_epoch)
 
     model = request.model or "dall-e-3"
     is_flux_model = model.startswith("flux-")
@@ -1046,12 +1290,13 @@ NARRATOR_PROMPTS = {
 @router.post("/narrator/comment")
 async def generate_narrator_comment(
     request: NarratorCommentRequest,
-    http_request: Request
+    http_request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Generate narrator comment for character creation"""
     check_api_key()
-    client_id = get_client_id(http_request)
-    check_rate_limit(client_id)
+    client_id = get_client_id(http_request, current_user)
+    check_rate_limit(client_id, current_user)
     
     # Get system prompt based on narrator personality
     system_prompt = NARRATOR_PROMPTS.get(request.narrator_id, NARRATOR_PROMPTS['deadpan'])
@@ -1123,12 +1368,13 @@ async def generate_narrator_comment(
 @router.post("/characters/names")
 async def generate_character_names(
     request: NamesGenerationRequest,
-    http_request: Request
+    http_request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Generate character names"""
     check_api_key()
-    client_id = get_client_id(http_request)
-    check_rate_limit(client_id)
+    client_id = get_client_id(http_request, current_user)
+    check_rate_limit(client_id, current_user)
     
     prompt = (
         f"Generate {request.count} fantasy character names suitable for a "
@@ -1176,12 +1422,13 @@ async def generate_character_names(
 @router.post("/characters/backstory")
 async def generate_character_backstory(
     request: BackstoryGenerationRequest,
-    http_request: Request
+    http_request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """Generate character backstory"""
     check_api_key()
-    client_id = get_client_id(http_request)
-    check_rate_limit(client_id)
+    client_id = get_client_id(http_request, current_user)
+    check_rate_limit(client_id, current_user)
     
     prompt = (
         f"Create a brief (100 words max) backstory for: {request.name}, "
@@ -1223,7 +1470,8 @@ async def generate_character_backstory(
 @router.post("/characters/summary")
 async def generate_character_summary(
     request: CharacterSummaryRequest,
-    http_request: Request
+    http_request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Generate BOTH:
@@ -1237,12 +1485,12 @@ async def generate_character_summary(
         needing another model call.
     """
     check_api_key()
-    client_id = get_client_id(http_request)
-    check_rate_limit(client_id)
+    client_id = get_client_id(http_request, current_user)
+    check_rate_limit(client_id, current_user)
     # Extra protection specifically for "new character" style operations: even
     # if the general per-minute/day rate limit is not hit, enforce a short
     # cooldown between summary generations for the same client.
-    check_character_summary_cooldown(client_id, cooldown_seconds=20)
+    check_character_summary_cooldown(client_id, current_user, cooldown_seconds=20)
 
     # Build a single structured prompt for both names and backstory template
     prompt = (

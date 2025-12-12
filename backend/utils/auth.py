@@ -140,3 +140,31 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
     return current_user
 
 
+async def get_current_user_optional(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """
+    Get current user from token if present, otherwise return None.
+    This allows endpoints to work for both authenticated and unauthenticated users.
+    """
+    try:
+        # Try to extract the token from the Authorization header
+        authorization = request.headers.get("Authorization")
+        if not authorization or not authorization.startswith("Bearer "):
+            return None
+        
+        token = authorization.replace("Bearer ", "")
+        
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        user_id: int = payload.get("sub")
+        if user_id is None:
+            return None
+        
+        user = db.query(User).filter(User.id == int(user_id)).first()
+        return user
+    except (JWTError, ExpiredSignatureError, ValueError, AttributeError):
+        # Invalid/expired token or parsing error - treat as unauthenticated
+        return None
+
+

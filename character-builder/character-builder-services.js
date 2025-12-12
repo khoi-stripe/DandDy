@@ -794,8 +794,28 @@ const AIService = (window.AIService = {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
     try {
+      // Attach auth token when available so backend can apply per-user quotas
+      // and admin bypass (instead of falling back to IP-based limits).
+      let finalOptions = options || {};
+      try {
+        const token =
+          window.AuthService && typeof AuthService.getToken === 'function'
+            ? AuthService.getToken()
+            : null;
+        if (token) {
+          const existingHeaders = (finalOptions && finalOptions.headers) || {};
+          const mergedHeaders = { ...existingHeaders };
+          if (!mergedHeaders.Authorization && !mergedHeaders.authorization) {
+            mergedHeaders.Authorization = `Bearer ${token}`;
+          }
+          finalOptions = { ...finalOptions, headers: mergedHeaders };
+        }
+      } catch (e) {
+        // Non-fatal: continue without auth header
+      }
+
       const response = await fetch(url, {
-        ...options,
+        ...finalOptions,
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -1508,6 +1528,33 @@ Format your response as JSON array of strings, one for each option in order. Exa
         }
       }
 
+      // Preflight quota so we can message the user before burning expensive calls.
+      // Backend still enforces quota; this is just a nicer UX.
+      try {
+        if (typeof this.getImageQuotaStatus === 'function') {
+          const quota = await this.getImageQuotaStatus();
+          if (quota && quota.enforced && quota.remaining === 0) {
+            const resetAt = quota.reset_at || quota.resetAt || null;
+            const msg = resetAt
+              ? `Daily image limit reached. Resets at ${resetAt
+                  .replace('T', ' ')
+                  .replace('+00:00', ' UTC')}.`
+              : 'Daily image limit reached. Please try again tomorrow.';
+            if (window.UIService) {
+              window.UIService.showNotification(msg, 'warning', 8000);
+            }
+            const rateLimitError = new Error(msg);
+            rateLimitError.isRateLimit = true;
+            rateLimitError.limit = quota.limit;
+            rateLimitError.remaining = quota.remaining;
+            rateLimitError.resetAt = resetAt;
+            throw rateLimitError;
+          }
+        }
+      } catch (quotaErr) {
+        // If quota endpoint fails, don't block generation; backend will enforce anyway.
+      }
+
       console.log('%c🎨 IMAGE: Calling backend AI...', 'color: #0ff; font-weight: bold');
       // Log only a preview of the prompt so the console isn't flooded,
       // but make it clear that the full prompt (without truncation) is
@@ -1589,8 +1636,28 @@ Format your response as JSON array of strings, one for each option in order. Exa
         
         // Check for rate limiting
         if (response.status === 429) {
-          const rateLimitError = new Error(errorMessage || 'Rate limit exceeded');
+          const resetAt = (errorData && (errorData.reset_at || errorData.resetAt)) || null;
+          const remaining =
+            errorData && typeof errorData.remaining === 'number' ? errorData.remaining : null;
+          const limit = errorData && typeof errorData.limit === 'number' ? errorData.limit : null;
+
+          const msg =
+            errorMessage ||
+            (resetAt
+              ? `Daily image limit reached. Resets at ${resetAt
+                  .replace('T', ' ')
+                  .replace('+00:00', ' UTC')}.`
+              : 'Daily image limit reached.');
+
+          if (window.UIService) {
+            window.UIService.showNotification(msg, 'warning', 8000);
+          }
+
+          const rateLimitError = new Error(msg);
           rateLimitError.isRateLimit = true;
+          rateLimitError.limit = limit;
+          rateLimitError.remaining = remaining;
+          rateLimitError.resetAt = resetAt;
           throw rateLimitError;
         }
         
@@ -1632,6 +1699,39 @@ Format your response as JSON array of strings, one for each option in order. Exa
       if (data.success) {
         console.log('%c🎨 IMAGE (Generated) ✨', 'color: #0f0; font-weight: bold');
         console.log('  URL:', data.url.substring(0, 50) + '...');
+
+        // Read quota headers when present and broadcast for UI updates.
+        try {
+          const limitStr = response.headers.get('x-danddy-image-limit');
+          const remainingStr = response.headers.get('x-danddy-image-remaining');
+          const resetStr = response.headers.get('x-danddy-image-reset');
+          const quotaInfo = {
+            limit: limitStr != null ? parseInt(limitStr, 10) : null,
+            remaining: remainingStr != null ? parseInt(remainingStr, 10) : null,
+            resetEpoch: resetStr != null ? parseInt(resetStr, 10) : null,
+          };
+
+          window.dispatchEvent(
+            new CustomEvent('danddy:imageQuotaUpdate', { detail: quotaInfo }),
+          );
+
+          // Optional lightweight notification when enforced and low remaining.
+          if (
+            window.UIService &&
+            typeof quotaInfo.remaining === 'number' &&
+            quotaInfo.remaining >= 0 &&
+            quotaInfo.remaining <= 2
+          ) {
+            window.UIService.showNotification(
+              `Images left today: ${quotaInfo.remaining}`,
+              'info',
+              5000,
+            );
+          }
+        } catch (e) {
+          // Non-fatal
+        }
+
         return data.url;
       }
       return null;
@@ -1659,6 +1759,47 @@ Format your response as JSON array of strings, one for each option in order. Exa
       }
       
       throw error;
+    }
+  },
+
+  /**
+   * Fetch current daily image quota from backend.
+   * Returns: { limit, used, remaining, reset_at, reset_epoch, enforced }
+   * - remaining === -1 indicates "unlimited" (admin/dev bypass)
+   */
+  async getImageQuotaStatus() {
+    try {
+      const response = await this.fetchWithTimeout(
+        `${CONFIG.BACKEND_URL}/api/ai/images/quota`,
+        { method: 'GET' },
+        10000,
+      );
+      if (!response.ok) return null;
+      const data = await response.json();
+
+      // Normalize keys to camelCase for callers, but keep originals too.
+      const normalized = {
+        ...data,
+        resetAt: data.reset_at || data.resetAt,
+        resetEpoch: data.reset_epoch || data.resetEpoch,
+      };
+
+      // Broadcast so any open UI can update its quota label.
+      try {
+        window.dispatchEvent(
+          new CustomEvent('danddy:imageQuotaUpdate', {
+            detail: {
+              limit: normalized.limit,
+              remaining: normalized.remaining,
+              resetEpoch: normalized.resetEpoch,
+            },
+          }),
+        );
+      } catch (_) {}
+
+      return normalized;
+    } catch (e) {
+      return null;
     }
   },
 
