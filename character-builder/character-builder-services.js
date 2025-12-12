@@ -1203,13 +1203,18 @@ const AIService = (window.AIService = {
 
         if (status === 429) {
           console.log(
-            '%c📦 SUMMARY (Cooldown / Rate Limit)',
+            '%c📦 SUMMARY (Cooldown / Quota Limit)',
             'color: #ff0; font-weight: bold',
           );
           if (window.UIService) {
+            // Show user-friendly message (hide "rate limit" terminology)
+            // Check if it's a creation quota message vs generic rate limit
+            const isCreationQuota = detail && detail.includes('character creation');
+            const friendlyMessage = isCreationQuota
+              ? detail
+              : "You've reached today's limit. Using offline suggestions for this character.";
             window.UIService.showNotification(
-              detail ||
-                'AI character generation is cooling down. Using offline suggestions for this one.',
+              friendlyMessage,
               'warning',
               6000,
             );

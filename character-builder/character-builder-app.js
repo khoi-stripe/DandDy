@@ -1965,7 +1965,7 @@ const App = (window.App = {
         this.showSystemMessage(userMessage);
       } else if (error.isRateLimit) {
         this.showSystemMessage(
-          'AI portrait generation hit a rate limit, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
+          "You've reached today's portrait limit, so we're using a pre-generated portrait for now. You can create a custom one tomorrow from the character sheet.",
         );
       } else {
         this.showSystemMessage(
@@ -4143,7 +4143,7 @@ const App = (window.App = {
         this.showSystemMessage(userMessage);
       } else if (error.isRateLimit) {
         this.showSystemMessage(
-          'AI portrait generation hit a rate limit, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
+          "You've reached today's portrait limit, so we're using a pre-generated portrait for now. You can create a custom one tomorrow from the character sheet.",
         );
       } else {
         this.showSystemMessage(
@@ -5135,7 +5135,7 @@ const App = (window.App = {
         this.showSystemMessage(userMessage);
       } else if (error.isRateLimit) {
         this.showSystemMessage(
-          'AI portrait generation hit a rate limit, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
+          "You've reached today's portrait limit, so we're using a pre-generated portrait for now. You can create a custom one tomorrow from the character sheet.",
         );
       } else {
         this.showSystemMessage(
