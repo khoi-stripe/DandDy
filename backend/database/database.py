@@ -209,6 +209,47 @@ def ensure_ai_image_usage_table():
         conn.commit()
 
 
+def ensure_ai_character_creation_usage_table():
+    """
+    Lightweight migration helper for AI character creation quota tracking.
+
+    Creates a table that stores per-day character creation counts keyed by:
+      - day_utc (DATE)
+      - subject_key (TEXT): "user:{id}" or "ip:{addr}"
+
+    This is separate from image quota - character creation includes one portrait,
+    but custom portraits use the image quota.
+    """
+    inspector = inspect(engine)
+    if inspector.has_table("ai_character_creation_usage"):
+        return
+
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS ai_character_creation_usage (
+                    day_utc DATE NOT NULL,
+                    subject_key TEXT NOT NULL,
+                    creation_count INTEGER NOT NULL DEFAULT 0,
+                    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (day_utc, subject_key)
+                )
+                """
+            )
+        )
+        try:
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_ai_character_creation_usage_subject_day ON ai_character_creation_usage (subject_key, day_utc)"
+                )
+            )
+        except Exception:
+            pass
+
+        conn.commit()
+
+
 def get_db():
     db = SessionLocal()
     try:

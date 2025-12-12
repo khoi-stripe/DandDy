@@ -76,6 +76,16 @@
   word-wrap: break-word;
 }
 
+/* Creation quota info line shown below entry-mode question */
+.creation-quota-info {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-small);
+  color: var(--terminal-dim);
+  border-left: 2px solid var(--sheet-accent-dim);
+  opacity: 0.8;
+}
+
 /* Dimmed conversation hierarchy
    - Older narrator messages and question cards are slightly dimmed
    - The newest section stays bright

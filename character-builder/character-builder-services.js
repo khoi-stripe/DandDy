@@ -1803,6 +1803,47 @@ Format your response as JSON array of strings, one for each option in order. Exa
     }
   },
 
+  /**
+   * Fetch current daily character creation quota from backend.
+   * Returns: { limit, used, remaining, reset_at, reset_epoch, enforced }
+   * - remaining === -1 indicates "unlimited" (admin/dev bypass)
+   */
+  async getCreationQuotaStatus() {
+    try {
+      const response = await this.fetchWithTimeout(
+        `${CONFIG.BACKEND_URL}/api/ai/characters/quota`,
+        { method: 'GET' },
+        10000,
+      );
+      if (!response.ok) return null;
+      const data = await response.json();
+
+      // Normalize keys to camelCase for callers, but keep originals too.
+      const normalized = {
+        ...data,
+        resetAt: data.reset_at || data.resetAt,
+        resetEpoch: data.reset_epoch || data.resetEpoch,
+      };
+
+      // Broadcast so any open UI can update its quota display.
+      try {
+        window.dispatchEvent(
+          new CustomEvent('danddy:creationQuotaUpdate', {
+            detail: {
+              limit: normalized.limit,
+              remaining: normalized.remaining,
+              resetEpoch: normalized.resetEpoch,
+            },
+          }),
+        );
+      } catch (_) {}
+
+      return normalized;
+    } catch (e) {
+      return null;
+    }
+  },
+
   // Build character description (shown to user in modal)
   buildCharacterDescription(character) {
     const parts = [];

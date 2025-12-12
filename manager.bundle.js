@@ -222,6 +222,7 @@ return data.url;}
 return null;}catch(error){console.log('%c🎨 IMAGE (Failed)','color: #f00; font-weight: bold');console.error('  Error:',error);if(error.isFluxError&&!isRetry){console.log('%c🔄 AUTO-FALLBACK: Flux unavailable, trying GPT Image instead...','color: #fa0; font-weight: bold');if(window.UIService){window.UIService.showNotification('Flux unavailable, switching to GPT Image...','info',4000);}
 return this.generateImageFromPrompt(prompt,{forceModel:'gpt-image-1',_isRetry:true});}
 throw error;}},async getImageQuotaStatus(){try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/quota`,{method:'GET'},10000,);if(!response.ok)return null;const data=await response.json();const normalized={...data,resetAt:data.reset_at||data.resetAt,resetEpoch:data.reset_epoch||data.resetEpoch,};try{window.dispatchEvent(new CustomEvent('danddy:imageQuotaUpdate',{detail:{limit:normalized.limit,remaining:normalized.remaining,resetEpoch:normalized.resetEpoch,},}),);}catch(_){}
+return normalized;}catch(e){return null;}},async getCreationQuotaStatus(){try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/quota`,{method:'GET'},10000,);if(!response.ok)return null;const data=await response.json();const normalized={...data,resetAt:data.reset_at||data.resetAt,resetEpoch:data.reset_epoch||data.resetEpoch,};try{window.dispatchEvent(new CustomEvent('danddy:creationQuotaUpdate',{detail:{limit:normalized.limit,remaining:normalized.remaining,resetEpoch:normalized.resetEpoch,},}),);}catch(_){}
 return normalized;}catch(e){return null;}},buildCharacterDescription(character){const parts=[];parts.push('Dungeons & Dragons fantasy character:');if(character.sex){parts.push(character.sex);}
 if(character.race){let raceDesc=null;try{if(window.PortraitPrompt&&typeof PortraitPrompt.getVariableSnippet==='function'){raceDesc=PortraitPrompt.getVariableSnippet('race',character.race);}}catch(e){}
 if(!raceDesc){raceDesc=window.PortraitPrompt?PortraitPrompt.getRaceDescription(character.race):character.race;}
@@ -6970,9 +6971,80 @@ function createNewCharacter() {
         return;
     }
     
+    // Check if creation quota is exhausted (checked in _creationQuotaRemaining)
+    if (typeof _creationQuotaRemaining === 'number' && _creationQuotaRemaining === 0) {
+        showAlertDialog(
+            "You've reached your daily limit for character creation. Come back tomorrow for more adventures!"
+        );
+        return;
+    }
+    
     // Launch the Character Builder in the same tab.
     // The builder has an EXIT button to return to the manager view.
     window.location.href = 'character-builder/index.html';
+}
+
+// Track creation quota state for NEW CHARACTER button
+let _creationQuotaRemaining = null;
+
+/**
+ * Fetch and update the creation quota state.
+ * Updates the NEW CHARACTER button's disabled state and title.
+ */
+async function updateCreationQuotaState() {
+    const btn = document.getElementById('newCharacterBtn');
+    if (!btn) return;
+
+    try {
+        // Use AIService if available, otherwise make direct fetch
+        let quota = null;
+        if (window.AIService && typeof AIService.getCreationQuotaStatus === 'function') {
+            quota = await AIService.getCreationQuotaStatus();
+        } else {
+            // Fallback: direct fetch (manager page may not have AIService loaded)
+            const response = await fetch(
+                `${window.CONFIG?.BACKEND_URL||''}/api/ai/characters/quota`,
+                { method: 'GET' }
+            );
+            if (response.ok) {
+                quota = await response.json();
+            }
+        }
+
+        if (!quota) {
+            // Quota check failed - allow user to proceed (fail open)
+            _creationQuotaRemaining = null;
+            btn.disabled = false;
+            btn.title = '';
+            return;
+        }
+
+        _creationQuotaRemaining = quota.remaining;
+
+        // If remaining is -1, quota is not enforced (admin/dev mode)
+        if (quota.remaining === -1) {
+            btn.disabled = false;
+            btn.title = '';
+            btn.classList.remove('is-quota-exhausted');
+            return;
+        }
+
+        if (quota.remaining === 0) {
+            btn.disabled = true;
+            btn.title = 'Daily character creation limit reached';
+            btn.classList.add('is-quota-exhausted');
+        } else {
+            btn.disabled = false;
+            btn.title = `${quota.remaining}creation${quota.remaining===1?'':'s'}remaining today`;
+            btn.classList.remove('is-quota-exhausted');
+        }
+    } catch (e) {
+        console.warn('Failed to check creation quota:', e);
+        // Fail open - allow user to proceed
+        _creationQuotaRemaining = null;
+        btn.disabled = false;
+        btn.title = '';
+    }
 }
 
 async function viewCharacter(id, options = {}) {
@@ -11238,6 +11310,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (newCharacterBtn) {
         newCharacterBtn.addEventListener('click', createNewCharacter);
     }
+
+    // Check creation quota on load and listen for updates
+    updateCreationQuotaState();
+    window.addEventListener('danddy:creationQuotaUpdate', (e) => {
+        if (e.detail && typeof e.detail.remaining === 'number') {
+            _creationQuotaRemaining = e.detail.remaining;
+            const btn = document.getElementById('newCharacterBtn');
+            if (btn) {
+                if (e.detail.remaining === -1) {
+                    btn.disabled = false;
+                    btn.title = '';
+                    btn.classList.remove('is-quota-exhausted');
+                } else if (e.detail.remaining === 0) {
+                    btn.disabled = true;
+                    btn.title = 'Daily character creation limit reached';
+                    btn.classList.add('is-quota-exhausted');
+                } else {
+                    btn.disabled = false;
+                    btn.title = `${e.detail.remaining}creation${e.detail.remaining===1?'':'s'}remaining today`;
+                    btn.classList.remove('is-quota-exhausted');
+                }
+            }
+        }
+    });
 
     const importBtn = document.getElementById('importBtn');
     if (importBtn) {

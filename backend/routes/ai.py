@@ -39,7 +39,12 @@ MAX_REQUESTS_PER_MINUTE = settings.max_requests_per_user_per_minute
 MAX_REQUESTS_PER_DAY = settings.max_requests_per_user_per_day
 
 # Dedicated image generation quota (separate from general AI request limiting).
+# This is for custom portrait regeneration only.
 IMAGE_DAILY_LIMIT = int(os.getenv("MAX_IMAGES_PER_USER_PER_DAY", "10"))
+
+# Character creation quota: each creation includes one AI portrait.
+# Separate from custom portrait quota so users get a clear "characters per day" limit.
+CHARACTER_CREATION_DAILY_LIMIT = int(os.getenv("MAX_CHARACTER_CREATIONS_PER_DAY", "5"))
 
 # Optional: Grafana Loki config for centralized logging
 GRAFANA_LOKI_URL = os.getenv("GRAFANA_LOKI_URL")
@@ -468,14 +473,20 @@ def _utc_next_midnight_iso() -> str:
     return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
 
 
-def _image_quota_is_enforced(user: Optional[User]) -> bool:
-    # Admins bypass image quota.
+def _quota_is_enforced(user: Optional[User]) -> bool:
+    """Check if quotas should be enforced for this user."""
+    # Admins bypass all quotas.
     if user and user.role == UserRole.ADMIN:
         return False
     # Development mode bypasses quotas so local testing is frictionless.
     if not os.getenv("PRODUCTION"):
         return False
     return True
+
+
+def _image_quota_is_enforced(user: Optional[User]) -> bool:
+    """Alias for backward compatibility."""
+    return _quota_is_enforced(user)
 
 
 def _get_image_usage_count(day_utc: date, subject_key: str) -> int:
@@ -553,6 +564,92 @@ def _try_increment_image_usage(day_utc: date, subject_key: str, limit: int) -> O
                 """
                 SELECT image_count
                 FROM ai_image_usage
+                WHERE day_utc = :day_utc AND subject_key = :subject_key
+                """
+            ),
+            {"day_utc": day_utc, "subject_key": subject_key},
+        ).fetchone()
+        return int(row[0]) if row else 1
+
+
+# --- Character Creation Quota Functions ---
+
+def _get_character_creation_usage_count(day_utc: date, subject_key: str) -> int:
+    """Get current character creation count for the day."""
+    with engine.connect() as conn:
+        row = conn.execute(
+            text(
+                """
+                SELECT creation_count
+                FROM ai_character_creation_usage
+                WHERE day_utc = :day_utc AND subject_key = :subject_key
+                """
+            ),
+            {"day_utc": day_utc, "subject_key": subject_key},
+        ).fetchone()
+        return int(row[0]) if row else 0
+
+
+def _try_increment_character_creation_usage(day_utc: date, subject_key: str, limit: int) -> Optional[int]:
+    """
+    Atomically increments daily character creation count if still under the limit.
+    Returns the new creation_count when allowed; returns None when the cap is reached.
+    """
+    dialect = getattr(engine, "dialect", None)
+    dialect_name = getattr(dialect, "name", "") if dialect else ""
+
+    # Postgres (Supabase): single-statement upsert with a conditional update.
+    if dialect_name in ("postgresql", "postgres"):
+        with engine.begin() as conn:
+            row = conn.execute(
+                text(
+                    """
+                    INSERT INTO ai_character_creation_usage (day_utc, subject_key, creation_count, updated_at)
+                    VALUES (:day_utc, :subject_key, 1, CURRENT_TIMESTAMP)
+                    ON CONFLICT (day_utc, subject_key) DO UPDATE
+                    SET creation_count = ai_character_creation_usage.creation_count + 1,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE ai_character_creation_usage.creation_count < :limit
+                    RETURNING creation_count
+                    """
+                ),
+                {"day_utc": day_utc, "subject_key": subject_key, "limit": limit},
+            ).fetchone()
+            return int(row[0]) if row else None
+
+    # SQLite (local dev): best-effort transactional check + upsert.
+    with engine.begin() as conn:
+        current = conn.execute(
+            text(
+                """
+                SELECT creation_count
+                FROM ai_character_creation_usage
+                WHERE day_utc = :day_utc AND subject_key = :subject_key
+                """
+            ),
+            {"day_utc": day_utc, "subject_key": subject_key},
+        ).fetchone()
+        current_count = int(current[0]) if current else 0
+        if current_count >= limit:
+            return None
+
+        conn.execute(
+            text(
+                """
+                INSERT INTO ai_character_creation_usage (day_utc, subject_key, creation_count, updated_at)
+                VALUES (:day_utc, :subject_key, 1, CURRENT_TIMESTAMP)
+                ON CONFLICT(day_utc, subject_key) DO UPDATE SET
+                    creation_count = ai_character_creation_usage.creation_count + 1,
+                    updated_at = CURRENT_TIMESTAMP
+                """
+            ),
+            {"day_utc": day_utc, "subject_key": subject_key},
+        )
+        row = conn.execute(
+            text(
+                """
+                SELECT creation_count
+                FROM ai_character_creation_usage
                 WHERE day_utc = :day_utc AND subject_key = :subject_key
                 """
             ),
@@ -680,6 +777,61 @@ async def get_image_quota(
         raise HTTPException(
             status_code=503,
             detail="Image quota system is temporarily unavailable. Please try again later.",
+        )
+
+    remaining = max(0, limit - used)
+    return {
+        "limit": limit,
+        "used": used,
+        "remaining": remaining,
+        "reset_at": reset_iso,
+        "reset_epoch": reset_epoch,
+        "enforced": True,
+    }
+
+
+@router.get("/characters/quota")
+async def get_character_creation_quota(
+    http_request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """
+    Return current daily character creation quota info.
+    
+    Each character creation includes one AI portrait, so this is separate
+    from the custom portrait quota (which is for regenerating portraits).
+
+    Returns:
+      - limit: max creations per day
+      - used: creations so far today
+      - remaining: creations left (-1 means unlimited for admins/dev)
+      - reset_at: ISO timestamp when quota resets
+      - enforced: whether quota is being enforced
+    """
+    client_id = get_client_id(http_request, current_user)
+    subject_key = client_id
+    limit = CHARACTER_CREATION_DAILY_LIMIT
+    reset_epoch = _utc_next_midnight_epoch()
+    reset_iso = _utc_next_midnight_iso()
+
+    enforced = _quota_is_enforced(current_user)
+    if not enforced:
+        return {
+            "limit": limit,
+            "used": 0,
+            "remaining": -1,
+            "reset_at": reset_iso,
+            "reset_epoch": reset_epoch,
+            "enforced": False,
+        }
+
+    try:
+        used = _get_character_creation_usage_count(_utc_today(), subject_key)
+    except Exception as e:
+        print("⚠️  Character creation quota lookup failed:", str(e))
+        raise HTTPException(
+            status_code=503,
+            detail="Character creation quota system is temporarily unavailable. Please try again later.",
         )
 
     remaining = max(0, limit - used)
@@ -1471,6 +1623,7 @@ async def generate_character_backstory(
 async def generate_character_summary(
     request: CharacterSummaryRequest,
     http_request: Request,
+    response: Response,
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
@@ -1483,6 +1636,9 @@ async def generate_character_summary(
       - pay for a single upstream OpenAI call, and
       - substitute the final player-chosen name client-side without
         needing another model call.
+    
+    Also enforces the daily character creation quota (each creation includes
+    one AI portrait).
     """
     check_api_key()
     client_id = get_client_id(http_request, current_user)
@@ -1491,6 +1647,50 @@ async def generate_character_summary(
     # if the general per-minute/day rate limit is not hit, enforce a short
     # cooldown between summary generations for the same client.
     check_character_summary_cooldown(client_id, current_user, cooldown_seconds=20)
+
+    # Enforce character creation quota (separate from general rate limits).
+    subject_key = client_id
+    limit = CHARACTER_CREATION_DAILY_LIMIT
+    reset_epoch = _utc_next_midnight_epoch()
+    reset_iso = _utc_next_midnight_iso()
+
+    enforced = _quota_is_enforced(current_user)
+    if enforced:
+        try:
+            used = _try_increment_character_creation_usage(_utc_today(), subject_key, limit)
+        except Exception as e:
+            print("⚠️  Character creation quota check failed:", str(e))
+            raise HTTPException(
+                status_code=503,
+                detail="Character creation quota system is temporarily unavailable. Please try again later.",
+            )
+
+        if used is None:
+            # Daily cap reached - return user-friendly message
+            headers = {
+                "X-Danddy-Creation-Limit": str(limit),
+                "X-Danddy-Creation-Remaining": "0",
+                "X-Danddy-Creation-Reset": str(reset_epoch),
+            }
+            payload = {
+                "detail": f"You've reached your daily limit of {limit} character creations. Come back tomorrow to create more!",
+                "limit": limit,
+                "used": limit,
+                "remaining": 0,
+                "reset_at": reset_iso,
+                "reset_epoch": reset_epoch,
+            }
+            return JSONResponse(status_code=429, content=payload, headers=headers)
+
+        remaining = max(0, limit - used)
+        response.headers["X-Danddy-Creation-Limit"] = str(limit)
+        response.headers["X-Danddy-Creation-Remaining"] = str(remaining)
+        response.headers["X-Danddy-Creation-Reset"] = str(reset_epoch)
+    else:
+        # Not enforced (admin or dev). Signal "unlimited" to clients with remaining=-1.
+        response.headers["X-Danddy-Creation-Limit"] = str(limit)
+        response.headers["X-Danddy-Creation-Remaining"] = "-1"
+        response.headers["X-Danddy-Creation-Reset"] = str(reset_epoch)
 
     # Build a single structured prompt for both names and backstory template
     prompt = (

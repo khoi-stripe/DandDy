@@ -8,6 +8,7 @@ from database.database import (
     ensure_prompt_entry_columns,
     ensure_sex_column,
     ensure_ai_image_usage_table,
+    ensure_ai_character_creation_usage_table,
 )
 from routes import auth, characters, campaigns, ai, users, prompt_entries, shares
 import os
@@ -22,6 +23,7 @@ ensure_timestamp_columns()
 ensure_prompt_entry_columns()
 ensure_sex_column()
 ensure_ai_image_usage_table()
+ensure_ai_character_creation_usage_table()
 
 app = FastAPI(
     title="DandDy API",

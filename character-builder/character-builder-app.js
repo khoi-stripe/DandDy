@@ -690,6 +690,51 @@ const App = (window.App = {
 
   async showChoice(question) {
     const narratorPanel = document.getElementById('narrator-panel');
+    
+    // For entry-mode question, check creation quota first
+    if (question.id === 'entry-mode') {
+      let quotaInfo = null;
+      try {
+        quotaInfo = await AIService.getCreationQuotaStatus();
+      } catch (e) {
+        // Non-fatal: quota check failed, allow user to proceed
+        console.warn('Creation quota check failed:', e);
+      }
+
+      // If quota is exhausted, show message and redirect
+      if (quotaInfo && quotaInfo.remaining === 0) {
+        narratorPanel.insertAdjacentHTML(
+          'beforeend',
+          Components.renderNarratorMessage(''),
+        );
+        Utils.scrollToBottom(true);
+        const messageEl =
+          narratorPanel.lastElementChild.querySelector('.narrator-text');
+        await Utils.typewriter(
+          messageEl,
+          "You've reached your daily limit for character creation. Come back tomorrow for more adventures!"
+        );
+        Utils.scrollToBottom(true);
+
+        // Show a button to go back to manager
+        narratorPanel.insertAdjacentHTML(
+          'beforeend',
+          `<div class="question-card">
+            <div class="options-container">
+              <button class="button-primary" onclick="exitToManager()">
+                Back to Character Manager
+              </button>
+            </div>
+          </div>`,
+        );
+        Utils.scrollToBottom(true);
+        return;
+      }
+
+      // Store quota info for later display
+      this._creationQuotaInfo = quotaInfo;
+    }
+
     narratorPanel.insertAdjacentHTML(
       'beforeend',
       Components.renderNarratorMessage(''),
@@ -699,6 +744,18 @@ const App = (window.App = {
     const messageEl =
       narratorPanel.lastElementChild.querySelector('.narrator-text');
     await Utils.typewriter(messageEl, question.text);
+
+    // For entry-mode, show quota info after the question text
+    if (question.id === 'entry-mode' && this._creationQuotaInfo) {
+      const qi = this._creationQuotaInfo;
+      // Only show if enforced (remaining !== -1 means quota is enforced)
+      if (qi.remaining !== -1) {
+        const quotaLine = document.createElement('div');
+        quotaLine.className = 'creation-quota-info';
+        quotaLine.textContent = `${qi.remaining} character creation${qi.remaining === 1 ? '' : 's'} remaining today`;
+        messageEl.parentElement.appendChild(quotaLine);
+      }
+    }
 
     // Get varied options (AI-generated or cached)
     const variedOptions = await OptionVariationsCache.get(question.id, question);
@@ -3703,18 +3760,46 @@ const App = (window.App = {
         const remaining = detail && typeof detail.remaining === 'number' ? detail.remaining : null;
         const limit = detail && typeof detail.limit === 'number' ? detail.limit : null;
 
+        // Find and update Generate button state based on quota
+        const generateBtn = document.querySelector('#promptModal .terminal-btn-primary');
+        const surpriseBtn = document.querySelector('#promptModal .terminal-btn:not(.terminal-btn-primary)');
+
         if (remaining === -1) {
           el.textContent = 'Image quota: unlimited (admin/dev)';
+          if (generateBtn) {
+            generateBtn.disabled = false;
+            generateBtn.title = '';
+          }
+          if (surpriseBtn) {
+            surpriseBtn.disabled = false;
+            surpriseBtn.title = '';
+          }
           return;
         }
 
         if (remaining === 0 && limit != null) {
-          el.textContent = `Images left today:0/${limit}`;
+          el.textContent = `Custom portraits left today: 0/${limit}`;
+          if (generateBtn) {
+            generateBtn.disabled = true;
+            generateBtn.title = 'Daily custom portrait limit reached';
+          }
+          if (surpriseBtn) {
+            surpriseBtn.disabled = true;
+            surpriseBtn.title = 'Daily custom portrait limit reached';
+          }
           return;
         }
 
         if (remaining != null && limit != null) {
-          el.textContent = `Images left today:${remaining}/${limit}`;
+          el.textContent = `Custom portraits left today: ${remaining}/${limit}`;
+          if (generateBtn) {
+            generateBtn.disabled = false;
+            generateBtn.title = '';
+          }
+          if (surpriseBtn) {
+            surpriseBtn.disabled = false;
+            surpriseBtn.title = '';
+          }
           return;
         }
 
