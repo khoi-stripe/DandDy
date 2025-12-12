@@ -3705,6 +3705,9 @@ const App = (window.App = {
             <button class="modal-close" onclick="App.closePromptModal(false)">&times;</button>
           </div>
           <div class="modal-body">
+            <div class="terminal-text-small terminal-text-dim portrait-quota-pill" id="builderImageQuotaLine">
+              Checking image quota…
+            </div>
             <div class="portrait-style-row">
               <div class="portrait-style-label">Style</div>
               <div class="selector-shell selector-shell--listbox portrait-style-selector" id="builderPortraitStyleShell">
@@ -3722,9 +3725,6 @@ const App = (window.App = {
                   <!-- Options populated by JS -->
                 </div>
               </div>
-            </div>
-            <div class="terminal-text-small terminal-text-dim portrait-quota-pill" id="builderImageQuotaLine">
-              Checking image quota…
             </div>
             <textarea
               class="terminal-textarea portrait-prompt-textarea"
