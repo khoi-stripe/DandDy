@@ -336,7 +336,7 @@ const Components = (window.Components = {
         <div class="modal-content builder-settings-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
             <div class="modal-header-main">
-              <h2 class="modal-title">⚙︎ Settings</h2>
+              <h2 class="modal-title">Settings</h2>
             </div>
             <button class="modal-close" onclick="SettingsModal.close()" aria-label="Close settings">&times;</button>
           </div>

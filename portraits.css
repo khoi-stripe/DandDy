@@ -913,6 +913,18 @@
   max-width: 700px;
 }
 
+/* Quota pill for "Images left today:10/10" line */
+.portrait-quota-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid var(--modal-accent-dim);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  margin-bottom: var(--spacing-md); /* gap before prompt box */
+  width: fit-content;
+}
+
 /* Style selector in header - positioned between title and close button */
 .portrait-style-selector {
   display: flex;

@@ -3644,7 +3644,7 @@ const App = (window.App = {
       <div id="promptModal" class="modal show" onclick="App.closePromptModal(false)">
         <div class="modal-content portrait-customize-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">★ Customize AI Portrait</h2>
+            <h2 class="modal-title">customize portrait</h2>
             <button class="modal-close" onclick="App.closePromptModal(false)">&times;</button>
           </div>
           <div class="modal-body">
@@ -3666,7 +3666,7 @@ const App = (window.App = {
                 </div>
               </div>
             </div>
-            <div class="terminal-text-small terminal-text-dim" id="builderImageQuotaLine">
+            <div class="terminal-text-small terminal-text-dim portrait-quota-pill" id="builderImageQuotaLine">
               Checking image quota…
             </div>
             <textarea
@@ -3709,12 +3709,12 @@ const App = (window.App = {
         }
 
         if (remaining === 0 && limit != null) {
-          el.textContent = `Images left today: 0 / ${limit}`;
+          el.textContent = `Images left today:0/${limit}`;
           return;
         }
 
         if (remaining != null && limit != null) {
-          el.textContent = `Images left today: ${remaining} / ${limit}`;
+          el.textContent = `Images left today:${remaining}/${limit}`;
           return;
         }
 
@@ -5402,16 +5402,25 @@ const App = (window.App = {
     this.showQuestion('entry-mode');
   },
 
-  showConfirmationOverlay(message, onConfirm, onCancel, options = {}) {
-    // Support old signature where third param was options object
-    if (typeof onCancel === 'object' && onCancel !== null && !options) {
+  showConfirmationOverlay(message, onConfirm, onCancel, options) {
+    // Support old signature where third param was an options object:
+    // showConfirmationOverlay(message, onConfirm, { ...options })
+    if (
+      options === undefined &&
+      typeof onCancel === 'object' &&
+      onCancel !== null
+    ) {
       options = onCancel;
       onCancel = null;
     }
 
+    options = options || {};
+
     const targetSelector = options.targetSelector;
     const primaryLabel = options.primaryLabel || 'YES';
-    const secondaryLabel = options.secondaryLabel || 'NO';
+    const secondaryLabel =
+      options.secondaryLabel === undefined ? 'NO' : options.secondaryLabel;
+    const hideSecondary = Boolean(options.hideSecondary);
     const primaryClass =
       options.primaryClass || 'terminal-btn terminal-btn-primary';
     const secondaryClass = options.secondaryClass || 'terminal-btn';
@@ -5419,6 +5428,11 @@ const App = (window.App = {
     // While a confirmation dialog is open, pause keyboard navigation so
     // arrow keys don't move focus behind the modal.
     KeyboardNav.deactivate();
+
+    const secondaryBtnHTML =
+      hideSecondary || secondaryLabel === null
+        ? ''
+        : `<button class="${secondaryClass}" id="confirm-no">${secondaryLabel}</button>`;
 
     const overlayHTML = `
       <div id="confirmationModal" class="modal show confirmation-overlay">
@@ -5432,7 +5446,7 @@ const App = (window.App = {
             </p>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="${secondaryClass}" id="confirm-no">${secondaryLabel}</button>
+            ${secondaryBtnHTML}
             <button class="${primaryClass}" id="confirm-yes">${primaryLabel}</button>
           </div>
         </div>
@@ -5492,9 +5506,11 @@ const App = (window.App = {
       runCloseAnimation(onConfirm);
     });
 
-    cancelBtn.addEventListener('click', () => {
-      runCloseAnimation(onCancel);
-    });
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        runCloseAnimation(onCancel);
+      });
+    }
   },
 
   async showChangeConfirmation(questionId, selectedIndex, isListChoice) {

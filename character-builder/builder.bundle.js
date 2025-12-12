@@ -4158,7 +4158,7 @@ aria-selected="${isSelected ? 'true' : 'false'}"><span class="selector-option-la
       ? formatThemeName(activePromptTheme)
       : 'Cinematic Inks';
 
-    return `<div id="settingsModal"class="modal show"onclick="SettingsModal.close()"><div class="modal-content builder-settings-modal"onclick="event.stopPropagation();"><div class="modal-header"><div class="modal-header-main"><h2 class="modal-title">⚙︎ Settings</h2></div><button class="modal-close"onclick="SettingsModal.close()"aria-label="Close settings">&times;</button></div><div class="modal-body"><div class="settings-layout"><div class="settings-grid"><div class="settings-group"><div class="settings-group-label">[Builder]</div><section class="settings-section"><div class="settings-row-inline"><div class="settings-inline-field"><div class="settings-label">Narrator Voice</div><div class="selector-shell selector-shell--listbox selector-shell--match-width"><button
+    return `<div id="settingsModal"class="modal show"onclick="SettingsModal.close()"><div class="modal-content builder-settings-modal"onclick="event.stopPropagation();"><div class="modal-header"><div class="modal-header-main"><h2 class="modal-title">Settings</h2></div><button class="modal-close"onclick="SettingsModal.close()"aria-label="Close settings">&times;</button></div><div class="modal-body"><div class="settings-layout"><div class="settings-grid"><div class="settings-group"><div class="settings-group-label">[Builder]</div><section class="settings-section"><div class="settings-row-inline"><div class="settings-inline-field"><div class="settings-label">Narrator Voice</div><div class="selector-shell selector-shell--listbox selector-shell--match-width"><button
 class="terminal-btn selector-trigger"
 id="narrator-select-trigger"
 type="button"
@@ -8562,13 +8562,13 @@ onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"><spa
       // Non-fatal
     }
 
-    const modalHTML = `<div id="promptModal"class="modal show"onclick="App.closePromptModal(false)"><div class="modal-content portrait-customize-modal"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">★ Customize AI Portrait</h2><button class="modal-close"onclick="App.closePromptModal(false)">&times;</button></div><div class="modal-body"><div class="portrait-style-row"><div class="portrait-style-label">Style</div><div class="selector-shell selector-shell--listbox portrait-style-selector"id="builderPortraitStyleShell"><button
+    const modalHTML = `<div id="promptModal"class="modal show"onclick="App.closePromptModal(false)"><div class="modal-content portrait-customize-modal"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">customize portrait</h2><button class="modal-close"onclick="App.closePromptModal(false)">&times;</button></div><div class="modal-body"><div class="portrait-style-row"><div class="portrait-style-label">Style</div><div class="selector-shell selector-shell--listbox portrait-style-selector"id="builderPortraitStyleShell"><button
 type="button"
 class="terminal-btn selector-trigger"
 id="builderPortraitStyleTrigger"
 aria-haspopup="listbox"
 aria-expanded="false"
-onclick="CharacterSheet.toggleSelectorMenu(this)"><span class="selector-trigger-label"id="builderPortraitStyleLabel">Cinematic inks</span></button><div class="selector-menu portrait-style-menu"id="builderPortraitStyleMenu"role="listbox"aria-label="Portrait style"aria-hidden="true"><!--Options populated by JS--></div></div></div><div class="terminal-text-small terminal-text-dim"id="builderImageQuotaLine">Checking image quota…</div><textarea
+onclick="CharacterSheet.toggleSelectorMenu(this)"><span class="selector-trigger-label"id="builderPortraitStyleLabel">Cinematic inks</span></button><div class="selector-menu portrait-style-menu"id="builderPortraitStyleMenu"role="listbox"aria-label="Portrait style"aria-hidden="true"><!--Options populated by JS--></div></div></div><div class="terminal-text-small terminal-text-dim portrait-quota-pill"id="builderImageQuotaLine">Checking image quota…</div><textarea
 class="terminal-textarea portrait-prompt-textarea"
 id="custom-prompt"
 placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="App.surpriseMePortrait()">SURPRISE ME</button><button class="terminal-btn terminal-btn-primary"onclick="App.confirmPromptModal()">GENERATE PORTRAIT</button></div></div></div>`;
@@ -10233,16 +10233,25 @@ placeholder="Enter character name"></div><div id="name-modal-error"class="termin
     this.showQuestion('entry-mode');
   },
 
-  showConfirmationOverlay(message, onConfirm, onCancel, options = {}) {
-    // Support old signature where third param was options object
-    if (typeof onCancel === 'object' && onCancel !== null && !options) {
+  showConfirmationOverlay(message, onConfirm, onCancel, options) {
+    // Support old signature where third param was an options object:
+    // showConfirmationOverlay(message, onConfirm, { ...options })
+    if (
+      options === undefined &&
+      typeof onCancel === 'object' &&
+      onCancel !== null
+    ) {
       options = onCancel;
       onCancel = null;
     }
 
+    options = options || {};
+
     const targetSelector = options.targetSelector;
     const primaryLabel = options.primaryLabel || 'YES';
-    const secondaryLabel = options.secondaryLabel || 'NO';
+    const secondaryLabel =
+      options.secondaryLabel === undefined ? 'NO' : options.secondaryLabel;
+    const hideSecondary = Boolean(options.hideSecondary);
     const primaryClass =
       options.primaryClass || 'terminal-btn terminal-btn-primary';
     const secondaryClass = options.secondaryClass || 'terminal-btn';
@@ -10251,7 +10260,12 @@ placeholder="Enter character name"></div><div id="name-modal-error"class="termin
     // arrow keys don't move focus behind the modal.
     KeyboardNav.deactivate();
 
-    const overlayHTML = `<div id="confirmationModal"class="modal show confirmation-overlay"><div class="modal-content"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">Confirm</h2></div><div class="modal-body"><p class="terminal-text">${message}</p></div><div class="modal-footer modal-footer-end"><button class="${secondaryClass}"id="confirm-no">${secondaryLabel}</button><button class="${primaryClass}"id="confirm-yes">${primaryLabel}</button></div></div></div>`;
+    const secondaryBtnHTML =
+      hideSecondary || secondaryLabel === null
+        ? ''
+        : `<button class="${secondaryClass}"id="confirm-no">${secondaryLabel}</button>`;
+
+    const overlayHTML = `<div id="confirmationModal"class="modal show confirmation-overlay"><div class="modal-content"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">Confirm</h2></div><div class="modal-body"><p class="terminal-text">${message}</p></div><div class="modal-footer modal-footer-end">${secondaryBtnHTML}<button class="${primaryClass}"id="confirm-yes">${primaryLabel}</button></div></div></div>`;
     const terminalContainer = document.querySelector('.terminal-container');
     terminalContainer.insertAdjacentHTML('beforeend', overlayHTML);
 
@@ -10307,9 +10321,11 @@ placeholder="Enter character name"></div><div id="name-modal-error"class="termin
       runCloseAnimation(onConfirm);
     });
 
-    cancelBtn.addEventListener('click', () => {
-      runCloseAnimation(onCancel);
-    });
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        runCloseAnimation(onCancel);
+      });
+    }
   },
 
   async showChangeConfirmation(questionId, selectedIndex, isListChoice) {
@@ -11065,7 +11081,7 @@ if(!window.CharacterCloudStorage){console.error('☁️ CharacterCloudStorage no
 const character=window.CharacterState.current.character;if(!character.name){console.log('☁️ Character has no name yet - skipping cloud save');return false;}
 console.log('☁️ Saving character to cloud:',character.name);const allCloudChars=await window.CharacterCloudStorage.getAll();const existingChar=allCloudChars.find(c=>c.characterUid===character.characterUid||c.metadata?.characterUid===character.characterUid);if(existingChar){console.log('☁️ Updating existing character in cloud:',existingChar.id);await window.CharacterCloudStorage.update(existingChar.id,character);console.log('☁️ Character updated in cloud successfully');}else{console.log('☁️ Creating new character in cloud');const result=await window.CharacterCloudStorage.add(character);console.log('☁️ Character created in cloud with ID:',result.id);}
 return true;}catch(error){console.error('☁️ Failed to save character to cloud:',error);return false;}}
-function handleSessionExpired(){updateAuthUI();if(window.App&&window.App.showConfirmationOverlay){window.App.showConfirmationOverlay('Your session has expired. Your character is safe locally, but you\'ll need to log in again to sync with the cloud.',()=>{showAuthModal();},'RE-LOGIN','CONTINUE OFFLINE');}else if(window.App&&window.App.showNotification){window.App.showNotification('⚠ Session expired - log in again to sync','warning');}}
+function handleSessionExpired(){updateAuthUI();if(window.App&&window.App.showConfirmationOverlay){window.App.showConfirmationOverlay('Your session has expired. Your character is safe locally, but you\'ll need to log in again to sync with the cloud.',()=>{showAuthModal();},null,{primaryLabel:'Got it',hideSecondary:true});}else if(window.App&&window.App.showNotification){window.App.showNotification('⚠ Session expired - log in again to sync','warning');}}
 function initBuilderAuth(){updateAuthUI();if(window.AuthService&&window.AuthService.isAuthenticated()){if(typeof window.AuthService.startSessionMonitor==='function'){window.AuthService.startSessionMonitor();}}
 window.addEventListener('danddy:sessionExpired',handleSessionExpired);}
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initBuilderAuth);}else{initBuilderAuth();}

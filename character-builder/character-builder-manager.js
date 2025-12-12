@@ -275,16 +275,19 @@ function handleSessionExpired() {
     // Update the UI to reflect logged-out state
     updateAuthUI();
 
-    // Show a confirmation overlay with options
+    // Show an informational overlay (single CTA)
     if (window.App && window.App.showConfirmationOverlay) {
         window.App.showConfirmationOverlay(
             'Your session has expired. Your character is safe locally, but you\'ll need to log in again to sync with the cloud.',
             () => {
-                // User clicked RE-LOGIN
+                // User acknowledged; route them to login to re-sync cloud
                 showAuthModal();
             },
-            'RE-LOGIN',
-            'CONTINUE OFFLINE'
+            null,
+            {
+                primaryLabel: 'Got it',
+                hideSecondary: true
+            }
         );
     } else if (window.App && window.App.showNotification) {
         // Fallback: just show a notification

@@ -311,7 +311,7 @@ promptThemes=promptThemes.slice().sort((a,b)=>{const nameA=(a.id||'').toLowerCas
         <div class="modal-content builder-settings-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
             <div class="modal-header-main">
-              <h2 class="modal-title">⚙︎ Settings</h2>
+              <h2 class="modal-title">Settings</h2>
             </div>
             <button class="modal-close" onclick="SettingsModal.close()" aria-label="Close settings">&times;</button>
           </div>
@@ -7649,7 +7649,7 @@ async function openShareModal(characterId) {
     if (existing) existing.remove();
 
     const safeName = Utils.escapeHtml(character.name || 'Unnamed');
-    const modalHtml = `<div id="shareModal"class="modal show"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">↗ SHARE CHARACTER</h2><button class="modal-close"onclick="closeShareModal()">&times;</button></div><div class="modal-body"><p class="terminal-text">Share${' '}<strong>${safeName}</strong>${' '}with another DandDy user.</p><p class="terminal-text-small terminal-text-dim"style="margin-top: 0.5rem;">Enter their email address.${' '}If they have a DandDy account,${' '}they'll see this character the next time they log in and can add it to their collection.</p><div style="margin-top: 1rem;"><label class="terminal-text-small modal-section-label"for="shareEmailInput">Email address:</label><input type="email"id="shareEmailInput"class="terminal-input"placeholder="friend@example.com"><p id="shareEmailError"class="terminal-text-small"style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p></div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"id="shareCancel">CANCEL</button><button class="terminal-btn terminal-btn-primary"id="shareSend">SEND</button></div></div></div>`;
+    const modalHtml = `<div id="shareModal"class="modal show"><div class="modal-content"><div class="modal-header"><h2 class="modal-title">SHARE CHARACTER</h2><button class="modal-close"onclick="closeShareModal()">&times;</button></div><div class="modal-body"><p class="terminal-text">Share${' '}<strong>${safeName}</strong>${' '}with another DandDy user.</p><p class="terminal-text-small terminal-text-dim"style="margin-top: 0.5rem;">Enter their email address.${' '}If they have a DandDy account,${' '}they'll see this character the next time they log in and can add it to their collection.</p><div style="margin-top: 1rem;"><label class="terminal-text-small modal-section-label"for="shareEmailInput">Email address:</label><input type="email"id="shareEmailInput"class="terminal-input"placeholder="friend@example.com"><p id="shareEmailError"class="terminal-text-small"style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p></div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"id="shareCancel">CANCEL</button><button class="terminal-btn terminal-btn-primary"id="shareSend">SEND</button></div></div></div>`;
 
     getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('shareModal');
@@ -7791,7 +7791,7 @@ function showPendingSharesModal(shares) {
         return `<div class="pending-share-card"data-share-id="${share.id}"data-index="${index}"><div class="share-card-layout"><div class="share-card-portrait-col">${portraitHtml}</div><div class="share-card-info-col"><h3 class="share-card-name">${safeName}</h3><div class="share-card-stats"><div class="share-card-stat"><span class="share-card-label">Race</span><span class="share-card-value">${safeRace}</span></div><div class="share-card-stat"><span class="share-card-label">Class</span><span class="share-card-value">${safeClass}</span></div><div class="share-card-stat"><span class="share-card-label">Level</span><span class="share-card-value">${level}</span></div></div><p class="share-card-from">From:${fromEmail}· ${dateStr}</p><div class="share-card-actions"><button class="terminal-btn pending-share-ignore"data-share-id="${share.id}">IGNORE</button><button class="terminal-btn pending-share-accept"data-share-id="${share.id}">ADD CHARACTER</button></div></div></div></div>`;
     }).join('');
 
-    const modalHtml = `<div id="pendingSharesModal"class="modal show"><div class="modal-content pending-shares-modal"><div class="modal-header"><h2 class="modal-title">↓ ${title}</h2><button class="modal-close"onclick="closePendingSharesModal()">&times;</button></div><div class="modal-body"><p class="terminal-text-small terminal-text-dim"style="margin-bottom: 1rem;">${shareCount===1?'Someone shared a character with you!':'Other users have shared characters with you!'}
+    const modalHtml = `<div id="pendingSharesModal"class="modal show"><div class="modal-content pending-shares-modal"><div class="modal-header"><h2 class="modal-title">${title}</h2><button class="modal-close"onclick="closePendingSharesModal()">&times;</button></div><div class="modal-body"><p class="terminal-text-small terminal-text-dim"style="margin-bottom: 1rem;">${shareCount===1?'Someone shared a character with you!':'Other users have shared characters with you!'}
 Add them to your collection or ignore to dismiss.</p><div class="pending-shares-list">${shareCardsHtml}</div></div></div></div>`;
 
     getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
@@ -9732,7 +9732,7 @@ function showLevelChangeDialog(oldLevel, newLevel) {
         const levelText = Math.abs(levelDiff) === 1 ? 'level' : 'levels';
 
         // Create new content for level change dialog
-        const levelChangeHtml = `<div class="modal-header"><h2 class="modal-title">↑︎ LEVEL CHANGE</h2><button class="modal-close"id="levelChangeClose">&times;</button></div><div class="modal-body"><p class="terminal-text level-change-text">You're changing from<strong>Level\u00A0${oldLevel}</strong>to<strong>Level\u00A0${newLevel}</strong>\u00A0(${Math.abs(levelDiff)}\u00A0${levelText}\u00A0${direction}).</p><p class="terminal-text-small"style="margin-top: 0.75rem; opacity: 0.8;">Would you like to automatically recalculate stats&nbsp;(HP,&nbsp;Proficiency Bonus)&nbsp;for the new level,or update them manually?</p></div><div class="modal-footer"style="flex-wrap: wrap; gap: 0.5rem;"><button class="terminal-btn"id="levelChangeManual">KEEP MANUAL</button><button class="terminal-btn terminal-btn-primary"id="levelChangeAuto">AUTO-CALCULATE</button></div>`;
+        const levelChangeHtml = `<div class="modal-header"><h2 class="modal-title">LEVEL CHANGE</h2><button class="modal-close"id="levelChangeClose">&times;</button></div><div class="modal-body"><p class="terminal-text level-change-text">You're changing from<strong>Level\u00A0${oldLevel}</strong>to<strong>Level\u00A0${newLevel}</strong>\u00A0(${Math.abs(levelDiff)}\u00A0${levelText}\u00A0${direction}).</p><p class="terminal-text-small"style="margin-top: 0.75rem; opacity: 0.8;">Would you like to automatically recalculate stats&nbsp;(HP,&nbsp;Proficiency Bonus)&nbsp;for the new level,or update them manually?</p></div><div class="modal-footer"style="flex-wrap: wrap; gap: 0.5rem;"><button class="terminal-btn"id="levelChangeManual">KEEP MANUAL</button><button class="terminal-btn terminal-btn-primary"id="levelChangeAuto">AUTO-CALCULATE</button></div>`;
 
         // Animate transition to level change dialog
         animateModalContentSwap(modalContent, levelChangeHtml, () => {
@@ -9753,7 +9753,7 @@ function showLevelChangeDialog(oldLevel, newLevel) {
                     });
                 } else if (result === 'auto') {
                     // Show cube loader while "calculating", then proceed with save
-                    const loadingHtml = `<div class="modal-header"><h2 class="modal-title">↑︎ LEVEL CHANGE</h2></div><div class="modal-body"style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px;"><div class="panel-loading-cube-container"><div class="panel-loading-cube"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><p class="terminal-text-small"style="margin-top: 1rem; opacity: 0.8;">Calculating stats for Level ${newLevel}...</p></div>`;
+                    const loadingHtml = `<div class="modal-header"><h2 class="modal-title">LEVEL CHANGE</h2></div><div class="modal-body"style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px;"><div class="panel-loading-cube-container"><div class="panel-loading-cube"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><p class="terminal-text-small"style="margin-top: 1rem; opacity: 0.8;">Calculating stats for Level ${newLevel}...</p></div>`;
                     
                     animateModalContentSwap(modalContent, loadingHtml, () => {
                         // Show loader briefly, then resolve to proceed with save

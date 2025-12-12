@@ -2058,7 +2058,7 @@ async function openShareModal(characterId) {
       <div id="shareModal" class="modal show">
         <div class="modal-content">
           <div class="modal-header">
-            <h2 class="modal-title">↗ SHARE CHARACTER</h2>
+            <h2 class="modal-title">SHARE CHARACTER</h2>
             <button class="modal-close" onclick="closeShareModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -2256,7 +2256,7 @@ function showPendingSharesModal(shares) {
       <div id="pendingSharesModal" class="modal show">
         <div class="modal-content pending-shares-modal">
           <div class="modal-header">
-            <h2 class="modal-title">↓ ${title}</h2>
+            <h2 class="modal-title">${title}</h2>
             <button class="modal-close" onclick="closePendingSharesModal()">&times;</button>
           </div>
           <div class="modal-body">
@@ -2698,12 +2698,12 @@ async function generatePortraitForCharacter(id) {
             }
 
             if (remaining === 0 && limit != null) {
-                el.textContent = `Images left today: 0 / ${limit}`;
+                el.textContent = `Images left today:0/${limit}`;
                 return;
             }
 
             if (remaining != null && limit != null) {
-                el.textContent = `Images left today: ${remaining} / ${limit}`;
+                el.textContent = `Images left today:${remaining}/${limit}`;
                 return;
             }
 
@@ -4259,7 +4259,7 @@ function showLevelChangeDialog(oldLevel, newLevel) {
         // Create new content for level change dialog
         const levelChangeHtml = `
           <div class="modal-header">
-            <h2 class="modal-title">↑︎ LEVEL CHANGE</h2>
+            <h2 class="modal-title">LEVEL CHANGE</h2>
             <button class="modal-close" id="levelChangeClose">&times;</button>
           </div>
           <div class="modal-body">
@@ -4295,7 +4295,7 @@ function showLevelChangeDialog(oldLevel, newLevel) {
                     // Show cube loader while "calculating", then proceed with save
                     const loadingHtml = `
                       <div class="modal-header">
-                        <h2 class="modal-title">↑︎ LEVEL CHANGE</h2>
+                        <h2 class="modal-title">LEVEL CHANGE</h2>
                       </div>
                       <div class="modal-body" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px;">
                         <div class="panel-loading-cube-container">
