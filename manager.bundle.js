@@ -696,7 +696,7 @@ console.groupEnd();return result;},enablePortraitDebug(){window.DEBUG_PORTRAITS=
     `;},_renderHeader(character,parsed,context,callbacks){const{onPrint,onRename,onDuplicate,onExport,onDelete,onLevelChange,onEdit,onGeneratePortrait,onTogglePortrait,onShare,}=callbacks;const renameFn=context==='builder'?'App.openNameModal()':`renameCharacter('${character.id}')`;const editFn=context==='manager'?`editCharacter('${character.id}')`:null;const printFn=onPrint&&context==='builder'?'App.printCharacterSheet()':onPrint&&context==='manager'?'printCharacterSheet()':null;const headerActions=[];let deleteAction=null;if(character.name&&onRename&&context==='builder'){headerActions.push({icon:'✎',label:'Rename',onclick:renameFn,});}
 if(context==='builder'&&onLevelChange){headerActions.push({icon:'↕',label:'Change level',onclick:'App.openLevelModal()',});}
 if(context==='manager'&&onDelete){deleteAction={icon:'×',label:'Delete character',onclick:`deleteCharacter('${character.id}')`,};}
-const hasValidManagerId=!!character.id;const generateFn=context==='builder'?'App.generateCustomAIPortrait()':hasValidManagerId?`generatePortraitForCharacter('${character.id}')`:null;const hasCustomPortrait=!!(character.customPortraitAscii||character.originalPortraitUrl||character.portrait?.url||(character.portraitMetadata&&Array.isArray(character.portraitMetadata.versions)&&character.portraitMetadata.versions.length>0));const historyFn=context==='builder'?'App.openPortraitHistory()':hasValidManagerId?`openPortraitHistory('${character.id}')`:null;if(parsed.hasRace&&parsed.hasClass&&onGeneratePortrait&&(context==='builder'||hasValidManagerId)&&generateFn){headerActions.push({icon:'★',label:'Customize portrait',onclick:generateFn,});}
+const hasValidManagerId=!!character.id;const generateFn=context==='builder'?'App.generateCustomAIPortrait()':hasValidManagerId?`generatePortraitForCharacter('${character.id}')`:null;const hasCustomPortrait=!!(character.customPortraitAscii||character.originalPortraitUrl||character.portrait?.url||(character.portraitMetadata&&Array.isArray(character.portraitMetadata.versions)&&character.portraitMetadata.versions.length>0));const historyFn=context==='builder'?'App.openPortraitHistory()':hasValidManagerId?`openPortraitHistory('${character.id}')`:null;if(parsed.hasRace&&parsed.hasClass&&onGeneratePortrait&&(context==='builder'||hasValidManagerId)&&generateFn){const imageQuotaExhausted=typeof window._imageQuotaRemaining==='number'&&window._imageQuotaRemaining===0;headerActions.push({icon:'★',label:'Customize portrait',onclick:generateFn,disabled:imageQuotaExhausted,title:imageQuotaExhausted?'Daily custom portrait limit reached':'',});}
 if(hasCustomPortrait&&historyFn){headerActions.push({icon:'⧖',label:'Portrait history',onclick:historyFn,});}
 if(context==='manager'&&onShare&&hasValidManagerId){headerActions.push({icon:'↗',label:'Share character',onclick:`openShareModal('${character.id}')`,});}
 if(printFn){headerActions.push({icon:'⎙',label:'Print sheet',onclick:printFn,});}
@@ -730,10 +730,10 @@ const editButtonHtml=context==='manager'&&onEdit&&editFn?`
             ${headerActions
               .map(
                 (action) => `<button
-class="selector-option"
+class="selector-option${action.disabled ? ' is-disabled' : ''}"
 type="button"
 role="menuitem"
-onclick="${action.onclick}"${action.id?` id="${action.id}"`:''}><span class="selector-option-icon">${action.icon}</span><span class="selector-option-label">${action.label}</span></button>`,
+${action.disabled?'disabled':`onclick="${action.onclick}"`}${action.id?` id="${action.id}"`:''}${action.title?` title="${action.title}"`:''}><span class="selector-option-icon">${action.icon}</span><span class="selector-option-label">${action.label}</span></button>`,
               )
               .join('')}
           </div>
@@ -6987,6 +6987,9 @@ function createNewCharacter() {
 // Track creation quota state for NEW CHARACTER button
 let _creationQuotaRemaining = null;
 
+// Track image quota state for Customize portrait button (exposed globally for shared-character-sheet.js)
+window._imageQuotaRemaining = null;
+
 /**
  * Fetch and update the creation quota state.
  * Updates the NEW CHARACTER button's disabled state and title.
@@ -7052,6 +7055,42 @@ async function updateCreationQuotaState() {
         // Fail open - allow user to proceed
         _creationQuotaRemaining = null;
         updateButtons(false, '', false);
+    }
+}
+
+/**
+ * Fetch and update the image quota state.
+ * Used to disable "Customize portrait" button when exhausted.
+ */
+async function updateImageQuotaState() {
+    try {
+        let quota = null;
+        if (window.AIService && typeof AIService.getImageQuotaStatus === 'function') {
+            quota = await AIService.getImageQuotaStatus();
+        } else {
+            const response = await fetch(
+                `${window.CONFIG?.BACKEND_URL||''}/api/ai/images/quota`,
+                { method: 'GET' }
+            );
+            if (response.ok) {
+                quota = await response.json();
+            }
+        }
+
+        if (!quota) {
+            window._imageQuotaRemaining = null;
+            return;
+        }
+
+        window._imageQuotaRemaining = quota.remaining;
+        
+        // If quota changed to 0, re-render current character sheet to update menu
+        if (quota.remaining === 0 && AppState.selectedCharacterId) {
+            viewCharacter(AppState.selectedCharacterId, { skipKeyboardSync: true });
+        }
+    } catch (e) {
+        console.warn('Failed to check image quota:', e);
+        window._imageQuotaRemaining = null;
     }
 }
 
@@ -11343,6 +11382,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     b.classList.remove('is-quota-exhausted');
                 }
             });
+        }
+    });
+
+    // Check image quota on load and listen for updates (for Customize portrait button)
+    updateImageQuotaState();
+    window.addEventListener('danddy:imageQuotaUpdate', (e) => {
+        if (e.detail && typeof e.detail.remaining === 'number') {
+            const oldRemaining = window._imageQuotaRemaining;
+            window._imageQuotaRemaining = e.detail.remaining;
+            
+            // Re-render character sheet if quota just became exhausted
+            if (e.detail.remaining === 0 && oldRemaining !== 0 && AppState.selectedCharacterId) {
+                viewCharacter(AppState.selectedCharacterId, { skipKeyboardSync: true });
+            }
         }
     });
 

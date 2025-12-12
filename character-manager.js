@@ -1374,6 +1374,9 @@ function createNewCharacter() {
 // Track creation quota state for NEW CHARACTER button
 let _creationQuotaRemaining = null;
 
+// Track image quota state for Customize portrait button (exposed globally for shared-character-sheet.js)
+window._imageQuotaRemaining = null;
+
 /**
  * Fetch and update the creation quota state.
  * Updates the NEW CHARACTER button's disabled state and title.
@@ -1439,6 +1442,42 @@ async function updateCreationQuotaState() {
         // Fail open - allow user to proceed
         _creationQuotaRemaining = null;
         updateButtons(false, '', false);
+    }
+}
+
+/**
+ * Fetch and update the image quota state.
+ * Used to disable "Customize portrait" button when exhausted.
+ */
+async function updateImageQuotaState() {
+    try {
+        let quota = null;
+        if (window.AIService && typeof AIService.getImageQuotaStatus === 'function') {
+            quota = await AIService.getImageQuotaStatus();
+        } else {
+            const response = await fetch(
+                `${window.CONFIG?.BACKEND_URL || ''}/api/ai/images/quota`,
+                { method: 'GET' }
+            );
+            if (response.ok) {
+                quota = await response.json();
+            }
+        }
+
+        if (!quota) {
+            window._imageQuotaRemaining = null;
+            return;
+        }
+
+        window._imageQuotaRemaining = quota.remaining;
+        
+        // If quota changed to 0, re-render current character sheet to update menu
+        if (quota.remaining === 0 && AppState.selectedCharacterId) {
+            viewCharacter(AppState.selectedCharacterId, { skipKeyboardSync: true });
+        }
+    } catch (e) {
+        console.warn('Failed to check image quota:', e);
+        window._imageQuotaRemaining = null;
     }
 }
 
@@ -5925,6 +5964,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     b.classList.remove('is-quota-exhausted');
                 }
             });
+        }
+    });
+
+    // Check image quota on load and listen for updates (for Customize portrait button)
+    updateImageQuotaState();
+    window.addEventListener('danddy:imageQuotaUpdate', (e) => {
+        if (e.detail && typeof e.detail.remaining === 'number') {
+            const oldRemaining = window._imageQuotaRemaining;
+            window._imageQuotaRemaining = e.detail.remaining;
+            
+            // Re-render character sheet if quota just became exhausted
+            if (e.detail.remaining === 0 && oldRemaining !== 0 && AppState.selectedCharacterId) {
+                viewCharacter(AppState.selectedCharacterId, { skipKeyboardSync: true });
+            }
         }
     });
 

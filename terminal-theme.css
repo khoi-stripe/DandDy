@@ -1302,6 +1302,14 @@ body.selector-menu-open .splash-art {
   flex: 1;
 }
 
+/* Disabled menu option (e.g., quota exhausted) */
+.selector-option.is-disabled,
+.selector-option:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* ==========================================================================
    SELECTOR SHELL TYPE MODIFIERS
    --------------------------------------------------------------------------

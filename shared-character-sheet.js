@@ -407,10 +407,16 @@ const CharacterSheet = (window.CharacterSheet = {
       (context === 'builder' || hasValidManagerId) &&
       generateFn
     ) {
+      // Check if custom portrait quota is exhausted
+      const imageQuotaExhausted = typeof window._imageQuotaRemaining === 'number' && 
+        window._imageQuotaRemaining === 0;
+      
       headerActions.push({
         icon: '★',
         label: 'Customize portrait',
         onclick: generateFn,
+        disabled: imageQuotaExhausted,
+        title: imageQuotaExhausted ? 'Daily custom portrait limit reached' : '',
       });
     }
 
@@ -494,12 +500,12 @@ const CharacterSheet = (window.CharacterSheet = {
               .map(
                 (action) => `
               <button
-                class="selector-option"
+                class="selector-option${action.disabled ? ' is-disabled' : ''}"
                 type="button"
                 role="menuitem"
-                onclick="${action.onclick}"${
+                ${action.disabled ? 'disabled' : `onclick="${action.onclick}"`}${
                   action.id ? ` id="${action.id}"` : ''
-                }
+                }${action.title ? ` title="${action.title}"` : ''}
               >
                 <span class="selector-option-icon">${action.icon}</span>
                 <span class="selector-option-label">${action.label}</span>
