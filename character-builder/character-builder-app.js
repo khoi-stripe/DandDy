@@ -701,36 +701,6 @@ const App = (window.App = {
         console.warn('Creation quota check failed:', e);
       }
 
-      // If quota is exhausted, show message and redirect
-      if (quotaInfo && quotaInfo.remaining === 0) {
-        narratorPanel.insertAdjacentHTML(
-          'beforeend',
-          Components.renderNarratorMessage(''),
-        );
-        Utils.scrollToBottom(true);
-        const messageEl =
-          narratorPanel.lastElementChild.querySelector('.narrator-text');
-        await Utils.typewriter(
-          messageEl,
-          "You've reached your daily limit for character creation. Come back tomorrow for more adventures!"
-        );
-        Utils.scrollToBottom(true);
-
-        // Show a button to go back to manager
-        narratorPanel.insertAdjacentHTML(
-          'beforeend',
-          `<div class="question-card">
-            <div class="options-container">
-              <button class="button-primary" onclick="exitToManager()">
-                Back to Character Manager
-              </button>
-            </div>
-          </div>`,
-        );
-        Utils.scrollToBottom(true);
-        return;
-      }
-
       // Store quota info for later display
       this._creationQuotaInfo = quotaInfo;
     }
@@ -752,7 +722,27 @@ const App = (window.App = {
       if (qi.remaining !== -1) {
         const quotaLine = document.createElement('div');
         quotaLine.className = 'creation-quota-info';
-        quotaLine.textContent = `${qi.remaining} character creation${qi.remaining === 1 ? '' : 's'} remaining today`;
+        
+        if (qi.remaining === 0) {
+          // Format reset time nicely
+          let resetText = 'Resets tomorrow';
+          if (qi.resetAt) {
+            try {
+              const resetDate = new Date(qi.resetAt);
+              const now = new Date();
+              const hoursUntil = Math.ceil((resetDate - now) / (1000 * 60 * 60));
+              if (hoursUntil <= 1) {
+                resetText = 'Resets in about an hour';
+              } else if (hoursUntil < 24) {
+                resetText = `Resets in about ${hoursUntil} hours`;
+              }
+            } catch (_) {}
+          }
+          quotaLine.textContent = `You've reached today's limit. ${resetText}.`;
+          quotaLine.classList.add('is-exhausted');
+        } else {
+          quotaLine.textContent = `${qi.remaining} character creation${qi.remaining === 1 ? '' : 's'} remaining today`;
+        }
         messageEl.parentElement.appendChild(quotaLine);
       }
     }
@@ -765,6 +755,30 @@ const App = (window.App = {
       'beforeend',
       Components.renderQuestion(variedQuestion),
     );
+
+    // For entry-mode, disable options if quota is exhausted
+    if (question.id === 'entry-mode' && this._creationQuotaInfo && this._creationQuotaInfo.remaining === 0) {
+      const questionCard = narratorPanel.querySelector(`.question-card[data-question-id="${question.id}"]`);
+      if (questionCard) {
+        const buttons = questionCard.querySelectorAll('.button-primary');
+        buttons.forEach(btn => {
+          btn.disabled = true;
+          btn.title = "Daily character creation limit reached";
+          btn.classList.add('is-quota-disabled');
+        });
+        
+        // Add a back button
+        const optionsContainer = questionCard.querySelector('.options-container');
+        if (optionsContainer) {
+          optionsContainer.insertAdjacentHTML(
+            'beforeend',
+            `<button class="button-primary" onclick="exitToManager()" style="margin-top: var(--spacing-md);">
+              Back to Character Manager
+            </button>`,
+          );
+        }
+      }
+    }
 
     // Activate keyboard navigation first
     KeyboardNav.activate();

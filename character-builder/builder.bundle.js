@@ -365,7 +365,7 @@ const data=await response.json();if(data.success&&Array.isArray(data.names)&&dat
 let unique=this._filterAndRegisterUniqueNames(candidates,desiredCount);if(unique.length<desiredCount){addFallbackCandidates(5);const more=this._filterAndRegisterUniqueNames(candidates,desiredCount-unique.length,);unique=unique.concat(more);}
 return unique.slice(0,desiredCount);},async generateCharacterSummary(character,options={}){const nameCount=typeof options.nameCount==='number'&&options.nameCount>0?options.nameCount:3;const race=character&&character.race;const classType=character&&character.class;const buildLocalFallback=()=>{const fallbackNames=this.generateFallbackNames(race||'human',nameCount);const template='{{NAME}} is a '+`${race || 'mysterious'}\u0020${classType || 'adventurer'} with a mysterious past. `+"They don't talk about it much. Probably for the best.";return{names:fallbackNames,backstoryTemplate:template,};};if(!CONFIG.ENABLE_AI){console.log('%c📦 SUMMARY (Fallback - AI Disabled)','color: #ff0; font-weight: bold',);return buildLocalFallback();}
 try{console.log('%c📦 SUMMARY: Calling backend AI for names + backstory template...','color: #0ff; font-weight: bold',);const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/summary`,{method:'POST',headers:{'Content-Type':'application/json',},body:JSON.stringify({race:race,class_type:classType,alignment:character&&character.alignment,background:character&&character.background,personality:character&&(character.personalityTrait||character.personality),name_count:nameCount*2,}),},);if(!response.ok){const status=response.status;let detail=null;try{const errBody=await response.json();if(errBody&&errBody.detail){detail=errBody.detail;}}catch{}
-if(status===429){console.log('%c📦 SUMMARY (Cooldown / Quota Limit)','color: #ff0; font-weight: bold',);if(window.UIService){const isCreationQuota=detail&&detail.includes('character creation');const friendlyMessage=isCreationQuota?detail:"You've reached today's limit. Using offline suggestions for this character.";window.UIService.showNotification(friendlyMessage,'warning',6000,);}}else{console.log('%c📦 SUMMARY (Fallback - API Error)','color: #f80; font-weight: bold',);console.log('  Status:',status);}
+if(status===429){console.log('%c📦 SUMMARY (Cooldown / Quota Limit)','color: #ff0; font-weight: bold',);try{window.dispatchEvent(new CustomEvent('danddy:creationQuotaUpdate',{detail:{remaining:0},}),);}catch(_){}}else{console.log('%c📦 SUMMARY (Fallback - API Error)','color: #f80; font-weight: bold',);console.log('  Status:',status);}
 return buildLocalFallback();}
 const data=await response.json();if(!data||data.success!==true){console.log('%c📦 SUMMARY (Fallback - Bad Payload)','color: #f80; font-weight: bold',);return buildLocalFallback();}
 let names=Array.isArray(data.names)?data.names.slice():[];const template=typeof data.backstory_template==='string'&&data.backstory_template.trim()?data.backstory_template:null;if(names.length){names=this._filterAndRegisterUniqueNames(names,nameCount);}
@@ -5871,30 +5871,6 @@ const App = (window.App = {
         console.warn('Creation quota check failed:', e);
       }
 
-      // If quota is exhausted, show message and redirect
-      if (quotaInfo && quotaInfo.remaining === 0) {
-        narratorPanel.insertAdjacentHTML(
-          'beforeend',
-          Components.renderNarratorMessage(''),
-        );
-        Utils.scrollToBottom(true);
-        const messageEl =
-          narratorPanel.lastElementChild.querySelector('.narrator-text');
-        await Utils.typewriter(
-          messageEl,
-          "You've reached your daily limit for character creation. Come back tomorrow for more adventures!"
-        );
-        Utils.scrollToBottom(true);
-
-        // Show a button to go back to manager
-        narratorPanel.insertAdjacentHTML(
-          'beforeend',
-          `<div class="question-card"><div class="options-container"><button class="button-primary"onclick="exitToManager()">Back to Character Manager</button></div></div>`,
-        );
-        Utils.scrollToBottom(true);
-        return;
-      }
-
       // Store quota info for later display
       this._creationQuotaInfo = quotaInfo;
     }
@@ -5916,7 +5892,27 @@ const App = (window.App = {
       if (qi.remaining !== -1) {
         const quotaLine = document.createElement('div');
         quotaLine.className = 'creation-quota-info';
-        quotaLine.textContent = `${qi.remaining}character creation${qi.remaining===1?'':'s'}remaining today`;
+        
+        if (qi.remaining === 0) {
+          // Format reset time nicely
+          let resetText = 'Resets tomorrow';
+          if (qi.resetAt) {
+            try {
+              const resetDate = new Date(qi.resetAt);
+              const now = new Date();
+              const hoursUntil = Math.ceil((resetDate - now) / (1000 * 60 * 60));
+              if (hoursUntil <= 1) {
+                resetText = 'Resets in about an hour';
+              } else if (hoursUntil < 24) {
+                resetText = `Resets in about ${hoursUntil}hours`;
+              }
+            } catch (_) {}
+          }
+          quotaLine.textContent = `You've reached today's limit.${resetText}.`;
+          quotaLine.classList.add('is-exhausted');
+        } else {
+          quotaLine.textContent = `${qi.remaining}character creation${qi.remaining===1?'':'s'}remaining today`;
+        }
         messageEl.parentElement.appendChild(quotaLine);
       }
     }
@@ -5929,6 +5925,28 @@ const App = (window.App = {
       'beforeend',
       Components.renderQuestion(variedQuestion),
     );
+
+    // For entry-mode, disable options if quota is exhausted
+    if (question.id === 'entry-mode' && this._creationQuotaInfo && this._creationQuotaInfo.remaining === 0) {
+      const questionCard = narratorPanel.querySelector(`.question-card[data-question-id="${question.id}"]`);
+      if (questionCard) {
+        const buttons = questionCard.querySelectorAll('.button-primary');
+        buttons.forEach(btn => {
+          btn.disabled = true;
+          btn.title = "Daily character creation limit reached";
+          btn.classList.add('is-quota-disabled');
+        });
+        
+        // Add a back button
+        const optionsContainer = questionCard.querySelector('.options-container');
+        if (optionsContainer) {
+          optionsContainer.insertAdjacentHTML(
+            'beforeend',
+            `<button class="button-primary"onclick="exitToManager()"style="margin-top: var(--spacing-md);">Back to Character Manager</button>`,
+          );
+        }
+      }
+    }
 
     // Activate keyboard navigation first
     KeyboardNav.activate();

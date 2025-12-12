@@ -1206,19 +1206,14 @@ const AIService = (window.AIService = {
             '%c📦 SUMMARY (Cooldown / Quota Limit)',
             'color: #ff0; font-weight: bold',
           );
-          if (window.UIService) {
-            // Show user-friendly message (hide "rate limit" terminology)
-            // Check if it's a creation quota message vs generic rate limit
-            const isCreationQuota = detail && detail.includes('character creation');
-            const friendlyMessage = isCreationQuota
-              ? detail
-              : "You've reached today's limit. Using offline suggestions for this character.";
-            window.UIService.showNotification(
-              friendlyMessage,
-              'warning',
-              6000,
+          // Dispatch quota update event so UI can disable options
+          try {
+            window.dispatchEvent(
+              new CustomEvent('danddy:creationQuotaUpdate', {
+                detail: { remaining: 0 },
+              }),
             );
-          }
+          } catch (_) {}
         } else {
           console.log(
             '%c📦 SUMMARY (Fallback - API Error)',

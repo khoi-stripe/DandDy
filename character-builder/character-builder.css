@@ -86,6 +86,19 @@
   opacity: 0.8;
 }
 
+.creation-quota-info.is-exhausted {
+  color: var(--theme-warning);
+  border-left-color: var(--theme-warning);
+  opacity: 1;
+}
+
+/* Disabled options when quota exhausted */
+.button-primary.is-quota-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* Dimmed conversation hierarchy
    - Older narrator messages and question cards are slightly dimmed
    - The newest section stays bright
