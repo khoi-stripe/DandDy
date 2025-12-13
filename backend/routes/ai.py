@@ -739,6 +739,65 @@ async def get_ai_status():
     }
 
 
+@router.get("/quota/debug")
+async def get_quota_debug(
+    http_request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """
+    Debug endpoint to diagnose quota issues.
+    Shows whether user is authenticated and what client_id is being used.
+    """
+    client_id = get_client_id(http_request, current_user)
+    reset_epoch = _utc_next_midnight_epoch()
+    reset_iso = _utc_next_midnight_iso()
+    
+    is_authenticated = current_user is not None
+    user_info = None
+    if current_user:
+        user_info = {
+            "id": current_user.id,
+            "email": current_user.email,
+            "role": current_user.role.value if current_user.role else "unknown",
+        }
+    
+    enforced = _quota_is_enforced(current_user)
+    
+    # Get both quotas
+    image_used = 0
+    char_used = 0
+    try:
+        image_used = _get_image_usage_count(_utc_today(), client_id)
+    except Exception:
+        pass
+    try:
+        char_used = _get_character_creation_usage_count(_utc_today(), client_id)
+    except Exception:
+        pass
+    
+    return {
+        "debug_info": {
+            "is_authenticated": is_authenticated,
+            "client_id": client_id,
+            "user": user_info,
+            "quotas_enforced": enforced,
+            "production_mode": bool(os.getenv("PRODUCTION")),
+        },
+        "character_creation": {
+            "limit": CHARACTER_CREATION_DAILY_LIMIT,
+            "used": char_used,
+            "remaining": -1 if not enforced else max(0, CHARACTER_CREATION_DAILY_LIMIT - char_used),
+        },
+        "image_generation": {
+            "limit": IMAGE_DAILY_LIMIT,
+            "used": image_used,
+            "remaining": -1 if not enforced else max(0, IMAGE_DAILY_LIMIT - image_used),
+        },
+        "reset_at": reset_iso,
+        "reset_epoch": reset_epoch,
+    }
+
+
 @router.get("/images/quota")
 async def get_image_quota(
     http_request: Request,

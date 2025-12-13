@@ -8,6 +8,7 @@ globs:
   - version.js
   - portrait-prompts.js
   - shared-portrait-data.js
+  - default-portraits.js
   - character-name-data.js
   - shared-character-sheet.js
   - character-manager-api.js

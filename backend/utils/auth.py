@@ -152,6 +152,7 @@ async def get_current_user_optional(
         # Try to extract the token from the Authorization header
         authorization = request.headers.get("Authorization")
         if not authorization or not authorization.startswith("Bearer "):
+            print(f"🔓 get_current_user_optional: No auth header (path={request.url.path})")
             return None
         
         token = authorization.replace("Bearer ", "")
@@ -159,12 +160,24 @@ async def get_current_user_optional(
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         user_id: int = payload.get("sub")
         if user_id is None:
+            print(f"🔓 get_current_user_optional: Token has no 'sub' claim")
             return None
         
         user = db.query(User).filter(User.id == int(user_id)).first()
+        if user:
+            print(f"🔓 get_current_user_optional: Found user {user.email} (role={user.role.value})")
+        else:
+            print(f"🔓 get_current_user_optional: User ID {user_id} not found in database")
         return user
-    except (JWTError, ExpiredSignatureError, ValueError, AttributeError):
+    except ExpiredSignatureError:
+        print(f"🔓 get_current_user_optional: Token EXPIRED")
+        return None
+    except JWTError as e:
+        print(f"🔓 get_current_user_optional: JWT error: {e}")
+        return None
+    except (ValueError, AttributeError) as e:
         # Invalid/expired token or parsing error - treat as unauthenticated
+        print(f"🔓 get_current_user_optional: Parse error: {e}")
         return None
 
 

@@ -1,0 +1,288 @@
+{
+  "generated_at": "2025-12-12T23:01:18.516178",
+  "model": "gpt-image-1",
+  "quality": "medium",
+  "style": "classic_high_fantasy",
+  "portraits": {
+    "elf-wizard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-wizard.png",
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears wizard, wearing robes, holding a staff and spellbook. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:40:44.863500"
+    },
+    "dwarf-barbarian": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-barbarian.png",
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard barbarian, wearing furs, holding an axe. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:41:14.548673"
+    },
+    "dwarf-bard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-bard.png",
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard bard, wearing colorful clothes, holding a lute. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:41:36.704209"
+    },
+    "dwarf-cleric": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-cleric.png",
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard cleric, wearing robes with a holy symbol. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:41:59.007272"
+    },
+    "dwarf-druid": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-druid.png",
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard druid, wearing natural clothing with leaves. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:42:22.368622"
+    },
+    "dwarf-fighter": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-fighter.png",
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard fighter, wearing armor, holding a sword. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:42:45.589803"
+    },
+    "dwarf-monk": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-monk.png",
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard monk, wearing simple robes in a martial stance. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:43:06.746636"
+    },
+    "dwarf-paladin": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-paladin.png",
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard paladin, wearing plate armor with a shield. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:43:28.701265"
+    },
+    "dwarf-ranger": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-ranger.png",
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard ranger, wearing a cloak, holding a bow. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:43:56.354376"
+    },
+    "dwarf-rogue": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-rogue.png",
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard rogue, wearing leather armor, holding daggers. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:44:32.166103"
+    },
+    "dwarf-sorcerer": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-sorcerer.png",
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard sorcerer, with magical energy around their hands. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:44:52.982560"
+    },
+    "dwarf-warlock": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-warlock.png",
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard warlock, wearing dark robes with arcane symbols. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:45:11.463527"
+    },
+    "dwarf-wizard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-wizard.png",
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard wizard, wearing robes, holding a staff and spellbook. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:45:33.763844"
+    },
+    "elf-barbarian": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-barbarian.png",
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears barbarian, wearing furs, holding an axe. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:45:54.654075"
+    },
+    "elf-bard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-bard.png",
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears bard, wearing colorful clothes, holding a lute. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:46:15.976942"
+    },
+    "elf-cleric": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-cleric.png",
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears cleric, wearing robes with a holy symbol. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:46:36.557264"
+    },
+    "elf-druid": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-druid.png",
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears druid, wearing natural clothing with leaves. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:46:58.057784"
+    },
+    "elf-fighter": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-fighter.png",
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears fighter, wearing armor, holding a sword. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:47:17.394605"
+    },
+    "elf-monk": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-monk.png",
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears monk, wearing simple robes in a martial stance. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:47:37.075667"
+    },
+    "elf-paladin": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-paladin.png",
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears paladin, wearing plate armor with a shield. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:47:57.187297"
+    },
+    "elf-ranger": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-ranger.png",
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears ranger, wearing a cloak, holding a bow. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:48:17.606201"
+    },
+    "elf-rogue": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-rogue.png",
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears rogue, wearing leather armor, holding daggers. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:48:38.847976"
+    },
+    "elf-sorcerer": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-sorcerer.png",
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears sorcerer, with magical energy around their hands. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:48:58.893090"
+    },
+    "elf-warlock": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-warlock.png",
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears warlock, wearing dark robes with arcane symbols. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:49:17.679637"
+    },
+    "halfling-barbarian": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-barbarian.png",
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair barbarian, wearing furs, holding an axe. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:49:39.213734"
+    },
+    "halfling-bard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-bard.png",
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair bard, wearing colorful clothes, holding a lute. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:50:03.007484"
+    },
+    "halfling-cleric": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-cleric.png",
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair cleric, wearing robes with a holy symbol. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:50:26.267603"
+    },
+    "halfling-druid": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-druid.png",
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair druid, wearing natural clothing with leaves. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:50:51.024948"
+    },
+    "halfling-fighter": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-fighter.png",
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair fighter, wearing armor, holding a sword. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:51:13.286141"
+    },
+    "halfling-monk": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-monk.png",
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair monk, wearing simple robes in a martial stance. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:51:35.748607"
+    },
+    "halfling-paladin": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-paladin.png",
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair paladin, wearing plate armor with a shield. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:51:58.553304"
+    },
+    "halfling-ranger": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-ranger.png",
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair ranger, wearing a cloak, holding a bow. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:52:19.597256"
+    },
+    "halfling-rogue": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-rogue.png",
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair rogue, wearing leather armor, holding daggers. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:52:44.202412"
+    },
+    "halfling-sorcerer": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-sorcerer.png",
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair sorcerer, with magical energy around their hands. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:53:08.103646"
+    },
+    "halfling-warlock": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-warlock.png",
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair warlock, wearing dark robes with arcane symbols. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:53:29.121314"
+    },
+    "halfling-wizard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-wizard.png",
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair wizard, wearing robes, holding a staff and spellbook. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:53:51.120882"
+    },
+    "human-barbarian": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-barbarian.png",
+      "prompt": "Fantasy RPG character portrait: a human barbarian, wearing furs, holding an axe. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:54:14.099597"
+    },
+    "human-bard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-bard.png",
+      "prompt": "Fantasy RPG character portrait: a human bard, wearing colorful clothes, holding a lute. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:54:36.400475"
+    },
+    "human-cleric": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-cleric.png",
+      "prompt": "Fantasy RPG character portrait: a human cleric, wearing robes with a holy symbol. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:54:56.696595"
+    },
+    "human-druid": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-druid.png",
+      "prompt": "Fantasy RPG character portrait: a human druid, wearing natural clothing with leaves. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:55:17.498787"
+    },
+    "human-fighter": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-fighter.png",
+      "prompt": "Fantasy RPG character portrait: a human fighter, wearing armor, holding a sword. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:55:40.935869"
+    },
+    "human-monk": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-monk.png",
+      "prompt": "Fantasy RPG character portrait: a human monk, wearing simple robes in a martial stance. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:56:04.943864"
+    },
+    "human-paladin": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-paladin.png",
+      "prompt": "Fantasy RPG character portrait: a human paladin, wearing plate armor with a shield. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:56:26.536368"
+    },
+    "human-ranger": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-ranger.png",
+      "prompt": "Fantasy RPG character portrait: a human ranger, wearing a cloak, holding a bow. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:56:48.328004"
+    },
+    "human-rogue": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-rogue.png",
+      "prompt": "Fantasy RPG character portrait: a human rogue, wearing leather armor, holding daggers. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:57:09.552397"
+    },
+    "human-sorcerer": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-sorcerer.png",
+      "prompt": "Fantasy RPG character portrait: a human sorcerer, with magical energy around their hands. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:57:37.220839"
+    },
+    "human-warlock": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-warlock.png",
+      "prompt": "Fantasy RPG character portrait: a human warlock, wearing dark robes with arcane symbols. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:57:57.987190"
+    },
+    "human-wizard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-wizard.png",
+      "prompt": "Fantasy RPG character portrait: a human wizard, wearing robes, holding a staff and spellbook. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:58:19.666025"
+    },
+    "dragonborn-barbarian": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-barbarian.png",
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales barbarian, wearing furs, holding an axe. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:58:46.742911"
+    },
+    "dragonborn-bard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-bard.png",
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales bard, wearing colorful clothes, holding a lute. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:59:06.857423"
+    },
+    "dragonborn-cleric": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-cleric.png",
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales cleric, wearing robes with a holy symbol. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:59:29.050860"
+    },
+    "dragonborn-druid": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-druid.png",
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales druid, wearing natural clothing with leaves. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T22:59:52.703637"
+    },
+    "dragonborn-fighter": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-fighter.png",
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales fighter, wearing armor, holding a sword. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T23:00:16.651995"
+    },
+    "dragonborn-monk": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-monk.png",
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales monk, wearing simple robes in a martial stance. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T23:00:36.578392"
+    },
+    "dragonborn-paladin": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-paladin.png",
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales paladin, wearing plate armor with a shield. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T23:00:57.310995"
+    },
+    "dragonborn-ranger": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-ranger.png",
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales ranger, wearing a cloak, holding a bow. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
+      "generated_at": "2025-12-12T23:01:18.516165"
+    }
+  }
+}

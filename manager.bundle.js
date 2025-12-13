@@ -1985,6 +1985,22 @@ ${hasChoices?`<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${pa
       return result;
     }
 
+    // 3) Fall back to default portrait based on race/class
+    if (window.DefaultPortraits && character.race && character.class) {
+      const defaultUrl = DefaultPortraits.getUrl(character.race, character.class);
+      if (defaultUrl && DefaultPortraits.exists(character.race, character.class)) {
+        source = 'DefaultPortraits (race/class fallback)';
+        result = defaultUrl;
+        logPortraitDebug('getOriginalPortraitUrl', charId, charName, {
+          source,
+          race: character.race,
+          class: character.class,
+          url: result
+        });
+        return result;
+      }
+    }
+
     logPortraitDebug('getOriginalPortraitUrl', charId, charName, {
       source: 'none',
       result: null
@@ -3171,6 +3187,8 @@ if (DEBUG_CLOUD) {
         this._createLyra(),
         this._createThorgrim(),
         this._createZephyr(),
+        this._createSienna(),
+        this._createKrazul(),
       ];
     },
 
@@ -3624,6 +3642,294 @@ if (DEBUG_CLOUD) {
         portrait: {
           url: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298383_2a5a798489b0460481a28c99bb85d235.png',
         },
+        
+        // Metadata
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+    },
+
+    // ========================================
+    // DEMO CHARACTER 4: Sienna Dawnbringer
+    // ========================================
+    // Female Human Cleric - compassionate healer
+    _createSienna() {
+      const nowIso = new Date().toISOString();
+      return {
+        id: `${DEMO_PREFIX}sienna`,
+        isDemo: true,
+        characterUid: `${DEMO_PREFIX}sienna_dawnbringer`,
+        name: 'Sienna Dawnbringer',
+        race: 'human',
+        class: 'cleric',
+        background: 'acolyte',
+        alignment: 'lg',
+        sex: 'female',
+        level: 4,
+        
+        // Abilities (wisdom-focused healer)
+        abilities: {
+          str: 12,
+          dex: 10,
+          con: 14,
+          int: 11,
+          wis: 17,
+          cha: 14,
+        },
+        baseAbilities: {
+          str: 11,  // +1 human
+          dex: 9,   // +1 human
+          con: 13,  // +1 human
+          int: 10,  // +1 human
+          wis: 16,  // +1 human
+          cha: 13,  // +1 human
+        },
+        
+        // Computed stats
+        hitPoints: 31,  // 8 + 3*5 + 4*2 = 31
+        armorClass: 18, // Chain mail (16) + shield (+2)
+        initiative: 0,
+        speed: 30,
+        proficiencyBonus: 2,
+        
+        // Ability modifiers
+        abilityModifiers: {
+          str: 1,
+          dex: 0,
+          con: 2,
+          int: 0,
+          wis: 3,
+          cha: 2,
+        },
+        
+        // Skills
+        skillProficiencies: ['insight', 'medicine', 'religion', 'persuasion'],
+        skillModifiers: {
+          insight: 5,     // WIS + prof
+          medicine: 5,    // WIS + prof
+          religion: 2,    // INT + prof
+          persuasion: 4,  // CHA + prof
+        },
+        
+        // Saving throws
+        savingThrows: ['wis', 'cha'],
+        savingThrowModifiers: {
+          str: 1,
+          dex: 0,
+          con: 2,
+          int: 0,
+          wis: 5,  // Proficient
+          cha: 4,  // Proficient
+        },
+        
+        // Languages
+        languages: ['Common', 'Celestial', 'Elvish'],
+        
+        // Equipment
+        equipment: [
+          'Chain mail',
+          'Shield',
+          'Mace',
+          'Holy symbol of Lathander',
+          'Prayer book',
+          'Incense sticks (5)',
+          'Vestments',
+          'Healer\'s kit',
+        ],
+        
+        // Spellcasting
+        spellcastingAbility: 'wis',
+        cantrips: ['Sacred Flame', 'Spare the Dying', 'Guidance'],
+        spellsKnown: [
+          'Cure Wounds',
+          'Bless',
+          'Shield of Faith',
+          'Healing Word',
+          'Lesser Restoration',
+          'Spiritual Weapon',
+          'Prayer of Healing',
+        ],
+        spellSlots: {
+          1: 4,
+          2: 3,
+        },
+        
+        // Race data
+        raceData: {
+          name: 'Human',
+          size: 'Medium',
+          speed: 30,
+          traits: ['Extra Language', 'Versatile (+1 to all abilities)'],
+          languages: ['Common', 'one extra'],
+        },
+        
+        // Class data
+        classData: {
+          name: 'Cleric',
+          hitDie: 8,
+          primaryAbility: ['wis'],
+          savingThrows: ['wis', 'cha'],
+          spellcaster: true,
+        },
+        
+        // Background data
+        backgroundData: {
+          name: 'Acolyte',
+          feature: {
+            name: 'Shelter of the Faithful',
+            description: 'You can receive free healing and care at temples of your faith, and you can call upon priests for assistance.',
+          },
+        },
+        
+        // Personality
+        backstory: 'Sienna was orphaned during a plague that swept through her village. Taken in by the Temple of Lathander, she devoted her life to ensuring no one else would suffer as she had. Now she travels the land, bringing hope and healing wherever darkness threatens.',
+        personalityTrait: 'I see omens in every event and action. The gods are always speaking to us, we just need to listen.',
+        
+        // Portrait - uses default portrait system (human-cleric)
+        // Will fall back to DefaultPortraits.getUrl('human', 'cleric')
+        
+        // Metadata
+        createdAt: nowIso,
+        updatedAt: nowIso,
+      };
+    },
+
+    // ========================================
+    // DEMO CHARACTER 5: Krazul Stormscale
+    // ========================================
+    // Male Dragonborn Paladin - noble dragon knight
+    _createKrazul() {
+      const nowIso = new Date().toISOString();
+      return {
+        id: `${DEMO_PREFIX}krazul`,
+        isDemo: true,
+        characterUid: `${DEMO_PREFIX}krazul_stormscale`,
+        name: 'Krazul Stormscale',
+        race: 'dragonborn',
+        class: 'paladin',
+        background: 'noble',
+        alignment: 'lg',
+        sex: 'male',
+        level: 5,
+        
+        // Abilities (strong and charismatic)
+        abilities: {
+          str: 17,  // +2 racial
+          dex: 10,
+          con: 14,
+          int: 10,
+          wis: 12,
+          cha: 16,  // +1 racial
+        },
+        baseAbilities: {
+          str: 15,
+          dex: 10,
+          con: 14,
+          int: 10,
+          wis: 12,
+          cha: 15,
+        },
+        
+        // Computed stats
+        hitPoints: 44,  // 10 + 4*6 + 5*2 = 44
+        armorClass: 18, // Chain mail (16) + shield (+2) or plate (18)
+        initiative: 0,
+        speed: 30,
+        proficiencyBonus: 3,
+        
+        // Ability modifiers
+        abilityModifiers: {
+          str: 3,
+          dex: 0,
+          con: 2,
+          int: 0,
+          wis: 1,
+          cha: 3,
+        },
+        
+        // Skills
+        skillProficiencies: ['athletics', 'intimidation', 'persuasion', 'history'],
+        skillModifiers: {
+          athletics: 6,    // STR + prof
+          intimidation: 6, // CHA + prof
+          persuasion: 6,   // CHA + prof
+          history: 3,      // INT + prof
+        },
+        
+        // Saving throws
+        savingThrows: ['wis', 'cha'],
+        savingThrowModifiers: {
+          str: 3,
+          dex: 0,
+          con: 2,
+          int: 0,
+          wis: 4,  // Proficient
+          cha: 6,  // Proficient
+        },
+        
+        // Languages
+        languages: ['Common', 'Draconic'],
+        
+        // Equipment
+        equipment: [
+          'Plate armor',
+          'Shield',
+          'Longsword',
+          'Javelins (5)',
+          'Holy symbol embedded in shield',
+          'Signet ring of House Stormscale',
+          'Fine clothes',
+        ],
+        
+        // Spellcasting
+        spellcastingAbility: 'cha',
+        cantrips: [],
+        spellsKnown: [
+          'Divine Smite',
+          'Thunderous Smite',
+          'Shield of Faith',
+          'Cure Wounds',
+          'Command',
+          'Find Steed',
+        ],
+        spellSlots: {
+          1: 4,
+          2: 2,
+        },
+        
+        // Race data
+        raceData: {
+          name: 'Dragonborn',
+          size: 'Medium',
+          speed: 30,
+          traits: ['Draconic Ancestry (Blue)', 'Breath Weapon (Lightning)', 'Damage Resistance (Lightning)'],
+          languages: ['Common', 'Draconic'],
+        },
+        
+        // Class data
+        classData: {
+          name: 'Paladin',
+          hitDie: 10,
+          primaryAbility: ['str', 'cha'],
+          savingThrows: ['wis', 'cha'],
+          spellcaster: true,
+        },
+        
+        // Background data
+        backgroundData: {
+          name: 'Noble',
+          feature: {
+            name: 'Position of Privilege',
+            description: 'Thanks to your noble birth, people are inclined to think the best of you. Common folk make every effort to accommodate you.',
+          },
+        },
+        
+        // Personality
+        backstory: 'Krazul hails from an ancient dragonborn clan that once served as dragon knights in a forgotten empire. When his clan\'s honor was questioned by corrupt nobles, he swore an oath to restore their name through righteous deeds. His lightning breath crackles with ancestral power.',
+        personalityTrait: 'My favor, once lost, is lost forever. But my loyalty, once earned, is unshakeable.',
+        
+        // Portrait - uses default portrait system (dragonborn-paladin)
+        // Will fall back to DefaultPortraits.getUrl('dragonborn', 'paladin')
         
         // Metadata
         createdAt: nowIso,
@@ -7078,9 +7384,15 @@ async function updateCreationQuotaState() {
             quota = await AIService.getCreationQuotaStatus();
         } else {
             // Fallback: direct fetch (manager page may not have AIService loaded)
+            // IMPORTANT: Include auth token so admins bypass quota
+            const headers = { 'Content-Type': 'application/json' };
+            const token = window.AuthService?.getToken?.();
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
             const response = await fetch(
                 `${window.CONFIG?.BACKEND_URL||''}/api/ai/characters/quota`,
-                { method: 'GET' }
+                { method: 'GET', headers }
             );
             if (response.ok) {
                 quota = await response.json();

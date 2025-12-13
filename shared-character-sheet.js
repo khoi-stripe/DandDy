@@ -2093,6 +2093,22 @@ const CharacterSheet = (window.CharacterSheet = {
       return result;
     }
 
+    // 3) Fall back to default portrait based on race/class
+    if (window.DefaultPortraits && character.race && character.class) {
+      const defaultUrl = DefaultPortraits.getUrl(character.race, character.class);
+      if (defaultUrl && DefaultPortraits.exists(character.race, character.class)) {
+        source = 'DefaultPortraits (race/class fallback)';
+        result = defaultUrl;
+        logPortraitDebug('getOriginalPortraitUrl', charId, charName, {
+          source,
+          race: character.race,
+          class: character.class,
+          url: result
+        });
+        return result;
+      }
+    }
+
     logPortraitDebug('getOriginalPortraitUrl', charId, charName, {
       source: 'none',
       result: null

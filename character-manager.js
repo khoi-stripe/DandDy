@@ -1413,9 +1413,15 @@ async function updateCreationQuotaState() {
             quota = await AIService.getCreationQuotaStatus();
         } else {
             // Fallback: direct fetch (manager page may not have AIService loaded)
+            // IMPORTANT: Include auth token so admins bypass quota
+            const headers = { 'Content-Type': 'application/json' };
+            const token = window.AuthService?.getToken?.();
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
             const response = await fetch(
                 `${window.CONFIG?.BACKEND_URL || ''}/api/ai/characters/quota`,
-                { method: 'GET' }
+                { method: 'GET', headers }
             );
             if (response.ok) {
                 quota = await response.json();
