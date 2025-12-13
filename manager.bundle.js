@@ -8315,6 +8315,14 @@ async function generatePortraitForCharacter(id) {
         return;
     }
 
+    // Check if image quota is exhausted (for authenticated users)
+    if (typeof window._imageQuotaRemaining === 'number' && window._imageQuotaRemaining === 0) {
+        showAlertDialog(
+            "You've reached your daily limit for portrait generation. Come back tomorrow for more adventures!"
+        );
+        return;
+    }
+
     // Check if race and class are defined
     if (!character.race || !character.class) {
         showAlertDialog('This character needs both a race and class to generate a custom portrait.');
@@ -8413,11 +8421,39 @@ async function generatePortraitForCharacter(id) {
 
     // Populate the quota line (and keep it updated while the modal is open).
     try {
+        // Helper to disable/enable modal controls based on quota state
+        const updateModalControlsState = (isExhausted) => {
+            const promptTextarea = document.getElementById('portraitPrompt');
+            const styleTrigger = document.getElementById('portraitStyleTrigger');
+            const footerBtns = promptModal?.querySelectorAll('.modal-footer button');
+            
+            if (promptTextarea) {
+                promptTextarea.disabled = isExhausted;
+                if (isExhausted) {
+                    promptTextarea.placeholder = 'Daily limit reached - come back tomorrow!';
+                } else {
+                    promptTextarea.placeholder = 'Enter custom description...';
+                }
+            }
+            if (styleTrigger) {
+                styleTrigger.disabled = isExhausted;
+            }
+            if (footerBtns) {
+                footerBtns.forEach(btn => {
+                    btn.disabled = isExhausted;
+                });
+            }
+        };
+
         const updateQuotaLine = (detail) => {
             const el = document.getElementById('managerImageQuotaLine');
             if (!el) return;
             const remaining = detail && typeof detail.remaining === 'number' ? detail.remaining : null;
             const limit = detail && typeof detail.limit === 'number' ? detail.limit : null;
+
+            // Update disabled state based on quota
+            const isExhausted = remaining === 0;
+            updateModalControlsState(isExhausted);
 
             if (remaining === -1) {
                 el.textContent = 'Image quota: unlimited (admin/dev)';
@@ -8494,6 +8530,15 @@ function closePortraitPromptModal() {
 }
 
 async function confirmGeneratePortrait() {
+    // Defensive check: block if quota is exhausted (in case modal was opened before quota loaded)
+    if (typeof window._imageQuotaRemaining === 'number' && window._imageQuotaRemaining === 0) {
+        showAlertDialog(
+            "You've reached your daily limit for portrait generation. Come back tomorrow for more adventures!"
+        );
+        closePortraitPromptModal();
+        return;
+    }
+
     // Capture the current character ID and style in local variables so they're not lost
     // when we close the modal (which resets currentPortraitCharacterId and currentPortraitStyle to null).
     const portraitCharacterId = currentPortraitCharacterId;
@@ -9136,6 +9181,15 @@ async function confirmGeneratePortrait() {
 }
 
 async function surpriseMePortrait() {
+    // Defensive check: block if quota is exhausted
+    if (typeof window._imageQuotaRemaining === 'number' && window._imageQuotaRemaining === 0) {
+        showAlertDialog(
+            "You've reached your daily limit for portrait generation. Come back tomorrow for more adventures!"
+        );
+        closePortraitPromptModal();
+        return;
+    }
+
     const portraitCharacterId = currentPortraitCharacterId;
     if (!portraitCharacterId) {
         closePortraitPromptModal();
