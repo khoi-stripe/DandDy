@@ -1310,16 +1310,20 @@ const UI = {
         placeholder.classList.add('is-hidden');
         sheetContainer.classList.remove('is-hidden');
         
+        // Check if this is a demo character - disable editing if so
+        const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
+        
         // Use the shared CharacterSheet component
+        // Demo characters cannot be edited, renamed, deleted, or have portraits generated
         sheetContainer.innerHTML = CharacterSheet.render(character, {
             context: 'manager',
             showPortrait: true,
-            onRename: true,
-            onEdit: true,
-            onDelete: true,
-            onGeneratePortrait: true,
+            onRename: !isDemo,
+            onEdit: !isDemo,
+            onDelete: !isDemo,
+            onGeneratePortrait: !isDemo,
             onPrint: true,
-            onShare: true,
+            onShare: !isDemo,  // Demo characters can't be shared (they're not real user chars)
         });
         
         // Populate ASCII portrait after rendering
