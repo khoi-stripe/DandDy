@@ -3674,6 +3674,17 @@ if (DEBUG_CLOUD) {
           }
           return await window.CharacterCloudStorage.getAll();
         } catch (error) {
+          // If session expired, dispatch event and re-throw instead of silently falling back
+          if (error.message && error.message.includes('Session expired')) {
+            console.warn('☁️ STORAGE: Session expired during getAll, dispatching event');
+            const event = new CustomEvent('danddy:sessionExpired', {
+              detail: { reason: 'api_401', operation: 'getAll' },
+            });
+            window.dispatchEvent(event);
+            // Re-throw so caller can handle
+            throw error;
+          }
+          // For other errors (network issues, etc.), fall back to local
           console.error(
             '☁️ STORAGE: Cloud getAll failed, falling back to local:',
             error,
@@ -3698,6 +3709,19 @@ if (DEBUG_CLOUD) {
           }
           return await window.CharacterCloudStorage.getById(id);
         } catch (error) {
+          // If session expired, dispatch event and re-throw instead of silently falling back
+          // This allows the UI to show the session expired modal
+          if (error.message && error.message.includes('Session expired')) {
+            console.warn('☁️ STORAGE: Session expired during getById, dispatching event');
+            // Dispatch event so UI can react
+            const event = new CustomEvent('danddy:sessionExpired', {
+              detail: { reason: 'api_401', operation: 'getById' },
+            });
+            window.dispatchEvent(event);
+            // Re-throw so caller can handle (e.g., show modal)
+            throw error;
+          }
+          // For other errors (network issues, etc.), fall back to local
           console.error(
             '☁️ STORAGE: Cloud getById failed, falling back to local:',
             error,
@@ -3717,6 +3741,16 @@ if (DEBUG_CLOUD) {
           }
           return await window.CharacterCloudStorage.add(character);
         } catch (error) {
+          // If session expired, dispatch event and re-throw - don't create local duplicate
+          if (error.message && error.message.includes('Session expired')) {
+            console.warn('☁️ STORAGE: Session expired during add, dispatching event');
+            const event = new CustomEvent('danddy:sessionExpired', {
+              detail: { reason: 'api_401', operation: 'add' },
+            });
+            window.dispatchEvent(event);
+            throw error;
+          }
+          // For other errors (network issues), fall back to local add
           console.error('☁️ STORAGE: Cloud add failed:', error);
           if (typeof window.showNotification === 'function') {
             window.showNotification(
@@ -3763,6 +3797,16 @@ if (DEBUG_CLOUD) {
           }
           return await window.CharacterCloudStorage.update(id, updates);
         } catch (error) {
+          // If session expired, dispatch event for UI handling
+          if (error.message && error.message.includes('Session expired')) {
+            console.warn('☁️ STORAGE: Session expired during update, dispatching event');
+            const event = new CustomEvent('danddy:sessionExpired', {
+              detail: { reason: 'api_401', operation: 'update' },
+            });
+            window.dispatchEvent(event);
+            throw error;
+          }
+          // For other errors, show notification and re-throw
           console.error('☁️ STORAGE: Cloud update failed:', error);
           if (typeof window.showNotification === 'function') {
             window.showNotification(
@@ -7138,8 +7182,18 @@ async function viewCharacter(id, options = {}) {
 
     if (!character) {
         // Fallback to storage lookup (cloud/local)
-        character = await CharacterStorage.getById(id);
-        characterSource = 'storage';
+        try {
+            character = await CharacterStorage.getById(id);
+            characterSource = 'storage';
+        } catch (error) {
+            // Check if this is a session expiry error
+            if (error.message && error.message.includes('Session expired')) {
+                showSessionExpiredModal();
+                return;
+            }
+            // Log other errors but don't block - character will just be null
+            console.warn('Failed to load character from storage:', error);
+        }
     }
 
     // If a newer viewCharacter call started while we were waiting on
@@ -8200,8 +8254,27 @@ function initPortraitStyleSelector() {
 }
 
 async function generatePortraitForCharacter(id) {
-    const character = await CharacterStorage.getById(id);
-    if (!character) return;
+    let character;
+    try {
+        character = await CharacterStorage.getById(id);
+    } catch (error) {
+        // Check if this is a session expiry error
+        if (error.message && error.message.includes('Session expired')) {
+            // Session has expired - show the modal and don't proceed
+            showSessionExpiredModal();
+            return;
+        }
+        // Some other error - show alert
+        console.error('Failed to load character for portrait generation:', error);
+        showAlertDialog('Failed to load character. Please try again.');
+        return;
+    }
+    
+    if (!character) {
+        // Character not found - might have been deleted or never synced
+        showAlertDialog('Character not found. It may have been deleted or not yet synced.');
+        return;
+    }
 
     // Block custom art generation for sample (demo) characters
     if (window.DemoCharacters && DemoCharacters.isDemo(character)) {

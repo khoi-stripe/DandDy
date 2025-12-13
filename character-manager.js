@@ -1525,8 +1525,18 @@ async function viewCharacter(id, options = {}) {
 
     if (!character) {
         // Fallback to storage lookup (cloud/local)
-        character = await CharacterStorage.getById(id);
-        characterSource = 'storage';
+        try {
+            character = await CharacterStorage.getById(id);
+            characterSource = 'storage';
+        } catch (error) {
+            // Check if this is a session expiry error
+            if (error.message && error.message.includes('Session expired')) {
+                showSessionExpiredModal();
+                return;
+            }
+            // Log other errors but don't block - character will just be null
+            console.warn('Failed to load character from storage:', error);
+        }
     }
 
     // If a newer viewCharacter call started while we were waiting on
@@ -2677,8 +2687,27 @@ function initPortraitStyleSelector() {
 }
 
 async function generatePortraitForCharacter(id) {
-    const character = await CharacterStorage.getById(id);
-    if (!character) return;
+    let character;
+    try {
+        character = await CharacterStorage.getById(id);
+    } catch (error) {
+        // Check if this is a session expiry error
+        if (error.message && error.message.includes('Session expired')) {
+            // Session has expired - show the modal and don't proceed
+            showSessionExpiredModal();
+            return;
+        }
+        // Some other error - show alert
+        console.error('Failed to load character for portrait generation:', error);
+        showAlertDialog('Failed to load character. Please try again.');
+        return;
+    }
+    
+    if (!character) {
+        // Character not found - might have been deleted or never synced
+        showAlertDialog('Character not found. It may have been deleted or not yet synced.');
+        return;
+    }
 
     // Block custom art generation for sample (demo) characters
     if (window.DemoCharacters && DemoCharacters.isDemo(character)) {
