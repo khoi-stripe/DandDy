@@ -896,6 +896,19 @@
       const affectedUsers = [...new Set(selectedChars.map(c => c.user_id || c.owner_id))];
       const affectedEmails = affectedUsers.map(uid => getUserDisplay(uid));
       
+      // Check if any selected characters are demo characters
+      const demoChars = selectedChars.filter(c => c.is_demo);
+      if (demoChars.length > 0) {
+        const demoNames = demoChars.map(c => c.name).join(', ');
+        const confirmDemo = confirm(
+          `⚠️ WARNING: You are about to delete ${demoChars.length} DEMO character(s):\n\n` +
+          `${demoNames}\n\n` +
+          `These characters are currently shown to users in demo mode.\n` +
+          `Are you sure you want to continue?`
+        );
+        if (!confirmDemo) return;
+      }
+      
       let message = `Are you sure you want to delete ${selectedIds.size} character(s)?`;
       if (affectedEmails.length === 1) {
         message += `\nOwner: ${affectedEmails[0]}`;
