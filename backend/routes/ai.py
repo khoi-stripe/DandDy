@@ -38,13 +38,24 @@ OPENAI_API_KEY = settings.openai_api_key
 MAX_REQUESTS_PER_MINUTE = settings.max_requests_per_user_per_minute
 MAX_REQUESTS_PER_DAY = settings.max_requests_per_user_per_day
 
-# Dedicated image generation quota (separate from general AI request limiting).
-# This is for custom portrait regeneration only.
-IMAGE_DAILY_LIMIT = int(os.getenv("MAX_IMAGES_PER_USER_PER_DAY", "10"))
+# =============================================================================
+# TIER-BASED DAILY QUOTAS
+# =============================================================================
+# Different limits for demo (anonymous) vs logged-in users.
+# Demo users get lower limits to encourage account creation.
+# Logged-in users get higher limits as a benefit of registration.
 
-# Character creation quota: each creation includes one AI portrait.
-# Separate from custom portrait quota so users get a clear "characters per day" limit.
-CHARACTER_CREATION_DAILY_LIMIT = int(os.getenv("MAX_CHARACTER_CREATIONS_PER_DAY", "5"))
+# Demo (anonymous) user limits
+DEMO_IMAGE_DAILY_LIMIT = int(os.getenv("DEMO_MAX_IMAGES_PER_DAY", "10"))
+DEMO_CHARACTER_CREATION_DAILY_LIMIT = int(os.getenv("DEMO_MAX_CHARACTER_CREATIONS_PER_DAY", "3"))
+
+# Logged-in user limits
+USER_IMAGE_DAILY_LIMIT = int(os.getenv("USER_MAX_IMAGES_PER_DAY", "20"))
+USER_CHARACTER_CREATION_DAILY_LIMIT = int(os.getenv("USER_MAX_CHARACTER_CREATIONS_PER_DAY", "10"))
+
+# Legacy single-value constants (kept for backward compatibility, uses logged-in limits)
+IMAGE_DAILY_LIMIT = USER_IMAGE_DAILY_LIMIT
+CHARACTER_CREATION_DAILY_LIMIT = USER_CHARACTER_CREATION_DAILY_LIMIT
 
 # Optional: Grafana Loki config for centralized logging
 GRAFANA_LOKI_URL = os.getenv("GRAFANA_LOKI_URL")
@@ -373,10 +384,15 @@ def get_client_id(request: Request, user: Optional[User] = None) -> str:
 
 def check_rate_limit(client_id: str, user: Optional[User] = None):
     """
-    Rate limiting with smart exemptions:
+    Per-minute rate limiting for abuse protection.
+    
+    This is a basic anti-spam measure that limits rapid-fire requests.
+    Daily quotas for specific features (images, character creation) are
+    handled separately via database-backed tier-based quotas.
+    
+    Exemptions:
     - Admins are never rate limited
     - Development mode bypasses rate limits for easier testing
-    - Regular users get per-minute and per-day limits
     """
     # Skip rate limiting for admins
     if user and user.role == UserRole.ADMIN:
@@ -390,28 +406,17 @@ def check_rate_limit(client_id: str, user: Optional[User] = None):
     
     now = datetime.now()
     
-    # Clean old entries
+    # Clean old entries (only need to keep 1 minute of history now)
     _rate_limit_store[client_id] = [
-        timestamp for timestamp in _rate_limit_store[client_id]
-        if now - timestamp < timedelta(days=1)
-    ]
-    
-    # Check per-minute limit
-    recent_requests = [
         timestamp for timestamp in _rate_limit_store[client_id]
         if now - timestamp < timedelta(minutes=1)
     ]
-    if len(recent_requests) >= MAX_REQUESTS_PER_MINUTE:
-        raise HTTPException(
-            status_code=429,
-            detail=f"Rate limit exceeded. Max {MAX_REQUESTS_PER_MINUTE} requests per minute."
-        )
     
-    # Check per-day limit
-    if len(_rate_limit_store[client_id]) >= MAX_REQUESTS_PER_DAY:
+    # Check per-minute limit only (daily limits handled by feature quotas)
+    if len(_rate_limit_store[client_id]) >= MAX_REQUESTS_PER_MINUTE:
         raise HTTPException(
             status_code=429,
-            detail=f"Daily rate limit exceeded. Max {MAX_REQUESTS_PER_DAY} requests per day."
+            detail=f"Too many requests. Please wait a moment before trying again."
         )
     
     # Record this request
@@ -487,6 +492,28 @@ def _quota_is_enforced(user: Optional[User]) -> bool:
 def _image_quota_is_enforced(user: Optional[User]) -> bool:
     """Alias for backward compatibility."""
     return _quota_is_enforced(user)
+
+
+def _get_image_limit_for_user(user: Optional[User]) -> int:
+    """
+    Get the appropriate daily image limit based on user tier.
+    - Demo (anonymous): lower limit to encourage sign-up
+    - Logged-in: higher limit as benefit of registration
+    """
+    if user is None:
+        return DEMO_IMAGE_DAILY_LIMIT
+    return USER_IMAGE_DAILY_LIMIT
+
+
+def _get_character_creation_limit_for_user(user: Optional[User]) -> int:
+    """
+    Get the appropriate daily character creation limit based on user tier.
+    - Demo (anonymous): lower limit to encourage sign-up
+    - Logged-in: higher limit as benefit of registration
+    """
+    if user is None:
+        return DEMO_CHARACTER_CREATION_DAILY_LIMIT
+    return USER_CHARACTER_CREATION_DAILY_LIMIT
 
 
 def _get_image_usage_count(day_utc: date, subject_key: str) -> int:
@@ -775,6 +802,10 @@ async def get_quota_debug(
     except Exception:
         pass
     
+    # Get tier-based limits
+    char_limit = _get_character_creation_limit_for_user(current_user)
+    image_limit = _get_image_limit_for_user(current_user)
+    
     return {
         "debug_info": {
             "is_authenticated": is_authenticated,
@@ -782,16 +813,17 @@ async def get_quota_debug(
             "user": user_info,
             "quotas_enforced": enforced,
             "production_mode": bool(os.getenv("PRODUCTION")),
+            "user_tier": "logged_in" if is_authenticated else "demo",
         },
         "character_creation": {
-            "limit": CHARACTER_CREATION_DAILY_LIMIT,
+            "limit": char_limit,
             "used": char_used,
-            "remaining": -1 if not enforced else max(0, CHARACTER_CREATION_DAILY_LIMIT - char_used),
+            "remaining": -1 if not enforced else max(0, char_limit - char_used),
         },
         "image_generation": {
-            "limit": IMAGE_DAILY_LIMIT,
+            "limit": image_limit,
             "used": image_used,
-            "remaining": -1 if not enforced else max(0, IMAGE_DAILY_LIMIT - image_used),
+            "remaining": -1 if not enforced else max(0, image_limit - image_used),
         },
         "reset_at": reset_iso,
         "reset_epoch": reset_epoch,
@@ -811,10 +843,14 @@ async def get_image_quota(
 
     For admin users and in development mode, quota is not enforced and
     `remaining` is -1 to signal "unlimited".
+    
+    Limits vary by user tier:
+      - Demo (anonymous): DEMO_IMAGE_DAILY_LIMIT
+      - Logged-in: USER_IMAGE_DAILY_LIMIT
     """
     client_id = get_client_id(http_request, current_user)
     subject_key = client_id
-    limit = IMAGE_DAILY_LIMIT
+    limit = _get_image_limit_for_user(current_user)
     reset_epoch = _utc_next_midnight_epoch()
     reset_iso = _utc_next_midnight_iso()
 
@@ -827,6 +863,7 @@ async def get_image_quota(
             "reset_at": reset_iso,
             "reset_epoch": reset_epoch,
             "enforced": False,
+            "user_tier": "logged_in" if current_user else "demo",
         }
 
     try:
@@ -846,6 +883,7 @@ async def get_image_quota(
         "reset_at": reset_iso,
         "reset_epoch": reset_epoch,
         "enforced": True,
+        "user_tier": "logged_in" if current_user else "demo",
     }
 
 
@@ -866,10 +904,14 @@ async def get_character_creation_quota(
       - remaining: creations left (-1 means unlimited for admins/dev)
       - reset_at: ISO timestamp when quota resets
       - enforced: whether quota is being enforced
+    
+    Limits vary by user tier:
+      - Demo (anonymous): DEMO_CHARACTER_CREATION_DAILY_LIMIT
+      - Logged-in: USER_CHARACTER_CREATION_DAILY_LIMIT
     """
     client_id = get_client_id(http_request, current_user)
     subject_key = client_id
-    limit = CHARACTER_CREATION_DAILY_LIMIT
+    limit = _get_character_creation_limit_for_user(current_user)
     reset_epoch = _utc_next_midnight_epoch()
     reset_iso = _utc_next_midnight_iso()
 
@@ -882,6 +924,7 @@ async def get_character_creation_quota(
             "reset_at": reset_iso,
             "reset_epoch": reset_epoch,
             "enforced": False,
+            "user_tier": "logged_in" if current_user else "demo",
         }
 
     try:
@@ -901,6 +944,7 @@ async def get_character_creation_quota(
         "reset_at": reset_iso,
         "reset_epoch": reset_epoch,
         "enforced": True,
+        "user_tier": "logged_in" if current_user else "demo",
     }
 
 
@@ -1180,8 +1224,9 @@ async def generate_image(
     check_rate_limit(client_id, current_user)
 
     # Enforce a dedicated daily quota for image generation (cost control).
+    # Limit varies by user tier: demo users get fewer, logged-in users get more.
     subject_key = client_id  # already prefixed with "user:" or "ip:"
-    limit = IMAGE_DAILY_LIMIT
+    limit = _get_image_limit_for_user(current_user)
     reset_epoch = _utc_next_midnight_epoch()
     reset_iso = _utc_next_midnight_iso()
 
@@ -1198,14 +1243,17 @@ async def generate_image(
             )
 
         if used is None:
-            # Daily cap reached
+            # Daily cap reached - provide tier-specific message
+            tier_msg = "Daily image limit reached."
+            if current_user is None:
+                tier_msg = f"Daily image limit ({limit}) reached in guest mode. Create an account for higher limits!"
             headers = {
                 "X-Danddy-Image-Limit": str(limit),
                 "X-Danddy-Image-Remaining": "0",
                 "X-Danddy-Image-Reset": str(reset_epoch),
             }
             payload = {
-                "detail": "Daily image limit reached.",
+                "detail": tier_msg,
                 "limit": limit,
                 "used": limit,
                 "remaining": 0,
@@ -1708,8 +1756,9 @@ async def generate_character_summary(
     check_character_summary_cooldown(client_id, current_user, cooldown_seconds=20)
 
     # Enforce character creation quota (separate from general rate limits).
+    # Limit varies by user tier: demo users get fewer, logged-in users get more.
     subject_key = client_id
-    limit = CHARACTER_CREATION_DAILY_LIMIT
+    limit = _get_character_creation_limit_for_user(current_user)
     reset_epoch = _utc_next_midnight_epoch()
     reset_iso = _utc_next_midnight_iso()
 
@@ -1725,14 +1774,18 @@ async def generate_character_summary(
             )
 
         if used is None:
-            # Daily cap reached - return user-friendly message
+            # Daily cap reached - provide tier-specific message
+            if current_user is None:
+                tier_msg = f"You've reached the daily limit of {limit} character creations in guest mode. Create an account for higher limits!"
+            else:
+                tier_msg = f"You've reached your daily limit of {limit} character creations. Come back tomorrow to create more!"
             headers = {
                 "X-Danddy-Creation-Limit": str(limit),
                 "X-Danddy-Creation-Remaining": "0",
                 "X-Danddy-Creation-Reset": str(reset_epoch),
             }
             payload = {
-                "detail": f"You've reached your daily limit of {limit} character creations. Come back tomorrow to create more!",
+                "detail": tier_msg,
                 "limit": limit,
                 "used": limit,
                 "remaining": 0,

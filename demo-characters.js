@@ -12,14 +12,14 @@
   const DEMO_MIGRATION_ASKED_KEY = 'danddy_demo_migration_asked';
 
   // Demo mode limits
-  const DEMO_MAX_USER_CHARACTERS = 5;
-  const DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER = 3;
+  // Character limit is enforced locally (total characters stored)
+  // Portrait limit is enforced by backend (daily quota)
+  const DEMO_MAX_USER_CHARACTERS = 3;
 
   const DemoCharacters = (global.DemoCharacters = {
     DEMO_PREFIX,
     DEMO_MIGRATION_ASKED_KEY,
     DEMO_MAX_USER_CHARACTERS,
-    DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER,
 
     // Check if a character is a demo character
     isDemo(character) {
@@ -78,24 +78,15 @@
       return this.getUserCharacterCount() >= DEMO_MAX_USER_CHARACTERS;
     },
 
-    // Check if a character has reached the portrait limit in demo mode
-    hasReachedPortraitLimit(character) {
-      if (!this.isDemoMode()) return false;
-      const currentCount = (character && character.customPortraitCount) || 0;
-      return currentCount >= DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
-    },
-
     // Check if custom art generation is allowed for a character
+    // Note: Daily portrait limits are now enforced by the backend.
+    // This function only checks if the character type allows custom art.
     canGenerateCustomArt(character) {
       // Sample characters cannot have custom art generated
       if (this.isDemo(character)) {
         return false;
       }
-      // In demo mode, check portrait limit
-      if (this.isDemoMode()) {
-        return !this.hasReachedPortraitLimit(character);
-      }
-      // Authenticated users have no demo restrictions
+      // All other characters can have custom art (backend enforces daily quota)
       return true;
     },
 

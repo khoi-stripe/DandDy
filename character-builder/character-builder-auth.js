@@ -54,6 +54,13 @@ const AuthUI = (window.AuthUI = {
             </button>
           </div>
           
+          <div id="demo-mode-info" class="demo-mode-notice is-hidden">
+            <div class="demo-notice-content">
+              <span class="demo-notice-icon">ℹ️</span>
+              <span>Guest mode: Create up to 3 characters and generate up to 10 custom portraits per day. Create an account to save characters in the cloud and get higher limits!</span>
+            </div>
+          </div>
+          
           <div class="auth-footer">
             <span class="auth-link" id="switch-to-register">
               Don't have an account? <span class="link-highlight">REGISTER HERE</span>
@@ -147,8 +154,19 @@ const AuthUI = (window.AuthUI = {
     });
 
     guestButton.addEventListener('click', () => {
-      this.removeAuthScreen();
-      if (onGuestMode) onGuestMode();
+      // Show demo mode info message
+      const demoInfo = document.getElementById('demo-mode-info');
+      if (demoInfo) {
+        demoInfo.classList.remove('is-hidden');
+        // Brief pause to let user see the message, then proceed
+        setTimeout(() => {
+          this.removeAuthScreen();
+          if (onGuestMode) onGuestMode();
+        }, 1500);
+      } else {
+        this.removeAuthScreen();
+        if (onGuestMode) onGuestMode();
+      }
     });
 
     switchButton.addEventListener('click', () => {

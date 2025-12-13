@@ -3588,16 +3588,9 @@ const App = (window.App = {
       return;
     }
 
-    // In demo mode, check portrait limit per character
-    if (window.DemoCharacters && !DemoCharacters.canGenerateCustomArt(character)) {
-      const limit = DemoCharacters.DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
-      this.showSystemMessage(
-        'You\'ve reached the limit of ' + limit + ' custom portraits per character in guest mode. ' +
-        '<a href="#" onclick="showAuthModal(); showLoginForm(); return false;" class="terminal-link">Log in</a> or ' +
-        '<a href="#" onclick="showAuthModal(); showRegisterForm(); return false;" class="terminal-link">create a free account</a> to generate unlimited portraits!'
-      );
-      return;
-    }
+    // Note: Daily portrait limits are now enforced by the backend.
+    // Demo users get 5/day, logged-in users get 20/day.
+    // The backend returns appropriate error messages when limits are hit.
 
     if (!character.race || !character.class) {
       this.showSystemMessage(

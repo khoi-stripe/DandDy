@@ -1466,14 +1466,22 @@ async function updateImageQuotaState() {
         if (window.AIService && typeof AIService.getImageQuotaStatus === 'function') {
             quota = await AIService.getImageQuotaStatus();
         } else {
+            // Include auth token so admins bypass quota
+            const headers = { 'Content-Type': 'application/json' };
+            const token = window.AuthService?.getToken?.();
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
             const response = await fetch(
                 `${window.CONFIG?.BACKEND_URL || ''}/api/ai/images/quota`,
-                { method: 'GET' }
+                { method: 'GET', headers }
             );
             if (response.ok) {
                 quota = await response.json();
             }
         }
+
+        const oldRemaining = window._imageQuotaRemaining;
 
         if (!quota) {
             window._imageQuotaRemaining = null;
@@ -1482,8 +1490,10 @@ async function updateImageQuotaState() {
 
         window._imageQuotaRemaining = quota.remaining;
         
-        // If quota changed to 0, re-render current character sheet to update menu
-        if (quota.remaining === 0 && AppState.selectedCharacterId) {
+        // Re-render current character sheet to update Customize portrait button state
+        // This ensures the button is correctly disabled on initial load when quota is exhausted
+        // Only re-render if quota was previously unknown (null) or changed
+        if (oldRemaining !== quota.remaining && AppState.selectedCharacterId) {
             viewCharacter(AppState.selectedCharacterId, { skipKeyboardSync: true });
         }
     } catch (e) {
@@ -2730,27 +2740,29 @@ async function generatePortraitForCharacter(id) {
         return;
     }
 
-    // In demo mode, check portrait limit per character
-    if (window.DemoCharacters && !DemoCharacters.canGenerateCustomArt(character)) {
-        const limit = DemoCharacters.DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
-        showAlertDialog(
-            'You\'ve reached the limit of ' + limit + ' custom portraits per character in guest mode.',
-            {
-                actionLabel: 'Create a free account',
-                onAction: () => {
-                    showAuthModal();
-                    showRegisterForm();
-                }
-            }
-        );
-        return;
-    }
-
-    // Check if image quota is exhausted (for authenticated users)
+    // Check if image quota is exhausted (backend enforces daily limits)
+    // Demo users get 5/day, logged-in users get 20/day
     if (typeof window._imageQuotaRemaining === 'number' && window._imageQuotaRemaining === 0) {
-        showAlertDialog(
-            "You've reached your daily limit for portrait generation. Come back tomorrow for more adventures!"
-        );
+        const isDemoMode = window.DemoCharacters && 
+            typeof DemoCharacters.isDemoMode === 'function' && 
+            DemoCharacters.isDemoMode();
+        
+        if (isDemoMode) {
+            showAlertDialog(
+                "You've reached the daily portrait limit in guest mode. Create an account for higher limits!",
+                {
+                    actionLabel: 'Create a free account',
+                    onAction: () => {
+                        showAuthModal();
+                        showRegisterForm();
+                    }
+                }
+            );
+        } else {
+            showAlertDialog(
+                "You've reached your daily limit for portrait generation. Come back tomorrow for more adventures!"
+            );
+        }
         return;
     }
 
@@ -6074,6 +6086,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Check creation quota on load and listen for updates
     updateCreationQuotaState();
+    
+    // Also check demo mode character limit immediately (doesn't require API call)
+    if (window.DemoCharacters && DemoCharacters.isDemoMode() && DemoCharacters.hasReachedCharacterLimit()) {
+        const btn = document.getElementById('newCharacterBtn');
+        const overflowBtn = document.getElementById('overflowNewCharBtn');
+        const tooltip = document.getElementById('newCharacterTooltip');
+        const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
+        
+        [btn, overflowBtn].forEach(b => {
+            if (!b) return;
+            b.disabled = true;
+            b.title = '';
+            b.classList.add('is-quota-exhausted');
+        });
+        if (tooltip) {
+            tooltip.textContent = `Guest limit: ${limit} characters`;
+        }
+    }
+    
     window.addEventListener('danddy:creationQuotaUpdate', (e) => {
         if (e.detail && typeof e.detail.remaining === 'number') {
             _creationQuotaRemaining = e.detail.remaining;

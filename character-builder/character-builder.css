@@ -1036,6 +1036,41 @@
   text-shadow: 0 0 5px var(--terminal-error);
 }
 
+/* Demo mode info notice - shown when user clicks "Continue as Guest" */
+.demo-mode-notice {
+  color: var(--sheet-accent);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-small);
+  padding: var(--spacing-md);
+  background: rgba(0, 128, 128, 0.15);
+  border: 1px solid var(--sheet-accent-dim);
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  text-shadow: 0 0 3px var(--sheet-accent-dim);
+  animation: fadeIn 0.3s ease-in;
+}
+
+.demo-notice-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-sm);
+}
+
+.demo-notice-icon {
+  flex-shrink: 0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Button group - now in terminal-theme.css */
 
 .auth-footer {
