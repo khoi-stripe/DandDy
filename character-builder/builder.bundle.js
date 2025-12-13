@@ -479,14 +479,16 @@ console.groupEnd();return result;},enablePortraitDebug(){window.DEBUG_PORTRAITS=
         onShare,
       })}
       
-      ${showPortrait
-        ? this._renderPortrait(character, parsed, context, {
-            onGeneratePortrait,
-            onTogglePortrait,
-          })
-        : ''}
-      
-      ${this._renderBasicInfo(parsed, context, {})}
+      <div class="sheet-portrait-info-row">
+        ${showPortrait
+          ? this._renderPortrait(character, parsed, context, {
+              onGeneratePortrait,
+              onTogglePortrait,
+            })
+          : ''}
+        
+        ${this._renderBasicInfo(parsed, context, { characterName: character.name })}
+      </div>
       
       ${parsed.hasCombatStats ? this._renderCombatStats(parsed, context) : ''}
       
@@ -591,9 +593,10 @@ const safeIdForDom=character.id||'current';const portraitId=context==='builder'?
           ? `<img id="${originalPortraitId}"class="original-portrait${showOriginalByDefault ? '' : ' is-hidden'}"src="${originalPortraitUrl}"alt="Character portrait"onload="this.classList.add('is-loaded')">`
           : ''}
       </div>
-    `;},_renderBasicInfo(parsed,context,callbacks){const isBuilder=context==='builder';const race=parsed.raceName?this.escapeHtml(this.toSentenceCase(parsed.raceName)):'';const cls=parsed.className?this.escapeHtml(this.toSentenceCase(parsed.className)):'';const background=parsed.backgroundName?this.escapeHtml(this.toSentenceCase(parsed.backgroundName)):'';const alignment=parsed.alignment?this.escapeHtml(this.toSentenceCase(this.formatAlignment(parsed.alignment)),):'';const sex=parsed.sex?this.escapeHtml(this.toSentenceCase(parsed.sex)):'';return`
-      <div class="sheet-section">
+    `;},_renderBasicInfo(parsed,context,callbacks){const isBuilder=context==='builder';const{characterName}=callbacks||{};const safeName=characterName&&typeof characterName==='string'?this.escapeHtml(characterName):'';const race=parsed.raceName?this.escapeHtml(this.toSentenceCase(parsed.raceName)):'';const cls=parsed.className?this.escapeHtml(this.toSentenceCase(parsed.className)):'';const background=parsed.backgroundName?this.escapeHtml(this.toSentenceCase(parsed.backgroundName)):'';const alignment=parsed.alignment?this.escapeHtml(this.toSentenceCase(this.formatAlignment(parsed.alignment)),):'';const sex=parsed.sex?this.escapeHtml(this.toSentenceCase(parsed.sex)):'';return`
+      <div class="sheet-section sheet-section--basic-info">
         <div class="sheet-header"></div>
+        ${safeName ? `<div class="print-only-name">${safeName}</div>` : ''}
         <div class="sheet-content">
           ${
             isBuilder || race

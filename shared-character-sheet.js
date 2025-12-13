@@ -282,14 +282,16 @@ const CharacterSheet = (window.CharacterSheet = {
         onShare,
       })}
       
-      ${showPortrait
-        ? this._renderPortrait(character, parsed, context, {
-            onGeneratePortrait,
-            onTogglePortrait,
-          })
-        : ''}
-      
-      ${this._renderBasicInfo(parsed, context, {})}
+      <div class="sheet-portrait-info-row">
+        ${showPortrait
+          ? this._renderPortrait(character, parsed, context, {
+              onGeneratePortrait,
+              onTogglePortrait,
+            })
+          : ''}
+        
+        ${this._renderBasicInfo(parsed, context, { characterName: character.name })}
+      </div>
       
       ${parsed.hasCombatStats ? this._renderCombatStats(parsed, context) : ''}
       
@@ -646,6 +648,10 @@ const CharacterSheet = (window.CharacterSheet = {
 
   _renderBasicInfo(parsed, context, callbacks) {
     const isBuilder = context === 'builder';
+    const { characterName } = callbacks || {};
+    const safeName = characterName && typeof characterName === 'string'
+      ? this.escapeHtml(characterName)
+      : '';
     const race = parsed.raceName
       ? this.escapeHtml(this.toSentenceCase(parsed.raceName))
       : '';
@@ -665,8 +671,9 @@ const CharacterSheet = (window.CharacterSheet = {
       : '';
 
     return `
-      <div class="sheet-section">
+      <div class="sheet-section sheet-section--basic-info">
         <div class="sheet-header"></div>
+        ${safeName ? `<div class="print-only-name">${safeName}</div>` : ''}
         <div class="sheet-content">
           ${
             isBuilder || race

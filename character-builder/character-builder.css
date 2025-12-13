@@ -358,6 +358,11 @@
   object-fit: cover;
 }
 
+/* Hide print-only name on screen - only shown in print */
+.print-only-name {
+  display: none;
+}
+
 /* Loading */
 .loading-indicator {
   color: var(--terminal-dim);
@@ -440,6 +445,60 @@
   .portrait-container {
     background: transparent;
     padding: 0;
+  }
+
+  /* Portrait + Basic Info side-by-side layout for print */
+  .character-sheet .sheet-portrait-info-row,
+  .sheet-portrait-info-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: flex-start !important;
+    gap: 24px !important;
+    margin-bottom: 16px !important;
+  }
+
+  /* Portrait container in print row */
+  .character-sheet .sheet-portrait-info-row .portrait-container,
+  .sheet-portrait-info-row .portrait-container {
+    flex-shrink: 0 !important;
+    max-width: 280px !important;
+    min-width: 220px !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  /* Basic info section in print row */
+  .character-sheet .sheet-portrait-info-row > .sheet-section,
+  .sheet-portrait-info-row > .sheet-section {
+    flex: 1 !important;
+    margin: 0 !important;
+    border: none !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  /* Print-only character name above stats */
+  .print-only-name {
+    display: block !important;
+    font-size: 18px !important;
+    font-weight: bold !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Hide the empty header in basic info section */
+  .sheet-section--basic-info .sheet-header {
+    display: none !important;
+  }
+
+  /* Hide the header name in print - keep only the one above stats */
+  .character-sheet .sheet-title-header,
+  .sheet-title-header {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .generate-ai-btn,

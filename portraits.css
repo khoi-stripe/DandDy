@@ -93,6 +93,14 @@
   line-height: 1.2;
   color: var(--terminal-accent);
   font-family: var(--font-mono);
+  /* Cross-browser monospace consistency (Safari fix) */
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variant-ligatures: none;
+  font-feature-settings: 'liga' 0, 'clig' 0;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   /* Use flexbox to center the inner content horizontally while keeping
      it pinned to the top. Overflow clips equally from both sides. */
   display: flex;

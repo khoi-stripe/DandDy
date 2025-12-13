@@ -400,6 +400,14 @@
     /* Default/unselected: dim green ASCII */
     color: var(--terminal-dim);
     font-family: var(--font-mono);
+    /* Cross-browser monospace consistency (Safari fix) */
+    letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-variant-ligatures: none;
+    font-feature-settings: 'liga' 0, 'clig' 0;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     overflow: hidden;
     /* Flexbox centers the inner <pre> horizontally, pins to top vertically */
     display: flex;
@@ -577,6 +585,11 @@
 .sheet-header-title {
     flex: 1;
     text-transform: uppercase;
+}
+
+/* Hide print-only name on screen - only shown in print */
+.print-only-name {
+    display: none;
 }
 
 .original-portrait {
@@ -1856,15 +1869,64 @@
         display: flex !important;
     }
 
+    /* Portrait + Basic Info side-by-side layout for print */
+    .character-sheet .sheet-portrait-info-row,
+    .sheet-portrait-info-row {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: flex-start !important;
+        gap: 24px !important;
+        margin-bottom: 16px !important;
+    }
+
     /* Fix portrait container for print - remove fixed aspect ratio */
-    .portrait-container,
-    .portrait-container--original-mode {
+    .character-sheet .sheet-portrait-info-row .portrait-container,
+    .character-sheet .sheet-portrait-info-row .portrait-container--original-mode,
+    .sheet-portrait-info-row .portrait-container,
+    .sheet-portrait-info-row .portrait-container--original-mode {
         position: static !important;
         aspect-ratio: auto !important;
         height: auto !important;
         width: auto !important;
         max-width: 300px !important;
-        margin: 0 auto var(--spacing-md) auto !important;
+        min-width: 250px !important;
+        flex-shrink: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+    }
+
+    /* Basic info section in print - sits to the right of portrait */
+    .character-sheet .sheet-portrait-info-row > .sheet-section,
+    .sheet-portrait-info-row > .sheet-section {
+        flex: 1 !important;
+        margin: 0 !important;
+        border: none !important;
+        padding: 0 !important;
+        display: block !important;
+    }
+
+    /* Print-only character name above stats */
+    .print-only-name {
+        display: block !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+        margin-bottom: 12px !important;
+    }
+
+    /* Hide the empty header in basic info section */
+    .sheet-section--basic-info .sheet-header {
+        display: none !important;
+    }
+
+    /* Hide the header name in print - keep only the one above stats */
+    .character-sheet .sheet-title-header,
+    .sheet-title-header {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     /* Portrait image should be static and sized properly */
@@ -2061,6 +2123,14 @@
     margin: 0;
     white-space: pre;
     overflow: hidden;
+    /* Cross-browser monospace consistency (Safari fix) */
+    letter-spacing: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-variant-ligatures: none;
+    font-feature-settings: 'liga' 0, 'clig' 0;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 /* Image portrait styling - yellow themed with multiply blend */
