@@ -846,76 +846,7 @@ body::before {
   justify-content: center;
 }
 
-/* CSS-only tooltip display on hover (use .show class for JS-controlled tooltips) */
-/* Top positions */
-.has-tooltip:hover > .custom-tooltip[data-position="top"],
-.has-tooltip:focus-within > .custom-tooltip[data-position="top"] {
-  opacity: 1;
-  transform: translateX(-50%) scale(1);
-}
-.has-tooltip:hover > .custom-tooltip[data-position="top-start"],
-.has-tooltip:focus-within > .custom-tooltip[data-position="top-start"] {
-  opacity: 1;
-  transform: scale(1);
-}
-.has-tooltip:hover > .custom-tooltip[data-position="top-end"],
-.has-tooltip:focus-within > .custom-tooltip[data-position="top-end"] {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Bottom positions (default) */
-.has-tooltip:hover > .custom-tooltip[data-position="bottom"],
-.has-tooltip:hover > .custom-tooltip:not([data-position]),
-.has-tooltip:focus-within > .custom-tooltip[data-position="bottom"],
-.has-tooltip:focus-within > .custom-tooltip:not([data-position]) {
-  opacity: 1;
-  transform: translateX(-50%) scale(1);
-}
-.has-tooltip:hover > .custom-tooltip[data-position="bottom-start"],
-.has-tooltip:focus-within > .custom-tooltip[data-position="bottom-start"] {
-  opacity: 1;
-  transform: scale(1);
-}
-.has-tooltip:hover > .custom-tooltip[data-position="bottom-end"],
-.has-tooltip:focus-within > .custom-tooltip[data-position="bottom-end"] {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Left positions */
-.has-tooltip:hover > .custom-tooltip[data-position="left"],
-.has-tooltip:focus-within > .custom-tooltip[data-position="left"] {
-  opacity: 1;
-  transform: translateY(-50%) scale(1);
-}
-.has-tooltip:hover > .custom-tooltip[data-position="left-start"],
-.has-tooltip:focus-within > .custom-tooltip[data-position="left-start"] {
-  opacity: 1;
-  transform: scale(1);
-}
-.has-tooltip:hover > .custom-tooltip[data-position="left-end"],
-.has-tooltip:focus-within > .custom-tooltip[data-position="left-end"] {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Right positions */
-.has-tooltip:hover > .custom-tooltip[data-position="right"],
-.has-tooltip:focus-within > .custom-tooltip[data-position="right"] {
-  opacity: 1;
-  transform: translateY(-50%) scale(1);
-}
-.has-tooltip:hover > .custom-tooltip[data-position="right-start"],
-.has-tooltip:focus-within > .custom-tooltip[data-position="right-start"] {
-  opacity: 1;
-  transform: scale(1);
-}
-.has-tooltip:hover > .custom-tooltip[data-position="right-end"],
-.has-tooltip:focus-within > .custom-tooltip[data-position="right-end"] {
-  opacity: 1;
-  transform: scale(1);
-}
+/* Tooltips require .show class to display (JS-controlled) */
 
 /* ===== SHARED CHARACTER SHEET LAYOUT ===== */
 .character-sheet {
@@ -1646,63 +1577,7 @@ body.selector-menu-open .splash-art {
   overflow: visible;
 }
 
-/* Show tooltip on hover for menu items (CSS-only) */
-/* Top positions */
-.selector-option-wrapper:hover > .custom-tooltip[data-position="top"] {
-  opacity: 1;
-  transform: translateX(-50%) scale(1);
-}
-.selector-option-wrapper:hover > .custom-tooltip[data-position="top-start"] {
-  opacity: 1;
-  transform: scale(1);
-}
-.selector-option-wrapper:hover > .custom-tooltip[data-position="top-end"] {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Bottom positions */
-.selector-option-wrapper:hover > .custom-tooltip[data-position="bottom"],
-.selector-option-wrapper:hover > .custom-tooltip:not([data-position]) {
-  opacity: 1;
-  transform: translateX(-50%) scale(1);
-}
-.selector-option-wrapper:hover > .custom-tooltip[data-position="bottom-start"] {
-  opacity: 1;
-  transform: scale(1);
-}
-.selector-option-wrapper:hover > .custom-tooltip[data-position="bottom-end"] {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Left positions */
-.selector-option-wrapper:hover > .custom-tooltip[data-position="left"] {
-  opacity: 1;
-  transform: translateY(-50%) scale(1);
-}
-.selector-option-wrapper:hover > .custom-tooltip[data-position="left-start"] {
-  opacity: 1;
-  transform: scale(1);
-}
-.selector-option-wrapper:hover > .custom-tooltip[data-position="left-end"] {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Right positions */
-.selector-option-wrapper:hover > .custom-tooltip[data-position="right"] {
-  opacity: 1;
-  transform: translateY(-50%) scale(1);
-}
-.selector-option-wrapper:hover > .custom-tooltip[data-position="right-start"] {
-  opacity: 1;
-  transform: scale(1);
-}
-.selector-option-wrapper:hover > .custom-tooltip[data-position="right-end"] {
-  opacity: 1;
-  transform: scale(1);
-}
+/* Menu item tooltips require .show class to display (JS-controlled) */
 
 /* ==========================================================================
    SELECTOR SHELL TYPE MODIFIERS
