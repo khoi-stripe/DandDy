@@ -3961,7 +3961,7 @@ const Components = (window.Components = {
         if (token) {
           const payload = token.split('.')[1];
           const decoded = JSON.parse(atob(payload));
-          isUserAdmin = decoded.role === 'admin';
+          isUserAdmin = decoded.role?.toLowerCase() === 'admin';
         }
       }
     } catch (e) {
@@ -4493,7 +4493,7 @@ const SettingsModal = (window.SettingsModal = {
           if (token) {
             const payload = token.split('.')[1];
             const decoded = JSON.parse(atob(payload));
-            isAdmin = decoded.role === 'admin';
+            isAdmin = decoded.role?.toLowerCase() === 'admin';
           }
         }
       } catch (e) {
