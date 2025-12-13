@@ -399,7 +399,9 @@
     line-height: 1.1;
     /* Default/unselected: dim green ASCII */
     color: var(--terminal-dim);
-    font-family: var(--font-mono);
+    /* ASCII art needs a consistent monospace font across all browsers.
+       Menlo/Monaco (macOS), Consolas (Windows) have identical metrics in Safari & Chrome. */
+    font-family: 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
     /* Cross-browser monospace consistency (Safari fix) */
     letter-spacing: 0;
     -webkit-font-smoothing: antialiased;
@@ -2116,7 +2118,8 @@
 
 /* ASCII portrait styling */
 .share-card-portrait {
-    font-family: var(--font-mono);
+    /* ASCII art needs a consistent monospace font across all browsers */
+    font-family: 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
     font-size: 4.5px;
     line-height: 1;
     color: var(--modal-accent);
