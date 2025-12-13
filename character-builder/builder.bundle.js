@@ -6785,7 +6785,7 @@ placeholder="Or enter your own name..."><button class="button-primary"onclick="A
     // Show completion options
     narratorPanel.insertAdjacentHTML(
       'beforeend',
-      `<div class="question-card mt-lg"data-question-id="${question.id}"><button class="button-primary completion-save-btn"id="completion-save-btn"onclick="App.saveCharacter()">>SAVE CHARACTER</button><button class="button-primary"id="completion-new-btn"onclick="App.startNew()">>CREATE ANOTHER CHARACTER</button></div>`,
+      `<div class="question-card mt-lg"data-question-id="${question.id}"><button class="button-primary completion-save-btn"id="completion-save-btn"onclick="App.saveCharacter()">&gt;\u00A0SAVE CHARACTER</button><button class="button-primary"id="completion-new-btn"onclick="App.startNew()">&gt;\u00A0CREATE ANOTHER CHARACTER</button></div>`,
     );
     Utils.scrollToBottom(true);
 
