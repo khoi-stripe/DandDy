@@ -2208,6 +2208,8 @@ const CharacterSheet = (window.CharacterSheet = {
    */
   setPortraitContent(portraitEl, asciiArt) {
     if (!portraitEl) return;
+    // Remove placeholder/loading classes since we now have real content
+    portraitEl.classList.remove('ascii-portrait--placeholder', 'ascii-portrait--loading');
     // Clear existing content and insert wrapped <pre>
     portraitEl.innerHTML = '';
     const pre = document.createElement('pre');

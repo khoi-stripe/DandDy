@@ -968,6 +968,74 @@ def require_admin(current_user: User = Depends(get_current_active_user)) -> User
     return current_user
 
 
+class RateLimitResetRequest(BaseModel):
+    """Request body for resetting in-memory rate limits."""
+    subject_key: Optional[str] = Field(None, description="Specific subject to reset (e.g., 'ip:127.0.0.1' or 'user:1'). If not provided, resets ALL rate limits.")
+
+
+@router.post("/admin/reset-rate-limits")
+async def reset_rate_limits(
+    request: RateLimitResetRequest,
+    current_user: User = Depends(require_admin),
+):
+    """
+    Admin-only endpoint to reset in-memory rate limits (per-minute throttling).
+    
+    This clears entries from the in-memory rate limit store, which tracks
+    requests per minute for abuse protection.
+    
+    - subject_key: optional, e.g., 'ip:127.0.0.1' or 'user:1'
+      If not provided, clears ALL rate limit entries.
+    
+    Returns the number of entries cleared.
+    """
+    cleared = 0
+    
+    if request.subject_key:
+        # Clear specific subject
+        if request.subject_key in _rate_limit_store:
+            del _rate_limit_store[request.subject_key]
+            cleared = 1
+        
+        # Also clear character summary cooldown for this subject
+        if request.subject_key in _character_summary_last_request:
+            del _character_summary_last_request[request.subject_key]
+    else:
+        # Clear all entries
+        cleared = len(_rate_limit_store)
+        _rate_limit_store.clear()
+        _character_summary_last_request.clear()
+    
+    print(f"🔧 Admin {current_user.email} reset rate limits: subject={request.subject_key or 'ALL'}, cleared={cleared}")
+    
+    return {
+        "success": True,
+        "subject_key": request.subject_key or "all",
+        "cleared": cleared,
+        "message": f"Cleared {cleared} rate limit entry(ies) for {request.subject_key or 'all subjects'}"
+    }
+
+
+@router.get("/admin/rate-limit-stats")
+async def get_rate_limit_stats(
+    current_user: User = Depends(require_admin),
+):
+    """
+    Admin-only endpoint to get current rate limit stats.
+    
+    Returns counts of entries in the in-memory rate limit stores.
+    """
+    return {
+        "rate_limit_entries": len(_rate_limit_store),
+        "character_cooldown_entries": len(_character_summary_last_request),
+        "production_mode": bool(os.getenv("PRODUCTION")),
+        "limits": {
+            "per_minute": MAX_REQUESTS_PER_MINUTE,
+            "per_day": MAX_REQUESTS_PER_DAY,
+        }
+    }
+
+
 @router.post("/admin/reset-quota")
 async def reset_quota(
     request: QuotaResetRequest,

@@ -340,12 +340,14 @@
                     <sl-input id="prompt-key" label="Key" placeholder="e.g. dwarf, fighter" required></sl-input>
                   </div>
                   
-                  <sl-textarea 
-                    id="prompt-description" 
-                    label="Description" 
-                    placeholder="Description snippet for prompts..."
-                    rows="4"
-                  ></sl-textarea>
+                  <div id="prompt-description-wrapper">
+                    <sl-textarea 
+                      id="prompt-description" 
+                      label="Description" 
+                      placeholder="Description snippet for prompts..."
+                      rows="4"
+                    ></sl-textarea>
+                  </div>
                   
                   <sl-textarea 
                     id="prompt-style-description" 
@@ -363,9 +365,11 @@
                     class="style-field hidden"
                   ></sl-textarea>
                   
-                  <sl-checkbox id="prompt-is-global" class="global-field hidden">
-                    Publish globally (visible to all users)
-                  </sl-checkbox>
+                  <div id="prompt-global-wrapper" class="hidden">
+                    <sl-checkbox id="prompt-is-global">
+                      Publish globally (visible to all users)
+                    </sl-checkbox>
+                  </div>
                   
                   <div class="form-actions">
                     <sl-button id="prompt-reset-btn" variant="default">Reset</sl-button>
@@ -500,6 +504,78 @@
                   password-toggle
                 ></sl-input>
                 <p class="settings-hint">Used for portrait generation with DALL-E</p>
+              </div>
+            </sl-card>
+            
+            <sl-card class="settings-card quota-card">
+              <div slot="header">
+                <sl-icon name="arrow-clockwise"></sl-icon>
+                Quota & Rate Limit Management
+              </div>
+              <div class="settings-form">
+                <div class="quota-stats" id="quota-stats">
+                  <div class="quota-stat-row">
+                    <span class="quota-label">Mode</span>
+                    <sl-badge id="quota-prod-status" variant="neutral" pill>Checking...</sl-badge>
+                  </div>
+                  <div class="quota-stat-row">
+                    <span class="quota-label">Rate Limit Entries (In-Memory)</span>
+                    <span id="rate-limit-count">--</span>
+                  </div>
+                  <div class="quota-stat-row">
+                    <span class="quota-label">Character Cooldowns (In-Memory)</span>
+                    <span id="cooldown-count">--</span>
+                  </div>
+                  <div id="quota-error-msg" class="quota-error-msg hidden"></div>
+                </div>
+                
+                <p class="settings-hint" style="margin-top: 8px;">
+                  Rate limits throttle rapid requests. Quotas limit daily usage (database-tracked).
+                </p>
+                
+                <sl-divider></sl-divider>
+                
+                <sl-input 
+                  id="quota-reset-subject" 
+                  label="Subject Key (Optional)"
+                  placeholder="e.g., user:1 or ip:127.0.0.1"
+                  help-text="Leave empty to reset ALL subjects"
+                ></sl-input>
+                
+                <div class="quota-actions-grid">
+                  <div class="quota-action-group">
+                    <span class="quota-action-label">Rate Limits</span>
+                    <sl-button id="rate-limit-reset-btn" variant="default" size="small">
+                      <sl-icon slot="prefix" name="lightning"></sl-icon>
+                      Clear Rate Limits
+                    </sl-button>
+                  </div>
+                  
+                  <div class="quota-action-group">
+                    <span class="quota-action-label">Daily Quotas</span>
+                    <sl-button-group>
+                      <sl-button id="quota-reset-images-btn" variant="default" size="small">
+                        <sl-icon slot="prefix" name="image"></sl-icon>
+                        Images
+                      </sl-button>
+                      <sl-button id="quota-reset-chars-btn" variant="default" size="small">
+                        <sl-icon slot="prefix" name="person"></sl-icon>
+                        Characters
+                      </sl-button>
+                      <sl-button id="quota-reset-all-btn" variant="danger" size="small">
+                        <sl-icon slot="prefix" name="trash"></sl-icon>
+                        All
+                      </sl-button>
+                    </sl-button-group>
+                  </div>
+                </div>
+                
+                <div class="form-actions" style="margin-top: 12px;">
+                  <sl-button id="quota-refresh-btn" variant="default" size="small">
+                    <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
+                    Refresh Stats
+                  </sl-button>
+                </div>
               </div>
             </sl-card>
           </div>

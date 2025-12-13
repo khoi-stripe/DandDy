@@ -1901,6 +1901,12 @@ const App = (window.App = {
       if (isDemoMode) {
         console.log('📷 Demo mode: Using pre-generated portrait for guided mode');
         await this._ensurePreGeneratedPortraitFallback(character, { force: true });
+        // Clean up the loader since we're bypassing the normal finally block
+        this._stopPortraitLoadingAnimation();
+        const portraitEl = document.getElementById('character-portrait');
+        if (portraitEl) {
+          portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
+        }
         return;
       }
       
@@ -3733,11 +3739,10 @@ const App = (window.App = {
       <div id="promptModal" class="modal show" onclick="App.closePromptModal(false)">
         <div class="modal-content portrait-customize-modal" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">customize portrait</h2>
+            <h2 class="modal-title">Customize portrait</h2>
             <button class="modal-close" onclick="App.closePromptModal(false)">&times;</button>
           </div>
           <div class="modal-body">
-            <div class="image-quota-info is-blinking" id="builderImageQuotaLine">Checking image quota…</div>
             <div class="portrait-style-row">
               <div class="portrait-style-label">Style</div>
               <div class="selector-shell selector-shell--listbox portrait-style-selector" id="builderPortraitStyleShell">
@@ -3756,6 +3761,7 @@ const App = (window.App = {
                 </div>
               </div>
             </div>
+            <div class="image-quota-info is-blinking" id="builderImageQuotaLine">Checking image quota…</div>
             <textarea
               class="terminal-textarea portrait-prompt-textarea"
               id="custom-prompt"
@@ -5080,6 +5086,12 @@ const App = (window.App = {
       if (isDemoMode) {
         console.log('📷 Demo mode: Using pre-generated portrait for quick-create');
         await this._ensurePreGeneratedPortraitFallback(currentChar, { force: true });
+        // Clean up the loader since we're bypassing the normal finally block
+        this._stopPortraitLoadingAnimation();
+        const portraitEl = document.getElementById('character-portrait');
+        if (portraitEl) {
+          portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
+        }
         return;
       }
 

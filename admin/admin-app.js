@@ -778,6 +778,9 @@
   // PROMPT ENTRIES
   // ========================================
   async function loadPromptEntries() {
+    // Ensure form visibility is correct for current user
+    syncPromptFormVisibility();
+    
     const tbody = $('prompts-tbody');
     tbody.innerHTML = `
       <tr class="loading-row">
@@ -908,10 +911,17 @@
       el.classList.toggle('hidden', !isStyle);
     });
     
-    $('prompt-description').parentElement.classList.toggle('hidden', isStyle);
+    // Toggle description field visibility (hidden when style is selected)
+    const descWrapper = $('prompt-description-wrapper');
+    if (descWrapper) {
+      descWrapper.classList.toggle('hidden', isStyle);
+    }
     
-    // Only admins can set global
-    $('prompt-is-global').parentElement.classList.toggle('hidden', !state.isAdmin);
+    // Only admins can set global - use the wrapper div
+    const globalWrapper = $('prompt-global-wrapper');
+    if (globalWrapper) {
+      globalWrapper.classList.toggle('hidden', !state.isAdmin);
+    }
   }
 
   async function savePromptEntry(e) {
@@ -1265,10 +1275,189 @@
     // Settings are typically stored on the backend or in env vars
     // For now, just display placeholder values
     log('Settings section loaded');
+    
+    // Load quota stats
+    loadQuotaStats();
   }
 
   async function saveSettings() {
     showToast('Settings save functionality coming soon', 'warning');
+  }
+
+  // ========================================
+  // QUOTA & RATE LIMIT MANAGEMENT
+  // ========================================
+  async function loadQuotaStats() {
+    const rateLimitCountEl = $('rate-limit-count');
+    const cooldownCountEl = $('cooldown-count');
+    const prodStatusEl = $('quota-prod-status');
+    const errorMsgEl = $('quota-error-msg');
+    
+    // Clear any previous error
+    if (errorMsgEl) {
+      errorMsgEl.classList.add('hidden');
+      errorMsgEl.textContent = '';
+    }
+    
+    try {
+      // Try to get rate limit stats from admin endpoint
+      const rateLimitStats = await apiRequest('/ai/admin/rate-limit-stats');
+      
+      if (rateLimitStats) {
+        // Update production status
+        if (rateLimitStats.production_mode) {
+          prodStatusEl.variant = 'success';
+          prodStatusEl.textContent = 'Production (Enforced)';
+        } else {
+          prodStatusEl.variant = 'warning';
+          prodStatusEl.textContent = 'Development (Bypassed)';
+        }
+        
+        // Update in-memory counts
+        rateLimitCountEl.textContent = rateLimitStats.rate_limit_entries ?? '--';
+        cooldownCountEl.textContent = rateLimitStats.character_cooldown_entries ?? '--';
+      }
+      
+    } catch (err) {
+      log('Rate limit stats error, trying fallback:', err);
+      
+      // Fallback: Try the quota/debug endpoint which already exists
+      try {
+        const debugInfo = await apiRequest('/ai/quota/debug');
+        
+        if (debugInfo && debugInfo.debug_info) {
+          // Update production status
+          if (debugInfo.debug_info.production_mode) {
+            prodStatusEl.variant = 'success';
+            prodStatusEl.textContent = 'Production (Enforced)';
+          } else {
+            prodStatusEl.variant = 'warning';
+            prodStatusEl.textContent = 'Development (Bypassed)';
+          }
+          
+          // We don't have rate limit counts from this endpoint
+          rateLimitCountEl.textContent = '(stats endpoint not deployed)';
+          cooldownCountEl.textContent = '(stats endpoint not deployed)';
+          
+          // Show info message
+          if (errorMsgEl) {
+            errorMsgEl.textContent = 'New rate limit stats endpoint not deployed yet. Using fallback. Quota reset still works.';
+            errorMsgEl.classList.remove('hidden');
+          }
+        }
+      } catch (fallbackErr) {
+        log('Fallback quota stats also failed:', fallbackErr);
+        
+        prodStatusEl.variant = 'danger';
+        prodStatusEl.textContent = 'Error';
+        rateLimitCountEl.textContent = '--';
+        cooldownCountEl.textContent = '--';
+        
+        // Show error message
+        if (errorMsgEl) {
+          errorMsgEl.textContent = `Error: ${fallbackErr.message || err.message || 'Failed to load stats'}`;
+          errorMsgEl.classList.remove('hidden');
+        }
+      }
+    }
+  }
+
+  async function resetRateLimits() {
+    const subjectKey = $('quota-reset-subject').value.trim() || null;
+    const resetBtn = $('rate-limit-reset-btn');
+    
+    const targetDesc = subjectKey ? `"${subjectKey}"` : 'ALL subjects';
+    
+    if (!confirm(`Clear rate limits for ${targetDesc}?\n\nThis resets per-minute throttling and character cooldowns.`)) {
+      return;
+    }
+    
+    resetBtn.loading = true;
+    
+    try {
+      const payload = {};
+      if (subjectKey) {
+        payload.subject_key = subjectKey;
+      }
+      
+      const result = await apiRequest('/ai/admin/reset-rate-limits', {
+        method: 'POST',
+        body: payload,
+      });
+      
+      if (result && result.success) {
+        showToast(`Cleared ${result.cleared} rate limit entry(ies)`, 'success');
+        loadQuotaStats();
+      } else {
+        showToast('Rate limit reset returned unexpected result', 'warning');
+      }
+      
+    } catch (err) {
+      log('Rate limit reset error:', err);
+      
+      // Check if endpoint isn't deployed yet
+      const isNotFound = err.message?.includes('404') || err.message?.includes('Not Found');
+      if (isNotFound) {
+        showToast('Rate limit reset endpoint not deployed yet. Please deploy backend first.', 'warning');
+      } else {
+        showToast(`Failed to reset rate limits: ${err.message}`, 'danger');
+      }
+    } finally {
+      resetBtn.loading = false;
+    }
+  }
+
+  async function resetQuotas(quotaType, buttonEl) {
+    const subjectKey = $('quota-reset-subject').value.trim() || null;
+    
+    const targetDesc = subjectKey ? `"${subjectKey}"` : 'ALL subjects';
+    const typeDesc = quotaType === 'all' ? 'ALL quotas' : (quotaType === 'images' ? 'image quotas' : 'character creation quotas');
+    
+    if (!confirm(`Reset ${typeDesc} for ${targetDesc} (today only)?\n\nThis action cannot be undone.`)) {
+      return;
+    }
+    
+    if (buttonEl) buttonEl.loading = true;
+    
+    try {
+      const payload = {
+        quota_type: quotaType,
+      };
+      
+      if (subjectKey) {
+        payload.subject_key = subjectKey;
+      }
+      
+      const result = await apiRequest('/ai/admin/reset-quota', {
+        method: 'POST',
+        body: payload,
+      });
+      
+      if (result && result.success) {
+        const deletedImages = result.deleted?.images || 0;
+        const deletedChars = result.deleted?.characters || 0;
+        
+        let msg = 'Reset complete: ';
+        if (quotaType === 'images') {
+          msg += `${deletedImages} image quota(s) cleared`;
+        } else if (quotaType === 'characters') {
+          msg += `${deletedChars} character quota(s) cleared`;
+        } else {
+          msg += `${deletedImages} image + ${deletedChars} character quota(s) cleared`;
+        }
+        
+        showToast(msg, 'success');
+        loadQuotaStats();
+      } else {
+        showToast('Quota reset returned unexpected result', 'warning');
+      }
+      
+    } catch (err) {
+      log('Quota reset error:', err);
+      showToast(`Failed to reset quotas: ${err.message}`, 'danger');
+    } finally {
+      if (buttonEl) buttonEl.loading = false;
+    }
   }
 
   // ========================================
@@ -1385,6 +1574,13 @@
     
     // Settings
     $('settings-save-btn').addEventListener('click', saveSettings);
+    
+    // Quota & Rate Limit management
+    $('quota-refresh-btn').addEventListener('click', loadQuotaStats);
+    $('rate-limit-reset-btn').addEventListener('click', resetRateLimits);
+    $('quota-reset-images-btn').addEventListener('click', (e) => resetQuotas('images', e.target.closest('sl-button')));
+    $('quota-reset-chars-btn').addEventListener('click', (e) => resetQuotas('characters', e.target.closest('sl-button')));
+    $('quota-reset-all-btn').addEventListener('click', (e) => resetQuotas('all', e.target.closest('sl-button')));
     
     // Session expiry handling
     window.addEventListener('danddy:sessionExpired', () => {
