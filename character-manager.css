@@ -396,7 +396,7 @@
     width: 100%;
     aspect-ratio: 3 / 4;
     font-size: 2.2px;
-    line-height: 1.1;
+    line-height: 1.2;
     /* Default/unselected: dim green ASCII */
     color: var(--terminal-dim);
     /* ASCII art needs a consistent monospace font across all browsers.
@@ -410,6 +410,9 @@
     font-feature-settings: 'liga' 0, 'clig' 0;
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    /* Force consistent sub-pixel rendering across browsers */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
     overflow: hidden;
     /* Flexbox centers the inner <pre> horizontally, pins to top vertically */
     display: flex;
