@@ -89,14 +89,14 @@
   color: var(--theme-warning);
 }
 
-/* Blink animation for quota info */
+/* Slow continuous blink animation for quota info */
 .creation-quota-info.is-blinking {
-  animation: quota-blink 0.5s ease-in-out 3;
+  animation: quota-blink 2s ease-in-out infinite;
 }
 
 @keyframes quota-blink {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+  50% { opacity: 0.4; }
 }
 
 /* Disabled options when quota exhausted */

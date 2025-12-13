@@ -629,9 +629,23 @@
     if (backgroundDescriptionField) {
       backgroundDescriptionField.style.display = styleFieldsVisible ? 'block' : 'none';
     }
-    // Only show isGlobal checkbox for admins
+    // Show isGlobal checkbox for style entries (only admins can edit it)
     if (isGlobalField) {
-      isGlobalField.style.display = isUserAdmin ? 'block' : 'none';
+      const isGlobalInput = $('isGlobalInput');
+      if (styleFieldsVisible) {
+        // Always show for style entries so users can see publish status
+        isGlobalField.style.display = 'block';
+        // But only admins can actually change it
+        if (isGlobalInput) {
+          isGlobalInput.disabled = !isUserAdmin;
+        }
+      } else {
+        // Hide for non-style entries unless admin
+        isGlobalField.style.display = isUserAdmin ? 'block' : 'none';
+        if (isGlobalInput) {
+          isGlobalInput.disabled = !isUserAdmin;
+        }
+      }
     }
 
     // Update placeholder and hints based on kind

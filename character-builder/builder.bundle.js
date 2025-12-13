@@ -5939,9 +5939,8 @@ const App = (window.App = {
           );
         } else {
           quotaLine.textContent = qi.remaining + ' character creation' + (qi.remaining === 1 ? '' : 's') + ' remaining today';
-          // Blink 3 times when appearing
+          // Slow continuous blink
           quotaLine.classList.add('is-blinking');
-          setTimeout(() => quotaLine.classList.remove('is-blinking'), 1500);
         }
         
         // Insert at the top of options container
@@ -10241,7 +10240,7 @@ placeholder="Enter character name"></div><div id="name-modal-error"class="termin
           narratorPanel.lastElementChild.querySelector('.narrator-text');
         await Utils.typewriter(
           spellsEl,
-          `>Auto-selected ${spells.cantrips.length}cantrip${spells.cantrips.length!==1?'s':''}and ${spells.firstLevel.length}1st level spell${spells.firstLevel.length!==1?'s':''}for your ${cls.name}.`,
+          `>${' '}Auto-selected ${spells.cantrips.length}${' '}cantrip${spells.cantrips.length!==1?'s':''}${' '}and ${spells.firstLevel.length}${' '}1st level spell${spells.firstLevel.length!==1?'s':''}${' '}for your ${cls.name}.`,
         );
         Utils.scrollToBottom(true);
         
