@@ -1386,6 +1386,16 @@ body::before {
   --spinner-cube-size: 0.6em;
 }
 
+/* Auth modal buttons loading state: use dim yellow instead of neutral grey
+   to maintain the modal's yellow theme during authentication. */
+#loginBtn:disabled,
+#registerBtn:disabled {
+  background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.15);
+  border-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5);
+  color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.7);
+  opacity: 1;
+}
+
 /* Warning button */
 .terminal-btn-warning {
   background: transparent;
