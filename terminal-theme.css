@@ -1375,15 +1375,23 @@ body::before {
 #registerBtn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   /* Keep label on a single line to avoid vertical growth on narrow screens */
   white-space: nowrap;
+  /* Lock the button height so the spinner doesn't cause layout shift */
+  height: 2.25em;
+  box-sizing: border-box;
 }
 
 #loginBtn .spinner-cube-scene,
 #registerBtn .spinner-cube-scene {
-  /* Slightly smaller cube inside buttons than in narrator text so it fits
-     comfortably within the button's baseline height. */
-  --spinner-cube-size: 0.6em;
+  /* Shrink the cube scene to fit within button height without overflow.
+     Use a smaller cube and collapse the scene wrapper dimensions. */
+  --spinner-cube-size: 0.55em;
+  width: 1.2em;
+  height: 1.2em;
+  margin-right: 0.4em;
+  flex-shrink: 0;
 }
 
 /* Auth modal buttons loading state: use dim yellow instead of neutral grey
