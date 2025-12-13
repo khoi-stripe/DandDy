@@ -409,13 +409,11 @@ const CharacterSheet = (window.CharacterSheet = {
     ) {
       // Check image quota status
       const imageQuotaRemaining = window._imageQuotaRemaining;
-      // DEBUG: Force exhausted state for tooltip testing
-      const DEBUG_FORCE_EXHAUSTED = true;
-      const imageQuotaExhausted = DEBUG_FORCE_EXHAUSTED || (typeof imageQuotaRemaining === 'number' && imageQuotaRemaining === 0);
+      const imageQuotaExhausted = typeof imageQuotaRemaining === 'number' && imageQuotaRemaining === 0;
       
       // Build tooltip text based on quota status
       let imageQuotaTooltip = '';
-      if (DEBUG_FORCE_EXHAUSTED) {
+      if (imageQuotaExhausted) {
         imageQuotaTooltip = 'Daily limit reached';
       } else if (typeof imageQuotaRemaining === 'number') {
         if (imageQuotaRemaining === 0) {
