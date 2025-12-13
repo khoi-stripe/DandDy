@@ -925,12 +925,12 @@
   width: fit-content;
 }
 
-/* New quota info style - no container, just blinking text */
+/* New quota info style - no container, just blinking yellow text */
 .image-quota-info {
   margin-bottom: var(--spacing-sm);
   padding: var(--spacing-xs) 0;
   font-size: var(--font-size-small);
-  color: var(--modal-fg-color);
+  color: var(--modal-accent-color);
 }
 
 .image-quota-info.is-exhausted {
@@ -939,7 +939,7 @@
 
 /* Slow continuous blink animation */
 .image-quota-info.is-blinking {
-  animation: image-quota-blink 2s ease-in-out infinite;
+  animation: image-quota-blink 4s ease-in-out infinite;
 }
 
 @keyframes image-quota-blink {

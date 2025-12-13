@@ -82,7 +82,7 @@
   margin-bottom: var(--spacing-sm);
   padding: var(--spacing-xs) 0;
   font-size: var(--font-size-small);
-  color: var(--terminal-fg);
+  color: var(--theme-warning);
   text-align: center;
 }
 
@@ -94,7 +94,7 @@
 /* Slow continuous blink animation for quota info */
 .creation-quota-info.is-blinking,
 .image-quota-info.is-blinking {
-  animation: quota-blink 2s ease-in-out infinite;
+  animation: quota-blink 4s ease-in-out infinite;
 }
 
 @keyframes quota-blink {
