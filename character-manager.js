@@ -1674,6 +1674,8 @@ function clearCharacterFromUrl() {
 
 let currentEditCharacterId = null;
 let originalEditLevel = null;
+// Store the original modal content HTML so we can restore it after level change dialog
+let originalEditModalContent = null;
 
 function selectAlignment(value, label) {
     // Update hidden select value
@@ -1736,6 +1738,26 @@ async function editCharacter(id) {
     if (!character) return;
 
     currentEditCharacterId = id;
+
+    // Ensure the modal content is restored to the original form HTML.
+    // This is necessary because showLevelChangeDialog replaces the content
+    // with a loading spinner when auto-calculating stats, and that content
+    // may persist if the modal wasn't fully closed before opening again.
+    const modal = document.getElementById('editDetailsModal');
+    if (modal) {
+        const modalContent = modal.querySelector('.modal-content');
+        if (modalContent) {
+            // Store original content on first open if not already stored
+            if (!originalEditModalContent) {
+                originalEditModalContent = modalContent.innerHTML;
+            } else {
+                // Restore original content in case it was replaced by level change dialog
+                modalContent.innerHTML = originalEditModalContent;
+            }
+        }
+        // Also ensure any stale closing state is cleared
+        modal.classList.remove('closing');
+    }
 
     // Use parsed data to pre-fill, so we respect any derived values
     const parsed = CharacterSheet._parseCharacterData(character);
@@ -4336,7 +4358,12 @@ function animateModalClose(modal, options = {}) {
 
     const content = modal.querySelector('.modal-content') || modal;
 
+    let finished = false;
     const finish = () => {
+        // Prevent double-execution from both animationend and fallback timeout
+        if (finished) return;
+        finished = true;
+
         if (removeOnClose) {
             if (modal && modal.parentNode) {
                 modal.parentNode.removeChild(modal);
@@ -4353,6 +4380,9 @@ function animateModalClose(modal, options = {}) {
 
     if (content && typeof content.addEventListener === 'function') {
         content.addEventListener('animationend', finish, { once: true });
+        // Fallback timeout in case animationend doesn't fire
+        // (e.g., animation was already running or browser quirk)
+        setTimeout(finish, 400);
     } else {
         finish();
     }
