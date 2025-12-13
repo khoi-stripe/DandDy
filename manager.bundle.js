@@ -3120,7 +3120,7 @@ if (DEBUG_CLOUD) {
   const DEMO_MIGRATION_ASKED_KEY = 'danddy_demo_migration_asked';
 
   // Demo mode limits
-  const DEMO_MAX_USER_CHARACTERS = 3;
+  const DEMO_MAX_USER_CHARACTERS = 5;
   const DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER = 3;
 
   const DemoCharacters = (global.DemoCharacters = {
@@ -6959,12 +6959,11 @@ function createNewCharacter() {
     if (window.DemoCharacters && DemoCharacters.hasReachedCharacterLimit()) {
         const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
         showAlertDialog(
-            'You\'ve reached the limit of ' + limit + ' characters in guest mode.',
+            'You\'ve reached the limit of ' + limit + ' characters in guest mode. Log in or create a free account to save unlimited characters!',
             {
-                actionLabel: 'Create a free account',
+                actionLabel: 'Log in',
                 onAction: () => {
                     showAuthModal();
-                    showRegisterForm();
                 }
             }
         );
@@ -8339,12 +8338,12 @@ async function generatePortraitForCharacter(id) {
             }
 
             if (remaining === 0 && limit != null) {
-                el.textContent = `Images left today:0/${limit}`;
+                el.textContent = 'Custom portraits left today: 0/' + limit;
                 return;
             }
 
             if (remaining != null && limit != null) {
-                el.textContent = `Images left today:${remaining}/${limit}`;
+                el.textContent = 'Custom portraits left today: ' + remaining + '/' + limit;
                 return;
             }
 

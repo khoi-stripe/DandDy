@@ -1682,13 +1682,26 @@ const App = (window.App = {
     // NOTE: We don't save here anymore - we wait for portrait to load first
     // This prevents creating duplicate characters in cloud storage
 
+    // Check if user can create another character after this one
+    // Demo mode: check if saving this character would hit the limit
+    // Logged in: check creation quota (remaining === 0 means exhausted, -1 means unlimited)
+    const demoLimitReached = window.DemoCharacters && DemoCharacters.isDemoMode() && 
+      DemoCharacters.getUserCharacterCount() + 1 >= DemoCharacters.DEMO_MAX_USER_CHARACTERS;
+    const quotaExhausted = this._creationQuotaInfo && 
+      this._creationQuotaInfo.remaining !== -1 && 
+      this._creationQuotaInfo.remaining <= 1;
+    const canCreateAnother = !demoLimitReached && !quotaExhausted;
+
     // Show completion options
+    const createAnotherBtn = canCreateAnother
+      ? `<button class="button-primary" id="completion-new-btn" onclick="App.startNew()">&gt;\u00A0CREATE ANOTHER CHARACTER</button>`
+      : '';
     narratorPanel.insertAdjacentHTML(
       'beforeend',
       `
       <div class="question-card mt-lg" data-question-id="${question.id}">
         <button class="button-primary completion-save-btn" id="completion-save-btn" onclick="App.saveCharacter()">&gt;\u00A0SAVE CHARACTER</button>
-        <button class="button-primary" id="completion-new-btn" onclick="App.startNew()">&gt;\u00A0CREATE ANOTHER CHARACTER</button>
+        ${createAnotherBtn}
       </div>`,
     );
     Utils.scrollToBottom(true);
@@ -3580,7 +3593,8 @@ const App = (window.App = {
       const limit = DemoCharacters.DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER;
       this.showSystemMessage(
         'You\'ve reached the limit of ' + limit + ' custom portraits per character in guest mode. ' +
-        '<a href="#" onclick="showAuthModal(); showRegisterForm(); return false;" class="terminal-link">Create a free account</a> to generate unlimited portraits!'
+        '<a href="#" onclick="showAuthModal(); showLoginForm(); return false;" class="terminal-link">Log in</a> or ' +
+        '<a href="#" onclick="showAuthModal(); showRegisterForm(); return false;" class="terminal-link">create a free account</a> to generate unlimited portraits!'
       );
       return;
     }
@@ -4300,7 +4314,8 @@ const App = (window.App = {
       const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
       this.showSystemMessage(
         'You\'ve reached the limit of ' + limit + ' characters in guest mode. ' +
-        '<a href="#" onclick="showAuthModal(); showRegisterForm(); return false;" class="terminal-link">Create a free account</a> to save unlimited characters!'
+        '<a href="#" onclick="showAuthModal(); showLoginForm(); return false;" class="terminal-link">Log in</a> or ' +
+        '<a href="#" onclick="showAuthModal(); showRegisterForm(); return false;" class="terminal-link">create a free account</a> to save unlimited characters!'
       );
       return;
     }

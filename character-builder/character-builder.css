@@ -828,6 +828,17 @@
   color: var(--terminal-warning);
 }
 
+.text-warning a,
+.text-warning .terminal-link {
+  color: var(--terminal-warning);
+  text-decoration: underline;
+}
+
+.text-warning a:hover,
+.text-warning .terminal-link:hover {
+  text-shadow: 0 0 5px var(--terminal-warning);
+}
+
 .text-error {
   color: var(--terminal-error);
 }

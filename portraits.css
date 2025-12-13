@@ -913,7 +913,7 @@
   max-width: 700px;
 }
 
-/* Quota pill for "Images left today:10/10" line */
+/* Quota pill for "Images left today:10/10" line (deprecated, use .image-quota-info) */
 .portrait-quota-pill {
   display: inline-flex;
   align-items: center;
@@ -923,6 +923,28 @@
   background: rgba(0, 0, 0, 0.22);
   margin-bottom: var(--spacing-md); /* gap before prompt box */
   width: fit-content;
+}
+
+/* New quota info style - no container, just blinking text */
+.image-quota-info {
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-xs) 0;
+  font-size: var(--font-size-small);
+  color: var(--modal-fg-color);
+}
+
+.image-quota-info.is-exhausted {
+  color: var(--theme-warning);
+}
+
+/* Slow continuous blink animation */
+.image-quota-info.is-blinking {
+  animation: image-quota-blink 2s ease-in-out infinite;
+}
+
+@keyframes image-quota-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 /* Style selector in header - positioned between title and close button */

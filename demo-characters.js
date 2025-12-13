@@ -12,7 +12,7 @@
   const DEMO_MIGRATION_ASKED_KEY = 'danddy_demo_migration_asked';
 
   // Demo mode limits
-  const DEMO_MAX_USER_CHARACTERS = 3;
+  const DEMO_MAX_USER_CHARACTERS = 5;
   const DEMO_MAX_CUSTOM_PORTRAITS_PER_CHARACTER = 3;
 
   const DemoCharacters = (global.DemoCharacters = {

@@ -1346,12 +1346,11 @@ function createNewCharacter() {
     if (window.DemoCharacters && DemoCharacters.hasReachedCharacterLimit()) {
         const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
         showAlertDialog(
-            'You\'ve reached the limit of ' + limit + ' characters in guest mode.',
+            'You\'ve reached the limit of ' + limit + ' characters in guest mode. Log in or create a free account to save unlimited characters!',
             {
-                actionLabel: 'Create a free account',
+                actionLabel: 'Log in',
                 onAction: () => {
                     showAuthModal();
-                    showRegisterForm();
                 }
             }
         );
@@ -2816,12 +2815,12 @@ async function generatePortraitForCharacter(id) {
             }
 
             if (remaining === 0 && limit != null) {
-                el.textContent = `Images left today:0/${limit}`;
+                el.textContent = 'Custom portraits left today: 0/' + limit;
                 return;
             }
 
             if (remaining != null && limit != null) {
-                el.textContent = `Images left today:${remaining}/${limit}`;
+                el.textContent = 'Custom portraits left today: ' + remaining + '/' + limit;
                 return;
             }
 
