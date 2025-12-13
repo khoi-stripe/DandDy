@@ -1419,8 +1419,9 @@ async function updateCreationQuotaState() {
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
             }
+            const backendUrl = window.DanddyConfig?.BACKEND_ORIGIN || window.CONFIG?.BACKEND_URL || '';
             const response = await fetch(
-                `${window.CONFIG?.BACKEND_URL || ''}/api/ai/characters/quota`,
+                `${backendUrl}/api/ai/characters/quota`,
                 { method: 'GET', headers }
             );
             if (response.ok) {
@@ -1472,8 +1473,9 @@ async function updateImageQuotaState() {
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
             }
+            const backendUrl = window.DanddyConfig?.BACKEND_ORIGIN || window.CONFIG?.BACKEND_URL || '';
             const response = await fetch(
-                `${window.CONFIG?.BACKEND_URL || ''}/api/ai/images/quota`,
+                `${backendUrl}/api/ai/images/quota`,
                 { method: 'GET', headers }
             );
             if (response.ok) {

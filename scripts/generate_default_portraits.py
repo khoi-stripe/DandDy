@@ -120,11 +120,23 @@ def get_r2_client():
 
 
 def build_prompt(race: str, class_type: str) -> str:
-    """Build a classic high fantasy portrait prompt."""
+    """Build a classic high fantasy portrait prompt using the admin-defined style."""
     race_desc = RACE_DESCRIPTIONS.get(race, f"a {race}")
     class_desc = CLASS_DESCRIPTIONS.get(class_type, f"as a {class_type}")
     
-    prompt = f"""Fantasy RPG character portrait: {race_desc} {class_type}, {class_desc}. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background."""
+    # Classic High-Fantasy style from portrait-prompts.js
+    style_lines = [
+        "Illustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white.",
+        "Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form.",
+        "Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes.",
+        "Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces.",
+        "Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence.",
+        "Aspect ratio 3:4.",
+    ]
+    
+    prompt = f"""Fantasy RPG character portrait: {race_desc} {class_type}, {class_desc}.
+
+{' '.join(style_lines)}"""
 
     return prompt
 

@@ -1,288 +1,508 @@
 {
-  "generated_at": "2025-12-12T23:01:18.516178",
+  "generated_at": "2025-12-13T09:05:19.678154",
   "model": "gpt-image-1",
   "quality": "medium",
   "style": "classic_high_fantasy",
   "portraits": {
-    "elf-wizard": {
-      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-wizard.png",
-      "prompt": "Fantasy RPG character portrait: an elf with pointed ears wizard, wearing robes, holding a staff and spellbook. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:40:44.863500"
-    },
     "dwarf-barbarian": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-barbarian.png",
-      "prompt": "Fantasy RPG character portrait: a dwarf with a beard barbarian, wearing furs, holding an axe. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:41:14.548673"
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard barbarian, wearing furs, holding an axe.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-12T23:27:11.890027"
     },
     "dwarf-bard": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-bard.png",
-      "prompt": "Fantasy RPG character portrait: a dwarf with a beard bard, wearing colorful clothes, holding a lute. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:41:36.704209"
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard bard, wearing colorful clothes, holding a lute.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-12T23:27:32.063086"
     },
     "dwarf-cleric": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-cleric.png",
-      "prompt": "Fantasy RPG character portrait: a dwarf with a beard cleric, wearing robes with a holy symbol. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:41:59.007272"
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard cleric, wearing robes with a holy symbol.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-12T23:27:52.880222"
     },
     "dwarf-druid": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-druid.png",
-      "prompt": "Fantasy RPG character portrait: a dwarf with a beard druid, wearing natural clothing with leaves. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:42:22.368622"
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard druid, wearing natural clothing with leaves.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-12T23:28:14.458652"
     },
     "dwarf-fighter": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-fighter.png",
-      "prompt": "Fantasy RPG character portrait: a dwarf with a beard fighter, wearing armor, holding a sword. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:42:45.589803"
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard fighter, wearing armor, holding a sword.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-12T23:28:37.115688"
     },
     "dwarf-monk": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-monk.png",
-      "prompt": "Fantasy RPG character portrait: a dwarf with a beard monk, wearing simple robes in a martial stance. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:43:06.746636"
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard monk, wearing simple robes in a martial stance.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-12T23:39:24.101250"
     },
     "dwarf-paladin": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-paladin.png",
-      "prompt": "Fantasy RPG character portrait: a dwarf with a beard paladin, wearing plate armor with a shield. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:43:28.701265"
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard paladin, wearing plate armor with a shield.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-12T23:39:45.742191"
     },
     "dwarf-ranger": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-ranger.png",
-      "prompt": "Fantasy RPG character portrait: a dwarf with a beard ranger, wearing a cloak, holding a bow. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:43:56.354376"
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard ranger, wearing a cloak, holding a bow.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-12T23:40:10.526552"
     },
     "dwarf-rogue": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-rogue.png",
-      "prompt": "Fantasy RPG character portrait: a dwarf with a beard rogue, wearing leather armor, holding daggers. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:44:32.166103"
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard rogue, wearing leather armor, holding daggers.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-12T23:40:30.836782"
     },
     "dwarf-sorcerer": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-sorcerer.png",
-      "prompt": "Fantasy RPG character portrait: a dwarf with a beard sorcerer, with magical energy around their hands. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:44:52.982560"
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard sorcerer, with magical energy around their hands.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T05:23:46.549358"
     },
     "dwarf-warlock": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-warlock.png",
-      "prompt": "Fantasy RPG character portrait: a dwarf with a beard warlock, wearing dark robes with arcane symbols. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:45:11.463527"
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard warlock, wearing dark robes with arcane symbols.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:20:52.593074"
     },
     "dwarf-wizard": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-wizard.png",
-      "prompt": "Fantasy RPG character portrait: a dwarf with a beard wizard, wearing robes, holding a staff and spellbook. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:45:33.763844"
+      "prompt": "Fantasy RPG character portrait: a dwarf with a beard wizard, wearing robes, holding a staff and spellbook.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:23:05.490575"
     },
     "elf-barbarian": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-barbarian.png",
-      "prompt": "Fantasy RPG character portrait: an elf with pointed ears barbarian, wearing furs, holding an axe. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:45:54.654075"
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears barbarian, wearing furs, holding an axe.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:31:19.335200"
     },
     "elf-bard": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-bard.png",
-      "prompt": "Fantasy RPG character portrait: an elf with pointed ears bard, wearing colorful clothes, holding a lute. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:46:15.976942"
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears bard, wearing colorful clothes, holding a lute.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:31:40.625914"
     },
     "elf-cleric": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-cleric.png",
-      "prompt": "Fantasy RPG character portrait: an elf with pointed ears cleric, wearing robes with a holy symbol. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:46:36.557264"
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears cleric, wearing robes with a holy symbol.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:32:01.356550"
     },
     "elf-druid": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-druid.png",
-      "prompt": "Fantasy RPG character portrait: an elf with pointed ears druid, wearing natural clothing with leaves. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:46:58.057784"
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears druid, wearing natural clothing with leaves.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:32:26.979192"
     },
     "elf-fighter": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-fighter.png",
-      "prompt": "Fantasy RPG character portrait: an elf with pointed ears fighter, wearing armor, holding a sword. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:47:17.394605"
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears fighter, wearing armor, holding a sword.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:32:50.165906"
     },
     "elf-monk": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-monk.png",
-      "prompt": "Fantasy RPG character portrait: an elf with pointed ears monk, wearing simple robes in a martial stance. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:47:37.075667"
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears monk, wearing simple robes in a martial stance.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:33:14.508513"
     },
     "elf-paladin": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-paladin.png",
-      "prompt": "Fantasy RPG character portrait: an elf with pointed ears paladin, wearing plate armor with a shield. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:47:57.187297"
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears paladin, wearing plate armor with a shield.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:33:36.043425"
     },
     "elf-ranger": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-ranger.png",
-      "prompt": "Fantasy RPG character portrait: an elf with pointed ears ranger, wearing a cloak, holding a bow. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:48:17.606201"
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears ranger, wearing a cloak, holding a bow.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:34:00.007251"
     },
     "elf-rogue": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-rogue.png",
-      "prompt": "Fantasy RPG character portrait: an elf with pointed ears rogue, wearing leather armor, holding daggers. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:48:38.847976"
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears rogue, wearing leather armor, holding daggers.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:34:20.025206"
     },
     "elf-sorcerer": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-sorcerer.png",
-      "prompt": "Fantasy RPG character portrait: an elf with pointed ears sorcerer, with magical energy around their hands. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:48:58.893090"
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears sorcerer, with magical energy around their hands.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:34:42.656252"
     },
     "elf-warlock": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-warlock.png",
-      "prompt": "Fantasy RPG character portrait: an elf with pointed ears warlock, wearing dark robes with arcane symbols. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:49:17.679637"
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears warlock, wearing dark robes with arcane symbols.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:35:04.632487"
+    },
+    "elf-wizard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-wizard.png",
+      "prompt": "Fantasy RPG character portrait: an elf with pointed ears wizard, wearing robes, holding a staff and spellbook.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:35:26.578919"
     },
     "halfling-barbarian": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-barbarian.png",
-      "prompt": "Fantasy RPG character portrait: a halfling with curly hair barbarian, wearing furs, holding an axe. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:49:39.213734"
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair barbarian, wearing furs, holding an axe.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:35:51.258152"
     },
     "halfling-bard": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-bard.png",
-      "prompt": "Fantasy RPG character portrait: a halfling with curly hair bard, wearing colorful clothes, holding a lute. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:50:03.007484"
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair bard, wearing colorful clothes, holding a lute.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:36:11.543601"
     },
     "halfling-cleric": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-cleric.png",
-      "prompt": "Fantasy RPG character portrait: a halfling with curly hair cleric, wearing robes with a holy symbol. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:50:26.267603"
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair cleric, wearing robes with a holy symbol.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:36:35.704547"
     },
     "halfling-druid": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-druid.png",
-      "prompt": "Fantasy RPG character portrait: a halfling with curly hair druid, wearing natural clothing with leaves. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:50:51.024948"
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair druid, wearing natural clothing with leaves.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:36:57.173262"
     },
     "halfling-fighter": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-fighter.png",
-      "prompt": "Fantasy RPG character portrait: a halfling with curly hair fighter, wearing armor, holding a sword. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:51:13.286141"
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair fighter, wearing armor, holding a sword.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:37:21.205497"
     },
     "halfling-monk": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-monk.png",
-      "prompt": "Fantasy RPG character portrait: a halfling with curly hair monk, wearing simple robes in a martial stance. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:51:35.748607"
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair monk, wearing simple robes in a martial stance.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:37:45.469547"
     },
     "halfling-paladin": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-paladin.png",
-      "prompt": "Fantasy RPG character portrait: a halfling with curly hair paladin, wearing plate armor with a shield. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:51:58.553304"
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair paladin, wearing plate armor with a shield.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:38:09.167673"
     },
     "halfling-ranger": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-ranger.png",
-      "prompt": "Fantasy RPG character portrait: a halfling with curly hair ranger, wearing a cloak, holding a bow. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:52:19.597256"
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair ranger, wearing a cloak, holding a bow.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:38:34.142035"
     },
     "halfling-rogue": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-rogue.png",
-      "prompt": "Fantasy RPG character portrait: a halfling with curly hair rogue, wearing leather armor, holding daggers. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:52:44.202412"
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair rogue, wearing leather armor, holding daggers.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:38:57.431973"
     },
     "halfling-sorcerer": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-sorcerer.png",
-      "prompt": "Fantasy RPG character portrait: a halfling with curly hair sorcerer, with magical energy around their hands. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:53:08.103646"
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair sorcerer, with magical energy around their hands.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:39:19.485230"
     },
     "halfling-warlock": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-warlock.png",
-      "prompt": "Fantasy RPG character portrait: a halfling with curly hair warlock, wearing dark robes with arcane symbols. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:53:29.121314"
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair warlock, wearing dark robes with arcane symbols.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:39:41.697354"
     },
     "halfling-wizard": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/halfling-wizard.png",
-      "prompt": "Fantasy RPG character portrait: a halfling with curly hair wizard, wearing robes, holding a staff and spellbook. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:53:51.120882"
+      "prompt": "Fantasy RPG character portrait: a halfling with curly hair wizard, wearing robes, holding a staff and spellbook.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:40:03.540711"
     },
     "human-barbarian": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-barbarian.png",
-      "prompt": "Fantasy RPG character portrait: a human barbarian, wearing furs, holding an axe. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:54:14.099597"
+      "prompt": "Fantasy RPG character portrait: a human barbarian, wearing furs, holding an axe.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:40:30.588919"
     },
     "human-bard": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-bard.png",
-      "prompt": "Fantasy RPG character portrait: a human bard, wearing colorful clothes, holding a lute. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:54:36.400475"
+      "prompt": "Fantasy RPG character portrait: a human bard, wearing colorful clothes, holding a lute.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:40:53.838675"
     },
     "human-cleric": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-cleric.png",
-      "prompt": "Fantasy RPG character portrait: a human cleric, wearing robes with a holy symbol. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:54:56.696595"
+      "prompt": "Fantasy RPG character portrait: a human cleric, wearing robes with a holy symbol.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:41:18.080930"
     },
     "human-druid": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-druid.png",
-      "prompt": "Fantasy RPG character portrait: a human druid, wearing natural clothing with leaves. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:55:17.498787"
+      "prompt": "Fantasy RPG character portrait: a human druid, wearing natural clothing with leaves.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:41:51.508655"
     },
     "human-fighter": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-fighter.png",
-      "prompt": "Fantasy RPG character portrait: a human fighter, wearing armor, holding a sword. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:55:40.935869"
+      "prompt": "Fantasy RPG character portrait: a human fighter, wearing armor, holding a sword.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:42:16.716621"
     },
     "human-monk": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-monk.png",
-      "prompt": "Fantasy RPG character portrait: a human monk, wearing simple robes in a martial stance. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:56:04.943864"
+      "prompt": "Fantasy RPG character portrait: a human monk, wearing simple robes in a martial stance.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:42:40.458371"
     },
     "human-paladin": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-paladin.png",
-      "prompt": "Fantasy RPG character portrait: a human paladin, wearing plate armor with a shield. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:56:26.536368"
+      "prompt": "Fantasy RPG character portrait: a human paladin, wearing plate armor with a shield.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:43:01.353627"
     },
     "human-ranger": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-ranger.png",
-      "prompt": "Fantasy RPG character portrait: a human ranger, wearing a cloak, holding a bow. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:56:48.328004"
+      "prompt": "Fantasy RPG character portrait: a human ranger, wearing a cloak, holding a bow.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:43:23.645902"
     },
     "human-rogue": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-rogue.png",
-      "prompt": "Fantasy RPG character portrait: a human rogue, wearing leather armor, holding daggers. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:57:09.552397"
+      "prompt": "Fantasy RPG character portrait: a human rogue, wearing leather armor, holding daggers.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:43:45.035808"
     },
     "human-sorcerer": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-sorcerer.png",
-      "prompt": "Fantasy RPG character portrait: a human sorcerer, with magical energy around their hands. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:57:37.220839"
+      "prompt": "Fantasy RPG character portrait: a human sorcerer, with magical energy around their hands.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:44:08.271106"
     },
     "human-warlock": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-warlock.png",
-      "prompt": "Fantasy RPG character portrait: a human warlock, wearing dark robes with arcane symbols. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:57:57.987190"
+      "prompt": "Fantasy RPG character portrait: a human warlock, wearing dark robes with arcane symbols.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:44:31.603448"
     },
     "human-wizard": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-wizard.png",
-      "prompt": "Fantasy RPG character portrait: a human wizard, wearing robes, holding a staff and spellbook. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:58:19.666025"
+      "prompt": "Fantasy RPG character portrait: a human wizard, wearing robes, holding a staff and spellbook.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:44:55.753252"
     },
     "dragonborn-barbarian": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-barbarian.png",
-      "prompt": "Fantasy RPG character portrait: a dragonborn with scales barbarian, wearing furs, holding an axe. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:58:46.742911"
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales barbarian, wearing furs, holding an axe.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:45:23.505819"
     },
     "dragonborn-bard": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-bard.png",
-      "prompt": "Fantasy RPG character portrait: a dragonborn with scales bard, wearing colorful clothes, holding a lute. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:59:06.857423"
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales bard, wearing colorful clothes, holding a lute.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:45:43.686173"
     },
     "dragonborn-cleric": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-cleric.png",
-      "prompt": "Fantasy RPG character portrait: a dragonborn with scales cleric, wearing robes with a holy symbol. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:59:29.050860"
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales cleric, wearing robes with a holy symbol.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:46:07.054529"
     },
     "dragonborn-druid": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-druid.png",
-      "prompt": "Fantasy RPG character portrait: a dragonborn with scales druid, wearing natural clothing with leaves. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T22:59:52.703637"
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales druid, wearing natural clothing with leaves.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:46:30.181305"
     },
     "dragonborn-fighter": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-fighter.png",
-      "prompt": "Fantasy RPG character portrait: a dragonborn with scales fighter, wearing armor, holding a sword. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T23:00:16.651995"
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales fighter, wearing armor, holding a sword.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:46:55.489640"
     },
     "dragonborn-monk": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-monk.png",
-      "prompt": "Fantasy RPG character portrait: a dragonborn with scales monk, wearing simple robes in a martial stance. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T23:00:36.578392"
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales monk, wearing simple robes in a martial stance.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:47:20.297954"
     },
     "dragonborn-paladin": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-paladin.png",
-      "prompt": "Fantasy RPG character portrait: a dragonborn with scales paladin, wearing plate armor with a shield. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T23:00:57.310995"
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales paladin, wearing plate armor with a shield.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:47:44.414677"
     },
     "dragonborn-ranger": {
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-ranger.png",
-      "prompt": "Fantasy RPG character portrait: a dragonborn with scales ranger, wearing a cloak, holding a bow. Classic fantasy art style, oil painting, heroic pose, dramatic lighting, neutral background.",
-      "generated_at": "2025-12-12T23:01:18.516165"
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales ranger, wearing a cloak, holding a bow.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:48:12.852781"
+    },
+    "dragonborn-rogue": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-rogue.png",
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales rogue, wearing leather armor, holding daggers.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:48:34.939226"
+    },
+    "dragonborn-sorcerer": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-sorcerer.png",
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales sorcerer, with magical energy around their hands.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:48:58.175794"
+    },
+    "dragonborn-warlock": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-warlock.png",
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales warlock, wearing dark robes with arcane symbols.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:49:22.582400"
+    },
+    "dragonborn-wizard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-wizard.png",
+      "prompt": "Fantasy RPG character portrait: a dragonborn with scales wizard, wearing robes, holding a staff and spellbook.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:49:41.816602"
+    },
+    "gnome-barbarian": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/gnome-barbarian.png",
+      "prompt": "Fantasy RPG character portrait: a gnome barbarian, wearing furs, holding an axe.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:50:06.691418"
+    },
+    "gnome-bard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/gnome-bard.png",
+      "prompt": "Fantasy RPG character portrait: a gnome bard, wearing colorful clothes, holding a lute.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:50:27.880662"
+    },
+    "gnome-cleric": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/gnome-cleric.png",
+      "prompt": "Fantasy RPG character portrait: a gnome cleric, wearing robes with a holy symbol.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:50:47.597605"
+    },
+    "gnome-druid": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/gnome-druid.png",
+      "prompt": "Fantasy RPG character portrait: a gnome druid, wearing natural clothing with leaves.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:51:10.407134"
+    },
+    "gnome-fighter": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/gnome-fighter.png",
+      "prompt": "Fantasy RPG character portrait: a gnome fighter, wearing armor, holding a sword.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:51:33.751827"
+    },
+    "gnome-monk": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/gnome-monk.png",
+      "prompt": "Fantasy RPG character portrait: a gnome monk, wearing simple robes in a martial stance.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:51:57.270871"
+    },
+    "gnome-paladin": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/gnome-paladin.png",
+      "prompt": "Fantasy RPG character portrait: a gnome paladin, wearing plate armor with a shield.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:52:19.907673"
+    },
+    "gnome-ranger": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/gnome-ranger.png",
+      "prompt": "Fantasy RPG character portrait: a gnome ranger, wearing a cloak, holding a bow.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:52:42.336897"
+    },
+    "gnome-rogue": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/gnome-rogue.png",
+      "prompt": "Fantasy RPG character portrait: a gnome rogue, wearing leather armor, holding daggers.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:53:06.179338"
+    },
+    "gnome-sorcerer": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/gnome-sorcerer.png",
+      "prompt": "Fantasy RPG character portrait: a gnome sorcerer, with magical energy around their hands.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:53:28.067333"
+    },
+    "gnome-warlock": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/gnome-warlock.png",
+      "prompt": "Fantasy RPG character portrait: a gnome warlock, wearing dark robes with arcane symbols.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:53:50.474236"
+    },
+    "gnome-wizard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/gnome-wizard.png",
+      "prompt": "Fantasy RPG character portrait: a gnome wizard, wearing robes, holding a staff and spellbook.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:54:10.429859"
+    },
+    "half-elf-barbarian": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-elf-barbarian.png",
+      "prompt": "Fantasy RPG character portrait: a half-elf barbarian, wearing furs, holding an axe.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:54:33.415627"
+    },
+    "half-elf-bard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-elf-bard.png",
+      "prompt": "Fantasy RPG character portrait: a half-elf bard, wearing colorful clothes, holding a lute.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:54:56.520134"
+    },
+    "half-elf-cleric": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-elf-cleric.png",
+      "prompt": "Fantasy RPG character portrait: a half-elf cleric, wearing robes with a holy symbol.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:55:19.408905"
+    },
+    "half-elf-druid": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-elf-druid.png",
+      "prompt": "Fantasy RPG character portrait: a half-elf druid, wearing natural clothing with leaves.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:55:42.451601"
+    },
+    "half-elf-fighter": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-elf-fighter.png",
+      "prompt": "Fantasy RPG character portrait: a half-elf fighter, wearing armor, holding a sword.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:56:12.347719"
+    },
+    "half-elf-monk": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-elf-monk.png",
+      "prompt": "Fantasy RPG character portrait: a half-elf monk, wearing simple robes in a martial stance.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:56:35.135377"
+    },
+    "half-elf-paladin": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-elf-paladin.png",
+      "prompt": "Fantasy RPG character portrait: a half-elf paladin, wearing plate armor with a shield.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:57:00.833359"
+    },
+    "half-elf-ranger": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-elf-ranger.png",
+      "prompt": "Fantasy RPG character portrait: a half-elf ranger, wearing a cloak, holding a bow.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:57:22.255750"
+    },
+    "half-elf-rogue": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-elf-rogue.png",
+      "prompt": "Fantasy RPG character portrait: a half-elf rogue, wearing leather armor, holding daggers.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:57:46.547323"
+    },
+    "half-elf-sorcerer": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-elf-sorcerer.png",
+      "prompt": "Fantasy RPG character portrait: a half-elf sorcerer, with magical energy around their hands.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:58:09.132983"
+    },
+    "half-elf-warlock": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-elf-warlock.png",
+      "prompt": "Fantasy RPG character portrait: a half-elf warlock, wearing dark robes with arcane symbols.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:58:35.202215"
+    },
+    "half-elf-wizard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-elf-wizard.png",
+      "prompt": "Fantasy RPG character portrait: a half-elf wizard, wearing robes, holding a staff and spellbook.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:58:57.576919"
+    },
+    "half-orc-barbarian": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-orc-barbarian.png",
+      "prompt": "Fantasy RPG character portrait: a half-orc barbarian, wearing furs, holding an axe.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:59:21.371387"
+    },
+    "half-orc-bard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-orc-bard.png",
+      "prompt": "Fantasy RPG character portrait: a half-orc bard, wearing colorful clothes, holding a lute.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T08:59:43.341440"
+    },
+    "half-orc-cleric": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-orc-cleric.png",
+      "prompt": "Fantasy RPG character portrait: a half-orc cleric, wearing robes with a holy symbol.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:00:06.935697"
+    },
+    "half-orc-druid": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-orc-druid.png",
+      "prompt": "Fantasy RPG character portrait: a half-orc druid, wearing natural clothing with leaves.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:00:30.271948"
+    },
+    "half-orc-fighter": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-orc-fighter.png",
+      "prompt": "Fantasy RPG character portrait: a half-orc fighter, wearing armor, holding a sword.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:01:06.152268"
+    },
+    "half-orc-monk": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-orc-monk.png",
+      "prompt": "Fantasy RPG character portrait: a half-orc monk, wearing simple robes in a martial stance.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:01:26.926812"
+    },
+    "half-orc-paladin": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-orc-paladin.png",
+      "prompt": "Fantasy RPG character portrait: a half-orc paladin, wearing plate armor with a shield.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:01:50.177631"
+    },
+    "half-orc-ranger": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-orc-ranger.png",
+      "prompt": "Fantasy RPG character portrait: a half-orc ranger, wearing a cloak, holding a bow.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:02:11.746277"
+    },
+    "half-orc-rogue": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-orc-rogue.png",
+      "prompt": "Fantasy RPG character portrait: a half-orc rogue, wearing leather armor, holding daggers.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:02:33.204785"
+    },
+    "half-orc-sorcerer": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-orc-sorcerer.png",
+      "prompt": "Fantasy RPG character portrait: a half-orc sorcerer, with magical energy around their hands.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:02:57.071692"
+    },
+    "half-orc-warlock": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-orc-warlock.png",
+      "prompt": "Fantasy RPG character portrait: a half-orc warlock, wearing dark robes with arcane symbols.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:03:20.585101"
+    },
+    "half-orc-wizard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/half-orc-wizard.png",
+      "prompt": "Fantasy RPG character portrait: a half-orc wizard, wearing robes, holding a staff and spellbook.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:03:43.836315"
+    },
+    "tiefling-barbarian": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-barbarian.png",
+      "prompt": "Fantasy RPG character portrait: a tiefling with small horns barbarian, wearing furs, holding an axe.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:04:08.724047"
+    },
+    "tiefling-bard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-bard.png",
+      "prompt": "Fantasy RPG character portrait: a tiefling with small horns bard, wearing colorful clothes, holding a lute.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:04:31.331338"
+    },
+    "tiefling-cleric": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-cleric.png",
+      "prompt": "Fantasy RPG character portrait: a tiefling with small horns cleric, wearing robes with a holy symbol.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:04:54.577810"
+    },
+    "tiefling-druid": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-druid.png",
+      "prompt": "Fantasy RPG character portrait: a tiefling with small horns druid, wearing natural clothing with leaves.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:05:19.678140"
     }
   }
 }
