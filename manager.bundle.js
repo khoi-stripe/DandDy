@@ -7487,6 +7487,8 @@ ${thumbnailHtml}<div class="card-details"><div class="card-name">${name}</div><d
         
         // Check if this is a demo character - disable editing if so
         const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
+        // Check if user is in demo mode (not authenticated) - sharing requires login
+        const isDemoMode = window.DemoCharacters && window.DemoCharacters.isDemoMode();
         
         // Use the shared CharacterSheet component
         // Demo characters cannot be edited, renamed, deleted, or have portraits generated
@@ -7498,7 +7500,7 @@ ${thumbnailHtml}<div class="card-details"><div class="card-name">${name}</div><d
             onDelete: !isDemo,
             onGeneratePortrait: !isDemo,
             onPrint: true,
-            onShare: !isDemo,  // Demo characters can't be shared (they're not real user chars)
+            onShare: !isDemo && !isDemoMode,  // Sharing requires login; demo chars can't be shared
         });
         
         // Populate ASCII portrait after rendering
