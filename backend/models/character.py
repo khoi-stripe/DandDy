@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, JSON, Enum, DateTime, Index
+from sqlalchemy import Column, Integer, String, ForeignKey, JSON, Enum, DateTime, Index, Boolean
 from sqlalchemy.orm import relationship
 import enum
 from datetime import datetime
@@ -120,6 +120,9 @@ class Character(Base):
     electrum_pieces = Column(Integer, default=0, nullable=False)
     gold_pieces = Column(Integer, default=0, nullable=False)
     platinum_pieces = Column(Integer, default=0, nullable=False)
+
+    # Demo Mode
+    is_demo = Column(Boolean, default=False, nullable=False)  # If true, shown in demo mode to non-logged-in users
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

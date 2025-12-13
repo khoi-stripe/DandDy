@@ -237,6 +237,43 @@
       font-family: monospace;
     }
 
+    /* Demo badge */
+    .demo-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: bold;
+      text-transform: uppercase;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .demo-badge.active {
+      background: rgba(0, 255, 0, 0.2);
+      color: #00ff00;
+      border: 1px solid #00ff00;
+    }
+
+    .demo-badge.inactive {
+      background: rgba(100, 100, 100, 0.2);
+      color: var(--terminal-dim);
+      border: 1px solid var(--terminal-border);
+    }
+
+    .demo-badge:hover {
+      transform: scale(1.05);
+    }
+
+    .demo-badge.active:hover {
+      background: rgba(0, 255, 0, 0.3);
+    }
+
+    .demo-badge.inactive:hover {
+      background: rgba(100, 100, 100, 0.3);
+      color: var(--terminal-fg);
+    }
+
     /* Auth section */
     .auth-section {
       background: rgba(0, 0, 0, 0.3);
@@ -401,6 +438,11 @@
     <select class="filter-select" id="userFilter" onchange="filterCharacters()">
       <option value="">All Users</option>
     </select>
+    <select class="filter-select" id="demoFilter" onchange="filterCharacters()">
+      <option value="">All Characters</option>
+      <option value="demo">Demo Only</option>
+      <option value="non-demo">Non-Demo Only</option>
+    </select>
     <button class="btn" onclick="selectAll()">Select All</button>
     <button class="btn" onclick="selectNone()">Select None</button>
     <button class="btn btn-danger" id="deleteBtn" onclick="confirmDelete()" disabled>Delete Selected (0)</button>
@@ -419,6 +461,7 @@
           <th class="sortable" data-sort="name" onclick="sortBy('name')">Name</th>
           <th class="sortable" data-sort="race" onclick="sortBy('race')">Race / Class</th>
           <th class="sortable" data-sort="level" onclick="sortBy('level')">Level</th>
+          <th class="sortable" data-sort="is_demo" onclick="sortBy('is_demo')">Demo</th>
           <th class="sortable" data-sort="user_id" onclick="sortBy('user_id')">Owner</th>
           <th class="sortable" data-sort="created_at" onclick="sortBy('created_at')">Created</th>
           <th class="sortable" data-sort="id" onclick="sortBy('id')">ID</th>
@@ -426,7 +469,7 @@
       </thead>
       <tbody id="characterTable">
         <tr>
-          <td colspan="7" class="status">Login to view characters</td>
+          <td colspan="8" class="status">Login to view characters</td>
         </tr>
       </tbody>
     </table>
@@ -583,7 +626,8 @@
         characters = await response.json();
         filteredCharacters = [...characters];
         selectedIds.clear();
-        document.getElementById('totalCount').textContent = `${characters.length} total characters`;
+        const demoCount = characters.filter(c => c.is_demo).length;
+        document.getElementById('totalCount').innerHTML = `${characters.length} total characters <span style="color: #00ff00; margin-left: 8px;">(${demoCount} demo)</span>`;
         populateUserFilter();
         applySort();
         updateSortIndicators();
@@ -599,7 +643,7 @@
       const tbody = document.getElementById('characterTable');
       
       if (filteredCharacters.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="status">No characters found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="status">No characters found</td></tr>';
         return;
       }
 
@@ -615,6 +659,13 @@
             <div class="char-meta">${escapeHtml(char.race || '?')} ${escapeHtml(char.character_class || '?')}</div>
           </td>
           <td>${char.level || 1}</td>
+          <td>
+            <span class="demo-badge ${char.is_demo ? 'active' : 'inactive'}" 
+                  onclick="toggleDemo(${char.id}, ${!char.is_demo}, event)"
+                  title="Click to ${char.is_demo ? 'remove from' : 'add to'} demo mode">
+              ${char.is_demo ? '✓ DEMO' : '—'}
+            </span>
+          </td>
           <td class="char-meta">${escapeHtml(getUserDisplay(char.user_id || char.owner_id))}</td>
           <td class="char-meta">${formatDate(char.created_at)}</td>
           <td class="char-id">${char.id}</td>
@@ -624,7 +675,49 @@
 
     function showTableStatus(message, loading = false, error = false) {
       const tbody = document.getElementById('characterTable');
-      tbody.innerHTML = `<tr><td colspan="7" class="status ${loading ? 'loading' : ''} ${error ? 'error' : ''}">${message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="status ${loading ? 'loading' : ''} ${error ? 'error' : ''}">${message}</td></tr>`;
+    }
+
+    // Toggle demo status for a character
+    async function toggleDemo(charId, newDemoStatus, event) {
+      if (event) {
+        event.stopPropagation();
+      }
+      
+      try {
+        const response = await fetch(`${API_BASE}/api/characters/${charId}/demo`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ is_demo: newDemoStatus })
+        });
+
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(error || 'Failed to update demo status');
+        }
+
+        // Update local data
+        const char = characters.find(c => c.id === charId);
+        if (char) {
+          char.is_demo = newDemoStatus;
+        }
+        const filteredChar = filteredCharacters.find(c => c.id === charId);
+        if (filteredChar) {
+          filteredChar.is_demo = newDemoStatus;
+        }
+
+        renderTable();
+        
+        // Show brief confirmation
+        const action = newDemoStatus ? 'added to' : 'removed from';
+        console.log(`Character ${charId} ${action} demo mode`);
+      } catch (err) {
+        console.error('Failed to toggle demo status:', err);
+        alert(`Failed to toggle demo status: ${err.message}`);
+      }
     }
 
     // Selection
@@ -704,6 +797,10 @@
         } else if (sortColumn === 'created_at') {
           aVal = new Date(aVal).getTime() || 0;
           bVal = new Date(bVal).getTime() || 0;
+        } else if (sortColumn === 'is_demo') {
+          // Sort booleans: true first when ascending
+          aVal = aVal ? 1 : 0;
+          bVal = bVal ? 1 : 0;
         } else {
           aVal = String(aVal).toLowerCase();
           bVal = String(bVal).toLowerCase();
@@ -759,6 +856,7 @@
     function filterCharacters() {
       const query = document.getElementById('searchBox').value.toLowerCase();
       const userFilter = document.getElementById('userFilter').value;
+      const demoFilter = document.getElementById('demoFilter').value;
       
       filteredCharacters = characters.filter(c => {
         // User filter
@@ -766,6 +864,10 @@
           const charUserId = c.user_id || c.owner_id;
           if (String(charUserId) !== userFilter) return false;
         }
+        
+        // Demo filter
+        if (demoFilter === 'demo' && !c.is_demo) return false;
+        if (demoFilter === 'non-demo' && c.is_demo) return false;
         
         // Text search
         if (query) {

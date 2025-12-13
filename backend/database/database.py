@@ -250,6 +250,26 @@ def ensure_ai_character_creation_usage_table():
         conn.commit()
 
 
+def ensure_is_demo_column():
+    """
+    Lightweight migration helper for characters table:
+    - Adds is_demo column for marking characters as available in demo mode
+    """
+    inspector = inspect(engine)
+    if not inspector.has_table("characters"):
+        return
+
+    existing_cols = {col["name"] for col in inspector.get_columns("characters")}
+
+    with engine.connect() as conn:
+        if "is_demo" not in existing_cols:
+            conn.execute(text("ALTER TABLE characters ADD COLUMN is_demo BOOLEAN DEFAULT FALSE"))
+            # Backfill existing rows to have is_demo = false
+            conn.execute(text("UPDATE characters SET is_demo = FALSE WHERE is_demo IS NULL"))
+
+        conn.commit()
+
+
 def get_db():
     db = SessionLocal()
     try:

@@ -1,13 +1,18 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from database.database import get_db
 from models.user import User, UserRole
 from models.character import Character
 from schemas.character import CharacterCreate, CharacterUpdate, CharacterResponse
-from utils.auth import get_current_active_user
+from utils.auth import get_current_active_user, get_current_user_optional
 
 router = APIRouter(prefix="/characters", tags=["characters"])
+
+
+class DemoToggleRequest(BaseModel):
+    is_demo: bool
 
 @router.post("/", response_model=CharacterResponse, status_code=status.HTTP_201_CREATED)
 def create_character(
@@ -50,6 +55,57 @@ def get_all_characters(
     
     characters = db.query(Character).all()
     return characters
+
+
+# ==========================================
+# DEMO MODE ENDPOINTS
+# ==========================================
+# NOTE: These must be defined BEFORE /{character_id} routes to avoid
+# FastAPI matching "demo" as a character_id
+
+@router.get("/demo/list", response_model=List[CharacterResponse])
+def get_demo_characters(
+    db: Session = Depends(get_db)
+):
+    """
+    Public endpoint to fetch all characters marked as demo.
+    No authentication required - used for the demo/guest experience.
+    """
+    demo_characters = db.query(Character).filter(Character.is_demo == True).all()
+    return demo_characters
+
+
+@router.patch("/{character_id}/demo", response_model=CharacterResponse)
+def toggle_demo_status(
+    character_id: int,
+    request: DemoToggleRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Admin-only endpoint to toggle a character's demo status.
+    When is_demo=True, the character will be shown to non-logged-in users.
+    """
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    
+    character = db.query(Character).filter(Character.id == character_id).first()
+    
+    if not character:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Character not found"
+        )
+    
+    character.is_demo = request.is_demo
+    db.commit()
+    db.refresh(character)
+    
+    return character
+
 
 @router.get("/{character_id}", response_model=CharacterResponse)
 def get_character(

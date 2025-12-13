@@ -1595,9 +1595,10 @@ body.selector-menu-open .splash-art {
   overflow: visible;
 }
 
-/* Show tooltip on hover for disabled menu items (CSS-driven since JS events don't fire
-   on elements with pointer-events: none). The wrapper receives hover events instead. */
-.selector-option-wrapper:has(.is-disabled):hover .custom-tooltip {
+/* Show tooltip on hover for menu items with tooltips (e.g., quota remaining for Customize portrait).
+   Works for both enabled and disabled items. CSS-driven since JS events don't fire on elements
+   with pointer-events: none. The wrapper receives hover events instead. */
+.selector-option-wrapper:hover .custom-tooltip {
   opacity: 1;
   transform: translateX(-50%) scale(1);
 }

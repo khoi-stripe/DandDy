@@ -86,6 +86,9 @@ class CharacterBase(BaseModel):
     electrum_pieces: int = 0
     gold_pieces: int = 0
     platinum_pieces: int = 0
+    
+    # Demo Mode
+    is_demo: bool = False
 
 class CharacterCreate(CharacterBase):
     campaign_id: Optional[int] = None
@@ -137,6 +140,9 @@ class CharacterUpdate(BaseModel):
     custom_portrait_ascii: Optional[str] = None
     custom_portrait_count: Optional[int] = None
     portrait_metadata: Optional[Dict] = None
+    
+    # Demo Mode (admin only)
+    is_demo: Optional[bool] = None
 
 class CharacterResponse(CharacterBase):
     id: int

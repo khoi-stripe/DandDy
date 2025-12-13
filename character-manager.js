@@ -5946,10 +5946,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Note: Debug listeners removed - they were interfering with button clicks
 
-    // Initialize app state (async) - will render when done.
-    // Do NOT await this so slow character loading can't block the entire UI.
-    AppState.init().catch((e) => {
-        console.error('AppState.init failed:', e);
+    // Pre-load demo characters from API, then load ASCII art BEFORE initializing app state.
+    // This ensures demo characters have portraits ready when displayed.
+    const initApp = async () => {
+        if (window.DemoCharacters) {
+            try {
+                // First, try to fetch demo characters from the API
+                if (typeof window.DemoCharacters.fetchFromApi === 'function') {
+                    await window.DemoCharacters.fetchFromApi();
+                }
+                // Then load ASCII art for any characters that need it
+                if (typeof window.DemoCharacters.loadAsciiForAllDemoCharacters === 'function') {
+                    await window.DemoCharacters.loadAsciiForAllDemoCharacters();
+                }
+            } catch (e) {
+                console.warn('Failed to load demo characters:', e);
+            }
+        }
+        
+        // Initialize app state after demo characters are loaded
+        await AppState.init();
+    };
+    
+    initApp().catch((e) => {
+        console.error('App initialization failed:', e);
     });
 
     // Setup event listeners

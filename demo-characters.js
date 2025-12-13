@@ -3,6 +3,9 @@
 // ========================================
 // Pre-made sample characters available in demo mode (not authenticated).
 // These showcase the variety of characters users can create.
+// 
+// Demo characters can be fetched from the API (characters marked with is_demo=true)
+// or fall back to hardcoded characters if the API is unavailable.
 
 (function (global) {
   // Demo character IDs use a special prefix for identification
@@ -16,10 +19,204 @@
   // Portrait limit is enforced by backend (daily quota)
   const DEMO_MAX_USER_CHARACTERS = 3;
 
+  // Cache for loaded ASCII art and demo characters
+  let _asciiCache = {};
+  let _demoCharactersCache = null;
+  let _asciiLoadPromise = null;
+  let _apiDemoCharacters = null; // Characters fetched from API
+  let _apiDemoFetchPromise = null;
+
   const DemoCharacters = (global.DemoCharacters = {
     DEMO_PREFIX,
     DEMO_MIGRATION_ASKED_KEY,
     DEMO_MAX_USER_CHARACTERS,
+
+    /**
+     * Load ASCII art for a race/class combination from pre-generated files.
+     * @param {string} race - Character race
+     * @param {string} classType - Character class
+     * @returns {Promise<string|null>} ASCII art or null if not found
+     */
+    async _loadAscii(race, classType) {
+      const raceLower = String(race).toLowerCase().replace(/\s+/g, '-');
+      const classLower = String(classType).toLowerCase().replace(/\s+/g, '-');
+      const key = `${raceLower}-${classLower}`;
+      
+      if (_asciiCache[key]) return _asciiCache[key];
+      
+      // Try to load from generated_portraits/ascii/
+      const paths = [
+        `generated_portraits/ascii/${key}.txt`,
+        `./generated_portraits/ascii/${key}.txt`,
+        `../generated_portraits/ascii/${key}.txt`,
+      ];
+      
+      for (const path of paths) {
+        try {
+          const response = await fetch(path);
+          if (response.ok) {
+            const ascii = await response.text();
+            _asciiCache[key] = ascii;
+            return ascii;
+          }
+        } catch (e) {
+          // Try next path
+        }
+      }
+      
+      return null;
+    },
+
+    /**
+     * Pre-load ASCII art for all demo characters.
+     * Call this on page load to ensure demo characters have ASCII art ready.
+     * Characters from API may already have ASCII art, so we skip those.
+     * @returns {Promise<void>}
+     */
+    async loadAsciiForAllDemoCharacters() {
+      if (_asciiLoadPromise) return _asciiLoadPromise;
+      
+      _asciiLoadPromise = (async () => {
+        const characters = this.getAll();
+        console.log('DemoCharacters: Loading ASCII art for', characters.length, 'demo characters...');
+        
+        let loadedCount = 0;
+        let skippedCount = 0;
+        const loadPromises = characters.map(async (char) => {
+          // Skip if character already has ASCII art (from API)
+          if (char.asciiPortrait) {
+            skippedCount++;
+            console.log(`  ⏭️ Skipped ${char.name} (already has ASCII art)`);
+            return;
+          }
+          
+          if (!char.race || !char.class) return;
+          const ascii = await this._loadAscii(char.race, char.class);
+          if (ascii) {
+            // Patch the character object with ASCII art
+            char.asciiPortrait = ascii;
+            char.asciiPortraitKey = `${char.race}|${char.class}`;
+            loadedCount++;
+            console.log(`  ✅ Loaded ASCII for ${char.name} (${char.race}-${char.class})`);
+          } else {
+            console.warn(`  ❌ Failed to load ASCII for ${char.name} (${char.race}-${char.class})`);
+          }
+        });
+        await Promise.all(loadPromises);
+        console.log(`DemoCharacters: ASCII art loaded for ${loadedCount} / skipped ${skippedCount} / total ${characters.length} demo characters`);
+      })();
+      
+      return _asciiLoadPromise;
+    },
+    
+    /**
+     * Clear the demo characters cache. Useful for testing.
+     */
+    _clearCache() {
+      _demoCharactersCache = null;
+      _asciiCache = {};
+      _asciiLoadPromise = null;
+      _apiDemoCharacters = null;
+      _apiDemoFetchPromise = null;
+    },
+
+    /**
+     * Fetch demo characters from the API.
+     * @returns {Promise<Array|null>} Array of demo characters or null if fetch failed
+     */
+    async fetchFromApi() {
+      if (_apiDemoFetchPromise) return _apiDemoFetchPromise;
+
+      _apiDemoFetchPromise = (async () => {
+        try {
+          const apiBase = global.DanddyConfig?.BACKEND_ORIGIN || 'https://danddy-api.onrender.com';
+          console.log('DemoCharacters: Fetching demo characters from API...');
+          
+          const response = await fetch(`${apiBase}/api/characters/demo/list`);
+          if (!response.ok) {
+            console.warn('DemoCharacters: API returned', response.status);
+            return null;
+          }
+
+          const apiChars = await response.json();
+          console.log(`DemoCharacters: Fetched ${apiChars.length} demo characters from API`);
+
+          // Transform API response to match expected format
+          _apiDemoCharacters = apiChars.map(char => this._transformApiCharacter(char));
+          return _apiDemoCharacters;
+        } catch (err) {
+          console.warn('DemoCharacters: Failed to fetch from API:', err.message);
+          return null;
+        }
+      })();
+
+      return _apiDemoFetchPromise;
+    },
+
+    /**
+     * Transform an API character response to the format expected by the frontend.
+     * @param {Object} apiChar - Character from API
+     * @returns {Object} Transformed character
+     */
+    _transformApiCharacter(apiChar) {
+      const nowIso = new Date().toISOString();
+      
+      return {
+        // Use demo prefix for ID to mark as demo character
+        id: `${DEMO_PREFIX}${apiChar.id}`,
+        isDemo: true,
+        characterUid: `${DEMO_PREFIX}${apiChar.id}`,
+        
+        // Basic info
+        name: apiChar.name,
+        race: apiChar.race,
+        class: apiChar.character_class,
+        background: apiChar.background,
+        alignment: apiChar.alignment,
+        sex: apiChar.sex,
+        level: apiChar.level || 1,
+        
+        // Abilities
+        abilities: {
+          str: apiChar.strength,
+          dex: apiChar.dexterity,
+          con: apiChar.constitution,
+          int: apiChar.intelligence,
+          wis: apiChar.wisdom,
+          cha: apiChar.charisma,
+        },
+        
+        // Computed stats
+        hitPoints: apiChar.hit_points_max,
+        armorClass: apiChar.armor_class,
+        initiative: apiChar.initiative,
+        speed: apiChar.speed,
+        
+        // Skills and proficiencies
+        skillProficiencies: apiChar.skill_proficiencies || [],
+        savingThrows: apiChar.saving_throw_proficiencies || [],
+        languages: apiChar.languages || [],
+        toolProficiencies: apiChar.tool_proficiencies || [],
+        
+        // Spellcasting
+        spellcastingAbility: apiChar.spellcasting_ability,
+        cantrips: apiChar.cantrips || [],
+        spellsKnown: apiChar.spells_known || [],
+        spellSlots: apiChar.spell_slots || {},
+        
+        // Background and personality
+        backstory: apiChar.backstory,
+        personalityTrait: apiChar.personality_traits,
+        
+        // Portrait - use API values
+        originalPortraitUrl: apiChar.original_portrait_url,
+        asciiPortrait: apiChar.custom_portrait_ascii || apiChar.ascii_portrait,
+        
+        // Metadata
+        createdAt: apiChar.created_at || nowIso,
+        updatedAt: apiChar.updated_at || nowIso,
+      };
+    },
 
     // Check if a character is a demo character
     isDemo(character) {
@@ -49,15 +246,40 @@
       localStorage.removeItem(DEMO_MIGRATION_ASKED_KEY);
     },
 
-    // Get all demo characters
+    // Get all demo characters (cached so ASCII can be patched)
+    // Returns API characters if available, otherwise falls back to hardcoded
     getAll() {
-      return [
-        this._createLyra(),
-        this._createThorgrim(),
-        this._createZephyr(),
-        this._createSienna(),
-        this._createKrazul(),
-      ];
+      // If we have API characters, use those
+      if (_apiDemoCharacters && _apiDemoCharacters.length > 0) {
+        return _apiDemoCharacters;
+      }
+      
+      // Fall back to hardcoded characters
+      if (!_demoCharactersCache) {
+        _demoCharactersCache = [
+          this._createLyra(),
+          this._createThorgrim(),
+          this._createZephyr(),
+          this._createSienna(),
+          this._createKrazul(),
+        ];
+      }
+      return _demoCharactersCache;
+    },
+
+    /**
+     * Get all demo characters, fetching from API first.
+     * Use this async version when you want to ensure API characters are loaded.
+     * @returns {Promise<Array>} Array of demo characters
+     */
+    async getAllAsync() {
+      // Try to fetch from API first
+      const apiChars = await this.fetchFromApi();
+      if (apiChars && apiChars.length > 0) {
+        return apiChars;
+      }
+      // Fall back to hardcoded characters
+      return this.getAll();
     },
 
     // Get count of demo characters that would be migrated
@@ -229,11 +451,8 @@
         backstory: 'Lyra spent decades studying in the Silverspire Academy, where she discovered an ancient tome that hinted at forgotten magic from before the Sundering. Now she travels the realm, seeking fragments of lost arcane knowledge.',
         personalityTrait: 'I\'m convinced there\'s a logical explanation for everything, and I won\'t rest until I find it.',
         
-        // Portrait - custom Boris Vallejo style from app
-        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298665_9f926a959c214c14bb7d1d04580843ff.png',
-        portrait: {
-          url: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298665_9f926a959c214c14bb7d1d04580843ff.png',
-        },
+        // Portrait - uses default portrait from R2
+        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-wizard.png',
         
         // Metadata
         createdAt: nowIso,
@@ -360,11 +579,8 @@
         backstory: 'Thorgrim served twenty years in the Ironforge Legion, defending the mountain holds from orc raids and goblin incursions. After the Battle of Redstone Pass, where he was the sole survivor of his unit, he set out to forge his own legend.',
         personalityTrait: 'I face problems head-on. A simple, direct solution is the best path to success.',
         
-        // Portrait - custom Boris Vallejo style from app
-        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298747_fd80b4efff0c4544942b98b1c15438ee.png',
-        portrait: {
-          url: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298747_fd80b4efff0c4544942b98b1c15438ee.png',
-        },
+        // Portrait - uses default portrait from R2
+        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-fighter.png',
         
         // Metadata
         createdAt: nowIso,
@@ -496,11 +712,8 @@
         backstory: 'Zephyr grew up on the streets of Waterdeep, their infernal appearance making them an outcast from birth. They learned to survive through cunning and quick fingers, eventually joining the Shadow Thieves. Now they work independently, taking jobs that interest them and staying one step ahead of the law.',
         personalityTrait: 'I have a joke for every occasion, especially occasions where humor is inappropriate.',
         
-        // Portrait - custom Boris Vallejo style from app
-        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298383_2a5a798489b0460481a28c99bb85d235.png',
-        portrait: {
-          url: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/portraits/1765298383_2a5a798489b0460481a28c99bb85d235.png',
-        },
+        // Portrait - uses default portrait from R2
+        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-rogue.png',
         
         // Metadata
         createdAt: nowIso,
@@ -644,8 +857,8 @@
         backstory: 'Sienna was orphaned during a plague that swept through her village. Taken in by the Temple of Lathander, she devoted her life to ensuring no one else would suffer as she had. Now she travels the land, bringing hope and healing wherever darkness threatens.',
         personalityTrait: 'I see omens in every event and action. The gods are always speaking to us, we just need to listen.',
         
-        // Portrait - uses default portrait system (human-cleric)
-        // Will fall back to DefaultPortraits.getUrl('human', 'cleric')
+        // Portrait - uses default portrait from R2
+        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-cleric.png',
         
         // Metadata
         createdAt: nowIso,
@@ -787,8 +1000,8 @@
         backstory: 'Krazul hails from an ancient dragonborn clan that once served as dragon knights in a forgotten empire. When his clan\'s honor was questioned by corrupt nobles, he swore an oath to restore their name through righteous deeds. His lightning breath crackles with ancestral power.',
         personalityTrait: 'My favor, once lost, is lost forever. But my loyalty, once earned, is unshakeable.',
         
-        // Portrait - uses default portrait system (dragonborn-paladin)
-        // Will fall back to DefaultPortraits.getUrl('dragonborn', 'paladin')
+        // Portrait - uses default portrait from R2
+        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-paladin.png',
         
         // Metadata
         createdAt: nowIso,
