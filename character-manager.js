@@ -4407,6 +4407,48 @@ function closeRenameModal() {
     animateModalClose(modal, { removeOnClose: true });
 }
 
+/**
+ * Close all editor/character-related modals.
+ * Called during logout and login to ensure a clean state.
+ */
+function closeAllEditorModals() {
+    // List of modal IDs that should be closed on auth state changes
+    const modalIds = [
+        'editDetailsModal',
+        'portraitPromptModal',
+        'importModal',
+        'duplicateModal',
+        'renameModal',
+        'shareModal',
+        'pendingSharesModal',
+        'genericConfirmModal',
+        'genericAlertModal',
+        'sessionExpiredModal',
+    ];
+    
+    modalIds.forEach(id => {
+        const modal = document.getElementById(id);
+        if (modal && modal.classList.contains('show')) {
+            // Force immediate close without animation to avoid race conditions
+            modal.classList.remove('show', 'closing');
+        }
+    });
+    
+    // Also restore the editDetailsModal content to its original state
+    // in case it was showing the level change dialog
+    const editModal = document.getElementById('editDetailsModal');
+    if (editModal && originalEditModalContent) {
+        const modalContent = editModal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.innerHTML = originalEditModalContent;
+        }
+    }
+    
+    // Clear any editing state
+    currentEditCharacterId = null;
+    originalEditLevel = null;
+}
+
 // Generic confirmation modal using terminal modal styles
 function showConfirmDialog(message, onConfirm) {
     const existing = document.getElementById('genericConfirmModal');
@@ -4724,6 +4766,10 @@ function showAlertDialog(message, options) {
 
 // Show a modal when the session has expired proactively
 function showSessionExpiredModal() {
+    // Close any open editor modals first (e.g., level change dialog)
+    // This prevents stale modal state from persisting
+    closeAllEditorModals();
+    
     const existing = document.getElementById('sessionExpiredModal');
     if (existing) existing.remove();
 
@@ -5127,6 +5173,10 @@ async function handleLogin() {
             // Mark splash as dismissed on successful login
             sessionStorage.setItem('welcomeSplashDismissed', 'true');
             closeAuthModal();
+            
+            // Close any stale editor modals (e.g., level change dialog from previous session)
+            closeAllEditorModals();
+            
             updateAuthUI();
             showNotification(`✓ Logged in as ${email}`);
 
@@ -5486,6 +5536,9 @@ async function handlePasswordResetConfirm() {
 }
 
 async function handleLogout() {
+    // Close all editor modals to prevent stale state (e.g., level change dialog)
+    closeAllEditorModals();
+    
     window.AuthService.logout();
     updateAuthUI();
     showNotification('✓ Logged out');

@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DandDy Admin</title>
+  
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Shoelace CSS & JS (from CDN) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.18.0/cdn/themes/dark.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.18.0/cdn/shoelace-autoloader.js"></script>
+  
+  <!-- DandDy base theme tokens (for shared variables) -->
+  <link rel="stylesheet" href="../terminal-theme.css">
+  
+  <!-- Admin-specific theme overrides -->
+  <link rel="stylesheet" href="admin-theme.css">
+</head>
+<body>
+  <!-- Login gate - shown when not authenticated -->
+  <div id="login-gate" class="login-gate">
+    <div class="login-container">
+      <div class="login-header">
+        <div class="login-logo">⬡ DandDy Admin</div>
+        <p class="login-subtitle">Sign in to access the admin panel</p>
+      </div>
+      
+      <form id="login-form" class="login-form">
+        <sl-input 
+          id="login-email" 
+          type="email" 
+          label="Email" 
+          placeholder="admin@example.com"
+          required
+        ></sl-input>
+        
+        <sl-input 
+          id="login-password" 
+          type="password" 
+          label="Password" 
+          placeholder="••••••••"
+          password-toggle
+          required
+        ></sl-input>
+        
+        <sl-button id="login-btn" type="submit" variant="primary" size="large" class="login-submit">
+          Sign In
+        </sl-button>
+        
+        <sl-alert id="login-error" variant="danger" closable class="login-error">
+          <sl-icon slot="icon" name="exclamation-octagon"></sl-icon>
+          <span id="login-error-message">Invalid credentials</span>
+        </sl-alert>
+      </form>
+      
+      <div class="login-footer">
+        <a href="../" class="back-link">← Back to DandDy</a>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Admin shell - shown when authenticated -->
+  <div id="admin-shell" class="admin-shell hidden">
+    <!-- Sidebar Navigation -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">⬡</div>
+        <div class="sidebar-title">DandDy</div>
+        <div class="sidebar-subtitle">Admin</div>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-section="dashboard">
+          <sl-icon name="speedometer2"></sl-icon>
+          <span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-section="characters">
+          <sl-icon name="people"></sl-icon>
+          <span>Characters</span>
+        </button>
+        <button class="nav-item" data-section="prompts">
+          <sl-icon name="palette"></sl-icon>
+          <span>Prompt Config</span>
+        </button>
+        <button class="nav-item" data-section="users">
+          <sl-icon name="person-badge"></sl-icon>
+          <span>Users</span>
+        </button>
+        <button class="nav-item" data-section="settings">
+          <sl-icon name="gear"></sl-icon>
+          <span>Settings</span>
+        </button>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <sl-icon name="person-circle"></sl-icon>
+          <span id="user-email">admin@example.com</span>
+        </div>
+        <sl-button id="logout-btn" variant="text" size="small">
+          <sl-icon slot="prefix" name="box-arrow-right"></sl-icon>
+          Sign Out
+        </sl-button>
+      </div>
+    </aside>
+    
+    <!-- Main Content Area -->
+    <main class="admin-main">
+      <!-- Top Header -->
+      <header class="admin-header">
+        <h1 id="section-title">Dashboard</h1>
+        <div class="header-actions">
+          <sl-badge id="api-status" variant="success" pill>API Online</sl-badge>
+        </div>
+      </header>
+      
+      <!-- Content Sections -->
+      <div class="admin-content">
+        <!-- Dashboard Section -->
+        <section id="section-dashboard" class="content-section active">
+          <div class="stats-grid">
+            <sl-card class="stat-card">
+              <div class="stat-icon"><sl-icon name="people"></sl-icon></div>
+              <div class="stat-value" id="stat-users">--</div>
+              <div class="stat-label">Total Users</div>
+            </sl-card>
+            
+            <sl-card class="stat-card">
+              <div class="stat-icon"><sl-icon name="person-vcard"></sl-icon></div>
+              <div class="stat-value" id="stat-characters">--</div>
+              <div class="stat-label">Characters</div>
+            </sl-card>
+            
+            <sl-card class="stat-card">
+              <div class="stat-icon"><sl-icon name="image"></sl-icon></div>
+              <div class="stat-value" id="stat-portraits">--</div>
+              <div class="stat-label">Portraits Generated</div>
+            </sl-card>
+            
+            <sl-card class="stat-card">
+              <div class="stat-icon"><sl-icon name="palette"></sl-icon></div>
+              <div class="stat-value" id="stat-prompts">--</div>
+              <div class="stat-label">Prompt Entries</div>
+            </sl-card>
+          </div>
+          
+          <div class="dashboard-panels">
+            <sl-card class="panel-card">
+              <div slot="header">
+                <sl-icon name="clock-history"></sl-icon>
+                Recent Activity
+              </div>
+              <div id="recent-activity" class="activity-list">
+                <div class="empty-state">
+                  <sl-icon name="inbox"></sl-icon>
+                  <p>Loading activity...</p>
+                </div>
+              </div>
+            </sl-card>
+            
+            <sl-card class="panel-card">
+              <div slot="header">
+                <sl-icon name="bar-chart"></sl-icon>
+                System Status
+              </div>
+              <div id="system-status" class="status-list">
+                <div class="status-item">
+                  <span>Backend API</span>
+                  <sl-badge id="backend-status" variant="success" pill>Checking...</sl-badge>
+                </div>
+                <div class="status-item">
+                  <span>Database</span>
+                  <sl-badge id="db-status" variant="success" pill>Connected</sl-badge>
+                </div>
+                <div class="status-item">
+                  <span>Rate Limiting</span>
+                  <sl-badge id="ratelimit-status" variant="primary" pill>Active</sl-badge>
+                </div>
+              </div>
+            </sl-card>
+          </div>
+        </section>
+        
+        <!-- Characters Section -->
+        <section id="section-characters" class="content-section">
+          <div class="section-toolbar">
+            <div class="toolbar-left">
+              <sl-input id="char-search" placeholder="Search characters..." size="small" clearable>
+                <sl-icon name="search" slot="prefix"></sl-icon>
+              </sl-input>
+              <sl-select id="char-user-filter" placeholder="All Users" size="small" clearable>
+                <sl-option value="">All Users</sl-option>
+              </sl-select>
+              <sl-select id="char-demo-filter" placeholder="All Characters" size="small" clearable>
+                <sl-option value="">All Characters</sl-option>
+                <sl-option value="demo">Demo Only</sl-option>
+                <sl-option value="non-demo">Non-Demo Only</sl-option>
+              </sl-select>
+            </div>
+            <div class="toolbar-right">
+              <sl-button id="char-refresh-btn" size="small" variant="default">
+                <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
+                Refresh
+              </sl-button>
+              <sl-button id="char-delete-btn" size="small" variant="danger" disabled>
+                <sl-icon slot="prefix" name="trash"></sl-icon>
+                Delete Selected (<span id="char-selected-count">0</span>)
+              </sl-button>
+            </div>
+          </div>
+          
+          <div class="table-container">
+            <table id="characters-table" class="data-table">
+              <thead>
+                <tr>
+                  <th class="checkbox-col">
+                    <sl-checkbox id="char-select-all"></sl-checkbox>
+                  </th>
+                  <th class="sortable" data-sort="name">Name</th>
+                  <th class="sortable" data-sort="race">Race / Class</th>
+                  <th class="sortable" data-sort="level">Level</th>
+                  <th class="sortable" data-sort="is_demo">Demo</th>
+                  <th class="sortable" data-sort="user_id">Owner</th>
+                  <th class="sortable active desc" data-sort="created_at">Created</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="characters-tbody">
+                <tr class="loading-row">
+                  <td colspan="8">
+                    <sl-spinner></sl-spinner>
+                    <span>Loading characters...</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        
+        <!-- Prompts Section -->
+        <section id="section-prompts" class="content-section">
+          <div class="prompts-layout">
+            <!-- Left: Entries List -->
+            <div class="prompts-list-panel">
+              <div class="section-toolbar">
+                <div class="toolbar-left">
+                  <sl-select id="prompt-kind-filter" placeholder="All Kinds" size="small" clearable>
+                    <sl-option value="">All Kinds</sl-option>
+                    <sl-option value="race">Race</sl-option>
+                    <sl-option value="class">Class</sl-option>
+                    <sl-option value="pose">Pose</sl-option>
+                    <sl-option value="camera">Camera</sl-option>
+                    <sl-option value="scene">Scene</sl-option>
+                    <sl-option value="style">Style</sl-option>
+                  </sl-select>
+                  <sl-select id="prompt-archive-filter" value="active" size="small">
+                    <sl-option value="active">Active Only</sl-option>
+                    <sl-option value="archived">Archived Only</sl-option>
+                    <sl-option value="all">All Entries</sl-option>
+                  </sl-select>
+                  <sl-input id="prompt-search" placeholder="Filter..." size="small" clearable>
+                    <sl-icon name="search" slot="prefix"></sl-icon>
+                  </sl-input>
+                </div>
+                <div class="toolbar-right">
+                  <sl-dropdown>
+                    <sl-button slot="trigger" size="small" caret>
+                      <sl-icon slot="prefix" name="three-dots"></sl-icon>
+                      Actions
+                    </sl-button>
+                    <sl-menu>
+                      <sl-menu-item id="prompt-load-defaults">
+                        <sl-icon slot="prefix" name="download"></sl-icon>
+                        Load Defaults
+                      </sl-menu-item>
+                      <sl-divider></sl-divider>
+                      <sl-menu-item id="prompt-export">
+                        <sl-icon slot="prefix" name="box-arrow-up"></sl-icon>
+                        Export JSON
+                      </sl-menu-item>
+                      <sl-menu-item id="prompt-import">
+                        <sl-icon slot="prefix" name="box-arrow-in-down"></sl-icon>
+                        Import JSON
+                      </sl-menu-item>
+                      <sl-divider></sl-divider>
+                      <sl-menu-item id="prompt-clear-all" class="danger-item">
+                        <sl-icon slot="prefix" name="trash"></sl-icon>
+                        Clear All
+                      </sl-menu-item>
+                    </sl-menu>
+                  </sl-dropdown>
+                  <input type="file" id="prompt-import-file" accept=".json" hidden>
+                </div>
+              </div>
+              
+              <div class="table-container prompts-table-container">
+                <table id="prompts-table" class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Kind</th>
+                      <th>Key</th>
+                      <th>Description</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="prompts-tbody">
+                    <tr class="loading-row">
+                      <td colspan="4">
+                        <sl-spinner></sl-spinner>
+                        <span>Loading entries...</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <!-- Right: Edit Form -->
+            <div class="prompts-form-panel">
+              <sl-card>
+                <div slot="header">
+                  <span id="prompt-form-title">New Entry</span>
+                </div>
+                
+                <form id="prompt-form">
+                  <input type="hidden" id="prompt-entry-id">
+                  
+                  <div class="form-row">
+                    <sl-select id="prompt-kind" label="Kind" value="race" required>
+                      <sl-option value="race">Race</sl-option>
+                      <sl-option value="class">Class</sl-option>
+                      <sl-option value="pose">Pose</sl-option>
+                      <sl-option value="camera">Camera</sl-option>
+                      <sl-option value="scene">Scene</sl-option>
+                      <sl-option value="style">Style</sl-option>
+                    </sl-select>
+                    
+                    <sl-input id="prompt-key" label="Key" placeholder="e.g. dwarf, fighter" required></sl-input>
+                  </div>
+                  
+                  <sl-textarea 
+                    id="prompt-description" 
+                    label="Description" 
+                    placeholder="Description snippet for prompts..."
+                    rows="4"
+                  ></sl-textarea>
+                  
+                  <sl-textarea 
+                    id="prompt-style-description" 
+                    label="Style Description (for style entries)" 
+                    placeholder="Style-specific description..."
+                    rows="3"
+                    class="style-field hidden"
+                  ></sl-textarea>
+                  
+                  <sl-textarea 
+                    id="prompt-background-description" 
+                    label="Background Description (for style entries)" 
+                    placeholder="Scene/background description..."
+                    rows="3"
+                    class="style-field hidden"
+                  ></sl-textarea>
+                  
+                  <sl-checkbox id="prompt-is-global" class="global-field hidden">
+                    Publish globally (visible to all users)
+                  </sl-checkbox>
+                  
+                  <div class="form-actions">
+                    <sl-button id="prompt-reset-btn" variant="default">Reset</sl-button>
+                    <sl-button id="prompt-save-btn" type="submit" variant="primary">Save Entry</sl-button>
+                  </div>
+                </form>
+              </sl-card>
+            </div>
+          </div>
+        </section>
+        
+        <!-- Users Section -->
+        <section id="section-users" class="content-section">
+          <div class="section-toolbar">
+            <div class="toolbar-left">
+              <sl-input id="user-search" placeholder="Search users..." size="small" clearable>
+                <sl-icon name="search" slot="prefix"></sl-icon>
+              </sl-input>
+              <sl-select id="user-role-filter" placeholder="All Roles" size="small" clearable>
+                <sl-option value="">All Roles</sl-option>
+                <sl-option value="admin">Admin</sl-option>
+                <sl-option value="player">Player</sl-option>
+              </sl-select>
+            </div>
+            <div class="toolbar-right">
+              <sl-button id="user-refresh-btn" size="small" variant="default">
+                <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
+                Refresh
+              </sl-button>
+            </div>
+          </div>
+          
+          <div class="table-container">
+            <table id="users-table" class="data-table">
+              <thead>
+                <tr>
+                  <th class="sortable" data-sort="email">Email</th>
+                  <th class="sortable" data-sort="role">Role</th>
+                  <th class="sortable" data-sort="created_at">Created</th>
+                  <th>Characters</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody">
+                <tr class="loading-row">
+                  <td colspan="5">
+                    <sl-spinner></sl-spinner>
+                    <span>Loading users...</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        
+        <!-- Settings Section -->
+        <section id="section-settings" class="content-section">
+          <div class="settings-grid">
+            <sl-card class="settings-card">
+              <div slot="header">
+                <sl-icon name="sliders"></sl-icon>
+                Rate Limiting
+              </div>
+              <div class="settings-form">
+                <sl-input 
+                  id="setting-portrait-limit" 
+                  type="number" 
+                  label="Portrait Generation Limit (per day)"
+                  value="5"
+                  min="1"
+                  max="100"
+                ></sl-input>
+                <sl-input 
+                  id="setting-api-limit" 
+                  type="number" 
+                  label="API Requests Limit (per hour)"
+                  value="100"
+                  min="10"
+                  max="1000"
+                ></sl-input>
+              </div>
+            </sl-card>
+            
+            <sl-card class="settings-card">
+              <div slot="header">
+                <sl-icon name="toggle-on"></sl-icon>
+                Feature Flags
+              </div>
+              <div class="settings-form">
+                <sl-switch id="setting-registration" checked>Allow New Registrations</sl-switch>
+                <sl-switch id="setting-portraits" checked>Enable Portrait Generation</sl-switch>
+                <sl-switch id="setting-demo-mode">Demo Mode (show demo characters)</sl-switch>
+              </div>
+            </sl-card>
+            
+            <sl-card class="settings-card">
+              <div slot="header">
+                <sl-icon name="envelope"></sl-icon>
+                Email Settings
+              </div>
+              <div class="settings-form">
+                <sl-input 
+                  id="setting-smtp-host" 
+                  label="SMTP Host"
+                  placeholder="smtp.example.com"
+                ></sl-input>
+                <sl-input 
+                  id="setting-smtp-port" 
+                  type="number" 
+                  label="SMTP Port"
+                  value="587"
+                ></sl-input>
+                <sl-input 
+                  id="setting-smtp-user" 
+                  label="SMTP Username"
+                  placeholder="user@example.com"
+                ></sl-input>
+              </div>
+            </sl-card>
+            
+            <sl-card class="settings-card">
+              <div slot="header">
+                <sl-icon name="key"></sl-icon>
+                API Keys
+              </div>
+              <div class="settings-form">
+                <sl-input 
+                  id="setting-openai-key" 
+                  type="password" 
+                  label="OpenAI API Key"
+                  placeholder="sk-..."
+                  password-toggle
+                ></sl-input>
+                <p class="settings-hint">Used for portrait generation with DALL-E</p>
+              </div>
+            </sl-card>
+          </div>
+          
+          <div class="settings-actions">
+            <sl-button id="settings-save-btn" variant="primary" size="large">
+              <sl-icon slot="prefix" name="check-lg"></sl-icon>
+              Save Settings
+            </sl-button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+  
+  <!-- Delete Confirmation Dialog -->
+  <sl-dialog id="delete-dialog" label="Confirm Delete">
+    <p id="delete-message">Are you sure you want to delete these items?</p>
+    <sl-button slot="footer" variant="default" id="delete-cancel-btn">Cancel</sl-button>
+    <sl-button slot="footer" variant="danger" id="delete-confirm-btn">Delete</sl-button>
+  </sl-dialog>
+  
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+  
+  <!-- Scripts -->
+  <script src="../danddy-config.js"></script>
+  <script src="../danddy-auth.js"></script>
+  <script src="admin-app.js"></script>
+</body>
+</html>
+
