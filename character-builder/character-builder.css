@@ -82,13 +82,13 @@
   margin-bottom: var(--spacing-sm);
   padding: var(--spacing-xs) 0;
   font-size: var(--font-size-small);
-  color: var(--theme-warning);
+  color: var(--terminal-warning);
   text-align: center;
 }
 
 .creation-quota-info.is-exhausted,
 .image-quota-info.is-exhausted {
-  color: var(--theme-warning);
+  color: var(--terminal-warning);
 }
 
 /* Slow continuous blink animation for quota info */
