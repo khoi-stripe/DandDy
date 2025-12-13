@@ -769,7 +769,7 @@ const App = (window.App = {
             </button>`,
           );
         } else {
-          quotaLine.textContent = `${qi.remaining} character creation${qi.remaining === 1 ? '' : 's'} remaining today`;
+          quotaLine.textContent = qi.remaining + ' character creation' + (qi.remaining === 1 ? '' : 's') + ' remaining today';
           // Blink 3 times when appearing
           quotaLine.classList.add('is-blinking');
           setTimeout(() => quotaLine.classList.remove('is-blinking'), 1500);

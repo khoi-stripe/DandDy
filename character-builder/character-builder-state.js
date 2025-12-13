@@ -204,6 +204,12 @@ const CharacterState = (window.CharacterState = {
   // Save current state to localStorage
   _saveSession() {
     try {
+      // Only save session if user has made at least one choice (entry-mode selected)
+      // This prevents saving empty/intro-only sessions
+      if (!this.current.answers || !this.current.answers['entry-mode']) {
+        return;
+      }
+      
       const toSave = {
         ...this.current,
         _savedAt: new Date().toISOString(),
