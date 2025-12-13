@@ -8632,7 +8632,7 @@ onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"><spa
       // Non-fatal
     }
 
-    const modalHTML = `<div id="promptModal"class="modal show"onclick="App.closePromptModal(false)"><div class="modal-content portrait-customize-modal"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">customize portrait</h2><button class="modal-close"onclick="App.closePromptModal(false)">&times;</button></div><div class="modal-body"><div class="terminal-text-small terminal-text-dim portrait-quota-pill"id="builderImageQuotaLine">Checking image quota…</div><div class="portrait-style-row"><div class="portrait-style-label">Style</div><div class="selector-shell selector-shell--listbox portrait-style-selector"id="builderPortraitStyleShell"><button
+    const modalHTML = `<div id="promptModal"class="modal show"onclick="App.closePromptModal(false)"><div class="modal-content portrait-customize-modal"onclick="event.stopPropagation();"><div class="modal-header"><h2 class="modal-title">customize portrait</h2><button class="modal-close"onclick="App.closePromptModal(false)">&times;</button></div><div class="modal-body"><div class="image-quota-info is-blinking"id="builderImageQuotaLine">Checking image quota…</div><div class="portrait-style-row"><div class="portrait-style-label">Style</div><div class="selector-shell selector-shell--listbox portrait-style-selector"id="builderPortraitStyleShell"><button
 type="button"
 class="terminal-btn selector-trigger"
 id="builderPortraitStyleTrigger"

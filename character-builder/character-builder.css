@@ -76,8 +76,9 @@
   word-wrap: break-word;
 }
 
-/* Creation quota info shown inside entry-mode options box */
-.creation-quota-info {
+/* Quota info shown inside options boxes (creation + image) */
+.creation-quota-info,
+.image-quota-info {
   margin-bottom: var(--spacing-sm);
   padding: var(--spacing-xs) 0;
   font-size: var(--font-size-small);
@@ -85,12 +86,14 @@
   text-align: center;
 }
 
-.creation-quota-info.is-exhausted {
+.creation-quota-info.is-exhausted,
+.image-quota-info.is-exhausted {
   color: var(--theme-warning);
 }
 
 /* Slow continuous blink animation for quota info */
-.creation-quota-info.is-blinking {
+.creation-quota-info.is-blinking,
+.image-quota-info.is-blinking {
   animation: quota-blink 2s ease-in-out infinite;
 }
 
