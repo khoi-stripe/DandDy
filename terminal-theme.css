@@ -1595,7 +1595,12 @@ body.selector-menu-open .splash-art {
   overflow: visible;
 }
 
-/* Menu item tooltips require .show class to display (JS-controlled) */
+/* Show tooltip on hover for disabled menu items (CSS-driven since JS events don't fire
+   on elements with pointer-events: none). The wrapper receives hover events instead. */
+.selector-option-wrapper:has(.is-disabled):hover .custom-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
 
 /* ==========================================================================
    SELECTOR SHELL TYPE MODIFIERS
