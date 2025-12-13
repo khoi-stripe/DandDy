@@ -508,7 +508,8 @@ console.groupEnd();return result;},enablePortraitDebug(){window.DEBUG_PORTRAITS=
     `;},_renderHeader(character,parsed,context,callbacks){const{onPrint,onRename,onDuplicate,onExport,onDelete,onLevelChange,onEdit,onGeneratePortrait,onTogglePortrait,onShare,}=callbacks;const renameFn=context==='builder'?'App.openNameModal()':`renameCharacter('${character.id}')`;const editFn=context==='manager'?`editCharacter('${character.id}')`:null;const printFn=onPrint&&context==='builder'?'App.printCharacterSheet()':onPrint&&context==='manager'?'printCharacterSheet()':null;const headerActions=[];let deleteAction=null;if(character.name&&onRename&&context==='builder'){headerActions.push({icon:'✎',label:'Rename',onclick:renameFn,});}
 if(context==='builder'&&onLevelChange){headerActions.push({icon:'↕',label:'Change level',onclick:'App.openLevelModal()',});}
 if(context==='manager'&&onDelete){deleteAction={icon:'×',label:'Delete character',onclick:`deleteCharacter('${character.id}')`,};}
-const hasValidManagerId=!!character.id;const generateFn=context==='builder'?'App.generateCustomAIPortrait()':hasValidManagerId?`generatePortraitForCharacter('${character.id}')`:null;const hasCustomPortrait=!!(character.customPortraitAscii||character.originalPortraitUrl||character.portrait?.url||(character.portraitMetadata&&Array.isArray(character.portraitMetadata.versions)&&character.portraitMetadata.versions.length>0));const historyFn=context==='builder'?'App.openPortraitHistory()':hasValidManagerId?`openPortraitHistory('${character.id}')`:null;if(parsed.hasRace&&parsed.hasClass&&onGeneratePortrait&&(context==='builder'||hasValidManagerId)&&generateFn){const imageQuotaExhausted=typeof window._imageQuotaRemaining==='number'&&window._imageQuotaRemaining===0;headerActions.push({icon:'★',label:'Customize portrait',onclick:generateFn,disabled:imageQuotaExhausted,title:imageQuotaExhausted?'Daily custom portrait limit reached':'',});}
+const hasValidManagerId=!!character.id;const generateFn=context==='builder'?'App.generateCustomAIPortrait()':hasValidManagerId?`generatePortraitForCharacter('${character.id}')`:null;const hasCustomPortrait=!!(character.customPortraitAscii||character.originalPortraitUrl||character.portrait?.url||(character.portraitMetadata&&Array.isArray(character.portraitMetadata.versions)&&character.portraitMetadata.versions.length>0));const historyFn=context==='builder'?'App.openPortraitHistory()':hasValidManagerId?`openPortraitHistory('${character.id}')`:null;if(parsed.hasRace&&parsed.hasClass&&onGeneratePortrait&&(context==='builder'||hasValidManagerId)&&generateFn){const imageQuotaRemaining=window._imageQuotaRemaining;const DEBUG_FORCE_EXHAUSTED=true;const imageQuotaExhausted=DEBUG_FORCE_EXHAUSTED||(typeof imageQuotaRemaining==='number'&&imageQuotaRemaining===0);let imageQuotaTooltip='';if(DEBUG_FORCE_EXHAUSTED){imageQuotaTooltip='Daily limit reached';}else if(typeof imageQuotaRemaining==='number'){if(imageQuotaRemaining===0){imageQuotaTooltip='Daily limit reached';}else if(imageQuotaRemaining>0){imageQuotaTooltip=`${imageQuotaRemaining}${' '}portrait${imageQuotaRemaining === 1 ? '' : 's'}${' '}remaining`;}}
+headerActions.push({icon:'★',label:'Customize portrait',onclick:generateFn,disabled:imageQuotaExhausted,title:imageQuotaTooltip,});}
 if(hasCustomPortrait&&historyFn){headerActions.push({icon:'⧖',label:'Portrait history',onclick:historyFn,});}
 if(context==='manager'&&onShare&&hasValidManagerId){headerActions.push({icon:'↗',label:'Share character',onclick:`openShareModal('${character.id}')`,});}
 if(printFn){headerActions.push({icon:'⎙',label:'Print sheet',onclick:printFn,});}
@@ -541,11 +542,18 @@ const editButtonHtml=context==='manager'&&onEdit&&editFn?`
           <div class="selector-menu sheet-actions-menu" role="menu" aria-hidden="true">
             ${headerActions
               .map(
-                (action) => `<button
+                (action) => {
+                  const btnHtml = `<button
 class="selector-option${action.disabled ? ' is-disabled' : ''}"
 type="button"
 role="menuitem"
-${action.disabled?'disabled':`onclick="${action.onclick}"`}${action.id?` id="${action.id}"`:''}${action.title?` title="${action.title}"`:''}><span class="selector-option-icon">${action.icon}</span><span class="selector-option-label">${action.label}</span></button>`,
+${action.disabled?'disabled':`onclick="${action.onclick}"`}${action.id?` id="${action.id}"`:''}><span class="selector-option-icon">${action.icon}</span><span class="selector-option-label">${action.label}</span></button>`;
+                  // Wrap with custom tooltip if action has a title
+                  if (action.title) {
+                    return `<span class="has-tooltip selector-option-wrapper">${btnHtml}<span class="custom-tooltip"${' '}data-position="bottom">${action.title}</span></span>`;
+                  }
+                  return btnHtml;
+                },
               )
               .join('')}
           </div>

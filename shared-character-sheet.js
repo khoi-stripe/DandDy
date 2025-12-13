@@ -407,16 +407,31 @@ const CharacterSheet = (window.CharacterSheet = {
       (context === 'builder' || hasValidManagerId) &&
       generateFn
     ) {
-      // Check if custom portrait quota is exhausted
-      const imageQuotaExhausted = typeof window._imageQuotaRemaining === 'number' && 
-        window._imageQuotaRemaining === 0;
+      // Check image quota status
+      const imageQuotaRemaining = window._imageQuotaRemaining;
+      // DEBUG: Force exhausted state for tooltip testing
+      const DEBUG_FORCE_EXHAUSTED = true;
+      const imageQuotaExhausted = DEBUG_FORCE_EXHAUSTED || (typeof imageQuotaRemaining === 'number' && imageQuotaRemaining === 0);
+      
+      // Build tooltip text based on quota status
+      let imageQuotaTooltip = '';
+      if (DEBUG_FORCE_EXHAUSTED) {
+        imageQuotaTooltip = 'Daily limit reached';
+      } else if (typeof imageQuotaRemaining === 'number') {
+        if (imageQuotaRemaining === 0) {
+          imageQuotaTooltip = 'Daily limit reached';
+        } else if (imageQuotaRemaining > 0) {
+          imageQuotaTooltip = `${imageQuotaRemaining}${' '}portrait${imageQuotaRemaining === 1 ? '' : 's'}${' '}remaining`;
+        }
+        // -1 means unlimited, no tooltip
+      }
       
       headerActions.push({
         icon: '★',
         label: 'Customize portrait',
         onclick: generateFn,
         disabled: imageQuotaExhausted,
-        title: imageQuotaExhausted ? 'Daily custom portrait limit reached' : '',
+        title: imageQuotaTooltip,
       });
     }
 
@@ -498,19 +513,25 @@ const CharacterSheet = (window.CharacterSheet = {
           <div class="selector-menu sheet-actions-menu" role="menu" aria-hidden="true">
             ${headerActions
               .map(
-                (action) => `
+                (action) => {
+                  const btnHtml = `
               <button
                 class="selector-option${action.disabled ? ' is-disabled' : ''}"
                 type="button"
                 role="menuitem"
                 ${action.disabled ? 'disabled' : `onclick="${action.onclick}"`}${
                   action.id ? ` id="${action.id}"` : ''
-                }${action.title ? ` title="${action.title}"` : ''}
+                }
               >
                 <span class="selector-option-icon">${action.icon}</span>
                 <span class="selector-option-label">${action.label}</span>
-              </button>
-            `,
+              </button>`;
+                  // Wrap with custom tooltip if action has a title
+                  if (action.title) {
+                    return `<span class="has-tooltip selector-option-wrapper">${btnHtml}<span class="custom-tooltip"${' '}data-position="bottom">${action.title}</span></span>`;
+                  }
+                  return btnHtml;
+                },
               )
               .join('')}
           </div>

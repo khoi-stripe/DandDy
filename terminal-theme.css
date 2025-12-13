@@ -607,6 +607,316 @@ body::before {
   }
 }
 
+/* ===== CUSTOM TOOLTIP ===== */
+/*
+ * Usage: Add .has-tooltip to the parent container and include a .custom-tooltip child.
+ * Set data-position to control placement: top, bottom, left, right (all centered)
+ * Add -start or -end suffix for edge alignment: top-start, bottom-end, etc.
+ * 
+ * Positions:
+ *   top        - Above trigger, horizontally centered
+ *   bottom     - Below trigger, horizontally centered (default)
+ *   left       - Left of trigger, vertically centered
+ *   right      - Right of trigger, vertically centered
+ *   top-start  - Above trigger, left-aligned
+ *   top-end    - Above trigger, right-aligned
+ *   bottom-start - Below trigger, left-aligned
+ *   bottom-end   - Below trigger, right-aligned
+ *   left-start   - Left of trigger, top-aligned
+ *   left-end     - Left of trigger, bottom-aligned
+ *   right-start  - Right of trigger, top-aligned
+ *   right-end    - Right of trigger, bottom-aligned
+ */
+.custom-tooltip {
+  position: absolute;
+  z-index: 10000;
+  
+  padding: 4px 8px;
+  line-height: 1.2;
+  
+  /* Dark translucent overlay background */
+  background-color: rgba(0, 0, 0, 0.85);
+  /* Dim teal text */
+  color: var(--sheet-accent-dim);
+  border-radius: 2px;
+  /* Thin outline */
+  border: 1px solid var(--sheet-accent-dim);
+  /* Subtle glow */
+  box-shadow: 0 0 8px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-dim), 0.3);
+  
+  /* Typography */
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  /* Sentence case - no transform */
+  white-space: nowrap;
+  pointer-events: none;
+  
+  /* Hidden by default */
+  opacity: 0;
+  transition:
+    opacity 0.15s ease-out,
+    transform 0.15s ease-out;
+  
+  /* Default position: bottom centered (when no data-position set) */
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.95);
+  margin-top: 4px;
+}
+
+.custom-tooltip.show {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* ---- TOP positions ---- */
+.custom-tooltip[data-position="top"] {
+  top: auto;
+  bottom: 100%;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%) scale(0.95);
+  margin: 0 0 4px 0;
+}
+
+.custom-tooltip[data-position="top"].show {
+  transform: translateX(-50%) scale(1);
+}
+
+.custom-tooltip[data-position="top-start"] {
+  top: auto;
+  bottom: 100%;
+  left: 0;
+  right: auto;
+  transform: scale(0.95);
+  transform-origin: left bottom;
+  margin: 0 0 4px 0;
+}
+
+.custom-tooltip[data-position="top-start"].show {
+  transform: scale(1);
+}
+
+.custom-tooltip[data-position="top-end"] {
+  top: auto;
+  bottom: 100%;
+  left: auto;
+  right: 0;
+  transform: scale(0.95);
+  transform-origin: right bottom;
+  margin: 0 0 4px 0;
+}
+
+.custom-tooltip[data-position="top-end"].show {
+  transform: scale(1);
+}
+
+/* ---- BOTTOM positions ---- */
+.custom-tooltip[data-position="bottom"] {
+  top: 100%;
+  bottom: auto;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%) scale(0.95);
+  margin: 4px 0 0 0;
+}
+
+.custom-tooltip[data-position="bottom"].show {
+  transform: translateX(-50%) scale(1);
+}
+
+.custom-tooltip[data-position="bottom-start"] {
+  top: 100%;
+  bottom: auto;
+  left: 0;
+  right: auto;
+  transform: scale(0.95);
+  transform-origin: left top;
+  margin: 4px 0 0 0;
+}
+
+.custom-tooltip[data-position="bottom-start"].show {
+  transform: scale(1);
+}
+
+.custom-tooltip[data-position="bottom-end"] {
+  top: 100%;
+  bottom: auto;
+  left: auto;
+  right: 0;
+  transform: scale(0.95);
+  transform-origin: right top;
+  margin: 4px 0 0 0;
+}
+
+.custom-tooltip[data-position="bottom-end"].show {
+  transform: scale(1);
+}
+
+/* ---- LEFT positions ---- */
+.custom-tooltip[data-position="left"] {
+  top: 50%;
+  bottom: auto;
+  left: auto;
+  right: 100%;
+  transform: translateY(-50%) scale(0.95);
+  margin: 0 4px 0 0;
+}
+
+.custom-tooltip[data-position="left"].show {
+  transform: translateY(-50%) scale(1);
+}
+
+.custom-tooltip[data-position="left-start"] {
+  top: 0;
+  bottom: auto;
+  left: auto;
+  right: 100%;
+  transform: scale(0.95);
+  transform-origin: right top;
+  margin: 0 4px 0 0;
+}
+
+.custom-tooltip[data-position="left-start"].show {
+  transform: scale(1);
+}
+
+.custom-tooltip[data-position="left-end"] {
+  top: auto;
+  bottom: 0;
+  left: auto;
+  right: 100%;
+  transform: scale(0.95);
+  transform-origin: right bottom;
+  margin: 0 4px 0 0;
+}
+
+.custom-tooltip[data-position="left-end"].show {
+  transform: scale(1);
+}
+
+/* ---- RIGHT positions ---- */
+.custom-tooltip[data-position="right"] {
+  top: 50%;
+  bottom: auto;
+  left: 100%;
+  right: auto;
+  transform: translateY(-50%) scale(0.95);
+  margin: 0 0 0 4px;
+}
+
+.custom-tooltip[data-position="right"].show {
+  transform: translateY(-50%) scale(1);
+}
+
+.custom-tooltip[data-position="right-start"] {
+  top: 0;
+  bottom: auto;
+  left: 100%;
+  right: auto;
+  transform: scale(0.95);
+  transform-origin: left top;
+  margin: 0 0 0 4px;
+}
+
+.custom-tooltip[data-position="right-start"].show {
+  transform: scale(1);
+}
+
+.custom-tooltip[data-position="right-end"] {
+  top: auto;
+  bottom: 0;
+  left: 100%;
+  right: auto;
+  transform: scale(0.95);
+  transform-origin: left bottom;
+  margin: 0 0 0 4px;
+}
+
+.custom-tooltip[data-position="right-end"].show {
+  transform: scale(1);
+}
+
+/* Container needs relative positioning for tooltip to anchor */
+.has-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* CSS-only tooltip display on hover (use .show class for JS-controlled tooltips) */
+/* Top positions */
+.has-tooltip:hover > .custom-tooltip[data-position="top"],
+.has-tooltip:focus-within > .custom-tooltip[data-position="top"] {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+.has-tooltip:hover > .custom-tooltip[data-position="top-start"],
+.has-tooltip:focus-within > .custom-tooltip[data-position="top-start"] {
+  opacity: 1;
+  transform: scale(1);
+}
+.has-tooltip:hover > .custom-tooltip[data-position="top-end"],
+.has-tooltip:focus-within > .custom-tooltip[data-position="top-end"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Bottom positions (default) */
+.has-tooltip:hover > .custom-tooltip[data-position="bottom"],
+.has-tooltip:hover > .custom-tooltip:not([data-position]),
+.has-tooltip:focus-within > .custom-tooltip[data-position="bottom"],
+.has-tooltip:focus-within > .custom-tooltip:not([data-position]) {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+.has-tooltip:hover > .custom-tooltip[data-position="bottom-start"],
+.has-tooltip:focus-within > .custom-tooltip[data-position="bottom-start"] {
+  opacity: 1;
+  transform: scale(1);
+}
+.has-tooltip:hover > .custom-tooltip[data-position="bottom-end"],
+.has-tooltip:focus-within > .custom-tooltip[data-position="bottom-end"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Left positions */
+.has-tooltip:hover > .custom-tooltip[data-position="left"],
+.has-tooltip:focus-within > .custom-tooltip[data-position="left"] {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+.has-tooltip:hover > .custom-tooltip[data-position="left-start"],
+.has-tooltip:focus-within > .custom-tooltip[data-position="left-start"] {
+  opacity: 1;
+  transform: scale(1);
+}
+.has-tooltip:hover > .custom-tooltip[data-position="left-end"],
+.has-tooltip:focus-within > .custom-tooltip[data-position="left-end"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Right positions */
+.has-tooltip:hover > .custom-tooltip[data-position="right"],
+.has-tooltip:focus-within > .custom-tooltip[data-position="right"] {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+.has-tooltip:hover > .custom-tooltip[data-position="right-start"],
+.has-tooltip:focus-within > .custom-tooltip[data-position="right-start"] {
+  opacity: 1;
+  transform: scale(1);
+}
+.has-tooltip:hover > .custom-tooltip[data-position="right-end"],
+.has-tooltip:focus-within > .custom-tooltip[data-position="right-end"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
 /* ===== SHARED CHARACTER SHEET LAYOUT ===== */
 .character-sheet {
   border: 1px solid var(--sheet-accent-dim);
@@ -1118,6 +1428,15 @@ body::before {
   cursor: not-allowed;
 }
 
+/* Quota exhausted state (matches selector-option disabled styling) */
+.terminal-btn-primary.is-quota-exhausted:disabled {
+  /* Keep the teal coloring but dim it significantly */
+  background-color: transparent;
+  border-color: var(--ui-border-color);
+  color: var(--ui-fg-color);
+  opacity: 0.4;
+}
+
 /* Auth modal primary buttons (LOGIN / REGISTER) should not change height when
    showing the spinner cube + "CONTACTING SERVER..." label. Use a flex layout
    and a slightly smaller cube so the loading state fits within the base height. */
@@ -1308,6 +1627,81 @@ body.selector-menu-open .splash-art {
   opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
+}
+
+/* Wrapper for menu options with tooltips */
+.selector-option-wrapper {
+  display: block;
+  position: relative;
+}
+
+/* Re-enable pointer events on wrapper so tooltip hover works on disabled items */
+.selector-option-wrapper:has(.is-disabled) {
+  pointer-events: auto;
+  cursor: not-allowed;
+}
+
+/* Allow tooltip to overflow the menu */
+.selector-menu:has(.selector-option-wrapper) {
+  overflow: visible;
+}
+
+/* Show tooltip on hover for menu items (CSS-only) */
+/* Top positions */
+.selector-option-wrapper:hover > .custom-tooltip[data-position="top"] {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+.selector-option-wrapper:hover > .custom-tooltip[data-position="top-start"] {
+  opacity: 1;
+  transform: scale(1);
+}
+.selector-option-wrapper:hover > .custom-tooltip[data-position="top-end"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Bottom positions */
+.selector-option-wrapper:hover > .custom-tooltip[data-position="bottom"],
+.selector-option-wrapper:hover > .custom-tooltip:not([data-position]) {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+.selector-option-wrapper:hover > .custom-tooltip[data-position="bottom-start"] {
+  opacity: 1;
+  transform: scale(1);
+}
+.selector-option-wrapper:hover > .custom-tooltip[data-position="bottom-end"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Left positions */
+.selector-option-wrapper:hover > .custom-tooltip[data-position="left"] {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+.selector-option-wrapper:hover > .custom-tooltip[data-position="left-start"] {
+  opacity: 1;
+  transform: scale(1);
+}
+.selector-option-wrapper:hover > .custom-tooltip[data-position="left-end"] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Right positions */
+.selector-option-wrapper:hover > .custom-tooltip[data-position="right"] {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+}
+.selector-option-wrapper:hover > .custom-tooltip[data-position="right-start"] {
+  opacity: 1;
+  transform: scale(1);
+}
+.selector-option-wrapper:hover > .custom-tooltip[data-position="right-end"] {
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* ==========================================================================

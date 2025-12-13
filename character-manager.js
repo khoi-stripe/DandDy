@@ -1383,19 +1383,25 @@ window._imageQuotaRemaining = null;
 async function updateCreationQuotaState() {
     const btn = document.getElementById('newCharacterBtn');
     const overflowBtn = document.getElementById('overflowNewCharBtn');
+    const tooltip = document.getElementById('newCharacterTooltip');
     
-    // Helper to update both buttons
-    const updateButtons = (disabled, title, addClass) => {
+    // Helper to update both buttons and the custom tooltip
+    const updateButtons = (disabled, tooltipText, addClass) => {
         [btn, overflowBtn].forEach(b => {
             if (!b) return;
             b.disabled = disabled;
-            b.title = title;
+            // Clear native title - we use custom tooltip now
+            b.title = '';
             if (addClass) {
                 b.classList.add('is-quota-exhausted');
             } else {
                 b.classList.remove('is-quota-exhausted');
             }
         });
+        // Update the custom tooltip text
+        if (tooltip) {
+            tooltip.textContent = tooltipText;
+        }
     };
 
     if (!btn && !overflowBtn) return;
@@ -1432,9 +1438,9 @@ async function updateCreationQuotaState() {
         }
 
         if (quota.remaining === 0) {
-            updateButtons(true, 'Daily character creation limit reached', true);
+            updateButtons(true, 'Daily limit reached', true);
         } else {
-            updateButtons(false, `${quota.remaining} creation${quota.remaining === 1 ? '' : 's'} remaining today`, false);
+            updateButtons(false, `${quota.remaining}${' '}creation${quota.remaining === 1 ? '' : 's'}${' '}remaining`, false);
         }
     } catch (e) {
         console.warn('Failed to check creation quota:', e);
@@ -5980,8 +5986,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Wire header buttons (guard against missing elements so init doesn't crash)
     const newCharacterBtn = document.getElementById('newCharacterBtn');
+    const newCharacterTooltip = document.getElementById('newCharacterTooltip');
     if (newCharacterBtn) {
         newCharacterBtn.addEventListener('click', createNewCharacter);
+        
+        // Show/hide custom tooltip on hover
+        if (newCharacterTooltip) {
+            newCharacterBtn.addEventListener('mouseenter', () => {
+                if (newCharacterTooltip.textContent) {
+                    newCharacterTooltip.classList.add('show');
+                }
+            });
+            newCharacterBtn.addEventListener('mouseleave', () => {
+                newCharacterTooltip.classList.remove('show');
+            });
+            // Also hide on focus out for keyboard users
+            newCharacterBtn.addEventListener('focus', () => {
+                if (newCharacterTooltip.textContent) {
+                    newCharacterTooltip.classList.add('show');
+                }
+            });
+            newCharacterBtn.addEventListener('blur', () => {
+                newCharacterTooltip.classList.remove('show');
+            });
+        }
     }
 
     // Check creation quota on load and listen for updates
@@ -5991,23 +6019,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             _creationQuotaRemaining = e.detail.remaining;
             const btn = document.getElementById('newCharacterBtn');
             const overflowBtn = document.getElementById('overflowNewCharBtn');
+            const tooltip = document.getElementById('newCharacterTooltip');
             
+            let tooltipText = '';
             [btn, overflowBtn].forEach(b => {
                 if (!b) return;
                 if (e.detail.remaining === -1) {
                     b.disabled = false;
                     b.title = '';
                     b.classList.remove('is-quota-exhausted');
+                    tooltipText = '';
                 } else if (e.detail.remaining === 0) {
                     b.disabled = true;
-                    b.title = 'Daily character creation limit reached';
+                    b.title = '';
                     b.classList.add('is-quota-exhausted');
+                    tooltipText = 'Daily limit reached';
                 } else {
                     b.disabled = false;
-                    b.title = `${e.detail.remaining} creation${e.detail.remaining === 1 ? '' : 's'} remaining today`;
+                    b.title = '';
                     b.classList.remove('is-quota-exhausted');
+                    tooltipText = `${e.detail.remaining}${' '}creation${e.detail.remaining === 1 ? '' : 's'}${' '}remaining`;
                 }
             });
+            if (tooltip) {
+                tooltip.textContent = tooltipText;
+            }
         }
     });
 
