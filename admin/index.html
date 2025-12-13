@@ -122,25 +122,21 @@
         <section id="section-dashboard" class="content-section active">
           <div class="stats-grid">
             <sl-card class="stat-card">
-              <div class="stat-icon"><sl-icon name="people"></sl-icon></div>
               <div class="stat-value" id="stat-users">--</div>
               <div class="stat-label">Total Users</div>
             </sl-card>
             
             <sl-card class="stat-card">
-              <div class="stat-icon"><sl-icon name="person-vcard"></sl-icon></div>
               <div class="stat-value" id="stat-characters">--</div>
               <div class="stat-label">Characters</div>
             </sl-card>
             
             <sl-card class="stat-card">
-              <div class="stat-icon"><sl-icon name="image"></sl-icon></div>
               <div class="stat-value" id="stat-portraits">--</div>
               <div class="stat-label">Portraits Generated</div>
             </sl-card>
             
             <sl-card class="stat-card">
-              <div class="stat-icon"><sl-icon name="palette"></sl-icon></div>
               <div class="stat-value" id="stat-prompts">--</div>
               <div class="stat-label">Prompt Entries</div>
             </sl-card>
@@ -190,10 +186,10 @@
               <sl-input id="char-search" placeholder="Search characters..." size="small" clearable>
                 <sl-icon name="search" slot="prefix"></sl-icon>
               </sl-input>
-              <sl-select id="char-user-filter" placeholder="All Users" size="small" clearable>
+              <sl-select id="char-user-filter" placeholder="All Users" size="small" clearable hoist>
                 <sl-option value="">All Users</sl-option>
               </sl-select>
-              <sl-select id="char-demo-filter" placeholder="All Characters" size="small" clearable>
+              <sl-select id="char-demo-filter" placeholder="All Characters" size="small" clearable hoist>
                 <sl-option value="">All Characters</sl-option>
                 <sl-option value="demo">Demo Only</sl-option>
                 <sl-option value="non-demo">Non-Demo Only</sl-option>
@@ -211,7 +207,7 @@
             </div>
           </div>
           
-          <div class="table-container">
+          <div class="table-container characters-table-container">
             <table id="characters-table" class="data-table">
               <thead>
                 <tr>
@@ -246,7 +242,7 @@
             <div class="prompts-list-panel">
               <div class="section-toolbar">
                 <div class="toolbar-left">
-                  <sl-select id="prompt-kind-filter" placeholder="All Kinds" size="small" clearable>
+                  <sl-select id="prompt-kind-filter" placeholder="All Kinds" size="small" clearable hoist>
                     <sl-option value="">All Kinds</sl-option>
                     <sl-option value="race">Race</sl-option>
                     <sl-option value="class">Class</sl-option>
@@ -255,7 +251,7 @@
                     <sl-option value="scene">Scene</sl-option>
                     <sl-option value="style">Style</sl-option>
                   </sl-select>
-                  <sl-select id="prompt-archive-filter" value="active" size="small">
+                  <sl-select id="prompt-archive-filter" value="active" size="small" hoist>
                     <sl-option value="active">Active Only</sl-option>
                     <sl-option value="archived">Archived Only</sl-option>
                     <sl-option value="all">All Entries</sl-option>
@@ -328,7 +324,7 @@
                   <input type="hidden" id="prompt-entry-id">
                   
                   <div class="form-row">
-                    <sl-select id="prompt-kind" label="Kind" value="race" required>
+                    <sl-select id="prompt-kind" label="Kind" value="race" required hoist>
                       <sl-option value="race">Race</sl-option>
                       <sl-option value="class">Class</sl-option>
                       <sl-option value="pose">Pose</sl-option>
@@ -388,7 +384,7 @@
               <sl-input id="user-search" placeholder="Search users..." size="small" clearable>
                 <sl-icon name="search" slot="prefix"></sl-icon>
               </sl-input>
-              <sl-select id="user-role-filter" placeholder="All Roles" size="small" clearable>
+              <sl-select id="user-role-filter" placeholder="All Roles" size="small" clearable hoist>
                 <sl-option value="">All Roles</sl-option>
                 <sl-option value="admin">Admin</sl-option>
                 <sl-option value="player">Player</sl-option>
@@ -399,13 +395,42 @@
                 <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
                 Refresh
               </sl-button>
+              <sl-dropdown id="user-batch-dropdown">
+                <sl-button slot="trigger" size="small" variant="default" id="user-batch-btn" disabled>
+                  <sl-icon slot="prefix" name="list-check"></sl-icon>
+                  Batch (<span id="user-selected-count">0</span>)
+                  <sl-icon slot="suffix" name="chevron-down"></sl-icon>
+                </sl-button>
+                <sl-menu>
+                  <sl-menu-item id="batch-reset-limits">
+                    <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
+                    Reset Limits
+                  </sl-menu-item>
+                  <sl-menu-item id="batch-make-admin">
+                    <sl-icon slot="prefix" name="shield-check"></sl-icon>
+                    Make Admin
+                  </sl-menu-item>
+                  <sl-menu-item id="batch-demote">
+                    <sl-icon slot="prefix" name="shield"></sl-icon>
+                    Demote to Player
+                  </sl-menu-item>
+                  <sl-divider></sl-divider>
+                  <sl-menu-item id="batch-delete-users" class="danger-item">
+                    <sl-icon slot="prefix" name="trash"></sl-icon>
+                    Delete Selected
+                  </sl-menu-item>
+                </sl-menu>
+              </sl-dropdown>
             </div>
           </div>
           
-          <div class="table-container">
+          <div class="table-container users-table-container">
             <table id="users-table" class="data-table">
               <thead>
                 <tr>
+                  <th class="checkbox-col">
+                    <sl-checkbox id="user-select-all"></sl-checkbox>
+                  </th>
                   <th class="sortable" data-sort="email">Email</th>
                   <th class="sortable" data-sort="role">Role</th>
                   <th class="sortable" data-sort="created_at">Created</th>
@@ -415,7 +440,7 @@
               </thead>
               <tbody id="users-tbody">
                 <tr class="loading-row">
-                  <td colspan="5">
+                  <td colspan="6">
                     <sl-spinner></sl-spinner>
                     <span>Loading users...</span>
                   </td>
@@ -596,6 +621,36 @@
     <p id="delete-message">Are you sure you want to delete these items?</p>
     <sl-button slot="footer" variant="default" id="delete-cancel-btn">Cancel</sl-button>
     <sl-button slot="footer" variant="danger" id="delete-confirm-btn">Delete</sl-button>
+  </sl-dialog>
+  
+  <!-- Reset Password Dialog -->
+  <sl-dialog id="reset-password-dialog" label="Reset Password">
+    <p id="reset-password-message">Generate a new password for this user:</p>
+    <p id="reset-password-email" style="font-weight: 600; color: var(--admin-accent);"></p>
+    <sl-input 
+      id="new-password-input" 
+      type="text" 
+      label="New Password"
+      placeholder="Enter new password or generate random"
+      style="margin-top: 16px;"
+    ></sl-input>
+    <sl-button id="generate-password-btn" variant="text" size="small" style="margin-top: 8px;">
+      <sl-icon slot="prefix" name="shuffle"></sl-icon>
+      Generate Random Password
+    </sl-button>
+    <sl-alert variant="warning" open style="margin-top: 16px;">
+      <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+      Make sure to share this password securely with the user. They should change it after logging in.
+    </sl-alert>
+    <sl-button slot="footer" variant="default" id="reset-password-cancel-btn">Cancel</sl-button>
+    <sl-button slot="footer" variant="primary" id="reset-password-confirm-btn">Reset Password</sl-button>
+  </sl-dialog>
+  
+  <!-- User Action Confirmation Dialog -->
+  <sl-dialog id="user-action-dialog" label="Confirm Action">
+    <p id="user-action-message">Are you sure you want to perform this action?</p>
+    <sl-button slot="footer" variant="default" id="user-action-cancel-btn">Cancel</sl-button>
+    <sl-button slot="footer" variant="primary" id="user-action-confirm-btn">Confirm</sl-button>
   </sl-dialog>
   
   <!-- Toast Container -->

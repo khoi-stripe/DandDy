@@ -39,8 +39,8 @@
   /* Warning: Yellow/Gold */
   --sl-color-warning-600: hsl(48, 100%, 64%);
   
-  /* Danger: Red */
-  --sl-color-danger-600: hsl(0, 100%, 50%);
+  /* Danger/Destructive: Yellow */
+  --sl-color-danger-600: hsl(48, 100%, 64%);
   
   /* Typography */
   --sl-font-sans: 'JetBrains Mono', 'Google Sans Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -73,7 +73,7 @@
   --sl-input-background-color: var(--sl-color-neutral-100);
   --sl-input-background-color-hover: var(--sl-color-neutral-100);
   --sl-input-background-color-focus: var(--sl-color-neutral-100);
-  --sl-input-border-color: var(--sl-color-neutral-300);
+  --sl-input-border-color: hsl(180, 50%, 40%);
   --sl-input-border-color-hover: var(--sl-color-primary-600);
   --sl-input-border-color-focus: var(--sl-color-primary-600);
   --sl-input-color: var(--sl-color-neutral-900);
@@ -100,7 +100,14 @@
   --admin-text-dim: #808080;
   --admin-bg: #000000;
   --admin-bg-elevated: #0a0a0a;
-  --admin-border: #2a2a2a;
+  --admin-border: rgba(255, 255, 255, 0.12);
+  
+  /* Translucent background layers (consistent across all sections) */
+  --admin-bg-translucent-base: rgba(255, 255, 255, 0.02);
+  --admin-bg-translucent-toolbar: rgba(255, 255, 255, 0.04);
+  --admin-bg-translucent-header: rgba(255, 255, 255, 0.06);
+  --admin-bg-translucent-hover: rgba(255, 255, 255, 0.05);
+  --admin-bg-translucent-selected: rgba(255, 255, 255, 0.08);
   
   /* Shoelace input sizing overrides */
   --sl-input-height-small: 36px;
@@ -153,8 +160,8 @@ body {
 .login-container {
   width: 100%;
   max-width: 420px;
-  background: var(--admin-bg-elevated);
-  border: 1px solid var(--admin-border);
+  background: var(--admin-bg-translucent-base);
+  border: 1px solid var(--admin-accent-dim);
   border-radius: var(--sl-border-radius-large);
   padding: var(--spacing-xl);
 }
@@ -469,11 +476,15 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-lg);
   flex-wrap: wrap;
   /* Ensure dropdowns can escape and appear on top */
   position: relative;
   z-index: 100;
+  background: var(--admin-bg-translucent-toolbar);
+  border: 1px solid var(--admin-border);
+  border-bottom: none;
+  border-radius: var(--sl-border-radius-medium) var(--sl-border-radius-medium) 0 0;
 }
 
 .toolbar-left,
@@ -491,18 +502,88 @@ body {
   min-width: 160px;
 }
 
+/* Uniform height for all toolbar form elements */
+.section-toolbar sl-select,
+.section-toolbar sl-input,
+.section-toolbar sl-dropdown {
+  --sl-input-height-medium: 44px;
+}
+
+.section-toolbar sl-select::part(combobox),
+.section-toolbar sl-input::part(base) {
+  height: 44px;
+  min-height: 44px;
+}
+
+.section-toolbar sl-dropdown sl-button::part(base) {
+  height: 44px;
+  min-height: 44px;
+}
+
+/* ===== CHARACTERS SECTION - Scrolling Layout ===== */
+#section-characters.active {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--admin-header-height) - var(--spacing-xl) * 2);
+  min-height: 400px;
+}
+
+#section-characters .section-toolbar {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  /* Solid background so content scrolls behind */
+  background: #050505;
+}
+
+#section-characters .characters-table-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+/* ===== USERS SECTION - Same scrolling layout ===== */
+#section-users.active {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--admin-header-height) - var(--spacing-xl) * 2);
+  min-height: 400px;
+}
+
+#section-users .section-toolbar {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #050505;
+}
+
+#section-users .users-table-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
 /* ===== DATA TABLES ===== */
 .table-container {
-  background: var(--admin-bg-elevated);
+  background: var(--admin-bg-translucent-base);
   border: 1px solid var(--admin-border);
   border-radius: var(--sl-border-radius-medium);
-  overflow: visible;
+  overflow-x: auto;
 }
 
 .table-container table {
-  /* Allow table to scroll if needed but don't clip dropdowns */
-  display: block;
-  overflow-x: auto;
+  width: 100%;
+  min-width: 100%;
+}
+
+/* When table follows a toolbar, connect them visually */
+.section-toolbar + .table-container {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
 .data-table {
@@ -519,7 +600,8 @@ body {
 }
 
 .data-table th {
-  background: var(--sl-color-neutral-200);
+  /* Solid background so scrolling content is hidden behind */
+  background: #0a0a0a;
   color: var(--admin-text-dim);
   font-weight: 500;
   font-size: 11px;
@@ -528,7 +610,7 @@ body {
   white-space: nowrap;
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 10;
 }
 
 .data-table th.sortable {
@@ -566,7 +648,7 @@ body {
 }
 
 .data-table tbody tr:hover {
-  background: hsla(180, 100%, 50%, 0.04);
+  background: var(--admin-bg-translucent-hover);
 }
 
 .data-table tbody tr:last-child td {
@@ -574,7 +656,7 @@ body {
 }
 
 .data-table tbody tr.selected {
-  background: hsla(180, 100%, 50%, 0.1);
+  background: var(--admin-bg-translucent-selected);
 }
 
 .data-table .checkbox-col {
@@ -601,28 +683,28 @@ body {
   gap: var(--spacing-sm);
 }
 
-/* Demo badge */
+/* Demo badge - matches app tooltip style */
 .demo-badge {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: 4px 8px;
   font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  border-radius: 3px;
+  font-weight: 400;
+  border-radius: 2px;
   cursor: pointer;
   transition: all 0.15s ease;
+  /* Dark translucent background like tooltip */
+  background-color: rgba(0, 0, 0, 0.85);
 }
 
 .demo-badge.active {
-  background: hsla(120, 100%, 50%, 0.15);
   color: hsl(120, 100%, 50%);
-  border: 1px solid hsl(120, 100%, 50%);
+  border: 1px solid hsl(120, 100%, 35%);
+  box-shadow: 0 0 8px hsla(120, 100%, 50%, 0.3);
 }
 
 .demo-badge.inactive {
-  background: transparent;
   color: var(--admin-text-dim);
   border: 1px solid var(--admin-border);
 }
@@ -631,36 +713,37 @@ body {
   transform: scale(1.05);
 }
 
-/* Kind badges */
+/* Kind badges - matches app tooltip style */
 .kind-badge {
   display: inline-flex;
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: 4px 8px;
   font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
-  border-radius: 3px;
-  background: hsla(180, 100%, 50%, 0.12);
-  color: var(--admin-accent);
+  font-weight: 400;
+  border-radius: 2px;
+  /* Dark translucent background like tooltip */
+  background-color: rgba(0, 0, 0, 0.85);
+  color: var(--admin-accent-dim);
   border: 1px solid var(--admin-accent-dim);
+  box-shadow: 0 0 8px hsla(180, 100%, 50%, 0.3);
   margin-right: var(--spacing-xs);
 }
 
 .kind-badge.global {
-  background: hsla(120, 100%, 50%, 0.12);
   color: hsl(120, 100%, 50%);
   border-color: hsl(120, 100%, 35%);
+  box-shadow: 0 0 8px hsla(120, 100%, 50%, 0.3);
 }
 
 .kind-badge.archived {
-  background: hsla(48, 100%, 50%, 0.12);
   color: hsl(48, 100%, 64%);
   border-color: hsl(48, 100%, 40%);
+  box-shadow: 0 0 8px hsla(48, 100%, 64%, 0.3);
 }
 
 .kind-badge.default {
-  background: hsla(240, 80%, 50%, 0.12);
   color: hsl(240, 80%, 70%);
   border-color: hsl(240, 80%, 40%);
+  box-shadow: 0 0 8px hsla(240, 80%, 70%, 0.3);
 }
 
 /* ===== PROMPTS LAYOUT ===== */
@@ -679,16 +762,27 @@ body {
   overflow: visible;
 }
 
+/* Override toolbar in prompts panel to not duplicate border */
+.prompts-list-panel .section-toolbar {
+  border-radius: var(--sl-border-radius-medium) var(--sl-border-radius-medium) 0 0;
+}
+
 .prompts-table-container {
   flex: 1;
   overflow-y: auto;
   /* Position context for z-index */
   position: relative;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
 .prompts-form-panel sl-card {
   position: sticky;
   top: 0;
+}
+
+.prompts-form-panel sl-card::part(body) {
+  padding: var(--spacing-md);
 }
 
 .prompts-form-panel [slot="header"] {
@@ -699,7 +793,15 @@ body {
 .prompts-form-panel form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
+  overflow: visible;
+}
+
+/* Ensure select dropdowns can escape their containers */
+.prompts-form-panel,
+.prompts-form-panel sl-card,
+.form-row {
+  overflow: visible;
 }
 
 .form-row {
@@ -712,7 +814,7 @@ body {
   display: flex;
   justify-content: flex-end;
   gap: var(--spacing-sm);
-  margin-top: var(--spacing-md);
+  margin-top: var(--spacing-sm);
 }
 
 /* ===== SETTINGS ===== */
@@ -721,6 +823,21 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
+  align-items: stretch;
+}
+
+.settings-card {
+  height: 100%;
+}
+
+.settings-card::part(base) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-card::part(body) {
+  flex: 1;
 }
 
 .settings-card [slot="header"] {
@@ -759,7 +876,7 @@ body {
   flex-direction: column;
   gap: var(--spacing-sm);
   padding: var(--spacing-md);
-  background: var(--sl-color-neutral-100);
+  background: var(--admin-bg-translucent-toolbar);
   border-radius: var(--sl-border-radius-medium);
   border: 1px solid var(--admin-border);
 }
@@ -816,7 +933,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--sl-color-neutral-100);
+  background: var(--admin-bg-translucent-toolbar);
   border-radius: var(--sl-border-radius-medium);
   border: 1px solid var(--admin-border);
 }
@@ -850,23 +967,29 @@ body {
 
 /* Cards */
 sl-card::part(base) {
-  background: var(--admin-bg-elevated);
+  background: var(--admin-bg-translucent-base);
   border-color: var(--admin-border);
+  overflow: visible;
 }
 
 sl-card::part(header) {
+  background: var(--admin-bg-translucent-header);
   border-color: var(--admin-border);
   padding: var(--spacing-md) var(--spacing-lg);
 }
 
 sl-card::part(body) {
   padding: var(--spacing-lg);
+  overflow: visible;
 }
 
 /* Buttons */
 sl-button::part(base) {
   font-family: inherit;
   font-size: 13px;
+  transition: all 0.15s ease;
+  border-width: 1px;
+  border-style: solid;
 }
 
 sl-button[size="small"]::part(base) {
@@ -883,53 +1006,97 @@ sl-button[size="large"]::part(base) {
   font-size: 14px;
 }
 
+/* Default buttons: outlined/empty style (matches main app) */
+sl-button[variant="default"]::part(base),
+sl-button:not([variant])::part(base) {
+  background-color: transparent;
+  border: 1px solid var(--admin-accent-dim);
+  color: var(--admin-accent-dim);
+}
+
+sl-button[variant="default"]:hover::part(base),
+sl-button:not([variant]):hover::part(base) {
+  background-color: rgba(0, 255, 255, 0.08);
+  border-color: var(--admin-accent);
+  color: var(--admin-accent);
+}
+
+/* Primary buttons: filled with reversed text (matches main app) */
 sl-button[variant="primary"]::part(base) {
   background-color: var(--admin-accent);
-  border-color: var(--admin-accent);
+  border: 1px solid var(--admin-accent);
   color: #000;
 }
 
 sl-button[variant="primary"]:hover::part(base) {
-  background-color: hsl(180, 100%, 60%);
-  border-color: hsl(180, 100%, 60%);
+  /* Invert on hover: transparent bg, colored text */
+  background-color: transparent;
+  border: 1px solid var(--admin-accent);
+  color: var(--admin-accent);
 }
 
+/* Danger/destructive buttons: outlined yellow style */
 sl-button[variant="danger"]::part(base) {
   background-color: transparent;
-  border-color: hsl(0, 100%, 50%);
-  color: hsl(0, 100%, 50%);
+  border: 1px solid hsl(48, 100%, 64%);
+  color: hsl(48, 100%, 64%);
 }
 
 sl-button[variant="danger"]:hover::part(base) {
-  background-color: hsla(0, 100%, 50%, 0.1);
+  background-color: hsla(48, 100%, 64%, 0.1);
 }
 
+/* Text buttons */
 sl-button[variant="text"]::part(base) {
   color: var(--admin-text-dim);
 }
 
 sl-button[variant="text"]:hover::part(base) {
-  color: var(--admin-text);
+  color: var(--admin-accent);
 }
 
-/* Inputs */
+/* Inputs - match main app terminal-input style */
 sl-input::part(base),
-sl-select::part(combobox),
 sl-textarea::part(base) {
-  background: var(--sl-color-neutral-100);
-  border-color: var(--admin-border);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid hsl(180, 50%, 40%);
+  transition: all 0.15s ease;
+}
+
+sl-input:hover::part(base),
+sl-textarea:hover::part(base) {
+  border-color: var(--admin-accent);
+}
+
+sl-input:focus-within::part(base),
+sl-textarea:focus-within::part(base) {
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 5px hsla(180, 100%, 50%, 0.5);
 }
 
 sl-input::part(input) {
   color: var(--admin-text);
   padding: var(--spacing-sm) var(--spacing-md);
   font-size: 14px;
+  background: transparent;
+}
+
+/* Input prefix (search icon) styling */
+sl-input::part(prefix) {
+  color: var(--admin-accent-dim);
+  padding-left: var(--spacing-sm);
+  background: transparent;
+}
+
+sl-input:focus-within::part(prefix) {
+  color: var(--admin-accent);
 }
 
 sl-textarea::part(textarea) {
   color: var(--admin-text);
   padding: var(--spacing-md);
   font-size: 14px;
+  background: transparent;
 }
 
 sl-input::part(form-control-label),
@@ -942,14 +1109,105 @@ sl-select::part(form-control-label) {
   margin-bottom: var(--spacing-xs);
 }
 
+/* Selects - match main app selector style */
 sl-select::part(combobox) {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid hsl(180, 50%, 40%);
   padding: var(--spacing-sm) var(--spacing-md);
   font-size: 14px;
+  transition: all 0.15s ease;
 }
 
-/* Checkboxes & Switches */
+sl-select:hover::part(combobox) {
+  border-color: var(--admin-accent);
+}
+
+sl-select:focus-within::part(combobox),
+sl-select[open]::part(combobox) {
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 5px hsla(180, 100%, 50%, 0.5);
+}
+
+sl-select::part(display-input) {
+  color: var(--admin-accent);
+}
+
+sl-select::part(expand-icon) {
+  color: var(--admin-accent-dim);
+  transition: transform 180ms ease-out, color 150ms ease;
+}
+
+sl-select[open]::part(expand-icon) {
+  transform: rotate(180deg);
+  color: var(--admin-accent);
+}
+
+/* Select listbox dropdown - match main app selector-menu style */
+sl-select::part(listbox) {
+  background: var(--admin-bg);
+  border: 1px solid var(--admin-accent);
+  border-radius: 4px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.9);
+  padding: 4px 0;
+  z-index: 10000 !important;
+}
+
+/* Ensure select popup container is on top */
+sl-select::part(popup) {
+  z-index: 10000 !important;
+}
+
+sl-select {
+  --sl-z-index-dropdown: 10000;
+}
+
+sl-option::part(base) {
+  color: var(--admin-accent);
+  padding: 6px 12px;
+  font-size: 13px;
+  transition: background-color 0.1s ease;
+}
+
+sl-option::part(base):hover,
+sl-option:focus::part(base) {
+  background: hsla(180, 100%, 50%, 0.15);
+  color: var(--admin-accent);
+}
+
+sl-option[aria-selected="true"]::part(base) {
+  background: hsla(180, 100%, 50%, 0.1);
+}
+
+sl-option::part(checked-icon) {
+  color: var(--admin-accent);
+}
+
+/* Checkboxes - match main app style */
+sl-checkbox {
+  --sl-input-border-color: var(--admin-accent);
+  --sl-input-border-color-hover: var(--admin-accent);
+  --sl-color-primary-600: var(--admin-accent);
+  --sl-toggle-size-medium: 18px;
+}
+
+sl-checkbox::part(base) {
+  gap: var(--spacing-sm);
+}
+
 sl-checkbox::part(control) {
-  border-color: var(--admin-border);
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  border: 1px solid var(--admin-accent-dim);
+  border-radius: 2px;
+  background: var(--admin-bg);
+  transition: all 0.15s ease;
+}
+
+sl-checkbox:hover::part(control) {
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 5px hsla(180, 100%, 50%, 0.4);
 }
 
 sl-checkbox::part(control--checked) {
@@ -957,12 +1215,35 @@ sl-checkbox::part(control--checked) {
   border-color: var(--admin-accent);
 }
 
+sl-checkbox::part(checked-icon) {
+  color: #000;
+  width: 12px;
+  height: 12px;
+}
+
+/* Switches - match main app style */
 sl-switch::part(control) {
   background-color: var(--admin-border);
+  border: 1px solid var(--admin-accent-dim);
+}
+
+sl-switch:hover::part(control) {
+  border-color: var(--admin-accent);
 }
 
 sl-switch::part(control--checked) {
   background-color: var(--admin-accent);
+  border-color: var(--admin-accent);
+}
+
+sl-switch::part(thumb) {
+  background-color: var(--admin-bg);
+  border: 1px solid var(--admin-accent-dim);
+}
+
+sl-switch::part(thumb--checked) {
+  background-color: var(--admin-bg);
+  border-color: var(--admin-accent);
 }
 
 /* Badges */
@@ -974,18 +1255,49 @@ sl-badge::part(base) {
   padding: var(--spacing-xs) var(--spacing-sm);
 }
 
-/* Dialogs */
-sl-dialog::part(panel) {
-  background: var(--admin-bg-elevated);
+/* Badge variants - restore Shoelace defaults with our colors */
+sl-badge[variant="success"]::part(base) {
+  background-color: hsla(120, 100%, 50%, 0.15);
+  color: hsl(120, 100%, 50%);
+  border: 1px solid hsl(120, 100%, 35%);
+}
+
+sl-badge[variant="primary"]::part(base) {
+  background-color: hsla(180, 100%, 50%, 0.15);
+  color: var(--admin-accent);
+  border: 1px solid var(--admin-accent-dim);
+}
+
+sl-badge[variant="warning"]::part(base) {
+  background-color: hsla(48, 100%, 50%, 0.15);
+  color: hsl(48, 100%, 64%);
+  border: 1px solid hsl(48, 100%, 40%);
+}
+
+sl-badge[variant="danger"]::part(base) {
+  background-color: hsla(0, 100%, 50%, 0.15);
+  color: hsl(0, 100%, 65%);
+  border: 1px solid hsl(0, 100%, 40%);
+}
+
+sl-badge[variant="neutral"]::part(base) {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--admin-text-dim);
   border: 1px solid var(--admin-border);
 }
 
+/* Dialogs */
+sl-dialog::part(panel) {
+  background: rgba(0, 0, 0, 0.95);
+  border: 1px solid var(--admin-accent-dim);
+}
+
 sl-dialog::part(title) {
-  color: var(--admin-text);
+  color: var(--admin-accent);
 }
 
 sl-dialog::part(body) {
-  color: var(--admin-text-dim);
+  color: var(--admin-text);
 }
 
 /* Spinners */
@@ -1006,16 +1318,19 @@ sl-dropdown::part(panel) {
   z-index: 10000 !important;
 }
 
+/* Menus - match main app selector-menu style */
 sl-menu {
-  background: var(--admin-bg-elevated) !important;
-  border: 1px solid var(--admin-border);
+  background: var(--admin-bg) !important;
+  border: 1px solid var(--admin-accent);
+  border-radius: 4px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.7);
   z-index: 10000;
-  /* Ensure solid background, no transparency */
-  opacity: 1 !important;
+  padding: 4px 0;
 }
 
 sl-menu::part(base) {
-  background: var(--admin-bg-elevated) !important;
+  background: var(--admin-bg) !important;
+  padding: 0;
 }
 
 /* Ensure select dropdowns are also on top */
@@ -1024,37 +1339,52 @@ sl-select::part(listbox) {
 }
 
 sl-menu-item::part(base) {
-  color: var(--admin-text);
-  padding: var(--spacing-sm) var(--spacing-lg);
-  font-size: 14px;
+  color: var(--admin-accent);
+  padding: 6px 12px;
+  font-size: 13px;
+  transition: background-color 0.1s ease;
+}
+
+sl-menu-item::part(prefix) {
+  color: var(--admin-accent);
+  margin-right: var(--spacing-sm);
 }
 
 sl-menu-item::part(label) {
-  margin-left: var(--spacing-sm);
+  margin-left: 0;
 }
 
 sl-menu-item::part(base):hover {
-  background: hsla(180, 100%, 50%, 0.1);
+  background: hsla(180, 100%, 50%, 0.15);
   color: var(--admin-accent);
 }
 
 sl-menu-item.danger-item::part(base) {
-  color: hsl(0, 100%, 50%);
+  color: hsl(48, 100%, 64%);
+}
+
+sl-menu-item.danger-item::part(prefix) {
+  color: hsl(48, 100%, 64%);
 }
 
 sl-menu-item.danger-item::part(base):hover {
-  background: hsla(0, 100%, 50%, 0.1);
+  background: hsla(48, 100%, 64%, 0.15);
 }
 
 /* Alerts */
 sl-alert::part(base) {
-  background: var(--admin-bg-elevated);
-  border-color: var(--admin-border);
+  background: var(--admin-bg-translucent-base);
+  border-color: var(--admin-accent-dim);
 }
 
 sl-alert[variant="danger"]::part(base) {
-  background: hsla(0, 100%, 50%, 0.1);
-  border-color: hsl(0, 100%, 50%);
+  background: hsla(48, 100%, 64%, 0.1);
+  border-color: hsl(48, 100%, 64%);
+}
+
+sl-alert[variant="success"]::part(base) {
+  background: hsla(120, 100%, 50%, 0.1);
+  border-color: hsl(120, 100%, 50%);
 }
 
 /* Dividers */
@@ -1103,11 +1433,13 @@ sl-divider {
   .section-toolbar {
     flex-direction: column;
     align-items: stretch;
+    gap: var(--spacing-md);
   }
   
   .toolbar-left,
   .toolbar-right {
     flex-wrap: wrap;
+    justify-content: center;
   }
 }
 

@@ -76,6 +76,7 @@
     // Users
     users: [],
     filteredUsers: [],
+    selectedUserIds: new Set(),
     
     // Dashboard stats
     stats: {
@@ -574,9 +575,15 @@
       if (aVal == null) aVal = '';
       if (bVal == null) bVal = '';
       
-      if (col === 'level' || col === 'id' || col === 'user_id') {
+      if (col === 'level' || col === 'id') {
         aVal = Number(aVal) || 0;
         bVal = Number(bVal) || 0;
+      } else if (col === 'user_id') {
+        // Sort by owner email, not numeric ID
+        const aUser = state.usersMap[a.user_id || a.owner_id];
+        const bUser = state.usersMap[b.user_id || b.owner_id];
+        aVal = (aUser?.email || '').toLowerCase();
+        bVal = (bUser?.email || '').toLowerCase();
       } else if (col === 'created_at') {
         aVal = new Date(aVal).getTime() || 0;
         bVal = new Date(bVal).getTime() || 0;
@@ -1152,7 +1159,7 @@
     const tbody = $('users-tbody');
     tbody.innerHTML = `
       <tr class="loading-row">
-        <td colspan="5">
+        <td colspan="6">
           <sl-spinner></sl-spinner>
           <span>Loading users...</span>
         </td>
@@ -1162,6 +1169,7 @@
     try {
       state.users = await apiRequest('/users/');
       state.filteredUsers = [...state.users];
+      state.selectedUserIds.clear();
       
       // Get character counts per user
       const characters = await apiRequest('/characters/all').catch(() => []);
@@ -1177,12 +1185,13 @@
       
       filterUsers();
       renderUsersTable();
+      updateUserSelectionUI();
       
     } catch (err) {
       log('Users load error:', err);
       tbody.innerHTML = `
         <tr class="loading-row">
-          <td colspan="5" style="color: hsl(0, 100%, 50%);">
+          <td colspan="6" style="color: hsl(0, 100%, 50%);">
             Error loading users: ${escapeHtml(err.message)}
           </td>
         </tr>
@@ -1206,6 +1215,7 @@
     });
     
     renderUsersTable();
+    updateUserSelectionUI();
   }
 
   function renderUsersTable() {
@@ -1214,7 +1224,7 @@
     if (state.filteredUsers.length === 0) {
       tbody.innerHTML = `
         <tr class="loading-row">
-          <td colspan="5">No users found</td>
+          <td colspan="6">No users found</td>
         </tr>
       `;
       return;
@@ -1222,9 +1232,13 @@
     
     tbody.innerHTML = state.filteredUsers.map(user => {
       const isCurrentUser = state.user && state.user.id === user.id;
+      const isSelected = state.selectedUserIds.has(user.id);
       
       return `
-        <tr data-id="${user.id}">
+        <tr data-id="${user.id}" class="${isSelected ? 'selected' : ''}">
+          <td class="checkbox-col">
+            <sl-checkbox ${isSelected ? 'checked' : ''} data-user-id="${user.id}" ${isCurrentUser ? 'disabled' : ''}></sl-checkbox>
+          </td>
           <td>
             <strong>${escapeHtml(user.email)}</strong>
             ${isCurrentUser ? '<sl-badge variant="primary" pill>You</sl-badge>' : ''}
@@ -1239,15 +1253,79 @@
           <td>
             <div class="table-actions">
               ${!isCurrentUser ? `
-                <sl-button size="small" data-action="toggle-role" data-user-id="${user.id}" data-current-role="${user.role}">
-                  ${user.role === 'admin' ? 'Demote' : 'Make Admin'}
-                </sl-button>
-              ` : ''}
+                <sl-dropdown>
+                  <sl-button slot="trigger" size="small" caret>
+                    Actions
+                  </sl-button>
+                  <sl-menu>
+                    <sl-menu-item data-action="toggle-role" data-user-id="${user.id}" data-current-role="${user.role}">
+                      <sl-icon slot="prefix" name="${user.role === 'admin' ? 'shield' : 'shield-check'}"></sl-icon>
+                      ${user.role === 'admin' ? 'Demote to Player' : 'Make Admin'}
+                    </sl-menu-item>
+                    <sl-menu-item data-action="reset-password" data-user-id="${user.id}" data-user-email="${escapeHtml(user.email)}">
+                      <sl-icon slot="prefix" name="key"></sl-icon>
+                      Reset Password
+                    </sl-menu-item>
+                    <sl-menu-item data-action="reset-limits" data-user-id="${user.id}">
+                      <sl-icon slot="prefix" name="arrow-clockwise"></sl-icon>
+                      Reset Limits
+                    </sl-menu-item>
+                    <sl-divider></sl-divider>
+                    <sl-menu-item data-action="delete-user" data-user-id="${user.id}" class="danger-item">
+                      <sl-icon slot="prefix" name="trash"></sl-icon>
+                      Delete User
+                    </sl-menu-item>
+                  </sl-menu>
+                </sl-dropdown>
+              ` : `
+                <sl-badge variant="neutral" pill>Protected</sl-badge>
+              `}
             </div>
           </td>
         </tr>
       `;
     }).join('');
+  }
+
+  // User selection functions
+  function toggleUserSelection(userId, isSelected) {
+    if (isSelected) {
+      state.selectedUserIds.add(userId);
+    } else {
+      state.selectedUserIds.delete(userId);
+    }
+    
+    // Update row styling
+    const row = document.querySelector(`#users-tbody tr[data-id="${userId}"]`);
+    if (row) row.classList.toggle('selected', isSelected);
+    
+    updateUserSelectionUI();
+  }
+
+  function selectAllUsers(selectAll) {
+    state.selectedUserIds.clear();
+    if (selectAll) {
+      // Don't select the current user
+      state.filteredUsers.forEach(u => {
+        if (!state.user || state.user.id !== u.id) {
+          state.selectedUserIds.add(u.id);
+        }
+      });
+    }
+    renderUsersTable();
+    updateUserSelectionUI();
+  }
+
+  function updateUserSelectionUI() {
+    const count = state.selectedUserIds.size;
+    $('user-selected-count').textContent = count;
+    $('user-batch-btn').disabled = count === 0;
+    
+    const selectAllCheckbox = $('user-select-all');
+    // Count selectable users (excluding current user)
+    const selectableCount = state.filteredUsers.filter(u => !state.user || state.user.id !== u.id).length;
+    selectAllCheckbox.checked = count > 0 && count === selectableCount;
+    selectAllCheckbox.indeterminate = count > 0 && count < selectableCount;
   }
 
   async function toggleUserRole(userId, currentRole) {
@@ -1266,6 +1344,319 @@
       log('Toggle role error:', err);
       showToast(`Failed to update role: ${err.message}`, 'danger');
     }
+  }
+
+  // Generate a random secure password
+  function generateRandomPassword(length = 16) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*';
+    let password = '';
+    const array = new Uint32Array(length);
+    crypto.getRandomValues(array);
+    for (let i = 0; i < length; i++) {
+      password += chars[array[i] % chars.length];
+    }
+    return password;
+  }
+
+  // Reset password for a user
+  async function resetUserPassword(userId, userEmail) {
+    const dialog = $('reset-password-dialog');
+    const passwordInput = $('new-password-input');
+    const emailDisplay = $('reset-password-email');
+    
+    emailDisplay.textContent = userEmail;
+    passwordInput.value = generateRandomPassword();
+    dialog.show();
+    
+    return new Promise(resolve => {
+      const confirmBtn = $('reset-password-confirm-btn');
+      const cancelBtn = $('reset-password-cancel-btn');
+      const generateBtn = $('generate-password-btn');
+      
+      const cleanup = () => {
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+        generateBtn.removeEventListener('click', handleGenerate);
+        dialog.removeEventListener('sl-hide', handleCancel);
+      };
+      
+      const handleGenerate = () => {
+        passwordInput.value = generateRandomPassword();
+      };
+      
+      const handleConfirm = async () => {
+        const newPassword = passwordInput.value.trim();
+        if (!newPassword || newPassword.length < 6) {
+          showToast('Password must be at least 6 characters', 'danger');
+          return;
+        }
+        
+        cleanup();
+        confirmBtn.loading = true;
+        
+        try {
+          await apiRequest(`/users/${userId}`, {
+            method: 'PATCH',
+            body: { password: newPassword },
+          });
+          
+          dialog.hide();
+          showToast(`Password reset for ${userEmail}. New password: ${newPassword}`, 'success', 10000);
+          resolve(true);
+        } catch (err) {
+          log('Password reset error:', err);
+          showToast(`Failed to reset password: ${err.message}`, 'danger');
+          resolve(false);
+        } finally {
+          confirmBtn.loading = false;
+        }
+      };
+      
+      const handleCancel = () => {
+        cleanup();
+        dialog.hide();
+        resolve(false);
+      };
+      
+      confirmBtn.addEventListener('click', handleConfirm);
+      cancelBtn.addEventListener('click', handleCancel);
+      generateBtn.addEventListener('click', handleGenerate);
+      dialog.addEventListener('sl-hide', handleCancel);
+    });
+  }
+
+  // Delete a single user
+  async function deleteUser(userId) {
+    const user = state.users.find(u => u.id === userId);
+    if (!user) return;
+    
+    const dialog = $('delete-dialog');
+    $('delete-message').textContent = `Are you sure you want to delete ${user.email}? This action cannot be undone and will also delete all their characters.`;
+    dialog.show();
+    
+    return new Promise(resolve => {
+      const confirmBtn = $('delete-confirm-btn');
+      const cancelBtn = $('delete-cancel-btn');
+      
+      const cleanup = () => {
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+        dialog.removeEventListener('sl-hide', handleCancel);
+      };
+      
+      const handleConfirm = async () => {
+        cleanup();
+        dialog.hide();
+        confirmBtn.loading = true;
+        
+        try {
+          await apiRequest(`/users/${userId}`, { method: 'DELETE' });
+          showToast(`User ${user.email} deleted`, 'success');
+          loadUsers();
+        } catch (err) {
+          log('Delete user error:', err);
+          showToast(`Failed to delete user: ${err.message}`, 'danger');
+        } finally {
+          confirmBtn.loading = false;
+        }
+        
+        resolve(true);
+      };
+      
+      const handleCancel = () => {
+        cleanup();
+        dialog.hide();
+        resolve(false);
+      };
+      
+      confirmBtn.addEventListener('click', handleConfirm);
+      cancelBtn.addEventListener('click', handleCancel);
+      dialog.addEventListener('sl-hide', handleCancel);
+    });
+  }
+
+  // Reset limits (quotas) for a specific user
+  async function resetUserLimits(userId) {
+    const subjectKey = `user:${userId}`;
+    
+    try {
+      // Reset both rate limits and quotas
+      await apiRequest('/ai/admin/reset-rate-limits', {
+        method: 'POST',
+        body: { subject_key: subjectKey },
+      });
+      
+      await apiRequest('/ai/admin/reset-quota', {
+        method: 'POST',
+        body: { quota_type: 'all', subject_key: subjectKey },
+      });
+      
+      showToast(`Limits reset for user ${userId}`, 'success');
+    } catch (err) {
+      log('Reset limits error:', err);
+      showToast(`Failed to reset limits: ${err.message}`, 'danger');
+    }
+  }
+
+  // Batch delete selected users
+  async function batchDeleteUsers() {
+    const ids = [...state.selectedUserIds];
+    if (ids.length === 0) return;
+    
+    const dialog = $('delete-dialog');
+    $('delete-message').textContent = `Are you sure you want to delete ${ids.length} user(s)? This action cannot be undone and will also delete all their characters.`;
+    dialog.show();
+    
+    return new Promise(resolve => {
+      const confirmBtn = $('delete-confirm-btn');
+      const cancelBtn = $('delete-cancel-btn');
+      
+      const cleanup = () => {
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+        dialog.removeEventListener('sl-hide', handleCancel);
+      };
+      
+      const handleConfirm = async () => {
+        cleanup();
+        dialog.hide();
+        confirmBtn.loading = true;
+        
+        let deleted = 0;
+        let failed = 0;
+        
+        for (const id of ids) {
+          try {
+            await apiRequest(`/users/${id}`, { method: 'DELETE' });
+            deleted++;
+          } catch {
+            failed++;
+          }
+        }
+        
+        confirmBtn.loading = false;
+        
+        if (failed > 0) {
+          showToast(`Deleted: ${deleted}, Failed: ${failed}`, 'warning');
+        } else {
+          showToast(`Successfully deleted ${deleted} user(s)`, 'success');
+        }
+        
+        loadUsers();
+        resolve(true);
+      };
+      
+      const handleCancel = () => {
+        cleanup();
+        dialog.hide();
+        resolve(false);
+      };
+      
+      confirmBtn.addEventListener('click', handleConfirm);
+      cancelBtn.addEventListener('click', handleCancel);
+      dialog.addEventListener('sl-hide', handleCancel);
+    });
+  }
+
+  // Batch reset limits for selected users
+  async function batchResetLimits() {
+    const ids = [...state.selectedUserIds];
+    if (ids.length === 0) return;
+    
+    showToast(`Resetting limits for ${ids.length} user(s)...`, 'primary');
+    
+    let success = 0;
+    let failed = 0;
+    
+    for (const id of ids) {
+      try {
+        const subjectKey = `user:${id}`;
+        await apiRequest('/ai/admin/reset-rate-limits', {
+          method: 'POST',
+          body: { subject_key: subjectKey },
+        });
+        await apiRequest('/ai/admin/reset-quota', {
+          method: 'POST',
+          body: { quota_type: 'all', subject_key: subjectKey },
+        });
+        success++;
+      } catch {
+        failed++;
+      }
+    }
+    
+    if (failed > 0) {
+      showToast(`Limits reset: ${success} succeeded, ${failed} failed`, 'warning');
+    } else {
+      showToast(`Successfully reset limits for ${success} user(s)`, 'success');
+    }
+  }
+
+  // Batch update role for selected users
+  async function batchUpdateRole(newRole) {
+    const ids = [...state.selectedUserIds];
+    if (ids.length === 0) return;
+    
+    const dialog = $('user-action-dialog');
+    const actionBtn = $('user-action-confirm-btn');
+    const action = newRole === 'admin' ? 'promote to Admin' : 'demote to Player';
+    
+    $('user-action-message').textContent = `Are you sure you want to ${action} ${ids.length} user(s)?`;
+    actionBtn.variant = newRole === 'admin' ? 'primary' : 'default';
+    dialog.show();
+    
+    return new Promise(resolve => {
+      const confirmBtn = $('user-action-confirm-btn');
+      const cancelBtn = $('user-action-cancel-btn');
+      
+      const cleanup = () => {
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+        dialog.removeEventListener('sl-hide', handleCancel);
+      };
+      
+      const handleConfirm = async () => {
+        cleanup();
+        dialog.hide();
+        confirmBtn.loading = true;
+        
+        let success = 0;
+        let failed = 0;
+        
+        for (const id of ids) {
+          try {
+            await apiRequest(`/users/${id}`, {
+              method: 'PATCH',
+              body: { role: newRole },
+            });
+            success++;
+          } catch {
+            failed++;
+          }
+        }
+        
+        confirmBtn.loading = false;
+        
+        if (failed > 0) {
+          showToast(`Role update: ${success} succeeded, ${failed} failed`, 'warning');
+        } else {
+          showToast(`Successfully updated ${success} user(s) to ${newRole}`, 'success');
+        }
+        
+        loadUsers();
+        resolve(true);
+      };
+      
+      const handleCancel = () => {
+        cleanup();
+        dialog.hide();
+        resolve(false);
+      };
+      
+      confirmBtn.addEventListener('click', handleConfirm);
+      cancelBtn.addEventListener('click', handleCancel);
+      dialog.addEventListener('sl-hide', handleCancel);
+    });
   }
 
   // ========================================
@@ -1557,8 +1948,20 @@
     $('user-search').addEventListener('sl-input', filterUsers);
     $('user-role-filter').addEventListener('sl-change', filterUsers);
     $('user-refresh-btn').addEventListener('click', loadUsers);
+    $('user-select-all').addEventListener('sl-change', (e) => {
+      selectAllUsers(e.target.checked);
+    });
     
-    // Users table events (delegation)
+    // Users table events (delegation) - handle checkboxes
+    $('users-tbody').addEventListener('sl-change', (e) => {
+      const checkbox = e.target.closest('sl-checkbox[data-user-id]');
+      if (checkbox) {
+        const userId = parseInt(checkbox.dataset.userId, 10);
+        toggleUserSelection(userId, checkbox.checked);
+      }
+    });
+    
+    // Users table events (delegation) - handle action menu items
     $('users-tbody').addEventListener('click', (e) => {
       const target = e.target.closest('[data-action]');
       if (!target) return;
@@ -1569,8 +1972,21 @@
       if (action === 'toggle-role') {
         const currentRole = target.dataset.currentRole;
         toggleUserRole(userId, currentRole);
+      } else if (action === 'reset-password') {
+        const userEmail = target.dataset.userEmail;
+        resetUserPassword(userId, userEmail);
+      } else if (action === 'delete-user') {
+        deleteUser(userId);
+      } else if (action === 'reset-limits') {
+        resetUserLimits(userId);
       }
     });
+    
+    // Batch actions for users
+    $('batch-delete-users').addEventListener('click', batchDeleteUsers);
+    $('batch-reset-limits').addEventListener('click', batchResetLimits);
+    $('batch-make-admin').addEventListener('click', () => batchUpdateRole('admin'));
+    $('batch-demote').addEventListener('click', () => batchUpdateRole('player'));
     
     // Settings
     $('settings-save-btn').addEventListener('click', saveSettings);
