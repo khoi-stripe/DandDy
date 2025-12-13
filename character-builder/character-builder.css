@@ -82,7 +82,7 @@
   margin-bottom: var(--spacing-sm);
   padding: var(--spacing-xs) 0;
   font-size: var(--font-size-small);
-  color: var(--terminal-warning);
+  color: var(--terminal-fg);
   text-align: center;
 }
 

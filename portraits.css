@@ -930,7 +930,7 @@
   margin-bottom: var(--spacing-sm);
   padding: var(--spacing-xs) 0;
   font-size: var(--font-size-small);
-  color: var(--modal-accent-color);
+  color: var(--modal-accent);
 }
 
 .image-quota-info.is-exhausted {
