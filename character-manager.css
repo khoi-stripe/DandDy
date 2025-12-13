@@ -404,15 +404,13 @@
     font-family: 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
     /* Cross-browser monospace consistency (Safari fix) */
     letter-spacing: 0;
-    -webkit-font-smoothing: antialiased;
+    -webkit-font-smoothing: none;
     -moz-osx-font-smoothing: grayscale;
     font-variant-ligatures: none;
     font-feature-settings: 'liga' 0, 'clig' 0;
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-    /* Force consistent sub-pixel rendering across browsers */
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
+    /* Disable Safari's text size adjustment completely */
+    -webkit-text-size-adjust: none;
+    text-size-adjust: none;
     overflow: hidden;
     /* Flexbox centers the inner <pre> horizontally, pins to top vertically */
     display: flex;
