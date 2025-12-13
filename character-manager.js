@@ -5818,8 +5818,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         welcomeDemoBtn.addEventListener('click', () => {
             // Mark splash as dismissed so it won't reappear when returning from builder
             sessionStorage.setItem('welcomeSplashDismissed', 'true');
-            // Simply close the modal; user continues in local "demo" mode.
+            // Close the modal
             if (welcomeModal) welcomeModal.classList.remove('show');
+            // Show guest notice to explain limits and encourage account creation
+            setTimeout(() => {
+                maybeShowGuestNotice();
+            }, 100);
         });
     }
 

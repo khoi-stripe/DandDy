@@ -1,5 +1,5 @@
 {
-  "generated_at": "2025-12-13T09:05:19.678154",
+  "generated_at": "2025-12-13T09:08:29.241651",
   "model": "gpt-image-1",
   "quality": "medium",
   "style": "classic_high_fantasy",
@@ -503,6 +503,46 @@
       "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-druid.png",
       "prompt": "Fantasy RPG character portrait: a tiefling with small horns druid, wearing natural clothing with leaves.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
       "generated_at": "2025-12-13T09:05:19.678140"
+    },
+    "tiefling-fighter": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-fighter.png",
+      "prompt": "Fantasy RPG character portrait: a tiefling with small horns fighter, wearing armor, holding a sword.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:05:48.167021"
+    },
+    "tiefling-monk": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-monk.png",
+      "prompt": "Fantasy RPG character portrait: a tiefling with small horns monk, wearing simple robes in a martial stance.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:06:12.854508"
+    },
+    "tiefling-paladin": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-paladin.png",
+      "prompt": "Fantasy RPG character portrait: a tiefling with small horns paladin, wearing plate armor with a shield.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:06:35.579981"
+    },
+    "tiefling-ranger": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-ranger.png",
+      "prompt": "Fantasy RPG character portrait: a tiefling with small horns ranger, wearing a cloak, holding a bow.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:07:01.261758"
+    },
+    "tiefling-rogue": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-rogue.png",
+      "prompt": "Fantasy RPG character portrait: a tiefling with small horns rogue, wearing leather armor, holding daggers.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:07:22.626491"
+    },
+    "tiefling-sorcerer": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-sorcerer.png",
+      "prompt": "Fantasy RPG character portrait: a tiefling with small horns sorcerer, with magical energy around their hands.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:07:44.920647"
+    },
+    "tiefling-warlock": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-warlock.png",
+      "prompt": "Fantasy RPG character portrait: a tiefling with small horns warlock, wearing dark robes with arcane symbols.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:08:07.565197"
+    },
+    "tiefling-wizard": {
+      "url": "https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-wizard.png",
+      "prompt": "Fantasy RPG character portrait: a tiefling with small horns wizard, wearing robes, holding a staff and spellbook.\n\nIllustrated in a highly detailed heroic-fantasy realist style rendered entirely in black and white. Figures should appear idealized and powerful, with smooth, sculpted shading that clearly defines anatomy, posture, and form. Use soft grayscale gradients to create lifelike highlights and deep, cinematic shadows across skin, armor, fabric, and environmental shapes. Lighting should feel dramatic and directional, producing strong contrast and a sense of polished, reflective surfaces. Metal, stone, and ornamental elements may display bright white specular highlights against darker shadow planes, giving the scene a dimensional, sculptural presence. Aspect ratio 3:4.",
+      "generated_at": "2025-12-13T09:08:29.241598"
     }
   }
 }
