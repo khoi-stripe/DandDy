@@ -5552,7 +5552,7 @@ async function startMigration() {
     const statusEl = document.getElementById('migrationStatus');
     statusEl.classList.remove('is-hidden');
     // Directly start migration without auto-downloading a JSON backup.
-    statusEl.textContent = '☁️ Migrating to cloud...';
+    statusEl.textContent = 'Migrating to cloud...';
     
     try {
         // Migrate (excluding demo characters - they have their own modal)
