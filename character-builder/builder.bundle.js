@@ -5885,11 +5885,23 @@ const App = (window.App = {
       narratorPanel.lastElementChild.querySelector('.narrator-text');
     await Utils.typewriter(messageEl, question.text);
 
-    // For entry-mode, show quota info after the question text
+    // Get varied options (AI-generated or cached)
+    const variedOptions = await OptionVariationsCache.get(question.id, question);
+    const variedQuestion = { ...question, options: variedOptions };
+
+    narratorPanel.insertAdjacentHTML(
+      'beforeend',
+      Components.renderQuestion(variedQuestion),
+    );
+
+    // For entry-mode, add quota info inside the options box
     if (question.id === 'entry-mode' && this._creationQuotaInfo) {
       const qi = this._creationQuotaInfo;
+      const questionCard = narratorPanel.querySelector(`.question-card[data-question-id="${question.id}"]`);
+      const optionsContainer = questionCard?.querySelector('.options-container');
+      
       // Only show if enforced (remaining !== -1 means quota is enforced)
-      if (qi.remaining !== -1) {
+      if (qi.remaining !== -1 && optionsContainer) {
         const quotaLine = document.createElement('div');
         quotaLine.className = 'creation-quota-info';
         
@@ -5910,41 +5922,29 @@ const App = (window.App = {
           }
           quotaLine.textContent = `You've reached today's limit.${resetText}.`;
           quotaLine.classList.add('is-exhausted');
-        } else {
-          quotaLine.textContent = `${qi.remaining}character creation${qi.remaining===1?'':'s'}remaining today`;
-        }
-        messageEl.parentElement.appendChild(quotaLine);
-      }
-    }
-
-    // Get varied options (AI-generated or cached)
-    const variedOptions = await OptionVariationsCache.get(question.id, question);
-    const variedQuestion = { ...question, options: variedOptions };
-
-    narratorPanel.insertAdjacentHTML(
-      'beforeend',
-      Components.renderQuestion(variedQuestion),
-    );
-
-    // For entry-mode, disable options if quota is exhausted
-    if (question.id === 'entry-mode' && this._creationQuotaInfo && this._creationQuotaInfo.remaining === 0) {
-      const questionCard = narratorPanel.querySelector(`.question-card[data-question-id="${question.id}"]`);
-      if (questionCard) {
-        const buttons = questionCard.querySelectorAll('.button-primary');
-        buttons.forEach(btn => {
-          btn.disabled = true;
-          btn.title = "Daily character creation limit reached";
-          btn.classList.add('is-quota-disabled');
-        });
-        
-        // Add a back button
-        const optionsContainer = questionCard.querySelector('.options-container');
-        if (optionsContainer) {
+          
+          // Disable the option buttons
+          const buttons = questionCard.querySelectorAll('.button-primary');
+          buttons.forEach(btn => {
+            btn.disabled = true;
+            btn.title = "Daily character creation limit reached";
+            btn.classList.add('is-quota-disabled');
+          });
+          
+          // Add a back button
           optionsContainer.insertAdjacentHTML(
             'beforeend',
             `<button class="button-primary"onclick="exitToManager()"style="margin-top: var(--spacing-md);">Back to Character Manager</button>`,
           );
+        } else {
+          quotaLine.textContent = `${qi.remaining}character creation${qi.remaining===1?'':'s'}remaining today`;
+          // Blink 3 times when appearing
+          quotaLine.classList.add('is-blinking');
+          setTimeout(() => quotaLine.classList.remove('is-blinking'), 1500);
         }
+        
+        // Insert at the top of options container
+        optionsContainer.insertBefore(quotaLine, optionsContainer.firstChild);
       }
     }
 

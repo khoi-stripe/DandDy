@@ -76,20 +76,27 @@
   word-wrap: break-word;
 }
 
-/* Creation quota info line shown below entry-mode question */
+/* Creation quota info shown inside entry-mode options box */
 .creation-quota-info {
-  margin-top: var(--spacing-sm);
-  padding: var(--spacing-xs) var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-xs) 0;
   font-size: var(--font-size-small);
-  color: var(--terminal-dim);
-  border-left: 2px solid var(--sheet-accent-dim);
-  opacity: 0.8;
+  color: var(--terminal-fg);
+  text-align: center;
 }
 
 .creation-quota-info.is-exhausted {
   color: var(--theme-warning);
-  border-left-color: var(--theme-warning);
-  opacity: 1;
+}
+
+/* Blink animation for quota info */
+.creation-quota-info.is-blinking {
+  animation: quota-blink 0.5s ease-in-out 3;
+}
+
+@keyframes quota-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 /* Disabled options when quota exhausted */
