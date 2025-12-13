@@ -3572,7 +3572,7 @@ async function confirmGeneratePortrait() {
         // Previously this message included a "3 remaining" counter, which
         // implied a hard limit on custom portraits per character. That limit
         // has been removed, so we no longer show a remaining count here.
-        showNotification('Custom AI portrait generated!');
+        showNotification('Custom portrait generated!');
 
         // Clear the global pointer once we're done
         currentPortraitCharacterId = null;
