@@ -4,9 +4,9 @@ import enum
 from database.database import Base
 
 class UserRole(enum.Enum):
-    PLAYER = "player"
-    DM = "dm"
-    ADMIN = "admin"  # Can publish global prompt styles
+    PLAYER = "PLAYER"
+    DM = "DM"
+    ADMIN = "ADMIN"  # Can publish global prompt styles
 
 
 class User(Base):
