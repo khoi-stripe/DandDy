@@ -880,9 +880,7 @@ const App = (window.App = {
         .map(({ opt, originalIndex }) => {
           const currentIndex = displayIndex++;
           return `
-              <button class="button-primary" onclick="App.handleListAnswer('${question.id}', ${currentIndex})">
-                * ${opt.text}
-              </button>
+              <button class="button-primary" onclick="App.handleListAnswer('${question.id}', ${currentIndex})">★\u00A0${opt.text}</button>
             `;
         })
         .join('');
