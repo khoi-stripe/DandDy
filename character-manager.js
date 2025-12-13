@@ -1825,8 +1825,7 @@ async function editCharacter(id) {
     // BACKSTORY (free text)
     setValue('editBackstory', character.backstory || '');
 
-    // Show modal
-    const modal = document.getElementById('editDetailsModal');
+    // Show modal (reuse modal variable from earlier in function)
     if (modal) {
         modal.classList.add('show');
         

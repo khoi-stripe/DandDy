@@ -176,11 +176,7 @@ body {
 }
 
 .login-error {
-  display: none;
-}
-
-.login-error.show {
-  display: block;
+  margin-top: 8px;
 }
 
 .login-footer {
@@ -452,6 +448,9 @@ body {
   gap: 16px;
   margin-bottom: 16px;
   flex-wrap: wrap;
+  /* Ensure dropdowns can escape and appear on top */
+  position: relative;
+  z-index: 100;
 }
 
 .toolbar-left,
@@ -459,6 +458,8 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  /* Allow dropdown popups to escape */
+  overflow: visible;
 }
 
 .toolbar-left sl-input,
@@ -472,7 +473,13 @@ body {
   background: var(--admin-bg-elevated);
   border: 1px solid var(--admin-border);
   border-radius: var(--sl-border-radius-medium);
-  overflow: hidden;
+  overflow: visible;
+}
+
+.table-container table {
+  /* Allow table to scroll if needed but don't clip dropdowns */
+  display: block;
+  overflow-x: auto;
 }
 
 .data-table {
@@ -642,11 +649,15 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* Allow dropdowns to escape */
+  overflow: visible;
 }
 
 .prompts-table-container {
   flex: 1;
   overflow-y: auto;
+  /* Position context for z-index */
+  position: relative;
 }
 
 .prompts-form-panel sl-card {
@@ -826,10 +837,34 @@ sl-spinner {
   --indicator-color: var(--admin-accent);
 }
 
-/* Dropdowns / Menus */
+/* Dropdowns / Menus - ensure always on top */
+sl-dropdown {
+  --sl-z-index-dropdown: 10000;
+}
+
+sl-dropdown::part(popup) {
+  z-index: 10000 !important;
+}
+
+sl-dropdown::part(panel) {
+  z-index: 10000 !important;
+}
+
 sl-menu {
-  background: var(--admin-bg-elevated);
+  background: var(--admin-bg-elevated) !important;
   border: 1px solid var(--admin-border);
+  z-index: 10000;
+  /* Ensure solid background, no transparency */
+  opacity: 1 !important;
+}
+
+sl-menu::part(base) {
+  background: var(--admin-bg-elevated) !important;
+}
+
+/* Ensure select dropdowns are also on top */
+sl-select::part(listbox) {
+  z-index: 10000 !important;
 }
 
 sl-menu-item::part(base) {

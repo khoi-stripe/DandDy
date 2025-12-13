@@ -1,6 +1,9 @@
 /**
  * DandDy Admin Application
  * Handles authentication, navigation, and admin operations
+ * 
+ * NOTE: Admin uses SEPARATE session storage from the main app.
+ * You can be logged into the app as one user and admin as another.
  */
 (function (global) {
   'use strict';
@@ -8,6 +11,45 @@
   const cfg = global.DanddyConfig || {};
   const API_BASE = cfg.API_BASE_URL || 'https://danddy-api.onrender.com/api';
   const DEBUG = !!cfg.DEBUG;
+
+  // Admin-specific storage keys (separate from main app)
+  const ADMIN_TOKEN_KEY = 'dnd_admin_token';
+  const ADMIN_USER_KEY = 'dnd_admin_user';
+
+  // ========================================
+  // ADMIN AUTH HELPERS (separate from main app)
+  // ========================================
+  const AdminAuth = {
+    getToken() {
+      return localStorage.getItem(ADMIN_TOKEN_KEY);
+    },
+    
+    setToken(token) {
+      if (token) {
+        localStorage.setItem(ADMIN_TOKEN_KEY, token);
+      }
+    },
+    
+    getUser() {
+      const raw = localStorage.getItem(ADMIN_USER_KEY);
+      return raw ? JSON.parse(raw) : null;
+    },
+    
+    setUser(user) {
+      if (user) {
+        localStorage.setItem(ADMIN_USER_KEY, JSON.stringify(user));
+      }
+    },
+    
+    clear() {
+      localStorage.removeItem(ADMIN_TOKEN_KEY);
+      localStorage.removeItem(ADMIN_USER_KEY);
+    },
+    
+    isAuthenticated() {
+      return !!this.getToken();
+    },
+  };
 
   // ========================================
   // STATE
@@ -87,7 +129,7 @@
   // API HELPERS
   // ========================================
   async function apiRequest(endpoint, options = {}) {
-    const token = state.token || AuthService.getToken();
+    const token = state.token || AdminAuth.getToken();
     if (!token) throw new Error('Not authenticated');
 
     const url = `${API_BASE}${endpoint}`;
@@ -165,22 +207,25 @@
   // AUTHENTICATION
   // ========================================
   async function checkAuth() {
-    const token = AuthService.getToken();
+    const token = AdminAuth.getToken();
     if (!token) {
       showLoginGate();
       return false;
     }
 
     try {
-      const profile = await AuthService.fetchProfile();
+      // Fetch profile using admin token
+      const profile = await fetchAdminProfile(token);
       if (!profile) {
+        AdminAuth.clear();
         showLoginGate();
         return false;
       }
 
-      // Check if user is admin
-      if (profile.role !== 'admin') {
+      // Check if user is admin (case-insensitive)
+      if (profile.role?.toLowerCase() !== 'admin') {
         showToast('Admin access required. You do not have permission to access this area.', 'danger');
+        AdminAuth.clear();
         showLoginGate();
         return false;
       }
@@ -195,8 +240,30 @@
       return true;
     } catch (err) {
       log('Auth check failed:', err);
+      AdminAuth.clear();
       showLoginGate();
       return false;
+    }
+  }
+
+  // Fetch profile using admin-specific token
+  async function fetchAdminProfile(token) {
+    try {
+      const response = await fetch(`${API_BASE}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          return null;
+        }
+        throw new Error('Failed to fetch profile');
+      }
+
+      return await response.json();
+    } catch (err) {
+      log('fetchAdminProfile error:', err);
+      return null;
     }
   }
 
@@ -214,28 +281,56 @@
     
     if (!email || !password) {
       errorMessage.textContent = 'Please enter email and password';
-      errorAlert.classList.add('show');
+      errorAlert.open = true;
       return;
     }
     
     loginBtn.loading = true;
-    errorAlert.classList.remove('show');
+    errorAlert.open = false;
     
     try {
-      const result = await AuthService.login(email, password);
+      // Login directly (not via AuthService to keep sessions separate)
+      const formData = new FormData();
+      formData.append('username', email);
+      formData.append('password', password);
+
+      const response = await fetch(`${API_BASE}/auth/token`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let detail = 'Login failed';
+        try {
+          const errJson = await response.json();
+          if (errJson && errJson.detail) detail = errJson.detail;
+        } catch (_) {}
+        throw new Error(detail);
+      }
+
+      const data = await response.json();
+      if (!data || !data.access_token) {
+        throw new Error('Login succeeded but no token was returned.');
+      }
+
+      // Store in admin-specific storage
+      AdminAuth.setToken(data.access_token);
       
-      if (!result.success) {
-        throw new Error(result.error || 'Login failed');
+      // Fetch and verify profile
+      const profile = await fetchAdminProfile(data.access_token);
+      if (!profile) {
+        AdminAuth.clear();
+        throw new Error('Failed to fetch user profile.');
       }
       
-      // Verify admin role
-      const profile = AuthService.getCurrentUser() || result.user;
-      if (profile && profile.role !== 'admin') {
-        AuthService.logout();
+      // Verify admin role (case-insensitive)
+      if (profile.role?.toLowerCase() !== 'admin') {
+        AdminAuth.clear();
         throw new Error('Admin access required. Your account does not have admin privileges.');
       }
       
-      state.token = AuthService.getToken();
+      AdminAuth.setUser(profile);
+      state.token = data.access_token;
       state.user = profile;
       state.isAdmin = true;
       
@@ -247,14 +342,14 @@
     } catch (err) {
       log('Login error:', err);
       errorMessage.textContent = err.message || 'Login failed';
-      errorAlert.classList.add('show');
+      errorAlert.open = true;
     } finally {
       loginBtn.loading = false;
     }
   }
 
   function handleLogout() {
-    AuthService.logout();
+    AdminAuth.clear();
     state.token = null;
     state.user = null;
     state.isAdmin = false;
