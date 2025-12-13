@@ -21,7 +21,7 @@ import replicate
 from sqlalchemy import text
 from database.database import get_settings, engine
 from models.user import User, UserRole
-from utils.auth import get_current_user_optional
+from utils.auth import get_current_user_optional, get_current_active_user
 
 router = APIRouter(tags=["AI"])
 
@@ -946,6 +946,95 @@ async def get_character_creation_quota(
         "enforced": True,
         "user_tier": "logged_in" if current_user else "demo",
     }
+
+
+# =============================================================================
+# ADMIN: QUOTA RESET
+# =============================================================================
+
+class QuotaResetRequest(BaseModel):
+    """Request body for resetting quotas."""
+    quota_type: str = Field(..., description="Type of quota to reset: 'images', 'characters', or 'all'")
+    subject_key: Optional[str] = Field(None, description="Specific subject to reset (e.g., 'ip:127.0.0.1' or 'user:1'). If not provided, resets all for today.")
+
+
+def require_admin(current_user: User = Depends(get_current_active_user)) -> User:
+    """Dependency that requires the user to be an admin."""
+    if not current_user or current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+    return current_user
+
+
+@router.post("/admin/reset-quota")
+async def reset_quota(
+    request: QuotaResetRequest,
+    current_user: User = Depends(require_admin),
+):
+    """
+    Admin-only endpoint to reset daily quotas.
+    
+    - quota_type: 'images', 'characters', or 'all'
+    - subject_key: optional, e.g., 'ip:127.0.0.1' or 'user:1'
+      If not provided, resets ALL quotas of that type for today.
+    
+    Returns the number of rows deleted.
+    """
+    today = _utc_today()
+    deleted_images = 0
+    deleted_characters = 0
+    
+    try:
+        with engine.connect() as conn:
+            if request.quota_type in ('images', 'all'):
+                if request.subject_key:
+                    result = conn.execute(
+                        text("DELETE FROM ai_image_usage WHERE day_utc = :day AND subject_key = :key"),
+                        {"day": today, "key": request.subject_key}
+                    )
+                else:
+                    result = conn.execute(
+                        text("DELETE FROM ai_image_usage WHERE day_utc = :day"),
+                        {"day": today}
+                    )
+                deleted_images = result.rowcount
+            
+            if request.quota_type in ('characters', 'all'):
+                if request.subject_key:
+                    result = conn.execute(
+                        text("DELETE FROM ai_character_creation_usage WHERE day_utc = :day AND subject_key = :key"),
+                        {"day": today, "key": request.subject_key}
+                    )
+                else:
+                    result = conn.execute(
+                        text("DELETE FROM ai_character_creation_usage WHERE day_utc = :day"),
+                        {"day": today}
+                    )
+                deleted_characters = result.rowcount
+            
+            conn.commit()
+        
+        print(f"🔧 Admin {current_user.email} reset quotas: type={request.quota_type}, subject={request.subject_key or 'ALL'}, deleted_images={deleted_images}, deleted_characters={deleted_characters}")
+        
+        return {
+            "success": True,
+            "quota_type": request.quota_type,
+            "subject_key": request.subject_key or "all",
+            "deleted": {
+                "images": deleted_images,
+                "characters": deleted_characters,
+            },
+            "message": f"Reset {deleted_images} image quota(s) and {deleted_characters} character quota(s) for {request.subject_key or 'all subjects'}"
+        }
+        
+    except Exception as e:
+        print(f"⚠️ Admin quota reset failed: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to reset quotas: {str(e)}"
+        )
 
 
 @router.post("/observability/test")

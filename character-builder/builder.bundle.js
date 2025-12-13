@@ -6825,20 +6825,27 @@ placeholder="Or enter your own name..."><button class="button-primary"onclick="A
     // Check if user can create another character after this one
     // Demo mode: check if saving this character would hit the limit
     // Logged in: check creation quota (remaining === 0 means exhausted, -1 means unlimited)
-    const demoLimitReached = window.DemoCharacters && DemoCharacters.isDemoMode() && 
+    const isDemoMode = window.DemoCharacters && DemoCharacters.isDemoMode();
+    const demoLimitReached = isDemoMode && 
       DemoCharacters.getUserCharacterCount() + 1 >= DemoCharacters.DEMO_MAX_USER_CHARACTERS;
     const quotaExhausted = this._creationQuotaInfo && 
       this._creationQuotaInfo.remaining !== -1 && 
       this._creationQuotaInfo.remaining <= 1;
     const canCreateAnother = !demoLimitReached && !quotaExhausted;
 
+    // In demo mode, show customize art button since we used pre-generated portraits
+    // This lets users optionally generate a custom portrait using their image quota
+    const customizeArtBtn = isDemoMode
+      ? `<button class="button-primary"id="completion-customize-btn"onclick="App.openPromptModalFromCompletion()">&gt;\u00A0CUSTOMIZE CHARACTER ART</button>`
+      : '';
+    
     // Show completion options
     const createAnotherBtn = canCreateAnother
       ? `<button class="button-primary"id="completion-new-btn"onclick="App.startNew()">&gt;\u00A0CREATE ANOTHER CHARACTER</button>`
       : '';
     narratorPanel.insertAdjacentHTML(
       'beforeend',
-      `<div class="question-card mt-lg"data-question-id="${question.id}"><button class="button-primary completion-save-btn"id="completion-save-btn"onclick="App.saveCharacter()">&gt;\u00A0SAVE CHARACTER</button>${createAnotherBtn}</div>`,
+      `<div class="question-card mt-lg"data-question-id="${question.id}">${customizeArtBtn}<button class="button-primary completion-save-btn"id="completion-save-btn"onclick="App.saveCharacter()">&gt;\u00A0SAVE CHARACTER</button>${createAnotherBtn}</div>`,
     );
     Utils.scrollToBottom(true);
 
@@ -6995,6 +7002,16 @@ placeholder="Or enter your own name..."><button class="button-primary"onclick="A
 
       // If we already have a custom AI portrait, don't regenerate.
       if (character.customPortraitAscii || (character.customPortraitCount || 0) > 0) {
+        return;
+      }
+
+      // In demo mode, skip AI portrait generation and use pre-generated portraits.
+      // Users can still generate custom portraits from the character sheet using
+      // their separate image generation quota.
+      const isDemoMode = window.DemoCharacters && DemoCharacters.isDemoMode();
+      if (isDemoMode) {
+        console.log('📷 Demo mode: Using pre-generated portrait for guided mode');
+        await this._ensurePreGeneratedPortraitFallback(character, { force: true });
         return;
       }
       
@@ -8839,6 +8856,20 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
     }
   },
 
+  // Open the prompt modal from the completion screen (for demo mode users
+  // who want to customize their pre-generated portrait).
+  openPromptModalFromCompletion() {
+    const state = CharacterState.get();
+    const character = state && state.character;
+    
+    if (!character || !character.race || !character.class) {
+      this.showSystemMessage('Character data not available for portrait customization.');
+      return;
+    }
+    
+    this.openPromptModal(character);
+  },
+
   async confirmPromptModal() {
     const customPromptInput = document.getElementById('custom-prompt');
     const customPrompt = customPromptInput.value.trim();
@@ -9917,6 +9948,16 @@ placeholder="Enter character name"></div><div id="name-modal-error"class="termin
       const currentChar = stateAfter.character || {};
 
       if (!CONFIG.ENABLE_AI || !currentChar.race || !currentChar.class || !window.AsciiArtService) {
+        return;
+      }
+
+      // In demo mode, skip AI portrait generation and use pre-generated portraits.
+      // Users can still generate custom portraits from the character sheet using
+      // their separate image generation quota.
+      const isDemoMode = window.DemoCharacters && DemoCharacters.isDemoMode();
+      if (isDemoMode) {
+        console.log('📷 Demo mode: Using pre-generated portrait for quick-create');
+        await this._ensurePreGeneratedPortraitFallback(currentChar, { force: true });
         return;
       }
 

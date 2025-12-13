@@ -133,6 +133,19 @@
   min-height: 8rem;
 }
 
+/* When the cube loader content is present but the modifier classes have been
+   removed (e.g., after image generation error), maintain proper sizing and
+   centering so the loader doesn't get clipped. Uses :has() to detect the loader. */
+.ascii-portrait:has(.portrait-placeholder-content) {
+  aspect-ratio: 16 / 9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  white-space: normal;
+}
+
 /* Placeholder state for portrait area (shown while user answers narrator questions).
    Fixed 16:9 aspect ratio container with centered message. */
 .ascii-portrait.ascii-portrait--placeholder {
@@ -162,6 +175,12 @@
   flex-direction: column;
   align-items: center;
   gap: 48px;
+  /* Ensure the loader content maintains minimum size even if parent loses
+     --placeholder/--loading classes (e.g., after image generation error).
+     This prevents the cube from being clipped. */
+  min-height: 220px;
+  padding: var(--spacing-lg) 0;
+  box-sizing: border-box;
 }
 
 .portrait-placeholder-text {
