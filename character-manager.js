@@ -5590,7 +5590,7 @@ function updateAuthUI() {
         }
     } else {
         userStatusIcon.textContent = '▣';
-        userStatusText.textContent = 'Local Storage';
+        userStatusText.textContent = 'Guest Mode';
         authBtn.textContent = 'LOGIN';
         authBtn.onclick = () => {
             authOpenedFromWelcome = false;
