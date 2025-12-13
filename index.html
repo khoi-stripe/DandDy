@@ -7,9 +7,9 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <title>DandDy Character Manager</title>
     <link href="https://cdn.jsdelivr.net/npm/@fontsource/google-sans-code@5.2.1/index.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="terminal-theme.css?v=20251208a">
-    <link rel="stylesheet" href="portraits.css?v=20251208a">
-    <link rel="stylesheet" href="character-manager.css?v=20251210i">
+    <link rel="stylesheet" href="terminal-theme.css?v=20251213a">
+    <link rel="stylesheet" href="portraits.css?v=20251213a">
+    <link rel="stylesheet" href="character-manager.css?v=20251213a">
 </head>
 <body>
     <div class="terminal-frame">
@@ -782,6 +782,43 @@
                         </button>
                         <div class="selector-menu portrait-style-menu" id="portraitStyleMenu" role="listbox" aria-label="Portrait style" aria-hidden="true">
                             <!-- Options populated by JS -->
+                        </div>
+                    </div>
+                </div>
+                <!-- Model selector (admin only) -->
+                <div class="portrait-style-row portrait-model-row hidden" id="managerPortraitModelRow">
+                    <div class="portrait-style-label">AI Model</div>
+                    <div class="selector-shell portrait-model-selector" id="managerPortraitModelShell">
+                        <button 
+                            type="button"
+                            class="terminal-btn selector-trigger"
+                            id="managerPortraitModelTrigger"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            onclick="CharacterSheet.toggleSelectorMenu(this)"
+                        >
+                            <span class="selector-trigger-label" id="managerPortraitModelLabel">DALL·E 3</span>
+                        </button>
+                        <div class="selector-menu portrait-model-menu" id="managerPortraitModelMenu" role="listbox" aria-label="AI model" aria-hidden="true">
+                            <!-- Options populated by JS -->
+                        </div>
+                    </div>
+                    <!-- Quality selector (admin only, when model supports it) -->
+                    <div class="portrait-quality-selector hidden" id="managerPortraitQualityContainer">
+                        <div class="selector-shell" id="managerPortraitQualityShell">
+                            <button 
+                                type="button"
+                                class="terminal-btn selector-trigger"
+                                id="managerPortraitQualityTrigger"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                onclick="CharacterSheet.toggleSelectorMenu(this)"
+                            >
+                                <span class="selector-trigger-label" id="managerPortraitQualityLabel">Standard</span>
+                            </button>
+                            <div class="selector-menu portrait-quality-menu" id="managerPortraitQualityMenu" role="listbox" aria-label="Image quality" aria-hidden="true">
+                                <!-- Options populated by JS -->
+                            </div>
                         </div>
                     </div>
                 </div>
