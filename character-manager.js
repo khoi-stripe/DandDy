@@ -1398,7 +1398,7 @@ function _formatCreationQuotaTooltip() {
     if (cr === -1) return '';
 
     const remainingText =
-        typeof cl === 'number' ? cr + '/' + cl + ' remaining today.' : cr + ' remaining today.';
+        typeof cl === 'number' ? cr + '/' + cl + ' remaining today' : cr + ' remaining today';
 
     return remainingText;
 }
