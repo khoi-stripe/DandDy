@@ -677,6 +677,13 @@ body::before {
   transform: translateX(-50%) scale(1);
 }
 
+/* Disable tooltips on mobile / touch devices (no hover, coarse pointer) */
+@media (hover: none), (pointer: coarse) {
+  .custom-tooltip {
+    display: none !important;
+  }
+}
+
 /* (Removed viewport-positioned tooltip mode; tooltips are CSS/JS show-hide only.) */
 
 /* ---- TOP positions ---- */
