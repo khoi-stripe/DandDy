@@ -7573,6 +7573,24 @@ function _updateQuotaTooltipText() {
     if (!tooltip) return;
 
     tooltip.textContent = _formatCreationQuotaTooltip();
+
+    // If the tooltip is currently visible, re-center it once after the text updates
+    // (quota events can change the string length).
+    try {
+        if (tooltip.classList.contains('show')) {
+            const btn = document.getElementById('newCharacterBtn');
+            if (btn) {
+                // Debounce to next frame so DOM has applied the new text metrics.
+                if (window._newCharTooltipRepositionRAF) {
+                    cancelAnimationFrame(window._newCharTooltipRepositionRAF);
+                }
+                window._newCharTooltipRepositionRAF = requestAnimationFrame(() => {
+                    _positionTooltipInViewport(tooltip, btn);
+                    window._newCharTooltipRepositionRAF = null;
+                });
+            }
+        }
+    } catch (_) {}
 }
 
 function _getTooltipBoundsRect() {
@@ -12254,19 +12272,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             const showTooltip = () => {
                 if (!newCharacterTooltip.textContent) return;
 
-                // Position FIRST (while hidden) to avoid any visible jump.
-                // Use visibility:hidden so we can measure without flashing.
-                const prevVisibility = newCharacterTooltip.style.visibility;
+                // Best-effort: reveal only after hover styles + tooltip layout settle,
+                // to avoid any visible “jump”.
+                newCharacterTooltip.classList.add('custom-tooltip--viewport');
                 newCharacterTooltip.style.visibility = 'hidden';
-                _positionTooltipInViewport(newCharacterTooltip, newCharacterBtn);
                 newCharacterTooltip.classList.add('show');
-                newCharacterTooltip.style.visibility = prevVisibility;
+
+                // Wait a frame for hover styles to apply, then position, then show.
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        _positionTooltipInViewport(newCharacterTooltip, newCharacterBtn);
+                        newCharacterTooltip.style.visibility = '';
+                    });
+                });
             };
             const hideTooltip = () => {
                 newCharacterTooltip.classList.remove('show');
                 newCharacterTooltip.classList.remove('custom-tooltip--viewport');
                 newCharacterTooltip.style.left = '';
                 newCharacterTooltip.style.top = '';
+                newCharacterTooltip.style.visibility = '';
             };
 
             newCharacterBtn.addEventListener('mouseenter', () => {
