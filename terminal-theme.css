@@ -649,11 +649,14 @@ body::before {
   font-size: 11px;
   font-weight: 400;
   /* Sentence case - no transform */
-  /* Allow multi-line tooltips (used by NEW CHARACTER quota tooltip) */
+  /* Layout: allow multi-line, but avoid breaking words unless necessary */
+  display: block;
   white-space: pre-line;
-  max-width: 260px;
+  width: max-content;
+  max-width: 360px;
   text-align: left;
-  word-break: break-word;
+  word-break: normal;
+  overflow-wrap: break-word;
   pointer-events: none;
   
   /* Hidden by default */
@@ -672,6 +675,19 @@ body::before {
 .custom-tooltip.show {
   opacity: 1;
   transform: translateX(-50%) scale(1);
+}
+
+/* Viewport-positioned tooltips: JS sets fixed top/left and clamps within edges */
+.custom-tooltip.custom-tooltip--viewport {
+  position: fixed;
+  top: 0;
+  left: 0;
+  margin: 0;
+  transform: scale(0.95);
+}
+
+.custom-tooltip.custom-tooltip--viewport.show {
+  transform: scale(1);
 }
 
 /* ---- TOP positions ---- */

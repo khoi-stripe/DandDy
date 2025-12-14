@@ -7579,6 +7579,42 @@ function _updateQuotaTooltipText() {
     tooltip.textContent = _formatCreationQuotaTooltip();
 }
 
+function _positionTooltipInViewport(tooltipEl, triggerEl) {
+    if (!tooltipEl || !triggerEl) return;
+
+    // Ensure we're using viewport positioning so we don't get clipped by containers.
+    tooltipEl.classList.add('custom-tooltip--viewport');
+
+    const margin = 8;
+    const triggerRect = triggerEl.getBoundingClientRect();
+
+    // Temporarily set to measure natural size.
+    tooltipEl.style.left = '0px';
+    tooltipEl.style.top = '0px';
+
+    const tipRect = tooltipEl.getBoundingClientRect();
+    const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+
+    // Default: below trigger, centered.
+    let left = triggerRect.left + triggerRect.width / 2 - tipRect.width / 2;
+    let top = triggerRect.bottom + 6;
+
+    // Clamp horizontally within viewport.
+    left = Math.max(margin, Math.min(left, Math.max(margin, vw - tipRect.width - margin)));
+
+    // If bottom would clip, place above.
+    if (top + tipRect.height + margin > vh) {
+        top = triggerRect.top - tipRect.height - 6;
+    }
+
+    // Clamp vertically within viewport.
+    top = Math.max(margin, Math.min(top, Math.max(margin, vh - tipRect.height - margin)));
+
+    tooltipEl.style.left = left + 'px';
+    tooltipEl.style.top = top + 'px';
+}
+
 /**
  * Fetch and update the creation quota state.
  * Updates the NEW CHARACTER button's disabled state and title.
@@ -12196,23 +12232,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Show/hide custom tooltip on hover
         if (newCharacterTooltip) {
+            const showTooltip = () => {
+                if (!newCharacterTooltip.textContent) return;
+                newCharacterTooltip.classList.add('show');
+                // Position after it becomes visible so we measure correctly.
+                requestAnimationFrame(() => _positionTooltipInViewport(newCharacterTooltip, newCharacterBtn));
+            };
+            const hideTooltip = () => {
+                newCharacterTooltip.classList.remove('show');
+                newCharacterTooltip.classList.remove('custom-tooltip--viewport');
+                newCharacterTooltip.style.left = '';
+                newCharacterTooltip.style.top = '';
+            };
+
             newCharacterBtn.addEventListener('mouseenter', () => {
-                if (newCharacterTooltip.textContent) {
-                    newCharacterTooltip.classList.add('show');
-                }
+                showTooltip();
             });
             newCharacterBtn.addEventListener('mouseleave', () => {
-                newCharacterTooltip.classList.remove('show');
+                hideTooltip();
             });
             // Also hide on focus out for keyboard users
             newCharacterBtn.addEventListener('focus', () => {
-                if (newCharacterTooltip.textContent) {
-                    newCharacterTooltip.classList.add('show');
-                }
+                showTooltip();
             });
             newCharacterBtn.addEventListener('blur', () => {
-                newCharacterTooltip.classList.remove('show');
+                hideTooltip();
             });
+
+            // Keep tooltip clamped on resize/scroll while visible.
+            const repositionIfVisible = () => {
+                if (newCharacterTooltip.classList.contains('show')) {
+                    _positionTooltipInViewport(newCharacterTooltip, newCharacterBtn);
+                }
+            };
+            window.addEventListener('resize', repositionIfVisible);
+            window.addEventListener('scroll', repositionIfVisible, true);
         }
     }
 
