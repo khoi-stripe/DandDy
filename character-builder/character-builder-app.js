@@ -1688,9 +1688,9 @@ const App = (window.App = {
     const isDemoMode = window.DemoCharacters && DemoCharacters.isDemoMode();
     const demoLimitReached = isDemoMode && 
       DemoCharacters.getUserCharacterCount() + 1 >= DemoCharacters.DEMO_MAX_USER_CHARACTERS;
-    const quotaExhausted = this._creationQuotaInfo && 
-      this._creationQuotaInfo.remaining !== -1 && 
-      this._creationQuotaInfo.remaining <= 1;
+    const quotaExhausted = this._creationQuotaInfo &&
+      this._creationQuotaInfo.remaining !== -1 &&
+      this._creationQuotaInfo.remaining <= 0;
     const canCreateAnother = !demoLimitReached && !quotaExhausted;
 
     // Show completion options
@@ -4288,8 +4288,54 @@ const App = (window.App = {
    * no longer needed. It is intentionally a no-op.
    */
   _applyPreferredPortraitViewBuilder(character) {
-    // No-op: behavior handled by CharacterSheet._renderPortrait.
-    void character;
+    try {
+      const asciiPortrait = document.getElementById('character-portrait');
+      const originalPortrait = document.getElementById('original-portrait');
+      if (!asciiPortrait || !originalPortrait) return;
+
+      const container = asciiPortrait.closest('.portrait-container');
+
+      // Respect global preference (shared with manager).
+      let portraitViewMode = 'original';
+      try {
+        if (window.StorageService && StorageService.getPortraitViewMode) {
+          portraitViewMode = StorageService.getPortraitViewMode();
+        } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
+          portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
+        }
+      } catch (e) {
+        // Non-fatal
+      }
+
+      // Only show the original image if we actually have a URL resolved for it.
+      let hasOriginalUrl = false;
+      try {
+        if (window.CharacterSheet && typeof CharacterSheet.getOriginalPortraitUrl === 'function') {
+          hasOriginalUrl = !!CharacterSheet.getOriginalPortraitUrl(character);
+        } else {
+          hasOriginalUrl = !!originalPortrait.getAttribute('src');
+        }
+      } catch (e) {
+        hasOriginalUrl = !!originalPortrait.getAttribute('src');
+      }
+
+      if (portraitViewMode === 'original' && hasOriginalUrl) {
+        asciiPortrait.classList.add('is-hidden');
+        originalPortrait.classList.remove('is-hidden');
+        if (container) {
+          container.classList.add('portrait-container--original-mode');
+        }
+      } else {
+        asciiPortrait.classList.remove('is-hidden');
+        originalPortrait.classList.add('is-hidden');
+        if (container) {
+          container.classList.remove('portrait-container--original-mode');
+        }
+      }
+    } catch (e) {
+      // Non-fatal: if anything goes wrong, don't block the render path.
+      console.warn('App._applyPreferredPortraitViewBuilder failed', e);
+    }
   },
 
   // Track if we've shown the guest save notice this session
