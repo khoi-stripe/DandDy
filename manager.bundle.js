@@ -7538,22 +7538,6 @@ window._creationQuotaRemaining = null;
 window._creationQuotaLimit = null;
 window._creationQuotaResetAt = null;
 
-function _formatQuotaResetText(resetAt) {
-    if (!resetAt) return '';
-    try {
-        const resetDate = new Date(resetAt);
-        const now = new Date();
-        const ms = resetDate - now;
-        if (!Number.isFinite(ms)) return '';
-        const hours = Math.max(0, Math.ceil(ms / (1000 * 60 * 60)));
-        if (hours <= 1) return 'Resets in ~1 hour';
-        if (hours < 24) return 'Resets in ~' + hours + ' hours';
-        return 'Resets tomorrow';
-    } catch (e) {
-        return '';
-    }
-}
-
 function _formatCreationQuotaTooltip() {
     const cr = window._creationQuotaRemaining;
     const cl = window._creationQuotaLimit;
