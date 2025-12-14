@@ -6289,8 +6289,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (!newCharacterTooltip.textContent) return;
 
                 // Position FIRST (while hidden) to avoid any visible jump.
+                // Use visibility:hidden so we can measure without flashing.
+                const prevVisibility = newCharacterTooltip.style.visibility;
+                newCharacterTooltip.style.visibility = 'hidden';
                 _positionTooltipInViewport(newCharacterTooltip, newCharacterBtn);
                 newCharacterTooltip.classList.add('show');
+                newCharacterTooltip.style.visibility = prevVisibility;
             };
             const hideTooltip = () => {
                 newCharacterTooltip.classList.remove('show');
@@ -6312,15 +6316,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             newCharacterBtn.addEventListener('blur', () => {
                 hideTooltip();
             });
-
-            // Keep tooltip clamped on resize/scroll while visible.
-            const repositionIfVisible = () => {
-                if (newCharacterTooltip.classList.contains('show')) {
-                    _positionTooltipInViewport(newCharacterTooltip, newCharacterBtn);
-                }
-            };
-            window.addEventListener('resize', repositionIfVisible);
-            window.addEventListener('scroll', repositionIfVisible, true);
         }
     }
 
