@@ -1178,7 +1178,7 @@ body::before {
 
 .stat-box-label {
   color: var(--sheet-label-color);
-  font-size: var(--font-size-small);
+  font-size: 12px;
   margin-bottom: var(--spacing-xs);
 }
 
@@ -1207,8 +1207,15 @@ body::before {
 
 .ability-name {
   color: var(--sheet-label-color);
-  font-size: var(--font-size-small);
+  font-size: 12px;
   margin-bottom: var(--spacing-xs);
+}
+
+/* Edit Details modal: combat stats + ability score input labels */
+.modal-grid-combat-hp label.terminal-text-small,
+.modal-grid-combat-def label.terminal-text-small,
+.modal-grid-abilities label.terminal-text-small {
+  font-size: 12px;
 }
 
 .ability-modifier {

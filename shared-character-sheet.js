@@ -1388,7 +1388,7 @@ const CharacterSheet = (window.CharacterSheet = {
                 return `
                   <div class="stat-line">
                     <span class="stat-label">${ability.toUpperCase()}:</span>
-                    <span class="stat-value">—${isProficient ? ' ★' : ''}</span>
+                    <span class="stat-value">${isProficient ? '★ ' : ''}—</span>
                   </div>
                 `;
               })
@@ -1414,7 +1414,7 @@ const CharacterSheet = (window.CharacterSheet = {
               return `
                 <div class="stat-line">
                   <span class="stat-label">${ability.toUpperCase()}:</span>
-                  <span class="stat-value">${display}${isProficient ? ' ★' : ''}</span>
+                  <span class="stat-value">${isProficient ? '★ ' : ''}${display}</span>
                 </div>
               `;
             })
@@ -1454,7 +1454,7 @@ const CharacterSheet = (window.CharacterSheet = {
             <span class="stat-label">${this.escapeHtml(
               this.formatSkillName(skill),
             )}:</span>
-            <span class="stat-value">${this.formatModifier(value)} ★</span>
+            <span class="stat-value">★ ${this.formatModifier(value)}</span>
           </div>
         `,
           )

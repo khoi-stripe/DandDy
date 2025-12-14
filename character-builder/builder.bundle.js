@@ -1235,7 +1235,7 @@ const score=parsed.abilities[ability]||10;const modifier=parsed.abilityModifiers
       return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[SAVING THROWS]</div></div><div class="sheet-content">${abilities.map((ability)=>{const isProficient=parsed.savingThrows?.includes(ability);return`
                   <div class="stat-line">
                     <span class="stat-label">${ability.toUpperCase()}:</span>
-                    <span class="stat-value">—${isProficient ? ' ★' : ''}</span>
+                    <span class="stat-value">${isProficient ? '★ ' : ''}—</span>
                   </div>
                 `;}).join('')}</div></div>`;
     }
@@ -1244,7 +1244,7 @@ const score=parsed.abilities[ability]||10;const modifier=parsed.abilityModifiers
     return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[SAVING THROWS]</div></div><div class="sheet-content">${abilities.map((ability)=>{const value=parsed.savingThrowModifiers?.[ability];const isProficient=parsed.savingThrows?.includes(ability);const display=typeof value==='number'?this.formatModifier(value):'—';return`
                 <div class="stat-line">
                   <span class="stat-label">${ability.toUpperCase()}:</span>
-                  <span class="stat-value">${display}${isProficient ? ' ★' : ''}</span>
+                  <span class="stat-value">${isProficient ? '★ ' : ''}${display}</span>
                 </div>
               `;}).join('')}</div></div>`;
   },
@@ -1274,7 +1274,7 @@ const score=parsed.abilities[ability]||10;const modifier=parsed.abilityModifiers
     const skillsMarkup = hasSkillModifiers
       ? Object.entries(parsed.skillModifiers)
           .map(
-            ([skill, value]) => `<div class="stat-line"><span class="stat-label">${this.escapeHtml(this.formatSkillName(skill),)}:</span><span class="stat-value">${this.formatModifier(value)}★</span></div>`,
+            ([skill, value]) => `<div class="stat-line"><span class="stat-label">${this.escapeHtml(this.formatSkillName(skill),)}:</span><span class="stat-value">★ ${this.formatModifier(value)}</span></div>`,
           )
           .join('')
       : '';
