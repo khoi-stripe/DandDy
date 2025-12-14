@@ -227,6 +227,27 @@
     .loading {
       animation: pulse 1.5s infinite;
     }
+
+    @media print {
+      html, body {
+        background: #fff !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: economy !important;
+        print-color-adjust: economy !important;
+      }
+      body, body *, body *::before, body *::after {
+        color: #000 !important;
+        background: transparent !important;
+        background-image: none !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+        border-color: #000 !important;
+        outline-color: #000 !important;
+      }
+      img, svg, canvas, video {
+        filter: grayscale(100%) !important;
+      }
+    }
   </style>
 </head>
 <body>

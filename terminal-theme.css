@@ -1256,7 +1256,15 @@ body::before {
   color: var(--terminal-fg);
   padding: var(--spacing-sm) var(--spacing-md);
   font-family: var(--font-mono);
-  font-size: var(--font-size-base);
+  /*
+    iOS Safari will auto-zoom the page when focusing form controls whose computed
+    font-size is < 16px. Because this app uses aggressive mobile scroll locking
+    (fixed body + overflow hidden), that zoom is hard to recover from.
+
+    Keep the overall UI typography at 14px, but ensure form controls are at
+    least 16px to prevent the focus-zoom behavior.
+  */
+  font-size: max(16px, var(--font-size-base));
   width: 100%;
   transition: all var(--transition-speed);
 }
@@ -1796,6 +1804,42 @@ body.selector-menu-open .splash-art {
 /* ===== PRINT STYLES ===== */
 
 @media print {
+  /* =========================================================
+     BLACK & WHITE ONLY (global print override)
+     ========================================================= */
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: economy !important;
+    print-color-adjust: economy !important;
+  }
+
+  body,
+  body * ,
+  body *::before,
+  body *::after {
+    color: #000 !important;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    border-color: #000 !important;
+    outline-color: #000 !important;
+  }
+
+  img,
+  svg,
+  canvas,
+  video {
+    filter: grayscale(100%) !important;
+  }
+
+  /* Make SVG icons reliably monochrome in print */
+  svg * {
+    fill: #000 !important;
+    stroke: #000 !important;
+  }
+
   /* Compact, sheet-focused layout */
   html,
   body {

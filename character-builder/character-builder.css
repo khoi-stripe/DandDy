@@ -215,7 +215,8 @@
   color: var(--terminal-fg);
   padding: var(--spacing-sm);
   font-family: var(--font-mono);
-  font-size: var(--font-size-base);
+  /* Prevent iOS Safari focus-zoom (requires computed font-size >= 16px) */
+  font-size: max(16px, var(--font-size-base));
   width: 100%;
   margin-top: var(--spacing-sm);
   text-align: left;
@@ -429,12 +430,10 @@
 
   .ascii-portrait {
     display: block !important;
-    background: #000000 !important;
-    color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
     padding: 16px !important;
     border: 2px solid #000000 !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
 
   }
 

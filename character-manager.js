@@ -5672,22 +5672,35 @@ async function startMigration() {
         const results = await window.MigrationService.migrateToCloud({ includeDemoCharacters: false });
         
         if (results.success > 0) {
-            statusEl.textContent = `✓ Migrated ${results.success} character(s) successfully!`;
+            // NOTE: The bundler/minifier used by this repo can strip literal spaces inside
+            // template literals (backticks). Use classic string concatenation here so the
+            // migration modal never shows "3character(s)successfully!".
+            statusEl.textContent =
+                '✓ Migrated ' + results.success + ' character(s) successfully!';
             
             if (results.failed > 0) {
-                statusEl.textContent += `\n⚠️ ${results.failed} character(s) failed to migrate.`;
+                statusEl.textContent +=
+                    '\n⚠️ ' +
+                    results.failed +
+                    ' character(s) failed to migrate.';
             }
             
             // Clear local storage after successful migration
             if (results.failed === 0) {
                 setTimeout(() => {
                     window.MigrationService.clearLocalStorage();
-                    showNotification(`✓ Migrated ${results.success} characters to cloud`);
+                    showNotification(
+                        '✓ Migrated ' + results.success + ' characters to cloud',
+                    );
                     closeMigrationModal();
                 }, 2000);
             } else {
                 setTimeout(() => {
-                    showNotification(`⚠️ Migration completed with ${results.failed} error(s)`);
+                    showNotification(
+                        '⚠️ Migration completed with ' +
+                            results.failed +
+                            ' error(s)',
+                    );
                     closeMigrationModal();
                 }, 3000);
             }
@@ -5723,7 +5736,13 @@ function showDemoMigrationModal() {
         listEl.innerHTML = demoChars.map(char => {
             const raceName = char.raceData?.name || char.race || '?';
             const className = char.classData?.name || char.class || '?';
-            return `<li><span class="demo-char-name">${Utils.escapeHtml(char.name)}</span> <span class="demo-char-info">– Level ${char.level} ${raceName} ${className}</span></li>`;
+            // NOTE: Use `${' '}` for spaces inside template literals because our bundler/minifier
+            // can strip literal spaces inside backticks.
+            return `<li><span class="demo-char-name">${Utils.escapeHtml(
+                char.name,
+            )}</span>${' '}<span class="demo-char-info">– Level${' '}${
+                char.level
+            }${' '}${raceName}${' '}${className}</span></li>`;
         }).join('');
     }
     

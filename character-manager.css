@@ -181,7 +181,8 @@
        even when focused, while still using shared focus borders/shadows. */
     color: var(--terminal-dim);
     /* Match search input text size to small button text */
-    font-size: var(--font-size-small);
+    /* Prevent iOS Safari focus-zoom (requires computed font-size >= 16px) */
+    font-size: max(16px, var(--font-size-small));
 }
 
 /* Placeholder copy (e.g., "Search all 15 characters") should also use
@@ -189,7 +190,7 @@
 .search-input-wrapper .terminal-input::placeholder {
     color: var(--terminal-dim);
     /* Keep placeholder the same size as the input/button text */
-    font-size: var(--font-size-small);
+    font-size: max(16px, var(--font-size-small));
 }
 
 /* Dim the search box when not focused so it feels secondary until active */
@@ -1775,6 +1776,36 @@
     body::before {
         display: none !important;
         content: none !important;
+    }
+
+    /* =========================================================
+       BLACK & WHITE ONLY (global print override)
+       ========================================================= */
+    body {
+        -webkit-print-color-adjust: economy !important;
+        print-color-adjust: economy !important;
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    body,
+    body *,
+    body *::before,
+    body *::after {
+        color: #000 !important;
+        background: transparent !important;
+        background-image: none !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+        border-color: #000 !important;
+        outline-color: #000 !important;
+    }
+
+    img,
+    svg,
+    canvas,
+    video {
+        filter: grayscale(100%) !important;
     }
 
     /* Reset all backgrounds to white for print */
