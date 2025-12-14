@@ -7000,11 +7000,11 @@ placeholder="Or enter your own name..."><button class="button-primary"onclick="A
 
     // Show completion options
     const createAnotherBtn = canCreateAnother
-      ? `<button class="button-primary"id="completion-new-btn"onclick="App.startNew()">&gt;\u00A0CREATE ANOTHER CHARACTER</button>`
+      ? `<button class="button-secondary"id="completion-new-btn"onclick="App.startNew()">&gt;\u00A0CREATE ANOTHER CHARACTER</button>`
       : '';
     narratorPanel.insertAdjacentHTML(
       'beforeend',
-      `<div class="question-card mt-lg"data-question-id="${question.id}"><button class="button-primary completion-save-btn"id="completion-save-btn"onclick="App.saveCharacter()">&gt;\u00A0SAVE CHARACTER</button>${createAnotherBtn}</div>`,
+      `<div class="question-card mt-lg"data-question-id="${question.id}"><button class="button-primary completion-save-btn"id="completion-save-btn"onclick="App.saveAndExit()">&gt;\u00A0SAVE AND EXIT</button>${createAnotherBtn}</div>`,
     );
     Utils.scrollToBottom(true);
 
@@ -9471,7 +9471,7 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
       this.showSystemMessage(
         'Unable to save character right now. Please try again shortly.',
       );
-      return;
+      return null;
     }
 
     // Note: guest mode no longer has a local-storage character cap; daily quota
@@ -9484,7 +9484,7 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
           'Character must have at least a name, race, and class before saving.',
         );
       }
-      return;
+      return null;
     }
 
     try {
@@ -9521,9 +9521,29 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
           this.showNotification('💡 Log in or create an account to save your character to the cloud', 'info');
         }, 1000);
       }
+
+      return saved;
     } catch (error) {
       console.error('Error saving character:', error);
       this.showSystemMessage('Save failed: ' + error.message);
+      return null;
+    }
+  },
+
+  /**
+   * Completion-screen action: save the character and return to the manager screen.
+   */
+  async saveAndExit() {
+    const saved = await this.saveCharacter(false);
+    if (!saved) return;
+
+    // Return to Character Manager, selecting the saved character if possible.
+    try {
+      const id = saved && saved.id != null ? String(saved.id) : null;
+      const targetUrl = id ? `../index.html?character=${encodeURIComponent(id)}` : '../index.html';
+      window.location.href = targetUrl;
+    } catch (e) {
+      window.location.href = '../index.html';
     }
   },
 
