@@ -1413,6 +1413,27 @@ async function updateCreationQuotaState() {
     if (!btn && !overflowBtn) return;
 
     try {
+        // In guest/demo mode, the NEW CHARACTER button is primarily constrained
+        // by the local guest character cap (not the backend daily quota). If we
+        // show the backend quota here, it can contradict the guest-limit modal.
+        const isDemoMode =
+            window.DemoCharacters &&
+            typeof DemoCharacters.isDemoMode === 'function' &&
+            DemoCharacters.isDemoMode();
+        const guestLimit = isDemoMode ? DemoCharacters.DEMO_MAX_USER_CHARACTERS : null;
+        const guestUsed = isDemoMode ? DemoCharacters.getUserCharacterCount() : null;
+        const guestRemaining =
+            isDemoMode && typeof guestLimit === 'number' && typeof guestUsed === 'number'
+                ? Math.max(0, guestLimit - guestUsed)
+                : null;
+
+        // If the guest cap is already reached, disable immediately and avoid
+        // showing the backend quota (which can still be >0).
+        if (isDemoMode && guestRemaining === 0) {
+            updateButtons(true, 'Guest limit reached (' + guestLimit + ')', true);
+            return;
+        }
+
         // Use AIService if available, otherwise make direct fetch
         let quota = null;
         if (window.AIService && typeof AIService.getCreationQuotaStatus === 'function') {
@@ -1452,9 +1473,25 @@ async function updateCreationQuotaState() {
 
         if (quota.remaining === 0) {
             updateButtons(true, 'Daily limit reached', true);
-        } else {
-            updateButtons(false, `${quota.remaining}${' '}creation${quota.remaining === 1 ? '' : 's'}${' '}remaining`, false);
+            return;
         }
+
+        // Prefer showing guest slots remaining (more actionable), but still
+        // keep the backend quota enforcement in _creationQuotaRemaining.
+        if (isDemoMode && typeof guestRemaining === 'number') {
+            updateButtons(
+                false,
+                `${guestRemaining}${' '}slot${guestRemaining === 1 ? '' : 's'}${' '}remaining`,
+                false,
+            );
+            return;
+        }
+
+        updateButtons(
+            false,
+            `${quota.remaining}${' '}creation${quota.remaining === 1 ? '' : 's'}${' '}remaining`,
+            false,
+        );
     } catch (e) {
         console.warn('Failed to check creation quota:', e);
         // Fail open - allow user to proceed
@@ -6201,22 +6238,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Check creation quota on load and listen for updates
     updateCreationQuotaState();
     
-    // Also check demo mode character limit immediately (doesn't require API call)
-    if (window.DemoCharacters && DemoCharacters.isDemoMode() && DemoCharacters.hasReachedCharacterLimit()) {
-        const btn = document.getElementById('newCharacterBtn');
-        const overflowBtn = document.getElementById('overflowNewCharBtn');
-        const tooltip = document.getElementById('newCharacterTooltip');
-        const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
-        
-        [btn, overflowBtn].forEach(b => {
-            if (!b) return;
-            b.disabled = true;
-            b.title = '';
-            b.classList.add('is-quota-exhausted');
-        });
-        if (tooltip) {
-            tooltip.textContent = `Guest limit: ${limit} characters`;
+    // Also check demo/guest character cap immediately (doesn't require API call).
+    // Keep tooltip consistent with the guest-limit modal.
+    try {
+        const isDemoMode =
+            window.DemoCharacters &&
+            typeof DemoCharacters.isDemoMode === 'function' &&
+            DemoCharacters.isDemoMode();
+        if (isDemoMode) {
+            const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
+            const used = DemoCharacters.getUserCharacterCount();
+            const remaining = Math.max(0, limit - used);
+
+            if (remaining === 0) {
+                const btn = document.getElementById('newCharacterBtn');
+                const overflowBtn = document.getElementById('overflowNewCharBtn');
+                const tooltip = document.getElementById('newCharacterTooltip');
+
+                [btn, overflowBtn].forEach((b) => {
+                    if (!b) return;
+                    b.disabled = true;
+                    b.title = '';
+                    b.classList.add('is-quota-exhausted');
+                });
+                if (tooltip) {
+                    tooltip.textContent = 'Guest limit reached (' + limit + ')';
+                }
+            }
         }
+    } catch (e) {
+        // Non-fatal
     }
     
     window.addEventListener('danddy:creationQuotaUpdate', (e) => {
@@ -6229,21 +6280,50 @@ document.addEventListener('DOMContentLoaded', async () => {
             let tooltipText = '';
             [btn, overflowBtn].forEach(b => {
                 if (!b) return;
-                if (e.detail.remaining === -1) {
-                    b.disabled = false;
-                    b.title = '';
-                    b.classList.remove('is-quota-exhausted');
-                    tooltipText = '';
-                } else if (e.detail.remaining === 0) {
-                    b.disabled = true;
-                    b.title = '';
-                    b.classList.add('is-quota-exhausted');
-                    tooltipText = 'Daily limit reached';
-                } else {
-                    b.disabled = false;
-                    b.title = '';
-                    b.classList.remove('is-quota-exhausted');
-                    tooltipText = `${e.detail.remaining}${' '}creation${e.detail.remaining === 1 ? '' : 's'}${' '}remaining`;
+
+                // If guest/demo mode cap is reached, it is always the limiting factor
+                // and should not be overridden by backend quota updates.
+                try {
+                    const isDemoMode =
+                        window.DemoCharacters &&
+                        typeof DemoCharacters.isDemoMode === 'function' &&
+                        DemoCharacters.isDemoMode();
+                    if (isDemoMode) {
+                        const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
+                        const used = DemoCharacters.getUserCharacterCount();
+                        const remaining = Math.max(0, limit - used);
+                        if (remaining === 0) {
+                            b.disabled = true;
+                            b.title = '';
+                            b.classList.add('is-quota-exhausted');
+                            tooltipText = 'Guest limit reached (' + limit + ')';
+                            return;
+                        }
+
+                        // Otherwise prefer showing guest slots remaining (more actionable).
+                        tooltipText = `${remaining}${' '}slot${remaining === 1 ? '' : 's'}${' '}remaining`;
+                    }
+                } catch (err) {
+                    // Non-fatal: fall back to backend quota display below.
+                }
+
+                if (!tooltipText) {
+                    if (e.detail.remaining === -1) {
+                        b.disabled = false;
+                        b.title = '';
+                        b.classList.remove('is-quota-exhausted');
+                        tooltipText = '';
+                    } else if (e.detail.remaining === 0) {
+                        b.disabled = true;
+                        b.title = '';
+                        b.classList.add('is-quota-exhausted');
+                        tooltipText = 'Daily limit reached';
+                    } else {
+                        b.disabled = false;
+                        b.title = '';
+                        b.classList.remove('is-quota-exhausted');
+                        tooltipText = `${e.detail.remaining}${' '}creation${e.detail.remaining === 1 ? '' : 's'}${' '}remaining`;
+                    }
                 }
             });
             if (tooltip) {
