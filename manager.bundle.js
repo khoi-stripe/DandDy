@@ -219,8 +219,8 @@ const data=await response.json();if(data.success){console.log('%c🎨 IMAGE (Gen
 return data.url;}
 return null;}catch(error){console.log('%c🎨 IMAGE (Failed)','color: #f00; font-weight: bold');console.error('  Error:',error);if(error.isFluxError&&!isRetry){console.log('%c🔄 AUTO-FALLBACK: Flux unavailable, trying GPT Image instead...','color: #fa0; font-weight: bold');if(window.UIService){window.UIService.showNotification('Flux unavailable, switching to GPT Image...','info',4000);}
 return this.generateImageFromPrompt(prompt,{forceModel:'gpt-image-1',_isRetry:true});}
-throw error;}},async getImageQuotaStatus(){try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/quota`,{method:'GET'},10000,);if(!response.ok)return null;const data=await response.json();const normalized={...data,resetAt:data.reset_at||data.resetAt,resetEpoch:data.reset_epoch||data.resetEpoch,};try{window.dispatchEvent(new CustomEvent('danddy:imageQuotaUpdate',{detail:{limit:normalized.limit,remaining:normalized.remaining,resetEpoch:normalized.resetEpoch,},}),);}catch(_){}
-return normalized;}catch(e){return null;}},async getCreationQuotaStatus(){try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/quota`,{method:'GET'},10000,);if(!response.ok)return null;const data=await response.json();const normalized={...data,resetAt:data.reset_at||data.resetAt,resetEpoch:data.reset_epoch||data.resetEpoch,};try{window.dispatchEvent(new CustomEvent('danddy:creationQuotaUpdate',{detail:{limit:normalized.limit,remaining:normalized.remaining,resetEpoch:normalized.resetEpoch,},}),);}catch(_){}
+throw error;}},async getImageQuotaStatus(){try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/quota`,{method:'GET'},10000,);if(!response.ok)return null;const data=await response.json();const normalized={...data,resetAt:data.reset_at||data.resetAt,resetEpoch:data.reset_epoch||data.resetEpoch,};try{window.dispatchEvent(new CustomEvent('danddy:imageQuotaUpdate',{detail:{limit:normalized.limit,remaining:normalized.remaining,resetAt:normalized.resetAt,resetEpoch:normalized.resetEpoch,},}),);}catch(_){}
+return normalized;}catch(e){return null;}},async getCreationQuotaStatus(){try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/quota`,{method:'GET'},10000,);if(!response.ok)return null;const data=await response.json();const normalized={...data,resetAt:data.reset_at||data.resetAt,resetEpoch:data.reset_epoch||data.resetEpoch,};try{window.dispatchEvent(new CustomEvent('danddy:creationQuotaUpdate',{detail:{limit:normalized.limit,remaining:normalized.remaining,resetAt:normalized.resetAt,resetEpoch:normalized.resetEpoch,},}),);}catch(_){}
 return normalized;}catch(e){return null;}},buildCharacterDescription(character){const parts=[];parts.push('Dungeons & Dragons fantasy character:');if(character.sex){parts.push(character.sex);}
 if(character.race){let raceDesc=null;try{if(window.PortraitPrompt&&typeof PortraitPrompt.getVariableSnippet==='function'){raceDesc=PortraitPrompt.getVariableSnippet('race',character.race);}}catch(e){}
 if(!raceDesc){raceDesc=window.PortraitPrompt?PortraitPrompt.getRaceDescription(character.race):character.race;}
@@ -7531,6 +7531,74 @@ let _creationQuotaRemaining = null;
 
 // Track image quota state for Customize portrait button (exposed globally for shared-character-sheet.js)
 window._imageQuotaRemaining = null;
+window._imageQuotaLimit = null;
+window._imageQuotaResetAt = null;
+
+window._creationQuotaRemaining = null;
+window._creationQuotaLimit = null;
+window._creationQuotaResetAt = null;
+
+function _formatQuotaResetText(resetAt) {
+    if (!resetAt) return '';
+    try {
+        const resetDate = new Date(resetAt);
+        const now = new Date();
+        const ms = resetDate - now;
+        if (!Number.isFinite(ms)) return '';
+        const hours = Math.max(0, Math.ceil(ms / (1000 * 60 * 60)));
+        if (hours <= 1) return 'Resets in ~1 hour';
+        if (hours < 24) return 'Resets in ~' + hours + ' hours';
+        return 'Resets tomorrow';
+    } catch (e) {
+        return '';
+    }
+}
+
+function _updateQuotaTooltipText() {
+    const tooltip = document.getElementById('newCharacterTooltip');
+    if (!tooltip) return;
+
+    const cr = window._creationQuotaRemaining;
+    const cl = window._creationQuotaLimit;
+    const ir = window._imageQuotaRemaining;
+    const il = window._imageQuotaLimit;
+
+    // If we don't have any info, clear tooltip.
+    if (typeof cr !== 'number' && typeof ir !== 'number') {
+        tooltip.textContent = '';
+        return;
+    }
+
+    // Prefer a compact two-line tooltip. Use <br> for readability.
+    const parts = [];
+
+    if (typeof cr === 'number') {
+        if (cr === -1) {
+            parts.push('Creations: unlimited');
+        } else if (typeof cl === 'number') {
+            parts.push('Creations: ' + cr + '/' + cl + ' left today');
+        } else {
+            parts.push('Creations: ' + cr + ' left today');
+        }
+    }
+
+    if (typeof ir === 'number') {
+        if (ir === -1) {
+            parts.push('Custom portraits: unlimited');
+        } else if (typeof il === 'number') {
+            parts.push('Custom portraits: ' + ir + '/' + il + ' left today');
+        } else {
+            parts.push('Custom portraits: ' + ir + ' left today');
+        }
+    }
+
+    const resetText = _formatQuotaResetText(window._creationQuotaResetAt || window._imageQuotaResetAt);
+    if (resetText) {
+        parts.push(resetText);
+    }
+
+    tooltip.innerHTML = parts.join('<br>');
+}
 
 /**
  * Fetch and update the creation quota state.
@@ -7554,7 +7622,8 @@ async function updateCreationQuotaState() {
                 b.classList.remove('is-quota-exhausted');
             }
         });
-        // Update the custom tooltip text
+        // Update the custom tooltip text (creation-only line). We'll also render
+        // the combined quota tooltip after both creation + image quotas load.
         if (tooltip) {
             tooltip.textContent = tooltipText;
         }
@@ -7593,10 +7662,13 @@ async function updateCreationQuotaState() {
         }
 
         _creationQuotaRemaining = quota.remaining;
+        window._creationQuotaLimit = typeof quota.limit === 'number' ? quota.limit : null;
+        window._creationQuotaResetAt = quota.resetAt || quota.reset_at || null;
 
         // If remaining is -1, quota is not enforced (admin/dev mode)
         if (quota.remaining === -1) {
             updateButtons(false, '', false);
+            _updateQuotaTooltipText();
             return;
         }
 
@@ -7605,11 +7677,14 @@ async function updateCreationQuotaState() {
         } else {
             updateButtons(false, `${quota.remaining}${' '}creation${quota.remaining===1?'':'s'}${' '}remaining`, false);
         }
+
+        _updateQuotaTooltipText();
     } catch (e) {
         console.warn('Failed to check creation quota:', e);
         // Fail open - allow user to proceed
         _creationQuotaRemaining = null;
         updateButtons(false, '', false);
+        _updateQuotaTooltipText();
     }
 }
 
@@ -7643,10 +7718,16 @@ async function updateImageQuotaState() {
 
         if (!quota) {
             window._imageQuotaRemaining = null;
+            window._imageQuotaLimit = null;
+            window._imageQuotaResetAt = null;
+            _updateQuotaTooltipText();
             return;
         }
 
         window._imageQuotaRemaining = quota.remaining;
+        window._imageQuotaLimit = typeof quota.limit === 'number' ? quota.limit : null;
+        window._imageQuotaResetAt = quota.resetAt || quota.reset_at || null;
+        _updateQuotaTooltipText();
         
         // Re-render current character sheet to update Customize portrait button state
         // This ensures the button is correctly disabled on initial load when quota is exhausted

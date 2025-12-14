@@ -769,7 +769,18 @@ const App = (window.App = {
             </button>`,
           );
         } else {
-          quotaLine.textContent = qi.remaining + ' character creation' + (qi.remaining === 1 ? '' : 's') + ' remaining today';
+          // Show remaining + reset timing to make the daily nature explicit.
+          let resetText = '';
+          if (qi.resetAt) {
+            try {
+              const resetDate = new Date(qi.resetAt);
+              const now = new Date();
+              const hoursUntil = Math.max(0, Math.ceil((resetDate - now) / (1000 * 60 * 60)));
+              if (hoursUntil <= 1) resetText = ' (resets in ~1 hour)';
+              else if (hoursUntil < 24) resetText = ' (resets in ~' + hoursUntil + ' hours)';
+            } catch (_) {}
+          }
+          quotaLine.textContent = qi.remaining + ' character creation' + (qi.remaining === 1 ? '' : 's') + ' remaining today' + resetText;
           // Slow continuous blink
           quotaLine.classList.add('is-blinking');
         }
@@ -3784,6 +3795,18 @@ const App = (window.App = {
         if (!el) return;
         const remaining = detail && typeof detail.remaining === 'number' ? detail.remaining : null;
         const limit = detail && typeof detail.limit === 'number' ? detail.limit : null;
+        const resetAt = detail && detail.resetAt ? detail.resetAt : null;
+
+        let resetText = '';
+        if (resetAt) {
+          try {
+            const resetDate = new Date(resetAt);
+            const now = new Date();
+            const hoursUntil = Math.max(0, Math.ceil((resetDate - now) / (1000 * 60 * 60)));
+            if (hoursUntil <= 1) resetText = ' (resets in ~1 hour)';
+            else if (hoursUntil < 24) resetText = ' (resets in ~' + hoursUntil + ' hours)';
+          } catch (_) {}
+        }
 
         // Find and update Generate button state based on quota
         const generateBtn = document.querySelector('#promptModal .terminal-btn-primary');
@@ -3803,7 +3826,7 @@ const App = (window.App = {
         }
 
         if (remaining === 0 && limit != null) {
-          el.textContent = `Custom portraits left today: 0/${limit}`;
+          el.textContent = 'Custom portraits left today: 0/' + limit + resetText;
           if (generateBtn) {
             generateBtn.disabled = true;
             generateBtn.title = 'Daily custom portrait limit reached';
@@ -3816,7 +3839,7 @@ const App = (window.App = {
         }
 
         if (remaining != null && limit != null) {
-          el.textContent = `Custom portraits left today: ${remaining}/${limit}`;
+          el.textContent = 'Custom portraits left today: ' + remaining + '/' + limit + resetText;
           if (generateBtn) {
             generateBtn.disabled = false;
             generateBtn.title = '';
@@ -3842,6 +3865,7 @@ const App = (window.App = {
           updateQuotaLine({
             limit: quota.limit,
             remaining: quota.remaining,
+            resetAt: quota.resetAt,
           });
         }
       }

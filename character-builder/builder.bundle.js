@@ -424,8 +424,8 @@ const data=await response.json();if(data.success){console.log('%c🎨 IMAGE (Gen
 return data.url;}
 return null;}catch(error){console.log('%c🎨 IMAGE (Failed)','color: #f00; font-weight: bold');console.error('  Error:',error);if(error.isFluxError&&!isRetry){console.log('%c🔄 AUTO-FALLBACK: Flux unavailable, trying GPT Image instead...','color: #fa0; font-weight: bold');if(window.UIService){window.UIService.showNotification('Flux unavailable, switching to GPT Image...','info',4000);}
 return this.generateImageFromPrompt(prompt,{forceModel:'gpt-image-1',_isRetry:true});}
-throw error;}},async getImageQuotaStatus(){try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/quota`,{method:'GET'},10000,);if(!response.ok)return null;const data=await response.json();const normalized={...data,resetAt:data.reset_at||data.resetAt,resetEpoch:data.reset_epoch||data.resetEpoch,};try{window.dispatchEvent(new CustomEvent('danddy:imageQuotaUpdate',{detail:{limit:normalized.limit,remaining:normalized.remaining,resetEpoch:normalized.resetEpoch,},}),);}catch(_){}
-return normalized;}catch(e){return null;}},async getCreationQuotaStatus(){try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/quota`,{method:'GET'},10000,);if(!response.ok)return null;const data=await response.json();const normalized={...data,resetAt:data.reset_at||data.resetAt,resetEpoch:data.reset_epoch||data.resetEpoch,};try{window.dispatchEvent(new CustomEvent('danddy:creationQuotaUpdate',{detail:{limit:normalized.limit,remaining:normalized.remaining,resetEpoch:normalized.resetEpoch,},}),);}catch(_){}
+throw error;}},async getImageQuotaStatus(){try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/images/quota`,{method:'GET'},10000,);if(!response.ok)return null;const data=await response.json();const normalized={...data,resetAt:data.reset_at||data.resetAt,resetEpoch:data.reset_epoch||data.resetEpoch,};try{window.dispatchEvent(new CustomEvent('danddy:imageQuotaUpdate',{detail:{limit:normalized.limit,remaining:normalized.remaining,resetAt:normalized.resetAt,resetEpoch:normalized.resetEpoch,},}),);}catch(_){}
+return normalized;}catch(e){return null;}},async getCreationQuotaStatus(){try{const response=await this.fetchWithTimeout(`${CONFIG.BACKEND_URL}/api/ai/characters/quota`,{method:'GET'},10000,);if(!response.ok)return null;const data=await response.json();const normalized={...data,resetAt:data.reset_at||data.resetAt,resetEpoch:data.reset_epoch||data.resetEpoch,};try{window.dispatchEvent(new CustomEvent('danddy:creationQuotaUpdate',{detail:{limit:normalized.limit,remaining:normalized.remaining,resetAt:normalized.resetAt,resetEpoch:normalized.resetEpoch,},}),);}catch(_){}
 return normalized;}catch(e){return null;}},buildCharacterDescription(character){const parts=[];parts.push('Dungeons & Dragons fantasy character:');if(character.sex){parts.push(character.sex);}
 if(character.race){let raceDesc=null;try{if(window.PortraitPrompt&&typeof PortraitPrompt.getVariableSnippet==='function'){raceDesc=PortraitPrompt.getVariableSnippet('race',character.race);}}catch(e){}
 if(!raceDesc){raceDesc=window.PortraitPrompt?PortraitPrompt.getRaceDescription(character.race):character.race;}
@@ -5978,7 +5978,18 @@ const App = (window.App = {
             `<button class="button-primary"onclick="exitToManager()"style="margin-top: var(--spacing-md);">Back to Character Manager</button>`,
           );
         } else {
-          quotaLine.textContent = qi.remaining + ' character creation' + (qi.remaining === 1 ? '' : 's') + ' remaining today';
+          // Show remaining + reset timing to make the daily nature explicit.
+          let resetText = '';
+          if (qi.resetAt) {
+            try {
+              const resetDate = new Date(qi.resetAt);
+              const now = new Date();
+              const hoursUntil = Math.max(0, Math.ceil((resetDate - now) / (1000 * 60 * 60)));
+              if (hoursUntil <= 1) resetText = ' (resets in ~1 hour)';
+              else if (hoursUntil < 24) resetText = ' (resets in ~' + hoursUntil + ' hours)';
+            } catch (_) {}
+          }
+          quotaLine.textContent = qi.remaining + ' character creation' + (qi.remaining === 1 ? '' : 's') + ' remaining today' + resetText;
           // Slow continuous blink
           quotaLine.classList.add('is-blinking');
         }
@@ -8722,6 +8733,18 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
         if (!el) return;
         const remaining = detail && typeof detail.remaining === 'number' ? detail.remaining : null;
         const limit = detail && typeof detail.limit === 'number' ? detail.limit : null;
+        const resetAt = detail && detail.resetAt ? detail.resetAt : null;
+
+        let resetText = '';
+        if (resetAt) {
+          try {
+            const resetDate = new Date(resetAt);
+            const now = new Date();
+            const hoursUntil = Math.max(0, Math.ceil((resetDate - now) / (1000 * 60 * 60)));
+            if (hoursUntil <= 1) resetText = ' (resets in ~1 hour)';
+            else if (hoursUntil < 24) resetText = ' (resets in ~' + hoursUntil + ' hours)';
+          } catch (_) {}
+        }
 
         // Find and update Generate button state based on quota
         const generateBtn = document.querySelector('#promptModal .terminal-btn-primary');
@@ -8741,7 +8764,7 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
         }
 
         if (remaining === 0 && limit != null) {
-          el.textContent = `Custom portraits left today:0/${limit}`;
+          el.textContent = 'Custom portraits left today: 0/' + limit + resetText;
           if (generateBtn) {
             generateBtn.disabled = true;
             generateBtn.title = 'Daily custom portrait limit reached';
@@ -8754,7 +8777,7 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
         }
 
         if (remaining != null && limit != null) {
-          el.textContent = `Custom portraits left today:${remaining}/${limit}`;
+          el.textContent = 'Custom portraits left today: ' + remaining + '/' + limit + resetText;
           if (generateBtn) {
             generateBtn.disabled = false;
             generateBtn.title = '';
@@ -8780,6 +8803,7 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
           updateQuotaLine({
             limit: quota.limit,
             remaining: quota.remaining,
+            resetAt: quota.resetAt,
           });
         }
       }

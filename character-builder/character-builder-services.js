@@ -1775,6 +1775,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
             detail: {
               limit: normalized.limit,
               remaining: normalized.remaining,
+              resetAt: normalized.resetAt,
               resetEpoch: normalized.resetEpoch,
             },
           }),
@@ -1816,6 +1817,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
             detail: {
               limit: normalized.limit,
               remaining: normalized.remaining,
+              resetAt: normalized.resetAt,
               resetEpoch: normalized.resetEpoch,
             },
           }),
