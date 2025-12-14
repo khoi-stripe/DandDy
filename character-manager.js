@@ -1409,11 +1409,11 @@ function _updateQuotaTooltipText() {
 
     if (typeof cr === 'number') {
         if (cr === -1) {
-            parts.push('Creations: unlimited');
+            parts.push('Character creations: unlimited');
         } else if (typeof cl === 'number') {
-            parts.push('Creations: ' + cr + '/' + cl + ' left today');
+            parts.push('Character creations: ' + cr + '/' + cl + ' left today');
         } else {
-            parts.push('Creations: ' + cr + ' left today');
+            parts.push('Character creations: ' + cr + ' left today');
         }
     }
 
@@ -1492,11 +1492,14 @@ async function updateCreationQuotaState() {
         if (!quota) {
             // Quota check failed - allow user to proceed (fail open)
             _creationQuotaRemaining = null;
+            window._creationQuotaRemaining = null;
             updateButtons(false, '', false);
             return;
         }
 
         _creationQuotaRemaining = quota.remaining;
+        // Keep the window-scoped value in sync (tooltip reads from window.*)
+        window._creationQuotaRemaining = quota.remaining;
         window._creationQuotaLimit = typeof quota.limit === 'number' ? quota.limit : null;
         window._creationQuotaResetAt = quota.resetAt || quota.reset_at || null;
 
@@ -1518,6 +1521,7 @@ async function updateCreationQuotaState() {
         console.warn('Failed to check creation quota:', e);
         // Fail open - allow user to proceed
         _creationQuotaRemaining = null;
+        window._creationQuotaRemaining = null;
         updateButtons(false, '', false);
         _updateQuotaTooltipText();
     }
@@ -6270,6 +6274,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.addEventListener('danddy:creationQuotaUpdate', (e) => {
         if (e.detail && typeof e.detail.remaining === 'number') {
             _creationQuotaRemaining = e.detail.remaining;
+            window._creationQuotaRemaining = e.detail.remaining;
+            window._creationQuotaLimit =
+                typeof e.detail.limit === 'number' ? e.detail.limit : window._creationQuotaLimit;
+            window._creationQuotaResetAt = e.detail.resetAt || window._creationQuotaResetAt;
             const btn = document.getElementById('newCharacterBtn');
             const overflowBtn = document.getElementById('overflowNewCharBtn');
             const tooltip = document.getElementById('newCharacterTooltip');
@@ -6296,7 +6304,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
             if (tooltip) {
-                tooltip.textContent = tooltipText;
+                // Prefer combined quota tooltip if we have both values.
+                _updateQuotaTooltipText();
+                if (!tooltip.textContent && !tooltip.innerHTML) {
+                    tooltip.textContent = tooltipText;
+                }
             }
         }
     });
