@@ -1389,50 +1389,26 @@ function _formatQuotaResetText(resetAt) {
     }
 }
 
+function _formatCreationQuotaTooltip() {
+    const cr = window._creationQuotaRemaining;
+    const cl = window._creationQuotaLimit;
+    if (typeof cr !== 'number' || typeof cl !== 'number') return '';
+
+    // Unlimited/admin bypass: keep tooltip empty to reduce noise.
+    if (cr === -1) return '';
+
+    const resetText = _formatQuotaResetText(window._creationQuotaResetAt);
+    if (resetText) {
+        return cr + '/' + cl + ' remaining today. ' + resetText + '.';
+    }
+    return cr + '/' + cl + ' remaining today.';
+}
+
 function _updateQuotaTooltipText() {
     const tooltip = document.getElementById('newCharacterTooltip');
     if (!tooltip) return;
 
-    const cr = window._creationQuotaRemaining;
-    const cl = window._creationQuotaLimit;
-    const ir = window._imageQuotaRemaining;
-    const il = window._imageQuotaLimit;
-
-    // If we don't have any info, clear tooltip.
-    if (typeof cr !== 'number' && typeof ir !== 'number') {
-        tooltip.textContent = '';
-        return;
-    }
-
-    // Prefer a compact two-line tooltip. Use <br> for readability.
-    const parts = [];
-
-    if (typeof cr === 'number') {
-        if (cr === -1) {
-            parts.push('Character creations: unlimited');
-        } else if (typeof cl === 'number') {
-            parts.push('Character creations: ' + cr + '/' + cl + ' left today');
-        } else {
-            parts.push('Character creations: ' + cr + ' left today');
-        }
-    }
-
-    if (typeof ir === 'number') {
-        if (ir === -1) {
-            parts.push('Custom portraits: unlimited');
-        } else if (typeof il === 'number') {
-            parts.push('Custom portraits: ' + ir + '/' + il + ' left today');
-        } else {
-            parts.push('Custom portraits: ' + ir + ' left today');
-        }
-    }
-
-    const resetText = _formatQuotaResetText(window._creationQuotaResetAt || window._imageQuotaResetAt);
-    if (resetText) {
-        parts.push(resetText);
-    }
-
-    tooltip.innerHTML = parts.join('<br>');
+    tooltip.textContent = _formatCreationQuotaTooltip();
 }
 
 /**
@@ -1457,8 +1433,7 @@ async function updateCreationQuotaState() {
                 b.classList.remove('is-quota-exhausted');
             }
         });
-        // Update the custom tooltip text (creation-only line). We'll also render
-        // the combined quota tooltip after both creation + image quotas load.
+        // Update the custom tooltip text (creation-only).
         if (tooltip) {
             tooltip.textContent = tooltipText;
         }
@@ -1512,6 +1487,8 @@ async function updateCreationQuotaState() {
 
         if (quota.remaining === 0) {
             updateButtons(true, 'Daily limit reached', true);
+        } else if (quota.remaining === -1) {
+            updateButtons(false, '', false);
         } else {
             updateButtons(false, `${quota.remaining}${' '}creation${quota.remaining === 1 ? '' : 's'}${' '}remaining`, false);
         }
@@ -1559,14 +1536,12 @@ async function updateImageQuotaState() {
             window._imageQuotaRemaining = null;
             window._imageQuotaLimit = null;
             window._imageQuotaResetAt = null;
-            _updateQuotaTooltipText();
             return;
         }
 
         window._imageQuotaRemaining = quota.remaining;
         window._imageQuotaLimit = typeof quota.limit === 'number' ? quota.limit : null;
         window._imageQuotaResetAt = quota.resetAt || quota.reset_at || null;
-        _updateQuotaTooltipText();
         
         // Re-render current character sheet to update Customize portrait button state
         // This ensures the button is correctly disabled on initial load when quota is exhausted
@@ -6304,9 +6279,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
             if (tooltip) {
-                // Prefer combined quota tooltip if we have both values.
                 _updateQuotaTooltipText();
-                if (!tooltip.textContent && !tooltip.innerHTML) {
+                if (!tooltip.textContent) {
                     tooltip.textContent = tooltipText;
                 }
             }
