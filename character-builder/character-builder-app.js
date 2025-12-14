@@ -1687,16 +1687,14 @@ const App = (window.App = {
     // NOTE: We don't save here anymore - we wait for portrait to load first
     // This prevents creating duplicate characters in cloud storage
 
-    // Check if user can create another character after this one
-    // Demo mode: check if saving this character would hit the limit
-    // Logged in: check creation quota (remaining === 0 means exhausted, -1 means unlimited)
-    const isDemoMode = window.DemoCharacters && DemoCharacters.isDemoMode();
-    const demoLimitReached = isDemoMode && 
-      DemoCharacters.getUserCharacterCount() + 1 >= DemoCharacters.DEMO_MAX_USER_CHARACTERS;
-    const quotaExhausted = this._creationQuotaInfo &&
+    // Check if user can create another character after this one.
+    // We enforce the daily creation quota (reset daily) for both guest + logged-in.
+    // remaining === 0 means exhausted, -1 means unlimited.
+    const quotaExhausted =
+      this._creationQuotaInfo &&
       this._creationQuotaInfo.remaining !== -1 &&
       this._creationQuotaInfo.remaining <= 0;
-    const canCreateAnother = !demoLimitReached && !quotaExhausted;
+    const canCreateAnother = !quotaExhausted;
 
     // Show completion options
     const createAnotherBtn = canCreateAnother
@@ -4363,16 +4361,8 @@ const App = (window.App = {
       return;
     }
 
-    // In demo mode, check if user has reached the character limit (for new characters only)
-    if (!character.id && window.DemoCharacters && DemoCharacters.hasReachedCharacterLimit()) {
-      const limit = DemoCharacters.DEMO_MAX_USER_CHARACTERS;
-      this.showSystemMessage(
-        'You\'ve reached the limit of ' + limit + ' characters in guest mode. ' +
-        '<a href="#" onclick="showAuthModal(); showLoginForm(); return false;" class="terminal-link">Log in</a> or ' +
-        '<a href="#" onclick="showAuthModal(); showRegisterForm(); return false;" class="terminal-link">create a free account</a> to save unlimited characters!'
-      );
-      return;
-    }
+    // Note: guest mode no longer has a local-storage character cap; daily quota
+    // is enforced server-side and surfaced via _creationQuotaInfo.
 
     // Validate character has minimum required fields before saving
     if (!character.name || !character.race || !character.class) {
