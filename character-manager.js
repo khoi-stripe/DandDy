@@ -1430,7 +1430,11 @@ async function updateCreationQuotaState() {
         // If the guest cap is already reached, disable immediately and avoid
         // showing the backend quota (which can still be >0).
         if (isDemoMode && guestRemaining === 0) {
-            updateButtons(true, 'Guest limit reached (' + guestLimit + ')', true);
+            updateButtons(
+                true,
+                'Guest limit reached (' + guestUsed + '/' + guestLimit + ' saved locally)',
+                true,
+            );
             return;
         }
 
@@ -1481,7 +1485,7 @@ async function updateCreationQuotaState() {
         if (isDemoMode && typeof guestRemaining === 'number') {
             updateButtons(
                 false,
-                `${guestRemaining}${' '}slot${guestRemaining === 1 ? '' : 's'}${' '}remaining`,
+                `${guestRemaining}${' '}slot${guestRemaining === 1 ? '' : 's'}${' '}remaining (guest cap)`,
                 false,
             );
             return;
@@ -6262,7 +6266,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     b.classList.add('is-quota-exhausted');
                 });
                 if (tooltip) {
-                    tooltip.textContent = 'Guest limit reached (' + limit + ')';
+                    tooltip.textContent =
+                        'Guest limit reached (' + used + '/' + limit + ' saved locally)';
                 }
             }
         }
@@ -6296,12 +6301,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                             b.disabled = true;
                             b.title = '';
                             b.classList.add('is-quota-exhausted');
-                            tooltipText = 'Guest limit reached (' + limit + ')';
+                            tooltipText =
+                                'Guest limit reached (' + used + '/' + limit + ' saved locally)';
                             return;
                         }
 
                         // Otherwise prefer showing guest slots remaining (more actionable).
-                        tooltipText = `${remaining}${' '}slot${remaining === 1 ? '' : 's'}${' '}remaining`;
+                        tooltipText = `${remaining}${' '}slot${remaining === 1 ? '' : 's'}${' '}remaining (guest cap)`;
                     }
                 } catch (err) {
                     // Non-fatal: fall back to backend quota display below.
