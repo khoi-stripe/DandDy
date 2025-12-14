@@ -7573,84 +7573,8 @@ function _updateQuotaTooltipText() {
     if (!tooltip) return;
 
     tooltip.textContent = _formatCreationQuotaTooltip();
-
-    // If the tooltip is currently visible, re-center it once after the text updates
-    // (quota events can change the string length).
-    try {
-        if (tooltip.classList.contains('show')) {
-            const btn = document.getElementById('newCharacterBtn');
-            if (btn) {
-                // Debounce to next frame so DOM has applied the new text metrics.
-                if (window._newCharTooltipRepositionRAF) {
-                    cancelAnimationFrame(window._newCharTooltipRepositionRAF);
-                }
-                window._newCharTooltipRepositionRAF = requestAnimationFrame(() => {
-                    _positionTooltipInViewport(tooltip, btn);
-                    window._newCharTooltipRepositionRAF = null;
-                });
-            }
-        }
-    } catch (_) {}
 }
 
-function _getTooltipBoundsRect() {
-    // Prefer clamping within the terminal frame to avoid clipping on its edges.
-    const frame = document.querySelector('.terminal-frame');
-    if (frame && typeof frame.getBoundingClientRect === 'function') {
-        return frame.getBoundingClientRect();
-    }
-    // Fall back to the viewport.
-    return {
-        left: 0,
-        top: 0,
-        right: window.innerWidth || document.documentElement.clientWidth || 0,
-        bottom: window.innerHeight || document.documentElement.clientHeight || 0,
-        width: window.innerWidth || document.documentElement.clientWidth || 0,
-        height: window.innerHeight || document.documentElement.clientHeight || 0,
-    };
-}
-
-function _positionTooltipInViewport(tooltipEl, triggerEl) {
-    if (!tooltipEl || !triggerEl) return;
-
-    // Ensure we're using viewport positioning so we don't get clipped by containers.
-    tooltipEl.classList.add('custom-tooltip--viewport');
-
-    const margin = 8;
-    const triggerRect = triggerEl.getBoundingClientRect();
-    const bounds = _getTooltipBoundsRect();
-
-    // Temporarily set to measure natural size.
-    tooltipEl.style.left = '0px';
-    tooltipEl.style.top = '0px';
-
-    // Use offsetWidth/offsetHeight so transforms/transitions don't affect measurement.
-    const tipW = tooltipEl.offsetWidth || 0;
-    const tipH = tooltipEl.offsetHeight || 0;
-
-    // Default: below trigger, centered.
-    let left = triggerRect.left + triggerRect.width / 2 - tipW / 2;
-    let top = triggerRect.bottom + 6;
-
-    // Clamp horizontally within bounds (terminal frame if present).
-    const minLeft = bounds.left + margin;
-    const maxLeft = bounds.right - tipW - margin;
-    left = Math.max(minLeft, Math.min(left, Math.max(minLeft, maxLeft)));
-
-    // If bottom would clip, place above.
-    const maxBottom = bounds.bottom - margin;
-    if (top + tipH > maxBottom) {
-        top = triggerRect.top - tipH - 6;
-    }
-
-    // Clamp vertically within bounds.
-    const minTop = bounds.top + margin;
-    const maxTop = bounds.bottom - tipH - margin;
-    top = Math.max(minTop, Math.min(top, Math.max(minTop, maxTop)));
-
-    tooltipEl.style.left = left + 'px';
-    tooltipEl.style.top = top + 'px';
-}
 
 /**
  * Fetch and update the creation quota state.
@@ -12271,27 +12195,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (newCharacterTooltip) {
             const showTooltip = () => {
                 if (!newCharacterTooltip.textContent) return;
-
-                // Best-effort: reveal only after hover styles + tooltip layout settle,
-                // to avoid any visible “jump”.
-                newCharacterTooltip.classList.add('custom-tooltip--viewport');
-                newCharacterTooltip.style.visibility = 'hidden';
                 newCharacterTooltip.classList.add('show');
-
-                // Wait a frame for hover styles to apply, then position, then show.
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        _positionTooltipInViewport(newCharacterTooltip, newCharacterBtn);
-                        newCharacterTooltip.style.visibility = '';
-                    });
-                });
             };
             const hideTooltip = () => {
                 newCharacterTooltip.classList.remove('show');
-                newCharacterTooltip.classList.remove('custom-tooltip--viewport');
-                newCharacterTooltip.style.left = '';
-                newCharacterTooltip.style.top = '';
-                newCharacterTooltip.style.visibility = '';
             };
 
             newCharacterBtn.addEventListener('mouseenter', () => {

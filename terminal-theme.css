@@ -677,21 +677,7 @@ body::before {
   transform: translateX(-50%) scale(1);
 }
 
-/* Viewport-positioned tooltips: JS sets fixed top/left and clamps within edges */
-.custom-tooltip.custom-tooltip--viewport {
-  position: fixed;
-  top: 0;
-  left: 0;
-  margin: 0;
-  /* Avoid visible "jump" caused by scaling around center for fixed-position tooltips */
-  transform: none;
-  transition: opacity 0.15s ease-out;
-  will-change: top, left, opacity;
-}
-
-.custom-tooltip.custom-tooltip--viewport.show {
-  transform: none;
-}
+/* (Removed viewport-positioned tooltip mode; tooltips are CSS/JS show-hide only.) */
 
 /* ---- TOP positions ---- */
 .custom-tooltip[data-position="top"] {
