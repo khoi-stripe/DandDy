@@ -411,6 +411,7 @@ const CharacterSheet = (window.CharacterSheet = {
     ) {
       // Check image quota status
       const imageQuotaRemaining = window._imageQuotaRemaining;
+      const imageQuotaLimit = window._imageQuotaLimit;
       const imageQuotaExhausted = typeof imageQuotaRemaining === 'number' && imageQuotaRemaining === 0;
       
       // Build tooltip text based on quota status
@@ -421,7 +422,11 @@ const CharacterSheet = (window.CharacterSheet = {
         if (imageQuotaRemaining === 0) {
           imageQuotaTooltip = 'Daily limit reached';
         } else if (imageQuotaRemaining > 0) {
-          imageQuotaTooltip = `${imageQuotaRemaining}${' '}portrait${imageQuotaRemaining === 1 ? '' : 's'}${' '}remaining`;
+          if (typeof imageQuotaLimit === 'number') {
+            imageQuotaTooltip = `${imageQuotaRemaining}${' '}of${' '}${imageQuotaLimit}${' '}portraits remaining`;
+          } else {
+            imageQuotaTooltip = `${imageQuotaRemaining}${' '}portraits remaining`;
+          }
         }
         // -1 means unlimited, no tooltip
       }
