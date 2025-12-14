@@ -1350,6 +1350,7 @@ body::before {
   font-size: var(--font-size-small);
   cursor: pointer;
   transition: all var(--transition-speed);
+  text-align: left;
 }
 
 .terminal-btn-small:hover:not(:disabled),
