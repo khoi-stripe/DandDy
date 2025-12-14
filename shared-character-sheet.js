@@ -423,9 +423,9 @@ const CharacterSheet = (window.CharacterSheet = {
           imageQuotaTooltip = 'Daily limit reached';
         } else if (imageQuotaRemaining > 0) {
           if (typeof imageQuotaLimit === 'number') {
-            imageQuotaTooltip = `${imageQuotaRemaining}${' '}of${' '}${imageQuotaLimit}${' '}portraits remaining`;
+            imageQuotaTooltip = `${imageQuotaRemaining}${' '}of${' '}${imageQuotaLimit}${' '}remaining`;
           } else {
-            imageQuotaTooltip = `${imageQuotaRemaining}${' '}portraits remaining`;
+            imageQuotaTooltip = `${imageQuotaRemaining}${' '}remaining`;
           }
         }
         // -1 means unlimited, no tooltip
