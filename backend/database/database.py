@@ -250,6 +250,49 @@ def ensure_ai_character_creation_usage_table():
         conn.commit()
 
 
+def ensure_ai_creation_portrait_grants_table():
+    """
+    Lightweight migration helper for one-time portrait grants tied to character creation.
+
+    Each successful character creation summary call issues a `grant_id` that can be
+    redeemed exactly once to generate the *included* portrait image without
+    consuming the separate custom image quota.
+
+    This table is intentionally minimal and created via raw SQL so it works for
+    both SQLite (local dev) and Postgres (Supabase).
+    """
+    inspector = inspect(engine)
+    if inspector.has_table("ai_creation_portrait_grants"):
+        return
+
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS ai_creation_portrait_grants (
+                    day_utc DATE NOT NULL,
+                    subject_key TEXT NOT NULL,
+                    grant_id TEXT NOT NULL,
+                    used BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    used_at TIMESTAMP NULL,
+                    PRIMARY KEY (day_utc, subject_key, grant_id)
+                )
+                """
+            )
+        )
+        try:
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_ai_creation_portrait_grants_subject_day ON ai_creation_portrait_grants (subject_key, day_utc)"
+                )
+            )
+        except Exception:
+            pass
+
+        conn.commit()
+
+
 def ensure_is_demo_column():
     """
     Lightweight migration helper for characters table:

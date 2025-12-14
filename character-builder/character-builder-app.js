@@ -1416,6 +1416,11 @@ const App = (window.App = {
           backstoryTemplate: summary.backstoryTemplate,
         });
       }
+      if (summary && summary.portraitGrantId) {
+        CharacterState.updateCharacter({
+          portraitGrantId: summary.portraitGrantId,
+        });
+      }
     } catch (e) {
       console.error('Name/backstory summary error; falling back to names-only flow:', e);
     }
@@ -1899,7 +1904,9 @@ const App = (window.App = {
         this._renderPortraitGeneratingLoader(portraitEl);
       }
 
-      const result = await AsciiArtService.generateCustomAIPortrait(character);
+      const result = await AsciiArtService.generateCustomAIPortrait(character, {
+        creationGrantId: character && character.portraitGrantId,
+      });
 
       if (result && result.asciiArt) {
         const currentCount = character.customPortraitCount || 0;
@@ -1954,6 +1961,9 @@ const App = (window.App = {
           customPortraitAscii: result.asciiArt,
           customPortraitCount: currentCount + 1,
           portraitMetadata: updatedMetadata,
+          // Grant was successfully redeemed; clear it so later regenerations
+          // (Customize portrait) always count against custom image quota.
+          portraitGrantId: null,
         });
 
         // Reset last portrait so the new AI art re-animates in the panel.
@@ -5113,7 +5123,9 @@ const App = (window.App = {
         this._renderPortraitGeneratingLoader(portraitEl);
       }
 
-      const result = await AsciiArtService.generateCustomAIPortrait(currentChar);
+      const result = await AsciiArtService.generateCustomAIPortrait(currentChar, {
+        creationGrantId: currentChar && currentChar.portraitGrantId,
+      });
 
       if (result && result.asciiArt) {
         const currentCount = currentChar.customPortraitCount || 0;
@@ -5167,6 +5179,9 @@ const App = (window.App = {
           customPortraitAscii: result.asciiArt,
           customPortraitCount: currentCount + 1,
           portraitMetadata: updatedMetadata,
+          // Grant was successfully redeemed; clear it so later regenerations
+          // (Customize portrait) always count against custom image quota.
+          portraitGrantId: null,
         });
 
         // Reset last portrait so the new AI art re-animates in the panel.
@@ -5336,6 +5351,13 @@ const App = (window.App = {
       // Substitute {{NAME}} in the backstory template
       if (summary && summary.backstoryTemplate) {
         backstory = summary.backstoryTemplate.replace(/\{\{NAME\}\}/g, name || 'The adventurer');
+      }
+
+      // Stash one-time included-portrait grant for this creation run.
+      if (summary && summary.portraitGrantId) {
+        CharacterState.updateCharacter({
+          portraitGrantId: summary.portraitGrantId,
+        });
       }
     } catch (e) {
       // Ignore AI errors; we'll fall back below

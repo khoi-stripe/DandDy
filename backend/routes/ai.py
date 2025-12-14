@@ -22,6 +22,7 @@ from sqlalchemy import text
 from database.database import get_settings, engine
 from models.user import User, UserRole
 from utils.auth import get_current_user_optional, get_current_active_user
+from uuid import uuid4
 
 router = APIRouter(tags=["AI"])
 
@@ -319,6 +320,75 @@ class ImageGenerationRequest(BaseModel):
         pattern="^(dall-e-3|gpt-image-1|flux-1\\.1-pro|flux-schnell)$",
         description="Image model identifier (e.g., 'dall-e-3', 'flux-1.1-pro')",
     )
+    # Optional: one-time grant issued by /characters/summary to cover the
+    # included portrait image for a character creation without consuming
+    # the separate custom image quota.
+    creation_grant_id: Optional[str] = Field(
+        None, max_length=200, description="One-time portrait grant id from /characters/summary"
+    )
+
+
+def _issue_creation_portrait_grant(day_utc: date, subject_key: str) -> str:
+    grant_id = str(uuid4())
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                """
+                INSERT INTO ai_creation_portrait_grants (day_utc, subject_key, grant_id, used, created_at)
+                VALUES (:day_utc, :subject_key, :grant_id, FALSE, CURRENT_TIMESTAMP)
+                """
+            ),
+            {"day_utc": day_utc, "subject_key": subject_key, "grant_id": grant_id},
+        )
+        conn.commit()
+    return grant_id
+
+
+def _try_reserve_creation_portrait_grant(day_utc: date, subject_key: str, grant_id: str) -> bool:
+    """
+    Atomically mark a grant as used (only if it exists for this subject/day and is unused).
+    Returns True when reserved; False when missing/already used.
+    """
+    if not grant_id:
+        return False
+    with engine.connect() as conn:
+        res = conn.execute(
+            text(
+                """
+                UPDATE ai_creation_portrait_grants
+                SET used = TRUE, used_at = CURRENT_TIMESTAMP
+                WHERE day_utc = :day_utc AND subject_key = :subject_key AND grant_id = :grant_id AND used = FALSE
+                """
+            ),
+            {"day_utc": day_utc, "subject_key": subject_key, "grant_id": grant_id},
+        )
+        conn.commit()
+        return bool(getattr(res, "rowcount", 0))
+
+
+def _release_creation_portrait_grant(day_utc: date, subject_key: str, grant_id: str) -> None:
+    """
+    Best-effort rollback: mark a previously reserved grant as unused.
+    Used when image generation fails after reserving the grant.
+    """
+    if not grant_id:
+        return
+    try:
+        with engine.connect() as conn:
+            conn.execute(
+                text(
+                    """
+                    UPDATE ai_creation_portrait_grants
+                    SET used = FALSE, used_at = NULL
+                    WHERE day_utc = :day_utc AND subject_key = :subject_key AND grant_id = :grant_id AND used = TRUE
+                    """
+                ),
+                {"day_utc": day_utc, "subject_key": subject_key, "grant_id": grant_id},
+            )
+            conn.commit()
+    except Exception:
+        # Non-fatal: do not mask the original error.
+        pass
 
 
 class NamesGenerationRequest(BaseModel):
@@ -1387,8 +1457,22 @@ async def generate_image(
     reset_epoch = _utc_next_midnight_epoch()
     reset_iso = _utc_next_midnight_iso()
 
+    # If this request includes a valid one-time portrait grant issued during
+    # character creation, redeem it to bypass the custom image quota exactly once.
+    used_creation_grant = False
+    grant_id = (request.creation_grant_id or "").strip() if request else ""
+    if grant_id:
+        try:
+            used_creation_grant = _try_reserve_creation_portrait_grant(
+                _utc_today(), subject_key, grant_id
+            )
+        except Exception as e:
+            # Non-fatal: fall back to normal quota enforcement.
+            print("⚠️  Portrait grant reserve failed:", str(e))
+            used_creation_grant = False
+
     enforced = _image_quota_is_enforced(current_user)
-    if enforced:
+    if enforced and not used_creation_grant:
         try:
             used = _try_increment_image_usage(_utc_today(), subject_key, limit)
         except Exception as e:
@@ -1424,10 +1508,21 @@ async def generate_image(
         response.headers["X-Danddy-Image-Remaining"] = str(remaining)
         response.headers["X-Danddy-Image-Reset"] = str(reset_epoch)
     else:
-        # Not enforced (admin or dev). Signal "unlimited" to clients with remaining=-1.
+        # Not enforced (admin/dev), OR included portrait grant was used.
+        # If quota is enforced but we used a grant, report the *custom* image
+        # quota remaining based on current image_usage_count (unchanged).
         response.headers["X-Danddy-Image-Limit"] = str(limit)
-        response.headers["X-Danddy-Image-Remaining"] = "-1"
+        if not enforced:
+            response.headers["X-Danddy-Image-Remaining"] = "-1"
+        else:
+            try:
+                used_custom = _get_image_usage_count(_utc_today(), subject_key)
+            except Exception:
+                used_custom = 0
+            response.headers["X-Danddy-Image-Remaining"] = str(max(0, limit - used_custom))
         response.headers["X-Danddy-Image-Reset"] = str(reset_epoch)
+        if used_creation_grant:
+            response.headers["X-Danddy-Image-Grant-Used"] = "1"
 
     model = request.model or "dall-e-3"
     is_flux_model = model.startswith("flux-")
@@ -1485,8 +1580,12 @@ async def generate_image(
             }
 
         except HTTPException:
+            if used_creation_grant:
+                _release_creation_portrait_grant(_utc_today(), subject_key, grant_id)
             raise
         except Exception as e:
+            if used_creation_grant:
+                _release_creation_portrait_grant(_utc_today(), subject_key, grant_id)
             raise HTTPException(
                 status_code=500,
                 detail=f"Flux image generation failed: {str(e)}",
@@ -1676,6 +1775,8 @@ async def generate_image(
         }
 
     except Exception as e:
+        if used_creation_grant:
+            _release_creation_portrait_grant(_utc_today(), subject_key, grant_id)
         handle_openai_error(
             e,
             feature_name="image",
@@ -1961,6 +2062,15 @@ async def generate_character_summary(
         response.headers["X-Danddy-Creation-Remaining"] = "-1"
         response.headers["X-Danddy-Creation-Reset"] = str(reset_epoch)
 
+    # Issue a one-time portrait grant so the included portrait generation during
+    # character creation does not consume the separate custom image quota.
+    portrait_grant_id: Optional[str] = None
+    try:
+        portrait_grant_id = _issue_creation_portrait_grant(_utc_today(), subject_key)
+    except Exception as e:
+        # Fail open: summary should still succeed even if grant issuance fails.
+        print("⚠️  Failed to issue portrait grant:", str(e))
+
     # Build a single structured prompt for both names and backstory template
     prompt = (
         "You are helping create a Dungeons & Dragons character.\n\n"
@@ -2074,6 +2184,7 @@ async def generate_character_summary(
             "success": True,
             "names": clean_names,
             "backstory_template": backstory_template.strip(),
+            "portrait_grant_id": portrait_grant_id,
         }
 
     except Exception as e:

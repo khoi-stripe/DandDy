@@ -634,12 +634,12 @@ const AsciiArtService = (window.AsciiArtService = {
   },
 
   // Generate CUSTOM AI portrait with DALL-E (user-initiated)
-  async generateCustomAIPortrait(character) {
+  async generateCustomAIPortrait(character, options = {}) {
     try {
       console.log('🎨 Generating custom AI portrait with DALL-E...');
 
       // Step 1: Generate image with DALL-E
-      const imageUrl = await AIService.generatePortraitImage(character);
+      const imageUrl = await AIService.generatePortraitImage(character, options);
 
       if (!imageUrl) {
         throw new Error('DALL-E generation failed');
@@ -1246,6 +1246,10 @@ const AIService = (window.AIService = {
           template ||
           (character && character.backstory) ||
           buildLocalFallback().backstoryTemplate,
+        portraitGrantId:
+          (typeof data.portrait_grant_id === 'string' && data.portrait_grant_id) ||
+          (typeof data.portraitGrantId === 'string' && data.portraitGrantId) ||
+          null,
       };
     } catch (error) {
       if (error.message && error.message.includes('timed out')) {
@@ -1465,7 +1469,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
   },
 
   // Generate character portrait image using DALL-E
-  async generatePortraitImage(character) {
+  async generatePortraitImage(character, options = {}) {
     if (!CONFIG.ENABLE_AI) {
       console.log('AI service disabled for image generation');
       return null;
@@ -1474,7 +1478,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
     // Build a detailed prompt from character attributes
     const prompt = this.buildPortraitPrompt(character);
 
-    return await this.generateImageFromPrompt(prompt);
+    return await this.generateImageFromPrompt(prompt, options);
   },
 
   // Generate image from custom prompt
@@ -1581,6 +1585,11 @@ Format your response as JSON array of strings, one for each option in order. Exa
             size: '1024x1024',
             quality: quality,
             model: model,
+            // Optional one-time included portrait grant from /characters/summary.
+            creation_grant_id:
+              (options && options.creationGrantId) ||
+              (options && options.creation_grant_id) ||
+              null,
           }),
         }, 70000); // 70 seconds for image generation (DALL-E can be very slow, plus R2 upload)
 
