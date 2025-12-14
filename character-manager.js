@@ -1373,6 +1373,48 @@ window._creationQuotaRemaining = null;
 window._creationQuotaLimit = null;
 window._creationQuotaResetAt = null;
 
+// When the user transitions between demo/guest and authenticated (or swaps accounts),
+// we must re-fetch quota state; otherwise the UI can temporarily show stale "limits"
+// until a navigation/reload happens (e.g. visiting builder and coming back).
+let _lastQuotaAuthToken = null;
+let _lastQuotaAuthIsAuthed = null;
+
+function _getAuthTokenForQuotaRefresh() {
+    try {
+        return window.AuthService && typeof window.AuthService.getToken === 'function'
+            ? window.AuthService.getToken()
+            : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function refreshQuotaStateForCurrentAuth(reason = '') {
+    const token = _getAuthTokenForQuotaRefresh();
+    const isAuthed = !!token;
+
+    // Only refresh when auth identity changes; avoids extra network calls on
+    // unrelated UI updates that also call updateAuthUI().
+    if (_lastQuotaAuthIsAuthed === isAuthed && _lastQuotaAuthToken === token) {
+        return;
+    }
+
+    _lastQuotaAuthIsAuthed = isAuthed;
+    _lastQuotaAuthToken = token;
+
+    // Fire-and-forget refresh (these functions are defensive if UI isn't ready yet).
+    try { updateCreationQuotaState(); } catch (_) {}
+    try { updateImageQuotaState(); } catch (_) {}
+
+    // Also re-render the current sheet so feature gates that depend on auth state
+    // (e.g. share enablement, quota labels) update immediately.
+    try {
+        if (typeof AppState !== 'undefined' && AppState && AppState.selectedCharacterId) {
+            viewCharacter(AppState.selectedCharacterId, { skipKeyboardSync: true });
+        }
+    } catch (_) {}
+}
+
 function _formatCreationQuotaTooltip() {
     const cr = window._creationQuotaRemaining;
     const cl = window._creationQuotaLimit;
@@ -5633,6 +5675,10 @@ function updateAuthUI() {
         // Don't show guest notice by default - only when user makes changes
         // (handled by maybeShowGuestNotice() function)
     }
+
+    // Ensure quotas (and any quota-driven UI labels) reflect the *current* auth state
+    // immediately after login/logout, instead of waiting for a navigation.
+    refreshQuotaStateForCurrentAuth('updateAuthUI');
 }
 
 // ========================================
