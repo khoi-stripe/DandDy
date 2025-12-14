@@ -1392,16 +1392,19 @@ function _formatQuotaResetText(resetAt) {
 function _formatCreationQuotaTooltip() {
     const cr = window._creationQuotaRemaining;
     const cl = window._creationQuotaLimit;
-    if (typeof cr !== 'number' || typeof cl !== 'number') return '';
+    if (typeof cr !== 'number') return '';
 
     // Unlimited/admin bypass: keep tooltip empty to reduce noise.
     if (cr === -1) return '';
 
     const resetText = _formatQuotaResetText(window._creationQuotaResetAt);
+    const remainingText =
+        typeof cl === 'number' ? cr + '/' + cl + ' remaining today.' : cr + ' remaining today.';
+
     if (resetText) {
-        return cr + '/' + cl + ' remaining today. ' + resetText + '.';
+        return remainingText + '\n' + resetText + '.';
     }
-    return cr + '/' + cl + ' remaining today.';
+    return remainingText;
 }
 
 function _updateQuotaTooltipText() {
