@@ -5366,6 +5366,11 @@ const App = (window.App = {
         'A mysterious past, a questionable present, and a future that depends entirely on your dice.';
     }
 
+    // Set flag BEFORE state update so updateCharacterPanel knows to show the loader
+    // instead of the DefaultPortraits fallback image. The actual generation promise
+    // is set later, but this flag tells the panel "generation is coming".
+    this._quickCreatePortraitPending = true;
+
     // Update character state with all basic info at once to avoid multiple renders
     CharacterState.updateCharacter({
       race: race.id,
@@ -5421,6 +5426,8 @@ const App = (window.App = {
     if (portraitEl) {
       this._renderPortraitGeneratingLoader(portraitEl);
     }
+    // Clear the pending flag now that we're starting the actual generation
+    this._quickCreatePortraitPending = false;
     this._quickCreatePortraitGeneration = this._generateQuickCreatePortrait();
 
     // Show thinking message for backstory (just displaying, no API call needed)
@@ -5820,8 +5827,10 @@ const App = (window.App = {
         // IMPORTANT: If portrait generation is in progress (in either quick or guided mode),
         // we need to preserve the current portrait HTML (the fast-spinning "Generating..." cube).
         // Otherwise the re-render will replace it with the slow "Waiting..." cube.
+        // Also check _quickCreatePortraitPending which is set before the state update but
+        // before the actual generation promise is assigned.
         const isGenerating =
-          !!this._quickCreatePortraitGeneration || !!this._guidedPortraitGenerating;
+          !!this._quickCreatePortraitGeneration || !!this._guidedPortraitGenerating || !!this._quickCreatePortraitPending;
         const portraitNode = document.getElementById('character-portrait');
         // Only capture HTML if it's actually the loader (has the --generating class on the cube)
         const hasLoaderRendered = portraitNode && 
