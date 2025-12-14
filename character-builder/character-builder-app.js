@@ -5859,9 +5859,22 @@ const App = (window.App = {
           // a sheet re-render.
           portraitEl.classList.add('ascii-portrait--placeholder');
           portraitEl.classList.add('ascii-portrait--loading');
+          // Ensure the ASCII portrait area is visible (not hidden behind the image)
+          portraitEl.classList.remove('is-hidden');
+          
+          // Hide any fallback portrait image during generation so only the
+          // spinning cube loader is visible (getOriginalPortraitUrl returns
+          // DefaultPortraits URLs as a fallback even when originalPortraitUrl is null).
+          if (originalPortraitEl) {
+            originalPortraitEl.classList.add('is-hidden');
+          }
+          const portraitContainer = portraitEl.closest('.portrait-container');
+          if (portraitContainer) {
+            portraitContainer.classList.remove('portrait-container--original-mode');
+          }
         }
 
-        if (originalPortraitEl && character.originalPortraitUrl) {
+        if (originalPortraitEl && character.originalPortraitUrl && !isGenerating) {
           originalPortraitEl.src = character.originalPortraitUrl;
         }
 
