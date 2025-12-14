@@ -545,24 +545,9 @@ const AsciiArtService = (window.AsciiArtService = {
 
   // Get the image URL for a pre-generated portrait
   getPreGeneratedImageUrl(race, classType) {
-    const raceLower = race?.toLowerCase().replace(/\s+/g, '-') || '';
-    const classLower = classType?.toLowerCase().replace(/\s+/g, '-') || '';
-    
-    if (!raceLower) return null;
-
-    const fileName = classLower
-      ? `${raceLower}-${classLower}.png`
-      : `${raceLower}.png`;
-
-    // If a public R2 (or other CDN) base URL is configured, use that.
-    if (CONFIG && CONFIG.PREGENERATED_PORTRAIT_BASE_URL) {
-      const base = CONFIG.PREGENERATED_PORTRAIT_BASE_URL.replace(/\/+$/, '');
-      return `${base}/${fileName}`;
-    }
-
-    // Fallback: relative path for environments where PNGs are served locally.
-    // This keeps older static setups working if images are present on disk.
-    return `../generated_portraits/images/${fileName}`;
+    // Pre-generated *image* URLs are intentionally disabled. We only support
+    // user-generated portrait images (from AI generation) as "original art".
+    return null;
   },
 
   // Load portrait (pre-generated or fallback to template)
@@ -603,22 +588,12 @@ const AsciiArtService = (window.AsciiArtService = {
         );
         this._portraitCache[key] = preGenerated;
 
-        // Store ASCII art (and original image URL, when configured) in character for export
+        // Store ASCII art in character for export
         if (window.CharacterState) {
           const updates = {
             asciiPortrait: preGenerated,
             asciiPortraitKey: key,
           };
-
-          // If we have a known location for the original pre-generated PNG,
-          // expose it as originalPortraitUrl so apps can show "View Original Art".
-          const pregenImageUrl = this.getPreGeneratedImageUrl(
-            character.race,
-            character.class,
-          );
-          if (pregenImageUrl) {
-            updates.originalPortraitUrl = pregenImageUrl;
-          }
 
           window.CharacterState.updateCharacter(updates);
         }

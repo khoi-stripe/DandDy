@@ -2051,6 +2051,19 @@ const CharacterSheet = (window.CharacterSheet = {
     let source = null;
     let result = null;
 
+    // Guard: ignore legacy pre-generated "original art" URLs that were written
+    // into character data. We only want user-generated portrait images to
+    // display as original art.
+    const isPregenUrl = (url) => {
+      if (!url) return false;
+      const u = String(url);
+      return (
+        u.includes('r2.dev/defaults/') ||
+        u.includes('r2.dev/portraits/pregen/') ||
+        u.includes('generated_portraits/images/')
+      );
+    };
+
     // Prefer the active portrait version from history when available so
     // manager, builder, and history views all agree on "current" art.
     try {
@@ -2079,7 +2092,7 @@ const CharacterSheet = (window.CharacterSheet = {
     }
 
     // 1) Explicit custom portrait URL
-    if (character.originalPortraitUrl) {
+    if (character.originalPortraitUrl && !isPregenUrl(character.originalPortraitUrl)) {
       source = 'originalPortraitUrl';
       result = character.originalPortraitUrl;
       logPortraitDebug('getOriginalPortraitUrl', charId, charName, {
@@ -2090,7 +2103,7 @@ const CharacterSheet = (window.CharacterSheet = {
     }
 
     // 2) Exported portrait object from builder
-    if (character.portrait && character.portrait.url) {
+    if (character.portrait && character.portrait.url && !isPregenUrl(character.portrait.url)) {
       source = 'portrait.url';
       result = character.portrait.url;
       logPortraitDebug('getOriginalPortraitUrl', charId, charName, {
@@ -2098,22 +2111,6 @@ const CharacterSheet = (window.CharacterSheet = {
         url: result
       });
       return result;
-    }
-
-    // 3) Fall back to default portrait based on race/class
-    if (window.DefaultPortraits && character.race && character.class) {
-      const defaultUrl = DefaultPortraits.getUrl(character.race, character.class);
-      if (defaultUrl && DefaultPortraits.exists(character.race, character.class)) {
-        source = 'DefaultPortraits (race/class fallback)';
-        result = defaultUrl;
-        logPortraitDebug('getOriginalPortraitUrl', charId, charName, {
-          source,
-          race: character.race,
-          class: character.class,
-          url: result
-        });
-        return result;
-      }
     }
 
     logPortraitDebug('getOriginalPortraitUrl', charId, charName, {

@@ -66,7 +66,7 @@ window.CONFIG = {
   //     'https://your-account-id.r2.dev/danddy-portraits/portraits/pregen'
   //
   // Leave as null to disable original image URLs for pre-generated portraits.
-  PREGENERATED_PORTRAIT_BASE_URL: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults',
+  PREGENERATED_PORTRAIT_BASE_URL: null,
 
   // Default image model for custom AI portraits.
   //

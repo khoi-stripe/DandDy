@@ -451,8 +451,6 @@
         backstory: 'Lyra spent decades studying in the Silverspire Academy, where she discovered an ancient tome that hinted at forgotten magic from before the Sundering. Now she travels the realm, seeking fragments of lost arcane knowledge.',
         personalityTrait: 'I\'m convinced there\'s a logical explanation for everything, and I won\'t rest until I find it.',
         
-        // Portrait - uses default portrait from R2
-        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/elf-wizard.png',
         
         // Metadata
         createdAt: nowIso,
@@ -579,8 +577,6 @@
         backstory: 'Thorgrim served twenty years in the Ironforge Legion, defending the mountain holds from orc raids and goblin incursions. After the Battle of Redstone Pass, where he was the sole survivor of his unit, he set out to forge his own legend.',
         personalityTrait: 'I face problems head-on. A simple, direct solution is the best path to success.',
         
-        // Portrait - uses default portrait from R2
-        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dwarf-fighter.png',
         
         // Metadata
         createdAt: nowIso,
@@ -712,8 +708,6 @@
         backstory: 'Zephyr grew up on the streets of Waterdeep, their infernal appearance making them an outcast from birth. They learned to survive through cunning and quick fingers, eventually joining the Shadow Thieves. Now they work independently, taking jobs that interest them and staying one step ahead of the law.',
         personalityTrait: 'I have a joke for every occasion, especially occasions where humor is inappropriate.',
         
-        // Portrait - uses default portrait from R2
-        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/tiefling-rogue.png',
         
         // Metadata
         createdAt: nowIso,
@@ -857,8 +851,6 @@
         backstory: 'Sienna was orphaned during a plague that swept through her village. Taken in by the Temple of Lathander, she devoted her life to ensuring no one else would suffer as she had. Now she travels the land, bringing hope and healing wherever darkness threatens.',
         personalityTrait: 'I see omens in every event and action. The gods are always speaking to us, we just need to listen.',
         
-        // Portrait - uses default portrait from R2
-        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/human-cleric.png',
         
         // Metadata
         createdAt: nowIso,
@@ -1000,8 +992,6 @@
         backstory: 'Krazul hails from an ancient dragonborn clan that once served as dragon knights in a forgotten empire. When his clan\'s honor was questioned by corrupt nobles, he swore an oath to restore their name through righteous deeds. His lightning breath crackles with ancestral power.',
         personalityTrait: 'My favor, once lost, is lost forever. But my loyalty, once earned, is unshakeable.',
         
-        // Portrait - uses default portrait from R2
-        originalPortraitUrl: 'https://pub-afa9482f09a14edbab3514fa1466ab95.r2.dev/defaults/dragonborn-paladin.png',
         
         // Metadata
         createdAt: nowIso,

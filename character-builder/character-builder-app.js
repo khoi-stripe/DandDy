@@ -1693,12 +1693,6 @@ const App = (window.App = {
       this._creationQuotaInfo.remaining <= 1;
     const canCreateAnother = !demoLimitReached && !quotaExhausted;
 
-    // In demo mode, show customize art button since we used pre-generated portraits
-    // This lets users optionally generate a custom portrait using their image quota
-    const customizeArtBtn = isDemoMode
-      ? `<button class="button-primary" id="completion-customize-btn" onclick="App.openPromptModalFromCompletion()">&gt;\u00A0CUSTOMIZE CHARACTER ART</button>`
-      : '';
-    
     // Show completion options
     const createAnotherBtn = canCreateAnother
       ? `<button class="button-primary" id="completion-new-btn" onclick="App.startNew()">&gt;\u00A0CREATE ANOTHER CHARACTER</button>`
@@ -1707,7 +1701,6 @@ const App = (window.App = {
       'beforeend',
       `
       <div class="question-card mt-lg" data-question-id="${question.id}">
-        ${customizeArtBtn}
         <button class="button-primary completion-save-btn" id="completion-save-btn" onclick="App.saveCharacter()">&gt;\u00A0SAVE CHARACTER</button>
         ${createAnotherBtn}
       </div>`,
@@ -1894,22 +1887,6 @@ const App = (window.App = {
         return;
       }
 
-      // In demo mode, skip AI portrait generation and use pre-generated portraits.
-      // Users can still generate custom portraits from the character sheet using
-      // their separate image generation quota.
-      const isDemoMode = window.DemoCharacters && DemoCharacters.isDemoMode();
-      if (isDemoMode) {
-        console.log('📷 Demo mode: Using pre-generated portrait for guided mode');
-        await this._ensurePreGeneratedPortraitFallback(character, { force: true });
-        // Clean up the loader since we're bypassing the normal finally block
-        this._stopPortraitLoadingAnimation();
-        const portraitEl = document.getElementById('character-portrait');
-        if (portraitEl) {
-          portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
-        }
-        return;
-      }
-      
       // Mark that portrait generation is in progress (used by updateCharacterPanel)
       this._guidedPortraitGenerating = true;
 
@@ -2009,15 +1986,15 @@ const App = (window.App = {
         this.showSystemMessage(userMessage);
       } else if (error.isRateLimit) {
         this.showSystemMessage(
-          "You've reached today's portrait limit, so we're using a pre-generated portrait for now. You can create a custom one tomorrow from the character sheet.",
+          "You've reached today's portrait limit, so we're using a simple fallback portrait for now. You can create a custom one tomorrow from the character sheet.",
         );
       } else {
         this.showSystemMessage(
-          'AI portrait generation failed, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
+          'AI portrait generation failed, so we\'re using a simple fallback portrait for now. You can still create a custom one later from the character sheet.',
         );
       }
       
-      // Ensure we at least have a pre-generated portrait to fall back to
+      // Ensure we at least have a basic portrait to fall back to.
       await this._ensurePreGeneratedPortraitFallback(character);
     } finally {
       // Clear the generating flag so future re-renders work normally
@@ -3651,20 +3628,18 @@ const App = (window.App = {
   },
 
   /**
-   * Ensure we have at least a pre-generated portrait (ASCII + optional image)
-   * for the given character. Used when custom AI portrait generation fails
-   * (rate limits, backend errors, etc.) so we can gracefully fall back to
-   * our static portrait set instead of leaving the frame empty.
+   * Ensure we have at least a basic ASCII fallback portrait for the given
+   * character. Used when custom AI portrait generation fails (rate limits,
+   * backend errors, etc.) so we don't leave the frame empty.
    *
-   * When `options.force` is true, we will attempt to load a pre-generated
-   * portrait even if the character already appears to have one; this is
-   * useful in quick-create flows that start from a blank portrait.
+   * Important: this intentionally does NOT load any pre-generated portrait
+   * assets (ASCII or images). It only uses the simple template portrait.
    */
   async _ensurePreGeneratedPortraitFallback(character, options = {}) {
     const force = !!(options && options.force);
 
     try {
-      if (!window.AsciiArtService || !character || !character.race || !character.class) {
+      if (!window.AsciiArtService || !character || !character.race) {
         return;
       }
 
@@ -3681,11 +3656,10 @@ const App = (window.App = {
         return;
       }
 
-      // This will prefer race/class-specific ASCII from generated_portraits/,
-      // fall back to race-only, and only as a last resort use a simple
-      // text template. It also updates CharacterState with asciiPortrait and
-      // originalPortraitUrl when successful.
-      const fallbackArt = await AsciiArtService.generateAIPortrait(character);
+      // Use the simple template portrait only (no pre-generated file loads).
+      const fallbackArt = AsciiArtService.getFullPortrait
+        ? AsciiArtService.getFullPortrait(character)
+        : '';
 
       // In guided/quick mode, updateCharacterPanel only shows customPortraitAscii,
       // not asciiPortrait. So we also set customPortraitAscii here to ensure the
@@ -3693,6 +3667,13 @@ const App = (window.App = {
       if (fallbackArt && window.CharacterState) {
         CharacterState.updateCharacter({
           customPortraitAscii: fallbackArt,
+          // Explicitly clear any existing original image URL so pre-generated
+          // images (or stale URLs) cannot appear as a fallback.
+          originalPortraitUrl: null,
+          portrait: {
+            ...(existing.portrait || {}),
+            url: null,
+          },
         });
       }
 
@@ -3702,7 +3683,7 @@ const App = (window.App = {
       const latest = CharacterState.get().character;
       await this.updateCharacterPanel(latest);
     } catch (fallbackError) {
-      console.error('Failed to apply pre-generated portrait fallback:', fallbackError);
+      console.error('Failed to apply fallback portrait:', fallbackError);
     }
   },
 
@@ -3923,20 +3904,6 @@ const App = (window.App = {
       // Fallback: no animation support, just close immediately.
       handleClose();
     }
-  },
-
-  // Open the prompt modal from the completion screen (for demo mode users
-  // who want to customize their pre-generated portrait).
-  openPromptModalFromCompletion() {
-    const state = CharacterState.get();
-    const character = state && state.character;
-    
-    if (!character || !character.race || !character.class) {
-      this.showSystemMessage('Character data not available for portrait customization.');
-      return;
-    }
-    
-    this.openPromptModal(character);
   },
 
   async confirmPromptModal() {
@@ -4193,15 +4160,15 @@ const App = (window.App = {
         this.showSystemMessage(userMessage);
       } else if (error.isRateLimit) {
         this.showSystemMessage(
-          "You've reached today's portrait limit, so we're using a pre-generated portrait for now. You can create a custom one tomorrow from the character sheet.",
+          "You've reached today's portrait limit, so we're using a simple fallback portrait for now. You can create a custom one tomorrow from the character sheet.",
         );
       } else {
         this.showSystemMessage(
-          'AI portrait generation failed, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
+          'AI portrait generation failed, so we\'re using a simple fallback portrait for now. You can still create a custom one later from the character sheet.',
         );
       }
       
-      // Restore portrait font sizing and swap back to a safe, pre-generated portrait.
+      // Restore portrait font sizing and swap back to a safe fallback portrait.
       const state = CharacterState.get();
       if (portraitEl) {
         portraitEl.style.fontSize = '';
@@ -4211,8 +4178,8 @@ const App = (window.App = {
         );
       }
 
-      // If we already have some portrait art (custom or pre-generated), just
-      // re-render the sheet; otherwise, load a pre-generated portrait now.
+      // If we already have some portrait art, just re-render the sheet;
+      // otherwise, apply a basic fallback portrait now.
       await this._ensurePreGeneratedPortraitFallback(state.character, {
         force: !(
           state.character &&
@@ -5079,22 +5046,6 @@ const App = (window.App = {
         return;
       }
 
-      // In demo mode, skip AI portrait generation and use pre-generated portraits.
-      // Users can still generate custom portraits from the character sheet using
-      // their separate image generation quota.
-      const isDemoMode = window.DemoCharacters && DemoCharacters.isDemoMode();
-      if (isDemoMode) {
-        console.log('📷 Demo mode: Using pre-generated portrait for quick-create');
-        await this._ensurePreGeneratedPortraitFallback(currentChar, { force: true });
-        // Clean up the loader since we're bypassing the normal finally block
-        this._stopPortraitLoadingAnimation();
-        const portraitEl = document.getElementById('character-portrait');
-        if (portraitEl) {
-          portraitEl.classList.remove('ascii-portrait--loading', 'ascii-portrait--placeholder');
-        }
-        return;
-      }
-
       // Wait for DOM to update before trying to render the loader.
       // The character sheet may not exist yet if state changes are still pending.
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -5202,15 +5153,15 @@ const App = (window.App = {
         this.showSystemMessage(userMessage);
       } else if (error.isRateLimit) {
         this.showSystemMessage(
-          "You've reached today's portrait limit, so we're using a pre-generated portrait for now. You can create a custom one tomorrow from the character sheet.",
+          "You've reached today's portrait limit, so we're using a simple fallback portrait for now. You can create a custom one tomorrow from the character sheet.",
         );
       } else {
         this.showSystemMessage(
-          'AI portrait generation failed, so we\'re using a pre-generated portrait for now. You can still create a custom one later from the character sheet.',
+          'AI portrait generation failed, so we\'re using a simple fallback portrait for now. You can still create a custom one later from the character sheet.',
         );
       }
       
-      // Ensure we at least have a pre-generated portrait to fall back to.
+      // Ensure we at least have a basic portrait to fall back to.
       await this._ensurePreGeneratedPortraitFallback(currentChar, { force: true });
     } finally {
       // Whatever happens above (success or failure), stop the animated dots
@@ -5367,8 +5318,8 @@ const App = (window.App = {
     }
 
     // Set flag BEFORE state update so updateCharacterPanel knows to show the loader
-    // instead of the DefaultPortraits fallback image. The actual generation promise
-    // is set later, but this flag tells the panel "generation is coming".
+    // instead of any stale/fallback image. The actual generation promise is set
+    // later, but this flag tells the panel "generation is coming".
     this._quickCreatePortraitPending = true;
 
     // Update character state with all basic info at once to avoid multiple renders
@@ -5871,9 +5822,8 @@ const App = (window.App = {
           // Ensure the ASCII portrait area is visible (not hidden behind the image)
           portraitEl.classList.remove('is-hidden');
           
-          // Hide any fallback portrait image during generation so only the
-          // spinning cube loader is visible (getOriginalPortraitUrl returns
-          // DefaultPortraits URLs as a fallback even when originalPortraitUrl is null).
+          // Hide any existing original image during generation so only the
+          // spinning cube loader is visible.
           if (originalPortraitEl) {
             originalPortraitEl.classList.add('is-hidden');
           }
