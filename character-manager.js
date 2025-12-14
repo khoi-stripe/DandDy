@@ -1414,6 +1414,23 @@ function _updateQuotaTooltipText() {
     tooltip.textContent = _formatCreationQuotaTooltip();
 }
 
+function _getTooltipBoundsRect() {
+    // Prefer clamping within the terminal frame to avoid clipping on its edges.
+    const frame = document.querySelector('.terminal-frame');
+    if (frame && typeof frame.getBoundingClientRect === 'function') {
+        return frame.getBoundingClientRect();
+    }
+    // Fall back to the viewport.
+    return {
+        left: 0,
+        top: 0,
+        right: window.innerWidth || document.documentElement.clientWidth || 0,
+        bottom: window.innerHeight || document.documentElement.clientHeight || 0,
+        width: window.innerWidth || document.documentElement.clientWidth || 0,
+        height: window.innerHeight || document.documentElement.clientHeight || 0,
+    };
+}
+
 function _positionTooltipInViewport(tooltipEl, triggerEl) {
     if (!tooltipEl || !triggerEl) return;
 
@@ -1422,29 +1439,35 @@ function _positionTooltipInViewport(tooltipEl, triggerEl) {
 
     const margin = 8;
     const triggerRect = triggerEl.getBoundingClientRect();
+    const bounds = _getTooltipBoundsRect();
 
     // Temporarily set to measure natural size.
     tooltipEl.style.left = '0px';
     tooltipEl.style.top = '0px';
 
-    const tipRect = tooltipEl.getBoundingClientRect();
-    const vw = window.innerWidth || document.documentElement.clientWidth || 0;
-    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+    // Use offsetWidth/offsetHeight so transforms/transitions don't affect measurement.
+    const tipW = tooltipEl.offsetWidth || 0;
+    const tipH = tooltipEl.offsetHeight || 0;
 
     // Default: below trigger, centered.
-    let left = triggerRect.left + triggerRect.width / 2 - tipRect.width / 2;
+    let left = triggerRect.left + triggerRect.width / 2 - tipW / 2;
     let top = triggerRect.bottom + 6;
 
-    // Clamp horizontally within viewport.
-    left = Math.max(margin, Math.min(left, Math.max(margin, vw - tipRect.width - margin)));
+    // Clamp horizontally within bounds (terminal frame if present).
+    const minLeft = bounds.left + margin;
+    const maxLeft = bounds.right - tipW - margin;
+    left = Math.max(minLeft, Math.min(left, Math.max(minLeft, maxLeft)));
 
     // If bottom would clip, place above.
-    if (top + tipRect.height + margin > vh) {
-        top = triggerRect.top - tipRect.height - 6;
+    const maxBottom = bounds.bottom - margin;
+    if (top + tipH > maxBottom) {
+        top = triggerRect.top - tipH - 6;
     }
 
-    // Clamp vertically within viewport.
-    top = Math.max(margin, Math.min(top, Math.max(margin, vh - tipRect.height - margin)));
+    // Clamp vertically within bounds.
+    const minTop = bounds.top + margin;
+    const maxTop = bounds.bottom - tipH - margin;
+    top = Math.max(minTop, Math.min(top, Math.max(minTop, maxTop)));
 
     tooltipEl.style.left = left + 'px';
     tooltipEl.style.top = top + 'px';
@@ -6264,9 +6287,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (newCharacterTooltip) {
             const showTooltip = () => {
                 if (!newCharacterTooltip.textContent) return;
+
+                // Position FIRST (while hidden) to avoid any visible jump.
+                _positionTooltipInViewport(newCharacterTooltip, newCharacterBtn);
                 newCharacterTooltip.classList.add('show');
-                // Position after it becomes visible so we measure correctly.
-                requestAnimationFrame(() => _positionTooltipInViewport(newCharacterTooltip, newCharacterBtn));
             };
             const hideTooltip = () => {
                 newCharacterTooltip.classList.remove('show');
