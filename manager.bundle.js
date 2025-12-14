@@ -7562,13 +7562,9 @@ function _formatCreationQuotaTooltip() {
     // Unlimited/admin bypass: keep tooltip empty to reduce noise.
     if (cr === -1) return '';
 
-    const resetText = _formatQuotaResetText(window._creationQuotaResetAt);
     const remainingText =
         typeof cl === 'number' ? cr + '/' + cl + ' remaining today.' : cr + ' remaining today.';
 
-    if (resetText) {
-        return remainingText + '\n' + resetText + '.';
-    }
     return remainingText;
 }
 
