@@ -6086,6 +6086,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (clearSearchBtn && searchInput) {
+        // Use mousedown with preventDefault to stop iOS Safari from blurring
+        // the input before we can process the clear action
+        clearSearchBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // Prevent input blur on iOS Safari
+        });
         clearSearchBtn.addEventListener('click', () => {
             if (searchInput.disabled) return;
             searchInput.value = '';
