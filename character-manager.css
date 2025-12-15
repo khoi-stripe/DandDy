@@ -1922,6 +1922,19 @@
         color: #000 !important;
     }
 
+    /* Restore real list markers for sheet bullet lists (the block override above
+       would otherwise hide markers by forcing li off of display:list-item). */
+    .character-sheet ul.sheet-bullet-list {
+        display: block !important;
+        padding-left: 1.25rem !important;
+        list-style: disc !important;
+        list-style-position: outside !important;
+    }
+
+    .character-sheet ul.sheet-bullet-list > li {
+        display: list-item !important;
+    }
+
     /* Reset grids to proper display */
     .character-sheet .stat-grid,
     .character-sheet .ability-grid {

@@ -1463,12 +1463,14 @@ const CharacterSheet = (window.CharacterSheet = {
 
     const extraProfsMarkup =
       extraProfs && extraProfs.length
-        ? extraProfs
-            .map((skill) => {
-              const label = this.escapeHtml(this.formatSkillName(skill));
-              return `<div class="text-dim">• ${label}</div>`;
-            })
-            .join('')
+        ? `<ul class="sheet-bullet-list">
+            ${extraProfs
+              .map((skill) => {
+                const label = this.escapeHtml(this.formatSkillName(skill));
+                return `<li class="text-dim">${label}</li>`;
+              })
+              .join('')}
+          </ul>`
         : '';
 
     const headerTitle = hasSkillModifiers
@@ -1506,7 +1508,7 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Helper to render spell list
     const renderSpellList = (spells) => {
-      return spells
+      const items = spells
         .map((spell) => {
           const rawName = spell && typeof spell === 'object' ? spell.name : spell;
           const name = this.escapeHtml(rawName || '');
@@ -1522,9 +1524,11 @@ const CharacterSheet = (window.CharacterSheet = {
                   spell.description,
                 )}</div>`
               : '';
-        return `<div class="text-dim spell-list-item">• ${name}${school}</div>${desc}`;
+          return `<li class="text-dim spell-list-item">${name}${school}${desc}</li>`;
         })
         .join('');
+
+      return `<ul class="sheet-bullet-list spell-list">${items}</ul>`;
     };
 
     let spellsContent = '';
@@ -1581,9 +1585,14 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderRacialTraits(parsed) {
-    const traitsMarkup = parsed.racialTraits
-      .map((trait) => `<div class="text-dim">• ${this.escapeHtml(trait)}</div>`)
-      .join('');
+    const traits = parsed.racialTraits || [];
+    if (!traits.length) return '';
+
+    const traitsMarkup = `<ul class="sheet-bullet-list">
+      ${traits
+        .map((trait) => `<li class="text-dim">${this.escapeHtml(trait)}</li>`)
+        .join('')}
+    </ul>`;
 
     return `
       <div class="sheet-section">
@@ -1598,14 +1607,14 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderEquipment(parsed) {
-    const equipmentMarkup = parsed.equipment
-      .map(
-        (item) =>
-          `<div class="text-dim">• ${this.escapeHtml(
-            item,
-          )}</div>`,
-      )
-      .join('');
+    const equipment = parsed.equipment || [];
+    if (!equipment.length) return '';
+
+    const equipmentMarkup = `<ul class="sheet-bullet-list">
+      ${equipment
+        .map((item) => `<li class="text-dim">${this.escapeHtml(item)}</li>`)
+        .join('')}
+    </ul>`;
 
     return `
       <div class="sheet-section">
@@ -1620,12 +1629,17 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderToolProficiencies(parsed) {
-    const toolsMarkup = parsed.toolProficiencies
-      .map((tool) => {
-        const label = this.escapeHtml(this.formatSkillName(tool));
-        return `<div class="text-dim">• ${label}</div>`;
-      })
-      .join('');
+    const tools = parsed.toolProficiencies || [];
+    if (!tools.length) return '';
+
+    const toolsMarkup = `<ul class="sheet-bullet-list">
+      ${tools
+        .map((tool) => {
+          const label = this.escapeHtml(this.formatSkillName(tool));
+          return `<li class="text-dim">${label}</li>`;
+        })
+        .join('')}
+    </ul>`;
 
     return `
       <div class="sheet-section">
@@ -1655,14 +1669,11 @@ const CharacterSheet = (window.CharacterSheet = {
         <div class="sheet-content">
           ${
             hasLanguages
-              ? parsed.languages
-                  .map(
-                    (lang) =>
-                      `<div class="text-dim">• ${this.escapeHtml(
-                        lang,
-                      )}</div>`,
-                  )
-                  .join('')
+              ? `<ul class="sheet-bullet-list">
+                  ${parsed.languages
+                    .map((lang) => `<li class="text-dim">${this.escapeHtml(lang)}</li>`)
+                    .join('')}
+                </ul>`
               : ''
           }
           ${hasChoices 

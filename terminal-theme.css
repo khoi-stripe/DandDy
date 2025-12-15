@@ -890,11 +890,27 @@ body::before {
 }
 
 .spell-list-description {
-  margin-left: 1rem;
+  margin-left: 0;
+  margin-top: 0.15rem;
 }
 
 .spellcasting-ability-note {
   margin-top: 0.5rem;
+}
+
+.sheet-bullet-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+  list-style-position: outside;
+}
+
+.sheet-bullet-list li {
+  margin: 0.15rem 0;
+}
+
+.sheet-bullet-list li::marker {
+  color: var(--sheet-label-color);
 }
 
 .sheet-title-header {
