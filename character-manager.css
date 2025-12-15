@@ -1345,6 +1345,17 @@
     .search-character-count {
         display: none;
     }
+
+    /* When the search field is focused on mobile, let it expand full-width by
+       temporarily hiding the right-side actions (sort button, etc). */
+    .search-bar:focus-within .search-actions {
+        display: none;
+    }
+
+    .search-bar:focus-within .search-input-wrapper {
+        flex: 1 1 100%;
+        width: 100%;
+    }
     
     .right-panel {
         display: none !important;
