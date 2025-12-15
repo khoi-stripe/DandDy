@@ -2701,9 +2701,9 @@ const App = (window.App = {
               <p>This character's portrait was created before the history feature was added.</p>
               <p>Generate a new custom AI portrait to:</p>
               <ul class="portrait-history-callout-list">
-                <li>• Save your current portrait as Version 1</li>
-                <li>• Add the new portrait as Version 2</li>
-                <li>• Enable portrait version switching</li>
+                <li>Save your current portrait as Version 1</li>
+                <li>Add the new portrait as Version 2</li>
+                <li>Enable portrait version switching</li>
               </ul>
             </div>`
         : `<p class="terminal-text-small terminal-text-dim portrait-history-callout">
@@ -5725,7 +5725,12 @@ const App = (window.App = {
 
       const content = overlay.querySelector('.modal-content') || overlay;
 
+      let finished = false;
       const handleClose = () => {
+        // Prevent double-execution from both animationend and fallback timeout
+        if (finished) return;
+        finished = true;
+
         if (overlay && overlay.parentNode) {
           overlay.parentNode.removeChild(overlay);
         }
@@ -5740,6 +5745,9 @@ const App = (window.App = {
 
       if (content && content.addEventListener) {
         content.addEventListener('animationend', handleClose, { once: true });
+        // Fallback timeout in case animationend doesn't fire
+        // (e.g., no CSS animation defined or browser quirk)
+        setTimeout(handleClose, 400);
       } else {
         handleClose();
       }

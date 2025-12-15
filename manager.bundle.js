@@ -5655,7 +5655,7 @@ class="portrait-history-card-row${normalized.versions.length===1?' is-single':''
 
       if (!hasVersions) {
         if (hasCustomPortraitWithoutHistory) {
-          return `<div class="terminal-text-small terminal-text-dim portrait-history-callout"><p><strong>No portrait history yet.</strong></p><p>This character's portrait was created before the history feature was added.</p><p>Generate a new custom AI portrait to:</p><ul class="portrait-history-callout-list"><li>• Save your current portrait as Version 1</li><li>• Add the new portrait as Version 2</li><li>• Enable portrait version switching</li></ul></div>`;
+          return `<div class="terminal-text-small terminal-text-dim portrait-history-callout"><p><strong>No portrait history yet.</strong></p><p>This character's portrait was created before the history feature was added.</p><p>Generate a new custom AI portrait to:</p><ul class="portrait-history-callout-list"><li>Save your current portrait as Version 1</li><li>Add the new portrait as Version 2</li><li>Enable portrait version switching</li></ul></div>`;
         }
 
         return `<p class="terminal-text-small terminal-text-dim portrait-history-callout">No saved portraits yet.<br><br>Generate a custom AI portrait to start building a history.</p>`;

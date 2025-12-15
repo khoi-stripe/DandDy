@@ -3390,7 +3390,7 @@ class="portrait-history-card-row${normalized.versions.length===1?' is-single':''
 
       if (!hasVersions) {
         if (hasCustomPortraitWithoutHistory) {
-          return `<div class="terminal-text-small terminal-text-dim portrait-history-callout"><p><strong>No portrait history yet.</strong></p><p>This character's portrait was created before the history feature was added.</p><p>Generate a new custom AI portrait to:</p><ul class="portrait-history-callout-list"><li>• Save your current portrait as Version 1</li><li>• Add the new portrait as Version 2</li><li>• Enable portrait version switching</li></ul></div>`;
+          return `<div class="terminal-text-small terminal-text-dim portrait-history-callout"><p><strong>No portrait history yet.</strong></p><p>This character's portrait was created before the history feature was added.</p><p>Generate a new custom AI portrait to:</p><ul class="portrait-history-callout-list"><li>Save your current portrait as Version 1</li><li>Add the new portrait as Version 2</li><li>Enable portrait version switching</li></ul></div>`;
         }
 
         return `<p class="terminal-text-small terminal-text-dim portrait-history-callout">No saved portraits yet.<br><br>Generate a custom AI portrait to start building a history.</p>`;
@@ -7809,7 +7809,7 @@ onclick="CharacterSheet.toggleSelectorMenu(this); event.stopPropagation();"><spa
           })
           .join('')
       : hasCustomPortraitWithoutHistory
-        ? `<div class="terminal-text-small terminal-text-dim portrait-history-callout"><p><strong>No portrait history yet.</strong></p><p>This character's portrait was created before the history feature was added.</p><p>Generate a new custom AI portrait to:</p><ul class="portrait-history-callout-list"><li>• Save your current portrait as Version 1</li><li>• Add the new portrait as Version 2</li><li>• Enable portrait version switching</li></ul></div>`
+        ? `<div class="terminal-text-small terminal-text-dim portrait-history-callout"><p><strong>No portrait history yet.</strong></p><p>This character's portrait was created before the history feature was added.</p><p>Generate a new custom AI portrait to:</p><ul class="portrait-history-callout-list"><li>Save your current portrait as Version 1</li><li>Add the new portrait as Version 2</li><li>Enable portrait version switching</li></ul></div>`
         : `<p class="terminal-text-small terminal-text-dim portrait-history-callout">No saved portraits yet.<br><br>Generate a custom AI portrait to start building a history.</p>`;
 
     return `<p class="terminal-text-small terminal-text-dim">View previous custom AI portraits for this character.Choose one to make it active,or delete versions you no longer need.</p><div class="portrait-history-card-row${versions.length===1?' is-single':''}">${listHtml}</div>`;
@@ -10644,7 +10644,12 @@ placeholder="Enter character name"></div><div id="name-modal-error"class="termin
 
       const content = overlay.querySelector('.modal-content') || overlay;
 
+      let finished = false;
       const handleClose = () => {
+        // Prevent double-execution from both animationend and fallback timeout
+        if (finished) return;
+        finished = true;
+
         if (overlay && overlay.parentNode) {
           overlay.parentNode.removeChild(overlay);
         }
@@ -10659,6 +10664,9 @@ placeholder="Enter character name"></div><div id="name-modal-error"class="termin
 
       if (content && content.addEventListener) {
         content.addEventListener('animationend', handleClose, { once: true });
+        // Fallback timeout in case animationend doesn't fire
+        // (e.g., no CSS animation defined or browser quirk)
+        setTimeout(handleClose, 400);
       } else {
         handleClose();
       }

@@ -591,6 +591,7 @@
 
 .sheet-subsection-title {
     margin-top: 4px;
+    padding-top: 8px;
 }
 
 /* Hide print-only name on screen - only shown in print */

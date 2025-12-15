@@ -1106,9 +1106,9 @@
               <p>This character's portrait was created before the history feature was added.</p>
               <p>Generate a new custom AI portrait to:</p>
               <ul class="portrait-history-callout-list">
-                <li>• Save your current portrait as Version 1</li>
-                <li>• Add the new portrait as Version 2</li>
-                <li>• Enable portrait version switching</li>
+                <li>Save your current portrait as Version 1</li>
+                <li>Add the new portrait as Version 2</li>
+                <li>Enable portrait version switching</li>
               </ul>
             </div>`;
         }
