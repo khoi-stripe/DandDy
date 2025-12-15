@@ -589,6 +589,10 @@
     text-transform: uppercase;
 }
 
+.sheet-subsection-title {
+    margin-top: 4px;
+}
+
 /* Hide print-only name on screen - only shown in print */
 .print-only-name {
     display: none;
