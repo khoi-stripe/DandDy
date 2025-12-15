@@ -532,15 +532,17 @@ function initBuilderHeaderAuth() {
     // Prompt user to log in again (in-place)
     if (window.App && typeof window.App.showConfirmationOverlay === 'function') {
       window.App.showConfirmationOverlay(
-        "Your session expired. Your character is safe locally — log in again to sync to the cloud.",
+        "Your session expired. Your character is safe locally. Log in to sync, or continue as guest.",
         () => {
           // Use modal for consistency with manager page
           if (typeof window.showAuthModal === 'function') {
             window.showAuthModal();
           }
         },
-        null,
-        { primaryLabel: 'LOG IN', hideSecondary: true },
+        () => {
+          // Continue as guest - just close the overlay
+        },
+        { primaryLabel: 'LOG IN', secondaryLabel: 'CONTINUE AS GUEST' },
       );
       return;
     }

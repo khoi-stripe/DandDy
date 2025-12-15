@@ -325,7 +325,7 @@ if(window.App&&typeof window.App.showAuthScreen==='function'){window.App.showAut
 if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>window.location.reload(),()=>{},()=>{});}});}},});window.updateAuthUI=async function updateAuthUI(){try{if(!window.AuthService||!window.AuthUI)return;if(window.AuthService.isAuthenticated()){let user=window.AuthService.getCurrentUser();if(!user&&typeof window.AuthService.fetchProfile==='function'){user=await window.AuthService.fetchProfile();if(user)window.AuthService.setCurrentUser(user);}
 if(user){window.AuthUI.updateHeaderWithUser(user);}else{window.AuthUI.updateHeaderWithUser({email:'Logged In',role:'player'});}}else{window.AuthUI.showGuestBanner();}}catch(e){console.warn('[Builder] updateAuthUI failed:',e);}};function initBuilderHeaderAuth(){if(typeof window.updateAuthUI==='function'){window.updateAuthUI();}
 if(window.AuthService&&window.AuthService.isAuthenticated()){if(typeof window.AuthService.startSessionMonitor==='function'){window.AuthService.startSessionMonitor();}}
-window.addEventListener('danddy:sessionExpired',()=>{if(typeof window.updateAuthUI==='function')window.updateAuthUI();if(window.App&&typeof window.App.showConfirmationOverlay==='function'){window.App.showConfirmationOverlay("Your session expired. Your character is safe locally — log in again to sync to the cloud.",()=>{if(typeof window.showAuthModal==='function'){window.showAuthModal();}},null,{primaryLabel:'LOG IN',hideSecondary:true},);return;}
+window.addEventListener('danddy:sessionExpired',()=>{if(typeof window.updateAuthUI==='function')window.updateAuthUI();if(window.App&&typeof window.App.showConfirmationOverlay==='function'){window.App.showConfirmationOverlay("Your session expired. Your character is safe locally. Log in to sync, or continue as guest.",()=>{if(typeof window.showAuthModal==='function'){window.showAuthModal();}},()=>{},{primaryLabel:'LOG IN',secondaryLabel:'CONTINUE AS GUEST'},);return;}
 window.App?.showNotification?.('⚠ Session expired — log in again to sync','warning');});}
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initBuilderHeaderAuth);}else{initBuilderHeaderAuth();}
 const CharacterAPI=(window.CharacterAPI={arrayToDict(arr){if(!arr||!Array.isArray(arr))return[];return arr.map(item=>{if(typeof item==='object'&&item!==null){return item;}
@@ -11396,6 +11396,7 @@ function showRegisterForm() {
 }
 
 async function handleLogin() {
+    console.log('[handleLogin] Function called');
     const errorEl = document.getElementById('authError');
 
     // If the login form is hidden (user is on the REGISTER tab), do nothing.
@@ -11403,6 +11404,7 @@ async function handleLogin() {
     // the register screen if some stray event fires the login handler.
     const loginFormEl = document.getElementById('loginForm');
     if (loginFormEl && loginFormEl.classList.contains('is-hidden')) {
+        console.log('[handleLogin] Aborted: loginForm is hidden');
         return;
     }
 
@@ -11416,15 +11418,19 @@ async function handleLogin() {
 
     const email = emailInput ? emailInput.value.trim() : '';
     const password = passwordInput ? passwordInput.value : '';
+    console.log('[handleLogin] Got email:', email ? '(provided)' : '(empty)');
 
     if (!email || !password) {
         errorEl.textContent = 'Please enter both email and password';
         errorEl.classList.remove('is-hidden');
+        console.log('[handleLogin] Validation failed: missing email or password');
         return;
     }
 
+    console.log('[handleLogin] Calling AuthService.login...');
     try {
         const result = await window.AuthService.login(email, password);
+        console.log('[handleLogin] AuthService.login returned:', result);
         if (result.success) {
             console.log(`✓ Logged in as ${email}`);
             
@@ -11442,8 +11448,10 @@ async function handleLogin() {
         } else {
             errorEl.textContent = result.error || 'Login failed';
             errorEl.classList.remove('is-hidden');
+            console.log('[handleLogin] Login failed:', result.error);
         }
     } catch (error) {
+        console.error('[handleLogin] Exception:', error);
         errorEl.textContent = 'Login failed. Please try again.';
         errorEl.classList.remove('is-hidden');
     }
@@ -11499,7 +11507,7 @@ if(!window.CharacterCloudStorage){console.error('☁️ CharacterCloudStorage no
 const character=window.CharacterState.current.character;if(!character.name){console.log('☁️ Character has no name yet - skipping cloud save');return false;}
 console.log('☁️ Saving character to cloud:',character.name);const allCloudChars=await window.CharacterCloudStorage.getAll();const existingChar=allCloudChars.find(c=>c.characterUid===character.characterUid||c.metadata?.characterUid===character.characterUid);if(existingChar){console.log('☁️ Updating existing character in cloud:',existingChar.id);await window.CharacterCloudStorage.update(existingChar.id,character);console.log('☁️ Character updated in cloud successfully');}else{console.log('☁️ Creating new character in cloud');const result=await window.CharacterCloudStorage.add(character);console.log('☁️ Character created in cloud with ID:',result.id);}
 return true;}catch(error){console.error('☁️ Failed to save character to cloud:',error);return false;}}
-function handleSessionExpired(){updateAuthUI();if(window.App&&window.App.showConfirmationOverlay){window.App.showConfirmationOverlay('Your session has expired. Your character is safe locally, but you\'ll need to log in again to sync with the cloud.',()=>{showAuthModal();},null,{primaryLabel:'LOG IN',hideSecondary:true});}else if(window.App&&window.App.showNotification){window.App.showNotification('⚠ Session expired - log in again to sync','warning');}}
+function handleSessionExpired(){updateAuthUI();if(window.App&&window.App.showConfirmationOverlay){window.App.showConfirmationOverlay('Your session has expired. Your character is safe locally. Log in to sync with the cloud, or continue as guest.',()=>{showAuthModal();},()=>{},{primaryLabel:'LOG IN',secondaryLabel:'CONTINUE AS GUEST'});}else if(window.App&&window.App.showNotification){window.App.showNotification('⚠ Session expired - log in again to sync','warning');}}
 function initBuilderAuth(){updateAuthUI();if(window.AuthService&&window.AuthService.isAuthenticated()){if(typeof window.AuthService.startSessionMonitor==='function'){window.AuthService.startSessionMonitor();}}
 window.addEventListener('danddy:sessionExpired',handleSessionExpired);}
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initBuilderAuth);}else{initBuilderAuth();}

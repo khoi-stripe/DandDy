@@ -283,12 +283,6 @@
     gap: var(--spacing-sm);
 }
 
-.search-character-count {
-    color: var(--terminal-accent);
-    font-size: var(--font-size-small);
-    white-space: nowrap;
-}
-
 .sort-trigger-wrap {
     position: relative;
     display: inline-block;
@@ -1350,11 +1344,6 @@
         margin-bottom: 0;
     }
 
-    /* Hide filtered count in the search header on mobile to prevent layout shifts */
-    .search-character-count {
-        display: none;
-    }
-
     /* When the search field is focused on mobile, let it expand full-width by
        temporarily hiding the right-side actions (sort button, etc). */
     .search-bar:focus-within .search-actions {
@@ -1364,6 +1353,12 @@
     .search-bar:focus-within .search-input-wrapper {
         flex: 1 1 100%;
         width: 100%;
+    }
+
+    /* On mobile, always show the clear/close button when search is focused,
+       even if there's no text - it acts as a close button */
+    .search-bar:focus-within .search-clear-btn.is-hidden {
+        display: block;
     }
     
     .right-panel {

@@ -7475,9 +7475,7 @@ ${thumbnailHtml}<div class="card-details"><div class="card-name">${name}</div><d
     updateCount() {
         const searchInput = document.getElementById('searchInput');
         const clearSearchBtn = document.getElementById('clearSearchBtn');
-        const countEl = document.getElementById('searchCharacterCount');
         const total = AppState.characters.length;
-        const filtered = AppState.filteredCharacters.length;
 
         // Disable search when there are no characters at all
         if (searchInput) {
@@ -7491,15 +7489,6 @@ ${thumbnailHtml}<div class="card-details"><div class="card-name">${name}</div><d
         }
         if (clearSearchBtn) {
             clearSearchBtn.disabled = total === 0;
-        }
-
-        // Show filtered count only when actively filtering
-        if (countEl) {
-            if (filtered < total && total > 0) {
-                countEl.textContent = filtered + ' of ' + total;
-            } else {
-                countEl.textContent = '';
-            }
         }
     },
 
@@ -12104,7 +12093,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             AppState.searchTerm = '';
             AppState.applyFilters();
             UI.render();
-            searchInput.focus();
+            // On mobile, blur to close the expanded search; on desktop, keep focus
+            if (MobileView.isMobile()) {
+                searchInput.blur();
+            } else {
+                searchInput.focus();
+            }
             updateClearSearchVisibility();
         });
         updateClearSearchVisibility();

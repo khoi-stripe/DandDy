@@ -98,6 +98,7 @@ function showRegisterForm() {
 }
 
 async function handleLogin() {
+    console.log('[handleLogin] Function called');
     const errorEl = document.getElementById('authError');
 
     // If the login form is hidden (user is on the REGISTER tab), do nothing.
@@ -105,6 +106,7 @@ async function handleLogin() {
     // the register screen if some stray event fires the login handler.
     const loginFormEl = document.getElementById('loginForm');
     if (loginFormEl && loginFormEl.classList.contains('is-hidden')) {
+        console.log('[handleLogin] Aborted: loginForm is hidden');
         return;
     }
 
@@ -118,15 +120,19 @@ async function handleLogin() {
 
     const email = emailInput ? emailInput.value.trim() : '';
     const password = passwordInput ? passwordInput.value : '';
+    console.log('[handleLogin] Got email:', email ? '(provided)' : '(empty)');
 
     if (!email || !password) {
         errorEl.textContent = 'Please enter both email and password';
         errorEl.classList.remove('is-hidden');
+        console.log('[handleLogin] Validation failed: missing email or password');
         return;
     }
 
+    console.log('[handleLogin] Calling AuthService.login...');
     try {
         const result = await window.AuthService.login(email, password);
+        console.log('[handleLogin] AuthService.login returned:', result);
         if (result.success) {
             console.log(`✓ Logged in as ${email}`);
             
@@ -144,8 +150,10 @@ async function handleLogin() {
         } else {
             errorEl.textContent = result.error || 'Login failed';
             errorEl.classList.remove('is-hidden');
+            console.log('[handleLogin] Login failed:', result.error);
         }
     } catch (error) {
+        console.error('[handleLogin] Exception:', error);
         errorEl.textContent = 'Login failed. Please try again.';
         errorEl.classList.remove('is-hidden');
     }
@@ -375,18 +383,21 @@ function handleSessionExpired() {
     // Update the UI to reflect logged-out state
     updateAuthUI();
 
-    // Show an informational overlay (single CTA)
+    // Show an informational overlay with option to log in or continue as guest
     if (window.App && window.App.showConfirmationOverlay) {
         window.App.showConfirmationOverlay(
-            'Your session has expired. Your character is safe locally, but you\'ll need to log in again to sync with the cloud.',
+            'Your session has expired. Your character is safe locally. Log in to sync with the cloud, or continue as guest.',
             () => {
-                // User acknowledged; route them to login to re-sync cloud
+                // User chose to log in
                 showAuthModal();
             },
-            null,
+            () => {
+                // User chose to continue as guest - just close the overlay
+                // Character is already saved locally, nothing else needed
+            },
             {
                 primaryLabel: 'LOG IN',
-                hideSecondary: true
+                secondaryLabel: 'CONTINUE AS GUEST'
             }
         );
     } else if (window.App && window.App.showNotification) {
