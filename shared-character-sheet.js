@@ -404,9 +404,9 @@ const CharacterSheet = (window.CharacterSheet = {
         ${this._renderBasicInfo(parsed, context, { characterName: character.name })}
       </div>
       
-      ${parsed.hasCombatStats ? this._renderCombatStats(parsed, context) : ''}
-      
       ${parsed.hasAbilities ? this._renderAbilities(parsed, context) : ''}
+      
+      ${parsed.hasCombatStats ? this._renderCombatStats(parsed, context) : ''}
       
       ${parsed.hasSavingThrows ? this._renderSavingThrows(parsed) : ''}
       
@@ -1495,7 +1495,7 @@ const CharacterSheet = (window.CharacterSheet = {
               return `
                 <div class="stat-line">
                   <span class="stat-label">${ability.toUpperCase()}:</span>
-                  <span class="stat-value">${isProficient ? '★ ' : ''}${this.formatModifier(value)}</span>
+                  <span class="stat-value">${isProficient ? '★' : ''}${this.formatModifier(value)}</span>
                 </div>
               `;
             })

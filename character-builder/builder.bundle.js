@@ -510,9 +510,9 @@ console.groupEnd();return result;},enablePortraitDebug(){window.DEBUG_PORTRAITS=
         ${this._renderBasicInfo(parsed, context, { characterName: character.name })}
       </div>
       
-      ${parsed.hasCombatStats ? this._renderCombatStats(parsed, context) : ''}
-      
       ${parsed.hasAbilities ? this._renderAbilities(parsed, context) : ''}
+      
+      ${parsed.hasCombatStats ? this._renderCombatStats(parsed, context) : ''}
       
       ${parsed.hasSavingThrows ? this._renderSavingThrows(parsed) : ''}
       
@@ -1253,7 +1253,7 @@ const score=parsed.abilities[ability]||10;const modifier=parsed.abilityModifiers
     return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[SAVING THROWS]</div></div><div class="sheet-content">${Object.entries(parsed.savingThrowModifiers).map(([ability,value])=>{const isProficient=parsed.savingThrows?.includes(ability);return`
                 <div class="stat-line">
                   <span class="stat-label">${ability.toUpperCase()}:</span>
-                  <span class="stat-value">${isProficient ? '★ ' : ''}${this.formatModifier(value)}</span>
+                  <span class="stat-value">${isProficient ? '★' : ''}${this.formatModifier(value)}</span>
                 </div>
               `;}).join('')}</div></div>`;
   },

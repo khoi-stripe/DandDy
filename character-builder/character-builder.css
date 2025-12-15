@@ -1661,7 +1661,7 @@
 
   /* Match manager sheet responsive layout: collapse grids and wrap header actions */
   .stat-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
   
   .ability-grid {
