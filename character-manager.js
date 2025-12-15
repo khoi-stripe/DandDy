@@ -6108,6 +6108,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateClearSearchVisibility();
     }
 
+    // Fix iOS Safari double-tap issue on header overflow button.
+    // Elements that appear via CSS transition (opacity 0→1) can fail to register
+    // the first tap properly. Using touchend ensures immediate response.
+    const headerOverflowBtn = document.getElementById('headerOverflowBtn');
+    if (headerOverflowBtn) {
+        headerOverflowBtn.addEventListener('touchend', (e) => {
+            // Only handle single-finger taps
+            if (e.changedTouches.length !== 1) return;
+            e.preventDefault(); // Prevent subsequent click/mouse events
+            CharacterSheet.toggleSelectorMenu(headerOverflowBtn);
+        });
+    }
+
     // Update search placeholder on viewport resize (debounced)
     let resizeTimeout;
     window.addEventListener('resize', () => {
