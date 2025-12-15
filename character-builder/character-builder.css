@@ -1043,8 +1043,8 @@
   text-shadow: 0 0 5px var(--terminal-accent);
 }
 
-.terminal-input,
-.terminal-select {
+.auth-screen .terminal-input,
+.auth-screen .terminal-select {
   width: 100%;
   background: var(--terminal-bg);
   border: 2px solid var(--terminal-border);
@@ -1056,13 +1056,13 @@
   transition: border-color var(--transition-speed);
 }
 
-.terminal-input:focus,
-.terminal-select:focus {
+.auth-screen .terminal-input:focus,
+.auth-screen .terminal-select:focus {
   border-color: var(--terminal-fg);
   box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
 }
 
-.terminal-input::placeholder {
+.auth-screen .terminal-input::placeholder {
   color: var(--terminal-dim);
   opacity: 0.5;
 }
@@ -1074,19 +1074,20 @@
 }
 
 .password-input-wrapper .terminal-input {
-  padding-right: calc(var(--spacing-lg) * 3);
+  /* Match manager modal spacing */
+  padding-right: 64px; /* make room for toggle button */
 }
 
 .password-toggle-btn {
   position: absolute;
-  right: var(--spacing-sm);
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
   background: transparent;
   border: none;
   color: var(--modal-accent);
   cursor: pointer;
-  font-family: var(--font-mono);
+  font-family: var(--font-family);
   font-size: var(--font-size-small);
   padding: 0;
   text-transform: uppercase;
