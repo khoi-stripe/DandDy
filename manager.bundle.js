@@ -7639,7 +7639,9 @@ ${thumbnailHtml}<div class="card-details"><div class="card-name">${name}</div><d
 
         // Show filtered count only when actively filtering
         if (countEl) {
-            if (filtered < total && total > 0) {
+            // On mobile, this counter crowds the search header layout (it was originally
+            // intended for the sheet navigation UX). Keep it desktop-only.
+            if (!MobileView.isMobile() && filtered < total && total > 0) {
                 countEl.textContent = filtered + ' of ' + total;
             } else {
                 countEl.textContent = '';
