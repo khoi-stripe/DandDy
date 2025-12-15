@@ -6874,7 +6874,7 @@ placeholder="Or enter your own name..."><button class="button-primary"onclick="A
       : '';
     narratorPanel.insertAdjacentHTML(
       'beforeend',
-      `<div class="question-card mt-lg"data-question-id="${question.id}"><button class="button-primary completion-save-btn"id="completion-save-btn"onclick="App.saveCharacter()">&gt;\u00A0SAVE CHARACTER</button>${createAnotherBtn}</div>`,
+      `<div class="question-card mt-lg"data-question-id="${question.id}"><button class="button-primary completion-save-btn"id="completion-save-btn"onclick="App.saveAndExit()">&gt;\u00A0SAVE AND EXIT</button>${createAnotherBtn}</div>`,
     );
     Utils.scrollToBottom(true);
 
@@ -9391,6 +9391,57 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
           this.showNotification('💡 Log in or create an account to save your character to the cloud', 'info');
         }, 1000);
       }
+    } catch (error) {
+      console.error('Error saving character:', error);
+      this.showSystemMessage('Save failed: ' + error.message);
+    }
+  },
+
+  // Save character and exit to character manager
+  async saveAndExit() {
+    const state = CharacterState.get();
+    const character = state.character;
+
+    if (!character || !window.StorageService) {
+      this.showSystemMessage(
+        'Unable to save character right now. Please try again shortly.',
+      );
+      return;
+    }
+
+    // Validate character has minimum required fields before saving
+    if (!character.name || !character.race || !character.class) {
+      this.showSystemMessage(
+        'Character must have at least a name, race, and class before saving.',
+      );
+      return;
+    }
+
+    try {
+      console.log('💾 Saving character and exiting...');
+      this._suppressNextPortraitAnimation = true;
+
+      // Build a complete character snapshot with derived stats (AC, speed, etc.)
+      const completeCharacter = this.buildCompleteCharacter(character);
+      const saved = await window.StorageService.saveCharacter(completeCharacter);
+      CharacterState.updateCharacter(saved);
+
+      // Clear the in-progress session since character is now saved
+      CharacterState.clearSession();
+
+      this.showToast('Character saved');
+
+      // Show reminder to log in if in guest mode
+      if (!this._guestSaveNoticeShown && window.AuthService && !window.AuthService.isAuthenticated()) {
+        this._guestSaveNoticeShown = true;
+        sessionStorage.setItem('showGuestNoticeOnReturn', 'true');
+      }
+
+      // Navigate to character manager after a brief moment
+      setTimeout(() => {
+        window.suppressBeforeunloadWarning();
+        window.location.href = '../index.html?from=builder';
+      }, 500);
     } catch (error) {
       console.error('Error saving character:', error);
       this.showSystemMessage('Save failed: ' + error.message);
