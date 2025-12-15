@@ -1662,17 +1662,64 @@
   // ========================================
   // SETTINGS
   // ========================================
+  
+  // Feature flag storage keys
+  const FEATURE_FLAGS_KEY = 'danddy_admin_feature_flags';
+  
   function loadSettings() {
     // Settings are typically stored on the backend or in env vars
     // For now, just display placeholder values
     log('Settings section loaded');
     
+    // Load feature flags from localStorage
+    loadFeatureFlags();
+    
     // Load quota stats
     loadQuotaStats();
   }
+  
+  function loadFeatureFlags() {
+    try {
+      const flags = JSON.parse(localStorage.getItem(FEATURE_FLAGS_KEY) || '{}');
+      
+      // Spell lookup flag
+      const spellLookupSwitch = $('setting-spell-lookup');
+      if (spellLookupSwitch) {
+        spellLookupSwitch.checked = !!flags.spellLookup;
+        // Apply to window immediately
+        window.FEATURE_SPELL_LOOKUP = !!flags.spellLookup;
+      }
+      
+      log('Feature flags loaded:', flags);
+    } catch (err) {
+      log('Error loading feature flags:', err);
+    }
+  }
+  
+  function saveFeatureFlags() {
+    try {
+      const flags = {
+        spellLookup: $('setting-spell-lookup')?.checked || false,
+      };
+      
+      localStorage.setItem(FEATURE_FLAGS_KEY, JSON.stringify(flags));
+      
+      // Apply spell lookup flag immediately
+      window.FEATURE_SPELL_LOOKUP = flags.spellLookup;
+      
+      log('Feature flags saved:', flags);
+      showToast('Feature flags saved', 'success');
+    } catch (err) {
+      log('Error saving feature flags:', err);
+      showToast('Failed to save feature flags', 'danger');
+    }
+  }
 
   async function saveSettings() {
-    showToast('Settings save functionality coming soon', 'warning');
+    // Save feature flags
+    saveFeatureFlags();
+    
+    // Other settings would go here when backend support is added
   }
 
   // ========================================

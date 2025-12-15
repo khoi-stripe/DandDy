@@ -32,6 +32,17 @@ function logPortraitDebug(action, characterId, characterName, details) {
   });
 }
 
+// Initialize FEATURE_SPELL_LOOKUP from localStorage (set via Admin panel)
+// This allows the flag to persist across page loads
+(function initSpellLookupFlag() {
+  try {
+    const flags = JSON.parse(localStorage.getItem('danddy_admin_feature_flags') || '{}');
+    window.FEATURE_SPELL_LOOKUP = !!flags.spellLookup;
+  } catch (e) {
+    window.FEATURE_SPELL_LOOKUP = false;
+  }
+})();
+
 // Built-in spell lookup table for displaying spell descriptions
 // when character data only has spell names (strings) instead of full objects.
 // This allows the manager to show descriptions for older characters or demo characters.
