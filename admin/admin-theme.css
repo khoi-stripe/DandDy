@@ -1222,6 +1222,12 @@ sl-checkbox::part(checked-icon) {
 }
 
 /* Switches - match main app style */
+sl-switch {
+  --width: 36px;
+  --height: 20px;
+  --thumb-size: 16px;
+}
+
 sl-switch::part(control) {
   background-color: var(--admin-border);
   border: 1px solid var(--admin-accent-dim);

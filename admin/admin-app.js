@@ -2038,6 +2038,14 @@
     // Settings
     $('settings-save-btn').addEventListener('click', saveSettings);
     
+    // Feature flag toggle - save immediately on change
+    const spellLookupSwitch = $('setting-spell-lookup');
+    if (spellLookupSwitch) {
+      spellLookupSwitch.addEventListener('sl-change', () => {
+        saveFeatureFlags();
+      });
+    }
+    
     // Quota & Rate Limit management
     $('quota-refresh-btn').addEventListener('click', loadQuotaStats);
     $('rate-limit-reset-btn').addEventListener('click', resetRateLimits);
