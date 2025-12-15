@@ -128,19 +128,19 @@ async function handleLogin() {
     try {
         const result = await window.AuthService.login(email, password);
         if (result.success) {
-            closeAuthModal();
-            updateAuthUI();
             console.log(`✓ Logged in as ${email}`);
-
-            // Start session monitoring now that user is logged in
-            if (typeof window.AuthService.startSessionMonitor === 'function') {
-                window.AuthService.startSessionMonitor();
-            }
             
             // Show notification in Builder's terminal
             if (window.App && window.App.showNotification) {
                 window.App.showNotification(`✓ Logged in as ${email}`, 'success');
             }
+            
+            // Refresh the page to ensure all data is fresh
+            // (quota counts, admin status, etc.)
+            setTimeout(() => {
+                window.location.reload();
+            }, 300);
+            return;
         } else {
             errorEl.textContent = result.error || 'Login failed';
             errorEl.classList.remove('is-hidden');

@@ -5200,50 +5200,16 @@ async function handleLogin() {
         if (result && result.success) {
             // Mark splash as dismissed on successful login
             sessionStorage.setItem('welcomeSplashDismissed', 'true');
-            closeAuthModal();
             
-            // Close any stale editor modals (e.g., level change dialog from previous session)
-            closeAllEditorModals();
-            
-            updateAuthUI();
+            // Show quick feedback, then refresh the page to ensure all data is fresh
+            // (quota counts, admin status, etc.)
             showNotification(`✓ Logged in as ${email}`);
-
-            // Start session monitoring now that user is logged in
-            if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
-                window.AuthService.startSessionMonitor();
-            }
             
-            // Capture the currently selected character ID before loading
-            // so we can restore the sheet after re-authentication
-            const previouslySelectedId = AppState.selectedCharacterId;
-            
-            // Check if should migrate user-created characters first
-            if (window.MigrationService.hasLocalCharacters()) {
-                showMigrationModal();
-            }
-            // Then check for demo character migration (only ask once)
-            else if (shouldShowDemoMigration()) {
-                showDemoMigrationModal();
-            } else {
-                // Reload characters from cloud
-                await AppState.loadCharacters();
-                UI.render();
-                
-                // If a character was selected before session expired, restore the sheet.
-                // UI.render() won't re-call viewCharacter if the selection "hasn't changed",
-                // but the sheet may have been left empty due to a failed fetch.
-                if (previouslySelectedId) {
-                    const stillExists = AppState.filteredCharacters.some(
-                        c => String(c.id) === String(previouslySelectedId)
-                    );
-                    if (stillExists) {
-                        viewCharacter(previouslySelectedId, { skipKeyboardSync: true });
-                    }
-                }
-            }
-            
-            // Check for pending character shares (after a short delay to not overwhelm)
-            setTimeout(() => checkPendingShares(), 500);
+            // Give the notification a moment to display before refreshing
+            setTimeout(() => {
+                window.location.reload();
+            }, 300);
+            return;
         } else {
             errorEl.textContent = (result && result.error) || 'Login failed';
             errorEl.classList.remove('is-hidden');
