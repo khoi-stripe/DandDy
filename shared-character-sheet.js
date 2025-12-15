@@ -32,6 +32,71 @@ function logPortraitDebug(action, characterId, characterName, details) {
   });
 }
 
+// Built-in spell lookup table for displaying spell descriptions
+// when character data only has spell names (strings) instead of full objects.
+// This allows the manager to show descriptions for older characters or demo characters.
+const SPELL_LOOKUP = {
+  // Cantrips
+  'fire bolt': { school: 'Evocation', description: 'Hurl a mote of fire at a creature or object. 1d10 fire damage.' },
+  'mage hand': { school: 'Conjuration', description: 'Create a spectral hand that can manipulate objects at range.' },
+  'light': { school: 'Evocation', description: 'Touch an object to make it shed bright light for 1 hour.' },
+  'ray of frost': { school: 'Evocation', description: 'Frigid beam dealing 1d8 cold damage and reducing speed.' },
+  'shocking grasp': { school: 'Evocation', description: 'Lightning damage on touch (1d8) and target cannot take reactions.' },
+  'prestidigitation': { school: 'Transmutation', description: 'Minor magical trick: light a candle, clean clothes, flavor food.' },
+  'minor illusion': { school: 'Illusion', description: 'Create a sound or image of an object within range.' },
+  'eldritch blast': { school: 'Evocation', description: 'Beam of crackling energy dealing 1d10 force damage.' },
+  'chill touch': { school: 'Necromancy', description: 'Ghostly hand dealing 1d8 necrotic damage and preventing healing.' },
+  'vicious mockery': { school: 'Enchantment', description: 'Insult dealing 1d4 psychic damage and imposing disadvantage.' },
+  'sacred flame': { school: 'Evocation', description: 'Flame-like radiance dealing 1d8 radiant damage (Dex save).' },
+  'guidance': { school: 'Divination', description: 'Touch a creature to grant +1d4 to one ability check.' },
+  'spare the dying': { school: 'Necromancy', description: 'Touch a dying creature to stabilize it.' },
+  'thaumaturgy': { school: 'Transmutation', description: 'Minor wonder: amplify voice, flicker flames, open doors.' },
+  'produce flame': { school: 'Conjuration', description: 'Flickering flame for light or to throw (1d8 fire damage).' },
+  'shillelagh': { school: 'Transmutation', description: 'Imbue a club or staff to use Wisdom for attacks (1d8 damage).' },
+  'druidcraft': { school: 'Transmutation', description: 'Minor druidic effects: predict weather, bloom flowers, light fires.' },
+  // 1st Level Spells
+  'magic missile': { school: 'Evocation', description: 'Three darts of force, each dealing 1d4+1 damage (auto-hit).' },
+  'shield': { school: 'Abjuration', description: 'Reaction: +5 AC until start of your next turn.' },
+  'mage armor': { school: 'Abjuration', description: 'Set AC to 13 + Dex modifier for 8 hours.' },
+  'detect magic': { school: 'Divination', description: 'Sense magic within 30 feet for 10 minutes (concentration).' },
+  'identify': { school: 'Divination', description: 'Learn properties of a magical object or spell affecting a creature.' },
+  'sleep': { school: 'Enchantment', description: 'Put 5d8 HP worth of creatures to sleep.' },
+  'burning hands': { school: 'Evocation', description: 'Cone of fire dealing 3d6 fire damage (Dex save for half).' },
+  'disguise self': { school: 'Illusion', description: 'Make yourself look different for 1 hour.' },
+  'feather fall': { school: 'Transmutation', description: 'Reaction: Up to 5 creatures fall slowly, taking no damage.' },
+  'grease': { school: 'Conjuration', description: 'Slick grease covers a 10-foot square (Dex save or fall prone).' },
+  'chromatic orb': { school: 'Evocation', description: 'Hurl a sphere dealing 3d8 damage (choose: acid, cold, fire, lightning, poison, thunder).' },
+  'hex': { school: 'Enchantment', description: 'Curse a creature to take +1d6 necrotic damage and disadvantage on checks.' },
+  'armor of agathys': { school: 'Abjuration', description: 'Gain 5 temp HP; attackers take 5 cold damage when they hit you.' },
+  'arms of hadar': { school: 'Conjuration', description: 'Tendrils deal 2d6 necrotic damage in 10-foot radius.' },
+  'charm person': { school: 'Enchantment', description: 'Charm a humanoid (Wis save) for 1 hour.' },
+  'hellish rebuke': { school: 'Evocation', description: 'Reaction: Attacker takes 2d10 fire damage (Dex save for half).' },
+  'healing word': { school: 'Evocation', description: 'Bonus action: Heal a creature for 1d4 + spellcasting modifier.' },
+  'cure wounds': { school: 'Evocation', description: 'Touch to heal 1d8 + spellcasting modifier HP.' },
+  'faerie fire': { school: 'Evocation', description: 'Outline creatures in light, granting advantage on attacks against them.' },
+  'thunderwave': { school: 'Evocation', description: '15-foot cube of thunderous force dealing 2d8 thunder damage and pushing creatures.' },
+  'bless': { school: 'Enchantment', description: 'Up to 3 creatures add 1d4 to attacks and saves (concentration).' },
+  'shield of faith': { school: 'Abjuration', description: 'Grant +2 AC to a creature (10 minutes, concentration).' },
+  'guiding bolt': { school: 'Evocation', description: 'Ranged attack dealing 4d6 radiant damage; next attack has advantage.' },
+  'inflict wounds': { school: 'Necromancy', description: 'Melee attack dealing 3d10 necrotic damage.' },
+  'sanctuary': { school: 'Abjuration', description: 'Attackers must make Wis save or choose another target.' },
+  'entangle': { school: 'Conjuration', description: 'Grasping vines restrain creatures in 20-foot square.' },
+  'goodberry': { school: 'Transmutation', description: 'Create 10 berries that each restore 1 HP and provide nourishment.' },
+  'speak with animals': { school: 'Divination', description: 'Communicate with beasts for 10 minutes.' },
+  // Higher level spells (common ones that might appear on character sheets)
+  'misty step': { school: 'Conjuration', description: 'Bonus action: Teleport up to 30 feet to an unoccupied space you can see.' },
+  'hold person': { school: 'Enchantment', description: 'Paralyze a humanoid (Wis save) for up to 1 minute.' },
+  'fireball': { school: 'Evocation', description: '20-foot radius explosion dealing 8d6 fire damage (Dex save for half).' },
+  'counterspell': { school: 'Abjuration', description: 'Reaction: Interrupt a spell being cast (automatic for level 3 or lower).' },
+  'lesser restoration': { school: 'Abjuration', description: 'End one disease or condition (blinded, deafened, paralyzed, poisoned).' },
+  'spiritual weapon': { school: 'Evocation', description: 'Create a floating weapon that attacks for 1d8 + spellcasting modifier force damage.' },
+  'prayer of healing': { school: 'Evocation', description: 'Up to 6 creatures regain 2d8 + spellcasting modifier HP (10 minute cast).' },
+  'divine smite': { school: 'Evocation', description: 'Expend spell slot to deal +2d8 radiant damage on melee hit (+1d8 vs undead/fiend).' },
+  'thunderous smite': { school: 'Evocation', description: 'Next melee hit deals +2d6 thunder damage and may push target.' },
+  'command': { school: 'Enchantment', description: 'Speak a one-word command that a creature must follow (Wis save).' },
+  'find steed': { school: 'Conjuration', description: 'Summon a loyal, intelligent mount (warhorse, pony, camel, elk, or mastiff).' },
+};
+
 const CharacterSheet = (window.CharacterSheet = {
   /**
    * Dump the portrait debug log to console for reporting.
@@ -62,6 +127,41 @@ const CharacterSheet = (window.CharacterSheet = {
   clearPortraitDebugLog() {
     PORTRAIT_DEBUG_LOG.length = 0;
     console.log('🖼️ Portrait debug log cleared');
+  },
+
+  /**
+   * Look up spell data (school, description) by spell name.
+   * First checks SPELL_DATA (if available, e.g., in builder), then falls back to built-in lookup.
+   * Feature flag: window.FEATURE_SPELL_LOOKUP (default: false)
+   * @param {string} spellName - The name of the spell to look up
+   * @returns {Object|null} - Object with school and description, or null if not found
+   */
+  _lookupSpellData(spellName) {
+    // Feature flag - disabled by default
+    if (!window.FEATURE_SPELL_LOOKUP) return null;
+    
+    if (!spellName) return null;
+    const normalizedName = String(spellName).toLowerCase().trim();
+    
+    // First, try to find in SPELL_DATA (available in character builder)
+    if (typeof window.SPELL_DATA !== 'undefined') {
+      // Search through all classes' cantrips and first level spells
+      const allClasses = ['wizard', 'sorcerer', 'warlock', 'bard', 'cleric', 'druid'];
+      for (const cls of allClasses) {
+        const cantrips = window.SPELL_DATA.cantrips?.[cls] || [];
+        const firstLevel = window.SPELL_DATA.firstLevel?.[cls] || [];
+        const allSpells = [...cantrips, ...firstLevel];
+        
+        for (const spell of allSpells) {
+          if (spell && spell.name && spell.name.toLowerCase() === normalizedName) {
+            return { school: spell.school, description: spell.description };
+          }
+        }
+      }
+    }
+    
+    // Fall back to built-in lookup table
+    return SPELL_LOOKUP[normalizedName] || null;
   },
 
   /**
@@ -1478,20 +1578,26 @@ const CharacterSheet = (window.CharacterSheet = {
     const renderSpellList = (spells) => {
       return spells
         .map((spell) => {
-          const rawName = spell && typeof spell === 'object' ? spell.name : spell;
+          const isObject = spell && typeof spell === 'object';
+          const rawName = isObject ? spell.name : spell;
           const name = this.escapeHtml(rawName || '');
-          const school =
-            spell && spell.school
-              ? ` <span class="text-dim">(${this.escapeHtml(
-                  spell.school,
-                )})</span>`
-              : '';
-          const desc =
-            spell && spell.description
-              ? `<div class="text-dim terminal-text-small spell-list-description">${this.escapeHtml(
-                  spell.description,
-                )}</div>`
-              : '';
+          
+          // If spell is a string, try to look up its data from the spell database
+          let spellData = null;
+          if (!isObject && rawName) {
+            spellData = this._lookupSpellData(rawName);
+          }
+          
+          // Use data from spell object or looked-up data
+          const schoolSource = isObject ? spell.school : spellData?.school;
+          const descSource = isObject ? spell.description : spellData?.description;
+          
+          const school = schoolSource
+            ? ` <span class="text-dim">(${this.escapeHtml(schoolSource)})</span>`
+            : '';
+          const desc = descSource
+            ? `<div class="text-dim terminal-text-small spell-list-description">${this.escapeHtml(descSource)}</div>`
+            : '';
         return `<div class="text-dim spell-list-item">• ${name}${school}</div>${desc}`;
         })
         .join('');
