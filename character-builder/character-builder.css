@@ -909,8 +909,13 @@
   animation: blink 1s infinite;
 }
 
+/* Modal section labels - match manager spacing */
+.modal-section-label {
+  margin-top: var(--spacing-lg);
+}
+
 .is-hidden {
-  display: none;
+  display: none !important;
 }
 
 .is-disabled {

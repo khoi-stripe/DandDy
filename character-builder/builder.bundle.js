@@ -325,7 +325,7 @@ if(window.App&&typeof window.App.showAuthScreen==='function'){window.App.showAut
 if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>window.location.reload(),()=>{},()=>{});}});}},});window.updateAuthUI=async function updateAuthUI(){try{if(!window.AuthService||!window.AuthUI)return;if(window.AuthService.isAuthenticated()){let user=window.AuthService.getCurrentUser();if(!user&&typeof window.AuthService.fetchProfile==='function'){user=await window.AuthService.fetchProfile();if(user)window.AuthService.setCurrentUser(user);}
 if(user){window.AuthUI.updateHeaderWithUser(user);}else{window.AuthUI.updateHeaderWithUser({email:'Logged In',role:'player'});}}else{window.AuthUI.showGuestBanner();}}catch(e){console.warn('[Builder] updateAuthUI failed:',e);}};function initBuilderHeaderAuth(){if(typeof window.updateAuthUI==='function'){window.updateAuthUI();}
 if(window.AuthService&&window.AuthService.isAuthenticated()){if(typeof window.AuthService.startSessionMonitor==='function'){window.AuthService.startSessionMonitor();}}
-window.addEventListener('danddy:sessionExpired',()=>{if(typeof window.updateAuthUI==='function')window.updateAuthUI();if(window.App&&typeof window.App.showConfirmationOverlay==='function'){window.App.showConfirmationOverlay("Your session expired. Your character is safe locally — log in again to sync to the cloud.",()=>window.App?.showAuthScreen?.(),null,{primaryLabel:'LOG IN',hideSecondary:true},);return;}
+window.addEventListener('danddy:sessionExpired',()=>{if(typeof window.updateAuthUI==='function')window.updateAuthUI();if(window.App&&typeof window.App.showConfirmationOverlay==='function'){window.App.showConfirmationOverlay("Your session expired. Your character is safe locally — log in again to sync to the cloud.",()=>{if(typeof window.showAuthModal==='function'){window.showAuthModal();}},null,{primaryLabel:'LOG IN',hideSecondary:true},);return;}
 window.App?.showNotification?.('⚠ Session expired — log in again to sync','warning');});}
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initBuilderHeaderAuth);}else{initBuilderHeaderAuth();}
 const CharacterAPI=(window.CharacterAPI={arrayToDict(arr){if(!arr||!Array.isArray(arr))return[];return arr.map(item=>{if(typeof item==='object'&&item!==null){return item;}
@@ -11397,11 +11397,10 @@ async function handleRegister() {
             // Show notification in Builder's terminal
             if (window.App && window.App.showNotification) {
                 window.App.showNotification(`✓ Registered as ${email}`,'success');}}else{errorEl.textContent=result.error||'Registration failed';errorEl.classList.remove('is-hidden');}}catch(error){errorEl.textContent='Registration failed. Please try again.';errorEl.classList.remove('is-hidden');}}
-function handleLogout(){if(!window.App||!window.App.showConfirmationOverlay){window.AuthService.logout();updateAuthUI();if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>location.reload(),()=>{},()=>{});}
-return;}
+function handleLogout(){if(!window.App||!window.App.showConfirmationOverlay){window.AuthService.logout();updateAuthUI();showAuthModal();return;}
 window.App.showConfirmationOverlay('Log out? Your character will be saved to the cloud before logging out.',async()=>{if(window.CharacterState&&window.CharacterState.current.character.name){await saveCurrentCharacterToCloud();}
 window.AuthService.logout();updateAuthUI();console.log('✓ Logged out');if(window.App&&window.App.showNotification){window.App.showNotification('✓ Logged out','success');}
-if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>location.reload(),()=>{},()=>{});}},);}
+showAuthModal();},);}
 function updateAuthUI(){const authBtn=document.getElementById('authBtn');const userInfoDisplay=document.getElementById('userInfoDisplay');const userStatusIcon=document.getElementById('userStatusIcon');const userStatusText=document.getElementById('userStatusText');if(!authBtn||!userInfoDisplay||!userStatusIcon||!userStatusText){if(typeof window.updateAuthUI==='function'){window.updateAuthUI();}
 return;}
 if(window.AuthService&&window.AuthService.isAuthenticated()){const user=window.AuthService.getCurrentUser();userStatusIcon.textContent='☁';userStatusText.textContent=user?user.email:'Logged In';authBtn.textContent='LOGOUT';authBtn.onclick=handleLogout;}else{userStatusIcon.textContent='▣';userStatusText.textContent='Guest mode';authBtn.textContent='LOGIN';authBtn.onclick=showAuthModal;}}

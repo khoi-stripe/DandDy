@@ -533,14 +533,19 @@ function initBuilderHeaderAuth() {
     if (window.App && typeof window.App.showConfirmationOverlay === 'function') {
       window.App.showConfirmationOverlay(
         "Your session expired. Your character is safe locally — log in again to sync to the cloud.",
-        () => window.App?.showAuthScreen?.(),
+        () => {
+          // Use modal for consistency with manager page
+          if (typeof window.showAuthModal === 'function') {
+            window.showAuthModal();
+          }
+        },
         null,
         { primaryLabel: 'LOG IN', hideSecondary: true },
       );
       return;
     }
 
-    // Fallback: notification then open auth
+    // Fallback: notification then open auth modal
     window.App?.showNotification?.('⚠ Session expired — log in again to sync', 'warning');
   });
 }

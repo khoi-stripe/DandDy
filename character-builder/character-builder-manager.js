@@ -202,14 +202,8 @@ function handleLogout() {
         window.AuthService.logout();
         updateAuthUI();
         
-        // Show login screen after logout
-        if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
-            window.AuthUI.showLogin(
-                () => location.reload(),  // onSuccess
-                () => {},                 // onSwitchToRegister (handled within AuthUI)
-                () => {}                  // onGuestMode
-            );
-        }
+        // Show login modal after logout (consistent with manager page)
+        showAuthModal();
         return;
     }
 
@@ -229,14 +223,8 @@ function handleLogout() {
                 window.App.showNotification('✓ Logged out', 'success');
             }
             
-            // Show login screen after logout
-            if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
-                window.AuthUI.showLogin(
-                    () => location.reload(),  // onSuccess
-                    () => {},                 // onSwitchToRegister (handled within AuthUI)
-                    () => {}                  // onGuestMode
-                );
-            }
+            // Show login modal after logout (consistent with manager page)
+            showAuthModal();
         },
     );
 }
