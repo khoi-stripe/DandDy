@@ -1358,7 +1358,7 @@
     /* On mobile, always show the clear/close button when search is focused,
        even if there's no text - it acts as a close button */
     .search-bar:focus-within .search-clear-btn.is-hidden {
-        display: block;
+        display: block !important;
     }
     
     .right-panel {
