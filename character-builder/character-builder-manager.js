@@ -28,6 +28,16 @@ function showAuthModal() {
     }
 }
 
+// The builder's auth modal markup uses the same cancel handler name as the manager.
+function cancelAuthFlow() {
+    closeAuthModal();
+}
+
+// Builder auth modal includes a "Forgot password?" link; route to manager reset UI.
+function openPasswordResetFromLogin() {
+    window.location.href = '../index.html#password-reset';
+}
+
 function closeAuthModal() {
     const modal = document.getElementById('authModal');
     const err = document.getElementById('authError');
@@ -38,14 +48,35 @@ function closeAuthModal() {
     modal.classList.remove('show');
     err.classList.add('is-hidden');
     // Clear form fields
-    document.getElementById('loginUsername').value = '';
-    document.getElementById('loginPassword').value = '';
-    document.getElementById('registerEmail').value = '';
-    document.getElementById('registerPassword').value = '';
+    const loginEmail = document.getElementById('loginEmail');
+    const loginPassword = document.getElementById('loginPassword');
+    const registerEmail = document.getElementById('registerEmail');
+    const registerPassword = document.getElementById('registerPassword');
     const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
+
+    if (loginEmail) loginEmail.value = '';
+    if (loginPassword) {
+        loginPassword.value = '';
+        loginPassword.type = 'password';
+    }
+    if (registerEmail) registerEmail.value = '';
+    if (registerPassword) {
+        registerPassword.value = '';
+        registerPassword.type = 'password';
+    }
     if (registerPasswordConfirm) {
         registerPasswordConfirm.value = '';
+        registerPasswordConfirm.type = 'password';
     }
+
+    // Reset toggle labels back to SHOW
+    document.querySelectorAll('.password-toggle-btn').forEach((btn) => {
+        try {
+            btn.textContent = 'SHOW';
+            btn.setAttribute('aria-pressed', 'false');
+            btn.setAttribute('aria-label', 'Show password');
+        } catch (_) {}
+    });
 }
 
 function showLoginForm() {
@@ -82,7 +113,7 @@ async function handleLogin() {
     // false "Please enter both email and password" errors.
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const emailInput = document.getElementById('loginUsername');
+    const emailInput = document.getElementById('loginEmail');
     const passwordInput = document.getElementById('loginPassword');
 
     const email = emailInput ? emailInput.value.trim() : '';
@@ -233,10 +264,66 @@ function updateAuthUI() {
         authBtn.onclick = handleLogout;
     } else {
         userStatusIcon.textContent = '▣';
-        userStatusText.textContent = 'Local Only';
+        userStatusText.textContent = 'Guest mode';
         authBtn.textContent = 'LOGIN';
         authBtn.onclick = showAuthModal;
     }
+}
+
+// Wire up auth modal keyboard + password visibility toggles (same behavior as manager).
+function initBuilderAuthModalWiring() {
+    const loginPasswordInput = document.getElementById('loginPassword');
+    const registerPasswordConfirmInput = document.getElementById('registerPasswordConfirm');
+
+    if (loginPasswordInput) {
+        loginPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleLogin();
+            }
+        });
+    }
+
+    if (registerPasswordConfirmInput) {
+        registerPasswordConfirmInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleRegister();
+            }
+        });
+    }
+
+    // Allow Escape to close modal if open
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        const modal = document.getElementById('authModal');
+        if (modal && modal.classList.contains('show')) {
+            e.preventDefault();
+            cancelAuthFlow();
+        }
+    });
+
+    // Password visibility toggles
+    const passwordToggleButtons = document.querySelectorAll('.password-toggle-btn');
+    passwordToggleButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const targetId = btn.getAttribute('data-target');
+            if (!targetId) return;
+            const input = document.getElementById(targetId);
+            if (!input) return;
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            btn.textContent = isPassword ? 'HIDE' : 'SHOW';
+            btn.setAttribute('aria-pressed', String(isPassword));
+            btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+        });
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBuilderAuthModalWiring);
+} else {
+    initBuilderAuthModalWiring();
 }
 
 // ========================================

@@ -1370,51 +1370,21 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderSavingThrows(parsed) {
-    if (!parsed.savingThrowModifiers) {
-      // In the builder flow, we want this section to be visible even before
-      // derived stats are computed. Render placeholders until we have values.
-      if (!parsed.isBuilder) return '';
+    if (!parsed.savingThrowModifiers) return '';
 
-      const abilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-      return `
-        <div class="sheet-section">
-          <div class="sheet-header">
-            <div class="sheet-header-title">[ SAVING THROWS ]</div>
-          </div>
-          <div class="sheet-content">
-            ${abilities
-              .map((ability) => {
-                const isProficient = parsed.savingThrows?.includes(ability);
-                return `
-                  <div class="stat-line">
-                    <span class="stat-label">${ability.toUpperCase()}:</span>
-                    <span class="stat-value">${isProficient ? '★ ' : ''}—</span>
-                  </div>
-                `;
-              })
-              .join('')}
-          </div>
-        </div>
-      `;
-    }
-
-    const abilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
     return `
       <div class="sheet-section">
         <div class="sheet-header">
           <div class="sheet-header-title">[ SAVING THROWS ]</div>
         </div>
         <div class="sheet-content">
-          ${abilities
-            .map((ability) => {
-              const value = parsed.savingThrowModifiers?.[ability];
+          ${Object.entries(parsed.savingThrowModifiers)
+            .map(([ability, value]) => {
               const isProficient = parsed.savingThrows?.includes(ability);
-              const display =
-                typeof value === 'number' ? this.formatModifier(value) : '—';
               return `
                 <div class="stat-line">
                   <span class="stat-label">${ability.toUpperCase()}:</span>
-                  <span class="stat-value">${isProficient ? '★ ' : ''}${display}</span>
+                  <span class="stat-value">${this.formatModifier(value)}${isProficient ? ' ★' : ''}</span>
                 </div>
               `;
             })
@@ -1454,7 +1424,7 @@ const CharacterSheet = (window.CharacterSheet = {
             <span class="stat-label">${this.escapeHtml(
               this.formatSkillName(skill),
             )}:</span>
-            <span class="stat-value">★ ${this.formatModifier(value)}</span>
+            <span class="stat-value">${this.formatModifier(value)} ★</span>
           </div>
         `,
           )
@@ -1463,14 +1433,12 @@ const CharacterSheet = (window.CharacterSheet = {
 
     const extraProfsMarkup =
       extraProfs && extraProfs.length
-        ? `<ul class="sheet-bullet-list">
-            ${extraProfs
-              .map((skill) => {
-                const label = this.escapeHtml(this.formatSkillName(skill));
-                return `<li class="text-dim">${label}</li>`;
-              })
-              .join('')}
-          </ul>`
+        ? extraProfs
+            .map((skill) => {
+              const label = this.escapeHtml(this.formatSkillName(skill));
+              return `<div class="text-dim">• ${label}</div>`;
+            })
+            .join('')
         : '';
 
     const headerTitle = hasSkillModifiers
@@ -1508,7 +1476,7 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Helper to render spell list
     const renderSpellList = (spells) => {
-      const items = spells
+      return spells
         .map((spell) => {
           const rawName = spell && typeof spell === 'object' ? spell.name : spell;
           const name = this.escapeHtml(rawName || '');
@@ -1524,11 +1492,9 @@ const CharacterSheet = (window.CharacterSheet = {
                   spell.description,
                 )}</div>`
               : '';
-          return `<li class="text-dim spell-list-item">${name}${school}${desc}</li>`;
+        return `<div class="text-dim spell-list-item">• ${name}${school}</div>${desc}`;
         })
         .join('');
-
-      return `<ul class="sheet-bullet-list spell-list">${items}</ul>`;
     };
 
     let spellsContent = '';
@@ -1585,14 +1551,9 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderRacialTraits(parsed) {
-    const traits = parsed.racialTraits || [];
-    if (!traits.length) return '';
-
-    const traitsMarkup = `<ul class="sheet-bullet-list">
-      ${traits
-        .map((trait) => `<li class="text-dim">${this.escapeHtml(trait)}</li>`)
-        .join('')}
-    </ul>`;
+    const traitsMarkup = parsed.racialTraits
+      .map((trait) => `<div class="text-dim">• ${this.escapeHtml(trait)}</div>`)
+      .join('');
 
     return `
       <div class="sheet-section">
@@ -1607,14 +1568,14 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderEquipment(parsed) {
-    const equipment = parsed.equipment || [];
-    if (!equipment.length) return '';
-
-    const equipmentMarkup = `<ul class="sheet-bullet-list">
-      ${equipment
-        .map((item) => `<li class="text-dim">${this.escapeHtml(item)}</li>`)
-        .join('')}
-    </ul>`;
+    const equipmentMarkup = parsed.equipment
+      .map(
+        (item) =>
+          `<div class="text-dim">• ${this.escapeHtml(
+            item,
+          )}</div>`,
+      )
+      .join('');
 
     return `
       <div class="sheet-section">
@@ -1629,17 +1590,12 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderToolProficiencies(parsed) {
-    const tools = parsed.toolProficiencies || [];
-    if (!tools.length) return '';
-
-    const toolsMarkup = `<ul class="sheet-bullet-list">
-      ${tools
-        .map((tool) => {
-          const label = this.escapeHtml(this.formatSkillName(tool));
-          return `<li class="text-dim">${label}</li>`;
-        })
-        .join('')}
-    </ul>`;
+    const toolsMarkup = parsed.toolProficiencies
+      .map((tool) => {
+        const label = this.escapeHtml(this.formatSkillName(tool));
+        return `<div class="text-dim">• ${label}</div>`;
+      })
+      .join('');
 
     return `
       <div class="sheet-section">
@@ -1669,11 +1625,14 @@ const CharacterSheet = (window.CharacterSheet = {
         <div class="sheet-content">
           ${
             hasLanguages
-              ? `<ul class="sheet-bullet-list">
-                  ${parsed.languages
-                    .map((lang) => `<li class="text-dim">${this.escapeHtml(lang)}</li>`)
-                    .join('')}
-                </ul>`
+              ? parsed.languages
+                  .map(
+                    (lang) =>
+                      `<div class="text-dim">• ${this.escapeHtml(
+                        lang,
+                      )}</div>`,
+                  )
+                  .join('')
               : ''
           }
           ${hasChoices 
@@ -1778,58 +1737,14 @@ const CharacterSheet = (window.CharacterSheet = {
       wizard: 6,
       sorcerer: 6,
     };
-
-    // Minimal built-in mapping of standard 5e class saving throw proficiencies.
-    // Used when a character is missing `savingThrows` (older exports/imports) and/or
-    // when DND_DATA is not available (manager context).
-    const SAVING_THROWS_BY_CLASS = {
-      barbarian: ['str', 'con'],
-      bard: ['dex', 'cha'],
-      cleric: ['wis', 'cha'],
-      druid: ['int', 'wis'],
-      fighter: ['str', 'con'],
-      monk: ['str', 'dex'],
-      paladin: ['wis', 'cha'],
-      ranger: ['str', 'dex'],
-      rogue: ['dex', 'int'],
-      sorcerer: ['con', 'cha'],
-      warlock: ['wis', 'cha'],
-      wizard: ['int', 'wis'],
-    };
-
-    const STANDARD_ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-
-    const normalizeClassKey = (raw) => {
-      if (!raw) return '';
-      return String(raw).trim().toLowerCase().replace(/\s+/g, '-');
-    };
     
     // Handle HP (old and new formats)
     const hp = character.hitPoints || { current: 0, max: 0 };
     const hpMax = typeof hp === 'number' ? hp : hp.max || 0;
     const hpCurrent = typeof hp === 'number' ? hp : hp.current || hpMax;
 
-    // Handle abilities:
-    // - New/enhanced formats: `abilities` or `abilityScores` (both {str,dex,con,int,wis,cha})
-    // - Backend-shaped characters: top-level strength/dexterity/... fields (possible via imports)
-    const abilities =
-      character.abilities ||
-      character.abilityScores ||
-      (character.strength != null ||
-      character.dexterity != null ||
-      character.constitution != null ||
-      character.intelligence != null ||
-      character.wisdom != null ||
-      character.charisma != null
-        ? {
-            str: character.strength,
-            dex: character.dexterity,
-            con: character.constitution,
-            int: character.intelligence,
-            wis: character.wisdom,
-            cha: character.charisma,
-          }
-        : {});
+    // Handle abilities (old 'abilityScores' and new 'abilities' format)
+    const abilities = character.abilities || character.abilityScores || {};
     const abilityModifiers = character.abilityModifiers || {};
     
     // Check if abilities have been actually rolled/populated.
@@ -1838,112 +1753,17 @@ const CharacterSheet = (window.CharacterSheet = {
     //   only show actual values when baseAbilities has been set (not null).
     // - In manager/cloud-sourced characters, baseAbilities may be undefined,
     //   so we check if any ability score differs from the default 10.
-    const hasAllStandardAbilityScores =
-      abilities &&
-      STANDARD_ABILITIES.every((k) => {
-        const v = abilities[k];
-        const n = typeof v === 'string' ? parseInt(v, 10) : v;
-        return Number.isFinite(n);
-      });
-
-    const hasNonDefaultAbilities =
-      abilities &&
-      Object.values(abilities).some((score) => {
-        const n = typeof score === 'string' ? parseInt(score, 10) : score;
-        return Number.isFinite(n) && n !== 10 && n !== 0;
-      });
+    const hasNonDefaultAbilities = abilities && 
+      Object.values(abilities).some(score => score !== 10 && score !== 0);
     const abilitiesPopulated =
       (character.baseAbilities !== null && character.baseAbilities !== undefined) ||
-      (character.baseAbilities === undefined &&
-        // In manager/cloud, treat a complete ability block as "real" even if
-        // all scores are 10 (so saves show as +0 instead of hiding).
-        (hasNonDefaultAbilities || hasAllStandardAbilityScores));
+      (character.baseAbilities === undefined && hasNonDefaultAbilities);
 
     // Handle race/class/background names (enhanced export has nested data)
     const raceName = character.raceData?.name || character.race || null;
-    const className =
-      character.classData?.name || character.class || character.character_class || null;
+    const className = character.classData?.name || character.class || null;
     const backgroundName =
       character.backgroundData?.name || character.background || null;
-
-    // Saving throws:
-    // - Prefer persisted `savingThrowModifiers` if present
-    // - Otherwise infer `savingThrows` from class (classData, DND_DATA, or built-in map)
-    // - If we have abilities, compute numeric modifiers as:
-    //   abilityMod + (proficiencyBonus if proficient).
-    const rawSavingThrows =
-      character.savingThrows ||
-      character.saving_throw_proficiencies ||
-      character.saving_throw_proficiencies ||
-      [];
-    let savingThrows = Array.isArray(rawSavingThrows) ? rawSavingThrows : [];
-    let savingThrowModifiers = character.savingThrowModifiers || null;
-
-    // Prefer enhanced export's nested classData when present.
-    if (
-      (!Array.isArray(savingThrows) || savingThrows.length === 0) &&
-      Array.isArray(character.classData?.savingThrows) &&
-      character.classData.savingThrows.length > 0
-    ) {
-      savingThrows = character.classData.savingThrows;
-    }
-
-    // If DND_DATA is available, prefer its definition.
-    if (
-      (!Array.isArray(savingThrows) || savingThrows.length === 0) &&
-      window.DND_DATA &&
-      Array.isArray(window.DND_DATA.classes)
-    ) {
-      const classIdOrName = character.class || character.character_class || className;
-      const cls = classIdOrName
-        ? window.DND_DATA.classes.find(
-            (c) => c.id === classIdOrName || c.name === classIdOrName,
-          )
-        : null;
-      if (cls && Array.isArray(cls.savingThrows) && cls.savingThrows.length > 0) {
-        savingThrows = cls.savingThrows;
-      }
-    }
-
-    // Fall back to a built-in standard 5e map.
-    if (!Array.isArray(savingThrows) || savingThrows.length === 0) {
-      const normalized = normalizeClassKey(
-        character.class || character.character_class || className,
-      );
-      if (normalized && Array.isArray(SAVING_THROWS_BY_CLASS[normalized])) {
-        savingThrows = SAVING_THROWS_BY_CLASS[normalized];
-      }
-    }
-
-    // Compute numeric save modifiers when missing and we have usable abilities.
-    if (!savingThrowModifiers && abilitiesPopulated) {
-      const level = character.level || 1;
-      const pb =
-        typeof character.proficiencyBonus === 'number'
-          ? character.proficiencyBonus
-          : Math.ceil(level / 4) + 1;
-
-      const mods =
-        character.abilityModifiers && Object.keys(character.abilityModifiers).length > 0
-          ? character.abilityModifiers
-          : {
-              str: Math.floor(((abilities.str || 10) - 10) / 2),
-              dex: Math.floor(((abilities.dex || 10) - 10) / 2),
-              con: Math.floor(((abilities.con || 10) - 10) / 2),
-              int: Math.floor(((abilities.int || 10) - 10) / 2),
-              wis: Math.floor(((abilities.wis || 10) - 10) / 2),
-              cha: Math.floor(((abilities.cha || 10) - 10) / 2),
-            };
-
-      const saves = {};
-      STANDARD_ABILITIES.forEach((ability) => {
-        const isProficient =
-          Array.isArray(savingThrows) && savingThrows.includes(ability);
-        const base = typeof mods[ability] === 'number' ? mods[ability] : 0;
-        saves[ability] = base + (isProficient ? pb : 0);
-      });
-      savingThrowModifiers = saves;
-    }
 
     // Derive hit die:
     // - Prefer any explicit character-level override (manager edits)
@@ -2032,8 +1852,8 @@ const CharacterSheet = (window.CharacterSheet = {
       abilitiesSet: abilitiesPopulated,
 
       // Saving throws
-      savingThrows,
-      savingThrowModifiers,
+      savingThrows: character.savingThrows || [],
+      savingThrowModifiers: character.savingThrowModifiers || null,
 
       // Skills
       skillModifiers,
@@ -2068,9 +1888,10 @@ const CharacterSheet = (window.CharacterSheet = {
       hasClass: !!className,
       hasAbilities: isBuilder || Object.keys(abilities).length > 0,
       hasCombatStats: isBuilder || hpMax > 0 || character.armorClass,
-      hasSavingThrows:
-        isBuilder ||
-        (savingThrowModifiers && Object.keys(savingThrowModifiers).length > 0),
+      hasSavingThrows: isBuilder || (
+        character.savingThrowModifiers &&
+        Object.keys(character.savingThrowModifiers).length > 0
+      ),
       hasSkills: isBuilder || (
         Object.keys(skillModifiers).length > 0 ||
         skillProficiencies.length > 0

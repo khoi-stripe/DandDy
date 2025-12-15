@@ -308,9 +308,21 @@ this.showLoading(submitButton,true,'CREATING ACCOUNT...');errorDiv.classList.add
 if(confirmToggle&&confirmInput){confirmToggle.addEventListener('click',()=>{const isPassword=confirmInput.type==='password';confirmInput.type=isPassword?'text':'password';confirmToggle.textContent=isPassword?'HIDE':'SHOW';confirmToggle.setAttribute('aria-pressed',String(isPassword));confirmToggle.setAttribute('aria-label',isPassword?'Hide password':'Show password',);});}
 confirmInput.addEventListener('keypress',(e)=>{if(e.key==='Enter')handleSubmit();});cancelButton.addEventListener('click',()=>{this.removeAuthScreen();if(onSwitchToLogin)onSwitchToLogin();});emailInput.focus();},showError(errorDiv,message){errorDiv.textContent=`⚠ ERROR: ${message}`;errorDiv.classList.remove('is-hidden');},showLoading(button,show,label){if(!button)return;if(show){if(!button.dataset.originalLabel){button.dataset.originalLabel=button.innerHTML;}
 button.disabled=true;const loadingLabel=label||'WORKING...';const cubeMarkup='<span class="spinner-cube-scene">'+'<span class="spinner-cube-tilt">'+'<span class="spinner-cube">'+'<span class="spinner-cube-face spinner-cube-face-front"></span>'+'<span class="spinner-cube-face spinner-cube-face-back"></span>'+'<span class="spinner-cube-face spinner-cube-face-right"></span>'+'<span class="spinner-cube-face spinner-cube-face-left"></span>'+'<span class="spinner-cube-face spinner-cube-face-top"></span>'+'<span class="spinner-cube-face spinner-cube-face-bottom"></span>'+'</span></span></span>';button.innerHTML=`${cubeMarkup} ${loadingLabel}`;}else{button.disabled=false;if(button.dataset.originalLabel){button.innerHTML=button.dataset.originalLabel;delete button.dataset.originalLabel;}}},removeAuthScreen(){const authScreen=document.getElementById('auth-screen');if(authScreen){authScreen.remove();}
-this._restoreUnderlay();},updateHeaderWithUser(user){const slot=document.getElementById('auth-slot')||document.getElementById('status-text');if(slot&&user){const roleIcon=user.role==='dm'?'🎲':'⚔️';const label=(user.email||'').toUpperCase();slot.innerHTML=`${roleIcon} ${label} | <button class="link-button" id="header-characters">MY CHARACTERS</button> | <button class="link-button" id="header-logout">LOGOUT</button>`;document.getElementById('header-characters')?.addEventListener('click',()=>{if(window.CharacterManager&&typeof CharacterManager.show==='function'){CharacterManager.show();return;}
-window.suppressBeforeunloadWarning?.();window.location.href='../index.html?from=builder';});document.getElementById('header-logout')?.addEventListener('click',()=>{if(confirm('Are you sure you want to logout?')){AuthService.logout();if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>window.location.reload(),()=>{},()=>{});}else{window.location.reload();}}});}},showGuestBanner(){const slot=document.getElementById('auth-slot')||document.getElementById('status-text');if(slot){slot.innerHTML=`👤 GUEST MODE | <button class="link-button" id="header-login">LOGIN TO SAVE</button>`;document.getElementById('header-login')?.addEventListener('click',()=>{if(window.App&&typeof window.App.showAuthScreen==='function'){App.showAuthScreen();return;}
-if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>window.location.reload(),()=>{},()=>{},);}});}},});window.updateAuthUI=async function updateAuthUI(){try{if(!window.AuthService||!window.AuthUI)return;if(window.AuthService.isAuthenticated()){let user=window.AuthService.getCurrentUser();if(!user&&typeof window.AuthService.fetchProfile==='function'){user=await window.AuthService.fetchProfile();if(user)window.AuthService.setCurrentUser(user);}
+this._restoreUnderlay();},updateHeaderWithUser(user){const slot=document.getElementById('auth-slot')||document.getElementById('status-text');if(slot&&user){const label=user&&user.email?String(user.email):'Logged In';slot.innerHTML=`
+        <span id="builderUserInfo" class="builder-user-info">
+          <span class="user-status-text">${label}</span>
+        </span>
+        <button id="builderAuthBtn" class="terminal-btn terminal-btn-small ui-theme-teal" type="button">LOGOUT</button>
+      `;const authBtn=document.getElementById('builderAuthBtn');authBtn?.addEventListener('click',()=>{if(!confirm('Log out?'))return;try{window.AuthService?.logout?.();}catch(_){}
+if(typeof window.updateAuthUI==='function'){window.updateAuthUI();}
+window.App?.showNotification?.('✓ Logged out','success');});}},showGuestBanner(){const slot=document.getElementById('auth-slot')||document.getElementById('status-text');if(slot){slot.innerHTML=`
+        <span id="builderUserInfo" class="builder-user-info">
+          <span class="user-status-text">Guest mode</span>
+        </span>
+        <button id="builderAuthBtn" class="terminal-btn terminal-btn-small ui-theme-teal" type="button">LOGIN</button>
+      `;const authBtn=document.getElementById('builderAuthBtn');authBtn?.addEventListener('click',()=>{if(typeof window.showAuthModal==='function'){window.showAuthModal();return;}
+if(window.App&&typeof window.App.showAuthScreen==='function'){window.App.showAuthScreen();return;}
+if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>window.location.reload(),()=>{},()=>{});}});}},});window.updateAuthUI=async function updateAuthUI(){try{if(!window.AuthService||!window.AuthUI)return;if(window.AuthService.isAuthenticated()){let user=window.AuthService.getCurrentUser();if(!user&&typeof window.AuthService.fetchProfile==='function'){user=await window.AuthService.fetchProfile();if(user)window.AuthService.setCurrentUser(user);}
 if(user){window.AuthUI.updateHeaderWithUser(user);}else{window.AuthUI.updateHeaderWithUser({email:'Logged In',role:'player'});}}else{window.AuthUI.showGuestBanner();}}catch(e){console.warn('[Builder] updateAuthUI failed:',e);}};function initBuilderHeaderAuth(){if(typeof window.updateAuthUI==='function'){window.updateAuthUI();}
 if(window.AuthService&&window.AuthService.isAuthenticated()){if(typeof window.AuthService.startSessionMonitor==='function'){window.AuthService.startSessionMonitor();}}
 window.addEventListener('danddy:sessionExpired',()=>{if(typeof window.updateAuthUI==='function')window.updateAuthUI();if(window.App&&typeof window.App.showConfirmationOverlay==='function'){window.App.showConfirmationOverlay("Your session expired. Your character is safe locally — log in again to sync to the cloud.",()=>window.App?.showAuthScreen?.(),null,{primaryLabel:'LOG IN',hideSecondary:true},);return;}
@@ -1235,25 +1247,12 @@ const score=parsed.abilities[ability]||10;const modifier=parsed.abilityModifiers
   },
 
   _renderSavingThrows(parsed) {
-    if (!parsed.savingThrowModifiers) {
-      // In the builder flow, we want this section to be visible even before
-      // derived stats are computed. Render placeholders until we have values.
-      if (!parsed.isBuilder) return '';
+    if (!parsed.savingThrowModifiers) return '';
 
-      const abilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-      return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[SAVING THROWS]</div></div><div class="sheet-content">${abilities.map((ability)=>{const isProficient=parsed.savingThrows?.includes(ability);return`
-                  <div class="stat-line">
-                    <span class="stat-label">${ability.toUpperCase()}:</span>
-                    <span class="stat-value">${isProficient ? '★ ' : ''}—</span>
-                  </div>
-                `;}).join('')}</div></div>`;
-    }
-
-    const abilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[SAVING THROWS]</div></div><div class="sheet-content">${abilities.map((ability)=>{const value=parsed.savingThrowModifiers?.[ability];const isProficient=parsed.savingThrows?.includes(ability);const display=typeof value==='number'?this.formatModifier(value):'—';return`
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[SAVING THROWS]</div></div><div class="sheet-content">${Object.entries(parsed.savingThrowModifiers).map(([ability,value])=>{const isProficient=parsed.savingThrows?.includes(ability);return`
                 <div class="stat-line">
                   <span class="stat-label">${ability.toUpperCase()}:</span>
-                  <span class="stat-value">${isProficient ? '★ ' : ''}${display}</span>
+                  <span class="stat-value">${this.formatModifier(value)}${isProficient ? ' ★' : ''}</span>
                 </div>
               `;}).join('')}</div></div>`;
   },
@@ -1283,14 +1282,19 @@ const score=parsed.abilities[ability]||10;const modifier=parsed.abilityModifiers
     const skillsMarkup = hasSkillModifiers
       ? Object.entries(parsed.skillModifiers)
           .map(
-            ([skill, value]) => `<div class="stat-line"><span class="stat-label">${this.escapeHtml(this.formatSkillName(skill),)}:</span><span class="stat-value">★ ${this.formatModifier(value)}</span></div>`,
+            ([skill, value]) => `<div class="stat-line"><span class="stat-label">${this.escapeHtml(this.formatSkillName(skill),)}:</span><span class="stat-value">${this.formatModifier(value)}★</span></div>`,
           )
           .join('')
       : '';
 
     const extraProfsMarkup =
       extraProfs && extraProfs.length
-        ? `<ul class="sheet-bullet-list">${extraProfs.map((skill)=>{const label=this.escapeHtml(this.formatSkillName(skill));return`<li class="text-dim">${label}</li>`;}).join('')}</ul>`
+        ? extraProfs
+            .map((skill) => {
+              const label = this.escapeHtml(this.formatSkillName(skill));
+              return `<div class="text-dim">• ${label}</div>`;
+            })
+            .join('')
         : '';
 
     const headerTitle = hasSkillModifiers
@@ -1316,7 +1320,7 @@ ${skillsMarkup}<div class="sheet-divider"></div>${extraProfsMarkup}`;
 
     // Helper to render spell list
     const renderSpellList = (spells) => {
-      const items = spells
+      return spells
         .map((spell) => {
           const rawName = spell && typeof spell === 'object' ? spell.name : spell;
           const name = this.escapeHtml(rawName || '');
@@ -1328,11 +1332,9 @@ ${skillsMarkup}<div class="sheet-divider"></div>${extraProfsMarkup}`;
             spell && spell.description
               ? `<div class="text-dim terminal-text-small spell-list-description">${this.escapeHtml(spell.description,)}</div>`
               : '';
-          return `<li class="text-dim spell-list-item">${name}${school}${desc}</li>`;
+        return `<div class="text-dim spell-list-item">• ${name}${school}</div>${desc}`;
         })
         .join('');
-
-      return `<ul class="sheet-bullet-list spell-list">${items}</ul>`;
     };
 
     let spellsContent = '';
@@ -1366,28 +1368,31 @@ ${skillsMarkup}<div class="sheet-divider"></div>${extraProfsMarkup}`;
   },
 
   _renderRacialTraits(parsed) {
-    const traits = parsed.racialTraits || [];
-    if (!traits.length) return '';
-
-    const traitsMarkup = `<ul class="sheet-bullet-list">${traits.map((trait)=>`<li class="text-dim">${this.escapeHtml(trait)}</li>`).join('')}</ul>`;
+    const traitsMarkup = parsed.racialTraits
+      .map((trait) => `<div class="text-dim">• ${this.escapeHtml(trait)}</div>`)
+      .join('');
 
     return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[RACIAL TRAITS]</div></div><div class="sheet-content">${traitsMarkup}</div></div>`;
   },
 
   _renderEquipment(parsed) {
-    const equipment = parsed.equipment || [];
-    if (!equipment.length) return '';
-
-    const equipmentMarkup = `<ul class="sheet-bullet-list">${equipment.map((item)=>`<li class="text-dim">${this.escapeHtml(item)}</li>`).join('')}</ul>`;
+    const equipmentMarkup = parsed.equipment
+      .map(
+        (item) =>
+          `<div class="text-dim">• ${this.escapeHtml(item,)}</div>`,
+      )
+      .join('');
 
     return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[${parsed.hasClassEquipment?'EQUIPMENT':'CLASS EQUIPMENT'}]</div></div><div class="sheet-content">${equipmentMarkup}</div></div>`;
   },
 
   _renderToolProficiencies(parsed) {
-    const tools = parsed.toolProficiencies || [];
-    if (!tools.length) return '';
-
-    const toolsMarkup = `<ul class="sheet-bullet-list">${tools.map((tool)=>{const label=this.escapeHtml(this.formatSkillName(tool));return`<li class="text-dim">${label}</li>`;}).join('')}</ul>`;
+    const toolsMarkup = parsed.toolProficiencies
+      .map((tool) => {
+        const label = this.escapeHtml(this.formatSkillName(tool));
+        return `<div class="text-dim">• ${label}</div>`;
+      })
+      .join('');
 
     return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[TOOL PROFICIENCIES]</div></div><div class="sheet-content">${toolsMarkup}</div></div>`;
   },
@@ -1400,11 +1405,9 @@ ${skillsMarkup}<div class="sheet-divider"></div>${extraProfsMarkup}`;
       return '';
     }
     
-    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[LANGUAGES]</div></div><div class="sheet-content">${hasLanguages?`<ul class="sheet-bullet-list">
-                  ${parsed.languages
-                    .map((lang) => `<li class="text-dim">${this.escapeHtml(lang)}</li>`)
-                    .join('')}
-                </ul>`:''}
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[LANGUAGES]</div></div><div class="sheet-content">${hasLanguages?parsed.languages.map((lang)=>`<div class="text-dim">• ${this.escapeHtml(
+                        lang,
+                      )}</div>`,).join(''):''}
 ${hasChoices?`<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${parsed.languageChoices} additional language${parsed.languageChoices > 1 ? 's' : ''}</div>`:''}</div></div>`;
   },
 
@@ -1460,58 +1463,14 @@ ${hasChoices?`<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${pa
       wizard: 6,
       sorcerer: 6,
     };
-
-    // Minimal built-in mapping of standard 5e class saving throw proficiencies.
-    // Used when a character is missing `savingThrows` (older exports/imports) and/or
-    // when DND_DATA is not available (manager context).
-    const SAVING_THROWS_BY_CLASS = {
-      barbarian: ['str', 'con'],
-      bard: ['dex', 'cha'],
-      cleric: ['wis', 'cha'],
-      druid: ['int', 'wis'],
-      fighter: ['str', 'con'],
-      monk: ['str', 'dex'],
-      paladin: ['wis', 'cha'],
-      ranger: ['str', 'dex'],
-      rogue: ['dex', 'int'],
-      sorcerer: ['con', 'cha'],
-      warlock: ['wis', 'cha'],
-      wizard: ['int', 'wis'],
-    };
-
-    const STANDARD_ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
-
-    const normalizeClassKey = (raw) => {
-      if (!raw) return '';
-      return String(raw).trim().toLowerCase().replace(/\s+/g, '-');
-    };
     
     // Handle HP (old and new formats)
     const hp = character.hitPoints || { current: 0, max: 0 };
     const hpMax = typeof hp === 'number' ? hp : hp.max || 0;
     const hpCurrent = typeof hp === 'number' ? hp : hp.current || hpMax;
 
-    // Handle abilities:
-    // - New/enhanced formats: `abilities` or `abilityScores` (both {str,dex,con,int,wis,cha})
-    // - Backend-shaped characters: top-level strength/dexterity/... fields (possible via imports)
-    const abilities =
-      character.abilities ||
-      character.abilityScores ||
-      (character.strength != null ||
-      character.dexterity != null ||
-      character.constitution != null ||
-      character.intelligence != null ||
-      character.wisdom != null ||
-      character.charisma != null
-        ? {
-            str: character.strength,
-            dex: character.dexterity,
-            con: character.constitution,
-            int: character.intelligence,
-            wis: character.wisdom,
-            cha: character.charisma,
-          }
-        : {});
+    // Handle abilities (old 'abilityScores' and new 'abilities' format)
+    const abilities = character.abilities || character.abilityScores || {};
     const abilityModifiers = character.abilityModifiers || {};
     
     // Check if abilities have been actually rolled/populated.
@@ -1520,112 +1479,17 @@ ${hasChoices?`<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${pa
     //   only show actual values when baseAbilities has been set (not null).
     // - In manager/cloud-sourced characters, baseAbilities may be undefined,
     //   so we check if any ability score differs from the default 10.
-    const hasAllStandardAbilityScores =
-      abilities &&
-      STANDARD_ABILITIES.every((k) => {
-        const v = abilities[k];
-        const n = typeof v === 'string' ? parseInt(v, 10) : v;
-        return Number.isFinite(n);
-      });
-
-    const hasNonDefaultAbilities =
-      abilities &&
-      Object.values(abilities).some((score) => {
-        const n = typeof score === 'string' ? parseInt(score, 10) : score;
-        return Number.isFinite(n) && n !== 10 && n !== 0;
-      });
+    const hasNonDefaultAbilities = abilities && 
+      Object.values(abilities).some(score => score !== 10 && score !== 0);
     const abilitiesPopulated =
       (character.baseAbilities !== null && character.baseAbilities !== undefined) ||
-      (character.baseAbilities === undefined &&
-        // In manager/cloud, treat a complete ability block as "real" even if
-        // all scores are 10 (so saves show as +0 instead of hiding).
-        (hasNonDefaultAbilities || hasAllStandardAbilityScores));
+      (character.baseAbilities === undefined && hasNonDefaultAbilities);
 
     // Handle race/class/background names (enhanced export has nested data)
     const raceName = character.raceData?.name || character.race || null;
-    const className =
-      character.classData?.name || character.class || character.character_class || null;
+    const className = character.classData?.name || character.class || null;
     const backgroundName =
       character.backgroundData?.name || character.background || null;
-
-    // Saving throws:
-    // - Prefer persisted `savingThrowModifiers` if present
-    // - Otherwise infer `savingThrows` from class (classData, DND_DATA, or built-in map)
-    // - If we have abilities, compute numeric modifiers as:
-    //   abilityMod + (proficiencyBonus if proficient).
-    const rawSavingThrows =
-      character.savingThrows ||
-      character.saving_throw_proficiencies ||
-      character.saving_throw_proficiencies ||
-      [];
-    let savingThrows = Array.isArray(rawSavingThrows) ? rawSavingThrows : [];
-    let savingThrowModifiers = character.savingThrowModifiers || null;
-
-    // Prefer enhanced export's nested classData when present.
-    if (
-      (!Array.isArray(savingThrows) || savingThrows.length === 0) &&
-      Array.isArray(character.classData?.savingThrows) &&
-      character.classData.savingThrows.length > 0
-    ) {
-      savingThrows = character.classData.savingThrows;
-    }
-
-    // If DND_DATA is available, prefer its definition.
-    if (
-      (!Array.isArray(savingThrows) || savingThrows.length === 0) &&
-      window.DND_DATA &&
-      Array.isArray(window.DND_DATA.classes)
-    ) {
-      const classIdOrName = character.class || character.character_class || className;
-      const cls = classIdOrName
-        ? window.DND_DATA.classes.find(
-            (c) => c.id === classIdOrName || c.name === classIdOrName,
-          )
-        : null;
-      if (cls && Array.isArray(cls.savingThrows) && cls.savingThrows.length > 0) {
-        savingThrows = cls.savingThrows;
-      }
-    }
-
-    // Fall back to a built-in standard 5e map.
-    if (!Array.isArray(savingThrows) || savingThrows.length === 0) {
-      const normalized = normalizeClassKey(
-        character.class || character.character_class || className,
-      );
-      if (normalized && Array.isArray(SAVING_THROWS_BY_CLASS[normalized])) {
-        savingThrows = SAVING_THROWS_BY_CLASS[normalized];
-      }
-    }
-
-    // Compute numeric save modifiers when missing and we have usable abilities.
-    if (!savingThrowModifiers && abilitiesPopulated) {
-      const level = character.level || 1;
-      const pb =
-        typeof character.proficiencyBonus === 'number'
-          ? character.proficiencyBonus
-          : Math.ceil(level / 4) + 1;
-
-      const mods =
-        character.abilityModifiers && Object.keys(character.abilityModifiers).length > 0
-          ? character.abilityModifiers
-          : {
-              str: Math.floor(((abilities.str || 10) - 10) / 2),
-              dex: Math.floor(((abilities.dex || 10) - 10) / 2),
-              con: Math.floor(((abilities.con || 10) - 10) / 2),
-              int: Math.floor(((abilities.int || 10) - 10) / 2),
-              wis: Math.floor(((abilities.wis || 10) - 10) / 2),
-              cha: Math.floor(((abilities.cha || 10) - 10) / 2),
-            };
-
-      const saves = {};
-      STANDARD_ABILITIES.forEach((ability) => {
-        const isProficient =
-          Array.isArray(savingThrows) && savingThrows.includes(ability);
-        const base = typeof mods[ability] === 'number' ? mods[ability] : 0;
-        saves[ability] = base + (isProficient ? pb : 0);
-      });
-      savingThrowModifiers = saves;
-    }
 
     // Derive hit die:
     // - Prefer any explicit character-level override (manager edits)
@@ -1714,8 +1578,8 @@ ${hasChoices?`<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${pa
       abilitiesSet: abilitiesPopulated,
 
       // Saving throws
-      savingThrows,
-      savingThrowModifiers,
+      savingThrows: character.savingThrows || [],
+      savingThrowModifiers: character.savingThrowModifiers || null,
 
       // Skills
       skillModifiers,
@@ -1750,9 +1614,10 @@ ${hasChoices?`<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${pa
       hasClass: !!className,
       hasAbilities: isBuilder || Object.keys(abilities).length > 0,
       hasCombatStats: isBuilder || hpMax > 0 || character.armorClass,
-      hasSavingThrows:
-        isBuilder ||
-        (savingThrowModifiers && Object.keys(savingThrowModifiers).length > 0),
+      hasSavingThrows: isBuilder || (
+        character.savingThrowModifiers &&
+        Object.keys(character.savingThrowModifiers).length > 0
+      ),
       hasSkills: isBuilder || (
         Object.keys(skillModifiers).length > 0 ||
         skillProficiencies.length > 0
@@ -5539,11 +5404,7 @@ const KeyboardNav = (window.KeyboardNav = {
     // Get ALL clickable buttons from ALL cards
     const allButtons = [];
     allCards.forEach((card) => {
-      // Include both primary + secondary buttons so completion screen options
-      // (e.g. "Save and Exit" + "Create Another Character") are keyboard navigable.
-      const cardButtons = Array.from(
-        card.querySelectorAll('.button-primary, .button-secondary'),
-      );
+      const cardButtons = Array.from(card.querySelectorAll('.button-primary'));
       // Include all buttons (selected, locked, etc) - they're all clickable now
       cardButtons.forEach((btn) => {
         // Skip only truly disabled buttons (like name input buttons after selection)
@@ -7009,11 +6870,11 @@ placeholder="Or enter your own name..."><button class="button-primary"onclick="A
 
     // Show completion options
     const createAnotherBtn = canCreateAnother
-      ? `<button class="button-secondary"id="completion-new-btn"onclick="App.startNew()">&gt;\u00A0CREATE ANOTHER CHARACTER</button>`
+      ? `<button class="button-primary"id="completion-new-btn"onclick="App.startNew()">&gt;\u00A0CREATE ANOTHER CHARACTER</button>`
       : '';
     narratorPanel.insertAdjacentHTML(
       'beforeend',
-      `<div class="question-card mt-lg"data-question-id="${question.id}"><button class="button-primary completion-save-btn"id="completion-save-btn"onclick="App.saveAndExit()">&gt;\u00A0SAVE AND EXIT</button>${createAnotherBtn}</div>`,
+      `<div class="question-card mt-lg"data-question-id="${question.id}"><button class="button-primary completion-save-btn"id="completion-save-btn"onclick="App.saveCharacter()">&gt;\u00A0SAVE CHARACTER</button>${createAnotherBtn}</div>`,
     );
     Utils.scrollToBottom(true);
 
@@ -9480,7 +9341,7 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
       this.showSystemMessage(
         'Unable to save character right now. Please try again shortly.',
       );
-      return null;
+      return;
     }
 
     // Note: guest mode no longer has a local-storage character cap; daily quota
@@ -9493,7 +9354,7 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
           'Character must have at least a name, race, and class before saving.',
         );
       }
-      return null;
+      return;
     }
 
     try {
@@ -9530,29 +9391,9 @@ placeholder="Enter custom description...">${defaultPrompt}</textarea></div><div 
           this.showNotification('💡 Log in or create an account to save your character to the cloud', 'info');
         }, 1000);
       }
-
-      return saved;
     } catch (error) {
       console.error('Error saving character:', error);
       this.showSystemMessage('Save failed: ' + error.message);
-      return null;
-    }
-  },
-
-  /**
-   * Completion-screen action: save the character and return to the manager screen.
-   */
-  async saveAndExit() {
-    const saved = await this.saveCharacter(false);
-    if (!saved) return;
-
-    // Return to Character Manager, selecting the saved character if possible.
-    try {
-      const id = saved && saved.id != null ? String(saved.id) : null;
-      const targetUrl = id ? `../index.html?character=${encodeURIComponent(id)}` : '../index.html';
-      window.location.href = targetUrl;
-    } catch (e) {
-      window.location.href = '../index.html';
     }
   },
 
@@ -11160,48 +11001,6 @@ placeholder="Enter character name"></div><div id="name-modal-error"class="termin
 
 });
 
-// Allow logging in from the builder page without leaving to the manager.
-// Renders into the header auth slot via window.updateAuthUI (defined in character-builder-auth.js).
-App.showAuthScreen = function showAuthScreen() {
-  if (!window.AuthUI || typeof window.AuthUI.showLogin !== 'function') {
-    console.warn('[Builder] AuthUI not available');
-    return;
-  }
-
-  const onSuccess = async (user) => {
-    try {
-      if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
-        window.AuthService.startSessionMonitor();
-      }
-    } catch (_) {}
-
-    if (typeof window.updateAuthUI === 'function') {
-      await window.updateAuthUI();
-    }
-
-    if (window.App && typeof window.App.showNotification === 'function') {
-      const email = user && user.email ? user.email : 'your account';
-      window.App.showNotification(`✓ Logged in as ${email}`, 'success');
-    }
-  };
-
-  const onGuestMode = async () => {
-    if (typeof window.updateAuthUI === 'function') {
-      await window.updateAuthUI();
-    }
-    window.App?.showNotification?.('👤 Continuing in guest mode', 'info');
-  };
-
-  const showRegister = () => {
-    if (typeof window.AuthUI.showRegister !== 'function') return;
-    window.AuthUI.showRegister(onSuccess, () => {
-      App.showAuthScreen();
-    });
-  };
-
-  window.AuthUI.showLogin(onSuccess, showRegister, onGuestMode);
-};
-
 // ===== AUTHENTICATION & BOOTSTRAP (builder splash handling) =====
 
 let builderSplashActive = true;
@@ -11441,6 +11240,16 @@ function showAuthModal() {
     }
 }
 
+// The builder's auth modal markup uses the same cancel handler name as the manager.
+function cancelAuthFlow() {
+    closeAuthModal();
+}
+
+// Builder auth modal includes a "Forgot password?" link; route to manager reset UI.
+function openPasswordResetFromLogin() {
+    window.location.href = '../index.html#password-reset';
+}
+
 function closeAuthModal() {
     const modal = document.getElementById('authModal');
     const err = document.getElementById('authError');
@@ -11451,14 +11260,35 @@ function closeAuthModal() {
     modal.classList.remove('show');
     err.classList.add('is-hidden');
     // Clear form fields
-    document.getElementById('loginUsername').value = '';
-    document.getElementById('loginPassword').value = '';
-    document.getElementById('registerEmail').value = '';
-    document.getElementById('registerPassword').value = '';
+    const loginEmail = document.getElementById('loginEmail');
+    const loginPassword = document.getElementById('loginPassword');
+    const registerEmail = document.getElementById('registerEmail');
+    const registerPassword = document.getElementById('registerPassword');
     const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
+
+    if (loginEmail) loginEmail.value = '';
+    if (loginPassword) {
+        loginPassword.value = '';
+        loginPassword.type = 'password';
+    }
+    if (registerEmail) registerEmail.value = '';
+    if (registerPassword) {
+        registerPassword.value = '';
+        registerPassword.type = 'password';
+    }
     if (registerPasswordConfirm) {
         registerPasswordConfirm.value = '';
+        registerPasswordConfirm.type = 'password';
     }
+
+    // Reset toggle labels back to SHOW
+    document.querySelectorAll('.password-toggle-btn').forEach((btn) => {
+        try {
+            btn.textContent = 'SHOW';
+            btn.setAttribute('aria-pressed', 'false');
+            btn.setAttribute('aria-label', 'Show password');
+        } catch (_) {}
+    });
 }
 
 function showLoginForm() {
@@ -11495,7 +11325,7 @@ async function handleLogin() {
     // false "Please enter both email and password" errors.
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const emailInput = document.getElementById('loginUsername');
+    const emailInput = document.getElementById('loginEmail');
     const passwordInput = document.getElementById('loginPassword');
 
     const email = emailInput ? emailInput.value.trim() : '';
@@ -11574,7 +11404,11 @@ window.AuthService.logout();updateAuthUI();console.log('✓ Logged out');if(wind
 if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>location.reload(),()=>{},()=>{});}},);}
 function updateAuthUI(){const authBtn=document.getElementById('authBtn');const userInfoDisplay=document.getElementById('userInfoDisplay');const userStatusIcon=document.getElementById('userStatusIcon');const userStatusText=document.getElementById('userStatusText');if(!authBtn||!userInfoDisplay||!userStatusIcon||!userStatusText){if(typeof window.updateAuthUI==='function'){window.updateAuthUI();}
 return;}
-if(window.AuthService&&window.AuthService.isAuthenticated()){const user=window.AuthService.getCurrentUser();userStatusIcon.textContent='☁';userStatusText.textContent=user?user.email:'Logged In';authBtn.textContent='LOGOUT';authBtn.onclick=handleLogout;}else{userStatusIcon.textContent='▣';userStatusText.textContent='Local Only';authBtn.textContent='LOGIN';authBtn.onclick=showAuthModal;}}
+if(window.AuthService&&window.AuthService.isAuthenticated()){const user=window.AuthService.getCurrentUser();userStatusIcon.textContent='☁';userStatusText.textContent=user?user.email:'Logged In';authBtn.textContent='LOGOUT';authBtn.onclick=handleLogout;}else{userStatusIcon.textContent='▣';userStatusText.textContent='Guest mode';authBtn.textContent='LOGIN';authBtn.onclick=showAuthModal;}}
+function initBuilderAuthModalWiring(){const loginPasswordInput=document.getElementById('loginPassword');const registerPasswordConfirmInput=document.getElementById('registerPasswordConfirm');if(loginPasswordInput){loginPasswordInput.addEventListener('keypress',(e)=>{if(e.key==='Enter'){e.preventDefault();handleLogin();}});}
+if(registerPasswordConfirmInput){registerPasswordConfirmInput.addEventListener('keypress',(e)=>{if(e.key==='Enter'){e.preventDefault();handleRegister();}});}
+document.addEventListener('keydown',(e)=>{if(e.key!=='Escape')return;const modal=document.getElementById('authModal');if(modal&&modal.classList.contains('show')){e.preventDefault();cancelAuthFlow();}});const passwordToggleButtons=document.querySelectorAll('.password-toggle-btn');passwordToggleButtons.forEach((btn)=>{btn.addEventListener('click',()=>{const targetId=btn.getAttribute('data-target');if(!targetId)return;const input=document.getElementById(targetId);if(!input)return;const isPassword=input.type==='password';input.type=isPassword?'text':'password';btn.textContent=isPassword?'HIDE':'SHOW';btn.setAttribute('aria-pressed',String(isPassword));btn.setAttribute('aria-label',isPassword?'Hide password':'Show password');});});}
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initBuilderAuthModalWiring);}else{initBuilderAuthModalWiring();}
 async function saveCurrentCharacterToCloud(){try{if(!window.AuthService||!window.AuthService.isAuthenticated()){console.log('💾 Not logged in - character saved to localStorage only');return false;}
 if(!window.CharacterCloudStorage){console.error('☁️ CharacterCloudStorage not available');return false;}
 const character=window.CharacterState.current.character;if(!character.name){console.log('☁️ Character has no name yet - skipping cloud save');return false;}

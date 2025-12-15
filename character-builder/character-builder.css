@@ -35,6 +35,41 @@
   white-space: nowrap;
 }
 
+/* Match manager hover-reveal behavior: hide label until auth button hover */
+#auth-slot #builderUserInfo {
+  font-size: var(--font-size-small);
+  white-space: nowrap;
+  color: var(--sheet-accent-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
+  padding-right: 0;
+}
+
+/* Reveal on LOGIN/LOGOUT hover (desktop) */
+#auth-slot:has(#builderAuthBtn:hover) #builderUserInfo {
+  max-width: 300px;
+  opacity: 0.7;
+  padding-right: var(--spacing-sm);
+}
+
+/* Builder header auth: match manager header's dim teal auth button */
+#auth-slot #builderAuthBtn {
+  border-color: var(--sheet-accent-dim);
+  color: var(--sheet-accent-dim);
+  opacity: 0.7;
+}
+
+#auth-slot #builderAuthBtn:hover:not(:disabled) {
+  border-color: var(--sheet-accent);
+  color: var(--sheet-accent);
+  opacity: 1;
+}
+
 /* Builder header: title + Settings link grouped together */
 .terminal-header .terminal-title {
   display: flex;

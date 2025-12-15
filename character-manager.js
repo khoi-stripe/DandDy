@@ -542,7 +542,6 @@ const MobileView = {
         window.addEventListener('resize', () => this.handleResize());
         this.initSwipeHandlers();
         this.initScrollHandler();
-        this.initHeaderOverflowTapHandler();
     },
     
     /** Track scroll state for header collapse */
@@ -584,33 +583,6 @@ const MobileView = {
             
             this._lastScrollTop = scrollTop;
         }, { passive: true });
-    },
-
-    /**
-     * Mobile Safari (and some touch browsers) can require a "first tap" to
-     * establish a hover/focus state (often showing the default green theme),
-     * and only open on the second tap. Bind a touch pointerdown handler to
-     * ensure the header overflow menu opens on the first tap.
-     */
-    initHeaderOverflowTapHandler() {
-        const btn = document.getElementById('headerOverflowBtn');
-        if (!btn) return;
-        if (btn._headerOverflowTapHandlerAttached) return;
-        btn._headerOverflowTapHandlerAttached = true;
-
-        btn.addEventListener('pointerdown', (e) => {
-            // Only intervene for touch-like pointers on mobile widths.
-            if (!this.isMobile()) return;
-            if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
-
-            // Prevent the browser from treating this as a "hover/focus priming" tap.
-            // We intentionally open/close the menu immediately on first contact.
-            e.preventDefault();
-
-            if (window.CharacterSheet && typeof window.CharacterSheet.toggleSelectorMenu === 'function') {
-                window.CharacterSheet.toggleSelectorMenu(btn);
-            }
-        }, { passive: false });
     },
     
     /** Initialize swipe gesture handlers for mobile navigation */
@@ -1323,9 +1295,7 @@ const UI = {
 
         // Show filtered count only when actively filtering
         if (countEl) {
-            // On mobile, this counter crowds the search header layout (it was originally
-            // intended for the sheet navigation UX). Keep it desktop-only.
-            if (!MobileView.isMobile() && filtered < total && total > 0) {
+            if (filtered < total && total > 0) {
                 countEl.textContent = filtered + ' of ' + total;
             } else {
                 countEl.textContent = '';
@@ -1402,48 +1372,6 @@ window._imageQuotaResetAt = null;
 window._creationQuotaRemaining = null;
 window._creationQuotaLimit = null;
 window._creationQuotaResetAt = null;
-
-// When the user transitions between demo/guest and authenticated (or swaps accounts),
-// we must re-fetch quota state; otherwise the UI can temporarily show stale "limits"
-// until a navigation/reload happens (e.g. visiting builder and coming back).
-let _lastQuotaAuthToken = null;
-let _lastQuotaAuthIsAuthed = null;
-
-function _getAuthTokenForQuotaRefresh() {
-    try {
-        return window.AuthService && typeof window.AuthService.getToken === 'function'
-            ? window.AuthService.getToken()
-            : null;
-    } catch (_) {
-        return null;
-    }
-}
-
-function refreshQuotaStateForCurrentAuth(reason = '') {
-    const token = _getAuthTokenForQuotaRefresh();
-    const isAuthed = !!token;
-
-    // Only refresh when auth identity changes; avoids extra network calls on
-    // unrelated UI updates that also call updateAuthUI().
-    if (_lastQuotaAuthIsAuthed === isAuthed && _lastQuotaAuthToken === token) {
-        return;
-    }
-
-    _lastQuotaAuthIsAuthed = isAuthed;
-    _lastQuotaAuthToken = token;
-
-    // Fire-and-forget refresh (these functions are defensive if UI isn't ready yet).
-    try { updateCreationQuotaState(); } catch (_) {}
-    try { updateImageQuotaState(); } catch (_) {}
-
-    // Also re-render the current sheet so feature gates that depend on auth state
-    // (e.g. share enablement, quota labels) update immediately.
-    try {
-        if (typeof AppState !== 'undefined' && AppState && AppState.selectedCharacterId) {
-            viewCharacter(AppState.selectedCharacterId, { skipKeyboardSync: true });
-        }
-    } catch (_) {}
-}
 
 function _formatCreationQuotaTooltip() {
     const cr = window._creationQuotaRemaining;
@@ -5705,10 +5633,6 @@ function updateAuthUI() {
         // Don't show guest notice by default - only when user makes changes
         // (handled by maybeShowGuestNotice() function)
     }
-
-    // Ensure quotas (and any quota-driven UI labels) reflect the *current* auth state
-    // immediately after login/logout, instead of waiting for a navigation.
-    refreshQuotaStateForCurrentAuth('updateAuthUI');
 }
 
 // ========================================

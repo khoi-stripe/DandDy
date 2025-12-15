@@ -2667,21 +2667,18 @@ body.selector-menu-open .splash-art {
   }
 }
 
-/* ===== BIG LOADING CUBE (shared) =====
-   Used by:
-   - Portrait generation loader: .portrait-placeholder-cube*
-   - Panel loading indicators: .panel-loading-cube*
-
-   Goal: Keep ONE implementation of the 3D cube geometry + animation, and let
-   per-context CSS override size/color/speed via variables.
-
-   Animation: complete Y rotation, then complete X rotation, repeat. */
+/* ===== BIG LOADING CUBE =====
+   Used for misc large cube loaders (not the portrait cube which has its own
+   styles in portraits.css, nor the panel loaders which have dedicated rules below). */
 
 :root {
   --big-cube-size: 60px;
   --big-cube-depth: calc(var(--big-cube-size) / 2);
   --big-cube-perspective: 200px;
   --big-cube-speed: 8s;
+  /* Stable isometric tilt so the cube reads as 3D (matches spinner cube tests). */
+  --big-cube-tilt-x: -35deg;
+  --big-cube-tilt-y: 0deg;
   --big-cube-border-width: 1.5px;
   --big-cube-fill-opacity: 0.05;
   --big-cube-face-opacity: 1;
@@ -2691,9 +2688,7 @@ body.selector-menu-open .splash-art {
   --big-cube-color: var(--ui-fg-color, var(--terminal-accent));
 }
 
-.big-loading-cube-container,
-.panel-loading-cube-container,
-.portrait-placeholder-cube-container {
+.big-loading-cube-container {
   width: var(--big-cube-size);
   height: var(--big-cube-size);
   perspective: var(--big-cube-perspective);
@@ -2703,9 +2698,7 @@ body.selector-menu-open .splash-art {
   justify-content: center;
 }
 
-.big-loading-cube,
-.panel-loading-cube,
-.portrait-placeholder-cube {
+.big-loading-cube {
   width: var(--big-cube-size);
   height: var(--big-cube-size);
   position: relative;
@@ -2714,15 +2707,14 @@ body.selector-menu-open .splash-art {
   will-change: transform;
 }
 
-.big-loading-cube i,
-.panel-loading-cube i,
-.portrait-placeholder-cube i {
+.big-loading-cube i {
   position: absolute;
   width: 100%;
   height: 100%;
   display: block;
   border: var(--big-cube-border-width) solid var(--big-cube-color);
   box-sizing: border-box;
+  backface-visibility: hidden;
   background: color-mix(
     in srgb,
     var(--big-cube-color) calc(var(--big-cube-fill-opacity) * 100%),
@@ -2737,40 +2729,82 @@ body.selector-menu-open .splash-art {
 }
 
 /* Cube faces */
-.big-loading-cube i:nth-child(1),
-.panel-loading-cube i:nth-child(1),
-.portrait-placeholder-cube i:nth-child(1) { transform: translateZ(var(--big-cube-depth)); }
-.big-loading-cube i:nth-child(2),
-.panel-loading-cube i:nth-child(2),
-.portrait-placeholder-cube i:nth-child(2) { transform: rotateY(180deg) translateZ(var(--big-cube-depth)); }
-.big-loading-cube i:nth-child(3),
-.panel-loading-cube i:nth-child(3),
-.portrait-placeholder-cube i:nth-child(3) { transform: rotateY(90deg) translateZ(var(--big-cube-depth)); }
-.big-loading-cube i:nth-child(4),
-.panel-loading-cube i:nth-child(4),
-.portrait-placeholder-cube i:nth-child(4) { transform: rotateY(-90deg) translateZ(var(--big-cube-depth)); }
-.big-loading-cube i:nth-child(5),
-.panel-loading-cube i:nth-child(5),
-.portrait-placeholder-cube i:nth-child(5) { transform: rotateX(90deg) translateZ(var(--big-cube-depth)); }
-.big-loading-cube i:nth-child(6),
-.panel-loading-cube i:nth-child(6),
-.portrait-placeholder-cube i:nth-child(6) { transform: rotateX(-90deg) translateZ(var(--big-cube-depth)); }
+.big-loading-cube i:nth-child(1) { transform: translateZ(var(--big-cube-depth)); }
+.big-loading-cube i:nth-child(2) { transform: rotateY(180deg) translateZ(var(--big-cube-depth)); }
+.big-loading-cube i:nth-child(3) { transform: rotateY(90deg) translateZ(var(--big-cube-depth)); }
+.big-loading-cube i:nth-child(4) { transform: rotateY(-90deg) translateZ(var(--big-cube-depth)); }
+.big-loading-cube i:nth-child(5) { transform: rotateX(90deg) translateZ(var(--big-cube-depth)); }
+.big-loading-cube i:nth-child(6) { transform: rotateX(-90deg) translateZ(var(--big-cube-depth)); }
 
 @keyframes big-cube-axis-swap {
   /* Phase 1: full Y rotation */
   0% {
-    transform: rotateX(0deg) rotateY(0deg);
+    transform: rotateX(var(--big-cube-tilt-x)) rotateY(var(--big-cube-tilt-y));
   }
   49.999% {
-    transform: rotateX(0deg) rotateY(-360deg);
+    transform: rotateX(var(--big-cube-tilt-x)) rotateY(calc(var(--big-cube-tilt-y) - 360deg));
   }
   /* Phase 2: full X rotation (while holding Y at -360deg == 0deg visually) */
   50% {
-    transform: rotateX(0deg) rotateY(-360deg);
+    transform: rotateX(var(--big-cube-tilt-x)) rotateY(calc(var(--big-cube-tilt-y) - 360deg));
   }
   100% {
-    transform: rotateX(-360deg) rotateY(-360deg);
+    transform: rotateX(calc(var(--big-cube-tilt-x) - 360deg)) rotateY(calc(var(--big-cube-tilt-y) - 360deg));
   }
+}
+
+/* ===== PANEL LOADING CUBE (shared) =====
+   This is the canonical cube used by the manager's panel loaders.
+   Builder/customize flows should reuse this so the cube is identical everywhere. */
+
+.panel-loading-cube-container {
+  perspective: 200px;
+  width: 60px;
+  height: 60px;
+  margin-bottom: var(--spacing-lg);
+}
+
+.panel-loading-cube {
+  width: 60px;
+  height: 60px;
+  position: relative;
+  transform-style: preserve-3d;
+  animation: panel-loading-cube-spin 8s infinite linear;
+}
+
+.panel-loading-cube i {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 1.5px solid var(--sheet-accent);
+  background: rgba(0, 206, 209, 0.05);
+  box-shadow:
+    inset 0 0 20px rgba(0, 206, 209, 0.1),
+    0 0 15px rgba(0, 206, 209, 0.2);
+}
+
+/* Cube faces (60px cube => 30px depth) */
+.panel-loading-cube i:nth-child(1) { transform: translateZ(30px); }
+.panel-loading-cube i:nth-child(2) { transform: rotateY(180deg) translateZ(30px); }
+.panel-loading-cube i:nth-child(3) { transform: rotateY(90deg) translateZ(30px); }
+.panel-loading-cube i:nth-child(4) { transform: rotateY(-90deg) translateZ(30px); }
+.panel-loading-cube i:nth-child(5) { transform: rotateX(90deg) translateZ(30px); }
+.panel-loading-cube i:nth-child(6) { transform: rotateX(-90deg) translateZ(30px); }
+
+@keyframes panel-loading-cube-spin {
+  from { transform: rotateY(0deg); }
+  to { transform: rotateY(-360deg); }
+}
+
+/* Modal loading cube - uses yellow modal theme */
+.modal-loading-overlay .panel-loading-cube i,
+.modal-body .panel-loading-cube i {
+  border-color: var(--modal-accent);
+  background: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.05);
+  box-shadow:
+    inset 0 0 20px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.1),
+    0 0 15px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.2);
 }
 
 /* Cube spinner maintains consistent 8px right margin in all contexts */

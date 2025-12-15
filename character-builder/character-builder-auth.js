@@ -429,36 +429,26 @@ const AuthUI = (window.AuthUI = {
   updateHeaderWithUser(user) {
     const slot = document.getElementById('auth-slot') || document.getElementById('status-text');
     if (slot && user) {
-      const roleIcon = user.role === 'dm' ? '🎲' : '⚔️';
-      const label = (user.email || '').toUpperCase();
-      slot.innerHTML = `${roleIcon} ${label} | <button class="link-button" id="header-characters">MY CHARACTERS</button> | <button class="link-button" id="header-logout">LOGOUT</button>`;
-      
-      // Add characters button handler
-      document.getElementById('header-characters')?.addEventListener('click', () => {
-        if (window.CharacterManager && typeof CharacterManager.show === 'function') {
-          CharacterManager.show();
-          return;
+      const label = user && user.email ? String(user.email) : 'Logged In';
+      // Match manager header behavior: user label is revealed on button hover.
+      slot.innerHTML = `
+        <span id="builderUserInfo" class="builder-user-info">
+          <span class="user-status-text">${label}</span>
+        </span>
+        <button id="builderAuthBtn" class="terminal-btn terminal-btn-small ui-theme-teal" type="button">LOGOUT</button>
+      `;
+
+      const authBtn = document.getElementById('builderAuthBtn');
+      authBtn?.addEventListener('click', () => {
+        if (!confirm('Log out?')) return;
+        try {
+          window.AuthService?.logout?.();
+        } catch (_) {}
+        // Re-render header state after logout
+        if (typeof window.updateAuthUI === 'function') {
+          window.updateAuthUI();
         }
-        window.suppressBeforeunloadWarning?.();
-        window.location.href = '../index.html?from=builder';
-      });
-      
-      // Add logout handler
-      document.getElementById('header-logout')?.addEventListener('click', () => {
-        if (confirm('Are you sure you want to logout?')) {
-          AuthService.logout();
-          
-          // Show login screen after logout (with register and guest mode options)
-          if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
-            window.AuthUI.showLogin(
-              () => window.location.reload(),  // onSuccess
-              () => {},                         // onSwitchToRegister (handled within AuthUI)
-              () => {}                          // onGuestMode
-            );
-          } else {
-            window.location.reload();
-          }
-        }
+        window.App?.showNotification?.('✓ Logged out', 'success');
       });
     }
   },
@@ -467,21 +457,28 @@ const AuthUI = (window.AuthUI = {
   showGuestBanner() {
     const slot = document.getElementById('auth-slot') || document.getElementById('status-text');
     if (slot) {
-      slot.innerHTML = `👤 GUEST MODE | <button class="link-button" id="header-login">LOGIN TO SAVE</button>`;
-      
-      // Add login handler
-      document.getElementById('header-login')?.addEventListener('click', () => {
-        if (window.App && typeof window.App.showAuthScreen === 'function') {
-          App.showAuthScreen();
+      // Match manager header UI: reveal "Guest mode" label on hover + LOGIN button.
+      slot.innerHTML = `
+        <span id="builderUserInfo" class="builder-user-info">
+          <span class="user-status-text">Guest mode</span>
+        </span>
+        <button id="builderAuthBtn" class="terminal-btn terminal-btn-small ui-theme-teal" type="button">LOGIN</button>
+      `;
+
+      const authBtn = document.getElementById('builderAuthBtn');
+      authBtn?.addEventListener('click', () => {
+        // Prefer the manager-style auth modal (matches manager flow + markup).
+        if (typeof window.showAuthModal === 'function') {
+          window.showAuthModal();
           return;
         }
-        // Fallback: open login UI directly
+        // Fallback: full-screen overlay auth if modal isn’t available.
+        if (window.App && typeof window.App.showAuthScreen === 'function') {
+          window.App.showAuthScreen();
+          return;
+        }
         if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
-          window.AuthUI.showLogin(
-            () => window.location.reload(),
-            () => {},
-            () => {},
-          );
+          window.AuthUI.showLogin(() => window.location.reload(), () => {}, () => {});
         }
       });
     }

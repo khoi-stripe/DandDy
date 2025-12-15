@@ -172,11 +172,7 @@ const KeyboardNav = (window.KeyboardNav = {
     // Get ALL clickable buttons from ALL cards
     const allButtons = [];
     allCards.forEach((card) => {
-      // Include both primary + secondary buttons so completion screen options
-      // (e.g. "Save and Exit" + "Create Another Character") are keyboard navigable.
-      const cardButtons = Array.from(
-        card.querySelectorAll('.button-primary, .button-secondary'),
-      );
+      const cardButtons = Array.from(card.querySelectorAll('.button-primary'));
       // Include all buttons (selected, locked, etc) - they're all clickable now
       cardButtons.forEach((btn) => {
         // Skip only truly disabled buttons (like name input buttons after selection)
@@ -1713,13 +1709,13 @@ const App = (window.App = {
 
     // Show completion options
     const createAnotherBtn = canCreateAnother
-      ? `<button class="button-secondary" id="completion-new-btn" onclick="App.startNew()">&gt;\u00A0CREATE ANOTHER CHARACTER</button>`
+      ? `<button class="button-primary" id="completion-new-btn" onclick="App.startNew()">&gt;\u00A0CREATE ANOTHER CHARACTER</button>`
       : '';
     narratorPanel.insertAdjacentHTML(
       'beforeend',
       `
       <div class="question-card mt-lg" data-question-id="${question.id}">
-        <button class="button-primary completion-save-btn" id="completion-save-btn" onclick="App.saveAndExit()">&gt;\u00A0SAVE AND EXIT</button>
+        <button class="button-primary completion-save-btn" id="completion-save-btn" onclick="App.saveCharacter()">&gt;\u00A0SAVE CHARACTER</button>
         ${createAnotherBtn}
       </div>`,
     );
@@ -4386,7 +4382,7 @@ const App = (window.App = {
       this.showSystemMessage(
         'Unable to save character right now. Please try again shortly.',
       );
-      return null;
+      return;
     }
 
     // Note: guest mode no longer has a local-storage character cap; daily quota
@@ -4399,7 +4395,7 @@ const App = (window.App = {
           'Character must have at least a name, race, and class before saving.',
         );
       }
-      return null;
+      return;
     }
 
     try {
@@ -4436,29 +4432,9 @@ const App = (window.App = {
           this.showNotification('💡 Log in or create an account to save your character to the cloud', 'info');
         }, 1000);
       }
-
-      return saved;
     } catch (error) {
       console.error('Error saving character:', error);
       this.showSystemMessage('Save failed: ' + error.message);
-      return null;
-    }
-  },
-
-  /**
-   * Completion-screen action: save the character and return to the manager screen.
-   */
-  async saveAndExit() {
-    const saved = await this.saveCharacter(false);
-    if (!saved) return;
-
-    // Return to Character Manager, selecting the saved character if possible.
-    try {
-      const id = saved && saved.id != null ? String(saved.id) : null;
-      const targetUrl = id ? `../index.html?character=${encodeURIComponent(id)}` : '../index.html';
-      window.location.href = targetUrl;
-    } catch (e) {
-      window.location.href = '../index.html';
     }
   },
 
@@ -6140,48 +6116,6 @@ const App = (window.App = {
   },
 
 });
-
-// Allow logging in from the builder page without leaving to the manager.
-// Renders into the header auth slot via window.updateAuthUI (defined in character-builder-auth.js).
-App.showAuthScreen = function showAuthScreen() {
-  if (!window.AuthUI || typeof window.AuthUI.showLogin !== 'function') {
-    console.warn('[Builder] AuthUI not available');
-    return;
-  }
-
-  const onSuccess = async (user) => {
-    try {
-      if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
-        window.AuthService.startSessionMonitor();
-      }
-    } catch (_) {}
-
-    if (typeof window.updateAuthUI === 'function') {
-      await window.updateAuthUI();
-    }
-
-    if (window.App && typeof window.App.showNotification === 'function') {
-      const email = user && user.email ? user.email : 'your account';
-      window.App.showNotification(`✓ Logged in as ${email}`, 'success');
-    }
-  };
-
-  const onGuestMode = async () => {
-    if (typeof window.updateAuthUI === 'function') {
-      await window.updateAuthUI();
-    }
-    window.App?.showNotification?.('👤 Continuing in guest mode', 'info');
-  };
-
-  const showRegister = () => {
-    if (typeof window.AuthUI.showRegister !== 'function') return;
-    window.AuthUI.showRegister(onSuccess, () => {
-      App.showAuthScreen();
-    });
-  };
-
-  window.AuthUI.showLogin(onSuccess, showRegister, onGuestMode);
-};
 
 // ===== AUTHENTICATION & BOOTSTRAP (builder splash handling) =====
 
