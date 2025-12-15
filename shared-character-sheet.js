@@ -132,10 +132,14 @@ const CharacterSheet = (window.CharacterSheet = {
   /**
    * Look up spell data (school, description) by spell name.
    * First checks SPELL_DATA (if available, e.g., in builder), then falls back to built-in lookup.
+   * Feature flag: window.FEATURE_SPELL_LOOKUP (default: false)
    * @param {string} spellName - The name of the spell to look up
    * @returns {Object|null} - Object with school and description, or null if not found
    */
   _lookupSpellData(spellName) {
+    // Feature flag - disabled by default
+    if (!window.FEATURE_SPELL_LOOKUP) return null;
+    
     if (!spellName) return null;
     const normalizedName = String(spellName).toLowerCase().trim();
     
