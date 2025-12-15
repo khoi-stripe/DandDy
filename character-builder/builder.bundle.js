@@ -1253,7 +1253,7 @@ const score=parsed.abilities[ability]||10;const modifier=parsed.abilityModifiers
     return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[SAVING THROWS]</div></div><div class="sheet-content">${Object.entries(parsed.savingThrowModifiers).map(([ability,value])=>{const isProficient=parsed.savingThrows?.includes(ability);return`
                 <div class="stat-line">
                   <span class="stat-label">${ability.toUpperCase()}:</span>
-                  <span class="stat-value">${this.formatModifier(value)}${isProficient ? ' ★' : ''}</span>
+                  <span class="stat-value">${isProficient ? '★ ' : ''}${this.formatModifier(value)}</span>
                 </div>
               `;}).join('')}</div></div>`;
   },
@@ -1482,7 +1482,16 @@ ${hasChoices?`<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${pa
 
     // Handle abilities (old 'abilityScores' and new 'abilities' format)
     const abilities = character.abilities || character.abilityScores || {};
-    const abilityModifiers = character.abilityModifiers || {};
+    
+    // Calculate ability modifiers if not present but we have ability scores
+    let abilityModifiers = character.abilityModifiers || {};
+    if (Object.keys(abilityModifiers).length === 0 && Object.keys(abilities).length > 0) {
+      abilityModifiers = {};
+      ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(ability => {
+        const score = abilities[ability] || 10;
+        abilityModifiers[ability] = Math.floor((score - 10) / 2);
+      });
+    }
     
     // Check if abilities have been actually rolled/populated.
     // - In the builder, baseAbilities is set when abilities are rolled.
@@ -1565,6 +1574,21 @@ ${hasChoices?`<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${pa
     const skillModifiers = character.skillModifiers || character.skills || {};
     const skillProficiencies = character.skillProficiencies || [];
 
+    // Calculate saving throw modifiers if not present but we have the data
+    const proficiencyBonus = character.proficiencyBonus || 2;
+    const savingThrowProficiencies = character.savingThrows || [];
+    let savingThrowModifiers = character.savingThrowModifiers || null;
+    
+    // If modifiers aren't stored but we have ability modifiers, calculate them
+    if (!savingThrowModifiers && Object.keys(abilityModifiers).length > 0) {
+      savingThrowModifiers = {};
+      ['str', 'dex', 'con', 'int', 'wis', 'cha'].forEach(ability => {
+        const isProficient = savingThrowProficiencies.includes(ability);
+        const mod = abilityModifiers[ability] || 0;
+        savingThrowModifiers[ability] = mod + (isProficient ? proficiencyBonus : 0);
+      });
+    }
+
     return {
       // Basic info
       raceName,
@@ -1589,8 +1613,8 @@ ${hasChoices?`<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${pa
       abilitiesSet: abilitiesPopulated,
 
       // Saving throws
-      savingThrows: character.savingThrows || [],
-      savingThrowModifiers: character.savingThrowModifiers || null,
+      savingThrows: savingThrowProficiencies,
+      savingThrowModifiers,
 
       // Skills
       skillModifiers,
@@ -1626,8 +1650,8 @@ ${hasChoices?`<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${pa
       hasAbilities: isBuilder || Object.keys(abilities).length > 0,
       hasCombatStats: isBuilder || hpMax > 0 || character.armorClass,
       hasSavingThrows: isBuilder || (
-        character.savingThrowModifiers &&
-        Object.keys(character.savingThrowModifiers).length > 0
+        savingThrowModifiers &&
+        Object.keys(savingThrowModifiers).length > 0
       ),
       hasSkills: isBuilder || (
         Object.keys(skillModifiers).length > 0 ||
