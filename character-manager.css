@@ -1340,6 +1340,11 @@
     .search-bar {
         margin-bottom: 0;
     }
+
+    /* Hide filtered count in the search header on mobile to prevent layout shifts */
+    .search-character-count {
+        display: none;
+    }
     
     .right-panel {
         display: none !important;
@@ -1627,6 +1632,9 @@
     border-color: var(--sheet-accent-dim);
     color: var(--sheet-accent-dim);
     background: transparent;
+    /* Mobile: avoid iOS/Android tap highlight + reduce "sticky hover" artifacts */
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 /* Trigger button: hover state */
@@ -1635,6 +1643,14 @@
     color: var(--sheet-accent);
     background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
     box-shadow: 0 0 8px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.3);
+}
+
+/* Trigger button: active (touch press) state - keep teal (never green) */
+.header-overflow-trigger:active {
+    border-color: var(--sheet-accent) !important;
+    color: var(--sheet-accent) !important;
+    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15) !important;
+    box-shadow: 0 0 8px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.2) !important;
 }
 
 /* Trigger button: focus state */

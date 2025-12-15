@@ -6882,6 +6882,7 @@ const MobileView = {
         window.addEventListener('resize', () => this.handleResize());
         this.initSwipeHandlers();
         this.initScrollHandler();
+        this.initHeaderOverflowTapHandler();
     },
     
     /** Track scroll state for header collapse */
@@ -6923,6 +6924,33 @@ const MobileView = {
             
             this._lastScrollTop = scrollTop;
         }, { passive: true });
+    },
+
+    /**
+     * Mobile Safari (and some touch browsers) can require a "first tap" to
+     * establish a hover/focus state (often showing the default green theme),
+     * and only open on the second tap. Bind a touch pointerdown handler to
+     * ensure the header overflow menu opens on the first tap.
+     */
+    initHeaderOverflowTapHandler() {
+        const btn = document.getElementById('headerOverflowBtn');
+        if (!btn) return;
+        if (btn._headerOverflowTapHandlerAttached) return;
+        btn._headerOverflowTapHandlerAttached = true;
+
+        btn.addEventListener('pointerdown', (e) => {
+            // Only intervene for touch-like pointers on mobile widths.
+            if (!this.isMobile()) return;
+            if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
+
+            // Prevent the browser from treating this as a "hover/focus priming" tap.
+            // We intentionally open/close the menu immediately on first contact.
+            e.preventDefault();
+
+            if (window.CharacterSheet && typeof window.CharacterSheet.toggleSelectorMenu === 'function') {
+                window.CharacterSheet.toggleSelectorMenu(btn);
+            }
+        }, { passive: false });
     },
     
     /** Initialize swipe gesture handlers for mobile navigation */
