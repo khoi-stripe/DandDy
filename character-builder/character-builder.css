@@ -1546,6 +1546,17 @@
 }
 
 /* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  /* Combat stats and abilities: 2-column grid on tablet */
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .ability-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   /* Lock the entire page - no scrolling on html or body */
   html {
