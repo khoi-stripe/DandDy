@@ -2651,6 +2651,112 @@ body.selector-menu-open .splash-art {
   }
 }
 
+/* ===== BIG LOADING CUBE (shared) =====
+   Used by:
+   - Portrait generation loader: .portrait-placeholder-cube*
+   - Panel loading indicators: .panel-loading-cube*
+
+   Goal: Keep ONE implementation of the 3D cube geometry + animation, and let
+   per-context CSS override size/color/speed via variables.
+
+   Animation: complete Y rotation, then complete X rotation, repeat. */
+
+:root {
+  --big-cube-size: 60px;
+  --big-cube-depth: calc(var(--big-cube-size) / 2);
+  --big-cube-perspective: 200px;
+  --big-cube-speed: 8s;
+  --big-cube-border-width: 1.5px;
+  --big-cube-fill-opacity: 0.05;
+  --big-cube-face-opacity: 1;
+  /* Glow intensity multipliers (0..1) */
+  --big-cube-glow-inner: 0.1;
+  --big-cube-glow-outer: 0.2;
+  --big-cube-color: var(--ui-fg-color, var(--terminal-accent));
+}
+
+.big-loading-cube-container,
+.panel-loading-cube-container,
+.portrait-placeholder-cube-container {
+  width: var(--big-cube-size);
+  height: var(--big-cube-size);
+  perspective: var(--big-cube-perspective);
+  perspective-origin: center center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.big-loading-cube,
+.panel-loading-cube,
+.portrait-placeholder-cube {
+  width: var(--big-cube-size);
+  height: var(--big-cube-size);
+  position: relative;
+  transform-style: preserve-3d;
+  animation: big-cube-axis-swap var(--big-cube-speed) linear infinite;
+  will-change: transform;
+}
+
+.big-loading-cube i,
+.panel-loading-cube i,
+.portrait-placeholder-cube i {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: var(--big-cube-border-width) solid var(--big-cube-color);
+  box-sizing: border-box;
+  background: color-mix(
+    in srgb,
+    var(--big-cube-color) calc(var(--big-cube-fill-opacity) * 100%),
+    transparent
+  );
+  opacity: var(--big-cube-face-opacity);
+  box-shadow:
+    inset 0 0 calc(20px * var(--big-cube-glow-inner))
+      color-mix(in srgb, var(--big-cube-color) 35%, transparent),
+    0 0 calc(15px * var(--big-cube-glow-outer))
+      color-mix(in srgb, var(--big-cube-color) 30%, transparent);
+}
+
+/* Cube faces */
+.big-loading-cube i:nth-child(1),
+.panel-loading-cube i:nth-child(1),
+.portrait-placeholder-cube i:nth-child(1) { transform: translateZ(var(--big-cube-depth)); }
+.big-loading-cube i:nth-child(2),
+.panel-loading-cube i:nth-child(2),
+.portrait-placeholder-cube i:nth-child(2) { transform: rotateY(180deg) translateZ(var(--big-cube-depth)); }
+.big-loading-cube i:nth-child(3),
+.panel-loading-cube i:nth-child(3),
+.portrait-placeholder-cube i:nth-child(3) { transform: rotateY(90deg) translateZ(var(--big-cube-depth)); }
+.big-loading-cube i:nth-child(4),
+.panel-loading-cube i:nth-child(4),
+.portrait-placeholder-cube i:nth-child(4) { transform: rotateY(-90deg) translateZ(var(--big-cube-depth)); }
+.big-loading-cube i:nth-child(5),
+.panel-loading-cube i:nth-child(5),
+.portrait-placeholder-cube i:nth-child(5) { transform: rotateX(90deg) translateZ(var(--big-cube-depth)); }
+.big-loading-cube i:nth-child(6),
+.panel-loading-cube i:nth-child(6),
+.portrait-placeholder-cube i:nth-child(6) { transform: rotateX(-90deg) translateZ(var(--big-cube-depth)); }
+
+@keyframes big-cube-axis-swap {
+  /* Phase 1: full Y rotation */
+  0% {
+    transform: rotateX(0deg) rotateY(0deg);
+  }
+  49.999% {
+    transform: rotateX(0deg) rotateY(-360deg);
+  }
+  /* Phase 2: full X rotation (while holding Y at -360deg == 0deg visually) */
+  50% {
+    transform: rotateX(0deg) rotateY(-360deg);
+  }
+  100% {
+    transform: rotateX(-360deg) rotateY(-360deg);
+  }
+}
+
 /* Cube spinner maintains consistent 8px right margin in all contexts */
 
 /* Global overrides for cube defaults – ensure all loaders share a stable,
