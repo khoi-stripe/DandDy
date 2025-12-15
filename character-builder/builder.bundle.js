@@ -194,7 +194,7 @@ window.removeEventListener('keydown',skipHandler);window.removeEventListener('cl
 const[count,sides]=notation.toLowerCase().split('d').map(Number);let total=0;for(let i=0;i<count;i++){total+=this.random(1,sides);}
 return total;},abilityModifier(score){return Math.floor((score-10)/2);},formatModifier(modifier){return modifier>=0?`+${modifier}`:`${modifier}`;},capitalize(str){return str.charAt(0).toUpperCase()+str.slice(1);},scrollToBottom(forceDelay=false){const doScroll=()=>{const panel=document.getElementById('narrator-panel');if(panel){panel.scrollTo({top:panel.scrollHeight,behavior:'smooth',});}};if(forceDelay){setTimeout(doScroll,50);}else{doScroll();}},focusFirstFieldInModal(modal){if(!modal||typeof modal.querySelector!=='function')return;const fieldSelectors=['input.terminal-input:not([type=\"hidden\"]):not(.file-input-hidden):not([disabled])','textarea.terminal-input:not([disabled])','textarea.terminal-textarea:not([disabled])','select.terminal-select:not([disabled])','input:not([type=\"hidden\"]):not(.file-input-hidden):not([disabled])','textarea:not([disabled])','select:not([disabled])',];let target=null;for(const selector of fieldSelectors){target=modal.querySelector(selector);if(target)break;}
 if(!target){const fallbackSelectors=['.modal-footer .terminal-btn-primary:not([disabled])','.modal-footer button:not([disabled])','button.terminal-btn-primary:not([disabled])','button:not([disabled])','[tabindex]:not([tabindex=\"-1\"])',];for(const selector of fallbackSelectors){target=modal.querySelector(selector);if(target)break;}}
-if(target&&typeof target.focus==='function'){setTimeout(()=>{try{target.focus();}catch(e){}},0);}},};const AuthUI=(window.AuthUI={showLogin(onSuccess,onSwitchToRegister,onGuestMode){const container=document.querySelector('.terminal-container');if(!container)return;document.getElementById('splash-content')?.classList.add('is-hidden');document.getElementById('main-content')?.classList.add('is-hidden');const authScreen=document.createElement('div');authScreen.id='auth-screen';authScreen.className='auth-screen';authScreen.innerHTML=`
+if(target&&typeof target.focus==='function'){setTimeout(()=>{try{target.focus();}catch(e){}},0);}},};const AuthUI=(window.AuthUI={_underlayPrevHidden:null,_hideUnderlay(){const ids=['splash-content','main-content'];const prev={};ids.forEach((id)=>{const el=document.getElementById(id);if(!el)return;prev[id]=el.classList.contains('is-hidden');el.classList.add('is-hidden');});this._underlayPrevHidden=prev;},_restoreUnderlay(){const prev=this._underlayPrevHidden;if(!prev)return;Object.keys(prev).forEach((id)=>{const el=document.getElementById(id);if(!el)return;if(prev[id])el.classList.add('is-hidden');else el.classList.remove('is-hidden');});this._underlayPrevHidden=null;},showLogin(onSuccess,onSwitchToRegister,onGuestMode){const container=document.querySelector('.terminal-container');if(!container)return;this._hideUnderlay();const authScreen=document.createElement('div');authScreen.id='auth-screen';authScreen.className='auth-screen';authScreen.innerHTML=`
       <div class="auth-container">
         <div class="auth-header">
           <div class="auth-title">╔═══════════════════════════════════════╗</div>
@@ -251,7 +251,7 @@ if(target&&typeof target.focus==='function'){setTimeout(()=>{try{target.focus();
 try{const cfg=window.DanddyConfig||{};const debug=!!cfg.DEBUG;if(debug){console.log('[AuthUI] Login submit clicked',{email,apiBaseUrl:cfg.API_BASE_URL,});}}catch(_){}
 this.showLoading(submitButton,true,'AUTHENTICATING...');errorDiv.classList.add('is-hidden');try{const result=await AuthService.login(email,password);this.showLoading(submitButton,false);if(result&&result.success){this.removeAuthScreen();if(onSuccess)onSuccess(result.user);}else{this.showError(errorDiv,(result&&result.error)||'Login failed. Please try again.',);}}catch(error){this.showLoading(submitButton,false);this.showError(errorDiv,error.message||'Login failed. Please try again.');}};submitButton.addEventListener('click',handleSubmit);if(passwordToggle&&passwordInput){passwordToggle.addEventListener('click',()=>{const isPassword=passwordInput.type==='password';passwordInput.type=isPassword?'text':'password';passwordToggle.textContent=isPassword?'HIDE':'SHOW';passwordToggle.setAttribute('aria-pressed',String(isPassword));passwordToggle.setAttribute('aria-label',isPassword?'Hide password':'Show password',);});}
 passwordInput.addEventListener('keypress',(e)=>{if(e.key==='Enter')handleSubmit();});guestButton.addEventListener('click',()=>{const demoInfo=document.getElementById('demo-mode-info');if(demoInfo){demoInfo.classList.remove('is-hidden');setTimeout(()=>{this.removeAuthScreen();if(onGuestMode)onGuestMode();},1500);}else{this.removeAuthScreen();if(onGuestMode)onGuestMode();}});switchButton.addEventListener('click',()=>{this.removeAuthScreen();if(onSwitchToRegister)onSwitchToRegister();});if(forgotPasswordLink){forgotPasswordLink.addEventListener('click',()=>{window.location.href='../index.html#password-reset';});}
-emailInput.focus();},showRegister(onSuccess,onSwitchToLogin){const container=document.querySelector('.terminal-container');if(!container)return;document.getElementById('splash-content')?.classList.add('is-hidden');document.getElementById('main-content')?.classList.add('is-hidden');const authScreen=document.createElement('div');authScreen.id='auth-screen';authScreen.className='auth-screen';authScreen.innerHTML=`
+emailInput.focus();},showRegister(onSuccess,onSwitchToLogin){const container=document.querySelector('.terminal-container');if(!container)return;this._hideUnderlay();const authScreen=document.createElement('div');authScreen.id='auth-screen';authScreen.className='auth-screen';authScreen.innerHTML=`
       <div class="auth-container">
         <div class="auth-header">
           <div class="auth-title">╔═══════════════════════════════════════╗</div>
@@ -307,7 +307,16 @@ if(password!==confirmPassword){this.showError(errorDiv,'Passwords do not match')
 this.showLoading(submitButton,true,'CREATING ACCOUNT...');errorDiv.classList.add('is-hidden');try{const result=await AuthService.register(email,password,role);this.showLoading(submitButton,false);if(result&&result.success){this.removeAuthScreen();if(onSuccess)onSuccess(result.user);}else{this.showError(errorDiv,(result&&result.error)||'Registration failed. Please try again.',);}}catch(error){this.showLoading(submitButton,false);this.showError(errorDiv,error.message||'Registration failed. Please try again.',);}};submitButton.addEventListener('click',handleSubmit);if(passwordToggle&&passwordInput){passwordToggle.addEventListener('click',()=>{const isPassword=passwordInput.type==='password';passwordInput.type=isPassword?'text':'password';passwordToggle.textContent=isPassword?'HIDE':'SHOW';passwordToggle.setAttribute('aria-pressed',String(isPassword));passwordToggle.setAttribute('aria-label',isPassword?'Hide password':'Show password',);});}
 if(confirmToggle&&confirmInput){confirmToggle.addEventListener('click',()=>{const isPassword=confirmInput.type==='password';confirmInput.type=isPassword?'text':'password';confirmToggle.textContent=isPassword?'HIDE':'SHOW';confirmToggle.setAttribute('aria-pressed',String(isPassword));confirmToggle.setAttribute('aria-label',isPassword?'Hide password':'Show password',);});}
 confirmInput.addEventListener('keypress',(e)=>{if(e.key==='Enter')handleSubmit();});cancelButton.addEventListener('click',()=>{this.removeAuthScreen();if(onSwitchToLogin)onSwitchToLogin();});emailInput.focus();},showError(errorDiv,message){errorDiv.textContent=`⚠ ERROR: ${message}`;errorDiv.classList.remove('is-hidden');},showLoading(button,show,label){if(!button)return;if(show){if(!button.dataset.originalLabel){button.dataset.originalLabel=button.innerHTML;}
-button.disabled=true;const loadingLabel=label||'WORKING...';const cubeMarkup='<span class="spinner-cube-scene">'+'<span class="spinner-cube-tilt">'+'<span class="spinner-cube">'+'<span class="spinner-cube-face spinner-cube-face-front"></span>'+'<span class="spinner-cube-face spinner-cube-face-back"></span>'+'<span class="spinner-cube-face spinner-cube-face-right"></span>'+'<span class="spinner-cube-face spinner-cube-face-left"></span>'+'<span class="spinner-cube-face spinner-cube-face-top"></span>'+'<span class="spinner-cube-face spinner-cube-face-bottom"></span>'+'</span></span></span>';button.innerHTML=`${cubeMarkup} ${loadingLabel}`;}else{button.disabled=false;if(button.dataset.originalLabel){button.innerHTML=button.dataset.originalLabel;delete button.dataset.originalLabel;}}},removeAuthScreen(){const authScreen=document.getElementById('auth-screen');if(authScreen){authScreen.remove();}},updateHeaderWithUser(user){const statusText=document.getElementById('status-text');if(statusText&&user){const roleIcon=user.role==='dm'?'🎲':'⚔️';const label=(user.email||'').toUpperCase();statusText.innerHTML=`${roleIcon} ${label} | <button class="link-button" id="header-characters">MY CHARACTERS</button> | <button class="link-button" id="header-logout">LOGOUT</button>`;document.getElementById('header-characters')?.addEventListener('click',()=>{CharacterManager.show();});document.getElementById('header-logout')?.addEventListener('click',()=>{if(confirm('Are you sure you want to logout?')){AuthService.logout();if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>window.location.reload(),()=>{},()=>{});}else{window.location.reload();}}});}},showGuestBanner(){const statusText=document.getElementById('status-text');if(statusText){statusText.innerHTML=`👤 GUEST MODE | <button class="link-button" id="header-login">LOGIN TO SAVE</button>`;document.getElementById('header-login')?.addEventListener('click',()=>{App.showAuthScreen();});}},});const CharacterAPI=(window.CharacterAPI={arrayToDict(arr){if(!arr||!Array.isArray(arr))return[];return arr.map(item=>{if(typeof item==='object'&&item!==null){return item;}
+button.disabled=true;const loadingLabel=label||'WORKING...';const cubeMarkup='<span class="spinner-cube-scene">'+'<span class="spinner-cube-tilt">'+'<span class="spinner-cube">'+'<span class="spinner-cube-face spinner-cube-face-front"></span>'+'<span class="spinner-cube-face spinner-cube-face-back"></span>'+'<span class="spinner-cube-face spinner-cube-face-right"></span>'+'<span class="spinner-cube-face spinner-cube-face-left"></span>'+'<span class="spinner-cube-face spinner-cube-face-top"></span>'+'<span class="spinner-cube-face spinner-cube-face-bottom"></span>'+'</span></span></span>';button.innerHTML=`${cubeMarkup} ${loadingLabel}`;}else{button.disabled=false;if(button.dataset.originalLabel){button.innerHTML=button.dataset.originalLabel;delete button.dataset.originalLabel;}}},removeAuthScreen(){const authScreen=document.getElementById('auth-screen');if(authScreen){authScreen.remove();}
+this._restoreUnderlay();},updateHeaderWithUser(user){const slot=document.getElementById('auth-slot')||document.getElementById('status-text');if(slot&&user){const roleIcon=user.role==='dm'?'🎲':'⚔️';const label=(user.email||'').toUpperCase();slot.innerHTML=`${roleIcon} ${label} | <button class="link-button" id="header-characters">MY CHARACTERS</button> | <button class="link-button" id="header-logout">LOGOUT</button>`;document.getElementById('header-characters')?.addEventListener('click',()=>{if(window.CharacterManager&&typeof CharacterManager.show==='function'){CharacterManager.show();return;}
+window.suppressBeforeunloadWarning?.();window.location.href='../index.html?from=builder';});document.getElementById('header-logout')?.addEventListener('click',()=>{if(confirm('Are you sure you want to logout?')){AuthService.logout();if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>window.location.reload(),()=>{},()=>{});}else{window.location.reload();}}});}},showGuestBanner(){const slot=document.getElementById('auth-slot')||document.getElementById('status-text');if(slot){slot.innerHTML=`👤 GUEST MODE | <button class="link-button" id="header-login">LOGIN TO SAVE</button>`;document.getElementById('header-login')?.addEventListener('click',()=>{if(window.App&&typeof window.App.showAuthScreen==='function'){App.showAuthScreen();return;}
+if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>window.location.reload(),()=>{},()=>{},);}});}},});window.updateAuthUI=async function updateAuthUI(){try{if(!window.AuthService||!window.AuthUI)return;if(window.AuthService.isAuthenticated()){let user=window.AuthService.getCurrentUser();if(!user&&typeof window.AuthService.fetchProfile==='function'){user=await window.AuthService.fetchProfile();if(user)window.AuthService.setCurrentUser(user);}
+if(user){window.AuthUI.updateHeaderWithUser(user);}else{window.AuthUI.updateHeaderWithUser({email:'Logged In',role:'player'});}}else{window.AuthUI.showGuestBanner();}}catch(e){console.warn('[Builder] updateAuthUI failed:',e);}};function initBuilderHeaderAuth(){if(typeof window.updateAuthUI==='function'){window.updateAuthUI();}
+if(window.AuthService&&window.AuthService.isAuthenticated()){if(typeof window.AuthService.startSessionMonitor==='function'){window.AuthService.startSessionMonitor();}}
+window.addEventListener('danddy:sessionExpired',()=>{if(typeof window.updateAuthUI==='function')window.updateAuthUI();if(window.App&&typeof window.App.showConfirmationOverlay==='function'){window.App.showConfirmationOverlay("Your session expired. Your character is safe locally — log in again to sync to the cloud.",()=>window.App?.showAuthScreen?.(),null,{primaryLabel:'LOG IN',hideSecondary:true},);return;}
+window.App?.showNotification?.('⚠ Session expired — log in again to sync','warning');});}
+if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initBuilderHeaderAuth);}else{initBuilderHeaderAuth();}
+const CharacterAPI=(window.CharacterAPI={arrayToDict(arr){if(!arr||!Array.isArray(arr))return[];return arr.map(item=>{if(typeof item==='object'&&item!==null){return item;}
 if(typeof item==='string'){return{name:item};}
 return{value:item};});},spellsToStringArray(arr){if(!arr||!Array.isArray(arr))return[];return arr.map(item=>{if(typeof item==='object'&&item!==null&&item.name){return item.name;}
 if(typeof item==='string'){return item;}
@@ -5534,7 +5543,11 @@ const KeyboardNav = (window.KeyboardNav = {
     // Get ALL clickable buttons from ALL cards
     const allButtons = [];
     allCards.forEach((card) => {
-      const cardButtons = Array.from(card.querySelectorAll('.button-primary'));
+      // Include both primary + secondary buttons so completion screen options
+      // (e.g. "Save and Exit" + "Create Another Character") are keyboard navigable.
+      const cardButtons = Array.from(
+        card.querySelectorAll('.button-primary, .button-secondary'),
+      );
       // Include all buttons (selected, locked, etc) - they're all clickable now
       cardButtons.forEach((btn) => {
         // Skip only truly disabled buttons (like name input buttons after selection)
@@ -11151,6 +11164,48 @@ placeholder="Enter character name"></div><div id="name-modal-error"class="termin
 
 });
 
+// Allow logging in from the builder page without leaving to the manager.
+// Renders into the header auth slot via window.updateAuthUI (defined in character-builder-auth.js).
+App.showAuthScreen = function showAuthScreen() {
+  if (!window.AuthUI || typeof window.AuthUI.showLogin !== 'function') {
+    console.warn('[Builder] AuthUI not available');
+    return;
+  }
+
+  const onSuccess = async (user) => {
+    try {
+      if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
+        window.AuthService.startSessionMonitor();
+      }
+    } catch (_) {}
+
+    if (typeof window.updateAuthUI === 'function') {
+      await window.updateAuthUI();
+    }
+
+    if (window.App && typeof window.App.showNotification === 'function') {
+      const email = user && user.email ? user.email : 'your account';
+      window.App.showNotification(`✓ Logged in as ${email}`, 'success');
+    }
+  };
+
+  const onGuestMode = async () => {
+    if (typeof window.updateAuthUI === 'function') {
+      await window.updateAuthUI();
+    }
+    window.App?.showNotification?.('👤 Continuing in guest mode', 'info');
+  };
+
+  const showRegister = () => {
+    if (typeof window.AuthUI.showRegister !== 'function') return;
+    window.AuthUI.showRegister(onSuccess, () => {
+      App.showAuthScreen();
+    });
+  };
+
+  window.AuthUI.showLogin(onSuccess, showRegister, onGuestMode);
+};
+
 // ===== AUTHENTICATION & BOOTSTRAP (builder splash handling) =====
 
 let builderSplashActive = true;
@@ -11370,13 +11425,35 @@ window.addEventListener('DOMContentLoaded', async () => {
 // ========================================
 
 function showAuthModal() {
-    document.getElementById('authModal').classList.add('show');
-    showLoginForm();
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        modal.classList.add('show');
+        showLoginForm();
+        return;
+    }
+    // Integrated builder page uses AuthUI full-screen overlay instead of manager modal.
+    if (window.App && typeof window.App.showAuthScreen === 'function') {
+        window.App.showAuthScreen();
+        return;
+    }
+    if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
+        window.AuthUI.showLogin(
+            () => location.reload(),
+            () => {},
+            () => {},
+        );
+    }
 }
 
 function closeAuthModal() {
-    document.getElementById('authModal').classList.remove('show');
-    document.getElementById('authError').classList.add('is-hidden');
+    const modal = document.getElementById('authModal');
+    const err = document.getElementById('authError');
+    if (!modal || !err) {
+        // No-op for builder page
+        return;
+    }
+    modal.classList.remove('show');
+    err.classList.add('is-hidden');
     // Clear form fields
     document.getElementById('loginUsername').value = '';
     document.getElementById('loginPassword').value = '';
@@ -11499,14 +11576,15 @@ return;}
 window.App.showConfirmationOverlay('Log out? Your character will be saved to the cloud before logging out.',async()=>{if(window.CharacterState&&window.CharacterState.current.character.name){await saveCurrentCharacterToCloud();}
 window.AuthService.logout();updateAuthUI();console.log('✓ Logged out');if(window.App&&window.App.showNotification){window.App.showNotification('✓ Logged out','success');}
 if(window.AuthUI&&typeof window.AuthUI.showLogin==='function'){window.AuthUI.showLogin(()=>location.reload(),()=>{},()=>{});}},);}
-function updateAuthUI(){const authBtn=document.getElementById('authBtn');const userInfoDisplay=document.getElementById('userInfoDisplay');const userStatusIcon=document.getElementById('userStatusIcon');const userStatusText=document.getElementById('userStatusText');if(!authBtn||!userInfoDisplay||!userStatusIcon||!userStatusText){return;}
+function updateAuthUI(){const authBtn=document.getElementById('authBtn');const userInfoDisplay=document.getElementById('userInfoDisplay');const userStatusIcon=document.getElementById('userStatusIcon');const userStatusText=document.getElementById('userStatusText');if(!authBtn||!userInfoDisplay||!userStatusIcon||!userStatusText){if(typeof window.updateAuthUI==='function'){window.updateAuthUI();}
+return;}
 if(window.AuthService&&window.AuthService.isAuthenticated()){const user=window.AuthService.getCurrentUser();userStatusIcon.textContent='☁';userStatusText.textContent=user?user.email:'Logged In';authBtn.textContent='LOGOUT';authBtn.onclick=handleLogout;}else{userStatusIcon.textContent='▣';userStatusText.textContent='Local Only';authBtn.textContent='LOGIN';authBtn.onclick=showAuthModal;}}
 async function saveCurrentCharacterToCloud(){try{if(!window.AuthService||!window.AuthService.isAuthenticated()){console.log('💾 Not logged in - character saved to localStorage only');return false;}
 if(!window.CharacterCloudStorage){console.error('☁️ CharacterCloudStorage not available');return false;}
 const character=window.CharacterState.current.character;if(!character.name){console.log('☁️ Character has no name yet - skipping cloud save');return false;}
 console.log('☁️ Saving character to cloud:',character.name);const allCloudChars=await window.CharacterCloudStorage.getAll();const existingChar=allCloudChars.find(c=>c.characterUid===character.characterUid||c.metadata?.characterUid===character.characterUid);if(existingChar){console.log('☁️ Updating existing character in cloud:',existingChar.id);await window.CharacterCloudStorage.update(existingChar.id,character);console.log('☁️ Character updated in cloud successfully');}else{console.log('☁️ Creating new character in cloud');const result=await window.CharacterCloudStorage.add(character);console.log('☁️ Character created in cloud with ID:',result.id);}
 return true;}catch(error){console.error('☁️ Failed to save character to cloud:',error);return false;}}
-function handleSessionExpired(){updateAuthUI();if(window.App&&window.App.showConfirmationOverlay){window.App.showConfirmationOverlay('Your session has expired. Your character is safe locally, but you\'ll need to log in again to sync with the cloud.',()=>{showAuthModal();},null,{primaryLabel:'Got it',hideSecondary:true});}else if(window.App&&window.App.showNotification){window.App.showNotification('⚠ Session expired - log in again to sync','warning');}}
+function handleSessionExpired(){updateAuthUI();if(window.App&&window.App.showConfirmationOverlay){window.App.showConfirmationOverlay('Your session has expired. Your character is safe locally, but you\'ll need to log in again to sync with the cloud.',()=>{showAuthModal();},null,{primaryLabel:'LOG IN',hideSecondary:true});}else if(window.App&&window.App.showNotification){window.App.showNotification('⚠ Session expired - log in again to sync','warning');}}
 function initBuilderAuth(){updateAuthUI();if(window.AuthService&&window.AuthService.isAuthenticated()){if(typeof window.AuthService.startSessionMonitor==='function'){window.AuthService.startSessionMonitor();}}
 window.addEventListener('danddy:sessionExpired',handleSessionExpired);}
 if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',initBuilderAuth);}else{initBuilderAuth();}

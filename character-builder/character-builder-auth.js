@@ -2,14 +2,40 @@
 // Exposes AuthUI as global on window.
 
 const AuthUI = (window.AuthUI = {
+  _underlayPrevHidden: null,
+
+  _hideUnderlay() {
+    const ids = ['splash-content', 'main-content'];
+    const prev = {};
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      prev[id] = el.classList.contains('is-hidden');
+      el.classList.add('is-hidden');
+    });
+    this._underlayPrevHidden = prev;
+  },
+
+  _restoreUnderlay() {
+    const prev = this._underlayPrevHidden;
+    if (!prev) return;
+    Object.keys(prev).forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      // Restore exact previous state
+      if (prev[id]) el.classList.add('is-hidden');
+      else el.classList.remove('is-hidden');
+    });
+    this._underlayPrevHidden = null;
+  },
+
   // Show login screen
   showLogin(onSuccess, onSwitchToRegister, onGuestMode) {
     const container = document.querySelector('.terminal-container');
     if (!container) return;
 
-    // Hide other content
-    document.getElementById('splash-content')?.classList.add('is-hidden');
-    document.getElementById('main-content')?.classList.add('is-hidden');
+    // Hide underlying content (we restore this in removeAuthScreen)
+    this._hideUnderlay();
 
     // Create auth screen
     const authScreen = document.createElement('div');
@@ -190,9 +216,8 @@ const AuthUI = (window.AuthUI = {
     const container = document.querySelector('.terminal-container');
     if (!container) return;
 
-    // Hide other content
-    document.getElementById('splash-content')?.classList.add('is-hidden');
-    document.getElementById('main-content')?.classList.add('is-hidden');
+    // Hide underlying content (we restore this in removeAuthScreen)
+    this._hideUnderlay();
 
     // Create auth screen
     const authScreen = document.createElement('div');
@@ -397,19 +422,25 @@ const AuthUI = (window.AuthUI = {
     if (authScreen) {
       authScreen.remove();
     }
+    this._restoreUnderlay();
   },
 
   // Show user info in header
   updateHeaderWithUser(user) {
-    const statusText = document.getElementById('status-text');
-    if (statusText && user) {
+    const slot = document.getElementById('auth-slot') || document.getElementById('status-text');
+    if (slot && user) {
       const roleIcon = user.role === 'dm' ? '🎲' : '⚔️';
       const label = (user.email || '').toUpperCase();
-      statusText.innerHTML = `${roleIcon} ${label} | <button class="link-button" id="header-characters">MY CHARACTERS</button> | <button class="link-button" id="header-logout">LOGOUT</button>`;
+      slot.innerHTML = `${roleIcon} ${label} | <button class="link-button" id="header-characters">MY CHARACTERS</button> | <button class="link-button" id="header-logout">LOGOUT</button>`;
       
       // Add characters button handler
       document.getElementById('header-characters')?.addEventListener('click', () => {
-        CharacterManager.show();
+        if (window.CharacterManager && typeof CharacterManager.show === 'function') {
+          CharacterManager.show();
+          return;
+        }
+        window.suppressBeforeunloadWarning?.();
+        window.location.href = '../index.html?from=builder';
       });
       
       // Add logout handler
@@ -434,15 +465,92 @@ const AuthUI = (window.AuthUI = {
 
   // Show guest mode banner
   showGuestBanner() {
-    const statusText = document.getElementById('status-text');
-    if (statusText) {
-      statusText.innerHTML = `👤 GUEST MODE | <button class="link-button" id="header-login">LOGIN TO SAVE</button>`;
+    const slot = document.getElementById('auth-slot') || document.getElementById('status-text');
+    if (slot) {
+      slot.innerHTML = `👤 GUEST MODE | <button class="link-button" id="header-login">LOGIN TO SAVE</button>`;
       
       // Add login handler
       document.getElementById('header-login')?.addEventListener('click', () => {
-        App.showAuthScreen();
+        if (window.App && typeof window.App.showAuthScreen === 'function') {
+          App.showAuthScreen();
+          return;
+        }
+        // Fallback: open login UI directly
+        if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
+          window.AuthUI.showLogin(
+            () => window.location.reload(),
+            () => {},
+            () => {},
+          );
+        }
       });
     }
   },
 });
+
+// Unified builder auth UI updater (called by AuthService session expiry + by builder)
+window.updateAuthUI = async function updateAuthUI() {
+  try {
+    if (!window.AuthService || !window.AuthUI) return;
+
+    if (window.AuthService.isAuthenticated()) {
+      let user = window.AuthService.getCurrentUser();
+      if (!user && typeof window.AuthService.fetchProfile === 'function') {
+        user = await window.AuthService.fetchProfile();
+        if (user) window.AuthService.setCurrentUser(user);
+      }
+      if (user) {
+        window.AuthUI.updateHeaderWithUser(user);
+      } else {
+        // Token exists but no profile (network?) – still show logged-in state
+        window.AuthUI.updateHeaderWithUser({ email: 'Logged In', role: 'player' });
+      }
+    } else {
+      window.AuthUI.showGuestBanner();
+    }
+  } catch (e) {
+    console.warn('[Builder] updateAuthUI failed:', e);
+  }
+};
+
+// Keep builder header auth state in sync and handle session expiry re-login.
+function initBuilderHeaderAuth() {
+  // Initial render
+  if (typeof window.updateAuthUI === 'function') {
+    window.updateAuthUI();
+  }
+
+  // Start session monitoring if authenticated
+  if (window.AuthService && window.AuthService.isAuthenticated()) {
+    if (typeof window.AuthService.startSessionMonitor === 'function') {
+      window.AuthService.startSessionMonitor();
+    }
+  }
+
+  // Handle session expiry
+  window.addEventListener('danddy:sessionExpired', () => {
+    // Update header immediately
+    if (typeof window.updateAuthUI === 'function') window.updateAuthUI();
+
+    // Prompt user to log in again (in-place)
+    if (window.App && typeof window.App.showConfirmationOverlay === 'function') {
+      window.App.showConfirmationOverlay(
+        "Your session expired. Your character is safe locally — log in again to sync to the cloud.",
+        () => window.App?.showAuthScreen?.(),
+        null,
+        { primaryLabel: 'LOG IN', hideSecondary: true },
+      );
+      return;
+    }
+
+    // Fallback: notification then open auth
+    window.App?.showNotification?.('⚠ Session expired — log in again to sync', 'warning');
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initBuilderHeaderAuth);
+} else {
+  initBuilderHeaderAuth();
+}
 

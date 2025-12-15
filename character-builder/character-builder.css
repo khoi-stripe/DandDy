@@ -23,8 +23,16 @@
   color: var(--terminal-dim);
 }
 
-.terminal-status > span {
+.terminal-status #status-text {
   margin-right: auto;
+}
+
+#auth-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--terminal-dim);
+  white-space: nowrap;
 }
 
 /* Builder header: title + Settings link grouped together */

@@ -1361,6 +1361,14 @@ body::before {
   color: var(--ui-fg-color);
 }
 
+/* KeyboardNav uses an `is-focused` class (not DOM focus). Mirror hover styling
+   so secondary buttons are visibly navigable via arrow keys. */
+.button-secondary.is-focused:not(:disabled) {
+  border-color: var(--ui-fg-color);
+  color: var(--ui-fg-color);
+  background: color-mix(in srgb, var(--ui-primary-bg-color) 10%, transparent);
+}
+
 /* Teal-themed small buttons (e.g., builder EXIT) should also get a subtle
    teal background glow on hover instead of the default green tint. */
 .ui-theme-teal.terminal-btn-small:hover:not(:disabled) {

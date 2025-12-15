@@ -172,7 +172,11 @@ const KeyboardNav = (window.KeyboardNav = {
     // Get ALL clickable buttons from ALL cards
     const allButtons = [];
     allCards.forEach((card) => {
-      const cardButtons = Array.from(card.querySelectorAll('.button-primary'));
+      // Include both primary + secondary buttons so completion screen options
+      // (e.g. "Save and Exit" + "Create Another Character") are keyboard navigable.
+      const cardButtons = Array.from(
+        card.querySelectorAll('.button-primary, .button-secondary'),
+      );
       // Include all buttons (selected, locked, etc) - they're all clickable now
       cardButtons.forEach((btn) => {
         // Skip only truly disabled buttons (like name input buttons after selection)
@@ -6136,6 +6140,48 @@ const App = (window.App = {
   },
 
 });
+
+// Allow logging in from the builder page without leaving to the manager.
+// Renders into the header auth slot via window.updateAuthUI (defined in character-builder-auth.js).
+App.showAuthScreen = function showAuthScreen() {
+  if (!window.AuthUI || typeof window.AuthUI.showLogin !== 'function') {
+    console.warn('[Builder] AuthUI not available');
+    return;
+  }
+
+  const onSuccess = async (user) => {
+    try {
+      if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
+        window.AuthService.startSessionMonitor();
+      }
+    } catch (_) {}
+
+    if (typeof window.updateAuthUI === 'function') {
+      await window.updateAuthUI();
+    }
+
+    if (window.App && typeof window.App.showNotification === 'function') {
+      const email = user && user.email ? user.email : 'your account';
+      window.App.showNotification(`✓ Logged in as ${email}`, 'success');
+    }
+  };
+
+  const onGuestMode = async () => {
+    if (typeof window.updateAuthUI === 'function') {
+      await window.updateAuthUI();
+    }
+    window.App?.showNotification?.('👤 Continuing in guest mode', 'info');
+  };
+
+  const showRegister = () => {
+    if (typeof window.AuthUI.showRegister !== 'function') return;
+    window.AuthUI.showRegister(onSuccess, () => {
+      App.showAuthScreen();
+    });
+  };
+
+  window.AuthUI.showLogin(onSuccess, showRegister, onGuestMode);
+};
 
 // ===== AUTHENTICATION & BOOTSTRAP (builder splash handling) =====
 

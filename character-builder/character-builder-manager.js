@@ -8,13 +8,35 @@
 // ========================================
 
 function showAuthModal() {
-    document.getElementById('authModal').classList.add('show');
-    showLoginForm();
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        modal.classList.add('show');
+        showLoginForm();
+        return;
+    }
+    // Integrated builder page uses AuthUI full-screen overlay instead of manager modal.
+    if (window.App && typeof window.App.showAuthScreen === 'function') {
+        window.App.showAuthScreen();
+        return;
+    }
+    if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
+        window.AuthUI.showLogin(
+            () => location.reload(),
+            () => {},
+            () => {},
+        );
+    }
 }
 
 function closeAuthModal() {
-    document.getElementById('authModal').classList.remove('show');
-    document.getElementById('authError').classList.add('is-hidden');
+    const modal = document.getElementById('authModal');
+    const err = document.getElementById('authError');
+    if (!modal || !err) {
+        // No-op for builder page
+        return;
+    }
+    modal.classList.remove('show');
+    err.classList.add('is-hidden');
     // Clear form fields
     document.getElementById('loginUsername').value = '';
     document.getElementById('loginPassword').value = '';
@@ -194,9 +216,12 @@ function updateAuthUI() {
     const userStatusIcon = document.getElementById('userStatusIcon');
     const userStatusText = document.getElementById('userStatusText');
 
-    // In the integrated app, the builder surface no longer exposes login/logout
-    // UI. If these elements are missing, simply skip any header updates.
+    // In the integrated app, these elements are missing. Delegate to the
+    // builder's unified header renderer if available.
     if (!authBtn || !userInfoDisplay || !userStatusIcon || !userStatusText) {
+        if (typeof window.updateAuthUI === 'function') {
+            window.updateAuthUI();
+        }
         return;
     }
 
@@ -285,7 +310,7 @@ function handleSessionExpired() {
             },
             null,
             {
-                primaryLabel: 'Got it',
+                primaryLabel: 'LOG IN',
                 hideSecondary: true
             }
         );
