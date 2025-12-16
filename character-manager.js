@@ -1601,6 +1601,9 @@ async function viewCharacter(id, options = {}) {
     }
 
     if (character) {
+        // Auto-recalculate level-dependent stats if they appear outdated
+        character = await autoRecalculateLevelStats(character);
+        
         // Debug: Log the character data being used to render the sheet
         if (window.DEBUG_PORTRAITS) {
             console.log(`🖼️ [PORTRAIT DEBUG] viewCharacter rendering`, {
@@ -1843,6 +1846,9 @@ async function editCharacter(id) {
     // BACKSTORY (free text)
     setValue('editBackstory', character.backstory || '');
 
+    // SPELLS - Initialize spell editing section
+    initializeSpellEditSection(character, parsed);
+
     // Show modal (reuse modal variable from earlier in function)
     if (modal) {
         modal.classList.add('show');
@@ -1999,8 +2005,12 @@ async function saveEditDetails() {
     const safeLevel = levelValue;
     let levelChangeChoice = 'manual'; // default to manual if no change
     let autoCalculatedStats = null;
+    let levelChangedFrom = null;
+    let levelChangedTo = null;
     
     if (safeLevel !== null && originalEditLevel !== null && safeLevel !== originalEditLevel) {
+        levelChangedFrom = originalEditLevel;
+        levelChangedTo = safeLevel;
         // Hide loading overlay while showing the dialog
         if (loadingOverlay) {
             loadingOverlay.classList.remove('is-visible');
@@ -2059,11 +2069,17 @@ async function saveEditDetails() {
     let profBonus = getNumber('editProfBonus');
     
     // Apply auto-calculated stats if user chose auto
+    let autoSpellSlots = null;
+    let autoHitDiceMax = null;
+    let autoClassResources = null;
     if (autoCalculatedStats) {
         hpMax = autoCalculatedStats.hpMax;
         // Set current HP to max HP when auto-calculating (leveling up usually means full health)
         hpCurrent = autoCalculatedStats.hpMax;
         profBonus = autoCalculatedStats.proficiencyBonus;
+        autoSpellSlots = autoCalculatedStats.spellSlots;
+        autoHitDiceMax = autoCalculatedStats.hitDiceMax;
+        autoClassResources = autoCalculatedStats.classResources;
     }
 
     // Alignment
@@ -2132,6 +2148,33 @@ async function saveEditDetails() {
     if (profBonus !== null) {
         updates.proficiencyBonus = profBonus;
     }
+    
+    // Apply auto-calculated spell slots for spellcasting classes
+    if (autoSpellSlots) {
+        updates.spellSlots = autoSpellSlots;
+        // Reset spell slots used when level changes
+        updates.spellSlotsUsed = {};
+    }
+
+    // Apply auto-calculated hit dice (reset to full on level up)
+    if (autoHitDiceMax) {
+        updates.hitDiceMax = autoHitDiceMax;
+        // Reset to full hit dice on level up (null means full = level)
+        updates.hitDiceCurrent = null;
+    }
+
+    // Apply auto-calculated class resources (reset to full on level up)
+    if (autoClassResources && Object.keys(autoClassResources).length > 0) {
+        updates.classResources = autoClassResources;
+    }
+
+    // Apply spell changes from the spell edit section
+    const className = (character.class || '').toLowerCase();
+    if (SPELLCASTING_CLASSES[className]) {
+        const spellEdits = getEditSpells();
+        updates.cantrips = spellEdits.cantrips;
+        updates.spellsKnown = spellEdits.spellsKnown;
+    }
 
     try {
         await CharacterStorage.update(currentEditCharacterId, updates);
@@ -2141,6 +2184,17 @@ async function saveEditDetails() {
         viewCharacter(currentEditCharacterId);
         showNotification('Character details updated');
         closeEditDetailsModal();
+        
+        // After a successful level-up with auto-calculation, check if the user needs to select new spells
+        if (autoCalculatedStats && autoCalculatedStats.spellProgression && levelChangedFrom !== null && levelChangedTo !== null) {
+            const updatedCharacter = await CharacterStorage.getById(currentEditCharacterId);
+            if (updatedCharacter) {
+                // Small delay to let the modal close animation complete
+                setTimeout(() => {
+                    checkAndPromptForNewSpells(updatedCharacter, levelChangedFrom, levelChangedTo);
+                }, 400);
+            }
+        }
     } catch (error) {
         console.error('Failed to save character details:', error);
         showNotification('Failed to save changes', 'error');
@@ -4586,7 +4640,7 @@ function showLevelChangeDialog(oldLevel, newLevel) {
           <div class="modal-body">
             <p class="terminal-text level-change-text">You're changing from<strong>Level\u00A0${oldLevel}</strong>to<strong>Level\u00A0${newLevel}</strong>\u00A0(${Math.abs(levelDiff)}\u00A0${levelText}\u00A0${direction}).</p>
             <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">
-              Would you like to automatically recalculate stats&nbsp;(HP,&nbsp;Proficiency Bonus)&nbsp;for the new level, or update them manually?
+              Would you like to automatically recalculate stats&nbsp;(HP,&nbsp;Proficiency&nbsp;Bonus,&nbsp;Spell&nbsp;Slots)&nbsp;for the new level, or update them manually?
             </p>
           </div>
           <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">
@@ -4658,7 +4712,9 @@ function showLevelChangeDialog(oldLevel, newLevel) {
 }
 
 // Calculate derived stats for a given level
-// Returns { proficiencyBonus, hpMax } based on level, class hit die, and CON modifier
+// Returns { proficiencyBonus, hpMax, hitDie, hitDiceMax, spellSlots, spellProgression }
+// spellProgression: { cantrips, spellsKnown, maxSpellLevel } for casters, null for non-casters
+// spellsKnown is null for "prepared" casters (Cleric, Druid, Paladin) who prepare from full spell list
 function calculateStatsForLevel(character, newLevel) {
     // Hit die mapping for standard 5e classes
     const HIT_DIE_BY_CLASS = {
@@ -4674,6 +4730,299 @@ function calculateStatsForLevel(character, newLevel) {
         warlock: 8,
         wizard: 6,
         sorcerer: 6,
+    };
+
+    // Full caster spell slot progression (Wizard, Sorcerer, Bard, Cleric, Druid)
+    // Format: level -> { slotLevel: count }
+    const FULL_CASTER_SLOTS = {
+        1:  { 1: 2 },
+        2:  { 1: 3 },
+        3:  { 1: 4, 2: 2 },
+        4:  { 1: 4, 2: 3 },
+        5:  { 1: 4, 2: 3, 3: 2 },
+        6:  { 1: 4, 2: 3, 3: 3 },
+        7:  { 1: 4, 2: 3, 3: 3, 4: 1 },
+        8:  { 1: 4, 2: 3, 3: 3, 4: 2 },
+        9:  { 1: 4, 2: 3, 3: 3, 4: 3, 5: 1 },
+        10: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2 },
+        11: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1 },
+        12: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1 },
+        13: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1 },
+        14: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1 },
+        15: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1 },
+        16: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1 },
+        17: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1, 9: 1 },
+        18: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 1, 7: 1, 8: 1, 9: 1 },
+        19: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 2, 7: 1, 8: 1, 9: 1 },
+        20: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 2, 7: 2, 8: 1, 9: 1 },
+    };
+
+    // Warlock Pact Magic slots (all slots are at highest available level, short rest recovery)
+    const WARLOCK_PACT_SLOTS = {
+        1:  { slots: 1, level: 1 },
+        2:  { slots: 2, level: 1 },
+        3:  { slots: 2, level: 2 },
+        4:  { slots: 2, level: 2 },
+        5:  { slots: 2, level: 3 },
+        6:  { slots: 2, level: 3 },
+        7:  { slots: 2, level: 4 },
+        8:  { slots: 2, level: 4 },
+        9:  { slots: 2, level: 5 },
+        10: { slots: 2, level: 5 },
+        11: { slots: 3, level: 5 },
+        12: { slots: 3, level: 5 },
+        13: { slots: 3, level: 5 },
+        14: { slots: 3, level: 5 },
+        15: { slots: 3, level: 5 },
+        16: { slots: 3, level: 5 },
+        17: { slots: 4, level: 5 },
+        18: { slots: 4, level: 5 },
+        19: { slots: 4, level: 5 },
+        20: { slots: 4, level: 5 },
+    };
+
+    // Half caster spell slot progression (Paladin, Ranger) - starts at level 2
+    const HALF_CASTER_SLOTS = {
+        1:  {},
+        2:  { 1: 2 },
+        3:  { 1: 3 },
+        4:  { 1: 3 },
+        5:  { 1: 4, 2: 2 },
+        6:  { 1: 4, 2: 2 },
+        7:  { 1: 4, 2: 3 },
+        8:  { 1: 4, 2: 3 },
+        9:  { 1: 4, 2: 3, 3: 2 },
+        10: { 1: 4, 2: 3, 3: 2 },
+        11: { 1: 4, 2: 3, 3: 3 },
+        12: { 1: 4, 2: 3, 3: 3 },
+        13: { 1: 4, 2: 3, 3: 3, 4: 1 },
+        14: { 1: 4, 2: 3, 3: 3, 4: 1 },
+        15: { 1: 4, 2: 3, 3: 3, 4: 2 },
+        16: { 1: 4, 2: 3, 3: 3, 4: 2 },
+        17: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 1 },
+        18: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 1 },
+        19: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2 },
+        20: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2 },
+    };
+
+    // Full casters
+    const FULL_CASTERS = ['wizard', 'sorcerer', 'bard', 'cleric', 'druid'];
+    // Half casters
+    const HALF_CASTERS = ['paladin', 'ranger'];
+
+    // Spells Known progression by class and level
+    // Format: { cantrips, spellsKnown, maxSpellLevel }
+    // Note: "prepared" casters (Cleric, Druid, Paladin) use spellsKnown: null (they prepare instead)
+    
+    // Sorcerer - "known" caster (PHB p.100)
+    const SORCERER_PROGRESSION = {
+        1:  { cantrips: 4, spellsKnown: 2,  maxSpellLevel: 1 },
+        2:  { cantrips: 4, spellsKnown: 3,  maxSpellLevel: 1 },
+        3:  { cantrips: 4, spellsKnown: 4,  maxSpellLevel: 2 },
+        4:  { cantrips: 5, spellsKnown: 5,  maxSpellLevel: 2 },
+        5:  { cantrips: 5, spellsKnown: 6,  maxSpellLevel: 3 },
+        6:  { cantrips: 5, spellsKnown: 7,  maxSpellLevel: 3 },
+        7:  { cantrips: 5, spellsKnown: 8,  maxSpellLevel: 4 },
+        8:  { cantrips: 5, spellsKnown: 9,  maxSpellLevel: 4 },
+        9:  { cantrips: 5, spellsKnown: 10, maxSpellLevel: 5 },
+        10: { cantrips: 6, spellsKnown: 11, maxSpellLevel: 5 },
+        11: { cantrips: 6, spellsKnown: 12, maxSpellLevel: 6 },
+        12: { cantrips: 6, spellsKnown: 12, maxSpellLevel: 6 },
+        13: { cantrips: 6, spellsKnown: 13, maxSpellLevel: 7 },
+        14: { cantrips: 6, spellsKnown: 13, maxSpellLevel: 7 },
+        15: { cantrips: 6, spellsKnown: 14, maxSpellLevel: 8 },
+        16: { cantrips: 6, spellsKnown: 14, maxSpellLevel: 8 },
+        17: { cantrips: 6, spellsKnown: 15, maxSpellLevel: 9 },
+        18: { cantrips: 6, spellsKnown: 15, maxSpellLevel: 9 },
+        19: { cantrips: 6, spellsKnown: 15, maxSpellLevel: 9 },
+        20: { cantrips: 6, spellsKnown: 15, maxSpellLevel: 9 },
+    };
+
+    // Warlock - "known" caster with Pact Magic (PHB p.106)
+    // Note: maxSpellLevel caps at 5 (Pact Magic), higher levels get Mystic Arcanum
+    const WARLOCK_PROGRESSION = {
+        1:  { cantrips: 2, spellsKnown: 2,  maxSpellLevel: 1 },
+        2:  { cantrips: 2, spellsKnown: 3,  maxSpellLevel: 1 },
+        3:  { cantrips: 2, spellsKnown: 4,  maxSpellLevel: 2 },
+        4:  { cantrips: 3, spellsKnown: 5,  maxSpellLevel: 2 },
+        5:  { cantrips: 3, spellsKnown: 6,  maxSpellLevel: 3 },
+        6:  { cantrips: 3, spellsKnown: 7,  maxSpellLevel: 3 },
+        7:  { cantrips: 3, spellsKnown: 8,  maxSpellLevel: 4 },
+        8:  { cantrips: 3, spellsKnown: 9,  maxSpellLevel: 4 },
+        9:  { cantrips: 3, spellsKnown: 10, maxSpellLevel: 5 },
+        10: { cantrips: 4, spellsKnown: 10, maxSpellLevel: 5 },
+        11: { cantrips: 4, spellsKnown: 11, maxSpellLevel: 5 },
+        12: { cantrips: 4, spellsKnown: 11, maxSpellLevel: 5 },
+        13: { cantrips: 4, spellsKnown: 12, maxSpellLevel: 5 },
+        14: { cantrips: 4, spellsKnown: 12, maxSpellLevel: 5 },
+        15: { cantrips: 4, spellsKnown: 13, maxSpellLevel: 5 },
+        16: { cantrips: 4, spellsKnown: 13, maxSpellLevel: 5 },
+        17: { cantrips: 4, spellsKnown: 14, maxSpellLevel: 5 },
+        18: { cantrips: 4, spellsKnown: 14, maxSpellLevel: 5 },
+        19: { cantrips: 4, spellsKnown: 15, maxSpellLevel: 5 },
+        20: { cantrips: 4, spellsKnown: 15, maxSpellLevel: 5 },
+    };
+
+    // Bard - "known" caster (PHB p.53)
+    const BARD_PROGRESSION = {
+        1:  { cantrips: 2, spellsKnown: 4,  maxSpellLevel: 1 },
+        2:  { cantrips: 2, spellsKnown: 5,  maxSpellLevel: 1 },
+        3:  { cantrips: 2, spellsKnown: 6,  maxSpellLevel: 2 },
+        4:  { cantrips: 3, spellsKnown: 7,  maxSpellLevel: 2 },
+        5:  { cantrips: 3, spellsKnown: 8,  maxSpellLevel: 3 },
+        6:  { cantrips: 3, spellsKnown: 9,  maxSpellLevel: 3 },
+        7:  { cantrips: 3, spellsKnown: 10, maxSpellLevel: 4 },
+        8:  { cantrips: 3, spellsKnown: 11, maxSpellLevel: 4 },
+        9:  { cantrips: 3, spellsKnown: 12, maxSpellLevel: 5 },
+        10: { cantrips: 4, spellsKnown: 14, maxSpellLevel: 5 },
+        11: { cantrips: 4, spellsKnown: 15, maxSpellLevel: 6 },
+        12: { cantrips: 4, spellsKnown: 15, maxSpellLevel: 6 },
+        13: { cantrips: 4, spellsKnown: 16, maxSpellLevel: 7 },
+        14: { cantrips: 4, spellsKnown: 18, maxSpellLevel: 7 },
+        15: { cantrips: 4, spellsKnown: 19, maxSpellLevel: 8 },
+        16: { cantrips: 4, spellsKnown: 19, maxSpellLevel: 8 },
+        17: { cantrips: 4, spellsKnown: 20, maxSpellLevel: 9 },
+        18: { cantrips: 4, spellsKnown: 22, maxSpellLevel: 9 },
+        19: { cantrips: 4, spellsKnown: 22, maxSpellLevel: 9 },
+        20: { cantrips: 4, spellsKnown: 22, maxSpellLevel: 9 },
+    };
+
+    // Wizard - "spellbook" caster (PHB p.113)
+    // spellsKnown = spellbook capacity (starts 6, +2 per level)
+    // Note: Wizards can also copy found spells into spellbook
+    const WIZARD_PROGRESSION = {
+        1:  { cantrips: 3, spellsKnown: 6,  maxSpellLevel: 1 },
+        2:  { cantrips: 3, spellsKnown: 8,  maxSpellLevel: 1 },
+        3:  { cantrips: 3, spellsKnown: 10, maxSpellLevel: 2 },
+        4:  { cantrips: 4, spellsKnown: 12, maxSpellLevel: 2 },
+        5:  { cantrips: 4, spellsKnown: 14, maxSpellLevel: 3 },
+        6:  { cantrips: 4, spellsKnown: 16, maxSpellLevel: 3 },
+        7:  { cantrips: 4, spellsKnown: 18, maxSpellLevel: 4 },
+        8:  { cantrips: 4, spellsKnown: 20, maxSpellLevel: 4 },
+        9:  { cantrips: 4, spellsKnown: 22, maxSpellLevel: 5 },
+        10: { cantrips: 5, spellsKnown: 24, maxSpellLevel: 5 },
+        11: { cantrips: 5, spellsKnown: 26, maxSpellLevel: 6 },
+        12: { cantrips: 5, spellsKnown: 28, maxSpellLevel: 6 },
+        13: { cantrips: 5, spellsKnown: 30, maxSpellLevel: 7 },
+        14: { cantrips: 5, spellsKnown: 32, maxSpellLevel: 7 },
+        15: { cantrips: 5, spellsKnown: 34, maxSpellLevel: 8 },
+        16: { cantrips: 5, spellsKnown: 36, maxSpellLevel: 8 },
+        17: { cantrips: 5, spellsKnown: 38, maxSpellLevel: 9 },
+        18: { cantrips: 5, spellsKnown: 40, maxSpellLevel: 9 },
+        19: { cantrips: 5, spellsKnown: 42, maxSpellLevel: 9 },
+        20: { cantrips: 5, spellsKnown: 44, maxSpellLevel: 9 },
+    };
+
+    // Cleric - "prepared" caster (PHB p.57)
+    // spellsKnown: null (prepares WIS mod + level from full class list)
+    const CLERIC_PROGRESSION = {
+        1:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 1 },
+        2:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 1 },
+        3:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 2 },
+        4:  { cantrips: 4, spellsKnown: null, maxSpellLevel: 2 },
+        5:  { cantrips: 4, spellsKnown: null, maxSpellLevel: 3 },
+        6:  { cantrips: 4, spellsKnown: null, maxSpellLevel: 3 },
+        7:  { cantrips: 4, spellsKnown: null, maxSpellLevel: 4 },
+        8:  { cantrips: 4, spellsKnown: null, maxSpellLevel: 4 },
+        9:  { cantrips: 4, spellsKnown: null, maxSpellLevel: 5 },
+        10: { cantrips: 5, spellsKnown: null, maxSpellLevel: 5 },
+        11: { cantrips: 5, spellsKnown: null, maxSpellLevel: 6 },
+        12: { cantrips: 5, spellsKnown: null, maxSpellLevel: 6 },
+        13: { cantrips: 5, spellsKnown: null, maxSpellLevel: 7 },
+        14: { cantrips: 5, spellsKnown: null, maxSpellLevel: 7 },
+        15: { cantrips: 5, spellsKnown: null, maxSpellLevel: 8 },
+        16: { cantrips: 5, spellsKnown: null, maxSpellLevel: 8 },
+        17: { cantrips: 5, spellsKnown: null, maxSpellLevel: 9 },
+        18: { cantrips: 5, spellsKnown: null, maxSpellLevel: 9 },
+        19: { cantrips: 5, spellsKnown: null, maxSpellLevel: 9 },
+        20: { cantrips: 5, spellsKnown: null, maxSpellLevel: 9 },
+    };
+
+    // Druid - "prepared" caster (PHB p.66)
+    // spellsKnown: null (prepares WIS mod + level from full class list)
+    const DRUID_PROGRESSION = {
+        1:  { cantrips: 2, spellsKnown: null, maxSpellLevel: 1 },
+        2:  { cantrips: 2, spellsKnown: null, maxSpellLevel: 1 },
+        3:  { cantrips: 2, spellsKnown: null, maxSpellLevel: 2 },
+        4:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 2 },
+        5:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 3 },
+        6:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 3 },
+        7:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 4 },
+        8:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 4 },
+        9:  { cantrips: 3, spellsKnown: null, maxSpellLevel: 5 },
+        10: { cantrips: 4, spellsKnown: null, maxSpellLevel: 5 },
+        11: { cantrips: 4, spellsKnown: null, maxSpellLevel: 6 },
+        12: { cantrips: 4, spellsKnown: null, maxSpellLevel: 6 },
+        13: { cantrips: 4, spellsKnown: null, maxSpellLevel: 7 },
+        14: { cantrips: 4, spellsKnown: null, maxSpellLevel: 7 },
+        15: { cantrips: 4, spellsKnown: null, maxSpellLevel: 8 },
+        16: { cantrips: 4, spellsKnown: null, maxSpellLevel: 8 },
+        17: { cantrips: 4, spellsKnown: null, maxSpellLevel: 9 },
+        18: { cantrips: 4, spellsKnown: null, maxSpellLevel: 9 },
+        19: { cantrips: 4, spellsKnown: null, maxSpellLevel: 9 },
+        20: { cantrips: 4, spellsKnown: null, maxSpellLevel: 9 },
+    };
+
+    // Ranger - half caster, "known" spells, no cantrips (PHB p.91)
+    // Spellcasting starts at level 2
+    const RANGER_PROGRESSION = {
+        1:  { cantrips: 0, spellsKnown: 0,  maxSpellLevel: 0 },
+        2:  { cantrips: 0, spellsKnown: 2,  maxSpellLevel: 1 },
+        3:  { cantrips: 0, spellsKnown: 3,  maxSpellLevel: 1 },
+        4:  { cantrips: 0, spellsKnown: 3,  maxSpellLevel: 1 },
+        5:  { cantrips: 0, spellsKnown: 4,  maxSpellLevel: 2 },
+        6:  { cantrips: 0, spellsKnown: 4,  maxSpellLevel: 2 },
+        7:  { cantrips: 0, spellsKnown: 5,  maxSpellLevel: 2 },
+        8:  { cantrips: 0, spellsKnown: 5,  maxSpellLevel: 2 },
+        9:  { cantrips: 0, spellsKnown: 6,  maxSpellLevel: 3 },
+        10: { cantrips: 0, spellsKnown: 6,  maxSpellLevel: 3 },
+        11: { cantrips: 0, spellsKnown: 7,  maxSpellLevel: 3 },
+        12: { cantrips: 0, spellsKnown: 7,  maxSpellLevel: 3 },
+        13: { cantrips: 0, spellsKnown: 8,  maxSpellLevel: 4 },
+        14: { cantrips: 0, spellsKnown: 8,  maxSpellLevel: 4 },
+        15: { cantrips: 0, spellsKnown: 9,  maxSpellLevel: 4 },
+        16: { cantrips: 0, spellsKnown: 9,  maxSpellLevel: 4 },
+        17: { cantrips: 0, spellsKnown: 10, maxSpellLevel: 5 },
+        18: { cantrips: 0, spellsKnown: 10, maxSpellLevel: 5 },
+        19: { cantrips: 0, spellsKnown: 11, maxSpellLevel: 5 },
+        20: { cantrips: 0, spellsKnown: 11, maxSpellLevel: 5 },
+    };
+
+    // Paladin - half caster, "prepared" spells, no cantrips (PHB p.83)
+    // Spellcasting starts at level 2, prepares CHA mod + half level
+    const PALADIN_PROGRESSION = {
+        1:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 0 },
+        2:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 1 },
+        3:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 1 },
+        4:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 1 },
+        5:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 2 },
+        6:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 2 },
+        7:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 2 },
+        8:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 2 },
+        9:  { cantrips: 0, spellsKnown: null, maxSpellLevel: 3 },
+        10: { cantrips: 0, spellsKnown: null, maxSpellLevel: 3 },
+        11: { cantrips: 0, spellsKnown: null, maxSpellLevel: 3 },
+        12: { cantrips: 0, spellsKnown: null, maxSpellLevel: 3 },
+        13: { cantrips: 0, spellsKnown: null, maxSpellLevel: 4 },
+        14: { cantrips: 0, spellsKnown: null, maxSpellLevel: 4 },
+        15: { cantrips: 0, spellsKnown: null, maxSpellLevel: 4 },
+        16: { cantrips: 0, spellsKnown: null, maxSpellLevel: 4 },
+        17: { cantrips: 0, spellsKnown: null, maxSpellLevel: 5 },
+        18: { cantrips: 0, spellsKnown: null, maxSpellLevel: 5 },
+        19: { cantrips: 0, spellsKnown: null, maxSpellLevel: 5 },
+        20: { cantrips: 0, spellsKnown: null, maxSpellLevel: 5 },
+    };
+
+    // Map class to progression table
+    const SPELL_PROGRESSION_BY_CLASS = {
+        sorcerer: SORCERER_PROGRESSION,
+        warlock: WARLOCK_PROGRESSION,
+        bard: BARD_PROGRESSION,
+        wizard: WIZARD_PROGRESSION,
+        cleric: CLERIC_PROGRESSION,
+        druid: DRUID_PROGRESSION,
+        ranger: RANGER_PROGRESSION,
+        paladin: PALADIN_PROGRESSION,
     };
 
     // Get hit die
@@ -4716,11 +5065,276 @@ function calculateStatsForLevel(character, newLevel) {
     const perLevel = Math.max(1, averageDie + conMod);
     const hpMax = newLevel === 1 ? Math.max(1, baseHP) : Math.max(1, baseHP + perLevel * (newLevel - 1));
 
+    // Calculate spell slots based on class type
+    const rawClass = character.class || '';
+    const normalizedClass = rawClass.toString().trim().toLowerCase().replace(/\s+/g, '-');
+    const clampedLevel = Math.max(1, Math.min(20, newLevel));
+    
+    let spellSlots = null;
+    
+    if (normalizedClass === 'warlock') {
+        // Warlock Pact Magic: all slots at the same level
+        const pactInfo = WARLOCK_PACT_SLOTS[clampedLevel];
+        if (pactInfo && pactInfo.slots > 0) {
+            spellSlots = {};
+            spellSlots[pactInfo.level] = pactInfo.slots;
+        }
+    } else if (FULL_CASTERS.includes(normalizedClass)) {
+        spellSlots = { ...FULL_CASTER_SLOTS[clampedLevel] };
+    } else if (HALF_CASTERS.includes(normalizedClass)) {
+        const halfSlots = HALF_CASTER_SLOTS[clampedLevel];
+        if (halfSlots && Object.keys(halfSlots).length > 0) {
+            spellSlots = { ...halfSlots };
+        }
+    }
+
+    // Get spell progression for this class and level
+    let spellProgression = null;
+    const progressionTable = SPELL_PROGRESSION_BY_CLASS[normalizedClass];
+    if (progressionTable && progressionTable[clampedLevel]) {
+        spellProgression = { ...progressionTable[clampedLevel] };
+    }
+
+    // Hit dice count equals character level (for short rest healing)
+    const hitDiceMax = newLevel;
+
+    // Calculate class resources based on class and level
+    const classResources = calculateClassResources(normalizedClass, newLevel, abilities);
+
     return {
         proficiencyBonus,
         hpMax,
         hitDie,
+        hitDiceMax,
+        spellSlots,
+        spellProgression, // { cantrips, spellsKnown, maxSpellLevel } or null for non-casters
+        classResources,
     };
+}
+
+/**
+ * Calculate class-specific resources (Ki, Rage, Sorcery Points, etc.)
+ * @param {string} className - Normalized class name (lowercase)
+ * @param {number} level - Character level
+ * @param {object} abilities - Ability scores { str, dex, con, int, wis, cha }
+ * @returns {object} - Class resources { resourceName: { current: X, max: X }, ... }
+ */
+function calculateClassResources(className, level, abilities) {
+    const resources = {};
+    const chaMod = Math.floor(((abilities?.cha || 10) - 10) / 2);
+    const wisMod = Math.floor(((abilities?.wis || 10) - 10) / 2);
+
+    switch (className) {
+        case 'monk':
+            // Ki Points = Monk level (starts at level 2)
+            if (level >= 2) {
+                resources.ki = { current: level, max: level, refresh: 'short' };
+            }
+            break;
+
+        case 'barbarian':
+            // Rage uses increase at certain levels
+            let rageMax = 2;
+            if (level >= 20) rageMax = Infinity; // Unlimited at 20
+            else if (level >= 17) rageMax = 6;
+            else if (level >= 12) rageMax = 5;
+            else if (level >= 6) rageMax = 4;
+            else if (level >= 3) rageMax = 3;
+            
+            resources.rage = { 
+                current: rageMax === Infinity ? 999 : rageMax, 
+                max: rageMax === Infinity ? 999 : rageMax, 
+                refresh: 'long',
+                unlimited: level >= 20
+            };
+            
+            // Rage damage bonus
+            let rageDamage = 2;
+            if (level >= 16) rageDamage = 4;
+            else if (level >= 9) rageDamage = 3;
+            resources.rageDamage = { value: rageDamage };
+            break;
+
+        case 'sorcerer':
+            // Sorcery Points = Sorcerer level (starts at level 2)
+            if (level >= 2) {
+                resources.sorceryPoints = { current: level, max: level, refresh: 'long' };
+            }
+            break;
+
+        case 'bard':
+            // Bardic Inspiration = CHA modifier (min 1)
+            const bardInspMax = Math.max(1, chaMod);
+            resources.bardicInspiration = { current: bardInspMax, max: bardInspMax, refresh: 'long' };
+            
+            // Die size increases with level
+            let inspDie = 'd6';
+            if (level >= 15) inspDie = 'd12';
+            else if (level >= 10) inspDie = 'd10';
+            else if (level >= 5) inspDie = 'd8';
+            resources.bardicInspirationDie = { value: inspDie };
+            break;
+
+        case 'cleric':
+            // Channel Divinity uses
+            let channelMax = 1;
+            if (level >= 18) channelMax = 3;
+            else if (level >= 6) channelMax = 2;
+            
+            if (level >= 2) {
+                resources.channelDivinity = { current: channelMax, max: channelMax, refresh: 'short' };
+            }
+            break;
+
+        case 'paladin':
+            // Lay on Hands = 5 × Paladin level
+            const layOnHandsMax = level * 5;
+            resources.layOnHands = { current: layOnHandsMax, max: layOnHandsMax, refresh: 'long' };
+            
+            // Channel Divinity (at level 3+)
+            if (level >= 3) {
+                resources.channelDivinity = { current: 1, max: 1, refresh: 'short' };
+            }
+            break;
+
+        case 'druid':
+            // Wild Shape uses (at level 2+)
+            if (level >= 2) {
+                resources.wildShape = { current: 2, max: 2, refresh: 'short' };
+            }
+            break;
+
+        case 'fighter':
+            // Second Wind (at level 1+)
+            resources.secondWind = { current: 1, max: 1, refresh: 'short' };
+            
+            // Action Surge (at level 2+)
+            if (level >= 2) {
+                const actionSurgeMax = level >= 17 ? 2 : 1;
+                resources.actionSurge = { current: actionSurgeMax, max: actionSurgeMax, refresh: 'short' };
+            }
+            
+            // Indomitable (at level 9+)
+            if (level >= 9) {
+                let indomMax = 1;
+                if (level >= 17) indomMax = 3;
+                else if (level >= 13) indomMax = 2;
+                resources.indomitable = { current: indomMax, max: indomMax, refresh: 'long' };
+            }
+            break;
+
+        case 'rogue':
+            // Sneak Attack dice (1d6 at level 1, +1d6 every odd level)
+            const sneakDice = Math.ceil(level / 2);
+            resources.sneakAttack = { value: `${sneakDice}d6` };
+            break;
+
+        case 'warlock':
+            // Note: Pact Magic slots are handled separately in spell slots
+            // Mystic Arcanum (6th+ level spells, 1/day each)
+            if (level >= 11) {
+                resources.mysticArcanum = { current: 1, max: 1, refresh: 'long', note: '6th level' };
+            }
+            break;
+
+        case 'wizard':
+            // Arcane Recovery (at level 1+)
+            const recoverySlots = Math.ceil(level / 2);
+            resources.arcaneRecovery = { current: recoverySlots, max: recoverySlots, refresh: 'long', note: 'spell slot levels' };
+            break;
+
+        case 'ranger':
+            // No major trackable resources beyond spells at basic level
+            break;
+    }
+
+    return resources;
+}
+
+/**
+ * Auto-recalculate level-dependent stats if they appear outdated.
+ * This ensures existing characters get updated spell slots, class resources, etc.
+ * @param {object} character - The character to check/update
+ * @returns {object} - The character (possibly updated)
+ */
+async function autoRecalculateLevelStats(character) {
+    if (!character || !character.class || !character.level) {
+        return character;
+    }
+
+    const level = character.level || 1;
+    const rawClass = character.class || '';
+    const normalizedClass = rawClass.toString().trim().toLowerCase().replace(/\s+/g, '-');
+    
+    // Classes that should have spell slots
+    const CASTER_CLASSES = ['wizard', 'sorcerer', 'bard', 'cleric', 'druid', 'warlock', 'paladin', 'ranger'];
+    const isCaster = CASTER_CLASSES.includes(normalizedClass);
+    
+    // Check if spell slots need recalculation
+    const currentSlots = character.spellSlots || {};
+    const currentSlotCount = Object.keys(currentSlots).length;
+    
+    // Calculate expected spell slots for this level
+    const calculatedStats = calculateStatsForLevel(character, level);
+    const expectedSlots = calculatedStats.spellSlots || {};
+    const expectedSlotCount = Object.keys(expectedSlots).length;
+    
+    // Check if class resources need calculation
+    const currentResources = character.classResources || {};
+    const expectedResources = calculatedStats.classResources || {};
+    const needsResourceUpdate = Object.keys(expectedResources).length > 0 && 
+                                Object.keys(currentResources).length === 0;
+    
+    // Check if spell slots are outdated (caster with fewer slot levels than expected)
+    const needsSlotUpdate = isCaster && expectedSlotCount > 0 && currentSlotCount < expectedSlotCount;
+    
+    // Check if proficiency bonus needs update
+    const currentProfBonus = character.proficiencyBonus || 2;
+    const expectedProfBonus = calculatedStats.proficiencyBonus;
+    const needsProfBonusUpdate = currentProfBonus !== expectedProfBonus;
+    
+    if (needsSlotUpdate || needsResourceUpdate || needsProfBonusUpdate) {
+        console.log(`📊 Auto-recalculating stats for ${character.name} (level ${level} ${normalizedClass})`);
+        
+        const updates = {};
+        
+        if (needsSlotUpdate) {
+            console.log(`  - Updating spell slots: ${currentSlotCount} levels → ${expectedSlotCount} levels`);
+            updates.spellSlots = expectedSlots;
+        }
+        
+        if (needsResourceUpdate) {
+            console.log(`  - Adding class resources:`, Object.keys(expectedResources));
+            updates.classResources = expectedResources;
+        }
+        
+        if (needsProfBonusUpdate) {
+            console.log(`  - Updating proficiency bonus: +${currentProfBonus} → +${expectedProfBonus}`);
+            updates.proficiencyBonus = expectedProfBonus;
+        }
+        
+        // Save updates to storage
+        try {
+            await CharacterStorage.update(character.id, updates);
+            
+            // Update the character object in memory
+            Object.assign(character, updates);
+            
+            // Update in AppState if present
+            if (typeof AppState !== 'undefined' && AppState && Array.isArray(AppState.characters)) {
+                const idx = AppState.characters.findIndex(c => c && String(c.id) === String(character.id));
+                if (idx !== -1) {
+                    Object.assign(AppState.characters[idx], updates);
+                }
+            }
+            
+            console.log(`  ✓ Stats updated successfully`);
+        } catch (error) {
+            console.warn('Failed to auto-update character stats:', error);
+        }
+    }
+    
+    return character;
 }
 
 // Generic alert modal using terminal modal styles
@@ -6512,3 +7126,893 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 });
+
+// ===== SPELL PICKER MODAL =====
+// State for spell picker
+let spellPickerState = {
+    isOpen: false,
+    mode: 'cantrips', // 'cantrips' or a number (1-9) for spell level
+    characterClass: null,
+    maxSpellLevel: 0,
+    selectedSpells: new Set(),
+    existingSpells: [], // Spells already on character
+    onConfirm: null, // Callback when selection is confirmed
+};
+
+/**
+ * Open the spell picker modal
+ * @param {object} options - Configuration options
+ * @param {string} options.characterClass - The class to filter spells by
+ * @param {string|number} options.level - 'cantrips' or 1-9 for spell level
+ * @param {number} options.maxSpellLevel - Maximum spell level character can cast
+ * @param {Array} options.existingSpells - Spells already selected (to exclude or mark)
+ * @param {Function} options.onConfirm - Callback with selected spells array
+ */
+function openSpellPicker(options) {
+    const { characterClass, level, maxSpellLevel = 9, existingSpells = [], onConfirm } = options;
+    
+    if (!window.SPELL_DATABASE) {
+        console.error('Spell database not loaded');
+        showNotification('Spell database not available', 'error');
+        return;
+    }
+    
+    spellPickerState = {
+        isOpen: true,
+        mode: level,
+        characterClass: characterClass?.toLowerCase(),
+        maxSpellLevel,
+        selectedSpells: new Set(),
+        existingSpells: existingSpells.map(s => (typeof s === 'string' ? s : s.name || s.id).toLowerCase()),
+        onConfirm,
+    };
+    
+    // Render the spell list
+    renderSpellPicker();
+    
+    // Update info text
+    const infoEl = document.getElementById('spellPickerInfo');
+    if (infoEl) {
+        const levelText = level === 'cantrips' || level === 0 ? 'Cantrips' : `Level ${level} Spells`;
+        const className = characterClass ? characterClass.charAt(0).toUpperCase() + characterClass.slice(1) : '';
+        infoEl.textContent = `Selecting ${levelText}${className ? ` for ${className}` : ''}`;
+    }
+    
+    // Show modal
+    const modal = document.getElementById('spellPickerModal');
+    if (modal) {
+        modal.classList.add('show');
+        // Focus search input
+        setTimeout(() => {
+            const searchInput = document.getElementById('spellSearchInput');
+            if (searchInput) searchInput.focus();
+        }, 100);
+    }
+    
+    updateSpellPickerCount();
+}
+
+/**
+ * Close the spell picker modal
+ */
+function closeSpellPicker() {
+    const modal = document.getElementById('spellPickerModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+    
+    // Clear search and filters
+    const searchInput = document.getElementById('spellSearchInput');
+    const schoolFilter = document.getElementById('spellSchoolFilter');
+    if (searchInput) searchInput.value = '';
+    if (schoolFilter) schoolFilter.value = '';
+    
+    spellPickerState.isOpen = false;
+    spellPickerState.selectedSpells.clear();
+}
+
+/**
+ * Render the spell list based on current filters
+ */
+function renderSpellPicker() {
+    const listEl = document.getElementById('spellPickerList');
+    if (!listEl || !window.SPELL_DATABASE) return;
+    
+    const searchQuery = document.getElementById('spellSearchInput')?.value || '';
+    const schoolFilter = document.getElementById('spellSchoolFilter')?.value || '';
+    
+    // Get level (0 for cantrips)
+    const level = spellPickerState.mode === 'cantrips' ? 0 : parseInt(spellPickerState.mode, 10);
+    
+    // Get spells for this level
+    let spells = window.SPELL_DATABASE.getSpellsByLevel(level) || [];
+    
+    // Filter by class if specified
+    if (spellPickerState.characterClass) {
+        spells = spells.filter(spell => 
+            spell.classes.includes(spellPickerState.characterClass)
+        );
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        spells = spells.filter(spell =>
+            spell.name.toLowerCase().includes(query) ||
+            spell.description.toLowerCase().includes(query) ||
+            spell.school.toLowerCase().includes(query)
+        );
+    }
+    
+    // Filter by school
+    if (schoolFilter) {
+        spells = spells.filter(spell => spell.school === schoolFilter);
+    }
+    
+    // Sort alphabetically
+    spells.sort((a, b) => a.name.localeCompare(b.name));
+    
+    if (spells.length === 0) {
+        listEl.innerHTML = '<div class="spell-picker-empty">No spells found matching your criteria.</div>';
+        return;
+    }
+    
+    // Render spell items
+    listEl.innerHTML = spells.map(spell => {
+        const isExisting = spellPickerState.existingSpells.includes(spell.name.toLowerCase()) ||
+                          spellPickerState.existingSpells.includes(spell.id);
+        const isSelected = spellPickerState.selectedSpells.has(spell.id);
+        
+        const classes = ['spell-picker-item'];
+        if (isSelected) classes.push('is-selected');
+        if (isExisting) classes.push('is-disabled');
+        
+        return `
+            <div class="${classes.join(' ')}" data-spell-id="${Utils.escapeHtml(spell.id)}" onclick="toggleSpellSelection('${Utils.escapeHtml(spell.id)}', ${isExisting})">
+                <input type="checkbox" class="spell-picker-checkbox" ${isSelected ? 'checked' : ''} ${isExisting ? 'disabled' : ''}>
+                <div class="spell-picker-item-content">
+                    <div class="spell-picker-item-header">
+                        <span class="spell-picker-item-name">${Utils.escapeHtml(spell.name)}</span>
+                        <span class="spell-picker-item-school">${Utils.escapeHtml(spell.school)}</span>
+                    </div>
+                    <div class="spell-picker-item-meta">
+                        ${Utils.escapeHtml(spell.castingTime)} · ${Utils.escapeHtml(spell.range)} · ${Utils.escapeHtml(spell.components)}
+                    </div>
+                    <div class="spell-picker-item-desc">${Utils.escapeHtml(spell.description)}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Toggle selection of a spell
+ */
+function toggleSpellSelection(spellId, isExisting) {
+    if (isExisting) return; // Can't toggle existing spells
+    
+    if (spellPickerState.selectedSpells.has(spellId)) {
+        spellPickerState.selectedSpells.delete(spellId);
+    } else {
+        spellPickerState.selectedSpells.add(spellId);
+    }
+    
+    // Update UI
+    const item = document.querySelector(`.spell-picker-item[data-spell-id="${spellId}"]`);
+    if (item) {
+        item.classList.toggle('is-selected', spellPickerState.selectedSpells.has(spellId));
+        const checkbox = item.querySelector('.spell-picker-checkbox');
+        if (checkbox) checkbox.checked = spellPickerState.selectedSpells.has(spellId);
+    }
+    
+    updateSpellPickerCount();
+}
+
+/**
+ * Update the selected count display
+ */
+function updateSpellPickerCount() {
+    const countEl = document.getElementById('spellPickerSelectedCount');
+    if (countEl) {
+        const count = spellPickerState.selectedSpells.size;
+        countEl.textContent = `${count} selected`;
+    }
+}
+
+/**
+ * Filter spell picker based on search/filters
+ */
+function filterSpellPicker() {
+    renderSpellPicker();
+}
+
+/**
+ * Confirm spell selection and call callback
+ */
+function confirmSpellSelection() {
+    if (spellPickerState.selectedSpells.size === 0) {
+        showNotification('No spells selected', 'warning');
+        return;
+    }
+    
+    // Get full spell objects for selected spells
+    const level = spellPickerState.mode === 'cantrips' ? 0 : parseInt(spellPickerState.mode, 10);
+    const allSpells = window.SPELL_DATABASE.getSpellsByLevel(level) || [];
+    const selectedSpells = allSpells.filter(spell => 
+        spellPickerState.selectedSpells.has(spell.id)
+    );
+    
+    // Call the callback with selected spells
+    if (typeof spellPickerState.onConfirm === 'function') {
+        spellPickerState.onConfirm(selectedSpells);
+    }
+    
+    closeSpellPicker();
+}
+
+// Make functions globally available
+window.openSpellPicker = openSpellPicker;
+window.closeSpellPicker = closeSpellPicker;
+window.filterSpellPicker = filterSpellPicker;
+window.toggleSpellSelection = toggleSpellSelection;
+window.confirmSpellSelection = confirmSpellSelection;
+
+// ===== SPELL EDITING IN EDIT MODAL =====
+// Track spells being edited
+let editSpellsState = {
+    cantrips: [],
+    spells: {}, // { 1: [...], 2: [...], etc. }
+    characterClass: null,
+    maxSpellLevel: 0,
+};
+
+// Spellcasting classes and their types
+const SPELLCASTING_CLASSES = {
+    'bard': { type: 'full', cantrips: true },
+    'cleric': { type: 'full', cantrips: true },
+    'druid': { type: 'full', cantrips: true },
+    'sorcerer': { type: 'full', cantrips: true },
+    'wizard': { type: 'full', cantrips: true },
+    'warlock': { type: 'pact', cantrips: true },
+    'paladin': { type: 'half', cantrips: false },
+    'ranger': { type: 'half', cantrips: false },
+    // Subclass casters would need more complex handling
+};
+
+/**
+ * Initialize the spell editing section based on character
+ */
+function initializeSpellEditSection(character, parsed) {
+    const spellSection = document.getElementById('spellEditSection');
+    if (!spellSection) return;
+    
+    const className = (character.class || '').toLowerCase();
+    const spellcasting = SPELLCASTING_CLASSES[className];
+    
+    // Hide section for non-casters
+    if (!spellcasting) {
+        spellSection.classList.add('is-hidden');
+        return;
+    }
+    
+    // Show section for casters
+    spellSection.classList.remove('is-hidden');
+    
+    // Calculate max spell level based on character level
+    const level = parsed.level || character.level || 1;
+    let maxSpellLevel = 0;
+    
+    if (spellcasting.type === 'full') {
+        // Full casters: level 1-2 = 1st level spells, +1 spell level per 2 levels thereafter
+        maxSpellLevel = Math.min(9, Math.ceil(level / 2));
+        if (level >= 17) maxSpellLevel = 9;
+        else if (level >= 15) maxSpellLevel = 8;
+        else if (level >= 13) maxSpellLevel = 7;
+        else if (level >= 11) maxSpellLevel = 6;
+        else if (level >= 9) maxSpellLevel = 5;
+        else if (level >= 7) maxSpellLevel = 4;
+        else if (level >= 5) maxSpellLevel = 3;
+        else if (level >= 3) maxSpellLevel = 2;
+        else maxSpellLevel = 1;
+    } else if (spellcasting.type === 'half') {
+        // Half casters: get spells at level 2, maxes at 5th level spells
+        if (level < 2) maxSpellLevel = 0;
+        else if (level < 5) maxSpellLevel = 1;
+        else if (level < 9) maxSpellLevel = 2;
+        else if (level < 13) maxSpellLevel = 3;
+        else if (level < 17) maxSpellLevel = 4;
+        else maxSpellLevel = 5;
+    } else if (spellcasting.type === 'pact') {
+        // Warlocks: unique progression
+        if (level < 3) maxSpellLevel = 1;
+        else if (level < 5) maxSpellLevel = 2;
+        else if (level < 7) maxSpellLevel = 3;
+        else if (level < 9) maxSpellLevel = 4;
+        else maxSpellLevel = 5;
+    }
+    
+    // Store state
+    editSpellsState = {
+        cantrips: [...(parsed.cantrips || [])],
+        spells: {},
+        characterClass: className,
+        maxSpellLevel,
+    };
+    
+    // Parse existing spells by level from spellsKnown
+    const existingSpells = parsed.spellsKnown || [];
+    for (const spellName of existingSpells) {
+        // Try to find the spell in database to get its level
+        if (window.SPELL_DATABASE) {
+            const spellInfo = window.SPELL_DATABASE.getSpellByName(spellName);
+            if (spellInfo && spellInfo.level > 0) {
+                if (!editSpellsState.spells[spellInfo.level]) {
+                    editSpellsState.spells[spellInfo.level] = [];
+                }
+                editSpellsState.spells[spellInfo.level].push(spellName);
+            }
+        }
+    }
+    
+    // Show/hide cantrips row based on class capability
+    const cantripsRow = document.getElementById('spellEditCantripsRow');
+    if (cantripsRow) {
+        cantripsRow.classList.toggle('is-hidden', !spellcasting.cantrips);
+    }
+    
+    // Show/hide spell level rows based on max spell level
+    for (let spellLevel = 1; spellLevel <= 9; spellLevel++) {
+        const row = document.getElementById(`spellEditLevel${spellLevel}Row`);
+        if (row) {
+            row.classList.toggle('is-hidden', spellLevel > maxSpellLevel || maxSpellLevel === 0);
+        }
+    }
+    
+    // Render spell tags
+    renderSpellTags();
+}
+
+/**
+ * Render spell tags in the edit modal
+ */
+function renderSpellTags() {
+    // Render cantrips
+    const cantripsContainer = document.getElementById('editCantrips');
+    if (cantripsContainer) {
+        renderSpellTagsInContainer(cantripsContainer, editSpellsState.cantrips, 'cantrips');
+    }
+    
+    // Render spells by level
+    for (let level = 1; level <= 9; level++) {
+        const container = document.getElementById(`editSpells${level}`);
+        if (container) {
+            const spells = editSpellsState.spells[level] || [];
+            renderSpellTagsInContainer(container, spells, level);
+        }
+    }
+}
+
+/**
+ * Render spell tags in a specific container
+ */
+function renderSpellTagsInContainer(container, spells, level) {
+    // Generate add button label
+    const addLabel = level === 'cantrips' ? '+ Add' : '+ Add';
+    const levelArg = level === 'cantrips' ? "'cantrips'" : level;
+    
+    // Build spell tags HTML
+    const spellTagsHtml = spells.map(spellName => `
+        <span class="spell-tag">
+            ${Utils.escapeHtml(spellName)}
+            <span class="spell-tag-remove" onclick="removeSpellFromEdit('${Utils.escapeHtml(spellName.replace(/'/g, "\\'"))}', '${level}')">&times;</span>
+        </span>
+    `).join('');
+    
+    // Add button is always at the end
+    const addButtonHtml = `<button type="button" class="spell-add-btn-inline" onclick="openSpellPickerForEdit(${levelArg})">${addLabel}</button>`;
+    
+    container.innerHTML = spellTagsHtml + addButtonHtml;
+}
+
+/**
+ * Remove a spell from the edit list
+ */
+function removeSpellFromEdit(spellName, level) {
+    if (level === 'cantrips') {
+        editSpellsState.cantrips = editSpellsState.cantrips.filter(s => s !== spellName);
+    } else {
+        const levelNum = parseInt(level, 10);
+        if (editSpellsState.spells[levelNum]) {
+            editSpellsState.spells[levelNum] = editSpellsState.spells[levelNum].filter(s => s !== spellName);
+        }
+    }
+    
+    renderSpellTags();
+    
+    // Mark form as dirty
+    ModalManager.markDirty('editDetailsModal');
+}
+
+// Store original edit modal content for back navigation
+let editModalOriginalContent = null;
+
+/**
+ * Open spell picker for edit modal - transforms the edit modal into spell picker view
+ */
+function openSpellPickerForEdit(level) {
+    const editModal = document.getElementById('editDetailsModal');
+    if (!editModal) return;
+    
+    const modalContent = editModal.querySelector('.modal-content');
+    if (!modalContent) return;
+    
+    // Store original content for back navigation
+    editModalOriginalContent = modalContent.innerHTML;
+    
+    // Get existing spells for this level
+    let existingSpells;
+    if (level === 'cantrips') {
+        existingSpells = editSpellsState.cantrips;
+    } else {
+        existingSpells = editSpellsState.spells[level] || [];
+    }
+    
+    // Set up spell picker state
+    spellPickerState = {
+        isOpen: true,
+        mode: level,
+        characterClass: editSpellsState.characterClass?.toLowerCase(),
+        maxSpellLevel: editSpellsState.maxSpellLevel,
+        selectedSpells: new Set(),
+        existingSpells: existingSpells.map(s => (typeof s === 'string' ? s : s.name || s.id).toLowerCase()),
+        onConfirm: null, // Handled inline
+        inlineMode: true,
+        targetLevel: level,
+    };
+    
+    // Generate spell picker HTML
+    const levelText = level === 'cantrips' || level === 0 ? 'Cantrips' : `Level ${level} Spells`;
+    const className = editSpellsState.characterClass ? 
+        editSpellsState.characterClass.charAt(0).toUpperCase() + editSpellsState.characterClass.slice(1) : '';
+    
+    const spellPickerHtml = `
+        <div class="modal-header">
+            <button class="modal-back-btn" onclick="closeInlineSpellPicker()">
+                <span class="back-arrow">←</span> Back
+            </button>
+            <h2 class="modal-title">SELECT ${levelText.toUpperCase()}</h2>
+            <button class="modal-close" onclick="ModalManager.requestClose('editDetailsModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="spell-picker-info">
+                Selecting ${levelText}${className ? ` for ${className}` : ''}
+            </div>
+            <div class="spell-picker-filters">
+                <input type="text" id="inlineSpellSearch" class="terminal-input" placeholder="Search spells..." oninput="filterInlineSpellPicker()">
+                <select id="inlineSpellSchool" class="terminal-select" onchange="filterInlineSpellPicker()">
+                    <option value="">All Schools</option>
+                    <option value="Abjuration">Abjuration</option>
+                    <option value="Conjuration">Conjuration</option>
+                    <option value="Divination">Divination</option>
+                    <option value="Enchantment">Enchantment</option>
+                    <option value="Evocation">Evocation</option>
+                    <option value="Illusion">Illusion</option>
+                    <option value="Necromancy">Necromancy</option>
+                    <option value="Transmutation">Transmutation</option>
+                </select>
+            </div>
+            <div class="spell-picker-list" id="inlineSpellList">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <div class="spell-picker-selected-count" id="inlineSpellCount">0 selected</div>
+            <div class="modal-footer-buttons">
+                <button class="terminal-btn" onclick="closeInlineSpellPicker()">CANCEL</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="confirmInlineSpellSelection()">ADD SELECTED</button>
+            </div>
+        </div>
+    `;
+    
+    // Animate swap to spell picker
+    animateModalContentSwap(modalContent, spellPickerHtml, () => {
+        renderInlineSpellPicker();
+        // Focus search input
+        setTimeout(() => {
+            const searchInput = document.getElementById('inlineSpellSearch');
+            if (searchInput) searchInput.focus();
+        }, 50);
+    });
+}
+
+/**
+ * Render the inline spell picker list
+ */
+function renderInlineSpellPicker() {
+    const listEl = document.getElementById('inlineSpellList');
+    if (!listEl || !window.SPELL_DATABASE) return;
+    
+    const searchQuery = document.getElementById('inlineSpellSearch')?.value || '';
+    const schoolFilter = document.getElementById('inlineSpellSchool')?.value || '';
+    
+    // Get level (0 for cantrips)
+    const level = spellPickerState.mode === 'cantrips' ? 0 : parseInt(spellPickerState.mode, 10);
+    
+    // Get spells for this level
+    let spells = window.SPELL_DATABASE.getSpellsByLevel(level) || [];
+    
+    // Filter by class if specified
+    if (spellPickerState.characterClass) {
+        spells = spells.filter(spell => 
+            spell.classes.includes(spellPickerState.characterClass)
+        );
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        spells = spells.filter(spell =>
+            spell.name.toLowerCase().includes(query) ||
+            spell.description.toLowerCase().includes(query) ||
+            spell.school.toLowerCase().includes(query)
+        );
+    }
+    
+    // Filter by school
+    if (schoolFilter) {
+        spells = spells.filter(spell => spell.school === schoolFilter);
+    }
+    
+    // Sort alphabetically
+    spells.sort((a, b) => a.name.localeCompare(b.name));
+    
+    if (spells.length === 0) {
+        listEl.innerHTML = '<div class="spell-picker-empty">No spells found matching your criteria.</div>';
+        return;
+    }
+    
+    // Render spell items
+    listEl.innerHTML = spells.map(spell => {
+        const isExisting = spellPickerState.existingSpells.includes(spell.name.toLowerCase()) ||
+                          spellPickerState.existingSpells.includes(spell.id);
+        const isSelected = spellPickerState.selectedSpells.has(spell.id);
+        
+        const classes = ['spell-picker-item'];
+        if (isSelected) classes.push('is-selected');
+        if (isExisting) classes.push('is-disabled');
+        
+        return `
+            <div class="${classes.join(' ')}" data-spell-id="${Utils.escapeHtml(spell.id)}" onclick="toggleInlineSpellSelection('${Utils.escapeHtml(spell.id)}', ${isExisting})">
+                <input type="checkbox" class="spell-picker-checkbox" ${isSelected ? 'checked' : ''} ${isExisting ? 'disabled' : ''}>
+                <div class="spell-picker-item-content">
+                    <div class="spell-picker-item-header">
+                        <span class="spell-picker-item-name">${Utils.escapeHtml(spell.name)}</span>
+                        <span class="spell-picker-item-school">${Utils.escapeHtml(spell.school)}</span>
+                    </div>
+                    <div class="spell-picker-item-meta">
+                        ${Utils.escapeHtml(spell.castingTime)} · ${Utils.escapeHtml(spell.range)} · ${Utils.escapeHtml(spell.components)}
+                    </div>
+                    <div class="spell-picker-item-desc">${Utils.escapeHtml(spell.description)}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Filter inline spell picker
+ */
+function filterInlineSpellPicker() {
+    renderInlineSpellPicker();
+}
+
+/**
+ * Toggle spell selection in inline picker
+ */
+function toggleInlineSpellSelection(spellId, isExisting) {
+    if (isExisting) return;
+    
+    if (spellPickerState.selectedSpells.has(spellId)) {
+        spellPickerState.selectedSpells.delete(spellId);
+    } else {
+        spellPickerState.selectedSpells.add(spellId);
+    }
+    
+    // Update UI
+    const item = document.querySelector(`.spell-picker-item[data-spell-id="${spellId}"]`);
+    if (item) {
+        item.classList.toggle('is-selected', spellPickerState.selectedSpells.has(spellId));
+        const checkbox = item.querySelector('.spell-picker-checkbox');
+        if (checkbox) checkbox.checked = spellPickerState.selectedSpells.has(spellId);
+    }
+    
+    updateInlineSpellCount();
+}
+
+/**
+ * Update inline spell picker count
+ */
+function updateInlineSpellCount() {
+    const countEl = document.getElementById('inlineSpellCount');
+    if (countEl) {
+        const count = spellPickerState.selectedSpells.size;
+        countEl.textContent = `${count} selected`;
+    }
+}
+
+/**
+ * Close inline spell picker and return to edit form
+ */
+function closeInlineSpellPicker() {
+    const editModal = document.getElementById('editDetailsModal');
+    if (!editModal || !editModalOriginalContent) return;
+    
+    const modalContent = editModal.querySelector('.modal-content');
+    if (!modalContent) return;
+    
+    // Animate back to original content
+    animateModalContentSwap(modalContent, editModalOriginalContent, () => {
+        // Re-render spell tags to reflect any previous changes
+        renderSpellTags();
+        
+        // Clear state
+        spellPickerState.isOpen = false;
+        spellPickerState.selectedSpells.clear();
+        editModalOriginalContent = null;
+    });
+}
+
+/**
+ * Confirm inline spell selection and return to edit form
+ */
+function confirmInlineSpellSelection() {
+    const level = spellPickerState.targetLevel;
+    
+    if (spellPickerState.selectedSpells.size === 0) {
+        showNotification('No spells selected', 'warning');
+        return;
+    }
+    
+    // Get full spell objects for selected spells
+    const spellLevel = level === 'cantrips' ? 0 : parseInt(level, 10);
+    const allSpells = window.SPELL_DATABASE.getSpellsByLevel(spellLevel) || [];
+    const selectedSpells = allSpells.filter(spell => 
+        spellPickerState.selectedSpells.has(spell.id)
+    );
+    
+    // Add selected spells to the edit state
+    if (level === 'cantrips') {
+        for (const spell of selectedSpells) {
+            if (!editSpellsState.cantrips.includes(spell.name)) {
+                editSpellsState.cantrips.push(spell.name);
+            }
+        }
+    } else {
+        const levelNum = typeof level === 'string' ? parseInt(level, 10) : level;
+        if (!editSpellsState.spells[levelNum]) {
+            editSpellsState.spells[levelNum] = [];
+        }
+        for (const spell of selectedSpells) {
+            if (!editSpellsState.spells[levelNum].includes(spell.name)) {
+                editSpellsState.spells[levelNum].push(spell.name);
+            }
+        }
+    }
+    
+    // Mark form as dirty
+    ModalManager.markDirty('editDetailsModal');
+    
+    // Animate back to original content
+    const editModal = document.getElementById('editDetailsModal');
+    if (!editModal || !editModalOriginalContent) return;
+    
+    const modalContent = editModal.querySelector('.modal-content');
+    if (!modalContent) return;
+    
+    animateModalContentSwap(modalContent, editModalOriginalContent, () => {
+        // Re-render spell tags to show newly added spells
+        renderSpellTags();
+        
+        showNotification(`Added ${selectedSpells.length} spell${selectedSpells.length > 1 ? 's' : ''}!`);
+        
+        // Clear state
+        spellPickerState.isOpen = false;
+        spellPickerState.selectedSpells.clear();
+        editModalOriginalContent = null;
+    });
+}
+
+/**
+ * Get the current spell selections from edit state
+ */
+function getEditSpells() {
+    return {
+        cantrips: [...editSpellsState.cantrips],
+        spellsKnown: Object.values(editSpellsState.spells).flat(),
+        spellsByLevel: { ...editSpellsState.spells },
+    };
+}
+
+/**
+ * Check if a character needs to select new spells after leveling up
+ * @param {object} character - The character object
+ * @param {number} oldLevel - Previous level
+ * @param {number} newLevel - New level
+ */
+async function checkAndPromptForNewSpells(character, oldLevel, newLevel) {
+    const className = (character.class || '').toLowerCase();
+    const spellcasting = SPELLCASTING_CLASSES[className];
+    
+    // Only prompt for spellcasting classes
+    if (!spellcasting) return;
+    
+    // Calculate what spells the character should have at each level
+    const stats = calculateStatsForLevel(character, newLevel);
+    if (!stats.spellProgression) return;
+    
+    const { cantrips: cantripsKnown, spellsKnown, maxSpellLevel } = stats.spellProgression;
+    
+    // Get current spell counts
+    const currentCantrips = character.cantrips || [];
+    const currentSpells = character.spellsKnown || [];
+    
+    // Calculate deficits
+    const cantripDeficit = Math.max(0, cantripsKnown - currentCantrips.length);
+    const spellDeficit = Math.max(0, spellsKnown - currentSpells.length);
+    
+    // If character needs more cantrips or spells, prompt them
+    if (cantripDeficit > 0 || spellDeficit > 0) {
+        showSpellLevelUpPrompt(character, {
+            cantripDeficit,
+            spellDeficit,
+            cantripsKnown,
+            spellsKnown,
+            maxSpellLevel,
+            currentCantrips,
+            currentSpells,
+        });
+    }
+}
+
+/**
+ * Show a prompt for selecting new spells after level up
+ */
+function showSpellLevelUpPrompt(character, spellInfo) {
+    const { cantripDeficit, spellDeficit, cantripsKnown, spellsKnown, maxSpellLevel, currentCantrips, currentSpells } = spellInfo;
+    const className = (character.class || '').toLowerCase();
+    
+    // Build prompt message
+    let message = `As a Level ${character.level} ${character.class}, you can know:\n`;
+    if (cantripsKnown > 0) {
+        message += `• ${cantripsKnown} cantrips (you have ${currentCantrips.length})\n`;
+    }
+    if (spellsKnown > 0) {
+        message += `• ${spellsKnown} spells (you have ${currentSpells.length})\n`;
+    }
+    
+    if (cantripDeficit > 0 || spellDeficit > 0) {
+        message += '\n';
+        if (cantripDeficit > 0) {
+            message += `You can select ${cantripDeficit} more cantrip${cantripDeficit > 1 ? 's' : ''}.\n`;
+        }
+        if (spellDeficit > 0) {
+            message += `You can select ${spellDeficit} more spell${spellDeficit > 1 ? 's' : ''}.`;
+        }
+    }
+    
+    // Create a simple alert with action options
+    const modalHost = getManagerModalHost();
+    const existingModal = document.getElementById('spellLevelUpModal');
+    if (existingModal) existingModal.remove();
+    
+    const levelOrdinal = (n) => {
+        const s = ['th', 'st', 'nd', 'rd'];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    };
+    
+    // Create buttons for each spell level available
+    let spellLevelButtons = '';
+    if (cantripDeficit > 0 && SPELLCASTING_CLASSES[className]?.cantrips) {
+        spellLevelButtons += `<button class="terminal-btn" onclick="openSpellLevelUpPicker('${character.id}', 'cantrips', ${currentCantrips.length})">SELECT CANTRIPS</button>`;
+    }
+    for (let level = 1; level <= maxSpellLevel; level++) {
+        spellLevelButtons += `<button class="terminal-btn" onclick="openSpellLevelUpPicker('${character.id}', ${level}, ${currentSpells.length})">${levelOrdinal(level)} LEVEL</button>`;
+    }
+    
+    const modalHtml = `
+        <div id="spellLevelUpModal" class="modal show">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">NEW SPELLS AVAILABLE</h2>
+                    <button class="modal-close" onclick="closeSpellLevelUpPrompt()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="terminal-text" style="white-space: pre-line;">${Utils.escapeHtml(message)}</p>
+                    <p class="terminal-text-small terminal-text-dim" style="margin-top: 1rem;">
+                        Select a spell level to add spells, or close this dialog to add them later via the Edit menu.
+                    </p>
+                </div>
+                <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">
+                    ${spellLevelButtons}
+                    <button class="terminal-btn" onclick="closeSpellLevelUpPrompt()">LATER</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modalHost.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+/**
+ * Close the spell level up prompt
+ */
+function closeSpellLevelUpPrompt() {
+    const modal = document.getElementById('spellLevelUpModal');
+    if (modal) {
+        animateModalClose(modal, { removeOnClose: true });
+    }
+}
+
+/**
+ * Open spell picker for level-up spell selection
+ */
+async function openSpellLevelUpPicker(characterId, level, currentCount) {
+    const character = await CharacterStorage.getById(characterId);
+    if (!character) return;
+    
+    const className = (character.class || '').toLowerCase();
+    
+    // Get existing spells for this level
+    let existingSpells;
+    if (level === 'cantrips') {
+        existingSpells = character.cantrips || [];
+    } else {
+        // For regular spells, we need to check which ones are at this level
+        existingSpells = character.spellsKnown || [];
+    }
+    
+    openSpellPicker({
+        characterClass: className,
+        level: level,
+        maxSpellLevel: 9, // Allow picking from all available levels
+        existingSpells: existingSpells,
+        onConfirm: async (selectedSpells) => {
+            // Add selected spells to character
+            const updates = {};
+            
+            if (level === 'cantrips') {
+                const currentCantrips = character.cantrips || [];
+                updates.cantrips = [...currentCantrips, ...selectedSpells.map(s => s.name)];
+            } else {
+                const currentSpells = character.spellsKnown || [];
+                updates.spellsKnown = [...currentSpells, ...selectedSpells.map(s => s.name)];
+            }
+            
+            try {
+                await CharacterStorage.update(characterId, updates);
+                await AppState.loadCharacters();
+                UI.render();
+                viewCharacter(characterId);
+                showNotification(`Added ${selectedSpells.length} spell${selectedSpells.length > 1 ? 's' : ''}!`);
+            } catch (error) {
+                console.error('Failed to add spells:', error);
+                showNotification('Failed to add spells', 'error');
+            }
+        }
+    });
+}
+
+// Make functions globally available
+window.initializeSpellEditSection = initializeSpellEditSection;
+window.removeSpellFromEdit = removeSpellFromEdit;
+window.openSpellPickerForEdit = openSpellPickerForEdit;
+window.getEditSpells = getEditSpells;
+window.checkAndPromptForNewSpells = checkAndPromptForNewSpells;
+window.closeSpellLevelUpPrompt = closeSpellLevelUpPrompt;
+window.openSpellLevelUpPicker = openSpellLevelUpPicker;
+// Inline spell picker functions (used within edit modal flow)
+window.filterInlineSpellPicker = filterInlineSpellPicker;
+window.toggleInlineSpellSelection = toggleInlineSpellSelection;
+window.closeInlineSpellPicker = closeInlineSpellPicker;
+window.confirmInlineSpellSelection = confirmInlineSpellSelection;

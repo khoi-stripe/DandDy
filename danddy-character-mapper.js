@@ -35,6 +35,8 @@
         armor_class: this._calculateACFromBuilder(character),
         initiative: this._calculateInitiativeFromBuilder(character),
         speed: this._getSpeedFromBuilder(character),
+        hit_dice_current: character.hitDiceCurrent ?? null,  // null means full
+        class_resources: character.classResources || {},
 
         // Death Saves
         death_save_successes: 0,
@@ -131,6 +133,8 @@
         armorClass: backendChar.armor_class,
         initiative: backendChar.initiative,
         speed: backendChar.speed,
+        hitDiceCurrent: backendChar.hit_dice_current,
+        classResources: backendChar.class_resources || {},
 
         savingThrows: backendChar.saving_throw_proficiencies,
         skillProficiencies: backendChar.skill_proficiencies,
@@ -221,6 +225,8 @@
         armor_class: character.armorClass || 10,
         initiative: character.initiative || 0,
         speed: character.speed || 30,
+        hit_dice_current: character.hitDiceCurrent ?? null,  // null means full
+        class_resources: character.classResources || {},
 
         // Death Saves
         death_save_successes: character.deathSaves?.successes || 0,
@@ -328,6 +334,9 @@
         armorClass: apiChar.armor_class,
         initiative: apiChar.initiative,
         speed: apiChar.speed,
+        hitDiceCurrent: apiChar.hit_dice_current,
+        hitDiceMax: apiChar.level || 1,
+        classResources: apiChar.class_resources || {},
 
         savingThrows: apiChar.saving_throw_proficiencies,
         skillProficiencies: apiChar.skill_proficiencies,

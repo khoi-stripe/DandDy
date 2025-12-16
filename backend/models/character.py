@@ -61,6 +61,13 @@ class Character(Base):
     initiative = Column(Integer, default=0, nullable=False)
     speed = Column(Integer, default=30, nullable=False)
     
+    # Hit Dice (for short rest healing) - max equals level, current tracks spent dice
+    hit_dice_current = Column(Integer, nullable=True)  # None means full (equals level)
+    
+    # Class Resources (Ki, Rage, Sorcery Points, etc.)
+    # Format: {"ki": {"current": 5, "max": 5}, "rage": {"current": 3, "max": 3}, ...}
+    class_resources = Column(JSON, default=dict, nullable=False)
+
     # Death Saves
     death_save_successes = Column(Integer, default=0, nullable=False)
     death_save_failures = Column(Integer, default=0, nullable=False)

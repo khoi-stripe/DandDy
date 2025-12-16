@@ -47,24 +47,27 @@ function logPortraitDebug(action, characterId, characterName, details) {
 // when character data only has spell names (strings) instead of full objects.
 // This allows the manager to show descriptions for older characters or demo characters.
 const SPELL_LOOKUP = {
-  // Cantrips
-  'fire bolt': { school: 'Evocation', description: 'Hurl a mote of fire at a creature or object. 1d10 fire damage.' },
+  // Cantrips (baseDice: die type for level scaling, damageType for reference)
+  'fire bolt': { school: 'Evocation', description: 'Hurl a mote of fire at a creature or object. {damage} fire damage.', baseDice: 'd10', damageType: 'fire' },
   'mage hand': { school: 'Conjuration', description: 'Create a spectral hand that can manipulate objects at range.' },
   'light': { school: 'Evocation', description: 'Touch an object to make it shed bright light for 1 hour.' },
-  'ray of frost': { school: 'Evocation', description: 'Frigid beam dealing 1d8 cold damage and reducing speed.' },
-  'shocking grasp': { school: 'Evocation', description: 'Lightning damage on touch (1d8) and target cannot take reactions.' },
+  'ray of frost': { school: 'Evocation', description: 'Frigid beam dealing {damage} cold damage and reducing speed.', baseDice: 'd8', damageType: 'cold' },
+  'shocking grasp': { school: 'Evocation', description: 'Lightning damage on touch ({damage}) and target cannot take reactions.', baseDice: 'd8', damageType: 'lightning' },
   'prestidigitation': { school: 'Transmutation', description: 'Minor magical trick: light a candle, clean clothes, flavor food.' },
   'minor illusion': { school: 'Illusion', description: 'Create a sound or image of an object within range.' },
-  'eldritch blast': { school: 'Evocation', description: 'Beam of crackling energy dealing 1d10 force damage.' },
-  'chill touch': { school: 'Necromancy', description: 'Ghostly hand dealing 1d8 necrotic damage and preventing healing.' },
-  'vicious mockery': { school: 'Enchantment', description: 'Insult dealing 1d4 psychic damage and imposing disadvantage.' },
-  'sacred flame': { school: 'Evocation', description: 'Flame-like radiance dealing 1d8 radiant damage (Dex save).' },
+  'eldritch blast': { school: 'Evocation', description: 'Beam of crackling energy dealing {damage} force damage.', baseDice: 'd10', damageType: 'force', special: 'eldritch-blast' },
+  'chill touch': { school: 'Necromancy', description: 'Ghostly hand dealing {damage} necrotic damage and preventing healing.', baseDice: 'd8', damageType: 'necrotic' },
+  'vicious mockery': { school: 'Enchantment', description: 'Insult dealing {damage} psychic damage and imposing disadvantage.', baseDice: 'd4', damageType: 'psychic' },
+  'sacred flame': { school: 'Evocation', description: 'Flame-like radiance dealing {damage} radiant damage (Dex save).', baseDice: 'd8', damageType: 'radiant' },
   'guidance': { school: 'Divination', description: 'Touch a creature to grant +1d4 to one ability check.' },
   'spare the dying': { school: 'Necromancy', description: 'Touch a dying creature to stabilize it.' },
   'thaumaturgy': { school: 'Transmutation', description: 'Minor wonder: amplify voice, flicker flames, open doors.' },
-  'produce flame': { school: 'Conjuration', description: 'Flickering flame for light or to throw (1d8 fire damage).' },
+  'produce flame': { school: 'Conjuration', description: 'Flickering flame for light or to throw ({damage} fire damage).', baseDice: 'd8', damageType: 'fire' },
   'shillelagh': { school: 'Transmutation', description: 'Imbue a club or staff to use Wisdom for attacks (1d8 damage).' },
   'druidcraft': { school: 'Transmutation', description: 'Minor druidic effects: predict weather, bloom flowers, light fires.' },
+  'toll the dead': { school: 'Necromancy', description: 'Toll a bell dealing {damage} necrotic damage (d12 if injured).', baseDice: 'd8', damageType: 'necrotic' },
+  'acid splash': { school: 'Conjuration', description: 'Hurl acid at one or two creatures for {damage} acid damage.', baseDice: 'd6', damageType: 'acid' },
+  'poison spray': { school: 'Conjuration', description: 'Spray poison dealing {damage} poison damage (Con save).', baseDice: 'd12', damageType: 'poison' },
   // 1st Level Spells
   'magic missile': { school: 'Evocation', description: 'Three darts of force, each dealing 1d4+1 damage (auto-hit).' },
   'shield': { school: 'Abjuration', description: 'Reaction: +5 AC until start of your next turn.' },
@@ -173,6 +176,48 @@ const CharacterSheet = (window.CharacterSheet = {
     
     // Fall back to built-in lookup table
     return SPELL_LOOKUP[normalizedName] || null;
+  },
+
+  /**
+   * Calculate scaled cantrip damage based on character level.
+   * Cantrips scale at levels 5, 11, and 17 in D&D 5e.
+   * @param {number} level - Character level
+   * @param {string} baseDice - Base die type (e.g., 'd10', 'd8')
+   * @param {string} special - Optional special handling (e.g., 'eldritch-blast')
+   * @returns {string} - Scaled damage string (e.g., '2d10')
+   */
+  _getScaledCantripDamage(level, baseDice, special) {
+    if (!baseDice) return null;
+    
+    // Calculate number of dice based on level thresholds
+    let numDice = 1;
+    if (level >= 17) numDice = 4;
+    else if (level >= 11) numDice = 3;
+    else if (level >= 5) numDice = 2;
+    
+    // Eldritch Blast is special: additional beams, not dice
+    if (special === 'eldritch-blast') {
+      const beams = numDice;
+      if (beams === 1) return `1${baseDice}`;
+      return `1${baseDice} (${beams} beams)`;
+    }
+    
+    return `${numDice}${baseDice}`;
+  },
+
+  /**
+   * Apply cantrip damage scaling to a description string.
+   * Replaces {damage} placeholder with scaled damage.
+   * @param {string} description - Spell description with {damage} placeholder
+   * @param {number} level - Character level
+   * @param {string} baseDice - Base die type
+   * @param {string} special - Optional special handling
+   * @returns {string} - Description with scaled damage
+   */
+  _scaleCantripDescription(description, level, baseDice, special) {
+    if (!description || !baseDice) return description;
+    const scaledDamage = this._getScaledCantripDamage(level, baseDice, special);
+    return description.replace('{damage}', scaledDamage);
   },
 
   /**
@@ -407,6 +452,8 @@ const CharacterSheet = (window.CharacterSheet = {
       ${parsed.hasAbilities ? this._renderAbilities(parsed, context) : ''}
       
       ${parsed.hasCombatStats ? this._renderCombatStats(parsed, context) : ''}
+      
+      ${parsed.hasClassResources ? this._renderClassResources(parsed) : ''}
       
       ${parsed.hasSavingThrows ? this._renderSavingThrows(parsed) : ''}
       
@@ -859,10 +906,81 @@ const CharacterSheet = (window.CharacterSheet = {
             <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `+${parsed.proficiencyBonus}`}</div>
           </div>
           <div class="stat-box">
-            <div class="stat-box-label">HIT DIE</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `d${parsed.hitDie}`}</div>
+            <div class="stat-box-label">HIT DICE</div>
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hitDiceCurrent}/${parsed.hitDiceMax} d${parsed.hitDie}`}</div>
           </div>
         </div>
+      </div>
+    `;
+  },
+
+  _renderClassResources(parsed) {
+    const resources = parsed.classResources || {};
+    const resourceKeys = Object.keys(resources);
+    
+    if (resourceKeys.length === 0) return '';
+
+    // Human-readable names for resources
+    const RESOURCE_NAMES = {
+      ki: 'Ki Points',
+      rage: 'Rage',
+      rageDamage: 'Rage Damage',
+      sorceryPoints: 'Sorcery Points',
+      bardicInspiration: 'Bardic Inspiration',
+      bardicInspirationDie: 'Inspiration Die',
+      channelDivinity: 'Channel Divinity',
+      layOnHands: 'Lay on Hands',
+      wildShape: 'Wild Shape',
+      secondWind: 'Second Wind',
+      actionSurge: 'Action Surge',
+      indomitable: 'Indomitable',
+      sneakAttack: 'Sneak Attack',
+      mysticArcanum: 'Mystic Arcanum',
+      arcaneRecovery: 'Arcane Recovery',
+    };
+
+    const resourceItems = resourceKeys
+      .filter(key => {
+        const r = resources[key];
+        // Filter out meta-resources that don't have current/max (like rageDamage, bardicInspirationDie)
+        return r && (r.current !== undefined || r.value !== undefined);
+      })
+      .map(key => {
+        const r = resources[key];
+        const name = RESOURCE_NAMES[key] || key;
+        
+        // For value-only resources (like sneakAttack, rageDamage)
+        if (r.value !== undefined) {
+          return `<li class="resource-item">
+            <span class="resource-name">${this.escapeHtml(name)}</span> <span class="resource-value">${this.escapeHtml(String(r.value))}</span>
+          </li>`;
+        }
+        
+        // For resources with current/max
+        const current = r.unlimited ? '∞' : r.current;
+        const max = r.unlimited ? '∞' : r.max;
+        const refreshIcon = r.refresh === 'short' ? '⟳' : r.refresh === 'long' ? '☽' : '';
+        const note = r.note ? `(${this.escapeHtml(r.note)})` : '';
+        
+        return `<li class="resource-item">
+          <span class="resource-name">${this.escapeHtml(name)}${note ? ' ' + note : ''}</span> <span class="resource-value">${current}/${max} ${refreshIcon}</span>
+        </li>`;
+      })
+      .join('');
+
+    if (!resourceItems) return '';
+
+    return `
+      <div class="sheet-section">
+        <div class="sheet-header">
+          <div class="sheet-header-title">[ CLASS RESOURCES ]</div>
+        </div>
+        <div class="resource-legend-box">
+          <span class="resource-legend-icon">⟳</span>&nbsp;Short Rest &nbsp;&bull;&nbsp; <span class="resource-legend-icon">☽</span>&nbsp;Long Rest
+        </div>
+        <ul class="sheet-list resource-list">
+          ${resourceItems}
+        </ul>
       </div>
     `;
   },
@@ -1584,9 +1702,11 @@ const CharacterSheet = (window.CharacterSheet = {
     const spellsKnown = parsed.spellsKnown || [];
     const spellsPrepared = parsed.spellsPrepared || [];
     const spellSlots = parsed.spellSlots || {};
+    const characterLevel = parsed.level || 1;
 
     // Helper to render spell list
-    const renderSpellList = (spells) => {
+    // isCantrip: if true, apply damage scaling based on level
+    const renderSpellList = (spells, isCantrip = false) => {
       const items = spells
         .map((spell) => {
           const isObject = spell && typeof spell === 'object';
@@ -1595,13 +1715,27 @@ const CharacterSheet = (window.CharacterSheet = {
           
           // If spell is a string, try to look up its data from the spell database
           let spellData = null;
+          const normalizedName = rawName ? String(rawName).toLowerCase().trim() : '';
           if (!isObject && rawName) {
             spellData = this._lookupSpellData(rawName);
           }
           
+          // Also check SPELL_LOOKUP directly for cantrip scaling data
+          const lookupData = SPELL_LOOKUP[normalizedName];
+          
           // Use data from spell object or looked-up data
           const schoolSource = isObject ? spell.school : spellData?.school;
-          const descSource = isObject ? spell.description : spellData?.description;
+          let descSource = isObject ? spell.description : spellData?.description;
+          
+          // Apply cantrip damage scaling if this is a cantrip with baseDice
+          if (isCantrip && lookupData?.baseDice && descSource) {
+            descSource = this._scaleCantripDescription(
+              descSource,
+              characterLevel,
+              lookupData.baseDice,
+              lookupData.special
+            );
+          }
           
           const school = schoolSource
             ? ` <span class="text-dim">(${this.escapeHtml(schoolSource)})</span>`
@@ -1617,25 +1751,44 @@ const CharacterSheet = (window.CharacterSheet = {
 
     let spellsContent = '';
 
-    // Cantrips
+    // Cantrips (with damage scaling based on level)
     if (cantrips.length > 0) {
       spellsContent += `
         <div class="sheet-subsection">
           <div class="sheet-subsection-title">CANTRIPS (At-Will)</div>
-          ${renderSpellList(cantrips)}
+          ${renderSpellList(cantrips, true)}
         </div>
       `;
     }
 
-    // 1st Level Spells
+    // Spell Slots Summary (show all levels with slots)
+    const slotLevels = Object.keys(spellSlots)
+      .map(k => parseInt(k))
+      .filter(k => !isNaN(k) && spellSlots[k] > 0)
+      .sort((a, b) => a - b);
+    
+    if (slotLevels.length > 0) {
+      const slotBoxes = slotLevels.map(level => {
+        const ordinal = level === 1 ? '1st' : level === 2 ? '2nd' : level === 3 ? '3rd' : `${level}th`;
+        return `<div class="spell-slot-box"><div class="spell-slot-label">${ordinal}</div><div class="spell-slot-value">${spellSlots[level]}</div></div>`;
+      }).join('');
+      
+      spellsContent += `
+        <div class="sheet-subsection">
+          <div class="sheet-subsection-title">SPELL SLOTS</div>
+          <div class="spell-slots-grid">${slotBoxes}</div>
+        </div>
+      `;
+    }
+
+    // Known/Prepared Spells
     if (spellsKnown.length > 0 || spellsPrepared.length > 0) {
       const spellList = spellsKnown.length > 0 ? spellsKnown : spellsPrepared;
-      const slotsText = spellSlots['1'] ? ` • Slots: ${spellSlots['1']}` : '';
       const preparedText = spellsPrepared.length > 0 && spellsKnown.length === 0 ? ' (Prepared)' : '';
       
       spellsContent += `
         <div class="sheet-subsection">
-          <div class="sheet-subsection-title">1ST LEVEL${preparedText}${slotsText}</div>
+          <div class="sheet-subsection-title">SPELLS KNOWN${preparedText}</div>
           ${renderSpellList(spellList)}
         </div>
       `;
@@ -1983,6 +2136,8 @@ const CharacterSheet = (window.CharacterSheet = {
       speed: character.speed || 30,
       proficiencyBonus: character.proficiencyBonus || 2,
       hitDie,
+      hitDiceMax: character.hitDiceMax || character.level || 1,
+      hitDiceCurrent: character.hitDiceCurrent ?? character.hitDiceMax ?? character.level ?? 1,
 
       // Abilities
       abilities,
@@ -2020,6 +2175,9 @@ const CharacterSheet = (window.CharacterSheet = {
       spellsPrepared: character.spellsPrepared || [],
       spellSlots: character.spellSlots || {},
 
+      // Class Resources (Ki, Rage, etc.)
+      classResources: character.classResources || {},
+
       // Flags for conditional rendering
       // In builder, always show sections (except spells until we know they're a caster)
       hasRace: !!raceName,
@@ -2038,6 +2196,8 @@ const CharacterSheet = (window.CharacterSheet = {
         (character.cantrips && character.cantrips.length > 0) ||
         (character.spellsKnown && character.spellsKnown.length > 0) ||
         (character.spellsPrepared && character.spellsPrepared.length > 0),
+      hasClassResources: 
+        character.classResources && Object.keys(character.classResources).length > 0,
       hasRacialTraits: isBuilder || racialTraits.length > 0,
       hasEquipment: isBuilder || allEquipment.length > 0,
       hasClassEquipment:

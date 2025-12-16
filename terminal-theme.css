@@ -1206,6 +1206,33 @@ body::before {
   font-weight: bold;
 }
 
+/* Spell slot boxes - compact grid layout */
+.spell-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+
+.spell-slot-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: var(--sheet-box-bg);
+  padding: 4px 8px;
+}
+
+.spell-slot-label {
+  color: var(--sheet-label-color);
+  font-size: 12px;
+}
+
+.spell-slot-value {
+  color: var(--sheet-value-color);
+  font-weight: bold;
+}
+
 /* Ability scores grid */
 .ability-grid {
   display: grid;
@@ -1256,6 +1283,37 @@ body::before {
   color: var(--sheet-accent);
 }
 
+/* Class resource items - ensure all text is teal */
+.character-sheet .resource-list {
+  list-style: disc;
+}
+
+.character-sheet .resource-item {
+  color: var(--sheet-value-color);
+}
+
+.character-sheet .resource-name {
+  color: var(--sheet-value-color);
+}
+
+.character-sheet .resource-value {
+  color: var(--sheet-value-color);
+  margin-left: 0.5em;
+}
+
+.character-sheet .resource-legend-box {
+  background: var(--sheet-box-bg);
+  padding: 8px;
+  margin-bottom: var(--spacing-sm);
+  color: var(--sheet-label-color);
+  font-size: 12px;
+  text-align: left;
+}
+
+.character-sheet .resource-legend-icon {
+  font-size: 14px;
+}
+
 /* Character sheet inputs/selects use teal borders and focus states */
 .character-sheet .terminal-input,
 .character-sheet .terminal-select,
@@ -1280,15 +1338,7 @@ body::before {
   color: var(--terminal-fg);
   padding: var(--spacing-sm) var(--spacing-md);
   font-family: var(--font-mono);
-  /*
-    iOS Safari will auto-zoom the page when focusing form controls whose computed
-    font-size is < 16px. Because this app uses aggressive mobile scroll locking
-    (fixed body + overflow hidden), that zoom is hard to recover from.
-
-    Keep the overall UI typography at 14px, but ensure form controls are at
-    least 16px to prevent the focus-zoom behavior.
-  */
-  font-size: max(16px, var(--font-size-base));
+  font-size: 14px;
   width: 100%;
   transition: all var(--transition-speed);
 }

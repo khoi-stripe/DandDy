@@ -613,12 +613,102 @@
                                 </div>
                             </section>
                         </div>
+
+                        <!-- Spellcasting (only visible for spellcasting classes) -->
+                        <div class="settings-group is-hidden" id="spellEditSection">
+                            <div class="settings-group-label">[ Spellcasting ]</div>
+                            <section class="settings-section">
+                                <!-- Cantrips -->
+                                <div class="spell-edit-row" id="spellEditCantripsRow">
+                                    <div class="settings-label">Cantrips</div>
+                                    <div class="spell-tag-list" id="editCantrips" data-level="cantrips">
+                                        <!-- Populated dynamically with add button -->
+                                    </div>
+                                </div>
+                                <!-- Spell levels (1-9) dynamically shown based on character level -->
+                                <div class="spell-edit-row is-hidden" id="spellEditLevel1Row">
+                                    <div class="settings-label">1st Level Spells</div>
+                                    <div class="spell-tag-list" id="editSpells1" data-level="1"></div>
+                                </div>
+                                <div class="spell-edit-row is-hidden" id="spellEditLevel2Row">
+                                    <div class="settings-label">2nd Level Spells</div>
+                                    <div class="spell-tag-list" id="editSpells2" data-level="2"></div>
+                                </div>
+                                <div class="spell-edit-row is-hidden" id="spellEditLevel3Row">
+                                    <div class="settings-label">3rd Level Spells</div>
+                                    <div class="spell-tag-list" id="editSpells3" data-level="3"></div>
+                                </div>
+                                <div class="spell-edit-row is-hidden" id="spellEditLevel4Row">
+                                    <div class="settings-label">4th Level Spells</div>
+                                    <div class="spell-tag-list" id="editSpells4" data-level="4"></div>
+                                </div>
+                                <div class="spell-edit-row is-hidden" id="spellEditLevel5Row">
+                                    <div class="settings-label">5th Level Spells</div>
+                                    <div class="spell-tag-list" id="editSpells5" data-level="5"></div>
+                                </div>
+                                <div class="spell-edit-row is-hidden" id="spellEditLevel6Row">
+                                    <div class="settings-label">6th Level Spells</div>
+                                    <div class="spell-tag-list" id="editSpells6" data-level="6"></div>
+                                </div>
+                                <div class="spell-edit-row is-hidden" id="spellEditLevel7Row">
+                                    <div class="settings-label">7th Level Spells</div>
+                                    <div class="spell-tag-list" id="editSpells7" data-level="7"></div>
+                                </div>
+                                <div class="spell-edit-row is-hidden" id="spellEditLevel8Row">
+                                    <div class="settings-label">8th Level Spells</div>
+                                    <div class="spell-tag-list" id="editSpells8" data-level="8"></div>
+                                </div>
+                                <div class="spell-edit-row is-hidden" id="spellEditLevel9Row">
+                                    <div class="settings-label">9th Level Spells</div>
+                                    <div class="spell-tag-list" id="editSpells9" data-level="9"></div>
+                                </div>
+                            </section>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="ModalManager.requestClose('editDetailsModal')">CANCEL</button>
                 <button class="terminal-btn terminal-btn-primary" onclick="saveEditDetails()">SAVE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spell Picker Modal -->
+    <div id="spellPickerModal" class="modal">
+        <div class="modal-content spell-picker-modal">
+            <div class="modal-header">
+                <h2 class="modal-title">SELECT SPELLS</h2>
+                <button class="modal-close" onclick="closeSpellPicker()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="spell-picker-info" id="spellPickerInfo">
+                    <!-- Populated dynamically: "Selecting cantrips (2 of 3)" -->
+                </div>
+                <div class="spell-picker-filters">
+                    <input type="text" id="spellSearchInput" class="terminal-input" placeholder="Search spells..." oninput="filterSpellPicker()">
+                    <select id="spellSchoolFilter" class="terminal-select" onchange="filterSpellPicker()">
+                        <option value="">All Schools</option>
+                        <option value="Abjuration">Abjuration</option>
+                        <option value="Conjuration">Conjuration</option>
+                        <option value="Divination">Divination</option>
+                        <option value="Enchantment">Enchantment</option>
+                        <option value="Evocation">Evocation</option>
+                        <option value="Illusion">Illusion</option>
+                        <option value="Necromancy">Necromancy</option>
+                        <option value="Transmutation">Transmutation</option>
+                    </select>
+                </div>
+                <div class="spell-picker-list" id="spellPickerList">
+                    <!-- Populated dynamically with spell cards -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="spell-picker-selected-count" id="spellPickerSelectedCount">0 selected</div>
+                <div class="modal-footer-buttons">
+                    <button class="terminal-btn" onclick="closeSpellPicker()">CANCEL</button>
+                    <button class="terminal-btn terminal-btn-primary" onclick="confirmSpellSelection()">ADD SELECTED</button>
+                </div>
             </div>
         </div>
     </div>
