@@ -594,6 +594,29 @@
     padding-top: 8px;
 }
 
+/* Character sheet bullet lists - proper hanging indent */
+.sheet-list {
+    list-style: disc;
+    margin: 0;
+    padding-left: 1.2em;
+}
+
+.sheet-list li {
+    padding-left: 0.3em;
+}
+
+/* Spell list items need special handling for the description */
+.sheet-list .spell-list-item {
+    margin-bottom: 0;
+}
+
+.sheet-list .spell-list-description {
+    margin-left: -1.5em;
+    padding-left: 1.5em;
+    margin-top: 2px;
+    margin-bottom: 4px;
+}
+
 /* Hide print-only name on screen - only shown in print */
 .print-only-name {
     display: none;

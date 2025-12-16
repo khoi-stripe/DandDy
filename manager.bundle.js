@@ -1445,12 +1445,7 @@ const score=parsed.abilities[ability]||10;const modifier=parsed.abilityModifiers
 
     const extraProfsMarkup =
       extraProfs && extraProfs.length
-        ? extraProfs
-            .map((skill) => {
-              const label = this.escapeHtml(this.formatSkillName(skill));
-              return `<div class="text-dim">• ${label}</div>`;
-            })
-            .join('')
+        ? `<ul class="sheet-list text-dim">${extraProfs.map((skill)=>{const label=this.escapeHtml(this.formatSkillName(skill));return`<li>${label}</li>`;}).join('')}</ul>`
         : '';
 
     const headerTitle = hasSkillModifiers
@@ -1476,7 +1471,7 @@ ${skillsMarkup}<div class="sheet-divider"></div>${extraProfsMarkup}`;
 
     // Helper to render spell list
     const renderSpellList = (spells) => {
-      return spells
+      const items = spells
         .map((spell) => {
           const isObject = spell && typeof spell === 'object';
           const rawName = isObject ? spell.name : spell;
@@ -1498,9 +1493,10 @@ ${skillsMarkup}<div class="sheet-divider"></div>${extraProfsMarkup}`;
           const desc = descSource
             ? `<div class="text-dim terminal-text-small spell-list-description">${this.escapeHtml(descSource)}</div>`
             : '';
-        return `<div class="text-dim spell-list-item">• ${name}${school}</div>${desc}`;
+          return `<li class="spell-list-item">${name}${school}${desc}</li>`;
         })
         .join('');
+      return `<ul class="sheet-list text-dim">${items}</ul>`;
     };
 
     let spellsContent = '';
@@ -1534,31 +1530,19 @@ ${skillsMarkup}<div class="sheet-divider"></div>${extraProfsMarkup}`;
   },
 
   _renderRacialTraits(parsed) {
-    const traitsMarkup = parsed.racialTraits
-      .map((trait) => `<div class="text-dim">• ${this.escapeHtml(trait)}</div>`)
-      .join('');
+    const traitsMarkup = `<ul class="sheet-list text-dim">${parsed.racialTraits.map((trait)=>`<li>${this.escapeHtml(trait)}</li>`).join('')}</ul>`;
 
     return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[RACIAL TRAITS]</div></div><div class="sheet-content">${traitsMarkup}</div></div>`;
   },
 
   _renderEquipment(parsed) {
-    const equipmentMarkup = parsed.equipment
-      .map(
-        (item) =>
-          `<div class="text-dim">• ${this.escapeHtml(item,)}</div>`,
-      )
-      .join('');
+    const equipmentMarkup = `<ul class="sheet-list text-dim">${parsed.equipment.map((item)=>`<li>${this.escapeHtml(item)}</li>`,).join('')}</ul>`;
 
     return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[${parsed.hasClassEquipment?'EQUIPMENT':'CLASS EQUIPMENT'}]</div></div><div class="sheet-content">${equipmentMarkup}</div></div>`;
   },
 
   _renderToolProficiencies(parsed) {
-    const toolsMarkup = parsed.toolProficiencies
-      .map((tool) => {
-        const label = this.escapeHtml(this.formatSkillName(tool));
-        return `<div class="text-dim">• ${label}</div>`;
-      })
-      .join('');
+    const toolsMarkup = `<ul class="sheet-list text-dim">${parsed.toolProficiencies.map((tool)=>{const label=this.escapeHtml(this.formatSkillName(tool));return`<li>${label}</li>`;}).join('')}</ul>`;
 
     return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[TOOL PROFICIENCIES]</div></div><div class="sheet-content">${toolsMarkup}</div></div>`;
   },
@@ -1571,9 +1555,12 @@ ${skillsMarkup}<div class="sheet-divider"></div>${extraProfsMarkup}`;
       return '';
     }
     
-    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[LANGUAGES]</div></div><div class="sheet-content">${hasLanguages?parsed.languages.map((lang)=>`<div class="text-dim">• ${this.escapeHtml(
-                        lang,
-                      )}</div>`,).join(''):''}
+    return `<div class="sheet-section"><div class="sheet-header"><div class="sheet-header-title">[LANGUAGES]</div></div><div class="sheet-content">${hasLanguages?`<ul class="sheet-list text-dim">${parsed.languages
+                  .map(
+                    (lang) =>
+                      `<li>${this.escapeHtml(lang)}</li>`,
+                  )
+                  .join('')}</ul>`:''}
 ${hasChoices?`<div class="text-dim ${hasLanguages ? 'mt-sm' : ''}">+ Choose ${parsed.languageChoices} additional language${parsed.languageChoices > 1 ? 's' : ''}</div>`:''}</div></div>`;
   },
 
