@@ -2590,7 +2590,7 @@
     border-radius: var(--border-radius);
     font-size: 0.8rem;
     color: #1a1a1a;
-    opacity: 0.5;
+    opacity: 0.75;
 }
 
 .spell-tag-remove {
