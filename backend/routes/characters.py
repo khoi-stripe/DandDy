@@ -71,8 +71,14 @@ def get_demo_characters(
     Public endpoint to fetch all characters marked as demo.
     No authentication required - used for the demo/guest experience.
     """
-    demo_characters = db.query(Character).filter(Character.is_demo == True).all()
-    return demo_characters
+    import traceback
+    try:
+        demo_characters = db.query(Character).filter(Character.is_demo == True).all()
+        return demo_characters
+    except Exception as e:
+        print(f"ERROR in demo/list: {type(e).__name__}: {e}")
+        print(traceback.format_exc())
+        raise
 
 
 @router.patch("/{character_id}/demo", response_model=CharacterResponse)
