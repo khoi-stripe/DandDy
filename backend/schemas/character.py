@@ -28,8 +28,9 @@ class CharacterBase(BaseModel):
     armor_class: int
     initiative: int = 0
     speed: int = 30
-    hit_dice_current: Optional[int] = None  # None means full (equals level)
-    class_resources: Dict = {}  # {"ki": {"current": 5, "max": 5}, ...}
+    # NOTE: hit_dice_current and class_resources planned but not yet migrated
+    # hit_dice_current: Optional[int] = None
+    # class_resources: Dict = {}
     
     # Death Saves
     death_save_successes: int = 0
@@ -116,8 +117,8 @@ class CharacterUpdate(BaseModel):
     armor_class: Optional[int] = None
     initiative: Optional[int] = None
     speed: Optional[int] = 30
-    hit_dice_current: Optional[int] = None
-    class_resources: Optional[Dict] = None
+    # hit_dice_current: Optional[int] = None  # Not yet migrated
+    # class_resources: Optional[Dict] = None  # Not yet migrated
     death_save_successes: Optional[int] = None
     death_save_failures: Optional[int] = None
     conditions: Optional[List[str]] = None

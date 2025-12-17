@@ -319,46 +319,14 @@ def ensure_combat_tracking_columns():
     - Adds hit_dice_current column for tracking spent hit dice during short rests
     - Adds class_resources column for tracking Ki, Rage, Sorcery Points, etc.
     
-    NOTE: For Supabase/hosted PostgreSQL with short statement timeouts, run this SQL manually:
+    NOTE: Currently disabled - columns commented out in model due to Supabase timeout issues.
+    To re-enable, run this SQL manually in Supabase SQL Editor:
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS hit_dice_current INTEGER;
         ALTER TABLE characters ADD COLUMN IF NOT EXISTS class_resources JSONB DEFAULT '{}';
+    Then uncomment the columns in models/character.py and schemas/character.py
     """
-    inspector = inspect(engine)
-    if not inspector.has_table("characters"):
-        return
-
-    is_postgres = str(engine.url).startswith("postgresql")
-
-    # Check if columns already exist to avoid timeout on ALTER
-    existing_cols = {col["name"] for col in inspector.get_columns("characters")}
-    
-    if "hit_dice_current" in existing_cols and "class_resources" in existing_cols:
-        # Columns exist, nothing to do
-        return
-
-    with engine.connect() as conn:
-        if is_postgres:
-            # PostgreSQL with short timeout (e.g., Supabase): Try but don't fail app startup
-            # If this times out, run the migration manually in Supabase SQL Editor
-            try:
-                if "hit_dice_current" not in existing_cols:
-                    conn.execute(text("ALTER TABLE characters ADD COLUMN IF NOT EXISTS hit_dice_current INTEGER"))
-                if "class_resources" not in existing_cols:
-                    conn.execute(text("ALTER TABLE characters ADD COLUMN IF NOT EXISTS class_resources JSONB DEFAULT '{}'"))
-                conn.commit()
-            except Exception as e:
-                print(f"⚠️  Combat tracking columns migration timed out. Run manually in Supabase SQL Editor:")
-                print(f"    ALTER TABLE characters ADD COLUMN IF NOT EXISTS hit_dice_current INTEGER;")
-                print(f"    ALTER TABLE characters ADD COLUMN IF NOT EXISTS class_resources JSONB DEFAULT '{{}}';")
-                # Rollback the failed transaction
-                conn.rollback()
-        else:
-            # SQLite: No timeout issues
-            if "hit_dice_current" not in existing_cols:
-                conn.execute(text("ALTER TABLE characters ADD COLUMN hit_dice_current INTEGER"))
-            if "class_resources" not in existing_cols:
-                conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources TEXT DEFAULT '{}'"))
-            conn.commit()
+    # Migration disabled - columns not in model yet
+    pass
 
 
 def get_db():
