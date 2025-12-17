@@ -104,6 +104,7 @@ window.DND_DATA = {
       primaryAbility: ['str', 'dex'],
       savingThrows: ['str', 'con'],
       equipment: ['Martial weapons', 'Heavy armor', 'Shield'],
+      isMartial: true,
     },
     {
       id: 'wizard',
@@ -122,6 +123,7 @@ window.DND_DATA = {
       primaryAbility: ['dex'],
       savingThrows: ['dex', 'int'],
       equipment: ['Light armor', 'Thieves\' tools', 'Rapier'],
+      isMartial: true,
     },
     {
       id: 'cleric',
@@ -140,6 +142,7 @@ window.DND_DATA = {
       primaryAbility: ['dex', 'wis'],
       savingThrows: ['str', 'dex'],
       equipment: ['Longbow', 'Leather armor', 'Survival gear'],
+      isMartial: true,
     },
     {
       id: 'paladin',
@@ -149,6 +152,7 @@ window.DND_DATA = {
       primaryAbility: ['str', 'cha'],
       savingThrows: ['wis', 'cha'],
       equipment: ['Heavy armor', 'Martial weapons', 'Holy symbol'],
+      isMartial: true,
     },
     {
       id: 'barbarian',
@@ -158,6 +162,7 @@ window.DND_DATA = {
       primaryAbility: ['str'],
       savingThrows: ['str', 'con'],
       equipment: ['Greataxe', 'Medium armor', 'Javelins'],
+      isMartial: true,
     },
     {
       id: 'bard',
@@ -185,6 +190,7 @@ window.DND_DATA = {
       primaryAbility: ['dex', 'wis'],
       savingThrows: ['str', 'dex'],
       equipment: ['Martial arts', 'Simple weapons', 'Unarmored defense'],
+      isMartial: true,
     },
     {
       id: 'sorcerer',

@@ -4550,6 +4550,34 @@ const App = (window.App = {
       }
     });
 
+    // For martial classes, ensure they have weapons from their class equipment
+    if (classData?.isMartial) {
+      const weaponKeywords = [
+        'weapon', 'sword', 'axe', 'mace', 'hammer', 'spear', 'dagger',
+        'bow', 'crossbow', 'rapier', 'scimitar', 'javelin', 'glaive',
+        'halberd', 'pike', 'trident', 'whip', 'flail', 'morningstar',
+        'quarterstaff', 'sickle', 'club', 'greatclub', 'handaxe',
+        'light hammer', 'sling', 'dart', 'shortbow', 'longbow',
+        'martial arts', 'simple weapons', 'martial weapons'
+      ];
+      
+      const hasWeapon = explicitEquipment.some(item => 
+        weaponKeywords.some(keyword => item.toLowerCase().includes(keyword))
+      );
+      
+      if (!hasWeapon && classData.equipment) {
+        // Add weapons from class equipment
+        classData.equipment.forEach(item => {
+          const isWeapon = weaponKeywords.some(keyword => 
+            item.toLowerCase().includes(keyword)
+          );
+          if (isWeapon && !explicitEquipment.includes(item)) {
+            explicitEquipment.push(item);
+          }
+        });
+      }
+    }
+
     // Get portrait data
     const portraitContainer = document.getElementById('character-portrait');
     const portraitElement = portraitContainer
