@@ -6176,12 +6176,31 @@ async function handleLogout() {
     // Close all editor modals to prevent stale state (e.g., level change dialog)
     closeAllEditorModals();
     
+    // Close mobile sheet modal if open (prevents showing stale cloud character)
+    if (typeof MobileView !== 'undefined' && MobileView.isMobile() && MobileView.isOpen()) {
+        MobileView.close();
+    }
+    
+    // Clear selected character before loading new list (cloud ID won't exist in demo)
+    AppState.selectedCharacterId = null;
+    
     window.AuthService.logout();
     updateAuthUI();
     showNotification('✓ Logged out');
     
-    // Reload with local storage
+    // Reload with local/demo characters
     await AppState.loadCharacters();
+    
+    // On mobile, select first demo character so sheet panel has valid content
+    // (prevents showing stale cloud character data in hidden sheet panel)
+    const isMobile = typeof MobileView !== 'undefined' && MobileView.isMobile();
+    if (isMobile && AppState.filteredCharacters.length > 0) {
+        const firstChar = AppState.filteredCharacters[0];
+        AppState.selectedCharacterId = firstChar.id;
+        // Render sheet but don't open modal (user stays on grid)
+        viewCharacter(firstChar.id, { openMobileModal: false, updateUrl: false });
+    }
+    
     UI.render();
     
     // Clear the dismissed flag so welcome modal appears on explicit logout
