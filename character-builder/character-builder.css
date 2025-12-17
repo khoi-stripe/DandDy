@@ -1089,6 +1089,9 @@
   background: var(--terminal-bg);
   border: 2px solid var(--terminal-border);
   color: var(--terminal-fg);
+  /* iOS Safari fix: -webkit-text-fill-color is needed for number inputs on iOS */
+  -webkit-text-fill-color: var(--terminal-fg);
+  opacity: 1; /* Prevent iOS from applying reduced opacity */
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
   padding: var(--spacing-md);

@@ -1021,6 +1021,24 @@
     gap: 4px;
 }
 
+/* iOS Safari fix: ensure number inputs in narrow grid columns display text properly */
+.modal-grid-abilities input[type="number"],
+.modal-grid-combat-hp input[type="number"],
+.modal-grid-combat-def input[type="number"] {
+    /* Force text visibility on iOS Safari */
+    -webkit-text-fill-color: var(--modal-accent);
+    opacity: 1;
+    /* Prevent iOS zoom on focus (requires >= 16px) */
+    font-size: 16px;
+    /* Center text in narrow inputs for better readability */
+    text-align: center;
+    /* Ensure padding doesn't clip text */
+    padding: var(--spacing-sm) 4px;
+    /* Remove iOS default styling that may interfere */
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+}
+
 .modal-grid-combat-hp,
 .modal-grid-combat-def {
     display: grid;
@@ -1032,7 +1050,7 @@
 }
 
 .modal-grid-combat-def {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .modal-grid-combat-hp label,

@@ -1336,6 +1336,9 @@ body::before {
   background-color: var(--terminal-bg);
   border: 1px solid var(--terminal-border);
   color: var(--terminal-fg);
+  /* iOS Safari fix: -webkit-text-fill-color is needed for number inputs on iOS */
+  -webkit-text-fill-color: var(--terminal-fg);
+  opacity: 1; /* Prevent iOS from applying reduced opacity */
   padding: var(--spacing-sm) var(--spacing-md);
   font-family: var(--font-mono);
   font-size: 14px;
@@ -2255,6 +2258,9 @@ body.selector-menu-open .splash-art {
 .modal .terminal-select {
   border-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.6);
   color: var(--modal-accent);
+  /* iOS Safari fix: -webkit-text-fill-color is needed for number inputs on iOS */
+  -webkit-text-fill-color: var(--modal-accent);
+  opacity: 1; /* Prevent iOS from applying reduced opacity */
 }
 
 .modal .terminal-input::placeholder,
