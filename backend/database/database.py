@@ -323,33 +323,28 @@ def ensure_combat_tracking_columns():
     if not inspector.has_table("characters"):
         return
 
-    existing_cols = {col["name"] for col in inspector.get_columns("characters")}
+    columns_info = {col["name"]: col for col in inspector.get_columns("characters")}
+    existing_cols = set(columns_info.keys())
     is_postgres = str(engine.url).startswith("postgresql")
 
     with engine.connect() as conn:
         if "hit_dice_current" not in existing_cols:
             conn.execute(text("ALTER TABLE characters ADD COLUMN hit_dice_current INTEGER"))
 
+        # For class_resources, we need JSONB on PostgreSQL for proper JSON handling
+        if "class_resources" in existing_cols and is_postgres:
+            # Check if column type is wrong (TEXT instead of JSONB)
+            col_type = str(columns_info["class_resources"].get("type", "")).upper()
+            if "JSON" not in col_type:
+                # Wrong type - drop and recreate
+                conn.execute(text("ALTER TABLE characters DROP COLUMN class_resources"))
+                existing_cols.discard("class_resources")
+
         if "class_resources" not in existing_cols:
-            # Use JSONB for PostgreSQL, TEXT for SQLite
             if is_postgres:
-                conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources JSONB DEFAULT '{}'::jsonb"))
+                conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources JSONB NOT NULL DEFAULT '{}'::jsonb"))
             else:
                 conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources TEXT DEFAULT '{}'"))
-            # Backfill existing rows
-            conn.execute(text("UPDATE characters SET class_resources = '{}' WHERE class_resources IS NULL"))
-        elif is_postgres:
-            # Column exists - check if we need to fix the type (might be TEXT from earlier migration)
-            # Convert TEXT to JSONB if needed
-            try:
-                conn.execute(text("""
-                    ALTER TABLE characters 
-                    ALTER COLUMN class_resources TYPE JSONB 
-                    USING COALESCE(class_resources::jsonb, '{}'::jsonb)
-                """))
-            except Exception:
-                # Already JSONB or conversion not needed
-                pass
 
         conn.commit()
 
