@@ -338,6 +338,18 @@ def ensure_combat_tracking_columns():
                 conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources TEXT DEFAULT '{}'"))
             # Backfill existing rows
             conn.execute(text("UPDATE characters SET class_resources = '{}' WHERE class_resources IS NULL"))
+        elif is_postgres:
+            # Column exists - check if we need to fix the type (might be TEXT from earlier migration)
+            # Convert TEXT to JSONB if needed
+            try:
+                conn.execute(text("""
+                    ALTER TABLE characters 
+                    ALTER COLUMN class_resources TYPE JSONB 
+                    USING COALESCE(class_resources::jsonb, '{}'::jsonb)
+                """))
+            except Exception:
+                # Already JSONB or conversion not needed
+                pass
 
         conn.commit()
 
