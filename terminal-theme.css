@@ -1233,6 +1233,26 @@ body::before {
   font-weight: bold;
 }
 
+/* Spell tags in character sheet (container style) */
+.sheet-spell-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+  margin-bottom: 16px;
+}
+
+.sheet-spell-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: var(--sheet-box-bg);
+  border: none;
+  font-size: 0.8rem;
+  color: var(--sheet-value-color);
+  font-weight: bold;
+}
+
 /* Ability scores grid */
 .ability-grid {
   display: grid;

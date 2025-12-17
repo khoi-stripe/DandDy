@@ -1702,61 +1702,30 @@ const CharacterSheet = (window.CharacterSheet = {
     const spellsKnown = parsed.spellsKnown || [];
     const spellsPrepared = parsed.spellsPrepared || [];
     const spellSlots = parsed.spellSlots || {};
-    const characterLevel = parsed.level || 1;
 
-    // Helper to render spell list
-    // isCantrip: if true, apply damage scaling based on level
-    const renderSpellList = (spells, isCantrip = false) => {
-      const items = spells
+    // Helper to render spell tags in a container
+    const renderSpellTags = (spells) => {
+      if (spells.length === 0) return '';
+      
+      const tags = spells
         .map((spell) => {
           const isObject = spell && typeof spell === 'object';
           const rawName = isObject ? spell.name : spell;
           const name = this.escapeHtml(rawName || '');
-          
-          // If spell is a string, try to look up its data from the spell database
-          let spellData = null;
-          const normalizedName = rawName ? String(rawName).toLowerCase().trim() : '';
-          if (!isObject && rawName) {
-            spellData = this._lookupSpellData(rawName);
-          }
-          
-          // Also check SPELL_LOOKUP directly for cantrip scaling data
-          const lookupData = SPELL_LOOKUP[normalizedName];
-          
-          // Use data from spell object or looked-up data
-          const schoolSource = isObject ? spell.school : spellData?.school;
-          let descSource = isObject ? spell.description : spellData?.description;
-          
-          // Apply cantrip damage scaling if this is a cantrip with baseDice
-          if (isCantrip && lookupData?.baseDice && descSource) {
-            descSource = this._scaleCantripDescription(
-              descSource,
-              characterLevel,
-              lookupData.baseDice,
-              lookupData.special
-            );
-          }
-          
-          const school = schoolSource
-            ? ` <span class="text-dim">(${this.escapeHtml(schoolSource)})</span>`
-            : '';
-          const desc = descSource
-            ? `<div class="text-dim terminal-text-small spell-list-description">${this.escapeHtml(descSource)}</div>`
-            : '';
-          return `<li class="spell-list-item">${name}${school}${desc}</li>`;
+          return `<span class="sheet-spell-tag">${name}</span>`;
         })
         .join('');
-      return `<ul class="sheet-list text-dim">${items}</ul>`;
+      return `<div class="sheet-spell-tag-list">${tags}</div>`;
     };
 
     let spellsContent = '';
 
-    // Cantrips (with damage scaling based on level)
+    // Cantrips
     if (cantrips.length > 0) {
       spellsContent += `
         <div class="sheet-subsection">
           <div class="sheet-subsection-title">CANTRIPS (At-Will)</div>
-          ${renderSpellList(cantrips, true)}
+          ${renderSpellTags(cantrips)}
         </div>
       `;
     }
@@ -1789,7 +1758,7 @@ const CharacterSheet = (window.CharacterSheet = {
       spellsContent += `
         <div class="sheet-subsection">
           <div class="sheet-subsection-title">SPELLS KNOWN${preparedText}</div>
-          ${renderSpellList(spellList)}
+          ${renderSpellTags(spellList)}
         </div>
       `;
     }
