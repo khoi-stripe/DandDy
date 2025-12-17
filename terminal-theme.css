@@ -1303,9 +1303,9 @@ body::before {
 
 .character-sheet .resource-legend-box {
   background: var(--sheet-box-bg);
-  padding: 4px 8px;
+  padding: 2px 8px;
   margin-bottom: var(--spacing-sm);
-  color: var(--sheet-label-color);
+  color: var(--sheet-accent-dim);
   font-size: 12px;
   text-align: left;
 }

@@ -2786,6 +2786,12 @@
     font-size: 0.8rem;
     color: #1a1a1a;
     opacity: 0.75;
+    transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.spell-tag:hover {
+    background: var(--modal-accent);
+    opacity: 1;
 }
 
 .spell-tag-remove {
