@@ -97,6 +97,11 @@ const Components = (window.Components = {
         { value: 'medium', label: 'Medium' },
         { value: 'high', label: 'High' },
       ],
+      'gpt-image-1.5': [
+        { value: 'low', label: 'Low' },
+        { value: 'medium', label: 'Medium' },
+        { value: 'high', label: 'High' },
+      ],
       // Flux models don't have quality options
       'flux-1.1-pro': [],
       'flux-schnell': [],
@@ -211,6 +216,7 @@ const Components = (window.Components = {
     const imageModelOptions = [
       { value: 'dall-e-3', label: 'DALL·E 3 (high detail)' },
       { value: 'gpt-image-1', label: 'GPT Image 1 (OpenAI)' },
+      { value: 'gpt-image-1.5', label: 'GPT Image 1.5 (faster)' },
       { value: 'flux-1.1-pro', label: 'Flux Pro (high quality)' },
       { value: 'flux-schnell', label: 'Flux Schnell (fast)' },
     ];
@@ -792,6 +798,11 @@ const SettingsModal = (window.SettingsModal = {
         { value: 'hd', label: 'HD' },
       ],
       'gpt-image-1': [
+        { value: 'medium', label: 'Medium' },
+        { value: 'high', label: 'High' },
+      ],
+      'gpt-image-1.5': [
+        { value: 'low', label: 'Low' },
         { value: 'medium', label: 'Medium' },
         { value: 'high', label: 'High' },
       ],

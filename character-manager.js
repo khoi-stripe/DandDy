@@ -3227,6 +3227,8 @@ async function confirmGeneratePortrait() {
 
            if (imageModel === 'gpt-image-1') {
                subtext = '(This can take up to a minute)';
+           } else if (imageModel === 'gpt-image-1.5') {
+               subtext = '(GPT Image 1.5 – usually 15–30 seconds)';
            }
        } catch (e) {
            // Fall back to default subtext on any error.

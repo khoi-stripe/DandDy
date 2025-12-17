@@ -312,13 +312,14 @@ class ImageGenerationRequest(BaseModel):
     # Image model to use. We currently support:
     # - dall-e-3       (default, OpenAI)
     # - gpt-image-1    (GPT Image 1, OpenAI)
+    # - gpt-image-1.5  (GPT Image 1.5, OpenAI - faster, better text rendering)
     # - flux-1.1-pro   (Flux Pro via Replicate - high quality)
     # - flux-schnell   (Flux Schnell via Replicate - fast & cheap)
     # Additional models can be added here later without breaking callers.
     model: str = Field(
         "dall-e-3",
-        pattern="^(dall-e-3|gpt-image-1|flux-1\\.1-pro|flux-schnell)$",
-        description="Image model identifier (e.g., 'dall-e-3', 'flux-1.1-pro')",
+        pattern="^(dall-e-3|gpt-image-1|gpt-image-1\\.5|flux-1\\.1-pro|flux-schnell)$",
+        description="Image model identifier (e.g., 'dall-e-3', 'gpt-image-1.5')",
     )
     # Optional: one-time grant issued by /characters/summary to cover the
     # included portrait image for a character creation without consuming
@@ -827,6 +828,7 @@ async def get_ai_status():
         "image_models": {
             "dall-e-3": OPENAI_API_KEY is not None,
             "gpt-image-1": OPENAI_API_KEY is not None,
+            "gpt-image-1.5": OPENAI_API_KEY is not None,
             "flux-1.1-pro": REPLICATE_API_TOKEN is not None,
             "flux-schnell": REPLICATE_API_TOKEN is not None,
         },
@@ -1594,7 +1596,7 @@ async def generate_image(
     # OpenAI models (DALL-E, GPT Image)
     check_api_key()
 
-    if model not in ("dall-e-3", "gpt-image-1"):
+    if model not in ("dall-e-3", "gpt-image-1", "gpt-image-1.5"):
         model = "dall-e-3"
 
     # Normalize quality for the current Images API:

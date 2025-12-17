@@ -524,32 +524,8 @@ function initBuilderHeaderAuth() {
     }
   }
 
-  // Handle session expiry
-  window.addEventListener('danddy:sessionExpired', () => {
-    // Update header immediately
-    if (typeof window.updateAuthUI === 'function') window.updateAuthUI();
-
-    // Prompt user to log in again (in-place)
-    if (window.App && typeof window.App.showConfirmationOverlay === 'function') {
-      window.App.showConfirmationOverlay(
-        "Your session expired. Your character is safe locally. Log in to sync, or continue as guest.",
-        () => {
-          // Use modal for consistency with manager page
-          if (typeof window.showAuthModal === 'function') {
-            window.showAuthModal();
-          }
-        },
-        () => {
-          // Continue as guest - just close the overlay
-        },
-        { primaryLabel: 'LOG IN', secondaryLabel: 'CONTINUE AS GUEST' },
-      );
-      return;
-    }
-
-    // Fallback: notification then open auth modal
-    window.App?.showNotification?.('⚠ Session expired — log in again to sync', 'warning');
-  });
+  // NOTE: Session expiry handling is done in character-builder-manager.js
+  // (initBuilderAuth / handleSessionExpired) to avoid duplicate overlays.
 }
 
 if (document.readyState === 'loading') {

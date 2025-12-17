@@ -1784,6 +1784,8 @@ const App = (window.App = {
         }
         if (imageModel === 'gpt-image-1') {
           subtext = '(This can take up to a minute)';
+        } else if (imageModel === 'gpt-image-1.5') {
+          subtext = '(GPT Image 1.5 – usually 15–30 seconds)';
         } else if (imageModel === 'flux-1.1-pro') {
           subtext = '(Flux Pro – usually 10–20 seconds)';
         } else if (imageModel === 'flux-schnell') {
@@ -3410,6 +3412,7 @@ const App = (window.App = {
       const modelNames = {
         'dall-e-3': 'DALL·E 3',
         'gpt-image-1': 'GPT Image 1',
+        'gpt-image-1.5': 'GPT Image 1.5',
         'flux-1.1-pro': 'Flux 1.1 Pro',
         'flux-schnell': 'Flux Schnell',
       };

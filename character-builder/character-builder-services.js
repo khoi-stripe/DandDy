@@ -211,6 +211,7 @@ const StorageService = (window.StorageService = {
   // Supported models:
   // - dall-e-3      (OpenAI DALL-E 3)
   // - gpt-image-1   (OpenAI GPT Image 1)
+  // - gpt-image-1.5 (OpenAI GPT Image 1.5 - faster, better text)
   // - flux-1.1-pro  (Replicate Flux Pro - high quality)
   // - flux-schnell  (Replicate Flux Schnell - fast & cheap)
   getImageModel() {
@@ -221,7 +222,7 @@ const StorageService = (window.StorageService = {
         'dall-e-3';
       if (!raw) return fallback;
       const value = String(raw).trim();
-      const allowed = ['dall-e-3', 'gpt-image-1', 'flux-1.1-pro', 'flux-schnell'];
+      const allowed = ['dall-e-3', 'gpt-image-1', 'gpt-image-1.5', 'flux-1.1-pro', 'flux-schnell'];
       return allowed.includes(value) ? value : fallback;
     } catch (e) {
       console.warn('StorageService.getImageModel failed, using fallback', e);
@@ -232,7 +233,7 @@ const StorageService = (window.StorageService = {
   setImageModel(model) {
     try {
       const value = String(model || '').trim();
-      const allowed = ['dall-e-3', 'gpt-image-1', 'flux-1.1-pro', 'flux-schnell'];
+      const allowed = ['dall-e-3', 'gpt-image-1', 'gpt-image-1.5', 'flux-1.1-pro', 'flux-schnell'];
       if (!allowed.includes(value)) {
         console.warn('StorageService.setImageModel: ignoring unsupported model', value);
         // Clear invalid values so we fall back cleanly next time.
@@ -1549,6 +1550,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
         const defaultQuality = {
           'dall-e-3': 'standard',
           'gpt-image-1': 'medium',
+          'gpt-image-1.5': 'medium',
           'flux-1.1-pro': 'standard',
           'flux-schnell': 'standard',
         };
