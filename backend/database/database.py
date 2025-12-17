@@ -324,14 +324,18 @@ def ensure_combat_tracking_columns():
         return
 
     existing_cols = {col["name"] for col in inspector.get_columns("characters")}
+    is_postgres = str(engine.url).startswith("postgresql")
 
     with engine.connect() as conn:
         if "hit_dice_current" not in existing_cols:
             conn.execute(text("ALTER TABLE characters ADD COLUMN hit_dice_current INTEGER"))
 
         if "class_resources" not in existing_cols:
-            # Default to empty JSON object
-            conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources TEXT DEFAULT '{}'"))
+            # Use JSONB for PostgreSQL, TEXT for SQLite
+            if is_postgres:
+                conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources JSONB DEFAULT '{}'::jsonb"))
+            else:
+                conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources TEXT DEFAULT '{}'"))
             # Backfill existing rows
             conn.execute(text("UPDATE characters SET class_resources = '{}' WHERE class_resources IS NULL"))
 
