@@ -6231,12 +6231,12 @@ function updateAuthUI() {
         const user = window.AuthService.getCurrentUser();
         userStatusIcon.textContent = '☁';
         userStatusText.textContent = user ? user.email : 'Logged In';
-        authBtn.textContent = 'LOGOUT';
+        authBtn.textContent = 'LOG OUT';
         authBtn.onclick = handleLogout;
         
         // Update overflow menu
         if (overflowAuthIcon) overflowAuthIcon.textContent = '←';
-        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Logout';
+        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log Out';
 
         // Hide guest notice when logged in
         if (guestNotice) {
@@ -6253,7 +6253,7 @@ function updateAuthUI() {
         
         // Update overflow menu
         if (overflowAuthIcon) overflowAuthIcon.textContent = '→';
-        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Login';
+        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log In';
 
         // Don't show guest notice by default - only when user makes changes
         // (handled by maybeShowGuestNotice() function)

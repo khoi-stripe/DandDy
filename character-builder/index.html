@@ -239,7 +239,7 @@
   <div id="authModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title" id="authModalTitle">LOGIN</h2>
+        <h2 class="modal-title" id="authModalTitle">LOG IN</h2>
         <button class="modal-close" onclick="cancelAuthFlow()">&times;</button>
       </div>
       <div class="modal-body">
@@ -273,14 +273,14 @@
             <button type="button" class="password-toggle-btn" data-target="registerPasswordConfirm" aria-label="Show password">SHOW</button>
           </div>
           <p class="terminal-text-small modal-section-label terminal-text-dim">
-            Already have an account? <a href="#" onclick="showLoginForm(); return false;" class="terminal-link">Login here</a>
+            Already have an account? <a href="#" onclick="showLoginForm(); return false;" class="terminal-link">Log in here</a>
           </p>
         </div>
         <div id="authError" class="terminal-text-error is-hidden"></div>
       </div>
       <div class="modal-footer modal-footer-end">
         <button id="authCancelBtn" class="terminal-btn" onclick="cancelAuthFlow()">CANCEL</button>
-        <button id="loginBtn" class="terminal-btn terminal-btn-primary" onclick="handleLogin()">LOGIN</button>
+        <button id="loginBtn" class="terminal-btn terminal-btn-primary" onclick="handleLogin()">LOG IN</button>
         <button id="registerBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handleRegister()">REGISTER</button>
       </div>
     </div>
