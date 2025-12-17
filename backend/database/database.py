@@ -318,6 +318,10 @@ def ensure_combat_tracking_columns():
     Lightweight migration helper for characters table:
     - Adds hit_dice_current column for tracking spent hit dice during short rests
     - Adds class_resources column for tracking Ki, Rage, Sorcery Points, etc.
+    
+    NOTE: For Supabase/hosted PostgreSQL with short statement timeouts, run this SQL manually:
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS hit_dice_current INTEGER;
+        ALTER TABLE characters ADD COLUMN IF NOT EXISTS class_resources JSONB DEFAULT '{}';
     """
     inspector = inspect(engine)
     if not inspector.has_table("characters"):
@@ -325,23 +329,36 @@ def ensure_combat_tracking_columns():
 
     is_postgres = str(engine.url).startswith("postgresql")
 
+    # Check if columns already exist to avoid timeout on ALTER
+    existing_cols = {col["name"] for col in inspector.get_columns("characters")}
+    
+    if "hit_dice_current" in existing_cols and "class_resources" in existing_cols:
+        # Columns exist, nothing to do
+        return
+
     with engine.connect() as conn:
         if is_postgres:
-            # PostgreSQL: Use IF NOT EXISTS to avoid timeout issues with column checks
+            # PostgreSQL with short timeout (e.g., Supabase): Try but don't fail app startup
+            # If this times out, run the migration manually in Supabase SQL Editor
             try:
-                conn.execute(text("ALTER TABLE characters ADD COLUMN IF NOT EXISTS hit_dice_current INTEGER"))
-                conn.execute(text("ALTER TABLE characters ADD COLUMN IF NOT EXISTS class_resources JSONB DEFAULT '{}'"))
+                if "hit_dice_current" not in existing_cols:
+                    conn.execute(text("ALTER TABLE characters ADD COLUMN IF NOT EXISTS hit_dice_current INTEGER"))
+                if "class_resources" not in existing_cols:
+                    conn.execute(text("ALTER TABLE characters ADD COLUMN IF NOT EXISTS class_resources JSONB DEFAULT '{}'"))
+                conn.commit()
             except Exception as e:
-                print(f"Note: combat tracking columns migration: {e}")
+                print(f"⚠️  Combat tracking columns migration timed out. Run manually in Supabase SQL Editor:")
+                print(f"    ALTER TABLE characters ADD COLUMN IF NOT EXISTS hit_dice_current INTEGER;")
+                print(f"    ALTER TABLE characters ADD COLUMN IF NOT EXISTS class_resources JSONB DEFAULT '{{}}';")
+                # Rollback the failed transaction
+                conn.rollback()
         else:
-            # SQLite: Check first since IF NOT EXISTS not supported for columns
-            existing_cols = {col["name"] for col in inspector.get_columns("characters")}
+            # SQLite: No timeout issues
             if "hit_dice_current" not in existing_cols:
                 conn.execute(text("ALTER TABLE characters ADD COLUMN hit_dice_current INTEGER"))
             if "class_resources" not in existing_cols:
                 conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources TEXT DEFAULT '{}'"))
-
-        conn.commit()
+            conn.commit()
 
 
 def get_db():
