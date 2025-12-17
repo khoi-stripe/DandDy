@@ -43,7 +43,7 @@
           return await window.CharacterCloudStorage.getAll();
         } catch (error) {
           // If session expired, dispatch event and re-throw instead of silently falling back
-          if (error.message && error.message.includes('Session expired')) {
+          if (error.message && error.message.toLowerCase().includes('session has expired')) {
             console.warn('☁️ STORAGE: Session expired during getAll, dispatching event');
             const event = new CustomEvent('danddy:sessionExpired', {
               detail: { reason: 'api_401', operation: 'getAll' },
@@ -79,7 +79,7 @@
         } catch (error) {
           // If session expired, dispatch event and re-throw instead of silently falling back
           // This allows the UI to show the session expired modal
-          if (error.message && error.message.includes('Session expired')) {
+          if (error.message && error.message.toLowerCase().includes('session has expired')) {
             console.warn('☁️ STORAGE: Session expired during getById, dispatching event');
             // Dispatch event so UI can react
             const event = new CustomEvent('danddy:sessionExpired', {
@@ -110,7 +110,7 @@
           return await window.CharacterCloudStorage.add(character);
         } catch (error) {
           // If session expired, dispatch event and re-throw - don't create local duplicate
-          if (error.message && error.message.includes('Session expired')) {
+          if (error.message && error.message.toLowerCase().includes('session has expired')) {
             console.warn('☁️ STORAGE: Session expired during add, dispatching event');
             const event = new CustomEvent('danddy:sessionExpired', {
               detail: { reason: 'api_401', operation: 'add' },
@@ -166,7 +166,7 @@
           return await window.CharacterCloudStorage.update(id, updates);
         } catch (error) {
           // If session expired, dispatch event for UI handling
-          if (error.message && error.message.includes('Session expired')) {
+          if (error.message && error.message.toLowerCase().includes('session has expired')) {
             console.warn('☁️ STORAGE: Session expired during update, dispatching event');
             const event = new CustomEvent('danddy:sessionExpired', {
               detail: { reason: 'api_401', operation: 'update' },

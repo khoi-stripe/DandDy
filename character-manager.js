@@ -1594,7 +1594,7 @@ async function viewCharacter(id, options = {}) {
             characterSource = 'storage';
         } catch (error) {
             // Check if this is a session expiry error
-            if (error.message && error.message.includes('Session expired')) {
+            if (error.message && error.message.toLowerCase().includes('session has expired')) {
                 showSessionExpiredModal();
                 return;
             }
@@ -2853,7 +2853,7 @@ async function generatePortraitForCharacter(id) {
         character = await CharacterStorage.getById(id);
     } catch (error) {
         // Check if this is a session expiry error
-        if (error.message && error.message.includes('Session expired')) {
+        if (error.message && error.message.toLowerCase().includes('session has expired')) {
             // Session has expired - show the modal and don't proceed
             showSessionExpiredModal();
             return;
@@ -5447,15 +5447,12 @@ function showSessionExpiredModal() {
     const modalHtml = `
       <div id="sessionExpiredModal" class="modal show">
         <div class="modal-content">
-          <div class="modal-header">
-            <h2 class="modal-title">⚠ SESSION EXPIRED</h2>
-          </div>
           <div class="modal-body">
-            <p class="terminal-text">Your login session has expired.${' '}Your local changes are safe,${' '}but you'll need to log in again to sync with the cloud.</p>
+            <p class="terminal-text">Your session has expired. Your local changes are safe, but you'll need to log in again to sync with the cloud.</p>
           </div>
           <div class="modal-footer modal-footer-end">
             <button class="terminal-btn terminal-btn-secondary" id="sessionExpiredDismiss">CONTINUE OFFLINE</button>
-            <button class="terminal-btn terminal-btn-primary" id="sessionExpiredLogin">RE-LOGIN</button>
+            <button class="terminal-btn terminal-btn-primary" id="sessionExpiredLogin">LOG IN</button>
           </div>
         </div>
       </div>

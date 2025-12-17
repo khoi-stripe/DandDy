@@ -94,7 +94,7 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       if (typeof window.updateAuthUI === 'function') {
         window.updateAuthUI();
       }
-      throw new Error('Session expired. Please log in again.');
+      throw new Error('Your session has expired. Please log in again.');
     }
 
     if (!response.ok) {

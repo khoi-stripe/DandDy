@@ -386,23 +386,23 @@ function handleSessionExpired() {
     // Show an informational overlay with option to log in or continue as guest
     if (window.App && window.App.showConfirmationOverlay) {
         window.App.showConfirmationOverlay(
-            'Your session has expired. Your character is safe locally. Log in to sync with the cloud, or continue as guest.',
+            'Your session has expired. Your character is safe locally, but you\'ll need to log in again to sync with the cloud.',
             () => {
                 // User chose to log in
                 showAuthModal();
             },
             () => {
-                // User chose to continue as guest - just close the overlay
+                // User chose to continue offline - just close the overlay
                 // Character is already saved locally, nothing else needed
             },
             {
                 primaryLabel: 'LOG IN',
-                secondaryLabel: 'CONTINUE AS GUEST'
+                secondaryLabel: 'CONTINUE OFFLINE'
             }
         );
     } else if (window.App && window.App.showNotification) {
         // Fallback: just show a notification
-        window.App.showNotification('⚠ Session expired - log in again to sync', 'warning');
+        window.App.showNotification('Your session has expired. Please log in again.', 'warning');
     }
 }
 
