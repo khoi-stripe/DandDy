@@ -313,6 +313,31 @@ def ensure_is_demo_column():
         conn.commit()
 
 
+def ensure_combat_tracking_columns():
+    """
+    Lightweight migration helper for characters table:
+    - Adds hit_dice_current column for tracking spent hit dice during short rests
+    - Adds class_resources column for tracking Ki, Rage, Sorcery Points, etc.
+    """
+    inspector = inspect(engine)
+    if not inspector.has_table("characters"):
+        return
+
+    existing_cols = {col["name"] for col in inspector.get_columns("characters")}
+
+    with engine.connect() as conn:
+        if "hit_dice_current" not in existing_cols:
+            conn.execute(text("ALTER TABLE characters ADD COLUMN hit_dice_current INTEGER"))
+
+        if "class_resources" not in existing_cols:
+            # Default to empty JSON object
+            conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources TEXT DEFAULT '{}'"))
+            # Backfill existing rows
+            conn.execute(text("UPDATE characters SET class_resources = '{}' WHERE class_resources IS NULL"))
+
+        conn.commit()
+
+
 def get_db():
     db = SessionLocal()
     try:
