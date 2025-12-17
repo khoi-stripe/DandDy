@@ -435,12 +435,11 @@ const AuthUI = (window.AuthUI = {
         <span id="builderUserInfo" class="builder-user-info">
           <span class="user-status-text">${label}</span>
         </span>
-        <button id="builderAuthBtn" class="terminal-btn terminal-btn-small ui-theme-teal" type="button">LOGOUT</button>
+        <button id="builderAuthBtn" class="terminal-btn terminal-btn-small ui-theme-teal" type="button">LOG OUT</button>
       `;
 
       const authBtn = document.getElementById('builderAuthBtn');
       authBtn?.addEventListener('click', () => {
-        if (!confirm('Log out?')) return;
         try {
           window.AuthService?.logout?.();
         } catch (_) {}
@@ -462,7 +461,7 @@ const AuthUI = (window.AuthUI = {
         <span id="builderUserInfo" class="builder-user-info">
           <span class="user-status-text">Guest mode</span>
         </span>
-        <button id="builderAuthBtn" class="terminal-btn terminal-btn-small ui-theme-teal" type="button">LOGIN</button>
+        <button id="builderAuthBtn" class="terminal-btn terminal-btn-small ui-theme-teal" type="button">LOG IN</button>
       `;
 
       const authBtn = document.getElementById('builderAuthBtn');

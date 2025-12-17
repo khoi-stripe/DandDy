@@ -5876,21 +5876,25 @@ const App = (window.App = {
   async updateCharacterPanel(character) {
     const panel = document.getElementById('character-panel');
 
-    // Determine entry mode (guided vs quick) from shared state so we can
+    // Determine entry mode (guided vs quick) and step from shared state so we can
     // adjust portrait behavior. In quick-create we suppress pre-generated
     // portraits until an AI portrait generation has actually started.
     let entryMode = null;
+    let currentStep = null;
     try {
       if (window.CharacterState && typeof CharacterState.get === 'function') {
         const state = CharacterState.get();
         entryMode = state?.answers?.['entry-mode'] || null;
+        currentStep = state?.step || null;
       }
     } catch (e) {
       // If state lookup fails for any reason, fall back to default behavior.
       entryMode = null;
+      currentStep = null;
     }
     const isQuickMode = entryMode === 'quick';
     const isGuidedMode = entryMode === 'guided';
+    const isCreationComplete = currentStep === 'complete';
 
     // If a portrait animation is in progress, queue this update for after animation completes
     if (this._portraitAnimating) {
@@ -5962,12 +5966,16 @@ const App = (window.App = {
           ? portraitNode.innerHTML
           : null;
         
+        // Hide overflow menu until character creation is complete AND portrait is ready
+        const shouldHideOverflow = !isCreationComplete || isGenerating || !hasCustomPortrait;
+        
         panel.innerHTML = Components.renderCharacterSheet(
           character,
           null,
           true,
           {
             showGeneratePortraitButton: hasCustomPortrait,
+            hideOverflowMenu: shouldHideOverflow,
           },
         );
 
@@ -6066,6 +6074,10 @@ const App = (window.App = {
           character,
           portraitArt,
           true,
+          {
+            // Legacy mode: hide overflow until creation complete
+            hideOverflowMenu: !isCreationComplete,
+          },
         );
         const portraitEl = document.getElementById('character-portrait');
         const originalPortraitEl = document.getElementById('original-portrait');
@@ -6122,6 +6134,10 @@ const App = (window.App = {
           character,
           fallbackArt,
           true,
+          {
+            // Fallback/error mode: hide overflow until creation complete
+            hideOverflowMenu: !isCreationComplete,
+          },
         );
         const portraitEl = document.getElementById('character-portrait');
         const originalPortraitEl = document.getElementById('original-portrait');
@@ -6164,6 +6180,10 @@ const App = (window.App = {
       character,
       null,
       true, // Always show portrait placeholder during initial character creation
+      {
+        // No race yet means creation not complete - hide overflow menu
+        hideOverflowMenu: true,
+      },
     );
   },
 

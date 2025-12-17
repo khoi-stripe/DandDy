@@ -82,7 +82,7 @@ function closeAuthModal() {
 function showLoginForm() {
     document.getElementById('loginForm').classList.remove('is-hidden');
     document.getElementById('registerForm').classList.add('is-hidden');
-    document.getElementById('authModalTitle').textContent = 'LOGIN';
+    document.getElementById('authModalTitle').textContent = 'LOG IN';
     document.getElementById('loginBtn').classList.remove('is-hidden');
     document.getElementById('registerBtn').classList.add('is-hidden');
     document.getElementById('authError').classList.add('is-hidden');
@@ -204,37 +204,21 @@ async function handleRegister() {
     }
 }
 
-function handleLogout() {
-    if (!window.App || !window.App.showConfirmationOverlay) {
-        // Fallback to immediate logout if confirmation UI is not available
-        window.AuthService.logout();
-        updateAuthUI();
-        
-        // Show login modal after logout (consistent with manager page)
-        showAuthModal();
-        return;
+async function handleLogout() {
+    // Save current character to cloud before logout if there is one
+    if (window.CharacterState && window.CharacterState.current.character.name) {
+        await saveCurrentCharacterToCloud();
     }
 
-    window.App.showConfirmationOverlay(
-        'Log out? Your character will be saved to the cloud before logging out.',
-        async () => {
-            // Save current character to cloud before logout if there is one
-            if (window.CharacterState && window.CharacterState.current.character.name) {
-                await saveCurrentCharacterToCloud();
-            }
+    window.AuthService.logout();
+    updateAuthUI();
 
-            window.AuthService.logout();
-            updateAuthUI();
-            console.log('✓ Logged out');
-
-            if (window.App && window.App.showNotification) {
-                window.App.showNotification('✓ Logged out', 'success');
-            }
-            
-            // Show login modal after logout (consistent with manager page)
-            showAuthModal();
-        },
-    );
+    if (window.App && window.App.showNotification) {
+        window.App.showNotification('✓ Logged out', 'success');
+    }
+    
+    // Show login modal after logout (consistent with manager page)
+    showAuthModal();
 }
 
 function updateAuthUI() {
@@ -256,12 +240,12 @@ function updateAuthUI() {
         const user = window.AuthService.getCurrentUser();
         userStatusIcon.textContent = '☁';
         userStatusText.textContent = user ? user.email : 'Logged In';
-        authBtn.textContent = 'LOGOUT';
+        authBtn.textContent = 'LOG OUT';
         authBtn.onclick = handleLogout;
     } else {
         userStatusIcon.textContent = '▣';
         userStatusText.textContent = 'Guest mode';
-        authBtn.textContent = 'LOGIN';
+        authBtn.textContent = 'LOG IN';
         authBtn.onclick = showAuthModal;
     }
 }

@@ -402,6 +402,7 @@ const CharacterSheet = (window.CharacterSheet = {
    * @param {Function} options.onDuplicate - Callback for duplicating (manager only)
    * @param {Function} options.onExport - Callback for exporting (manager only)
    * @param {Function} options.onDelete - Callback for deleting (manager only)
+   * @param {boolean} options.hideOverflowMenu - Whether to hide the overflow menu (builder: hide until creation complete)
    * @returns {string} HTML string for the character sheet
    */
   render(character, options = {}) {
@@ -418,6 +419,7 @@ const CharacterSheet = (window.CharacterSheet = {
       onExport = null,
       onDelete = null,
       onShare = null,
+      hideOverflowMenu = false,
     } = options;
 
     // Parse character data (handle both old and new formats)
@@ -436,6 +438,7 @@ const CharacterSheet = (window.CharacterSheet = {
         onGeneratePortrait,
         onTogglePortrait,
         onShare,
+        hideOverflowMenu,
       })}
       
       <div class="sheet-portrait-info-row">
@@ -499,6 +502,7 @@ const CharacterSheet = (window.CharacterSheet = {
       onGeneratePortrait,
       onTogglePortrait,
       onShare,
+      hideOverflowMenu,
     } = callbacks;
     // Function names differ by context
     const renameFn = context === 'builder' ? 'App.openNameModal()' : `renameCharacter('${character.id}')`;
@@ -656,7 +660,7 @@ const CharacterSheet = (window.CharacterSheet = {
         : '';
 
     const headerMenu =
-      headerActions.length > 0
+      headerActions.length > 0 && !hideOverflowMenu
         ? `
         <div class="sheet-title-buttons selector-shell selector-shell--actions">
           <button

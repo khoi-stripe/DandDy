@@ -48,7 +48,7 @@ const Components = (window.Components = {
     showPortrait = true,
     extraOptions = {},
   ) {
-    const { showGeneratePortraitButton = true } = extraOptions || {};
+    const { showGeneratePortraitButton = true, hideOverflowMenu = false } = extraOptions || {};
 
     // Use the shared CharacterSheet component
     return `
@@ -63,6 +63,8 @@ const Components = (window.Components = {
           onTogglePortrait: true,
           onLevelChange: true,
           onPrint: true,
+          // Hide overflow menu until character creation is complete (including portrait)
+          hideOverflowMenu: hideOverflowMenu,
         })}
       </div>
     `;
@@ -1119,7 +1121,14 @@ const SettingsModal = (window.SettingsModal = {
           // Re-render the character panel to reflect the new view mode
           const panel = document.getElementById('character-panel');
           if (panel && typeof Components !== 'undefined' && Components.renderCharacterSheet) {
-            panel.innerHTML = Components.renderCharacterSheet(state.character);
+            // Check if portrait is ready (custom portrait exists)
+            const hasCustomPortrait = !!state.character.customPortraitAscii;
+            // Check if portrait generation is in progress
+            const isGenerating = !!(App._quickCreatePortraitGeneration || App._guidedPortraitGenerating || App._quickCreatePortraitPending);
+            panel.innerHTML = Components.renderCharacterSheet(state.character, null, true, {
+              // Show overflow menu only when creation is complete AND portrait is ready
+              hideOverflowMenu: isGenerating || !hasCustomPortrait,
+            });
             // Populate the ASCII portrait after rendering
             if (typeof CharacterSheet !== 'undefined' && CharacterSheet.populatePortrait) {
               CharacterSheet.populatePortrait(state.character);
