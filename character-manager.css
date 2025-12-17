@@ -181,8 +181,7 @@
        even when focused, while still using shared focus borders/shadows. */
     color: var(--terminal-dim);
     /* Match search input text size to small button text */
-    /* Prevent iOS Safari focus-zoom (requires computed font-size >= 16px) */
-    font-size: max(16px, var(--font-size-small));
+    font-size: 14px;
 }
 
 /* Placeholder copy (e.g., "Search all 15 characters") should also use
@@ -190,7 +189,7 @@
 .search-input-wrapper .terminal-input::placeholder {
     color: var(--terminal-dim);
     /* Keep placeholder the same size as the input/button text */
-    font-size: max(16px, var(--font-size-small));
+    font-size: 14px;
 }
 
 /* Dim the search box when not focused so it feels secondary until active */
@@ -298,7 +297,7 @@
     white-space: nowrap;
     /* Match search input padding and font-size to maintain consistent height */
     padding: var(--spacing-sm) var(--spacing-md);
-    font-size: max(16px, var(--font-size-small));
+    font-size: 14px;
     /* Fixed width sized for longest label "Sort: Date modified" to prevent layout shift
        Override width: 100% from .selector-trigger */
     width: 200px;
@@ -2378,13 +2377,13 @@
     align-items: center;
     gap: 0.25rem;
     background: none;
-    border: 1px solid var(--border-dim);
-    color: var(--text-secondary);
+    border: 1px solid var(--modal-accent-dim);
+    color: var(--modal-accent-dim);
     padding: 0.25rem 0.75rem;
     font-family: var(--font-family);
     font-size: 0.85rem;
     cursor: pointer;
-    border-radius: var(--border-radius);
+    border-radius: 2px;
     transition: all 0.15s ease;
     margin-right: auto;
 }
@@ -2392,6 +2391,7 @@
 .modal-back-btn:hover {
     border-color: var(--modal-accent);
     color: var(--modal-accent);
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1);
 }
 
 .modal-back-btn .back-arrow {
@@ -2420,6 +2420,7 @@
     max-height: 85vh;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
 }
 
 .spell-picker-modal .modal-body {
@@ -2430,20 +2431,63 @@
     overflow: hidden;
 }
 
+/* Inline spell picker in edit modal */
+#editDetailsModal .modal-body {
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Left-aligned modal header variant */
+.modal-header-left {
+    justify-content: flex-start;
+}
+
+.modal-header-left .modal-title {
+    flex: 1;
+}
+
+.modal-header-left .modal-close {
+    margin-left: auto;
+}
+
 .spell-picker-info {
-    padding: var(--spacing-sm) 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm) 0 8px 0;
     color: var(--modal-accent);
     font-family: var(--font-family);
     font-size: 0.9rem;
-    border-bottom: 1px solid var(--border-dim);
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--modal-accent-dim);
+}
+
+.spell-picker-info-text {
+    flex: 1;
+}
+
+/* Count display inline with info text */
+.spell-picker-info .spell-picker-selected-count {
+    color: var(--modal-accent-dim);
+    font-size: 0.85rem;
+    margin-left: var(--spacing-md);
+    animation: quota-blink 4s ease-in-out infinite;
+}
+
+@keyframes quota-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
 }
 
 .spell-picker-filters {
     display: flex;
     gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: 16px;
     flex-wrap: wrap;
+    align-items: stretch;
 }
 
 .spell-picker-filters .terminal-input {
@@ -2451,17 +2495,63 @@
     min-width: 150px;
 }
 
-.spell-picker-filters .terminal-select {
+/* Spell school selector shell - yellow themed */
+.spell-picker-filters .selector-shell {
     min-width: 140px;
+}
+
+.spell-picker-filters .selector-trigger {
+    height: 100%;
+    min-width: 140px;
+    border-color: var(--modal-accent-dim);
+    color: var(--modal-accent);
+}
+
+/* Hide caret for spell school selector */
+.spell-picker-filters .selector-caret {
+    display: none;
+}
+
+.spell-picker-filters .selector-trigger:hover {
+    border-color: var(--modal-accent);
+    color: var(--modal-accent);
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1);
+}
+
+.spell-picker-filters .selector-trigger.is-open {
+    border-color: var(--modal-accent-dim);
+    color: var(--modal-accent-dim);
+}
+
+.spell-picker-filters .selector-menu {
+    border-color: var(--modal-accent);
+    background: var(--terminal-bg);
+}
+
+.spell-picker-filters .selector-option {
+    color: var(--modal-accent);
+}
+
+.spell-picker-filters .selector-option:hover,
+.spell-picker-filters .selector-option:focus {
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.15);
+    color: var(--modal-accent);
+}
+
+.spell-picker-filters .selector-option.is-selected {
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1);
+}
+
+.spell-picker-filters .selector-option.is-selected::before {
+    color: var(--modal-accent);
 }
 
 .spell-picker-list {
     flex: 1;
     overflow-y: auto;
     min-height: 200px;
-    max-height: 400px;
-    border: 1px solid var(--border-dim);
-    border-radius: var(--border-radius);
+    border: 1px solid var(--modal-accent-dim);
+    border-radius: 2px;
     padding: var(--spacing-xs);
 }
 
@@ -2471,7 +2561,7 @@
     align-items: flex-start;
     gap: var(--spacing-sm);
     padding: var(--spacing-sm);
-    border-bottom: 1px solid var(--border-dim);
+    border-bottom: 1px solid hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.3);
     cursor: pointer;
     transition: background-color 0.15s ease;
 }
@@ -2481,12 +2571,11 @@
 }
 
 .spell-picker-item:hover {
-    background-color: var(--surface-hover);
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1);
 }
 
 .spell-picker-item.is-selected {
-    background-color: var(--modal-accent-dim);
-    border-color: var(--modal-accent);
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.15);
 }
 
 .spell-picker-item.is-disabled {
@@ -2494,12 +2583,39 @@
     cursor: not-allowed;
 }
 
+/* Custom checkbox styling for spell picker */
 .spell-picker-checkbox {
     flex-shrink: 0;
     width: 18px;
     height: 18px;
     margin-top: 2px;
-    accent-color: var(--modal-accent);
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1.5px solid var(--modal-accent-dim);
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+}
+
+.spell-picker-checkbox:checked {
+    border-color: var(--modal-accent);
+    background-color: var(--modal-accent);
+}
+
+.spell-picker-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--terminal-bg);
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.spell-picker-checkbox:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 .spell-picker-item-content {
@@ -2516,25 +2632,27 @@
 
 .spell-picker-item-name {
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--modal-accent);
     font-size: 0.95rem;
 }
 
 .spell-picker-item-school {
     font-size: 0.8rem;
-    color: var(--text-dim);
+    color: var(--modal-accent);
     font-style: italic;
+    opacity: 0.7;
 }
 
 .spell-picker-item-meta {
     font-size: 0.75rem;
-    color: var(--text-dim);
+    color: var(--modal-accent);
+    opacity: 0.6;
     margin-top: 2px;
 }
 
 .spell-picker-item-desc {
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--modal-accent-dim);
     margin-top: var(--spacing-xs);
     line-height: 1.4;
     /* Truncate long descriptions */
@@ -2555,6 +2673,26 @@
 .spell-picker-selected-count {
     color: var(--modal-accent);
     font-size: 0.9rem;
+    transition: color 0.2s ease;
+}
+
+.spell-picker-selected-count.at-limit {
+    color: var(--color-warning, #ffa500);
+    font-weight: bold;
+}
+
+.spell-picker-info.at-limit {
+    color: var(--color-warning, #ffa500);
+}
+
+/* Spell picker loading state */
+.spell-picker-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    gap: var(--spacing-md);
 }
 
 .modal-footer-buttons {
@@ -2565,7 +2703,27 @@
 .spell-picker-empty {
     padding: var(--spacing-lg);
     text-align: center;
-    color: var(--text-dim);
+    color: var(--modal-accent-dim);
+}
+
+/* Spell limits summary in edit modal */
+.spell-limits-summary {
+    padding: var(--spacing-sm) var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    font-size: 0.85rem;
+    color: var(--modal-accent);
+    background: rgba(var(--modal-accent-rgb, 255, 215, 0), 0.08);
+    border-radius: 4px;
+    border-left: 3px solid var(--modal-accent);
+}
+
+.spell-limits-summary.at-limit {
+    color: var(--color-warning, #ffa500);
+    border-left-color: var(--color-warning, #ffa500);
+}
+
+.spell-limits-summary:empty {
+    display: none;
 }
 
 /* Spell tags in edit modal */
@@ -2655,7 +2813,4 @@
         width: 100%;
     }
     
-    .spell-picker-list {
-        max-height: 300px;
-    }
 }

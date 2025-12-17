@@ -617,6 +617,9 @@
                         <!-- Spellcasting (only visible for spellcasting classes) -->
                         <div class="settings-group is-hidden" id="spellEditSection">
                             <div class="settings-group-label">[ Spellcasting ]</div>
+                            <div class="spell-limits-summary" id="spellLimitsSummary">
+                                <!-- Populated dynamically: e.g., "Spells: 4/6 · Cantrips: 3/4" -->
+                            </div>
                             <section class="settings-section">
                                 <!-- Cantrips -->
                                 <div class="spell-edit-row" id="spellEditCantripsRow">
@@ -687,17 +690,27 @@
                 </div>
                 <div class="spell-picker-filters">
                     <input type="text" id="spellSearchInput" class="terminal-input" placeholder="Search spells..." oninput="filterSpellPicker()">
-                    <select id="spellSchoolFilter" class="terminal-select" onchange="filterSpellPicker()">
-                        <option value="">All Schools</option>
-                        <option value="Abjuration">Abjuration</option>
-                        <option value="Conjuration">Conjuration</option>
-                        <option value="Divination">Divination</option>
-                        <option value="Enchantment">Enchantment</option>
-                        <option value="Evocation">Evocation</option>
-                        <option value="Illusion">Illusion</option>
-                        <option value="Necromancy">Necromancy</option>
-                        <option value="Transmutation">Transmutation</option>
-                    </select>
+                    <div class="selector-shell selector-shell--listbox" id="spellSchoolFilterShell">
+                        <button type="button" 
+                                class="terminal-btn-small selector-trigger" 
+                                id="spellSchoolFilterTrigger"
+                                aria-haspopup="listbox"
+                                aria-expanded="false"
+                                onclick="CharacterSheet.toggleSelectorMenu(this)">
+                            <span class="selector-trigger-label">All Schools</span>
+                        </button>
+                        <div class="selector-menu" id="spellSchoolFilterMenu" role="listbox">
+                            <button class="selector-option is-selected" role="option" data-value="" onclick="selectStandaloneSpellSchool('')">All Schools</button>
+                            <button class="selector-option" role="option" data-value="Abjuration" onclick="selectStandaloneSpellSchool('Abjuration')">Abjuration</button>
+                            <button class="selector-option" role="option" data-value="Conjuration" onclick="selectStandaloneSpellSchool('Conjuration')">Conjuration</button>
+                            <button class="selector-option" role="option" data-value="Divination" onclick="selectStandaloneSpellSchool('Divination')">Divination</button>
+                            <button class="selector-option" role="option" data-value="Enchantment" onclick="selectStandaloneSpellSchool('Enchantment')">Enchantment</button>
+                            <button class="selector-option" role="option" data-value="Evocation" onclick="selectStandaloneSpellSchool('Evocation')">Evocation</button>
+                            <button class="selector-option" role="option" data-value="Illusion" onclick="selectStandaloneSpellSchool('Illusion')">Illusion</button>
+                            <button class="selector-option" role="option" data-value="Necromancy" onclick="selectStandaloneSpellSchool('Necromancy')">Necromancy</button>
+                            <button class="selector-option" role="option" data-value="Transmutation" onclick="selectStandaloneSpellSchool('Transmutation')">Transmutation</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="spell-picker-list" id="spellPickerList">
                     <!-- Populated dynamically with spell cards -->
