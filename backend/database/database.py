@@ -323,28 +323,26 @@ def ensure_combat_tracking_columns():
     if not inspector.has_table("characters"):
         return
 
-    columns_info = {col["name"]: col for col in inspector.get_columns("characters")}
-    existing_cols = set(columns_info.keys())
+    existing_cols = {col["name"] for col in inspector.get_columns("characters")}
     is_postgres = str(engine.url).startswith("postgresql")
 
     with engine.connect() as conn:
+        # Add hit_dice_current if missing
         if "hit_dice_current" not in existing_cols:
-            conn.execute(text("ALTER TABLE characters ADD COLUMN hit_dice_current INTEGER"))
+            try:
+                conn.execute(text("ALTER TABLE characters ADD COLUMN hit_dice_current INTEGER"))
+            except Exception as e:
+                print(f"Note: hit_dice_current column may already exist: {e}")
 
-        # For class_resources, we need JSONB on PostgreSQL for proper JSON handling
-        if "class_resources" in existing_cols and is_postgres:
-            # Check if column type is wrong (TEXT instead of JSONB)
-            col_type = str(columns_info["class_resources"].get("type", "")).upper()
-            if "JSON" not in col_type:
-                # Wrong type - drop and recreate
-                conn.execute(text("ALTER TABLE characters DROP COLUMN class_resources"))
-                existing_cols.discard("class_resources")
-
+        # Add class_resources if missing
         if "class_resources" not in existing_cols:
-            if is_postgres:
-                conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources JSONB NOT NULL DEFAULT '{}'::jsonb"))
-            else:
-                conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources TEXT DEFAULT '{}'"))
+            try:
+                if is_postgres:
+                    conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources JSONB DEFAULT '{}'"))
+                else:
+                    conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources TEXT DEFAULT '{}'"))
+            except Exception as e:
+                print(f"Note: class_resources column may already exist: {e}")
 
         conn.commit()
 
