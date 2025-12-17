@@ -1104,6 +1104,20 @@ body::before {
   align-items: center;
 }
 
+/* Edit link in section headers */
+.sheet-section-edit-link {
+  font-size: 0.85rem;
+  color: var(--terminal-accent);
+  text-decoration: none;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.sheet-section-edit-link:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
 /* Optional variant for headers that should not show the dividing line
    below the title (used by certain sections in the builder sheet). */
 .sheet-header--no-divider {

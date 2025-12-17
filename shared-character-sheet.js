@@ -459,7 +459,7 @@ const CharacterSheet = (window.CharacterSheet = {
       
       ${parsed.hasSkills ? this._renderSkills(parsed) : ''}
       
-      ${parsed.hasSpells ? this._renderSpells(parsed) : ''}
+      ${parsed.hasSpells ? this._renderSpells(parsed, context, { characterId: character.id, onEdit }) : ''}
       
       ${parsed.hasRacialTraits ? this._renderRacialTraits(parsed) : ''}
       
@@ -1697,7 +1697,8 @@ const CharacterSheet = (window.CharacterSheet = {
     `;
   },
 
-  _renderSpells(parsed) {
+  _renderSpells(parsed, context = 'builder', callbacks = {}) {
+    const { characterId, onEdit } = callbacks;
     const cantrips = parsed.cantrips || [];
     const spellsKnown = parsed.spellsKnown || [];
     const spellsPrepared = parsed.spellsPrepared || [];
@@ -1778,10 +1779,16 @@ const CharacterSheet = (window.CharacterSheet = {
       `;
     }
 
+    // Edit link for manager context
+    const editLink = context === 'manager' && onEdit && characterId
+      ? `<a href="#" class="sheet-section-edit-link" onclick="editCharacter('${characterId}', { scrollTo: 'spellEditSection' }); return false;">✎ Edit</a>`
+      : '';
+
     return `
       <div class="sheet-section">
         <div class="sheet-header">
           <div class="sheet-header-title">[ SPELLS ]</div>
+          ${editLink}
         </div>
         <div class="sheet-content">
           ${spellsContent}
