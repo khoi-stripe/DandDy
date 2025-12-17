@@ -2895,6 +2895,17 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       }
       if (updates.conditions !== undefined) apiUpdates.conditions = updates.conditions;
       
+      // Spells
+      if (updates.cantrips !== undefined) apiUpdates.cantrips = this._spellsToStringArray(updates.cantrips);
+      if (updates.spellsKnown !== undefined) apiUpdates.spells_known = this._spellsToStringArray(updates.spellsKnown);
+      if (updates.spellsPrepared !== undefined) apiUpdates.spells_prepared = this._spellsToStringArray(updates.spellsPrepared);
+      if (updates.spellSlots !== undefined) apiUpdates.spell_slots = updates.spellSlots;
+      if (updates.spellSlotsUsed !== undefined) apiUpdates.spell_slots_used = updates.spellSlotsUsed;
+      
+      // Hit dice and class resources
+      if (updates.hitDiceCurrent !== undefined) apiUpdates.hit_dice_current = updates.hitDiceCurrent;
+      if (updates.classResources !== undefined) apiUpdates.class_resources = updates.classResources;
+      
       // Text fields
       if (updates.backstory !== undefined) apiUpdates.backstory = updates.backstory;
       if (updates.sex !== undefined) apiUpdates.sex = updates.sex;
@@ -6558,6 +6569,11 @@ const ModalManager = {
      * Check if a modal's form has unsaved changes
      */
     isDirty(modalId) {
+        // Check if manually marked dirty (e.g., spell changes)
+        if (this._manuallyDirty.has(modalId)) {
+            return true;
+        }
+        
         const modal = document.getElementById(modalId);
         if (!modal) return false;
         
@@ -6580,6 +6596,17 @@ const ModalManager = {
      */
     clearSnapshot(modalId) {
         this._formSnapshots.delete(modalId);
+        this._manuallyDirty.delete(modalId);
+    },
+    
+    // Track modals that have been manually marked dirty (e.g., spell changes)
+    _manuallyDirty: new Set(),
+    
+    /**
+     * Manually mark a modal as dirty (for changes that don't update form inputs)
+     */
+    markDirty(modalId) {
+        this._manuallyDirty.add(modalId);
     },
     
     /**
@@ -13225,6 +13252,7 @@ let spellPickerState = {
     selectedSpells: new Set(),
     existingSpells: [], // Spells already on character
     onConfirm: null, // Callback when selection is confirmed
+    maxSelections: null, // Max spells that can be selected (null = unlimited)
 };
 
 /**
@@ -13235,9 +13263,10 @@ let spellPickerState = {
  * @param {number} options.maxSpellLevel - Maximum spell level character can cast
  * @param {Array} options.existingSpells - Spells already selected (to exclude or mark)
  * @param {Function} options.onConfirm - Callback with selected spells array
+ * @param {number|null} options.maxSelections - Maximum spells that can be selected (null = unlimited)
  */
 function openSpellPicker(options) {
-    const { characterClass, level, maxSpellLevel = 9, existingSpells = [], onConfirm } = options;
+    const { characterClass, level, maxSpellLevel = 9, existingSpells = [], onConfirm, maxSelections = null } = options;
     
     if (!window.SPELL_DATABASE) {
         console.error('Spell database not loaded');
@@ -13253,6 +13282,7 @@ function openSpellPicker(options) {
         selectedSpells: new Set(),
         existingSpells: existingSpells.map(s => (typeof s === 'string' ? s : s.name || s.id).toLowerCase()),
         onConfirm,
+        maxSelections,
     };
     
     // Render the spell list
@@ -13280,6 +13310,41 @@ function openSpellPicker(options) {
     updateSpellPickerCount();
 }
 
+// Track current standalone spell school filter selection
+let standaloneSpellSchoolFilter = '';
+
+/**
+ * Select a spell school from the standalone dropdown
+ */
+function selectStandaloneSpellSchool(value) {
+    standaloneSpellSchoolFilter = value;
+    
+    const trigger = document.getElementById('spellSchoolFilterTrigger');
+    const menu = document.getElementById('spellSchoolFilterMenu');
+    
+    if (trigger) {
+        const label = trigger.querySelector('.selector-trigger-label');
+        if (label) {
+            label.textContent = value || 'All Schools';
+        }
+    }
+    
+    // Update selected state on options
+    if (menu) {
+        menu.querySelectorAll('.selector-option').forEach(opt => {
+            opt.classList.toggle('is-selected', opt.dataset.value === value);
+        });
+    }
+    
+    // Menu is closed automatically by CharacterSheet global option handler
+    
+    // Re-render the spell list
+    filterSpellPicker();
+}
+
+// Make selector functions globally available
+window.selectStandaloneSpellSchool = selectStandaloneSpellSchool;
+
 /**
  * Close the spell picker modal
  */
@@ -13289,11 +13354,23 @@ function closeSpellPicker() {
         modal.classList.remove('show');
     }
     
-    // Clear search and filters
+    // Clear search and reset filter
     const searchInput = document.getElementById('spellSearchInput');
-    const schoolFilter = document.getElementById('spellSchoolFilter');
     if (searchInput) searchInput.value = '';
-    if (schoolFilter) schoolFilter.value = '';
+    
+    // Reset the selector to "All Schools"
+    standaloneSpellSchoolFilter = '';
+    const trigger = document.getElementById('spellSchoolFilterTrigger');
+    if (trigger) {
+        const label = trigger.querySelector('.selector-trigger-label');
+        if (label) label.textContent = 'All Schools';
+    }
+    const menu = document.getElementById('spellSchoolFilterMenu');
+    if (menu) {
+        menu.querySelectorAll('.selector-option').forEach(opt => {
+            opt.classList.toggle('is-selected', opt.dataset.value === '');
+        });
+    }
     
     spellPickerState.isOpen = false;
     spellPickerState.selectedSpells.clear();
@@ -13307,7 +13384,7 @@ function renderSpellPicker() {
     if (!listEl || !window.SPELL_DATABASE) return;
     
     const searchQuery = document.getElementById('spellSearchInput')?.value || '';
-    const schoolFilter = document.getElementById('spellSchoolFilter')?.value || '';
+    const schoolFilter = standaloneSpellSchoolFilter;
     
     // Get level (0 for cantrips)
     const level = spellPickerState.mode === 'cantrips' ? 0 : parseInt(spellPickerState.mode, 10);
@@ -13368,6 +13445,12 @@ function toggleSpellSelection(spellId, isExisting) {
     if (spellPickerState.selectedSpells.has(spellId)) {
         spellPickerState.selectedSpells.delete(spellId);
     } else {
+        // Check if we've reached the selection limit
+        if (spellPickerState.maxSelections !== null && 
+            spellPickerState.selectedSpells.size >= spellPickerState.maxSelections) {
+            showNotification(`You can only select ${spellPickerState.maxSelections}spell${spellPickerState.maxSelections===1?'':'s'}`, 'warning');
+            return;
+        }
         spellPickerState.selectedSpells.add(spellId);
     }
     
@@ -13389,7 +13472,14 @@ function updateSpellPickerCount() {
     const countEl = document.getElementById('spellPickerSelectedCount');
     if (countEl) {
         const count = spellPickerState.selectedSpells.size;
-        countEl.textContent = `${count}selected`;
+        if (spellPickerState.maxSelections !== null) {
+            countEl.textContent = count + ' of ' + spellPickerState.maxSelections + ' selected';
+            // Add visual indicator when at limit
+            countEl.classList.toggle('at-limit', count >= spellPickerState.maxSelections);
+        } else {
+            countEl.textContent = count + ' selected';
+            countEl.classList.remove('at-limit');
+        }
     }
 }
 
@@ -13438,6 +13528,9 @@ let editSpellsState = {
     spells: {}, // { 1: [...], 2: [...], etc. }
     characterClass: null,
     maxSpellLevel: 0,
+    characterLevel: 1,
+    cantripsAllowed: 0,   // Max cantrips allowed for this class/level
+    spellsAllowed: null,  // Max spells allowed (null = unlimited for prepared casters)
 };
 
 // Spellcasting classes and their types
@@ -13505,12 +13598,19 @@ function initializeSpellEditSection(character, parsed) {
         else maxSpellLevel = 5;
     }
     
+    // Get spell progression for this class/level to determine limits
+    const stats = calculateStatsForLevel(character, level);
+    const spellProgression = stats.spellProgression || { cantrips: 0, spellsKnown: null, maxSpellLevel: 0 };
+    
     // Store state
     editSpellsState = {
         cantrips: [...(parsed.cantrips || [])],
         spells: {},
         characterClass: className,
         maxSpellLevel,
+        characterLevel: level,
+        cantripsAllowed: spellProgression.cantrips || 0,
+        spellsAllowed: spellProgression.spellsKnown, // null for prepared casters (unlimited)
     };
     
     // Parse existing spells by level from spellsKnown
@@ -13547,6 +13647,40 @@ function initializeSpellEditSection(character, parsed) {
 }
 
 /**
+ * Update the spell limits summary display in the edit modal
+ */
+function updateSpellLimitsSummary() {
+    const summaryEl = document.getElementById('spellLimitsSummary');
+    if (!summaryEl) return;
+    
+    const parts = [];
+    
+    // Cantrips count
+    const currentCantrips = editSpellsState.cantrips.length;
+    const maxCantrips = editSpellsState.cantripsAllowed;
+    if (maxCantrips > 0) {
+        parts.push('Cantrips: ' + currentCantrips + '/' + maxCantrips);
+    }
+    
+    // Spells count (only for known casters)
+    const currentSpells = Object.values(editSpellsState.spells).flat().length;
+    const maxSpells = editSpellsState.spellsAllowed;
+    if (maxSpells !== null) {
+        parts.push('Spells: ' + currentSpells + '/' + maxSpells);
+    } else if (editSpellsState.characterClass) {
+        // Prepared casters - show current count only
+        parts.push('Spells: ' + currentSpells + ' (no limit)');
+    }
+    
+    summaryEl.textContent = parts.join(' · ');
+    
+    // Add at-limit class if at or over limit
+    const atLimit = (maxCantrips > 0 && currentCantrips >= maxCantrips) || 
+                   (maxSpells !== null && currentSpells >= maxSpells);
+    summaryEl.classList.toggle('at-limit', atLimit);
+}
+
+/**
  * Render spell tags in the edit modal
  */
 function renderSpellTags() {
@@ -13564,6 +13698,9 @@ function renderSpellTags() {
             renderSpellTagsInContainer(container, spells, level);
         }
     }
+    
+    // Update the limits summary
+    updateSpellLimitsSummary();
 }
 
 /**
@@ -13604,6 +13741,38 @@ function removeSpellFromEdit(spellName, level) {
 
 // Store original edit modal content for back navigation
 let editModalOriginalContent = null;
+// Store form values before spell picker opens (since innerHTML doesn't capture input .value)
+let editModalFormValues = null;
+
+/**
+ * Capture current form values from edit modal
+ */
+function captureEditFormValues() {
+    const form = document.getElementById('editDetailsModal');
+    if (!form) return null;
+    
+    const values = {};
+    form.querySelectorAll('input, textarea, select').forEach(el => {
+        if (el.id) {
+            values[el.id] = el.value;
+        }
+    });
+    return values;
+}
+
+/**
+ * Restore form values to edit modal
+ */
+function restoreEditFormValues(values) {
+    if (!values) return;
+    
+    Object.entries(values).forEach(([id, value]) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = value;
+        }
+    });
+}
 
 /**
  * Open spell picker for edit modal - transforms the edit modal into spell picker view
@@ -13615,6 +13784,9 @@ function openSpellPickerForEdit(level) {
     const modalContent = editModal.querySelector('.modal-content');
     if (!modalContent) return;
     
+    // Capture form values before storing HTML (input .value isn't in innerHTML)
+    editModalFormValues = captureEditFormValues();
+    
     // Store original content for back navigation
     editModalOriginalContent = modalContent.innerHTML;
     
@@ -13624,6 +13796,23 @@ function openSpellPickerForEdit(level) {
         existingSpells = editSpellsState.cantrips;
     } else {
         existingSpells = editSpellsState.spells[level] || [];
+    }
+    
+    // Calculate how many more spells can be selected
+    let maxSelections = null;
+    if (level === 'cantrips') {
+        // For cantrips: limit is cantripsAllowed - current cantrips
+        if (editSpellsState.cantripsAllowed > 0) {
+            const currentCantripCount = editSpellsState.cantrips.length;
+            maxSelections = Math.max(0, editSpellsState.cantripsAllowed - currentCantripCount);
+        }
+    } else {
+        // For regular spells: limit is spellsAllowed - total current spells across all levels
+        // null means unlimited (prepared casters)
+        if (editSpellsState.spellsAllowed !== null) {
+            const totalCurrentSpells = Object.values(editSpellsState.spells).flat().length;
+            maxSelections = Math.max(0, editSpellsState.spellsAllowed - totalCurrentSpells);
+        }
     }
     
     // Set up spell picker state
@@ -13637,25 +13826,149 @@ function openSpellPickerForEdit(level) {
         onConfirm: null, // Handled inline
         inlineMode: true,
         targetLevel: level,
+        maxSelections,
     };
     
     // Generate spell picker HTML
-    const levelText = level === 'cantrips' || level === 0 ? 'Cantrips' : `Level ${level}Spells`;
     const className = editSpellsState.characterClass ? 
         editSpellsState.characterClass.charAt(0).toUpperCase() + editSpellsState.characterClass.slice(1) : '';
     
-    const spellPickerHtml = `<div class="modal-header"><button class="modal-back-btn"onclick="closeInlineSpellPicker()"><span class="back-arrow">←</span>Back</button><h2 class="modal-title">SELECT ${levelText.toUpperCase()}</h2><button class="modal-close"onclick="ModalManager.requestClose('editDetailsModal')">&times;</button></div><div class="modal-body"><div class="spell-picker-info">Selecting ${levelText}${className?` for ${className}`:''}</div><div class="spell-picker-filters"><input type="text"id="inlineSpellSearch"class="terminal-input"placeholder="Search spells..."oninput="filterInlineSpellPicker()"><select id="inlineSpellSchool"class="terminal-select"onchange="filterInlineSpellPicker()"><option value="">All Schools</option><option value="Abjuration">Abjuration</option><option value="Conjuration">Conjuration</option><option value="Divination">Divination</option><option value="Enchantment">Enchantment</option><option value="Evocation">Evocation</option><option value="Illusion">Illusion</option><option value="Necromancy">Necromancy</option><option value="Transmutation">Transmutation</option></select></div><div class="spell-picker-list"id="inlineSpellList"><!--Populated dynamically--></div></div><div class="modal-footer"><div class="spell-picker-selected-count"id="inlineSpellCount">0 selected</div><div class="modal-footer-buttons"><button class="terminal-btn"onclick="closeInlineSpellPicker()">CANCEL</button><button class="terminal-btn terminal-btn-primary"onclick="confirmInlineSpellSelection()">ADD SELECTED</button></div></div>`;
+    // Build title text: "Level 1 Wizard spells" or "Wizard cantrips"
+    let titleText;
+    if (level === 'cantrips' || level === 0) {
+        titleText = className ? className + ' cantrips' : 'Cantrips';
+    } else {
+        titleText = 'Level ' + level + (className ? ' ' + className : '') + ' spells';
+    }
     
-    // Animate swap to spell picker
-    animateModalContentSwap(modalContent, spellPickerHtml, () => {
-        renderInlineSpellPicker();
-        // Focus search input
+    // Build count text (remaining slots)
+    const countText = maxSelections !== null ? maxSelections + ' remaining slot' + (maxSelections === 1 ? '' : 's') : '';
+    
+    // Reset school filter
+    currentSpellSchoolFilter = '';
+    
+    // Show loading state first (yellow cube spinner)
+    const loadingHtml = `<div class="modal-header modal-header-left"><h2 class="modal-title">${titleText}</h2><button class="modal-close"onclick="ModalManager.requestClose('editDetailsModal')">&times;</button></div><div class="modal-body spell-picker-loading"><div class="panel-loading-cube-container"><div class="panel-loading-cube"><i></i><i></i><i></i><i></i><i></i><i></i></div></div><p class="panel-loading-text">Loading spells...</p></div>`;
+    
+    // Animate to loading state
+    animateModalContentSwap(modalContent, loadingHtml, () => {
+        // Generate spell list content while loading is shown
+        const spellListHtml = generateInlineSpellListHtml();
+        
+        // Build the final spell picker HTML with pre-rendered list
+        const spellPickerHtml = `<div class="modal-header modal-header-left"><h2 class="modal-title">${titleText}</h2><button class="modal-close"onclick="ModalManager.requestClose('editDetailsModal')">&times;</button></div><div class="modal-body"><div class="spell-picker-info${maxSelections === 0 ? ' at-limit' : ''}"><span class="spell-picker-info-text">Select spells</span><span class="spell-picker-selected-count"id="inlineSpellCount">${countText}</span></div><div class="spell-picker-filters"><input type="text"id="inlineSpellSearch"class="terminal-input"placeholder="Search spells..."oninput="filterInlineSpellPicker()"><div class="selector-shell selector-shell--listbox"id="spellSchoolSelector"><button type="button"
+class="terminal-btn-small selector-trigger"
+id="spellSchoolTrigger"
+aria-haspopup="listbox"
+aria-expanded="false"
+onclick="CharacterSheet.toggleSelectorMenu(this)"><span class="selector-trigger-label">All Schools</span></button><div class="selector-menu"id="spellSchoolMenu"role="listbox"><button class="selector-option is-selected"role="option"data-value=""onclick="selectSpellSchool('')">All Schools</button><button class="selector-option"role="option"data-value="Abjuration"onclick="selectSpellSchool('Abjuration')">Abjuration</button><button class="selector-option"role="option"data-value="Conjuration"onclick="selectSpellSchool('Conjuration')">Conjuration</button><button class="selector-option"role="option"data-value="Divination"onclick="selectSpellSchool('Divination')">Divination</button><button class="selector-option"role="option"data-value="Enchantment"onclick="selectSpellSchool('Enchantment')">Enchantment</button><button class="selector-option"role="option"data-value="Evocation"onclick="selectSpellSchool('Evocation')">Evocation</button><button class="selector-option"role="option"data-value="Illusion"onclick="selectSpellSchool('Illusion')">Illusion</button><button class="selector-option"role="option"data-value="Necromancy"onclick="selectSpellSchool('Necromancy')">Necromancy</button><button class="selector-option"role="option"data-value="Transmutation"onclick="selectSpellSchool('Transmutation')">Transmutation</button></div></div></div><div class="spell-picker-list"id="inlineSpellList">${spellListHtml}</div></div><div class="modal-footer modal-footer-end"><button class="terminal-btn"onclick="closeInlineSpellPicker()">← BACK</button><button class="terminal-btn terminal-btn-primary"onclick="confirmInlineSpellSelection()">ADD SELECTED</button></div>`;
+        
+        // Small delay to ensure loading state is visible, then swap to populated content
         setTimeout(() => {
-            const searchInput = document.getElementById('inlineSpellSearch');
-            if (searchInput) searchInput.focus();
-        }, 50);
+            animateModalContentSwap(modalContent, spellPickerHtml, () => {
+                // Focus search input
+                setTimeout(() => {
+                    const searchInput = document.getElementById('inlineSpellSearch');
+                    if (searchInput) searchInput.focus();
+                }, 50);
+            });
+        }, 150);
     });
 }
+
+/**
+ * Generate the spell list HTML without rendering to DOM
+ * Used to pre-generate content before transition
+ */
+function generateInlineSpellListHtml() {
+    if (!window.SPELL_DATABASE) return '<div class="spell-picker-empty">Spell database not available.</div>';
+    
+    const searchQuery = '';
+    const schoolFilter = currentSpellSchoolFilter;
+    
+    // Get level (0 for cantrips)
+    const level = spellPickerState.mode === 'cantrips' ? 0 : parseInt(spellPickerState.mode, 10);
+    
+    // Get spells for this level
+    let spells = window.SPELL_DATABASE.getSpellsByLevel(level) || [];
+    
+    // Filter by class if specified
+    if (spellPickerState.characterClass) {
+        spells = spells.filter(spell => 
+            spell.classes.includes(spellPickerState.characterClass)
+        );
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        spells = spells.filter(spell => 
+            spell.name.toLowerCase().includes(query) ||
+            spell.school.toLowerCase().includes(query) ||
+            spell.description.toLowerCase().includes(query)
+        );
+    }
+    
+    // Filter by school
+    if (schoolFilter) {
+        spells = spells.filter(spell => spell.school === schoolFilter);
+    }
+    
+    // Sort alphabetically
+    spells.sort((a, b) => a.name.localeCompare(b.name));
+    
+    if (spells.length === 0) {
+        return '<div class="spell-picker-empty">No spells found matching your criteria.</div>';
+    }
+    
+    // Generate HTML for each spell
+    return spells.map(spell => {
+        const isExisting = spellPickerState.existingSpells.includes(spell.name.toLowerCase()) ||
+                          spellPickerState.existingSpells.includes(spell.id);
+        const isSelected = spellPickerState.selectedSpells.has(spell.id);
+        
+        const classes = ['spell-picker-item'];
+        if (isSelected) classes.push('is-selected');
+        if (isExisting) classes.push('is-disabled');
+        
+        return `<div class="${classes.join(' ')}"data-spell-id="${Utils.escapeHtml(spell.id)}"onclick="toggleInlineSpellSelection('${Utils.escapeHtml(spell.id)}', ${isExisting})"><input type="checkbox"class="spell-picker-checkbox"${isSelected?'checked':''}${isExisting?'disabled':''}><div class="spell-picker-item-content"><div class="spell-picker-item-header"><span class="spell-picker-item-name">${Utils.escapeHtml(spell.name)}</span><span class="spell-picker-item-school">${Utils.escapeHtml(spell.school)}</span></div><div class="spell-picker-item-meta">${Utils.escapeHtml(spell.castingTime)}· ${Utils.escapeHtml(spell.range)}· ${Utils.escapeHtml(spell.components)}</div><div class="spell-picker-item-desc">${Utils.escapeHtml(spell.description)}</div></div></div>`;
+    }).join('');
+}
+
+// Track current spell school filter selection
+let currentSpellSchoolFilter = '';
+
+/**
+ * Select a spell school from the dropdown
+ */
+function selectSpellSchool(value) {
+    currentSpellSchoolFilter = value;
+    
+    const trigger = document.getElementById('spellSchoolTrigger');
+    const menu = document.getElementById('spellSchoolMenu');
+    
+    if (trigger) {
+        const label = trigger.querySelector('.selector-trigger-label');
+        if (label) {
+            label.textContent = value || 'All Schools';
+        }
+    }
+    
+    // Update selected state on options
+    if (menu) {
+        menu.querySelectorAll('.selector-option').forEach(opt => {
+            opt.classList.toggle('is-selected', opt.dataset.value === value);
+        });
+    }
+    
+    // Menu is closed automatically by CharacterSheet global option handler
+    
+    // Re-render the spell list
+    filterInlineSpellPicker();
+}
+
+// Make selector functions globally available
+window.selectSpellSchool = selectSpellSchool;
 
 /**
  * Render the inline spell picker list
@@ -13665,7 +13978,7 @@ function renderInlineSpellPicker() {
     if (!listEl || !window.SPELL_DATABASE) return;
     
     const searchQuery = document.getElementById('inlineSpellSearch')?.value || '';
-    const schoolFilter = document.getElementById('inlineSpellSchool')?.value || '';
+    const schoolFilter = currentSpellSchoolFilter;
     
     // Get level (0 for cantrips)
     const level = spellPickerState.mode === 'cantrips' ? 0 : parseInt(spellPickerState.mode, 10);
@@ -13733,6 +14046,12 @@ function toggleInlineSpellSelection(spellId, isExisting) {
     if (spellPickerState.selectedSpells.has(spellId)) {
         spellPickerState.selectedSpells.delete(spellId);
     } else {
+        // Check if we've reached the selection limit
+        if (spellPickerState.maxSelections !== null && 
+            spellPickerState.selectedSpells.size >= spellPickerState.maxSelections) {
+            showNotification(`You can only select ${spellPickerState.maxSelections}spell${spellPickerState.maxSelections===1?'':'s'}`, 'warning');
+            return;
+        }
         spellPickerState.selectedSpells.add(spellId);
     }
     
@@ -13754,7 +14073,16 @@ function updateInlineSpellCount() {
     const countEl = document.getElementById('inlineSpellCount');
     if (countEl) {
         const count = spellPickerState.selectedSpells.size;
-        countEl.textContent = `${count}selected`;
+        
+        if (spellPickerState.maxSelections !== null) {
+            const remaining = spellPickerState.maxSelections - count;
+            countEl.textContent = remaining + ' remaining slot' + (remaining === 1 ? '' : 's');
+            // Add visual indicator when at limit
+            countEl.classList.toggle('at-limit', remaining <= 0);
+        } else {
+            countEl.textContent = '';
+            countEl.classList.remove('at-limit');
+        }
     }
 }
 
@@ -13770,13 +14098,20 @@ function closeInlineSpellPicker() {
     
     // Animate back to original content
     animateModalContentSwap(modalContent, editModalOriginalContent, () => {
+        // Restore form values (input .value isn't preserved in innerHTML)
+        restoreEditFormValues(editModalFormValues);
+        
         // Re-render spell tags to reflect any previous changes
         renderSpellTags();
+        
+        // Update spell limits summary
+        updateSpellLimitsSummary();
         
         // Clear state
         spellPickerState.isOpen = false;
         spellPickerState.selectedSpells.clear();
         editModalOriginalContent = null;
+        editModalFormValues = null;
     });
 }
 
@@ -13828,8 +14163,20 @@ function confirmInlineSpellSelection() {
     if (!modalContent) return;
     
     animateModalContentSwap(modalContent, editModalOriginalContent, () => {
+        // Restore form values (input .value isn't preserved in innerHTML)
+        restoreEditFormValues(editModalFormValues);
+        
         // Re-render spell tags to show newly added spells
         renderSpellTags();
+        
+        // Update spell limits summary
+        updateSpellLimitsSummary();
+        
+        // Scroll to Spellcasting section
+        const spellSection = document.getElementById('spellEditSection');
+        if (spellSection) {
+            spellSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
         
         showNotification(`Added ${selectedSpells.length}spell${selectedSpells.length>1?'s':''}!`);
         
@@ -13837,6 +14184,7 @@ function confirmInlineSpellSelection() {
         spellPickerState.isOpen = false;
         spellPickerState.selectedSpells.clear();
         editModalOriginalContent = null;
+        editModalFormValues = null;
     });
 }
 
@@ -13961,14 +14309,29 @@ async function openSpellLevelUpPicker(characterId, level, currentCount) {
     if (!character) return;
     
     const className = (character.class || '').toLowerCase();
+    const charLevel = character.level || 1;
+    
+    // Get spell progression to calculate limits
+    const stats = calculateStatsForLevel(character, charLevel);
+    const spellProgression = stats.spellProgression || { cantrips: 0, spellsKnown: null, maxSpellLevel: 0 };
     
     // Get existing spells for this level
     let existingSpells;
+    let maxSelections = null;
+    
     if (level === 'cantrips') {
         existingSpells = character.cantrips || [];
+        // Calculate remaining cantrip slots
+        if (spellProgression.cantrips > 0) {
+            maxSelections = Math.max(0, spellProgression.cantrips - existingSpells.length);
+        }
     } else {
         // For regular spells, we need to check which ones are at this level
         existingSpells = character.spellsKnown || [];
+        // Calculate remaining spell slots (null = unlimited for prepared casters)
+        if (spellProgression.spellsKnown !== null) {
+            maxSelections = Math.max(0, spellProgression.spellsKnown - existingSpells.length);
+        }
     }
     
     openSpellPicker({
@@ -13976,6 +14339,7 @@ async function openSpellLevelUpPicker(characterId, level, currentCount) {
         level: level,
         maxSpellLevel: 9, // Allow picking from all available levels
         existingSpells: existingSpells,
+        maxSelections: maxSelections,
         onConfirm: async (selectedSpells) => {
             // Add selected spells to character
             const updates = {};

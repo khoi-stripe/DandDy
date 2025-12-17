@@ -230,6 +230,17 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       }
       if (updates.conditions !== undefined) apiUpdates.conditions = updates.conditions;
       
+      // Spells
+      if (updates.cantrips !== undefined) apiUpdates.cantrips = this._spellsToStringArray(updates.cantrips);
+      if (updates.spellsKnown !== undefined) apiUpdates.spells_known = this._spellsToStringArray(updates.spellsKnown);
+      if (updates.spellsPrepared !== undefined) apiUpdates.spells_prepared = this._spellsToStringArray(updates.spellsPrepared);
+      if (updates.spellSlots !== undefined) apiUpdates.spell_slots = updates.spellSlots;
+      if (updates.spellSlotsUsed !== undefined) apiUpdates.spell_slots_used = updates.spellSlotsUsed;
+      
+      // Hit dice and class resources
+      if (updates.hitDiceCurrent !== undefined) apiUpdates.hit_dice_current = updates.hitDiceCurrent;
+      if (updates.classResources !== undefined) apiUpdates.class_resources = updates.classResources;
+      
       // Text fields
       if (updates.backstory !== undefined) apiUpdates.backstory = updates.backstory;
       if (updates.sex !== undefined) apiUpdates.sex = updates.sex;

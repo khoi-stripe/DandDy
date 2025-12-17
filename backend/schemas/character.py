@@ -122,6 +122,7 @@ class CharacterUpdate(BaseModel):
     death_save_failures: Optional[int] = None
     conditions: Optional[List[str]] = None
     inventory: Optional[List[Dict]] = None
+    spell_slots: Optional[Dict[str, int]] = None
     spell_slots_used: Optional[Dict[str, int]] = None
     cantrips: Optional[List[str]] = None
     spells_known: Optional[List[str]] = None
