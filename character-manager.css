@@ -1201,6 +1201,20 @@
   text-shadow: 0 0 10px var(--sheet-accent);
 }
 
+/* Left panel loading cube - green terminal theme */
+#leftPanelLoading .panel-loading-cube i {
+  border-color: hsl(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright));
+  background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.05);
+  box-shadow: 
+    inset 0 0 20px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.1),
+    0 0 15px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.2);
+}
+
+#leftPanelLoading .panel-loading-text {
+  color: hsl(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright));
+  text-shadow: 0 0 10px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.8);
+}
+
 /* Modal loading overlay - shown while saving */
 .modal-loading-overlay {
   position: absolute;
@@ -2550,7 +2564,6 @@
     flex: 1;
     overflow-y: auto;
     min-height: 200px;
-    border: 1px solid var(--modal-accent-dim);
     border-radius: 2px;
     padding: var(--spacing-xs);
 }
@@ -2578,9 +2591,21 @@
     background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.15);
 }
 
-.spell-picker-item.is-disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.spell-picker-item.is-existing {
+    /* Visual indicator that spell is currently on character - but still selectable */
+    border-left: 2px solid var(--modal-accent);
+}
+
+/* Badge showing spell is currently on character */
+.spell-existing-badge {
+    font-size: 0.65rem;
+    font-weight: normal;
+    text-transform: uppercase;
+    padding: 1px 4px;
+    margin-left: 6px;
+    background: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.3);
+    border-radius: 2px;
+    vertical-align: middle;
 }
 
 /* Custom checkbox styling for spell picker */
@@ -2677,12 +2702,18 @@
 }
 
 .spell-picker-selected-count.at-limit {
-    color: var(--color-warning, #ffa500);
+    color: var(--modal-accent, #ffd700);
     font-weight: bold;
 }
 
 .spell-picker-info.at-limit {
-    color: var(--color-warning, #ffa500);
+    color: var(--modal-accent, #ffd700);
+}
+
+.spell-picker-selected-count.over-limit,
+.spell-picker-info.over-limit {
+    color: var(--modal-accent, #ffd700);
+    font-weight: bold;
 }
 
 /* Spell picker loading state */
@@ -2718,8 +2749,14 @@
 }
 
 .spell-limits-summary.at-limit {
-    color: var(--color-warning, #ffa500);
-    border-left-color: var(--color-warning, #ffa500);
+    color: var(--modal-accent, #ffd700);
+    border-left-color: var(--modal-accent, #ffd700);
+}
+
+.spell-limits-summary.over-limit {
+    color: var(--modal-accent, #ffd700);
+    border-left-color: var(--modal-accent, #ffd700);
+    font-weight: bold;
 }
 
 .spell-limits-summary:empty {
@@ -2813,4 +2850,60 @@
         width: 100%;
     }
     
+}
+
+/* Spell removal modal (level down) */
+.spell-removal-section {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-sm);
+    border: 1px solid var(--terminal-border);
+    background: var(--terminal-bg-darker, rgba(0,0,0,0.2));
+}
+
+.spell-removal-header {
+    margin: 0 0 var(--spacing-sm) 0;
+    font-size: var(--font-size-base);
+    color: var(--terminal-accent);
+    text-transform: uppercase;
+}
+
+.spell-removal-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.spell-removal-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.spell-removal-item:hover {
+    background: var(--terminal-bg-hover, rgba(255,255,255,0.05));
+}
+
+.spell-removal-item.forced {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.spell-removal-item.forced span {
+    color: var(--terminal-error, #ff6b6b);
+}
+
+.spell-removal-item input[type="checkbox"] {
+    accent-color: var(--terminal-accent);
+    width: 16px;
+    height: 16px;
+}
+
+#confirmSpellRemovalBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }

@@ -17,29 +17,67 @@ of script tags / requests needed in the browser.
 """
 
 import sys
+import subprocess
+import shutil
 from pathlib import Path
-
-# Try to import rjsmin for minification
-try:
-    import rjsmin
-    HAS_MINIFIER = True
-except ImportError:
-    HAS_MINIFIER = False
-    print("Warning: rjsmin not installed. Run: pip install rjsmin")
-    print("         Bundles will not be minified.\n")
-
 
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def minify_js(code: str) -> str:
-    """Minify JavaScript code using rjsmin."""
-    if not HAS_MINIFIER:
+def check_terser_available() -> bool:
+    """Check if terser is available via npx."""
+    # Check if npx is available
+    if not shutil.which("npx"):
+        return False
+    # Try running terser --version
+    try:
+        result = subprocess.run(
+            ["npx", "--yes", "terser", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        return result.returncode == 0
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+
+
+def minify_js_terser(code: str) -> str:
+    """Minify JavaScript using terser (proper AST-based minification)."""
+    result = subprocess.run(
+        [
+            "npx", "--yes", "terser",
+            "--compress",
+            "--mangle",
+            "--format", "ascii_only=true"
+        ],
+        input=code,
+        capture_output=True,
+        text=True,
+        timeout=120
+    )
+    if result.returncode != 0:
+        print(f"Terser error: {result.stderr}")
+        return code
+    return result.stdout
+
+
+# Fallback to rjsmin if terser not available
+try:
+    import rjsmin
+    HAS_RJSMIN = True
+except ImportError:
+    HAS_RJSMIN = False
+
+
+def minify_js_rjsmin(code: str) -> str:
+    """Fallback minification using rjsmin (DEPRECATED - has template literal bugs)."""
+    if not HAS_RJSMIN:
         return code
     return rjsmin.jsmin(code, keep_bang_comments=False)
 
 
-def build_bundle(output_path: Path, parts: list[str], minify: bool = True) -> None:
+def build_bundle(output_path: Path, parts: list[str], minify: bool = True, use_terser: bool = True) -> None:
     lines: list[str] = []
     for rel in parts:
         src = ROOT / rel
@@ -52,16 +90,25 @@ def build_bundle(output_path: Path, parts: list[str], minify: bool = True) -> No
     combined = "\n".join(lines)
     original_size = len(combined.encode("utf-8"))
     
-    if minify and HAS_MINIFIER:
-        combined = minify_js(combined)
+    if minify:
+        if use_terser:
+            combined = minify_js_terser(combined)
+            minifier_name = "terser"
+        elif HAS_RJSMIN:
+            combined = minify_js_rjsmin(combined)
+            minifier_name = "rjsmin (WARNING: may corrupt template literals!)"
+        else:
+            print(f"  No minifier available, writing unminified")
+            output_path.write_text(combined, encoding="utf-8")
+            print(f"Wrote bundle: {output_path.relative_to(ROOT)} ({original_size / 1024:.1f} KB, unminified)")
+            return
+        
         minified_size = len(combined.encode("utf-8"))
         reduction = (1 - minified_size / original_size) * 100
         print(f"Wrote bundle: {output_path.relative_to(ROOT)}")
-        print(f"  Original: {original_size / 1024:.1f} KB → Minified: {minified_size / 1024:.1f} KB ({reduction:.1f}% smaller)")
+        print(f"  Minified with {minifier_name}: {original_size / 1024:.1f} KB → {minified_size / 1024:.1f} KB ({reduction:.1f}% smaller)")
     else:
-        output_path.write_text(combined, encoding="utf-8")
         print(f"Wrote bundle: {output_path.relative_to(ROOT)} ({original_size / 1024:.1f} KB, unminified)")
-        return
     
     output_path.write_text(combined, encoding="utf-8")
 
@@ -123,12 +170,33 @@ builder_parts = [
 
 def main() -> None:
     minify = "--no-minify" not in sys.argv
+    force_rjsmin = "--rjsmin" in sys.argv
     
     if not minify:
         print("Minification disabled via --no-minify flag\n")
     
-    build_bundle(ROOT / "manager.bundle.js", manager_parts, minify=minify)
-    build_bundle(ROOT / "character-builder" / "builder.bundle.js", builder_parts, minify=minify)
+    # Determine which minifier to use
+    use_terser = False
+    if minify and not force_rjsmin:
+        print("Checking for terser (proper AST-based minifier)...")
+        if check_terser_available():
+            print("✓ terser available - using it for safe minification\n")
+            use_terser = True
+        else:
+            print("✗ terser not available (requires Node.js)")
+            if HAS_RJSMIN:
+                print("  Falling back to rjsmin (WARNING: may corrupt template literals!)")
+                print("  Install terser: npm install -g terser")
+                print("  Or use npx (automatic if Node.js installed)\n")
+            else:
+                print("  No minifier available. Install Node.js for terser or: pip install rjsmin\n")
+    
+    if force_rjsmin:
+        print("Using rjsmin (forced via --rjsmin flag)")
+        print("WARNING: rjsmin may corrupt template literals!\n")
+    
+    build_bundle(ROOT / "manager.bundle.js", manager_parts, minify=minify, use_terser=use_terser)
+    build_bundle(ROOT / "character-builder" / "builder.bundle.js", builder_parts, minify=minify, use_terser=use_terser)
     
     print("\nDone!")
 

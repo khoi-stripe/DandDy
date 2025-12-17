@@ -59,6 +59,12 @@ python3 scripts/simple_bundle.py
 - **Never edit the bundle files directly** - They are auto-generated and will be overwritten
 - **Verify the rebuild succeeded** - Check for "Wrote bundle:" messages in output
 
+## Minification
+
+The bundler uses **terser** (via `npx`) for minification. Terser is an AST-based minifier that properly preserves template literals - no special workarounds needed for strings.
+
+Old workarounds like `${' '}` for spacing are no longer necessary (but still work).
+
 ## File Watcher (Alternative)
 
 If running `./start-dev.sh`, the bundle watcher automatically rebuilds on file changes. But when editing files outside of that workflow, manual rebuilding is required.

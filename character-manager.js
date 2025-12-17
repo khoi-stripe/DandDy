@@ -1770,7 +1770,8 @@ function selectSex(value, label) {
     }
 }
 
-async function editCharacter(id) {
+async function editCharacter(id, options = {}) {
+    const { scrollTo } = options;
     const character = await CharacterStorage.getById(id);
     if (!character) return;
 
@@ -1929,6 +1930,16 @@ async function editCharacter(id) {
                         opt.classList.toggle('is-selected', isSelected);
                         opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
                     });
+                }
+            }
+            
+            // Scroll to specific section if requested
+            if (scrollTo) {
+                const targetSection = document.getElementById(scrollTo);
+                if (targetSection) {
+                    setTimeout(() => {
+                        targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
                 }
             }
         }, 0);
@@ -2187,6 +2198,17 @@ async function saveEditDetails() {
     // Apply spell changes from the spell edit section
     const className = (character.class || '').toLowerCase();
     if (SPELLCASTING_CLASSES[className]) {
+        // Validate spell limits before saving
+        const spellValidation = validateAllSpellLimits();
+        if (!spellValidation.valid) {
+            // Hide loading overlay while showing validation error
+            if (loadingOverlay) {
+                loadingOverlay.classList.remove('is-visible');
+            }
+            showSpellLimitSaveModal(spellValidation);
+            return;
+        }
+        
         const spellEdits = getEditSpells();
         updates.cantrips = spellEdits.cantrips;
         updates.spellsKnown = spellEdits.spellsKnown;
@@ -7175,13 +7197,27 @@ function openSpellPicker(options) {
         return;
     }
     
+    // Normalize existing spells to lowercase for comparison
+    const normalizedExisting = existingSpells.map(s => (typeof s === 'string' ? s : s.name || s.id).toLowerCase());
+    
+    // Pre-select existing spells so user can manage them
+    const preSelected = new Set();
+    const spellLevel = level === 'cantrips' ? 0 : parseInt(level, 10);
+    const allSpells = window.SPELL_DATABASE.getSpellsByLevel(spellLevel) || [];
+    for (const spell of allSpells) {
+        if (normalizedExisting.includes(spell.name.toLowerCase()) || normalizedExisting.includes(spell.id)) {
+            preSelected.add(spell.id);
+        }
+    }
+    
     spellPickerState = {
         isOpen: true,
         mode: level,
         characterClass: characterClass?.toLowerCase(),
         maxSpellLevel,
-        selectedSpells: new Set(),
-        existingSpells: existingSpells.map(s => (typeof s === 'string' ? s : s.name || s.id).toLowerCase()),
+        selectedSpells: preSelected,
+        existingSpells: normalizedExisting, // Keep for reference but don't lock
+        originalSelection: new Set(preSelected), // Track what was originally selected
         onConfirm,
         maxSelections,
     };
@@ -7325,20 +7361,19 @@ function renderSpellPicker() {
     
     // Render spell items
     listEl.innerHTML = spells.map(spell => {
-        const isExisting = spellPickerState.existingSpells.includes(spell.name.toLowerCase()) ||
-                          spellPickerState.existingSpells.includes(spell.id);
         const isSelected = spellPickerState.selectedSpells.has(spell.id);
+        const wasOriginallySelected = spellPickerState.originalSelection?.has(spell.id);
         
         const classes = ['spell-picker-item'];
         if (isSelected) classes.push('is-selected');
-        if (isExisting) classes.push('is-disabled');
+        if (wasOriginallySelected) classes.push('is-existing'); // Visual indicator only, not locked
         
         return `
-            <div class="${classes.join(' ')}" data-spell-id="${Utils.escapeHtml(spell.id)}" onclick="toggleSpellSelection('${Utils.escapeHtml(spell.id)}', ${isExisting})">
-                <input type="checkbox" class="spell-picker-checkbox" ${isSelected ? 'checked' : ''} ${isExisting ? 'disabled' : ''}>
+            <div class="${classes.join(' ')}" data-spell-id="${Utils.escapeHtml(spell.id)}" onclick="toggleSpellSelection('${Utils.escapeHtml(spell.id)}')">
+                <input type="checkbox" class="spell-picker-checkbox" ${isSelected ? 'checked' : ''}>
                 <div class="spell-picker-item-content">
                     <div class="spell-picker-item-header">
-                        <span class="spell-picker-item-name">${Utils.escapeHtml(spell.name)}</span>
+                        <span class="spell-picker-item-name">${Utils.escapeHtml(spell.name)}${wasOriginallySelected ? ' <span class="spell-existing-badge">current</span>' : ''}</span>
                         <span class="spell-picker-item-school">${Utils.escapeHtml(spell.school)}</span>
                     </div>
                     <div class="spell-picker-item-meta">
@@ -7354,9 +7389,7 @@ function renderSpellPicker() {
 /**
  * Toggle selection of a spell
  */
-function toggleSpellSelection(spellId, isExisting) {
-    if (isExisting) return; // Can't toggle existing spells
-    
+function toggleSpellSelection(spellId) {
     if (spellPickerState.selectedSpells.has(spellId)) {
         spellPickerState.selectedSpells.delete(spellId);
     } else {
@@ -7409,11 +7442,6 @@ function filterSpellPicker() {
  * Confirm spell selection and call callback
  */
 function confirmSpellSelection() {
-    if (spellPickerState.selectedSpells.size === 0) {
-        showNotification('No spells selected', 'warning');
-        return;
-    }
-    
     // Get full spell objects for selected spells
     const level = spellPickerState.mode === 'cantrips' ? 0 : parseInt(spellPickerState.mode, 10);
     const allSpells = window.SPELL_DATABASE.getSpellsByLevel(level) || [];
@@ -7421,7 +7449,7 @@ function confirmSpellSelection() {
         spellPickerState.selectedSpells.has(spell.id)
     );
     
-    // Call the callback with selected spells
+    // Call the callback with selected spells (may be empty if user removed all)
     if (typeof spellPickerState.onConfirm === 'function') {
         spellPickerState.onConfirm(selectedSpells);
     }
@@ -7460,6 +7488,219 @@ const SPELLCASTING_CLASSES = {
     'ranger': { type: 'half', cantrips: false },
     // Subclass casters would need more complex handling
 };
+
+/**
+ * Validate a spell selection against the allowed limits
+ * @param {string|number} level - 'cantrips' or spell level (1-9)
+ * @param {Array} selectedSpells - Array of spell objects being selected
+ * @returns {object} - { valid: boolean, message: string, overBy: number }
+ */
+function validateSpellSelection(level, selectedSpells) {
+    const selectedCount = selectedSpells.length;
+    
+    if (level === 'cantrips') {
+        const maxCantrips = editSpellsState.cantripsAllowed;
+        if (maxCantrips > 0 && selectedCount > maxCantrips) {
+            const overBy = selectedCount - maxCantrips;
+            return {
+                valid: false,
+                message: `Too many cantrips! You have ${selectedCount} selected but your limit is ${maxCantrips}. Please remove ${overBy} cantrip${overBy > 1 ? 's' : ''}.`,
+                overBy
+            };
+        }
+    } else {
+        // For leveled spells, check against total spells allowed (if limited)
+        const maxSpells = editSpellsState.spellsAllowed;
+        if (maxSpells !== null) {
+            // Calculate total spells including this selection
+            const currentLevelNum = typeof level === 'string' ? parseInt(level, 10) : level;
+            let totalSpells = selectedCount;
+            
+            // Add spells from other levels
+            for (const [lvl, spells] of Object.entries(editSpellsState.spells)) {
+                if (parseInt(lvl, 10) !== currentLevelNum) {
+                    totalSpells += spells.length;
+                }
+            }
+            
+            if (totalSpells > maxSpells) {
+                const overBy = totalSpells - maxSpells;
+                return {
+                    valid: false,
+                    message: `Too many spells! You have ${totalSpells} total but your limit is ${maxSpells}. Please remove ${overBy} spell${overBy > 1 ? 's' : ''}.`,
+                    overBy
+                };
+            }
+        }
+    }
+    
+    return { valid: true, message: '', overBy: 0 };
+}
+
+/**
+ * Validate all current spell selections against limits
+ * @returns {object} - { valid: boolean, message: string, cantripsOver: number, spellsOver: number }
+ */
+function validateAllSpellLimits() {
+    const currentCantrips = editSpellsState.cantrips.length;
+    const maxCantrips = editSpellsState.cantripsAllowed;
+    const currentSpells = Object.values(editSpellsState.spells).flat().length;
+    const maxSpells = editSpellsState.spellsAllowed;
+    
+    const cantripsOver = maxCantrips > 0 ? Math.max(0, currentCantrips - maxCantrips) : 0;
+    const spellsOver = maxSpells !== null ? Math.max(0, currentSpells - maxSpells) : 0;
+    
+    if (cantripsOver > 0 || spellsOver > 0) {
+        const messages = [];
+        if (cantripsOver > 0) {
+            messages.push(`Remove ${cantripsOver} cantrip${cantripsOver > 1 ? 's' : ''} (${currentCantrips}/${maxCantrips})`);
+        }
+        if (spellsOver > 0) {
+            messages.push(`Remove ${spellsOver} spell${spellsOver > 1 ? 's' : ''} (${currentSpells}/${maxSpells})`);
+        }
+        return {
+            valid: false,
+            message: `You are over your spell limit.\n\n${messages.join('\n')}`,
+            cantripsOver,
+            spellsOver
+        };
+    }
+    
+    return { valid: true, message: '', cantripsOver: 0, spellsOver: 0 };
+}
+
+/**
+ * Animate opening a modal by inserting it without .show, then adding .show on next frame
+ * @param {string} modalHtml - The modal HTML string (without .show class)
+ * @param {string} modalId - The ID of the modal element
+ */
+function animateModalOpen(modalHtml, modalId) {
+    getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        // Force browser to acknowledge the element exists before adding .show
+        // This ensures the CSS animation triggers properly
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+            });
+        });
+    }
+}
+
+/**
+ * Show a modal when user is over spell limit
+ * @param {object} validation - The validation result with overBy info
+ * @param {string|number} level - 'cantrips' or spell level
+ */
+function showSpellLimitModal(validation, level) {
+    const isCantrips = level === 'cantrips';
+    const overBy = validation.overBy || 1;
+    const spellType = isCantrips ? 'cantrip' : 'spell';
+    const spellTypePlural = isCantrips ? 'cantrips' : 'spells';
+    
+    const modalHtml = `
+        <div id="spellLimitModal" class="modal">
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">Too Many ${isCantrips ? 'Cantrips' : 'Spells'}</h2>
+                    <button class="modal-close" onclick="closeSpellLimitModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="terminal-text">
+                        You've selected more ${spellTypePlural} than allowed for your class and level.
+                    </p>
+                    <p class="terminal-text" style="margin-top: 0.75rem;">
+                        Please remove <strong>${overBy}</strong> ${overBy === 1 ? spellType : spellTypePlural} to continue.
+                    </p>
+                </div>
+                <div class="modal-footer modal-footer-end" style="gap: 0.5rem;">
+                    <button class="terminal-btn" onclick="closeSpellLimitModal()">Cancel</button>
+                    <button class="terminal-btn" onclick="closeSpellLimitModal()">Edit Spells</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    animateModalOpen(modalHtml, 'spellLimitModal');
+}
+
+/**
+ * Close the spell limit modal
+ */
+function closeSpellLimitModal() {
+    const modal = document.getElementById('spellLimitModal');
+    if (modal) {
+        animateModalClose(modal, { removeOnClose: true });
+    }
+}
+
+/**
+ * Show a modal when trying to save while over spell limit
+ * @param {object} validation - The validation result with cantripsOver and spellsOver
+ */
+function showSpellLimitSaveModal(validation) {
+    const { cantripsOver, spellsOver } = validation;
+    
+    // Build the message
+    const parts = [];
+    if (cantripsOver > 0) {
+        parts.push(`${cantripsOver} cantrip${cantripsOver > 1 ? 's' : ''}`);
+    }
+    if (spellsOver > 0) {
+        parts.push(`${spellsOver} spell${spellsOver > 1 ? 's' : ''}`);
+    }
+    const removeText = parts.join(' and ');
+    
+    const modalHtml = `
+        <div id="spellLimitSaveModal" class="modal">
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">Over Spell Limit</h2>
+                    <button class="modal-close" onclick="closeSpellLimitSaveModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="terminal-text">
+                        You have more spells than allowed for your class and level.
+                    </p>
+                    <p class="terminal-text" style="margin-top: 0.75rem;">
+                        Please remove <strong>${removeText}</strong> to save your changes.
+                    </p>
+                </div>
+                <div class="modal-footer modal-footer-end" style="gap: 0.5rem;">
+                    <button class="terminal-btn" onclick="closeSpellLimitSaveModal()">Cancel</button>
+                    <button class="terminal-btn" onclick="closeSpellLimitSaveModal(); scrollToSpellSection();">Edit Spells</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    animateModalOpen(modalHtml, 'spellLimitSaveModal');
+}
+
+/**
+ * Close the spell limit save modal
+ */
+function closeSpellLimitSaveModal() {
+    const modal = document.getElementById('spellLimitSaveModal');
+    if (modal) {
+        animateModalClose(modal, { removeOnClose: true });
+    }
+}
+
+/**
+ * Scroll to the spell section in the edit modal
+ */
+function scrollToSpellSection() {
+    const spellSection = document.getElementById('spellEditSection');
+    if (spellSection) {
+        spellSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+window.closeSpellLimitModal = closeSpellLimitModal;
+window.closeSpellLimitSaveModal = closeSpellLimitSaveModal;
+window.scrollToSpellSection = scrollToSpellSection;
 
 /**
  * Initialize the spell editing section based on character
@@ -7573,15 +7814,21 @@ function updateSpellLimitsSummary() {
     // Cantrips count
     const currentCantrips = editSpellsState.cantrips.length;
     const maxCantrips = editSpellsState.cantripsAllowed;
+    const cantripsOver = maxCantrips > 0 ? Math.max(0, currentCantrips - maxCantrips) : 0;
+    
     if (maxCantrips > 0) {
-        parts.push('Cantrips: ' + currentCantrips + '/' + maxCantrips);
+        const prefix = cantripsOver > 0 ? '⚠ ' : '';
+        parts.push(`${prefix}Cantrips: ${currentCantrips}/${maxCantrips}`);
     }
     
     // Spells count (only for known casters)
     const currentSpells = Object.values(editSpellsState.spells).flat().length;
     const maxSpells = editSpellsState.spellsAllowed;
+    const spellsOver = maxSpells !== null ? Math.max(0, currentSpells - maxSpells) : 0;
+    
     if (maxSpells !== null) {
-        parts.push('Spells: ' + currentSpells + '/' + maxSpells);
+        const prefix = spellsOver > 0 ? '⚠ ' : '';
+        parts.push(`${prefix}Spells: ${currentSpells}/${maxSpells}`);
     } else if (editSpellsState.characterClass) {
         // Prepared casters - show current count only
         parts.push('Spells: ' + currentSpells + ' (no limit)');
@@ -7589,10 +7836,12 @@ function updateSpellLimitsSummary() {
     
     summaryEl.textContent = parts.join(' · ');
     
-    // Add at-limit class if at or over limit
-    const atLimit = (maxCantrips > 0 && currentCantrips >= maxCantrips) || 
-                   (maxSpells !== null && currentSpells >= maxSpells);
+    // Add over-limit class if over limit
+    const overLimit = cantripsOver > 0 || spellsOver > 0;
+    const atLimit = !overLimit && ((maxCantrips > 0 && currentCantrips >= maxCantrips) || 
+                   (maxSpells !== null && currentSpells >= maxSpells));
     summaryEl.classList.toggle('at-limit', atLimit);
+    summaryEl.classList.toggle('over-limit', overLimit);
 }
 
 /**
@@ -7735,18 +7984,32 @@ function openSpellPickerForEdit(level) {
         }
     }
     
+    // Normalize existing spells and pre-select them
+    const normalizedExisting = existingSpells.map(s => (typeof s === 'string' ? s : s.name || s.id).toLowerCase());
+    
+    // Pre-select existing spells so user can manage them
+    const preSelected = new Set();
+    const spellLevel = level === 'cantrips' ? 0 : parseInt(level, 10);
+    const allSpells = window.SPELL_DATABASE?.getSpellsByLevel(spellLevel) || [];
+    for (const spell of allSpells) {
+        if (normalizedExisting.includes(spell.name.toLowerCase()) || normalizedExisting.includes(spell.id)) {
+            preSelected.add(spell.id);
+        }
+    }
+    
     // Set up spell picker state
     spellPickerState = {
         isOpen: true,
         mode: level,
         characterClass: editSpellsState.characterClass?.toLowerCase(),
         maxSpellLevel: editSpellsState.maxSpellLevel,
-        selectedSpells: new Set(),
-        existingSpells: existingSpells.map(s => (typeof s === 'string' ? s : s.name || s.id).toLowerCase()),
+        selectedSpells: preSelected,
+        existingSpells: normalizedExisting,
+        originalSelection: new Set(preSelected), // Track what was originally selected
         onConfirm: null, // Handled inline
         inlineMode: true,
         targetLevel: level,
-        maxSelections,
+        maxSelections: null, // Allow free management, no limit
     };
     
     // Generate spell picker HTML
@@ -7829,13 +8092,16 @@ function openSpellPickerForEdit(level) {
             </div>
             <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="closeInlineSpellPicker()">← BACK</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="confirmInlineSpellSelection()">ADD SELECTED</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="confirmInlineSpellSelection()">CONFIRM</button>
             </div>
         `;
         
         // Small delay to ensure loading state is visible, then swap to populated content
         setTimeout(() => {
             animateModalContentSwap(modalContent, spellPickerHtml, () => {
+                // Update spell count display
+                updateInlineSpellCount();
+                
                 // Focus search input
                 setTimeout(() => {
                     const searchInput = document.getElementById('inlineSpellSearch');
@@ -7893,20 +8159,19 @@ function generateInlineSpellListHtml() {
     
     // Generate HTML for each spell
     return spells.map(spell => {
-        const isExisting = spellPickerState.existingSpells.includes(spell.name.toLowerCase()) ||
-                          spellPickerState.existingSpells.includes(spell.id);
         const isSelected = spellPickerState.selectedSpells.has(spell.id);
+        const wasOriginallySelected = spellPickerState.originalSelection?.has(spell.id);
         
         const classes = ['spell-picker-item'];
         if (isSelected) classes.push('is-selected');
-        if (isExisting) classes.push('is-disabled');
+        if (wasOriginallySelected) classes.push('is-existing');
         
         return `
-            <div class="${classes.join(' ')}" data-spell-id="${Utils.escapeHtml(spell.id)}" onclick="toggleInlineSpellSelection('${Utils.escapeHtml(spell.id)}', ${isExisting})">
-                <input type="checkbox" class="spell-picker-checkbox" ${isSelected ? 'checked' : ''} ${isExisting ? 'disabled' : ''}>
+            <div class="${classes.join(' ')}" data-spell-id="${Utils.escapeHtml(spell.id)}" onclick="toggleInlineSpellSelection('${Utils.escapeHtml(spell.id)}')">
+                <input type="checkbox" class="spell-picker-checkbox" ${isSelected ? 'checked' : ''}>
                 <div class="spell-picker-item-content">
                     <div class="spell-picker-item-header">
-                        <span class="spell-picker-item-name">${Utils.escapeHtml(spell.name)}</span>
+                        <span class="spell-picker-item-name">${Utils.escapeHtml(spell.name)}${wasOriginallySelected ? ' <span class="spell-existing-badge">current</span>' : ''}</span>
                         <span class="spell-picker-item-school">${Utils.escapeHtml(spell.school)}</span>
                     </div>
                     <div class="spell-picker-item-meta">
@@ -8002,20 +8267,19 @@ function renderInlineSpellPicker() {
     
     // Render spell items
     listEl.innerHTML = spells.map(spell => {
-        const isExisting = spellPickerState.existingSpells.includes(spell.name.toLowerCase()) ||
-                          spellPickerState.existingSpells.includes(spell.id);
         const isSelected = spellPickerState.selectedSpells.has(spell.id);
+        const wasOriginallySelected = spellPickerState.originalSelection?.has(spell.id);
         
         const classes = ['spell-picker-item'];
         if (isSelected) classes.push('is-selected');
-        if (isExisting) classes.push('is-disabled');
+        if (wasOriginallySelected) classes.push('is-existing');
         
         return `
-            <div class="${classes.join(' ')}" data-spell-id="${Utils.escapeHtml(spell.id)}" onclick="toggleInlineSpellSelection('${Utils.escapeHtml(spell.id)}', ${isExisting})">
-                <input type="checkbox" class="spell-picker-checkbox" ${isSelected ? 'checked' : ''} ${isExisting ? 'disabled' : ''}>
+            <div class="${classes.join(' ')}" data-spell-id="${Utils.escapeHtml(spell.id)}" onclick="toggleInlineSpellSelection('${Utils.escapeHtml(spell.id)}')">
+                <input type="checkbox" class="spell-picker-checkbox" ${isSelected ? 'checked' : ''}>
                 <div class="spell-picker-item-content">
                     <div class="spell-picker-item-header">
-                        <span class="spell-picker-item-name">${Utils.escapeHtml(spell.name)}</span>
+                        <span class="spell-picker-item-name">${Utils.escapeHtml(spell.name)}${wasOriginallySelected ? ' <span class="spell-existing-badge">current</span>' : ''}</span>
                         <span class="spell-picker-item-school">${Utils.escapeHtml(spell.school)}</span>
                     </div>
                     <div class="spell-picker-item-meta">
@@ -8038,9 +8302,7 @@ function filterInlineSpellPicker() {
 /**
  * Toggle spell selection in inline picker
  */
-function toggleInlineSpellSelection(spellId, isExisting) {
-    if (isExisting) return;
-    
+function toggleInlineSpellSelection(spellId) {
     if (spellPickerState.selectedSpells.has(spellId)) {
         spellPickerState.selectedSpells.delete(spellId);
     } else {
@@ -8069,17 +8331,53 @@ function toggleInlineSpellSelection(spellId, isExisting) {
  */
 function updateInlineSpellCount() {
     const countEl = document.getElementById('inlineSpellCount');
-    if (countEl) {
-        const count = spellPickerState.selectedSpells.size;
+    const infoEl = document.querySelector('.spell-picker-info');
+    if (!countEl) return;
+    
+    const count = spellPickerState.selectedSpells.size;
+    const level = spellPickerState.targetLevel;
+    
+    // Calculate limit based on level type
+    let maxAllowed = null;
+    let currentTotal = count;
+    
+    if (level === 'cantrips') {
+        maxAllowed = editSpellsState.cantripsAllowed;
+    } else {
+        // For leveled spells, count includes other levels too
+        maxAllowed = editSpellsState.spellsAllowed;
+        if (maxAllowed !== null) {
+            const currentLevelNum = typeof level === 'string' ? parseInt(level, 10) : level;
+            currentTotal = count;
+            // Add spells from other levels
+            for (const [lvl, spells] of Object.entries(editSpellsState.spells)) {
+                if (parseInt(lvl, 10) !== currentLevelNum) {
+                    currentTotal += spells.length;
+                }
+            }
+        }
+    }
+    
+    if (maxAllowed !== null && maxAllowed > 0) {
+        const remaining = maxAllowed - currentTotal;
+        const isOver = remaining < 0;
+        const isAtLimit = remaining === 0;
         
-        if (spellPickerState.maxSelections !== null) {
-            const remaining = spellPickerState.maxSelections - count;
-            countEl.textContent = remaining + ' remaining slot' + (remaining === 1 ? '' : 's');
-            // Add visual indicator when at limit
-            countEl.classList.toggle('at-limit', remaining <= 0);
-        } else {
-            countEl.textContent = '';
-            countEl.classList.remove('at-limit');
+        // Simple display: x/y with warning glyph if over
+        const prefix = isOver ? '⚠ ' : '';
+        countEl.textContent = `${prefix}${currentTotal}/${maxAllowed}`;
+        
+        countEl.classList.toggle('at-limit', isAtLimit);
+        countEl.classList.toggle('over-limit', isOver);
+        if (infoEl) {
+            infoEl.classList.toggle('at-limit', isAtLimit);
+            infoEl.classList.toggle('over-limit', isOver);
+        }
+    } else {
+        countEl.textContent = `${count} selected`;
+        countEl.classList.remove('at-limit', 'over-limit');
+        if (infoEl) {
+            infoEl.classList.remove('at-limit', 'over-limit');
         }
     }
 }
@@ -8119,11 +8417,6 @@ function closeInlineSpellPicker() {
 function confirmInlineSpellSelection() {
     const level = spellPickerState.targetLevel;
     
-    if (spellPickerState.selectedSpells.size === 0) {
-        showNotification('No spells selected', 'warning');
-        return;
-    }
-    
     // Get full spell objects for selected spells
     const spellLevel = level === 'cantrips' ? 0 : parseInt(level, 10);
     const allSpells = window.SPELL_DATABASE.getSpellsByLevel(spellLevel) || [];
@@ -8131,23 +8424,19 @@ function confirmInlineSpellSelection() {
         spellPickerState.selectedSpells.has(spell.id)
     );
     
-    // Add selected spells to the edit state
+    // Check if over limit - show modal if so
+    const validation = validateSpellSelection(level, selectedSpells);
+    if (!validation.valid) {
+        showSpellLimitModal(validation, level);
+        return;
+    }
+    
+    // Replace spells for this level entirely (allows removal as well as addition)
     if (level === 'cantrips') {
-        for (const spell of selectedSpells) {
-            if (!editSpellsState.cantrips.includes(spell.name)) {
-                editSpellsState.cantrips.push(spell.name);
-            }
-        }
+        editSpellsState.cantrips = selectedSpells.map(s => s.name);
     } else {
         const levelNum = typeof level === 'string' ? parseInt(level, 10) : level;
-        if (!editSpellsState.spells[levelNum]) {
-            editSpellsState.spells[levelNum] = [];
-        }
-        for (const spell of selectedSpells) {
-            if (!editSpellsState.spells[levelNum].includes(spell.name)) {
-                editSpellsState.spells[levelNum].push(spell.name);
-            }
-        }
+        editSpellsState.spells[levelNum] = selectedSpells.map(s => s.name);
     }
     
     // Mark form as dirty
@@ -8198,7 +8487,8 @@ function getEditSpells() {
 }
 
 /**
- * Check if a character needs to select new spells after leveling up
+ * Check if a character needs to select new spells after leveling up,
+ * or remove excess spells after leveling down
  * @param {object} character - The character object
  * @param {number} oldLevel - Previous level
  * @param {number} newLevel - New level
@@ -8220,12 +8510,40 @@ async function checkAndPromptForNewSpells(character, oldLevel, newLevel) {
     const currentCantrips = character.cantrips || [];
     const currentSpells = character.spellsKnown || [];
     
-    // Calculate deficits
+    // Calculate deficits (need more spells)
     const cantripDeficit = Math.max(0, cantripsKnown - currentCantrips.length);
-    const spellDeficit = Math.max(0, spellsKnown - currentSpells.length);
+    const spellDeficit = Math.max(0, (spellsKnown || 0) - currentSpells.length);
     
+    // Calculate surpluses (have too many spells) - only for "known" casters, not prepared
+    const cantripSurplus = Math.max(0, currentCantrips.length - cantripsKnown);
+    const spellSurplus = spellsKnown !== null ? Math.max(0, currentSpells.length - spellsKnown) : 0;
+    
+    // Check for spells that are too high level for current max
+    const tooHighLevelSpells = [];
+    if (window.SPELL_DATABASE && maxSpellLevel > 0) {
+        for (const spellName of currentSpells) {
+            const spellInfo = window.SPELL_DATABASE.getSpellByName(spellName);
+            if (spellInfo && spellInfo.level > maxSpellLevel) {
+                tooHighLevelSpells.push({ name: spellName, level: spellInfo.level });
+            }
+        }
+    }
+    
+    // If character has excess spells or spells too high level, prompt for removal
+    if (cantripSurplus > 0 || spellSurplus > 0 || tooHighLevelSpells.length > 0) {
+        showSpellRemovalPrompt(character, {
+            cantripSurplus,
+            spellSurplus,
+            cantripsKnown,
+            spellsKnown,
+            maxSpellLevel,
+            currentCantrips,
+            currentSpells,
+            tooHighLevelSpells,
+        });
+    }
     // If character needs more cantrips or spells, prompt them
-    if (cantripDeficit > 0 || spellDeficit > 0) {
+    else if (cantripDeficit > 0 || spellDeficit > 0) {
         showSpellLevelUpPrompt(character, {
             cantripDeficit,
             spellDeficit,
@@ -8246,21 +8564,22 @@ function showSpellLevelUpPrompt(character, spellInfo) {
     const className = (character.class || '').toLowerCase();
     
     // Build prompt message
-    let message = `As a Level ${character.level} ${character.class}, you can know:\n`;
+    // Note: Use ${' '} to preserve spaces after interpolations (rjsmin strips them)
+    let message = `As a Level ${character.level}${' '}${character.class}, you can know:\n`;
     if (cantripsKnown > 0) {
-        message += `• ${cantripsKnown} cantrips (you have ${currentCantrips.length})\n`;
+        message += `• ${cantripsKnown}${' '}cantrips (you have ${currentCantrips.length})\n`;
     }
     if (spellsKnown > 0) {
-        message += `• ${spellsKnown} spells (you have ${currentSpells.length})\n`;
+        message += `• ${spellsKnown}${' '}spells (you have ${currentSpells.length})\n`;
     }
     
     if (cantripDeficit > 0 || spellDeficit > 0) {
         message += '\n';
         if (cantripDeficit > 0) {
-            message += `You can select ${cantripDeficit} more cantrip${cantripDeficit > 1 ? 's' : ''}.\n`;
+            message += `You can select ${cantripDeficit}${' '}more cantrip${cantripDeficit > 1 ? 's' : ''}.\n`;
         }
         if (spellDeficit > 0) {
-            message += `You can select ${spellDeficit} more spell${spellDeficit > 1 ? 's' : ''}.`;
+            message += `You can select ${spellDeficit}${' '}more spell${spellDeficit > 1 ? 's' : ''}.`;
         }
     }
     
@@ -8268,21 +8587,6 @@ function showSpellLevelUpPrompt(character, spellInfo) {
     const modalHost = getManagerModalHost();
     const existingModal = document.getElementById('spellLevelUpModal');
     if (existingModal) existingModal.remove();
-    
-    const levelOrdinal = (n) => {
-        const s = ['th', 'st', 'nd', 'rd'];
-        const v = n % 100;
-        return n + (s[(v - 20) % 10] || s[v] || s[0]);
-    };
-    
-    // Create buttons for each spell level available
-    let spellLevelButtons = '';
-    if (cantripDeficit > 0 && SPELLCASTING_CLASSES[className]?.cantrips) {
-        spellLevelButtons += `<button class="terminal-btn" onclick="openSpellLevelUpPicker('${character.id}', 'cantrips', ${currentCantrips.length})">SELECT CANTRIPS</button>`;
-    }
-    for (let level = 1; level <= maxSpellLevel; level++) {
-        spellLevelButtons += `<button class="terminal-btn" onclick="openSpellLevelUpPicker('${character.id}', ${level}, ${currentSpells.length})">${levelOrdinal(level)} LEVEL</button>`;
-    }
     
     const modalHtml = `
         <div id="spellLevelUpModal" class="modal show">
@@ -8293,13 +8597,10 @@ function showSpellLevelUpPrompt(character, spellInfo) {
                 </div>
                 <div class="modal-body">
                     <p class="terminal-text" style="white-space: pre-line;">${Utils.escapeHtml(message)}</p>
-                    <p class="terminal-text-small terminal-text-dim" style="margin-top: 1rem;">
-                        Select a spell level to add spells, or close this dialog to add them later via the Edit menu.
-                    </p>
                 </div>
-                <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">
-                    ${spellLevelButtons}
-                    <button class="terminal-btn" onclick="closeSpellLevelUpPrompt()">LATER</button>
+                <div class="modal-footer" style="gap: 0.5rem;">
+                    <button class="terminal-btn terminal-btn-secondary" onclick="closeSpellLevelUpPrompt()">Later</button>
+                    <button class="terminal-btn terminal-btn-secondary" onclick="closeSpellLevelUpPrompt(); editCharacter('${character.id}', { scrollTo: 'spellEditSection' })">Select spells</button>
                 </div>
             </div>
         </div>
@@ -8313,6 +8614,238 @@ function showSpellLevelUpPrompt(character, spellInfo) {
  */
 function closeSpellLevelUpPrompt() {
     const modal = document.getElementById('spellLevelUpModal');
+    if (modal) {
+        animateModalClose(modal, { removeOnClose: true });
+    }
+}
+
+// Track state for spell removal modal
+let spellRemovalState = {
+    characterId: null,
+    selectedCantrips: new Set(),
+    selectedSpells: new Set(),
+    requiredCantripRemovals: 0,
+    requiredSpellRemovals: 0,
+    forcedSpellRemovals: [], // Spells that MUST be removed (too high level)
+};
+
+/**
+ * Show a prompt for removing excess spells after level down
+ */
+function showSpellRemovalPrompt(character, spellInfo) {
+    const { cantripSurplus, spellSurplus, cantripsKnown, spellsKnown, maxSpellLevel, currentCantrips, currentSpells, tooHighLevelSpells } = spellInfo;
+    
+    // Initialize removal state
+    spellRemovalState = {
+        characterId: character.id,
+        selectedCantrips: new Set(),
+        selectedSpells: new Set(),
+        requiredCantripRemovals: cantripSurplus,
+        requiredSpellRemovals: spellSurplus,
+        forcedSpellRemovals: tooHighLevelSpells.map(s => s.name),
+    };
+    
+    // Pre-select forced removals
+    tooHighLevelSpells.forEach(s => spellRemovalState.selectedSpells.add(s.name));
+    
+    // Build prompt message
+    let message = `As a Level ${character.level}${' '}${character.class}, you can know:\n`;
+    if (cantripsKnown > 0) {
+        message += `• ${cantripsKnown}${' '}cantrips (you have ${currentCantrips.length})\n`;
+    }
+    if (spellsKnown !== null && spellsKnown > 0) {
+        message += `• ${spellsKnown}${' '}spells (you have ${currentSpells.length})\n`;
+    }
+    
+    message += '\n';
+    if (cantripSurplus > 0) {
+        message += `You must remove ${cantripSurplus}${' '}cantrip${cantripSurplus > 1 ? 's' : ''}.\n`;
+    }
+    if (spellSurplus > 0) {
+        message += `You must remove ${spellSurplus}${' '}spell${spellSurplus > 1 ? 's' : ''}.\n`;
+    }
+    if (tooHighLevelSpells.length > 0) {
+        message += `\n${tooHighLevelSpells.length}${' '}spell${tooHighLevelSpells.length > 1 ? 's are' : ' is'} above your max spell level (${maxSpellLevel}) and must be removed.`;
+    }
+    
+    // Build cantrip checkboxes
+    let cantripCheckboxes = '';
+    if (cantripSurplus > 0 && currentCantrips.length > 0) {
+        cantripCheckboxes = `
+            <div class="spell-removal-section">
+                <h4 class="spell-removal-header">Cantrips (remove ${cantripSurplus})</h4>
+                <div class="spell-removal-list">
+                    ${currentCantrips.map(cantrip => `
+                        <label class="spell-removal-item">
+                            <input type="checkbox" 
+                                   onchange="toggleSpellRemoval('cantrip', '${Utils.escapeHtml(cantrip.replace(/'/g, "\\'"))}')"
+                                   ${spellRemovalState.selectedCantrips.has(cantrip) ? 'checked' : ''}>
+                            <span>${Utils.escapeHtml(cantrip)}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Build spell checkboxes (grouped by level if possible)
+    let spellCheckboxes = '';
+    if ((spellSurplus > 0 || tooHighLevelSpells.length > 0) && currentSpells.length > 0) {
+        // Group spells by level
+        const spellsByLevel = {};
+        for (const spellName of currentSpells) {
+            let level = 1;
+            if (window.SPELL_DATABASE) {
+                const info = window.SPELL_DATABASE.getSpellByName(spellName);
+                if (info) level = info.level;
+            }
+            if (!spellsByLevel[level]) spellsByLevel[level] = [];
+            spellsByLevel[level].push(spellName);
+        }
+        
+        const totalToRemove = spellSurplus + tooHighLevelSpells.length;
+        spellCheckboxes = `
+            <div class="spell-removal-section">
+                <h4 class="spell-removal-header">Spells (remove ${totalToRemove})</h4>
+                <div class="spell-removal-list">
+                    ${Object.entries(spellsByLevel)
+                        .sort(([a], [b]) => Number(a) - Number(b))
+                        .map(([level, spells]) => spells.map(spell => {
+                            const isForced = spellRemovalState.forcedSpellRemovals.includes(spell);
+                            const isTooHigh = tooHighLevelSpells.some(s => s.name === spell);
+                            return `
+                                <label class="spell-removal-item${isForced ? ' forced' : ''}">
+                                    <input type="checkbox" 
+                                           onchange="toggleSpellRemoval('spell', '${Utils.escapeHtml(spell.replace(/'/g, "\\'"))}')"
+                                           ${spellRemovalState.selectedSpells.has(spell) ? 'checked' : ''}
+                                           ${isForced ? 'disabled checked' : ''}>
+                                    <span>${Utils.escapeHtml(spell)}${' '}(${level === '0' ? 'cantrip' : `lvl ${level}`})${isTooHigh ? ' ⚠️ too high' : ''}</span>
+                                </label>
+                            `;
+                        }).join('')).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    const modalHost = getManagerModalHost();
+    const existingModal = document.getElementById('spellRemovalModal');
+    if (existingModal) existingModal.remove();
+    
+    const modalHtml = `
+        <div id="spellRemovalModal" class="modal show">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">REMOVE EXCESS SPELLS</h2>
+                    <button class="modal-close" onclick="closeSpellRemovalPrompt()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="terminal-text" style="white-space: pre-line;">${Utils.escapeHtml(message)}</p>
+                    ${cantripCheckboxes}
+                    ${spellCheckboxes}
+                    <p id="spellRemovalStatus" class="terminal-text-small terminal-text-dim" style="margin-top: 1rem;"></p>
+                </div>
+                <div class="modal-footer" style="gap: 0.5rem;">
+                    <button class="terminal-btn terminal-btn-secondary" onclick="closeSpellRemovalPrompt()">Later</button>
+                    <button id="confirmSpellRemovalBtn" class="terminal-btn" onclick="confirmSpellRemoval()">Remove selected</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modalHost.insertAdjacentHTML('beforeend', modalHtml);
+    updateSpellRemovalStatus();
+}
+
+/**
+ * Toggle a spell/cantrip selection for removal
+ */
+function toggleSpellRemoval(type, name) {
+    if (type === 'cantrip') {
+        if (spellRemovalState.selectedCantrips.has(name)) {
+            spellRemovalState.selectedCantrips.delete(name);
+        } else {
+            spellRemovalState.selectedCantrips.add(name);
+        }
+    } else {
+        // Don't allow deselecting forced removals
+        if (spellRemovalState.forcedSpellRemovals.includes(name)) return;
+        
+        if (spellRemovalState.selectedSpells.has(name)) {
+            spellRemovalState.selectedSpells.delete(name);
+        } else {
+            spellRemovalState.selectedSpells.add(name);
+        }
+    }
+    updateSpellRemovalStatus();
+}
+
+/**
+ * Update the status text and button state
+ */
+function updateSpellRemovalStatus() {
+    const statusEl = document.getElementById('spellRemovalStatus');
+    const btn = document.getElementById('confirmSpellRemovalBtn');
+    if (!statusEl || !btn) return;
+    
+    const cantripSelected = spellRemovalState.selectedCantrips.size;
+    const spellSelected = spellRemovalState.selectedSpells.size;
+    const cantripNeeded = spellRemovalState.requiredCantripRemovals;
+    const spellNeeded = spellRemovalState.requiredSpellRemovals + spellRemovalState.forcedSpellRemovals.length;
+    
+    const cantripOk = cantripSelected >= cantripNeeded;
+    const spellOk = spellSelected >= spellNeeded;
+    
+    let status = '';
+    if (!cantripOk) {
+        status += `Select ${cantripNeeded - cantripSelected}${' '}more cantrip${cantripNeeded - cantripSelected > 1 ? 's' : ''} to remove. `;
+    }
+    if (!spellOk) {
+        status += `Select ${spellNeeded - spellSelected}${' '}more spell${spellNeeded - spellSelected > 1 ? 's' : ''} to remove.`;
+    }
+    if (cantripOk && spellOk) {
+        status = 'Ready to remove selected spells.';
+    }
+    
+    statusEl.textContent = status;
+    btn.disabled = !(cantripOk && spellOk);
+}
+
+/**
+ * Confirm and apply spell removals
+ */
+async function confirmSpellRemoval() {
+    const character = await CharacterStorage.getById(spellRemovalState.characterId);
+    if (!character) return;
+    
+    // Remove selected cantrips
+    const newCantrips = (character.cantrips || []).filter(c => !spellRemovalState.selectedCantrips.has(c));
+    
+    // Remove selected spells
+    const newSpells = (character.spellsKnown || []).filter(s => !spellRemovalState.selectedSpells.has(s));
+    
+    // Save updates
+    const updates = {
+        cantrips: newCantrips,
+        spellsKnown: newSpells,
+    };
+    
+    await CharacterStorage.update(spellRemovalState.characterId, updates);
+    
+    // Close modal and refresh
+    closeSpellRemovalPrompt();
+    showNotification(`Removed ${spellRemovalState.selectedCantrips.size + spellRemovalState.selectedSpells.size}${' '}spell${spellRemovalState.selectedCantrips.size + spellRemovalState.selectedSpells.size > 1 ? 's' : ''}`, 'success');
+    
+    // Refresh character display
+    await CharacterManager.refreshCharacterList();
+    await CharacterManager.selectCharacter(spellRemovalState.characterId);
+}
+
+/**
+ * Close the spell removal prompt
+ */
+function closeSpellRemovalPrompt() {
+    const modal = document.getElementById('spellRemovalModal');
     if (modal) {
         animateModalClose(modal, { removeOnClose: true });
     }
@@ -8391,6 +8924,10 @@ window.getEditSpells = getEditSpells;
 window.checkAndPromptForNewSpells = checkAndPromptForNewSpells;
 window.closeSpellLevelUpPrompt = closeSpellLevelUpPrompt;
 window.openSpellLevelUpPicker = openSpellLevelUpPicker;
+// Spell removal (level down) functions
+window.closeSpellRemovalPrompt = closeSpellRemovalPrompt;
+window.toggleSpellRemoval = toggleSpellRemoval;
+window.confirmSpellRemoval = confirmSpellRemoval;
 // Inline spell picker functions (used within edit modal flow)
 window.filterInlineSpellPicker = filterInlineSpellPicker;
 window.toggleInlineSpellSelection = toggleInlineSpellSelection;
