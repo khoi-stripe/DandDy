@@ -323,26 +323,23 @@ def ensure_combat_tracking_columns():
     if not inspector.has_table("characters"):
         return
 
-    existing_cols = {col["name"] for col in inspector.get_columns("characters")}
     is_postgres = str(engine.url).startswith("postgresql")
 
     with engine.connect() as conn:
-        # Add hit_dice_current if missing
-        if "hit_dice_current" not in existing_cols:
+        if is_postgres:
+            # PostgreSQL: Use IF NOT EXISTS to avoid timeout issues with column checks
             try:
+                conn.execute(text("ALTER TABLE characters ADD COLUMN IF NOT EXISTS hit_dice_current INTEGER"))
+                conn.execute(text("ALTER TABLE characters ADD COLUMN IF NOT EXISTS class_resources JSONB DEFAULT '{}'"))
+            except Exception as e:
+                print(f"Note: combat tracking columns migration: {e}")
+        else:
+            # SQLite: Check first since IF NOT EXISTS not supported for columns
+            existing_cols = {col["name"] for col in inspector.get_columns("characters")}
+            if "hit_dice_current" not in existing_cols:
                 conn.execute(text("ALTER TABLE characters ADD COLUMN hit_dice_current INTEGER"))
-            except Exception as e:
-                print(f"Note: hit_dice_current column may already exist: {e}")
-
-        # Add class_resources if missing
-        if "class_resources" not in existing_cols:
-            try:
-                if is_postgres:
-                    conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources JSONB DEFAULT '{}'"))
-                else:
-                    conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources TEXT DEFAULT '{}'"))
-            except Exception as e:
-                print(f"Note: class_resources column may already exist: {e}")
+            if "class_resources" not in existing_cols:
+                conn.execute(text("ALTER TABLE characters ADD COLUMN class_resources TEXT DEFAULT '{}'"))
 
         conn.commit()
 
