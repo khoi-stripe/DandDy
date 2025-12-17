@@ -2590,8 +2590,8 @@
 .spell-picker-item {
     display: flex;
     align-items: flex-start;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm);
+    gap: 16px;
+    padding: 16px;
     border-bottom: 1px solid hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.3);
     cursor: pointer;
     transition: background-color 0.15s ease;
@@ -2629,12 +2629,12 @@
 /* Custom checkbox styling for spell picker */
 .spell-picker-checkbox {
     flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    margin-top: 2px;
+    width: 12px;
+    height: 12px;
+    margin-top: 4px;
     -webkit-appearance: none;
     appearance: none;
-    border: 1.5px solid var(--modal-accent-dim);
+    border: 1px solid var(--modal-accent-dim);
     background: transparent;
     cursor: pointer;
     position: relative;
@@ -2652,7 +2652,7 @@
     left: 50%;
     transform: translate(-50%, -50%);
     color: var(--terminal-bg);
-    font-size: 12px;
+    font-size: 9px;
     font-weight: bold;
 }
 
