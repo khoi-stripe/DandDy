@@ -5716,7 +5716,7 @@ function closeAuthModal() {
 function showLoginForm() {
     document.getElementById('loginForm').classList.remove('is-hidden');
     document.getElementById('registerForm').classList.add('is-hidden');
-    document.getElementById('authModalTitle').textContent = 'LOGIN';
+    document.getElementById('authModalTitle').textContent = 'LOG IN';
     document.getElementById('loginBtn').classList.remove('is-hidden');
     document.getElementById('registerBtn').classList.add('is-hidden');
     document.getElementById('authError').classList.add('is-hidden');
@@ -5778,7 +5778,7 @@ function setAuthLoading(isLoading, message) {
                 loginBtn.innerHTML = loginBtn.dataset.originalLabel;
                 delete loginBtn.dataset.originalLabel;
             } else {
-                loginBtn.textContent = 'LOGIN';
+                loginBtn.textContent = 'LOG IN';
             }
         }
     }
@@ -6245,7 +6245,7 @@ function updateAuthUI() {
     } else {
         userStatusIcon.textContent = '▣';
         userStatusText.textContent = 'Guest Mode';
-        authBtn.textContent = 'LOGIN';
+        authBtn.textContent = 'LOG IN';
         authBtn.onclick = () => {
             authOpenedFromWelcome = false;
             showAuthModal();
