@@ -916,6 +916,22 @@ body::before {
   color: var(--sheet-label-color);
 }
 
+/* Character sheet lists - proper hanging indent for tool profs, equipment, etc. */
+.sheet-list {
+  list-style: disc;
+  list-style-position: outside;
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.sheet-list li {
+  padding-left: 0.3em;
+}
+
+.sheet-list li::marker {
+  color: var(--sheet-label-color);
+}
+
 .sheet-title-header {
   display: flex;
   justify-content: space-between;

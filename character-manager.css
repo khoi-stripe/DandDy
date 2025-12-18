@@ -632,7 +632,8 @@
 
 /* ===== WELCOME MODAL (BUILDER-STYLE SPLASH) ===== */
 .welcome-modal {
-    max-width: 960px;
+    width: fit-content;
+    max-width: 90%;
 }
 
 .welcome-modal .modal-body {
@@ -709,6 +710,58 @@
     font-size: var(--font-size-small);
     color: var(--modal-accent-dim);
     text-align: center;
+}
+
+/* Short viewport: side-by-side layout */
+@media (max-height: 580px) {
+    .welcome-modal {
+        max-width: 95%;
+    }
+    
+    .welcome-body {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+    }
+    
+    .welcome-modal .splash-content {
+        flex: 0 0 auto;
+        min-width: 0;
+        max-height: none;
+    }
+    
+    .welcome-modal .splash-logo-img {
+        max-height: 35vh;
+        height: auto;
+        width: auto;
+    }
+    
+    .welcome-actions {
+        flex: 0 0 auto;
+        min-width: 180px;
+        padding-left: var(--spacing-lg);
+        padding-right: var(--spacing-lg);
+    }
+}
+
+/* Very short viewport: even more compact */
+@media (max-height: 450px) {
+    .welcome-modal .modal-body {
+        padding: var(--spacing-md);
+    }
+    
+    .welcome-modal .splash-logo-img {
+        max-height: 28vh;
+    }
+    
+    .welcome-actions {
+        min-width: 160px;
+        gap: var(--spacing-xs);
+    }
+    
+    .welcome-version {
+        margin-top: var(--spacing-sm);
+    }
 }
 
 /* ===== UTILITY CLASSES ===== */
