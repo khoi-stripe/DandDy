@@ -1719,7 +1719,7 @@ const App = (window.App = {
       'beforeend',
       `
       <div class="question-card mt-lg" data-question-id="${question.id}">
-        <button class="button-primary completion-save-btn" id="completion-save-btn" onclick="App.saveAndExit()">&gt;\u00A0SAVE AND EXIT</button>
+        <button class="button-primary" id="completion-save-btn" onclick="App.saveAndExit()">&gt;\u00A0SAVE AND EXIT</button>
         ${createAnotherBtn}
       </div>`,
     );

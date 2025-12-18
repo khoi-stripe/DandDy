@@ -859,21 +859,6 @@
   margin-bottom: 8px;
 }
 
-/* Completion primary action: inverted fill (green bg + black text) */
-#completion-save-btn {
-  background: var(--ui-primary-bg-color);
-  color: var(--ui-on-primary-color);
-  border-color: var(--ui-primary-bg-color);
-}
-
-#completion-save-btn:hover:not(:disabled),
-#completion-save-btn:focus-visible:not(:disabled) {
-  background: var(--ui-primary-bg-color);
-  color: var(--ui-on-primary-color);
-  border-color: var(--ui-primary-bg-color);
-  filter: brightness(1.08);
-}
-
 /* Level modal layout */
 .level-modal-row {
   margin-top: 12px;
