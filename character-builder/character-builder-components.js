@@ -1117,7 +1117,7 @@ const SettingsModal = (window.SettingsModal = {
       // Character Builder context: re-render completion screen if on that step
       if (typeof App !== 'undefined' && App && typeof CharacterState !== 'undefined') {
         const state = CharacterState.get ? CharacterState.get() : null;
-        if (state && state.step === 'complete' && state.character) {
+        if (state && state.currentQuestionId === 'complete' && state.character) {
           // Re-render the character panel to reflect the new view mode
           const panel = document.getElementById('character-panel');
           if (panel && typeof Components !== 'undefined' && Components.renderCharacterSheet) {

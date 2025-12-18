@@ -2474,23 +2474,17 @@ body.selector-menu-open .splash-art {
 /* Background glow hue animation:
    - Start from terminal green (120°)
    - Rotate hue toward teal (~180°)
-   - Then toward yellow (~60°)
    - Back to green
    - Intensity varies in sync with color transitions */
 @keyframes terminal-glow-hue-cycle {
-  0%, 20% {
+  0%, 15% {
     filter: hue-rotate(0deg);
     opacity: 1;
   }
-  33%, 53% {
+  50%, 65% {
     /* Approx. teal/cyan - slightly dimmer */
     filter: hue-rotate(60deg);
-    opacity: 0.75;
-  }
-  66%, 86% {
-    /* Approx. yellow - brightest */
-    filter: hue-rotate(-60deg);
-    opacity: 1.2;
+    opacity: 0.85;
   }
   100% {
     filter: hue-rotate(0deg);

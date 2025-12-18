@@ -1675,6 +1675,10 @@ const App = (window.App = {
   },
 
   async showComplete(question) {
+    // Track that we're on the complete question (important for quick-create which 
+    // calls showComplete directly, bypassing showQuestion)
+    CharacterState.setCurrentQuestion(question.id);
+    
     const narratorPanel = document.getElementById('narrator-panel');
     narratorPanel.insertAdjacentHTML(
       'beforeend',
@@ -1723,6 +1727,15 @@ const App = (window.App = {
 
     // Activate keyboard navigation
     KeyboardNav.activate();
+    
+    // Re-render character panel now that we're on the complete step
+    // This ensures the overflow menu shows up if portrait is already ready
+    // Clear the render cache so we force a re-render even if character data hasn't changed
+    this._lastRenderedCharacter = null;
+    const state = CharacterState.get();
+    if (state.character) {
+      this.updateCharacterPanel(state.character);
+    }
   },
 
   /**
@@ -5876,25 +5889,25 @@ const App = (window.App = {
   async updateCharacterPanel(character) {
     const panel = document.getElementById('character-panel');
 
-    // Determine entry mode (guided vs quick) and step from shared state so we can
+    // Determine entry mode (guided vs quick) and current question from shared state so we can
     // adjust portrait behavior. In quick-create we suppress pre-generated
     // portraits until an AI portrait generation has actually started.
     let entryMode = null;
-    let currentStep = null;
+    let currentQuestionId = null;
     try {
       if (window.CharacterState && typeof CharacterState.get === 'function') {
         const state = CharacterState.get();
         entryMode = state?.answers?.['entry-mode'] || null;
-        currentStep = state?.step || null;
+        currentQuestionId = state?.currentQuestionId || null;
       }
     } catch (e) {
       // If state lookup fails for any reason, fall back to default behavior.
       entryMode = null;
-      currentStep = null;
+      currentQuestionId = null;
     }
     const isQuickMode = entryMode === 'quick';
     const isGuidedMode = entryMode === 'guided';
-    const isCreationComplete = currentStep === 'complete';
+    const isCreationComplete = currentQuestionId === 'complete';
 
     // If a portrait animation is in progress, queue this update for after animation completes
     if (this._portraitAnimating) {
