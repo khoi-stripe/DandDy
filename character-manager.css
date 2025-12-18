@@ -902,7 +902,7 @@
 .settings-group-label {
     color: var(--terminal-fg);
     font-size: var(--font-size-base);
-    font-weight: bold;
+    font-weight: 500;
     text-transform: uppercase;
 }
 
@@ -1037,7 +1037,7 @@
 
 .terminal-text-error {
     color: var(--terminal-error);
-    font-weight: bold;
+    font-weight: 500;
     margin-top: var(--spacing-sm);
 }
 
@@ -2112,7 +2112,7 @@
     .print-only-name {
         display: block !important;
         font-size: 18px !important;
-        font-weight: bold !important;
+        font-weight: 500 !important;
         margin-bottom: 12px !important;
     }
 
@@ -2262,7 +2262,7 @@
     z-index: 5;
     padding: 0 4px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--terminal-bg);
@@ -2370,7 +2370,7 @@
 .share-card-name {
     margin: 0 0 0.5rem 0;
     font-size: 1.1rem;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--modal-accent);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2714,7 +2714,7 @@
     transform: translate(-50%, -50%);
     color: var(--terminal-bg);
     font-size: 9px;
-    font-weight: bold;
+    font-weight: 500;
 }
 
 .spell-picker-checkbox:disabled {
@@ -2735,7 +2735,7 @@
 }
 
 .spell-picker-item-name {
-    font-weight: 600;
+    font-weight: 500;
     color: var(--modal-accent);
     font-size: 0.95rem;
 }
@@ -2782,7 +2782,7 @@
 
 .spell-picker-selected-count.at-limit {
     color: var(--modal-accent, #ffd700);
-    font-weight: bold;
+    font-weight: 500;
 }
 
 .spell-picker-info.at-limit {
@@ -2792,7 +2792,7 @@
 .spell-picker-selected-count.over-limit,
 .spell-picker-info.over-limit {
     color: var(--modal-accent, #ffd700);
-    font-weight: bold;
+    font-weight: 500;
 }
 
 /* Spell picker loading state */
@@ -2835,7 +2835,7 @@
 .spell-limits-summary.over-limit {
     color: var(--modal-accent, #ffd700);
     border-left-color: var(--modal-accent, #ffd700);
-    font-weight: bold;
+    font-weight: 500;
 }
 
 .spell-limits-summary:empty {
@@ -2863,6 +2863,7 @@
     border: 1px solid var(--modal-accent);
     border-radius: var(--border-radius);
     font-size: 0.8rem;
+    font-weight: 400;
     color: #1a1a1a;
     opacity: 0.75;
     transition: background 0.15s ease, opacity 0.15s ease;
@@ -2875,7 +2876,7 @@
 
 .spell-tag-remove {
     cursor: pointer;
-    font-weight: bold;
+    font-weight: 400;
     color: #1a1a1a;
     opacity: 0.6;
     display: inline-block;

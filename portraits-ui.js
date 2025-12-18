@@ -106,7 +106,7 @@
 
       // Debug hook to verify manager history is opening with the expected data.
       try {
-        console.log('%c🎨 MANAGER PORTRAIT HISTORY OPEN', 'color:#0ff;font-weight:bold;');
+        console.log('%c🎨 MANAGER PORTRAIT HISTORY OPEN', 'color:#0ff;font-weight:500;');
         console.log('  Character ID:', characterId);
         console.log('  Versions count:', versions.length);
         console.log('  Active version ID:', metadata.activeVersionId || '(none)');
@@ -505,7 +505,7 @@
 
       // Debug: log which version is being applied.
       try {
-        console.log('%c🎨 MANAGER PORTRAIT USE SELECTED', 'color:#0ff;font-weight:bold;');
+        console.log('%c🎨 MANAGER PORTRAIT USE SELECTED', 'color:#0ff;font-weight:500;');
         console.log('  Character ID:', ctx.characterId);
         console.log('  Selected version ID:', versionId);
       } catch (e) {
@@ -1513,7 +1513,7 @@
 
        // Debug: log current vs target portrait details.
       try {
-        console.log('%c🎨 MANAGER PORTRAIT APPLY VERSION', 'color:#0ff;font-weight:bold;');
+        console.log('%c🎨 MANAGER PORTRAIT APPLY VERSION', 'color:#0ff;font-weight:500;');
         console.log('  Character ID:', characterId);
         console.log('  Applying version ID:', versionId);
         console.log('  Version has ascii:', !!version.ascii, 'len:', (version.ascii || '').length);

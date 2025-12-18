@@ -43,8 +43,8 @@
   --sl-color-danger-600: hsl(48, 100%, 64%);
   
   /* Typography */
-  --sl-font-sans: 'JetBrains Mono', 'Google Sans Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --sl-font-mono: 'JetBrains Mono', 'Google Sans Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --sl-font-sans: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --sl-font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --sl-font-size-medium: 13px;
   --sl-font-size-small: 12px;
   --sl-font-size-x-small: 11px;
@@ -173,7 +173,7 @@ body {
 
 .login-logo {
   font-size: 32px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--admin-accent);
   margin-bottom: var(--spacing-sm);
   letter-spacing: 0.02em;
@@ -254,7 +254,7 @@ body {
 
 .sidebar-title {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--admin-text);
 }
 
@@ -399,7 +399,7 @@ body {
 
 .stat-value {
   font-size: 42px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--admin-text);
   line-height: 1;
   margin-bottom: var(--spacing-sm);

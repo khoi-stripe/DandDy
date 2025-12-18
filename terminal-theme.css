@@ -101,8 +101,8 @@
   --context-hover: var(--terminal-hover);
   
   /* Typography */
-  --font-family: 'Google Sans Code', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: 'Google Sans Code', 'Courier New', Courier, monospace;
+  --font-family: 'IBM Plex Mono', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
+  --font-mono: 'IBM Plex Mono', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
   --font-size-base: 14px;
   --font-size-large: 20px;
   --font-size-small: 14px;
@@ -317,7 +317,7 @@ body::before {
 .terminal-title {
   color: var(--terminal-accent);
   font-size: 18px;
-  font-weight: bold;
+  font-weight: 500;
   line-height: 1.1;
   letter-spacing: 0.03em;
   display: flex;
@@ -327,7 +327,7 @@ body::before {
 
 .title-bracket {
   color: var(--terminal-accent);
-  font-weight: bold;
+  font-weight: 500;
 }
 
 /* ===== TITLE CUBE SPINNER (slow teal cube in header) ===== */
@@ -955,7 +955,7 @@ body::before {
 .sheet-title {
   color: var(--sheet-accent);
   font-size: 18px;
-  font-weight: bold;
+  font-weight: 500;
   line-height: 1.1;
   letter-spacing: 0.03em;
   flex: 1 1 auto;
@@ -1144,7 +1144,7 @@ body::before {
 
 .sheet-header-title {
   flex: 1;
-  font-weight: bold;
+  font-weight: 500;
   text-transform: uppercase;
 }
 
@@ -1235,7 +1235,7 @@ body::before {
 .stat-box-value,
 .ability-score {
   color: var(--sheet-value-color);
-  font-weight: bold;
+  font-weight: 500;
 }
 
 /* Spell slot boxes - compact grid layout */
@@ -1262,7 +1262,7 @@ body::before {
 
 .spell-slot-value {
   color: var(--sheet-value-color);
-  font-weight: bold;
+  font-weight: 500;
 }
 
 /* Spell tags in character sheet (container style) */
@@ -1282,7 +1282,7 @@ body::before {
   border: none;
   font-size: 0.8rem;
   color: var(--sheet-value-color);
-  font-weight: bold;
+  font-weight: 400;
 }
 
 /* Ability scores grid */
@@ -1435,6 +1435,7 @@ body::before {
   padding: var(--spacing-xs) var(--spacing-sm);
   font-family: var(--font-mono);
   font-size: var(--font-size-small);
+  font-weight: 400;
   cursor: pointer;
   transition: all var(--transition-speed);
   text-align: left;
@@ -1470,6 +1471,7 @@ body::before {
   padding: var(--spacing-xs) var(--spacing-sm);
   font-family: var(--font-mono);
   font-size: var(--font-size-small);
+  font-weight: 400;
   cursor: pointer;
   transition: all var(--transition-speed);
   text-align: left;
@@ -1505,7 +1507,7 @@ body::before {
   color: var(--ui-on-primary-color);
   border: 1px solid var(--ui-primary-bg-color);
   text-transform: uppercase;
-  font-weight: bold;
+  font-weight: 400;
 }
 
 .terminal-btn-primary:hover:not(:disabled) {
@@ -1579,6 +1581,7 @@ body::before {
   padding: var(--spacing-sm) var(--spacing-md);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
+  font-weight: 400;
   cursor: pointer;
   transition: all var(--transition-speed);
 }
@@ -1595,6 +1598,7 @@ body::before {
   padding: var(--spacing-sm) var(--spacing-md);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
+  font-weight: 400;
   cursor: pointer;
   transition: all var(--transition-speed);
 }
@@ -1792,7 +1796,7 @@ body.selector-menu-open .splash-art {
   position: absolute;
   left: 4px;
   color: var(--ui-fg-color);
-  font-weight: bold;
+  font-weight: 500;
 }
 
 .selector-shell--listbox .selector-option {
@@ -2083,7 +2087,7 @@ body.selector-menu-open .splash-art {
   .print-only-name {
     display: block !important;
     font-size: 18px !important;
-    font-weight: bold !important;
+    font-weight: 500 !important;
     margin-bottom: 12px !important;
   }
 
@@ -2368,7 +2372,7 @@ body.selector-menu-open .splash-art {
 /* Accent + weight emphasis */
 .terminal-text-strong {
   color: var(--terminal-accent);
-  font-weight: bold;
+  font-weight: 500;
 }
 
 /* Level change dialog text - ensure proper wrapping on mobile */

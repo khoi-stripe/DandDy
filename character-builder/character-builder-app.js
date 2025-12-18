@@ -6341,7 +6341,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   
   // 🔥 Wake up the backend server early (Render cold start can take 30-50s)
   if (CONFIG.ENABLE_AI) {
-    console.log('%c🚀 BOOT: Waking up backend server early...', 'color: #0ff; font-weight: bold');
+    console.log('%c🚀 BOOT: Waking up backend server early...', 'color: #0ff; font-weight: 500');
     AIService.warmupBackend();
   }
 

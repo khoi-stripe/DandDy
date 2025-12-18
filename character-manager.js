@@ -3299,7 +3299,7 @@ async function confirmGeneratePortrait() {
         portraitLoadingInterval = setInterval(updatePortraitLoading, 1000);
     }
 
-    console.log('%c🎨 PORTRAIT: Starting AI portrait generation...', 'color: #0ff; font-weight: bold');
+    console.log('%c🎨 PORTRAIT: Starting AI portrait generation...', 'color: #0ff; font-weight: 500');
     console.log('  Note: DALL-E takes 20-30s when backend is warm, 60s+ on cold start...');
 
     try {
@@ -3388,12 +3388,12 @@ async function confirmGeneratePortrait() {
             clearInterval(portraitLoadingInterval);
         }
 
-        console.log('%c🎨 PORTRAIT (Success) ✨', 'color: #0f0; font-weight: bold');
+        console.log('%c🎨 PORTRAIT (Success) ✨', 'color: #0f0; font-weight: 500');
 
         // Update character in storage and append a new portrait version
         const currentCount = character.customPortraitCount || 0;
 
-        console.log('%c🎨 PORTRAIT HISTORY CHECK', 'color: #0ff; font-weight: bold');
+        console.log('%c🎨 PORTRAIT HISTORY CHECK', 'color: #0ff; font-weight: 500');
         console.log('  window.PortraitHistory exists:', !!window.PortraitHistory);
         console.log('  addVersion is function:', typeof window.PortraitHistory?.addVersion === 'function');
 
@@ -3470,11 +3470,11 @@ async function confirmGeneratePortrait() {
                     quality: generationQuality,
                 },
             );
-            console.log('%c🎨 PORTRAIT HISTORY UPDATED', 'color: #0f0; font-weight: bold');
+            console.log('%c🎨 PORTRAIT HISTORY UPDATED', 'color: #0f0; font-weight: 500');
             console.log('  Versions count:', updatedMetadata.versions?.length || 0);
             console.log('  Active version:', updatedMetadata.activeVersionId);
         } else {
-            console.log('%c⚠️ PORTRAIT HISTORY NOT AVAILABLE!', 'color: #f00; font-weight: bold');
+            console.log('%c⚠️ PORTRAIT HISTORY NOT AVAILABLE!', 'color: #f00; font-weight: 500');
             console.log('  Using fallback - no versions will be saved');
             updatedMetadata = character.portraitMetadata || {};
         }
@@ -3760,14 +3760,14 @@ async function confirmGeneratePortrait() {
         
         // Graceful error handling - inform but don't block
         if (error.isSafetyRejection) {
-            console.log('%c🎨 PORTRAIT (Safety System Rejection)', 'color: #fa0; font-weight: bold');
+            console.log('%c🎨 PORTRAIT (Safety System Rejection)', 'color: #fa0; font-weight: 500');
             console.log('  OpenAI flagged this request:', error.originalMessage || error.message);
             showNotification('⚠️ OpenAI flagged this portrait request. Try modifying your character description or prompt.');
         } else if (error.isRateLimit) {
-            console.log('%c🎨 PORTRAIT (Rate Limited)', 'color: #fa0; font-weight: bold');
+            console.log('%c🎨 PORTRAIT (Rate Limited)', 'color: #fa0; font-weight: 500');
             showNotification('⚠️ Rate limit exceeded. Please wait a few minutes before trying again.');
         } else if (error.name === 'AbortError' || (error.message && error.message.includes('timed out'))) {
-            console.log('%c🎨 PORTRAIT (Timeout - Backend Waking Up)', 'color: #fa0; font-weight: bold');
+            console.log('%c🎨 PORTRAIT (Timeout - Backend Waking Up)', 'color: #fa0; font-weight: 500');
             console.log('  ⏰ Request timed out. Backend may be waking up from cold start.');
             console.log('  ✅ Try again in a moment - server should be warm now!');
             showNotification('⏰ Request timed out. Backend may be waking up. Try again in a moment!');
@@ -3777,11 +3777,11 @@ async function confirmGeneratePortrait() {
                 window.AIService.warmupBackend();
             }
         } else if (error.message && error.message.includes('fetch')) {
-            console.log('%c🎨 PORTRAIT (Connection Error)', 'color: #f00; font-weight: bold');
+            console.log('%c🎨 PORTRAIT (Connection Error)', 'color: #f00; font-weight: 500');
             console.log('  Cannot connect to backend server');
             showNotification('🔌 Cannot connect to backend server. Check that it\'s running.');
         } else {
-            console.log('%c🎨 PORTRAIT (Failed)', 'color: #f00; font-weight: bold');
+            console.log('%c🎨 PORTRAIT (Failed)', 'color: #f00; font-weight: 500');
             console.log('  Error:', error.message);
             showNotification('❌ Portrait generation failed. Check console for details and try again.');
         }
@@ -4297,7 +4297,7 @@ function showNotification(rawMessage, duration = 4000) {
     const message = (rawMessage == null) ? '' : String(rawMessage);
 
     // Console notification with visual styling (preserve any glyphs for logs)
-    console.log('%c✓ ' + message, 'color: #0f0; font-weight: bold');
+    console.log('%c✓ ' + message, 'color: #0f0; font-weight: 500');
 
     // Strip leading glyphs (checkmarks, warning icons, etc.) from the toast text
     // while keeping them available in logs. This keeps toasts purely textual

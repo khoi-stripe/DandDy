@@ -736,7 +736,7 @@ const AIService = (window.AIService = {
     }
     
     this._warmupInProgress = true;
-    console.log('%c🔄 WARMUP: Waking up backend server...', 'color: #fa0; font-weight: bold');
+    console.log('%c🔄 WARMUP: Waking up backend server...', 'color: #fa0; font-weight: 500');
     
     while (this._backendAvailable !== true) {
       try {
@@ -748,7 +748,7 @@ const AIService = (window.AIService = {
           const data = await response.json();
           if (data.available) {
             this._backendAvailable = true;
-            console.log('%c✅ WARMUP: Backend is now ready!', 'color: #0f0; font-weight: bold');
+            console.log('%c✅ WARMUP: Backend is now ready!', 'color: #0f0; font-weight: 500');
             this._warmupInProgress = false;
             return;
           }
@@ -890,13 +890,13 @@ const AIService = (window.AIService = {
     if (narratorAiDisabled || this._narratorCommentCount >= maxComments) {
       console.log(
         '%c🤖 NARRATOR (Fallback - Disabled or limit reached)',
-        'color: #ff0; font-weight: bold',
+        'color: #ff0; font-weight: 500',
       );
       return Utils.randomChoice(fallbacks);
     }
 
     try {
-      console.log('%c🤖 NARRATOR: Calling backend AI...', 'color: #0ff; font-weight: bold');
+      console.log('%c🤖 NARRATOR: Calling backend AI...', 'color: #0ff; font-weight: 500');
       console.log('  Request:', { choice: context.choice, question: context.question, narrator: narratorId });
       console.log(
         `  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,
@@ -916,7 +916,7 @@ const AIService = (window.AIService = {
         }); // Uses CONFIG.AI_TIMEOUT, then fallback + background warmup
 
       if (!response.ok) {
-        console.log('%c🤖 NARRATOR (Fallback - API Error)', 'color: #f80; font-weight: bold');
+        console.log('%c🤖 NARRATOR (Fallback - API Error)', 'color: #f80; font-weight: 500');
         console.log('  Status:', response.status);
         return Utils.randomChoice(fallbacks);
       }
@@ -924,7 +924,7 @@ const AIService = (window.AIService = {
       const data = await response.json();
       let text = data.comment || Utils.randomChoice(fallbacks);
       
-      console.log('%c🤖 NARRATOR (AI Generated) ✨', 'color: #0f0; font-weight: bold');
+      console.log('%c🤖 NARRATOR (AI Generated) ✨', 'color: #0f0; font-weight: 500');
       console.log('  Response:', text);
     
       // Use the text from the response
@@ -974,13 +974,13 @@ const AIService = (window.AIService = {
       return responseText;
     } catch (error) {
       if (error.message.includes('timed out')) {
-        console.log('%c🤖 NARRATOR (Fallback - Backend Waking Up)', 'color: #f80; font-weight: bold');
+        console.log('%c🤖 NARRATOR (Fallback - Backend Waking Up)', 'color: #f80; font-weight: 500');
         console.log(
           `  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,
         );
         console.log('  ✅ Once awake, subsequent requests will use AI!');
       } else {
-        console.log('%c🤖 NARRATOR (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
+        console.log('%c🤖 NARRATOR (Fallback - Connection Error)', 'color: #f00; font-weight: 500');
         console.error('  Error:', error);
       }
       return Utils.randomChoice(fallbacks);
@@ -996,7 +996,7 @@ const AIService = (window.AIService = {
       if (!CONFIG.ENABLE_AI) {
         console.log(
           '%c📛 NAMES (Fallback - AI Disabled)',
-          'color: #ff0; font-weight: bold',
+          'color: #ff0; font-weight: 500',
         );
         return;
       }
@@ -1004,7 +1004,7 @@ const AIService = (window.AIService = {
       try {
         console.log(
           '%c📛 NAMES: Calling backend AI...',
-          'color: #0ff; font-weight: bold',
+          'color: #0ff; font-weight: 500',
         );
         console.log('  Request:', { race, classType, count: desiredCount });
         console.log(
@@ -1030,7 +1030,7 @@ const AIService = (window.AIService = {
         if (!response.ok) {
           console.log(
             '%c📛 NAMES (Fallback - API Error)',
-            'color: #f80; font-weight: bold',
+            'color: #f80; font-weight: 500',
           );
           return;
         }
@@ -1039,7 +1039,7 @@ const AIService = (window.AIService = {
         if (data.success && Array.isArray(data.names) && data.names.length > 0) {
           console.log(
             '%c📛 NAMES (AI Generated) ✨',
-            'color: #0f0; font-weight: bold',
+            'color: #0f0; font-weight: 500',
           );
           console.log('  Response:', data.names);
           candidates.push(...data.names);
@@ -1048,7 +1048,7 @@ const AIService = (window.AIService = {
         if (error.message && error.message.includes('timed out')) {
           console.log(
             '%c📛 NAMES (Fallback - Backend Waking Up)',
-            'color: #f80; font-weight: bold',
+            'color: #f80; font-weight: 500',
           );
           console.log(
             `  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,
@@ -1059,7 +1059,7 @@ const AIService = (window.AIService = {
         } else {
           console.log(
             '%c📛 NAMES (Fallback - Connection Error)',
-            'color: #f00; font-weight: bold',
+            'color: #f00; font-weight: 500',
           );
           console.error('  Error:', error);
         }
@@ -1070,7 +1070,7 @@ const AIService = (window.AIService = {
     const addFallbackCandidates = (multiplier = 3) => {
       console.log(
         '%c📛 NAMES (Fallback)',
-        'color: #f80; font-weight: bold',
+        'color: #f80; font-weight: 500',
       );
       const extra = this.generateFallbackNames(race, desiredCount * multiplier);
       candidates.push(...extra);
@@ -1135,7 +1135,7 @@ const AIService = (window.AIService = {
     if (!CONFIG.ENABLE_AI) {
       console.log(
         '%c📦 SUMMARY (Fallback - AI Disabled)',
-        'color: #ff0; font-weight: bold',
+        'color: #ff0; font-weight: 500',
       );
       return buildLocalFallback();
     }
@@ -1143,7 +1143,7 @@ const AIService = (window.AIService = {
     try {
       console.log(
         '%c📦 SUMMARY: Calling backend AI for names + backstory template...',
-        'color: #0ff; font-weight: bold',
+        'color: #0ff; font-weight: 500',
       );
 
       const response = await this.fetchWithTimeout(
@@ -1180,7 +1180,7 @@ const AIService = (window.AIService = {
         if (status === 429) {
           console.log(
             '%c📦 SUMMARY (Cooldown / Quota Limit)',
-            'color: #ff0; font-weight: bold',
+            'color: #ff0; font-weight: 500',
           );
           // Dispatch quota update event so UI can disable options
           try {
@@ -1193,7 +1193,7 @@ const AIService = (window.AIService = {
         } else {
           console.log(
             '%c📦 SUMMARY (Fallback - API Error)',
-            'color: #f80; font-weight: bold',
+            'color: #f80; font-weight: 500',
           );
           console.log('  Status:', status);
         }
@@ -1205,7 +1205,7 @@ const AIService = (window.AIService = {
       if (!data || data.success !== true) {
         console.log(
           '%c📦 SUMMARY (Fallback - Bad Payload)',
-          'color: #f80; font-weight: bold',
+          'color: #f80; font-weight: 500',
         );
         return buildLocalFallback();
       }
@@ -1225,7 +1225,7 @@ const AIService = (window.AIService = {
       if (!names.length) {
         console.log(
           '%c📦 SUMMARY (Fallback - No Names From Backend)',
-          'color: #f80; font-weight: bold',
+          'color: #f80; font-weight: 500',
         );
         const fallback = buildLocalFallback();
         // Preserve backend-provided template if we got one.
@@ -1237,7 +1237,7 @@ const AIService = (window.AIService = {
 
       console.log(
         '%c📦 SUMMARY (AI Generated) ✨',
-        'color: #0f0; font-weight: bold',
+        'color: #0f0; font-weight: 500',
       );
       console.log('  Names:', names);
 
@@ -1256,7 +1256,7 @@ const AIService = (window.AIService = {
       if (error.message && error.message.includes('timed out')) {
         console.log(
           '%c📦 SUMMARY (Fallback - Backend Waking Up)',
-          'color: #f80; font-weight: bold',
+          'color: #f80; font-weight: 500',
         );
         console.log(
           '  ⏰ Timeout reached. Using local fallback for now; backend warmup continues...',
@@ -1264,7 +1264,7 @@ const AIService = (window.AIService = {
       } else {
         console.log(
           '%c📦 SUMMARY (Fallback - Connection Error)',
-          'color: #f00; font-weight: bold',
+          'color: #f00; font-weight: 500',
         );
         console.error('  Error:', error);
       }
@@ -1364,12 +1364,12 @@ const AIService = (window.AIService = {
       + "They don't talk about it much. Probably for the best.";
 
     if (!CONFIG.ENABLE_AI) {
-      console.log('%c📖 BACKSTORY (Fallback - AI Disabled)', 'color: #ff0; font-weight: bold');
+      console.log('%c📖 BACKSTORY (Fallback - AI Disabled)', 'color: #ff0; font-weight: 500');
       return fallback;
     }
 
     try {
-      console.log('%c📖 BACKSTORY: Calling backend AI...', 'color: #0ff; font-weight: bold');
+      console.log('%c📖 BACKSTORY: Calling backend AI...', 'color: #0ff; font-weight: 500');
       console.log('  Request:', { name: character.name, race: character.race, class: character.class });
       console.log(
         `  Note: Will fallback after ${CONFIG.AI_TIMEOUT / 1000}s if server is cold, but keep warming up in background...`,
@@ -1390,30 +1390,30 @@ const AIService = (window.AIService = {
       }); // Uses CONFIG.AI_TIMEOUT
 
       if (!response.ok) {
-        console.log('%c📖 BACKSTORY (Fallback - API Error)', 'color: #f80; font-weight: bold');
+        console.log('%c📖 BACKSTORY (Fallback - API Error)', 'color: #f80; font-weight: 500');
         return fallback;
       }
 
       const data = await response.json();
       if (data.success && data.backstory) {
-        console.log('%c📖 BACKSTORY (AI Generated) ✨', 'color: #0f0; font-weight: bold');
+        console.log('%c📖 BACKSTORY (AI Generated) ✨', 'color: #0f0; font-weight: 500');
         console.log('  Response:', data.backstory.substring(0, 100) + '...');
         return data.backstory;
       }
     } catch (error) {
       if (error.message.includes('timed out')) {
-        console.log('%c📖 BACKSTORY (Fallback - Backend Waking Up)', 'color: #f80; font-weight: bold');
+        console.log('%c📖 BACKSTORY (Fallback - Backend Waking Up)', 'color: #f80; font-weight: 500');
         console.log(
           `  ⏰ ${CONFIG.AI_TIMEOUT / 1000}s timeout reached. Using fallback now, but backend warmup continues...`,
         );
         console.log('  ✅ Once awake, subsequent requests will use AI!');
       } else {
-        console.log('%c📖 BACKSTORY (Fallback - Connection Error)', 'color: #f00; font-weight: bold');
+        console.log('%c📖 BACKSTORY (Fallback - Connection Error)', 'color: #f00; font-weight: 500');
         console.error('  Error:', error);
       }
     }
 
-    console.log('%c📖 BACKSTORY (Fallback)', 'color: #f80; font-weight: bold');
+    console.log('%c📖 BACKSTORY (Fallback)', 'color: #f80; font-weight: 500');
     return fallback;
   },
 
@@ -1421,7 +1421,7 @@ const AIService = (window.AIService = {
     if (!CONFIG.ENABLE_AI || CONFIG.ENABLE_AI_OPTION_VARIATIONS === false) {
       console.log(
         '%c🎲 OPTIONS (Fallback - AI Disabled or variations off)',
-        'color: #ff0; font-weight: bold',
+        'color: #ff0; font-weight: 500',
       );
       return options.map((opt) => opt.text);
     }
@@ -1442,7 +1442,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
       'You are a creative D&D character creation assistant. Generate engaging option text that feels fresh but maintains the same meaning. ' +
       'Be concise and direct. Return ONLY valid JSON.';
 
-    console.log('%c🎲 OPTIONS: Calling backend AI...', 'color: #0ff; font-weight: bold');
+    console.log('%c🎲 OPTIONS: Calling backend AI...', 'color: #0ff; font-weight: 500');
     console.log('  Note: Will fallback to original option texts if unavailable...');
 
     const response = await this.generateCompletion(prompt, systemPrompt);
@@ -1454,7 +1454,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
         if (jsonMatch) {
           const variations = JSON.parse(jsonMatch[0]);
           if (Array.isArray(variations) && variations.length === options.length) {
-            console.log('%c🎲 OPTIONS (AI Generated) ✨', 'color: #0f0; font-weight: bold');
+            console.log('%c🎲 OPTIONS (AI Generated) ✨', 'color: #0f0; font-weight: 500');
             return variations;
           }
         }
@@ -1464,7 +1464,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
     }
 
     // Fallback: return original texts
-    console.log('%c🎲 OPTIONS (Fallback - Using Original Texts) ✅', 'color: #f80; font-weight: bold');
+    console.log('%c🎲 OPTIONS (Fallback - Using Original Texts) ✅', 'color: #f80; font-weight: 500');
     console.log('  The original option texts will be used instead of AI variations');
     return options.map((opt) => opt.text);
   },
@@ -1485,7 +1485,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
   // Generate image from custom prompt
   async generateImageFromPrompt(prompt, options = {}) {
     if (!CONFIG.ENABLE_AI) {
-      console.log('%c🎨 DALL-E (Unavailable - AI Disabled)', 'color: #ff0; font-weight: bold');
+      console.log('%c🎨 DALL-E (Unavailable - AI Disabled)', 'color: #ff0; font-weight: 500');
       return null;
     }
 
@@ -1535,7 +1535,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
         // If quota endpoint fails, don't block generation; backend will enforce anyway.
       }
 
-      console.log('%c🎨 IMAGE: Calling backend AI...', 'color: #0ff; font-weight: bold');
+      console.log('%c🎨 IMAGE: Calling backend AI...', 'color: #0ff; font-weight: 500');
       // Log only a preview of the prompt so the console isn't flooded,
       // but make it clear that the full prompt (without truncation) is
       // sent to the backend.
@@ -1597,7 +1597,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.log('%c🎨 IMAGE (Error)', 'color: #f00; font-weight: bold');
+        console.log('%c🎨 IMAGE (Error)', 'color: #f00; font-weight: 500');
         console.log('  Error:', errorData.detail);
         
         // Helper to extract error message from Pydantic validation errors or plain strings
@@ -1683,7 +1683,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
 
       const data = await response.json();
       if (data.success) {
-        console.log('%c🎨 IMAGE (Generated) ✨', 'color: #0f0; font-weight: bold');
+        console.log('%c🎨 IMAGE (Generated) ✨', 'color: #0f0; font-weight: 500');
         console.log('  URL:', data.url.substring(0, 50) + '...');
 
         // Read quota headers when present and broadcast for UI updates.
@@ -1722,12 +1722,12 @@ Format your response as JSON array of strings, one for each option in order. Exa
       }
       return null;
     } catch (error) {
-      console.log('%c🎨 IMAGE (Failed)', 'color: #f00; font-weight: bold');
+      console.log('%c🎨 IMAGE (Failed)', 'color: #f00; font-weight: 500');
       console.error('  Error:', error);
       
       // Auto-fallback: If Flux failed and we haven't tried fallback yet, retry with GPT Image
       if (error.isFluxError && !isRetry) {
-        console.log('%c🔄 AUTO-FALLBACK: Flux unavailable, trying GPT Image instead...', 'color: #fa0; font-weight: bold');
+        console.log('%c🔄 AUTO-FALLBACK: Flux unavailable, trying GPT Image instead...', 'color: #fa0; font-weight: 500');
         
         if (window.UIService) {
           window.UIService.showNotification(
@@ -2115,7 +2115,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
 
   // Analyze a rejected prompt to help identify problematic sections
   analyzeRejectedPrompt(prompt) {
-    console.log('%c🔍 Analyzing Rejected Prompt', 'color: #ff0; font-weight: bold; font-size: 14px;');
+    console.log('%c🔍 Analyzing Rejected Prompt', 'color: #ff0; font-weight: 500; font-size: 14px;');
     console.log('─'.repeat(80));
     
     // Common problematic patterns that might trigger safety filters
@@ -2163,7 +2163,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
     console.log('─'.repeat(80));
     
     if (potentialIssues.length > 0) {
-      console.log('%c⚠️  POTENTIAL ISSUES DETECTED:', 'color: #f90; font-weight: bold;');
+      console.log('%c⚠️  POTENTIAL ISSUES DETECTED:', 'color: #f90; font-weight: 500;');
       potentialIssues.forEach(issue => {
         console.log(`  • ${issue.category}: ${issue.matches.join(', ')} (${issue.count}x)`);
       });
@@ -2177,7 +2177,7 @@ Format your response as JSON array of strings, one for each option in order. Exa
     }
     
     console.log('─'.repeat(80));
-    console.log('%c💡 DEBUGGING SUGGESTIONS:', 'color: #0ff; font-weight: bold;');
+    console.log('%c💡 DEBUGGING SUGGESTIONS:', 'color: #0ff; font-weight: 500;');
     console.log('  1. Try regenerating - sometimes the same prompt works on retry');
     console.log('  2. Simplify the backstory or character description');
     console.log('  3. Remove alignment-based descriptions (e.g., "menacing aura")');
