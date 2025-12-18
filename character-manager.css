@@ -655,7 +655,16 @@
 }
 
 .welcome-modal .splash-art {
-    color: var(--modal-accent);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.welcome-modal .splash-logo-img {
+    max-height: 40vh;
+    max-width: 100%;
+    width: auto;
+    height: auto;
 }
 
 .welcome-actions {
@@ -1522,9 +1531,8 @@
         max-height: 45vh;
     }
     
-    .welcome-modal .splash-art {
-        font-size: 2px;
-        letter-spacing: 1px;
+    .welcome-modal .splash-logo-img {
+        max-height: 30vh;
     }
     
     .welcome-actions {
