@@ -5447,8 +5447,11 @@ function showSessionExpiredModal() {
     const modalHtml = `
       <div id="sessionExpiredModal" class="modal show">
         <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title">[!] Your session has expired</h2>
+          </div>
           <div class="modal-body">
-            <p class="terminal-text">Your session has expired. Your local changes are safe, but you'll need to log in again to sync with the cloud.</p>
+            <p class="terminal-text">Your local changes are safe, but you'll need to log in again to sync with the cloud.</p>
           </div>
           <div class="modal-footer modal-footer-end">
             <button class="terminal-btn terminal-btn-secondary" id="sessionExpiredDismiss">CONTINUE OFFLINE</button>

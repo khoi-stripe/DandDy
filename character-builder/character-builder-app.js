@@ -5711,6 +5711,7 @@ const App = (window.App = {
     const primaryClass =
       options.primaryClass || 'terminal-btn terminal-btn-primary';
     const secondaryClass = options.secondaryClass || 'terminal-btn';
+    const title = options.title || 'Confirm';
 
     // While a confirmation dialog is open, pause keyboard navigation so
     // arrow keys don't move focus behind the modal.
@@ -5725,7 +5726,7 @@ const App = (window.App = {
       <div id="confirmationModal" class="modal show confirmation-overlay">
         <div class="modal-content" onclick="event.stopPropagation();">
           <div class="modal-header">
-            <h2 class="modal-title">Confirm</h2>
+            <h2 class="modal-title">${title}</h2>
           </div>
           <div class="modal-body">
             <p class="terminal-text">

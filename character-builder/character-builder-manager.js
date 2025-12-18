@@ -370,7 +370,7 @@ function handleSessionExpired() {
     // Show an informational overlay with option to log in or continue as guest
     if (window.App && window.App.showConfirmationOverlay) {
         window.App.showConfirmationOverlay(
-            'Your session has expired. Your character is safe locally, but you\'ll need to log in again to sync with the cloud.',
+            'Your character is safe locally, but you\'ll need to log in again to sync with the cloud.',
             () => {
                 // User chose to log in
                 showAuthModal();
@@ -380,6 +380,7 @@ function handleSessionExpired() {
                 // Character is already saved locally, nothing else needed
             },
             {
+                title: '[!] Your session has expired',
                 primaryLabel: 'LOG IN',
                 secondaryLabel: 'CONTINUE OFFLINE'
             }
