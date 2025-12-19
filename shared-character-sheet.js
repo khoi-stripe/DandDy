@@ -2278,9 +2278,23 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderRacialTraits(parsed) {
-    const traitsMarkup = `<ul class="sheet-list text-dim">${parsed.racialTraits
-      .map((trait) => `<li>${this.escapeHtml(trait)}</li>`)
-      .join('')}</ul>`;
+    // Build trait items with descriptions from RacialTraitsData
+    const traitItems = parsed.racialTraits.map(traitName => {
+      // Look up description from RacialTraitsData if available
+      const traitData = window.RacialTraitsData?.getTrait(traitName);
+      const description = traitData?.description
+        ? `<span class="skill-prof-desc">${this.escapeHtml(traitData.description)}</span>`
+        : '';
+      
+      return `
+        <li class="skill-prof-item">
+          <div class="skill-prof-header">
+            <span class="skill-prof-name">${this.escapeHtml(traitName)}</span>
+          </div>
+          ${description}
+        </li>
+      `;
+    }).join('');
 
     return `
       <div class="sheet-section sheet-section--collapsible" id="racial-traits-section">
@@ -2289,7 +2303,9 @@ const CharacterSheet = (window.CharacterSheet = {
           <span class="sheet-header-toggle">^</span>
         </button>
         <div class="sheet-collapsible-content">
-          ${traitsMarkup}
+          <ul class="skill-prof-list">
+            ${traitItems}
+          </ul>
         </div>
       </div>
     `;
@@ -2561,7 +2577,11 @@ const CharacterSheet = (window.CharacterSheet = {
         : [...new Set([...(character.equipment || []), ...classEquipment])];
 
     // Handle racial traits
-    const race = window.DND_DATA?.races?.find((r) => r.id === character.race);
+    // Look up race by id or name (case-insensitive) since character.race may be display name
+    const raceKey = (character.race || '').toLowerCase();
+    const race = window.DND_DATA?.races?.find(
+      (r) => r.id === raceKey || r.name.toLowerCase() === raceKey
+    );
     const racialTraits =
       character.raceData?.traits || race?.traits || [];
 
