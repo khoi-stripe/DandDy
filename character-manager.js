@@ -2370,6 +2370,7 @@ async function renameCharacter(id) {
 
 /**
  * Open the share character modal.
+ * Shows existing collaborators and allows adding/removing access.
  * @param {string|number} characterId - The character ID to share
  */
 async function openShareModal(characterId) {
@@ -2397,19 +2398,26 @@ async function openShareModal(characterId) {
             <button class="modal-close" onclick="closeShareModal()">&times;</button>
           </div>
           <div class="modal-body">
-            <p class="terminal-text">Share${' '}<strong>${safeName}</strong>${' '}with another DandDy user.</p>
-            <p class="terminal-text-small terminal-text-dim" style="margin-top: 0.5rem;">
-              Enter their email address.${' '}If they have a DandDy account,${' '}they'll see this character the next time they log in and can add it to their collection.
-            </p>
-            <div style="margin-top: 1rem;">
-              <label class="terminal-text-small modal-section-label" for="shareEmailInput">Email address:</label>
-              <input type="email" id="shareEmailInput" class="terminal-input" placeholder="friend@example.com">
+            <p class="terminal-text">Sharing <strong>${safeName}</strong></p>
+            
+            <div class="share-section" style="margin-top: 1.25rem;">
+              <label class="terminal-text-small modal-section-label">PEOPLE WITH ACCESS</label>
+              <div id="shareCollaboratorsList" class="share-collaborators-list">
+                <div class="share-collaborators-loading terminal-text-small terminal-text-dim">Loading...</div>
+              </div>
+            </div>
+            
+            <div class="share-section" style="margin-top: 1.25rem;">
+              <label class="terminal-text-small modal-section-label" for="shareEmailInput">ADD PERSON</label>
+              <div class="share-add-row">
+                <input type="email" id="shareEmailInput" class="terminal-input" placeholder="email@example.com">
+                <button class="terminal-btn terminal-btn-primary" id="shareAddBtn">ADD</button>
+              </div>
               <p id="shareEmailError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
             </div>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" id="shareCancel">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" id="shareSend">SEND</button>
+            <button class="terminal-btn terminal-btn-primary" id="shareDoneBtn">DONE</button>
           </div>
         </div>
       </div>
@@ -2419,8 +2427,9 @@ async function openShareModal(characterId) {
     const modal = document.getElementById('shareModal');
     const input = document.getElementById('shareEmailInput');
     const errorEl = document.getElementById('shareEmailError');
-    const cancelBtn = document.getElementById('shareCancel');
-    const sendBtn = document.getElementById('shareSend');
+    const addBtn = document.getElementById('shareAddBtn');
+    const doneBtn = document.getElementById('shareDoneBtn');
+    const collaboratorsList = document.getElementById('shareCollaboratorsList');
 
     const close = () => {
         if (!modal) return;
@@ -2441,11 +2450,78 @@ async function openShareModal(characterId) {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     };
 
-    cancelBtn.addEventListener('click', close);
+    // Render collaborators list
+    const renderCollaborators = (collaborators) => {
+        if (!collaborators || collaborators.length === 0) {
+            collaboratorsList.innerHTML = `
+                <div class="share-collaborators-empty terminal-text-small terminal-text-dim">
+                    No one else has access yet
+                </div>
+            `;
+            return;
+        }
+
+        collaboratorsList.innerHTML = collaborators.map(collab => `
+            <div class="share-collaborator-item" data-id="${collab.id}">
+                <span class="share-collaborator-email">${Utils.escapeHtml(collab.user_email)}</span>
+                <button class="share-collaborator-remove" title="Remove access" data-id="${collab.id}">&times;</button>
+            </div>
+        `).join('');
+
+        // Attach remove handlers
+        collaboratorsList.querySelectorAll('.share-collaborator-remove').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const collabId = e.target.dataset.id;
+                const itemEl = collaboratorsList.querySelector(`.share-collaborator-item[data-id="${collabId}"]`);
+                if (itemEl) {
+                    itemEl.classList.add('removing');
+                }
+                try {
+                    await CharacterCloudStorage.removeCollaborator(characterId, collabId);
+                    // Refresh the list
+                    await loadCollaborators();
+                    showNotification('Access removed');
+                } catch (error) {
+                    if (itemEl) {
+                        itemEl.classList.remove('removing');
+                    }
+                    showNotification(error.message || 'Failed to remove access', 'error');
+                }
+            });
+        });
+    };
+
+    // Load collaborators
+    const loadCollaborators = async () => {
+        try {
+            const collaborators = await CharacterCloudStorage.getCollaborators(characterId);
+            renderCollaborators(collaborators);
+        } catch (error) {
+            console.error('Failed to load collaborators:', error);
+            collaboratorsList.innerHTML = `
+                <div class="share-collaborators-empty terminal-text-small terminal-text-dim">
+                    Could not load collaborators
+                </div>
+            `;
+        }
+    };
+
+    // Load collaborators on modal open
+    loadCollaborators();
+
+    doneBtn.addEventListener('click', close);
     
     input.addEventListener('input', clearError);
+    
+    // Handle Enter key in input
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            addBtn.click();
+        }
+    });
 
-    sendBtn.addEventListener('click', async () => {
+    addBtn.addEventListener('click', async () => {
         const email = input.value.trim().toLowerCase();
         
         if (!email) {
@@ -2459,17 +2535,20 @@ async function openShareModal(characterId) {
         }
 
         // Disable button while processing
-        sendBtn.disabled = true;
-        sendBtn.textContent = 'SENDING...';
+        addBtn.disabled = true;
+        addBtn.textContent = 'ADDING...';
 
         try {
             await CharacterCloudStorage.shareCharacter(characterId, email);
-            close();
-            showNotification(`${safeName}${' '}shared with ${email}`);
+            input.value = '';
+            showNotification(`Shared with ${email}`);
+            // Refresh the collaborators list
+            await loadCollaborators();
         } catch (error) {
-            sendBtn.disabled = false;
-            sendBtn.textContent = 'SEND';
             showError(error.message || 'Failed to share character');
+        } finally {
+            addBtn.disabled = false;
+            addBtn.textContent = 'ADD';
         }
     });
 

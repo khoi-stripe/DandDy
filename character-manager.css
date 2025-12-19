@@ -2379,6 +2379,100 @@
 }
 
 /* ========================================
+   SHARE MODAL - Unified add/manage access
+   ======================================== */
+
+.share-section {
+    margin-top: 1.25rem;
+}
+
+.share-section .modal-section-label {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+/* Add person row - input + button */
+.share-add-row {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.share-add-row .terminal-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.share-add-row .terminal-btn {
+    flex-shrink: 0;
+}
+
+/* Collaborators list */
+.share-collaborators-list {
+    border: 1px solid var(--terminal-border);
+    border-radius: 4px;
+    background: var(--terminal-bg-dim);
+    max-height: 180px;
+    overflow-y: auto;
+}
+
+.share-collaborators-loading,
+.share-collaborators-empty {
+    padding: 1rem;
+    text-align: center;
+}
+
+.share-collaborator-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--terminal-border);
+    transition: opacity 0.2s ease, background-color 0.15s ease;
+}
+
+.share-collaborator-item:last-child {
+    border-bottom: none;
+}
+
+.share-collaborator-item:hover {
+    background-color: hsla(var(--theme-terminal-h), 50%, 50%, 0.08);
+}
+
+.share-collaborator-item.removing {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.share-collaborator-email {
+    font-size: var(--font-size-sm);
+    color: var(--terminal-fg);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.share-collaborator-remove {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: var(--terminal-dim);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.share-collaborator-remove:hover {
+    color: var(--error-color, #f44);
+    background-color: hsla(0, 70%, 50%, 0.15);
+}
+
+/* ========================================
    PENDING SHARES MODAL
    Uses modal-accent (yellow) theme colors
    ======================================== */

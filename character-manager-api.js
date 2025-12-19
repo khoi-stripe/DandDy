@@ -456,6 +456,50 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       throw error;
     }
   },
+
+  /**
+   * Get all collaborators for a character (owner only).
+   * @param {number|string} characterId - The character ID
+   * @returns {Promise<Array>} List of collaborators with id, user_email, permission, created_at
+   */
+  async getCollaborators(characterId) {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Fetching collaborators for character', characterId);
+      }
+      const collaborators = await this._apiRequest(`/characters/${characterId}/collaborators`);
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Found', collaborators.length, 'collaborators');
+      }
+      return collaborators;
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to fetch collaborators:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Remove a collaborator from a character (owner only).
+   * @param {number|string} characterId - The character ID
+   * @param {number} collaboratorId - The collaborator record ID to remove
+   * @returns {Promise<void>}
+   */
+  async removeCollaborator(characterId, collaboratorId) {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Removing collaborator', collaboratorId, 'from character', characterId);
+      }
+      await this._apiRequest(`/characters/${characterId}/collaborators/${collaboratorId}`, {
+        method: 'DELETE',
+      });
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Collaborator removed');
+      }
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to remove collaborator:', error);
+      throw error;
+    }
+  },
 });
 
 // ========================================
