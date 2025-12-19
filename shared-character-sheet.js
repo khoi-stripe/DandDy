@@ -652,22 +652,23 @@ const CharacterSheet = (window.CharacterSheet = {
       });
     }
 
+    // Manager-only: Edit Spells (only for spellcasting classes)
+    if (context === 'manager' && onEdit && character.id && parsed.hasSpells) {
+      headerActions.unshift({
+        icon: '✦',
+        label: 'Edit spells',
+        onclick: `openSpellEditModal('${character.id}')`,
+      });
+    }
+
     // Manager-only: Add Edit to overflow menu (visible only on narrow viewports via CSS)
+    // Placed at top of menu on mobile
     if (context === 'manager' && onEdit && editFn) {
       headerActions.unshift({
         icon: '✎',
         label: 'Edit character',
         onclick: editFn,
         id: 'sheet-edit-overflow',
-      });
-    }
-
-    // Manager-only: Edit Spells (only for spellcasting classes) - at top of menu
-    if (context === 'manager' && onEdit && character.id && parsed.hasSpells) {
-      headerActions.unshift({
-        icon: '✦',
-        label: 'Edit spells',
-        onclick: `openSpellEditModal('${character.id}')`,
       });
     }
 
