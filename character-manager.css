@@ -2354,25 +2354,28 @@
         max-height: none !important;
     }
 
-    /* Allow sections to break across pages if needed */
+    /* Keep whole sections together - avoid breaking mid-section */
     .character-sheet .sheet-section {
-        page-break-inside: auto !important;
-        break-inside: auto !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        page-break-before: auto;
+        break-before: auto;
     }
 
-    /* But try to avoid breaking inside individual stat/ability boxes */
+    /* Avoid breaking inside individual stat/ability boxes */
     .character-sheet .stat-box,
     .character-sheet .ability-box {
         page-break-inside: avoid;
         break-inside: avoid;
     }
 
-    /* Ensure spell lists and other long content can break */
-    .character-sheet .spell-list,
-    .character-sheet .sheet-content ul,
-    .character-sheet .sheet-content ol {
-        page-break-inside: auto !important;
-        break-inside: auto !important;
+    /* For very long spell lists, allow individual spell items to start on new page if needed,
+       but keep each spell entry together */
+    .character-sheet .spell-list li,
+    .character-sheet .sheet-content ul li,
+    .character-sheet .sheet-content ol li {
+        page-break-inside: avoid;
+        break-inside: avoid;
     }
 
     /* Make all images black and white for print */
