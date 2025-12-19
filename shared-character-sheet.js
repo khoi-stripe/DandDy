@@ -633,6 +633,17 @@ const CharacterSheet = (window.CharacterSheet = {
       });
     }
 
+    // Manager-only: Pin character (above Share, only for saved characters)
+    if (context === 'manager' && hasValidManagerId) {
+      const isPinned = typeof window.isCharacterPinned === 'function' 
+        && window.isCharacterPinned(character.id);
+      headerActions.push({
+        icon: isPinned ? '◇' : '◆',
+        label: isPinned ? 'Unpin character' : 'Pin character',
+        onclick: `togglePinCharacter('${character.id}')`,
+      });
+    }
+
     // Manager-only: Share character (only for saved characters with valid IDs, not for shared chars)
     if (context === 'manager' && onShare && hasValidManagerId && !isShared) {
       headerActions.push({

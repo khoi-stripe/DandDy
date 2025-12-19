@@ -406,6 +406,93 @@ function toSentenceCase(text) {
 }
 
 // ========================================
+// PINNED CHARACTERS
+// ========================================
+const PINNED_STORAGE_KEY = 'danddy_pinned_characters';
+
+/**
+ * Get array of pinned character IDs (in pinned order).
+ * @returns {string[]}
+ */
+function getPinnedCharacterIds() {
+    try {
+        const raw = localStorage.getItem(PINNED_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch {
+        return [];
+    }
+}
+
+/**
+ * Save pinned character IDs to localStorage.
+ * @param {string[]} ids
+ */
+function savePinnedCharacterIds(ids) {
+    try {
+        localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(ids || []));
+    } catch (e) {
+        console.warn('Failed to save pinned characters:', e);
+    }
+}
+
+/**
+ * Check if a character is pinned.
+ * @param {string} characterId
+ * @returns {boolean}
+ */
+function isCharacterPinned(characterId) {
+    const pinned = getPinnedCharacterIds();
+    return pinned.includes(String(characterId));
+}
+
+/**
+ * Toggle pin status for a character.
+ * If pinning, adds to the end of the pinned list (appears last among pinned).
+ * If unpinning, removes from the list.
+ * @param {string} characterId
+ * @returns {boolean} New pinned state
+ */
+function togglePinCharacter(characterId) {
+    const idStr = String(characterId);
+    const pinned = getPinnedCharacterIds();
+    const index = pinned.indexOf(idStr);
+    
+    let newState;
+    if (index >= 0) {
+        // Unpin: remove from array
+        pinned.splice(index, 1);
+        newState = false;
+        if (DEBUG_MANAGER) {
+            console.log(`📌 Unpinned character: ${idStr}`);
+        }
+    } else {
+        // Pin: add to end (newest pinned appears last among pinned)
+        pinned.push(idStr);
+        newState = true;
+        if (DEBUG_MANAGER) {
+            console.log(`📌 Pinned character: ${idStr}`);
+        }
+    }
+    
+    savePinnedCharacterIds(pinned);
+    
+    // Re-apply filters and re-render
+    AppState.applyFilters();
+    UI.render();
+    
+    // Re-select the character to update the sheet (shows updated pin state)
+    if (AppState.selectedCharacterId === idStr) {
+        viewCharacter(idStr, { force: true });
+    }
+    
+    return newState;
+}
+
+// Expose globally for onclick handlers
+window.togglePinCharacter = togglePinCharacter;
+window.isCharacterPinned = isCharacterPinned;
+
+// ========================================
 // APP STATE
 // ========================================
 const AppState = {
@@ -500,9 +587,29 @@ const AppState = {
             return Number.isFinite(t) ? t : 0;
         };
 
-        // Sort according to current mode
+        // Separate pinned and unpinned characters
+        const pinnedIds = getPinnedCharacterIds();
+        const pinned = [];
+        const unpinned = [];
+        
+        filtered.forEach(char => {
+            if (pinnedIds.includes(String(char.id))) {
+                pinned.push(char);
+            } else {
+                unpinned.push(char);
+            }
+        });
+        
+        // Sort pinned characters by their pin order (order in pinnedIds array)
+        pinned.sort((a, b) => {
+            const aIndex = pinnedIds.indexOf(String(a.id));
+            const bIndex = pinnedIds.indexOf(String(b.id));
+            return aIndex - bIndex;
+        });
+
+        // Sort unpinned characters according to current mode
         if (this.sortMode === 'alphabetical') {
-            filtered.sort((a, b) => {
+            unpinned.sort((a, b) => {
                 const nameA = (a.name || '').toLowerCase();
                 const nameB = (b.name || '').toLowerCase();
                 if (nameA === nameB) {
@@ -512,7 +619,7 @@ const AppState = {
             });
         } else if (this.sortMode === 'dateModified') {
             // Sort by most recently modified using canonical timestamps
-            filtered.sort((a, b) => {
+            unpinned.sort((a, b) => {
                 const aTime = getSortTime(a);
                 const bTime = getSortTime(b);
                 if (aTime === bTime) {
@@ -522,7 +629,8 @@ const AppState = {
             });
         }
 
-        this.filteredCharacters = filtered;
+        // Combine: pinned first, then unpinned
+        this.filteredCharacters = [...pinned, ...unpinned];
     }
 };
 
@@ -1422,9 +1530,16 @@ const UI = {
             const tooltip = collaboratorCount === 1 ? 'Shared with 1 person' : `Shared with ${collaboratorCount} people`;
             sharedTagHtml = `<span class="card-shared-tag" title="${tooltip}">SHARED</span>`;
         }
+        
+        // Check if character is pinned
+        const isPinned = isCharacterPinned(character.id);
+        const pinnedTagHtml = isPinned 
+            ? '<span class="card-pinned-tag" title="Pinned">◆</span>' 
+            : '';
 
         return `
-            <div class="character-card${showSharedTag ? ' is-shared' : ''}" data-id="${character.id}" onclick="viewCharacter('${character.id}')">
+            <div class="character-card${showSharedTag ? ' is-shared' : ''}${isPinned ? ' is-pinned' : ''}" data-id="${character.id}" onclick="viewCharacter('${character.id}')">
+                ${pinnedTagHtml}
                 ${demoTagHtml}
                 ${sharedTagHtml}
                 ${thumbnailHtml}

@@ -387,6 +387,22 @@
     border-radius: 3px;
 }
 
+/* Pinned character indicator - top right corner */
+.card-pinned-tag {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 5;
+    font-size: 12px;
+    color: var(--terminal-fg);
+    opacity: 0.7;
+    line-height: 1;
+}
+
+/* Subtle highlight for pinned cards */
+.character-card.is-pinned {
+    border-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-dim), 0.5);
+}
 
 /* Hover and keyboard focus (unselected) - bright green outline, text, and ASCII */
 .character-card:hover:not(.is-selected),
