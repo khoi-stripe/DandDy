@@ -502,65 +502,96 @@
                             </section>
                         </div>
 
-                        <!-- Spellcasting (only visible for spellcasting classes) -->
-                        <div class="settings-group is-hidden" id="spellEditSection">
-                            <div class="settings-group-label">[ Spellcasting ]</div>
-                            <div class="spell-limits-summary" id="spellLimitsSummary">
-                                <!-- Populated dynamically: e.g., "Spells: 4/6 · Cantrips: 3/4" -->
-                            </div>
-                            <section class="settings-section">
-                                <!-- Cantrips -->
-                                <div class="spell-edit-row" id="spellEditCantripsRow">
-                                    <div class="settings-label">Cantrips</div>
-                                    <div class="spell-tag-list" id="editCantrips" data-level="cantrips">
-                                        <!-- Populated dynamically with add button -->
-                                    </div>
-                                </div>
-                                <!-- Spell levels (1-9) dynamically shown based on character level -->
-                                <div class="spell-edit-row is-hidden" id="spellEditLevel1Row">
-                                    <div class="settings-label">1st Level Spells</div>
-                                    <div class="spell-tag-list" id="editSpells1" data-level="1"></div>
-                                </div>
-                                <div class="spell-edit-row is-hidden" id="spellEditLevel2Row">
-                                    <div class="settings-label">2nd Level Spells</div>
-                                    <div class="spell-tag-list" id="editSpells2" data-level="2"></div>
-                                </div>
-                                <div class="spell-edit-row is-hidden" id="spellEditLevel3Row">
-                                    <div class="settings-label">3rd Level Spells</div>
-                                    <div class="spell-tag-list" id="editSpells3" data-level="3"></div>
-                                </div>
-                                <div class="spell-edit-row is-hidden" id="spellEditLevel4Row">
-                                    <div class="settings-label">4th Level Spells</div>
-                                    <div class="spell-tag-list" id="editSpells4" data-level="4"></div>
-                                </div>
-                                <div class="spell-edit-row is-hidden" id="spellEditLevel5Row">
-                                    <div class="settings-label">5th Level Spells</div>
-                                    <div class="spell-tag-list" id="editSpells5" data-level="5"></div>
-                                </div>
-                                <div class="spell-edit-row is-hidden" id="spellEditLevel6Row">
-                                    <div class="settings-label">6th Level Spells</div>
-                                    <div class="spell-tag-list" id="editSpells6" data-level="6"></div>
-                                </div>
-                                <div class="spell-edit-row is-hidden" id="spellEditLevel7Row">
-                                    <div class="settings-label">7th Level Spells</div>
-                                    <div class="spell-tag-list" id="editSpells7" data-level="7"></div>
-                                </div>
-                                <div class="spell-edit-row is-hidden" id="spellEditLevel8Row">
-                                    <div class="settings-label">8th Level Spells</div>
-                                    <div class="spell-tag-list" id="editSpells8" data-level="8"></div>
-                                </div>
-                                <div class="spell-edit-row is-hidden" id="spellEditLevel9Row">
-                                    <div class="settings-label">9th Level Spells</div>
-                                    <div class="spell-tag-list" id="editSpells9" data-level="9"></div>
-                                </div>
-                            </section>
-                        </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="ModalManager.requestClose('editDetailsModal')">CANCEL</button>
                 <button class="terminal-btn terminal-btn-primary" onclick="saveEditDetails()">SAVE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spell Edit Modal (dedicated modal for editing spells) -->
+    <div id="spellEditModal" class="modal">
+        <div class="modal-content">
+            <!-- Loading overlay (stays outside animated content) -->
+            <div id="spellEditLoading" class="modal-loading-overlay">
+                <div class="panel-loading-cube-container">
+                    <div class="panel-loading-cube">
+                        <i></i><i></i><i></i><i></i><i></i><i></i>
+                    </div>
+                </div>
+                <span class="panel-loading-text">Saving...</span>
+            </div>
+            <!-- Animated content wrapper -->
+            <div class="modal-content-inner">
+                <div class="modal-header">
+                    <h2 class="modal-title">Edit Spells</h2>
+                    <button class="modal-close" onclick="ModalManager.requestClose('spellEditModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-layout">
+                        <div class="settings-grid">
+                            <!-- Spellcasting section -->
+                            <div class="settings-group" id="spellEditModalSection">
+                                <div class="spell-limits-summary" id="spellEditModalLimitsSummary">
+                                    <!-- Populated dynamically: e.g., "Spells: 4/6 · Cantrips: 3/4" -->
+                                </div>
+                                <section class="settings-section">
+                                    <!-- Cantrips -->
+                                    <div class="spell-edit-row" id="spellEditModalCantripsRow">
+                                        <div class="settings-label">Cantrips</div>
+                                        <div class="spell-tag-list" id="spellEditModalCantrips" data-level="cantrips">
+                                            <!-- Populated dynamically with add button -->
+                                        </div>
+                                    </div>
+                                    <!-- Spell levels (1-9) dynamically shown based on character level -->
+                                    <div class="spell-edit-row is-hidden" id="spellEditModalLevel1Row">
+                                        <div class="settings-label">1st Level Spells</div>
+                                        <div class="spell-tag-list" id="spellEditModalSpells1" data-level="1"></div>
+                                    </div>
+                                    <div class="spell-edit-row is-hidden" id="spellEditModalLevel2Row">
+                                        <div class="settings-label">2nd Level Spells</div>
+                                        <div class="spell-tag-list" id="spellEditModalSpells2" data-level="2"></div>
+                                    </div>
+                                    <div class="spell-edit-row is-hidden" id="spellEditModalLevel3Row">
+                                        <div class="settings-label">3rd Level Spells</div>
+                                        <div class="spell-tag-list" id="spellEditModalSpells3" data-level="3"></div>
+                                    </div>
+                                    <div class="spell-edit-row is-hidden" id="spellEditModalLevel4Row">
+                                        <div class="settings-label">4th Level Spells</div>
+                                        <div class="spell-tag-list" id="spellEditModalSpells4" data-level="4"></div>
+                                    </div>
+                                    <div class="spell-edit-row is-hidden" id="spellEditModalLevel5Row">
+                                        <div class="settings-label">5th Level Spells</div>
+                                        <div class="spell-tag-list" id="spellEditModalSpells5" data-level="5"></div>
+                                    </div>
+                                    <div class="spell-edit-row is-hidden" id="spellEditModalLevel6Row">
+                                        <div class="settings-label">6th Level Spells</div>
+                                        <div class="spell-tag-list" id="spellEditModalSpells6" data-level="6"></div>
+                                    </div>
+                                    <div class="spell-edit-row is-hidden" id="spellEditModalLevel7Row">
+                                        <div class="settings-label">7th Level Spells</div>
+                                        <div class="spell-tag-list" id="spellEditModalSpells7" data-level="7"></div>
+                                    </div>
+                                    <div class="spell-edit-row is-hidden" id="spellEditModalLevel8Row">
+                                        <div class="settings-label">8th Level Spells</div>
+                                        <div class="spell-tag-list" id="spellEditModalSpells8" data-level="8"></div>
+                                    </div>
+                                    <div class="spell-edit-row is-hidden" id="spellEditModalLevel9Row">
+                                        <div class="settings-label">9th Level Spells</div>
+                                        <div class="spell-tag-list" id="spellEditModalSpells9" data-level="9"></div>
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-end">
+                    <button class="terminal-btn" onclick="ModalManager.requestClose('spellEditModal')">CANCEL</button>
+                    <button class="terminal-btn terminal-btn-primary" onclick="saveSpellEditModal()">SAVE</button>
+                </div>
             </div>
         </div>
     </div>

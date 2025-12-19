@@ -366,6 +366,13 @@ window.SPELL_DATABASE = {
     return this[level] || [];
   },
 
+  getSpellsByClassAndLevel(classId, level) {
+    const normalizedClass = classId.toLowerCase();
+    return (this[level] || []).filter(spell => 
+      spell.classes.includes(normalizedClass)
+    );
+  },
+
   getSpellsForClass(classId, maxLevel = 9) {
     const normalizedClass = classId.toLowerCase();
     const result = { cantrips: [], spells: {} };

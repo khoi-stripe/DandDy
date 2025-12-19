@@ -6333,6 +6333,109 @@ function dismissBuilderSplash(instant = false) {
   }
 }
 
+// ========================================
+// PORTRAIT LIGHTBOX (Mobile)
+// Full-screen image viewer for character portraits on mobile/touch devices
+// ========================================
+const PortraitLightbox = {
+  _lightbox: null,
+  _isTouch: false,
+  _mobileBreakpoint: 768,
+  
+  /** Check if viewport is mobile-sized */
+  _isMobile() {
+    return window.innerWidth <= this._mobileBreakpoint;
+  },
+  
+  /** Create the lightbox element if it doesn't exist */
+  _ensureLightbox() {
+    if (this._lightbox) return this._lightbox;
+    
+    const lightbox = document.createElement('div');
+    lightbox.className = 'portrait-lightbox';
+    lightbox.innerHTML = `
+      <div class="portrait-lightbox-backdrop"></div>
+      <img class="portrait-lightbox-image" src="" alt="Portrait">
+      <div class="portrait-lightbox-hint">Tap to close</div>
+    `;
+    document.body.appendChild(lightbox);
+    this._lightbox = lightbox;
+    
+    // Close on backdrop tap
+    const backdrop = lightbox.querySelector('.portrait-lightbox-backdrop');
+    backdrop.addEventListener('click', () => this.close());
+    
+    // Also close on lightbox tap (anywhere)
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox || e.target === backdrop) {
+        this.close();
+      }
+    });
+    
+    // Close on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.isOpen()) {
+        this.close();
+      }
+    });
+    
+    return lightbox;
+  },
+  
+  /** Check if lightbox is currently open */
+  isOpen() {
+    return this._lightbox && this._lightbox.classList.contains('is-open');
+  },
+  
+  /** Open the lightbox with the given image URL */
+  open(imageUrl) {
+    if (!imageUrl) return;
+    
+    const lightbox = this._ensureLightbox();
+    const img = lightbox.querySelector('.portrait-lightbox-image');
+    
+    img.src = imageUrl;
+    document.body.style.overflow = 'hidden';
+    lightbox.classList.add('is-open');
+  },
+  
+  /** Close the lightbox */
+  close() {
+    if (!this._lightbox) return;
+    
+    this._lightbox.classList.remove('is-open');
+    document.body.style.overflow = '';
+  },
+  
+  /** Initialize portrait tap handlers for mobile */
+  init() {
+    this._isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    // Use event delegation for portrait clicks
+    document.addEventListener('click', (e) => {
+      // Guard against non-element targets (text nodes, etc.)
+      if (!e.target || typeof e.target.closest !== 'function') return;
+      
+      // Only handle on mobile/touch
+      if (!this._isMobile() && !this._isTouch) return;
+      
+      // Check if clicked element is a portrait image
+      const portrait = e.target.closest('.portrait-container--original-mode .original-portrait.is-loaded');
+      if (!portrait) return;
+      
+      // Don't open lightbox if it's already open
+      if (this.isOpen()) return;
+      
+      // Get the image URL
+      const imageUrl = portrait.src;
+      if (imageUrl) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.open(imageUrl);
+      }
+    }, true);
+  }
+};
 
 // Initialize on page load
 window.addEventListener('DOMContentLoaded', async () => {
@@ -6367,6 +6470,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize the builder app
   await App.init();
+  
+  // Initialize portrait lightbox for mobile (tap-to-zoom)
+  PortraitLightbox.init();
 
   // Stop loading animation once initialized
   if (loadingInterval) {

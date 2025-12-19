@@ -1218,6 +1218,8 @@ body::before {
 
 .stat-label {
   color: var(--sheet-label-color);
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .stat-value {
@@ -1298,6 +1300,44 @@ body::before {
   font-size: 0.8rem;
   color: var(--sheet-value-color);
   font-weight: 400;
+}
+
+/* Spell tag tooltip - show on hover (CSS-only, desktop) */
+.sheet-spell-tag.has-tooltip {
+  cursor: help;
+  position: relative;
+}
+
+.sheet-spell-tag.has-tooltip:hover .custom-tooltip,
+.sheet-spell-tag .custom-tooltip.show {
+  opacity: 1;
+  transform: translateX(calc(-50% + var(--tooltip-offset-x, 0px))) scale(1);
+}
+
+.sheet-spell-tag .custom-tooltip {
+  --tooltip-offset-x: 0px;
+  white-space: normal;
+  text-align: left;
+  max-width: 250px;
+  font-weight: normal;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  /* Base transform includes offset variable */
+  transform: translateX(calc(-50% + var(--tooltip-offset-x, 0px))) scale(0.95);
+}
+
+/* Mobile: allow tap-to-show tooltip on spell tag */
+@media (hover: none), (pointer: coarse) {
+  .sheet-spell-tag.has-tooltip {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .sheet-spell-tag.has-tooltip.tooltip-active .custom-tooltip {
+    opacity: 1;
+    transform: translateX(calc(-50% + var(--tooltip-offset-x, 0px))) scale(1);
+    pointer-events: auto;
+  }
 }
 
 /* Ability scores grid */
@@ -1424,10 +1464,12 @@ body::before {
 
 /* Flip animation: close in towards center, then invert */
 .sheet-header-toggle.is-collapsed {
+  transform: scaleY(-1); /* Hold collapsed state */
   animation: caret-flip-down 0.25s ease forwards;
 }
 
 .sheet-header-toggle.is-expanded {
+  transform: scaleY(1); /* Hold expanded state */
   animation: caret-flip-up 0.25s ease forwards;
 }
 
@@ -1531,8 +1573,9 @@ body::before {
 }
 
 .class-features-name {
-  color: var(--sheet-value-color);
-  font-size: 13px;
+  color: var(--sheet-label-color);
+  font-size: 14px;
+  font-weight: 500;
   margin-top: 4px;
 }
 
@@ -1543,9 +1586,8 @@ body::before {
 }
 
 .class-features-desc {
-  color: var(--sheet-value-color);
-  font-size: 11px;
-  opacity: 0.85;
+  color: var(--sheet-label-color);
+  font-size: 14px;
 }
 
 .class-features-toggle-links {
@@ -1601,8 +1643,8 @@ body::before {
 }
 
 .skill-prof-name {
-  color: var(--sheet-value-color);
-  font-size: 13px;
+  color: var(--sheet-label-color);
+  font-size: 14px;
   font-weight: 500;
 }
 
@@ -1620,9 +1662,8 @@ body::before {
 }
 
 .skill-prof-desc {
-  color: var(--sheet-value-color);
-  font-size: 11px;
-  opacity: 0.85;
+  color: var(--sheet-label-color);
+  font-size: 14px;
   line-height: 1.4;
 }
 
@@ -1653,15 +1694,14 @@ body::before {
 }
 
 .tool-prof-name {
-  color: var(--sheet-value-color);
-  font-size: 13px;
+  color: var(--sheet-label-color);
+  font-size: 14px;
   font-weight: 500;
 }
 
 .tool-prof-desc {
-  color: var(--sheet-value-color);
-  font-size: 11px;
-  opacity: 0.85;
+  color: var(--sheet-label-color);
+  font-size: 14px;
   line-height: 1.4;
 }
 

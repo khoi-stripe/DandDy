@@ -199,7 +199,7 @@ const ModalManager = {
     _formSnapshots: new Map(),
     
     // Modals that have forms which can be dirty
-    FORM_MODALS: ['editDetailsModal', 'portraitPromptModal'],
+    FORM_MODALS: ['editDetailsModal', 'spellEditModal', 'portraitPromptModal'],
     
     /**
      * Initialize modal behaviors (call once on page load)
@@ -207,6 +207,7 @@ const ModalManager = {
     init() {
         // Backdrop click to close
         document.addEventListener('click', (e) => {
+            if (!e.target || typeof e.target.closest !== 'function') return;
             const modal = e.target.closest('.modal.show');
             if (!modal) return;
             
@@ -360,6 +361,9 @@ const ModalManager = {
                 break;
             case 'editDetailsModal':
                 closeEditDetailsModal();
+                break;
+            case 'spellEditModal':
+                closeSpellEditModal();
                 break;
             case 'authModal':
                 cancelAuthFlow();
@@ -967,6 +971,113 @@ const MobileView = {
         
         // Clear URL param
         clearCharacterFromUrl();
+    }
+};
+
+// ========================================
+// PORTRAIT LIGHTBOX (Mobile)
+// Full-screen image viewer for character portraits
+// ========================================
+const PortraitLightbox = {
+    _lightbox: null,
+    _isTouch: false,
+    
+    /** Create the lightbox element if it doesn't exist */
+    _ensureLightbox() {
+        if (this._lightbox) return this._lightbox;
+        
+        const lightbox = document.createElement('div');
+        lightbox.className = 'portrait-lightbox';
+        lightbox.innerHTML = `
+            <div class="portrait-lightbox-backdrop"></div>
+            <img class="portrait-lightbox-image" src="" alt="Portrait">
+            <div class="portrait-lightbox-hint">Tap to close</div>
+        `;
+        document.body.appendChild(lightbox);
+        this._lightbox = lightbox;
+        
+        // Close on backdrop tap
+        const backdrop = lightbox.querySelector('.portrait-lightbox-backdrop');
+        backdrop.addEventListener('click', () => this.close());
+        
+        // Also close on lightbox tap (anywhere)
+        lightbox.addEventListener('click', (e) => {
+            // Only close if tap is on the lightbox itself or backdrop, not the image
+            if (e.target === lightbox || e.target === backdrop) {
+                this.close();
+            }
+        });
+        
+        // Close on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isOpen()) {
+                this.close();
+            }
+        });
+        
+        return lightbox;
+    },
+    
+    /** Check if lightbox is currently open */
+    isOpen() {
+        return this._lightbox && this._lightbox.classList.contains('is-open');
+    },
+    
+    /** Open the lightbox with the given image URL */
+    open(imageUrl) {
+        if (!imageUrl) return;
+        
+        const lightbox = this._ensureLightbox();
+        const img = lightbox.querySelector('.portrait-lightbox-image');
+        
+        // Set the image source
+        img.src = imageUrl;
+        
+        // Prevent body scroll while lightbox is open
+        document.body.style.overflow = 'hidden';
+        
+        // Open the lightbox
+        lightbox.classList.add('is-open');
+    },
+    
+    /** Close the lightbox */
+    close() {
+        if (!this._lightbox) return;
+        
+        this._lightbox.classList.remove('is-open');
+        
+        // Restore body scroll
+        document.body.style.overflow = '';
+    },
+    
+    /** Initialize portrait tap handlers for mobile */
+    init() {
+        // Detect touch device
+        this._isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        // Use event delegation for portrait clicks
+        document.addEventListener('click', (e) => {
+            // Guard against non-element targets (text nodes, etc.)
+            if (!e.target || typeof e.target.closest !== 'function') return;
+            
+            // Only handle on mobile/touch
+            if (!MobileView.isMobile() && !this._isTouch) return;
+            
+            // Check if clicked element is a portrait image
+            const portrait = e.target.closest('.portrait-container--original-mode .original-portrait.is-loaded');
+            if (!portrait) return;
+            
+            // Don't open lightbox if it's already open
+            if (this.isOpen()) return;
+            
+            // Get the image URL
+            const imageUrl = portrait.src;
+            if (imageUrl) {
+                e.preventDefault();
+                e.stopPropagation();
+                this.open(imageUrl);
+            }
+        }, true); // Use capture to get click before other handlers
     }
 };
 
@@ -1898,9 +2009,6 @@ async function editCharacter(id, options = {}) {
     // BACKSTORY (free text)
     setValue('editBackstory', character.backstory || '');
 
-    // SPELLS - Initialize spell editing section
-    initializeSpellEditSection(character, parsed);
-
     // Handle field permissions for shared characters
     // Only the owner can edit the character name (owner_only_fields on backend)
     const isSharedWithMe = character.is_shared || character.isShared;
@@ -2268,25 +2376,6 @@ async function saveEditDetails() {
     // Apply auto-calculated class resources (reset to full on level up)
     if (autoClassResources && Object.keys(autoClassResources).length > 0) {
         updates.classResources = autoClassResources;
-    }
-
-    // Apply spell changes from the spell edit section
-    const className = (character.class || '').toLowerCase();
-    if (SPELLCASTING_CLASSES[className]) {
-        // Validate spell limits before saving
-        const spellValidation = validateAllSpellLimits();
-        if (!spellValidation.valid) {
-            // Hide loading overlay while showing validation error
-            if (loadingOverlay) {
-                loadingOverlay.classList.remove('is-visible');
-            }
-            showSpellLimitSaveModal(spellValidation);
-            return;
-        }
-        
-        const spellEdits = getEditSpells();
-        updates.cantrips = spellEdits.cantrips;
-        updates.spellsKnown = spellEdits.spellsKnown;
     }
 
     try {
@@ -4752,6 +4841,7 @@ function closeAllEditorModals() {
     // List of modal IDs that should be closed on auth state changes
     const modalIds = [
         'editDetailsModal',
+        'spellEditModal',
         'portraitPromptModal',
         'importModal',
         'duplicateModal',
@@ -6727,6 +6817,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize mobile view handling (resize transitions)
     MobileView.init();
     
+    // Initialize portrait lightbox for mobile (tap-to-zoom)
+    PortraitLightbox.init();
+    
     // Show panel loading spinners as early as possible so the shell never feels empty
     // while we verify auth state and fetch characters.
     if (typeof UI !== 'undefined' && UI && typeof UI.setLoadingState === 'function') {
@@ -7294,32 +7387,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Mobile: tap on shared tag to reveal tooltip, tap again or outside to close
+    // Mobile: tap on shared/spell tag to reveal tooltip, tap again or outside to close
     // Use event delegation for dynamically rendered content
     document.addEventListener('click', (e) => {
+        // Guard against non-element targets (text nodes, etc.)
+        if (!e.target || typeof e.target.closest !== 'function') return;
+        
         // Check if touch device (coarse pointer)
         const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
         if (!isTouch) return;
         
-        const sharedTag = e.target.closest('.sheet-shared-tag.has-tooltip');
+        // Find any tooltip-enabled tag that was tapped (shared tag or spell tag)
+        const tappedTag = e.target.closest('.sheet-shared-tag.has-tooltip, .sheet-spell-tag.has-tooltip');
         const clickedTooltip = e.target.closest('.custom-tooltip');
-        const activeTag = document.querySelector('.sheet-shared-tag.tooltip-active');
+        const activeTag = document.querySelector('.sheet-shared-tag.tooltip-active, .sheet-spell-tag.tooltip-active');
         
-        if (sharedTag) {
-            // Tapped on a shared tag (or its tooltip) - toggle its tooltip
+        if (tappedTag) {
+            // Tapped on a tag with tooltip - toggle its tooltip
             e.stopPropagation();
             
             // If there's already an active tooltip on a different tag, close it
-            if (activeTag && activeTag !== sharedTag) {
+            if (activeTag && activeTag !== tappedTag) {
                 activeTag.classList.remove('tooltip-active');
             }
             
             // Toggle the tapped tag's tooltip
-            sharedTag.classList.toggle('tooltip-active');
+            tappedTag.classList.toggle('tooltip-active');
+            
+            // Reposition tooltip if it will be clipped
+            if (tappedTag.classList.contains('tooltip-active')) {
+                repositionTooltipIfClipped(tappedTag);
+            }
         } else if (clickedTooltip) {
             // Tapped directly on a tooltip - close its parent tag's tooltip
             e.stopPropagation();
-            const parentTag = clickedTooltip.closest('.sheet-shared-tag.has-tooltip');
+            const parentTag = clickedTooltip.closest('.sheet-shared-tag.has-tooltip, .sheet-spell-tag.has-tooltip');
             if (parentTag) {
                 parentTag.classList.remove('tooltip-active');
             }
@@ -7330,6 +7432,69 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
+
+    // Find the closest scrollable/overflow container
+    function getContainerBounds(element) {
+        let current = element.parentElement;
+        while (current && current !== document.body) {
+            const style = getComputedStyle(current);
+            const overflowX = style.overflowX;
+            const overflowY = style.overflowY;
+            // Check if this element clips its content
+            if (overflowX === 'hidden' || overflowX === 'auto' || overflowX === 'scroll' ||
+                overflowY === 'hidden' || overflowY === 'auto' || overflowY === 'scroll') {
+                return current.getBoundingClientRect();
+            }
+            current = current.parentElement;
+        }
+        // Fallback to viewport
+        return { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+    }
+
+    // Tooltip edge detection: apply inline offset to prevent clipping
+    function repositionTooltipIfClipped(parent) {
+        const tooltip = parent.querySelector('.custom-tooltip');
+        if (!tooltip) return;
+        
+        // Reset any previous inline adjustments
+        tooltip.style.setProperty('--tooltip-offset-x', '0px');
+        tooltip.classList.add('show');
+        
+        // Force reflow to ensure CSS variable change is applied before measuring
+        void tooltip.offsetWidth;
+        
+        // Now measure with fresh layout
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const containerBounds = getContainerBounds(parent);
+        const margin = 12;
+        
+        let offsetX = 0;
+        
+        // Check left clipping
+        if (tooltipRect.left < containerBounds.left + margin) {
+            offsetX = (containerBounds.left + margin) - tooltipRect.left;
+        }
+        // Check right clipping
+        else if (tooltipRect.right > containerBounds.right - margin) {
+            offsetX = (containerBounds.right - margin) - tooltipRect.right;
+        }
+        
+        // Apply horizontal offset using CSS custom property
+        tooltip.style.setProperty('--tooltip-offset-x', `${offsetX}px`);
+        
+        tooltip.classList.remove('show');
+    }
+
+    // Desktop: reposition tooltip on hover
+    document.addEventListener('mouseenter', (e) => {
+        // Guard against non-element targets (text nodes, etc.)
+        if (!e.target || typeof e.target.closest !== 'function') return;
+        
+        const parent = e.target.closest('.sheet-spell-tag.has-tooltip');
+        if (parent) {
+            repositionTooltipIfClipped(parent);
+        }
+    }, true);
 
     // Handle password reset token from URL fragment (e.g. when coming from email link)
     try {
@@ -7400,6 +7565,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const characterGrid = document.getElementById('characterGrid');
     if (characterGrid) {
         characterGrid.addEventListener('mouseover', (e) => {
+            // Guard against non-element targets (text nodes, etc.)
+            if (!e.target || typeof e.target.closest !== 'function') return;
+            
             const card = e.target.closest('.character-card');
 
             // Clear previous hover states
@@ -8009,7 +8177,7 @@ function showSpellLimitSaveModal(validation) {
                 </div>
                 <div class="modal-footer modal-footer-end" style="gap: 0.5rem;">
                     <button class="terminal-btn" onclick="closeSpellLimitSaveModal()">Cancel</button>
-                    <button class="terminal-btn" onclick="closeSpellLimitSaveModal(); scrollToSpellSection();">Edit Spells</button>
+                    <button class="terminal-btn" onclick="closeSpellLimitSaveModal()">OK</button>
                 </div>
             </div>
         </div>
@@ -8940,7 +9108,7 @@ function showSpellLevelUpPrompt(character, spellInfo) {
                 </div>
                 <div class="modal-footer" style="gap: 0.5rem;">
                     <button class="terminal-btn terminal-btn-secondary" onclick="closeSpellLevelUpPrompt()">Later</button>
-                    <button class="terminal-btn terminal-btn-secondary" onclick="closeSpellLevelUpPrompt(); editCharacter('${character.id}', { scrollTo: 'spellEditSection' })">Select spells</button>
+                    <button class="terminal-btn terminal-btn-secondary" onclick="closeSpellLevelUpPrompt(); openSpellEditModal('${character.id}')">Select spells</button>
                 </div>
             </div>
         </div>
@@ -8958,6 +9126,680 @@ function closeSpellLevelUpPrompt() {
         animateModalClose(modal, { removeOnClose: true });
     }
 }
+
+// ========================================
+// DEDICATED SPELL EDIT MODAL
+// ========================================
+
+// Track state for the dedicated spell edit modal
+let spellEditModalState = {
+    characterId: null,
+    cantrips: [],
+    spells: {},
+    characterClass: null,
+    maxSpellLevel: 0,
+    characterLevel: 1,
+    cantripsAllowed: 0,
+    spellsAllowed: null,
+};
+
+// Store original content for spell picker back navigation
+let spellEditModalOriginalContent = null;
+let spellEditModalFormValues = null;
+
+/**
+ * Open the dedicated spell edit modal
+ */
+async function openSpellEditModal(characterId) {
+    const character = await CharacterStorage.getById(characterId);
+    if (!character) return;
+    
+    const className = (character.class || '').toLowerCase();
+    const spellcasting = SPELLCASTING_CLASSES[className];
+    
+    // Only allow for spellcasting classes
+    if (!spellcasting) {
+        showNotification('This character is not a spellcaster', 'error');
+        return;
+    }
+    
+    // Parse character data
+    const parsed = CharacterSheet._parseCharacterData(character);
+    const level = parsed.level || character.level || 1;
+    
+    // Calculate max spell level based on character level
+    let maxSpellLevel = 0;
+    if (spellcasting.type === 'full') {
+        if (level >= 17) maxSpellLevel = 9;
+        else if (level >= 15) maxSpellLevel = 8;
+        else if (level >= 13) maxSpellLevel = 7;
+        else if (level >= 11) maxSpellLevel = 6;
+        else if (level >= 9) maxSpellLevel = 5;
+        else if (level >= 7) maxSpellLevel = 4;
+        else if (level >= 5) maxSpellLevel = 3;
+        else if (level >= 3) maxSpellLevel = 2;
+        else maxSpellLevel = 1;
+    } else if (spellcasting.type === 'half') {
+        if (level < 2) maxSpellLevel = 0;
+        else if (level < 5) maxSpellLevel = 1;
+        else if (level < 9) maxSpellLevel = 2;
+        else if (level < 13) maxSpellLevel = 3;
+        else if (level < 17) maxSpellLevel = 4;
+        else maxSpellLevel = 5;
+    } else if (spellcasting.type === 'pact') {
+        if (level < 3) maxSpellLevel = 1;
+        else if (level < 5) maxSpellLevel = 2;
+        else if (level < 7) maxSpellLevel = 3;
+        else if (level < 9) maxSpellLevel = 4;
+        else maxSpellLevel = 5;
+    }
+    
+    // Get spell progression for this class/level
+    const stats = calculateStatsForLevel(character, level);
+    const spellProgression = stats.spellProgression || { cantrips: 0, spellsKnown: null, maxSpellLevel: 0 };
+    
+    // Initialize state
+    spellEditModalState = {
+        characterId,
+        cantrips: [...(parsed.cantrips || [])],
+        spells: {},
+        characterClass: className,
+        maxSpellLevel,
+        characterLevel: level,
+        cantripsAllowed: spellProgression.cantrips || 0,
+        spellsAllowed: spellProgression.spellsKnown,
+    };
+    
+    // Parse existing spells by level
+    const existingSpells = parsed.spellsKnown || [];
+    for (const spellName of existingSpells) {
+        if (window.SPELL_DATABASE) {
+            const spellInfo = window.SPELL_DATABASE.getSpellByName(spellName);
+            if (spellInfo && spellInfo.level > 0) {
+                if (!spellEditModalState.spells[spellInfo.level]) {
+                    spellEditModalState.spells[spellInfo.level] = [];
+                }
+                spellEditModalState.spells[spellInfo.level].push(spellName);
+            }
+        }
+    }
+    
+    // Show/hide cantrips row
+    const cantripsRow = document.getElementById('spellEditModalCantripsRow');
+    if (cantripsRow) {
+        cantripsRow.classList.toggle('is-hidden', !spellcasting.cantrips);
+    }
+    
+    // Show/hide spell level rows
+    for (let spellLevel = 1; spellLevel <= 9; spellLevel++) {
+        const row = document.getElementById(`spellEditModalLevel${spellLevel}Row`);
+        if (row) {
+            row.classList.toggle('is-hidden', spellLevel > maxSpellLevel || maxSpellLevel === 0);
+        }
+    }
+    
+    // Render spell tags
+    renderSpellEditModalTags();
+    
+    // Show the modal
+    const modal = document.getElementById('spellEditModal');
+    if (modal) {
+        modal.classList.add('show');
+        setTimeout(() => ModalManager.snapshotForm('spellEditModal'), 50);
+    }
+}
+
+/**
+ * Close the spell edit modal
+ */
+function closeSpellEditModal() {
+    const modal = document.getElementById('spellEditModal');
+    if (!modal) {
+        spellEditModalState.characterId = null;
+        return;
+    }
+    
+    // Hide loading overlay
+    const loadingOverlay = document.getElementById('spellEditLoading');
+    if (loadingOverlay) {
+        loadingOverlay.classList.remove('is-visible');
+    }
+    
+    animateModalClose(modal, {
+        removeOnClose: false,
+        onClosed: () => {
+            spellEditModalState.characterId = null;
+        },
+    });
+}
+
+/**
+ * Save spells from the dedicated spell edit modal
+ */
+async function saveSpellEditModal() {
+    if (!spellEditModalState.characterId) {
+        closeSpellEditModal();
+        return;
+    }
+    
+    const character = await CharacterStorage.getById(spellEditModalState.characterId);
+    if (!character) {
+        closeSpellEditModal();
+        return;
+    }
+    
+    // Validate spell limits
+    const validation = validateSpellEditModalLimits();
+    if (!validation.valid) {
+        showSpellLimitSaveModal(validation);
+        return;
+    }
+    
+    // Show loading overlay
+    const loadingOverlay = document.getElementById('spellEditLoading');
+    if (loadingOverlay) {
+        loadingOverlay.classList.add('is-visible');
+    }
+    
+    // Build updates
+    const updates = {
+        cantrips: [...spellEditModalState.cantrips],
+        spellsKnown: Object.values(spellEditModalState.spells).flat(),
+    };
+    
+    try {
+        await CharacterStorage.update(spellEditModalState.characterId, updates);
+        markUserChanges();
+        await AppState.loadCharacters();
+        UI.render();
+        viewCharacter(spellEditModalState.characterId);
+        showNotification('Spells updated');
+        closeSpellEditModal();
+    } catch (error) {
+        console.error('Failed to save spells:', error);
+        showNotification('Failed to save spells', 'error');
+    } finally {
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('is-visible');
+        }
+    }
+}
+
+/**
+ * Validate spell limits for the dedicated spell edit modal
+ */
+function validateSpellEditModalLimits() {
+    const currentCantrips = spellEditModalState.cantrips.length;
+    const maxCantrips = spellEditModalState.cantripsAllowed;
+    const currentSpells = Object.values(spellEditModalState.spells).flat().length;
+    const maxSpells = spellEditModalState.spellsAllowed;
+    
+    const issues = [];
+    
+    if (maxCantrips > 0 && currentCantrips > maxCantrips) {
+        issues.push(`You have ${currentCantrips} cantrips but can only know ${maxCantrips}.`);
+    }
+    
+    if (maxSpells !== null && currentSpells > maxSpells) {
+        issues.push(`You have ${currentSpells} spells but can only know ${maxSpells}.`);
+    }
+    
+    return {
+        valid: issues.length === 0,
+        issues,
+        cantripsOver: maxCantrips > 0 ? Math.max(0, currentCantrips - maxCantrips) : 0,
+        spellsOver: maxSpells !== null ? Math.max(0, currentSpells - maxSpells) : 0,
+    };
+}
+
+/**
+ * Update the spell limits summary in the dedicated spell edit modal
+ */
+function updateSpellEditModalLimitsSummary() {
+    const summaryEl = document.getElementById('spellEditModalLimitsSummary');
+    if (!summaryEl) return;
+    
+    const parts = [];
+    
+    const currentCantrips = spellEditModalState.cantrips.length;
+    const maxCantrips = spellEditModalState.cantripsAllowed;
+    const cantripsOver = maxCantrips > 0 ? Math.max(0, currentCantrips - maxCantrips) : 0;
+    
+    if (maxCantrips > 0) {
+        const prefix = cantripsOver > 0 ? '⚠ ' : '';
+        parts.push(`${prefix}Cantrips: ${currentCantrips}/${maxCantrips}`);
+    }
+    
+    const currentSpells = Object.values(spellEditModalState.spells).flat().length;
+    const maxSpells = spellEditModalState.spellsAllowed;
+    const spellsOver = maxSpells !== null ? Math.max(0, currentSpells - maxSpells) : 0;
+    
+    if (maxSpells !== null) {
+        const prefix = spellsOver > 0 ? '⚠ ' : '';
+        parts.push(`${prefix}Spells: ${currentSpells}/${maxSpells}`);
+    } else if (spellEditModalState.characterClass) {
+        parts.push('Spells: ' + currentSpells + ' (no limit)');
+    }
+    
+    summaryEl.textContent = parts.join(' · ');
+    
+    const overLimit = cantripsOver > 0 || spellsOver > 0;
+    const atLimit = !overLimit && ((maxCantrips > 0 && currentCantrips >= maxCantrips) || 
+                   (maxSpells !== null && currentSpells >= maxSpells));
+    summaryEl.classList.toggle('at-limit', atLimit);
+    summaryEl.classList.toggle('over-limit', overLimit);
+}
+
+/**
+ * Render spell tags in the dedicated spell edit modal
+ */
+function renderSpellEditModalTags() {
+    // Render cantrips
+    const cantripsContainer = document.getElementById('spellEditModalCantrips');
+    if (cantripsContainer) {
+        renderSpellEditModalTagsInContainer(cantripsContainer, spellEditModalState.cantrips, 'cantrips');
+    }
+    
+    // Render spells by level
+    for (let level = 1; level <= 9; level++) {
+        const container = document.getElementById(`spellEditModalSpells${level}`);
+        if (container) {
+            const spells = spellEditModalState.spells[level] || [];
+            renderSpellEditModalTagsInContainer(container, spells, level);
+        }
+    }
+    
+    updateSpellEditModalLimitsSummary();
+}
+
+/**
+ * Render spell tags in a container for the dedicated spell edit modal
+ */
+function renderSpellEditModalTagsInContainer(container, spells, level) {
+    const levelArg = level === 'cantrips' ? "'cantrips'" : level;
+    
+    const spellTagsHtml = spells.map(spellName => {
+        // Try to get spell description for tooltip
+        let description = '';
+        if (window.SPELL_DATABASE) {
+            const spellInfo = window.SPELL_DATABASE.getSpellByName(spellName);
+            if (spellInfo && spellInfo.description) {
+                description = spellInfo.description;
+            }
+        }
+        const escapedDesc = description ? Utils.escapeHtml(description) : '';
+        const tooltipClass = escapedDesc ? ' has-tooltip' : '';
+        const tooltipHtml = escapedDesc ? `<span class="custom-tooltip" data-position="top">${escapedDesc}</span>` : '';
+        
+        return `<span class="sheet-spell-tag spell-edit-tag${tooltipClass}">${Utils.escapeHtml(spellName)}${tooltipHtml}</span>`;
+    }).join('');
+    
+    const editButtonHtml = `<button type="button" class="spell-add-btn-inline" onclick="openSpellPickerForSpellEditModal(${levelArg})">Edit</button>`;
+    
+    container.innerHTML = spellTagsHtml + editButtonHtml;
+}
+
+/**
+ * Remove a spell from the dedicated spell edit modal
+ */
+function removeSpellFromSpellEditModal(spellName, level) {
+    if (level === 'cantrips') {
+        spellEditModalState.cantrips = spellEditModalState.cantrips.filter(s => s !== spellName);
+    } else {
+        const levelNum = parseInt(level, 10);
+        if (spellEditModalState.spells[levelNum]) {
+            spellEditModalState.spells[levelNum] = spellEditModalState.spells[levelNum].filter(s => s !== spellName);
+        }
+    }
+    
+    renderSpellEditModalTags();
+    ModalManager.markDirty('spellEditModal');
+}
+
+/**
+ * Open spell picker for the dedicated spell edit modal
+ */
+// Temporary state for spell picker selections (before save)
+let spellPickerTempState = {
+    level: null,
+    originalSelections: [],
+    currentSelections: [],
+    maxAllowed: null,
+};
+
+function openSpellPickerForSpellEditModal(level) {
+    const modal = document.getElementById('spellEditModal');
+    if (!modal) return;
+    
+    const modalContent = modal.querySelector('.modal-content');
+    if (!modalContent) return;
+    
+    // Store original content
+    spellEditModalOriginalContent = modalContent.innerHTML;
+    
+    // Get current selections for this level
+    const currentSelections = level === 'cantrips' 
+        ? [...spellEditModalState.cantrips]
+        : [...(spellEditModalState.spells[level] || [])];
+    
+    // Calculate max allowed
+    let maxAllowed = null;
+    if (level === 'cantrips') {
+        maxAllowed = spellEditModalState.cantripsAllowed > 0 ? spellEditModalState.cantripsAllowed : null;
+    } else {
+        maxAllowed = spellEditModalState.spellsAllowed;
+    }
+    
+    // Initialize temp state
+    spellPickerTempState = {
+        level,
+        originalSelections: [...currentSelections],
+        currentSelections: [...currentSelections],
+        maxAllowed,
+    };
+    
+    // Determine title
+    const levelLabel = level === 'cantrips' ? 'CANTRIPS' : 
+        `${level === 1 ? '1ST' : level === 2 ? '2ND' : level === 3 ? '3RD' : level + 'TH'} LEVEL SPELLS`;
+    const titleText = `SELECT ${levelLabel}`;
+    
+    // Animate out current content (collapse vertically)
+    const currentInner = modalContent.querySelector('.modal-content-inner');
+    if (currentInner) {
+        currentInner.classList.add('slide-out-left');
+    }
+    
+    // After collapse animation, show loading then content
+    setTimeout(() => {
+        // Show loading first
+        const loadingHtml = `
+            <div class="modal-content-inner slide-in-right">
+                <div class="modal-header modal-header-left">
+                    <h2 class="modal-title">${titleText}</h2>
+                    <button class="modal-close" onclick="ModalManager.requestClose('spellEditModal')">&times;</button>
+                </div>
+                <div class="modal-body spell-picker-loading">
+                    <div class="panel-loading-cube-container">
+                        <div class="panel-loading-cube">
+                            <i></i><i></i><i></i><i></i><i></i><i></i>
+                        </div>
+                    </div>
+                    <span class="panel-loading-text">Loading spells...</span>
+                </div>
+            </div>
+        `;
+        
+        modalContent.innerHTML = loadingHtml;
+        
+        // Load spells asynchronously
+        setTimeout(() => {
+            const spells = getSpellsForPicker(spellEditModalState.characterClass, level);
+            
+            const spellPickerHtml = `
+                <div class="modal-content-inner">
+                    <div class="modal-header modal-header-left">
+                        <h2 class="modal-title">${titleText}</h2>
+                        <button class="modal-close" onclick="ModalManager.requestClose('spellEditModal')">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="spell-picker-info" id="spellPickerInfoText">
+                            ${getSpellPickerInfoText()}
+                        </div>
+                        <div class="spell-picker-filters">
+                            <input type="text" id="spellEditModalSearchInput" class="terminal-input" placeholder="Search spells..." oninput="filterSpellEditModalPicker()">
+                        </div>
+                        <div class="spell-picker-list" id="spellEditModalPickerList">
+                            ${renderSpellPickerListWithState(spells, level)}
+                        </div>
+                    </div>
+                    <div class="modal-footer modal-footer-end">
+                        <button class="terminal-btn" onclick="cancelSpellEditModalPicker()">Cancel</button>
+                        <button id="spellPickerSaveBtn" class="terminal-btn terminal-btn-primary" onclick="saveSpellEditModalPicker()">Save</button>
+                    </div>
+                </div>
+            `;
+            
+            modalContent.innerHTML = spellPickerHtml;
+            
+            // Focus search input
+            const searchInput = document.getElementById('spellEditModalSearchInput');
+            if (searchInput) searchInput.focus();
+        }, 100);
+    }, currentInner ? 150 : 0);
+}
+
+/**
+ * Get the info text for spell picker (with x/y counter)
+ */
+function getSpellPickerInfoText() {
+    const { currentSelections, maxAllowed } = spellPickerTempState;
+    const current = currentSelections.length;
+    
+    if (maxAllowed === null) {
+        return `Select spells for your character. <span class="spell-picker-count">${current} selected</span>`;
+    }
+    
+    const remaining = maxAllowed - current;
+    const isOver = remaining < 0;
+    const countClass = isOver ? 'spell-picker-count over-limit' : 'spell-picker-count';
+    const warningIcon = isOver ? '⚠ ' : '';
+    const countText = `${warningIcon}${current}/${maxAllowed}`;
+    
+    if (isOver) {
+        const removeCount = Math.abs(remaining);
+        return `<span class="spell-picker-warning">Remove ${removeCount} spell${removeCount !== 1 ? 's' : ''} to save.</span> <span class="${countClass}">${countText}</span>`;
+    } else if (remaining === 0) {
+        return `Selection complete. <span class="${countClass}">${countText}</span>`;
+    } else {
+        return `You can select ${remaining} more spell${remaining !== 1 ? 's' : ''}. <span class="${countClass}">${countText}</span>`;
+    }
+}
+
+/**
+ * Update the spell picker info text
+ */
+function updateSpellPickerInfo() {
+    const infoEl = document.getElementById('spellPickerInfoText');
+    if (infoEl) {
+        infoEl.innerHTML = getSpellPickerInfoText();
+        
+        // Update class based on limit status
+        const { currentSelections, maxAllowed } = spellPickerTempState;
+        const isOver = maxAllowed !== null && currentSelections.length > maxAllowed;
+        const atLimit = maxAllowed !== null && currentSelections.length === maxAllowed;
+        infoEl.classList.toggle('over-limit', isOver);
+        infoEl.classList.toggle('at-limit', atLimit && !isOver);
+    }
+    
+    // Update save button disabled state
+    const saveBtn = document.getElementById('spellPickerSaveBtn');
+    if (saveBtn) {
+        const { currentSelections, maxAllowed } = spellPickerTempState;
+        const isOver = maxAllowed !== null && currentSelections.length > maxAllowed;
+        saveBtn.disabled = isOver;
+    }
+}
+
+/**
+ * Render spell picker list with current temp state
+ */
+function renderSpellPickerListWithState(spells, level) {
+    if (!spells || spells.length === 0) {
+        return '<div class="spell-picker-empty">No spells available at this level for this class.</div>';
+    }
+    
+    const { originalSelections, currentSelections } = spellPickerTempState;
+    const originalSet = new Set(originalSelections.map(s => s.toLowerCase()));
+    const selectedSet = new Set(currentSelections.map(s => s.toLowerCase()));
+    
+    return spells.map(spell => {
+        const spellNameLower = spell.name.toLowerCase();
+        const isSelected = selectedSet.has(spellNameLower);
+        const wasOriginallySelected = originalSet.has(spellNameLower);
+        const escapedName = Utils.escapeHtml(spell.name);
+        const escapedDesc = Utils.escapeHtml(spell.description || '');
+        
+        // Classes for styling
+        const classes = ['spell-picker-item'];
+        if (isSelected) classes.push('is-selected');
+        if (wasOriginallySelected) classes.push('is-existing');
+        
+        return `
+            <div class="${classes.join(' ')}" 
+                 data-spell-name="${escapedName.toLowerCase()}"
+                 onclick="toggleSpellInSpellEditModal('${escapedName.replace(/'/g, "\\'")}', '${level}', this)">
+                <div class="spell-picker-item-header">
+                    <span class="spell-picker-item-name">${escapedName}</span>
+                    <span class="spell-picker-item-school">${spell.school || ''}</span>
+                </div>
+                <div class="spell-picker-item-desc">${escapedDesc}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Get spells for picker based on class and level
+ */
+function getSpellsForPicker(className, level) {
+    if (!window.SPELL_DATABASE) return [];
+    
+    const spellLevel = level === 'cantrips' ? 0 : level;
+    const classSpells = window.SPELL_DATABASE.getSpellsByClassAndLevel(className, spellLevel);
+    
+    return classSpells || [];
+}
+
+/**
+ * Toggle spell selection in the dedicated spell edit modal (updates temp state)
+ */
+function toggleSpellInSpellEditModal(spellName, level, element) {
+    const isSelected = element.classList.contains('is-selected');
+    
+    if (isSelected) {
+        // Remove from temp state
+        spellPickerTempState.currentSelections = spellPickerTempState.currentSelections.filter(s => s !== spellName);
+        element.classList.remove('is-selected');
+    } else {
+        // Add to temp state (allow going over limit - user will see warning)
+        spellPickerTempState.currentSelections.push(spellName);
+        element.classList.add('is-selected');
+    }
+    
+    // Update info text with new counts
+    updateSpellPickerInfo();
+}
+
+/**
+ * Save spell picker selections and return to spell edit modal
+ */
+function saveSpellEditModalPicker() {
+    const { level, currentSelections, maxAllowed } = spellPickerTempState;
+    
+    // Check if over limit
+    if (maxAllowed !== null && currentSelections.length > maxAllowed) {
+        const removeCount = currentSelections.length - maxAllowed;
+        showNotification(`Remove ${removeCount} spell${removeCount !== 1 ? 's' : ''} before saving`, 'error');
+        return;
+    }
+    
+    // Commit selections to main state
+    if (level === 'cantrips') {
+        spellEditModalState.cantrips = [...currentSelections];
+    } else {
+        const levelNum = parseInt(level, 10);
+        spellEditModalState.spells[levelNum] = [...currentSelections];
+    }
+    
+    // Mark the modal as dirty
+    ModalManager.markDirty('spellEditModal');
+    
+    // Return to main spell edit screen
+    returnToSpellEditScreen();
+}
+
+/**
+ * Cancel spell picker and return to spell edit modal without saving
+ */
+function cancelSpellEditModalPicker() {
+    // Just return without committing changes
+    returnToSpellEditScreen();
+}
+
+/**
+ * Return to the main spell edit screen (shared by save and cancel)
+ */
+function returnToSpellEditScreen() {
+    const modal = document.getElementById('spellEditModal');
+    if (!modal || !spellEditModalOriginalContent) return;
+    
+    const modalContent = modal.querySelector('.modal-content');
+    if (!modalContent) return;
+    
+    // Animate out current content
+    const currentInner = modalContent.querySelector('.modal-content-inner');
+    if (currentInner) {
+        currentInner.classList.add('slide-out-right');
+    }
+    
+    // After animation, restore original content
+    setTimeout(() => {
+        const wrappedContent = `<div class="modal-content-inner slide-in-left">${spellEditModalOriginalContent}</div>`;
+        modalContent.innerHTML = wrappedContent;
+        spellEditModalOriginalContent = null;
+        
+        // Clear temp state
+        spellPickerTempState = { level: null, originalSelections: [], currentSelections: [], maxAllowed: null };
+        
+        // Re-render tags with updated selections
+        renderSpellEditModalTags();
+        
+        // Re-setup visibility for cantrips and spell level rows
+        const className = spellEditModalState.characterClass;
+        const spellcasting = SPELLCASTING_CLASSES[className];
+        
+        const cantripsRow = document.getElementById('spellEditModalCantripsRow');
+        if (cantripsRow && spellcasting) {
+            cantripsRow.classList.toggle('is-hidden', !spellcasting.cantrips);
+        }
+        
+        for (let spellLevel = 1; spellLevel <= 9; spellLevel++) {
+            const row = document.getElementById(`spellEditModalLevel${spellLevel}Row`);
+            if (row) {
+                row.classList.toggle('is-hidden', spellLevel > spellEditModalState.maxSpellLevel || spellEditModalState.maxSpellLevel === 0);
+            }
+        }
+    }, currentInner ? 150 : 0);
+}
+
+/**
+ * Filter spell picker in the dedicated spell edit modal
+ */
+function filterSpellEditModalPicker() {
+    const searchInput = document.getElementById('spellEditModalSearchInput');
+    const list = document.getElementById('spellEditModalPickerList');
+    if (!searchInput || !list) return;
+    
+    const query = searchInput.value.toLowerCase().trim();
+    const items = list.querySelectorAll('.spell-picker-item');
+    
+    items.forEach(item => {
+        const spellName = item.getAttribute('data-spell-name') || '';
+        const matches = !query || spellName.includes(query);
+        item.style.display = matches ? '' : 'none';
+    });
+}
+
+// Expose spell edit modal functions globally
+window.openSpellEditModal = openSpellEditModal;
+window.closeSpellEditModal = closeSpellEditModal;
+window.saveSpellEditModal = saveSpellEditModal;
+window.removeSpellFromSpellEditModal = removeSpellFromSpellEditModal;
+window.openSpellPickerForSpellEditModal = openSpellPickerForSpellEditModal;
+window.toggleSpellInSpellEditModal = toggleSpellInSpellEditModal;
+window.filterSpellEditModalPicker = filterSpellEditModalPicker;
+window.saveSpellEditModalPicker = saveSpellEditModalPicker;
+window.cancelSpellEditModalPicker = cancelSpellEditModalPicker;
 
 // Track state for spell removal modal
 let spellRemovalState = {

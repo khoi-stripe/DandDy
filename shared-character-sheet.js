@@ -480,8 +480,6 @@ const CharacterSheet = (window.CharacterSheet = {
       
       ${parsed.hasSkills ? this._renderSkills(parsed) : ''}
       
-      ${parsed.hasSpells ? this._renderSpells(parsed, context, { characterId: character.id, onEdit }) : ''}
-      
       ${parsed.hasRacialTraits ? this._renderRacialTraits(parsed) : ''}
       
       ${parsed.hasToolProficiencies
@@ -501,6 +499,8 @@ const CharacterSheet = (window.CharacterSheet = {
       ${context === 'manager' && parsed.hasExportInfo
         ? this._renderExportInfo(character)
         : ''}
+      
+      ${parsed.hasSpells ? this._renderSpells(parsed, context, { characterId: character.id, onEdit }) : ''}
     `;
   },
 
@@ -659,6 +659,15 @@ const CharacterSheet = (window.CharacterSheet = {
         label: 'Edit character',
         onclick: editFn,
         id: 'sheet-edit-overflow',
+      });
+    }
+
+    // Manager-only: Edit Spells (only for spellcasting classes) - at top of menu
+    if (context === 'manager' && onEdit && character.id && parsed.hasSpells) {
+      headerActions.unshift({
+        icon: '✦',
+        label: 'Edit spells',
+        onclick: `openSpellEditModal('${character.id}')`,
       });
     }
 
@@ -1243,7 +1252,7 @@ const CharacterSheet = (window.CharacterSheet = {
         </button>
         <div class="sheet-collapsible-content">
           <div class="class-features-legend">
-            <span class="class-features-choice">◆</span> = requires choice
+            <span class="class-features-choice">◆</span> Requires Choice
           </div>
           <div class="class-features-groups">
             ${visibleGroupsHtml}
@@ -1889,6 +1898,9 @@ const CharacterSheet = (window.CharacterSheet = {
 
     if (!this._selectorOutsideHandler) {
       this._selectorOutsideHandler = (event) => {
+        // Guard against non-element targets (text nodes, etc.)
+        if (!event.target || typeof event.target.closest !== 'function') return;
+        
         // Small delay to let the toggle complete first
         setTimeout(() => {
           const openShells = document.querySelectorAll('.selector-shell.is-open');
@@ -1929,6 +1941,9 @@ const CharacterSheet = (window.CharacterSheet = {
     // Close selector menus when an option is activated (click inside the menu)
     if (!this._selectorOptionHandler) {
       this._selectorOptionHandler = (event) => {
+        // Guard against non-element targets (text nodes, etc.)
+        if (!event.target || typeof event.target.closest !== 'function') return;
+        
         const option = event.target.closest('.selector-option');
         if (!option) return;
         // First, try to find the shell in the normal DOM tree
@@ -2139,6 +2154,20 @@ const CharacterSheet = (window.CharacterSheet = {
     const spellsPrepared = parsed.spellsPrepared || [];
     const spellSlots = parsed.spellSlots || {};
 
+    // Helper to look up spell description from SPELL_DATABASE
+    const getSpellDescription = (spellName) => {
+      if (!spellName || typeof window.SPELL_DATABASE !== 'object') return '';
+      const normalizedName = spellName.toLowerCase().trim();
+      // Search all spell levels (0-9)
+      for (let level = 0; level <= 9; level++) {
+        const spellsAtLevel = window.SPELL_DATABASE[level];
+        if (!Array.isArray(spellsAtLevel)) continue;
+        const found = spellsAtLevel.find(s => s.name && s.name.toLowerCase() === normalizedName);
+        if (found && found.description) return found.description;
+      }
+      return '';
+    };
+
     // Helper to render spell tags in a container
     const renderSpellTags = (spells) => {
       if (spells.length === 0) return '';
@@ -2148,6 +2177,17 @@ const CharacterSheet = (window.CharacterSheet = {
           const isObject = spell && typeof spell === 'object';
           const rawName = isObject ? spell.name : spell;
           const name = this.escapeHtml(rawName || '');
+          // Try to get description from spell object first, then look up in database
+          let description = isObject && spell.description ? spell.description : '';
+          if (!description) {
+            description = getSpellDescription(rawName);
+          }
+          const escapedDesc = description ? this.escapeHtml(description) : '';
+          
+          // Add tooltip if description exists
+          if (escapedDesc) {
+            return `<span class="sheet-spell-tag has-tooltip">${name}<span class="custom-tooltip" data-position="top">${escapedDesc}</span></span>`;
+          }
           return `<span class="sheet-spell-tag">${name}</span>`;
         })
         .join('');
@@ -2214,9 +2254,9 @@ const CharacterSheet = (window.CharacterSheet = {
       `;
     }
 
-    // Edit link for manager context
+    // Edit link for manager context - opens dedicated spell edit modal
     const editLink = context === 'manager' && onEdit && characterId
-      ? `<a href="#" class="sheet-section-edit-link" onclick="editCharacter('${characterId}', { scrollTo: 'spellEditSection' }); return false;">✎ Edit</a>`
+      ? `<a href="#" class="sheet-section-edit-link" onclick="openSpellEditModal('${characterId}'); return false;">✎ Edit</a>`
       : '';
 
     return `
