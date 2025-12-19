@@ -484,11 +484,11 @@ const CharacterSheet = (window.CharacterSheet = {
       
       ${parsed.hasRacialTraits ? this._renderRacialTraits(parsed) : ''}
       
-      ${parsed.hasEquipment ? this._renderEquipment(parsed) : ''}
-      
       ${parsed.hasToolProficiencies
         ? this._renderToolProficiencies(parsed)
         : ''}
+      
+      ${parsed.hasEquipment ? this._renderEquipment(parsed) : ''}
       
       ${parsed.hasLanguages ? this._renderLanguages(parsed) : ''}
       
@@ -1196,9 +1196,7 @@ const CharacterSheet = (window.CharacterSheet = {
     const hasHiddenGroups = hiddenGroups.length > 0;
 
     const renderGroup = (levelData) => {
-      const levelLabel = levelData.isCurrentLevel 
-        ? `<span class="class-features-level class-features-level--current">Level ${levelData.level}</span>`
-        : `<span class="class-features-level">Level ${levelData.level}</span>`;
+      const levelLabel = `<span class="class-features-group-label">Level ${levelData.level}</span>`;
 
       const featureItems = levelData.features.map(feature => {
         const choiceIndicator = feature.choice 
@@ -1217,7 +1215,7 @@ const CharacterSheet = (window.CharacterSheet = {
       }).join('');
 
       return `
-        <div class="class-features-group${levelData.isCurrentLevel ? ' class-features-group--current' : ''}">
+        <div class="class-features-group">
           ${levelLabel}
           <ul class="class-features-list">
             ${featureItems}
@@ -1231,7 +1229,10 @@ const CharacterSheet = (window.CharacterSheet = {
       ? `<div class="class-features-hidden" style="display: none;">${hiddenGroups.map(renderGroup).join('')}</div>`
       : '';
     const showAllLink = hasHiddenGroups
-      ? `<button class="class-features-show-all" onclick="CharacterSheet.showAllClassFeatures(this)">Show all (${hiddenGroups.length} more)</button>`
+      ? `<span class="class-features-toggle-links">
+           <a href="#" class="class-features-see-more" onclick="CharacterSheet.showAllClassFeatures(this, event)">See more</a>
+           <a href="#" class="class-features-see-less" style="display: none;" onclick="CharacterSheet.hideClassFeatures(this, event)">See less</a>
+         </span>`
       : '';
 
     return `
@@ -1299,18 +1300,42 @@ const CharacterSheet = (window.CharacterSheet = {
 
   /**
    * Show all hidden class features
-   * @param {HTMLElement} buttonEl - The "show all" button element
+   * @param {HTMLElement} linkEl - The "see more" link element
+   * @param {Event} event - Click event
    */
-  showAllClassFeatures(buttonEl) {
-    if (!buttonEl) return;
-    const section = buttonEl.closest('.sheet-collapsible-content');
+  showAllClassFeatures(linkEl, event) {
+    if (event) event.preventDefault();
+    if (!linkEl) return;
+    const section = linkEl.closest('.sheet-collapsible-content');
     if (!section) return;
     
     const hiddenGroups = section.querySelector('.class-features-hidden');
     if (hiddenGroups) {
       hiddenGroups.style.display = 'block';
     }
-    buttonEl.style.display = 'none';
+    linkEl.style.display = 'none';
+    const seeLessLink = section.querySelector('.class-features-see-less');
+    if (seeLessLink) seeLessLink.style.display = 'inline';
+  },
+
+  /**
+   * Hide class features (collapse back)
+   * @param {HTMLElement} linkEl - The "see less" link element
+   * @param {Event} event - Click event
+   */
+  hideClassFeatures(linkEl, event) {
+    if (event) event.preventDefault();
+    if (!linkEl) return;
+    const section = linkEl.closest('.sheet-collapsible-content');
+    if (!section) return;
+    
+    const hiddenGroups = section.querySelector('.class-features-hidden');
+    if (hiddenGroups) {
+      hiddenGroups.style.display = 'none';
+    }
+    linkEl.style.display = 'none';
+    const seeMoreLink = section.querySelector('.class-features-see-more');
+    if (seeMoreLink) seeMoreLink.style.display = 'inline';
   },
 
   _renderAbilities(parsed, context) {
@@ -1978,6 +2003,56 @@ const CharacterSheet = (window.CharacterSheet = {
     survival: { ability: 'WIS', description: 'Track creatures, hunt, and navigate the wilderness.' },
   },
 
+  /**
+   * Tool definitions for D&D 5e with descriptions.
+   */
+  _toolDefinitions: {
+    // Artisan's Tools
+    "alchemist's-supplies": { description: "Create alchemical items like acid, alchemist's fire, and potions." },
+    "brewer's-supplies": { description: "Brew alcoholic beverages and identify poisons in drinks." },
+    "calligrapher's-supplies": { description: "Create beautiful writing and identify authenticity of documents." },
+    "carpenter's-tools": { description: "Build and repair wooden structures, furniture, and objects." },
+    "cartographer's-tools": { description: "Create and interpret maps of areas and terrains." },
+    "cobbler's-tools": { description: "Craft, repair, and modify footwear and leather goods." },
+    "cook's-utensils": { description: "Prepare food, identify ingredients, and detect poisoned meals." },
+    "glassblower's-tools": { description: "Shape glass into bottles, containers, and decorative items." },
+    "jeweler's-tools": { description: "Craft jewelry, cut gems, and identify valuable stones." },
+    "leatherworker's-tools": { description: "Work with leather to create armor, bags, and accessories." },
+    "mason's-tools": { description: "Cut and shape stone for building and sculpting." },
+    "painter's-supplies": { description: "Create paintings, sketches, and visual artworks." },
+    "potter's-tools": { description: "Create ceramic items like pots, vessels, and containers." },
+    "smith's-tools": { description: "Forge and repair metal items, weapons, and armor." },
+    "tinker's-tools": { description: "Repair and create small mechanical devices and gadgets." },
+    "weaver's-tools": { description: "Create cloth, textiles, and fabric items." },
+    "woodcarver's-tools": { description: "Carve intricate wooden objects and decorations." },
+    // Gaming Sets
+    "dice-set": { description: "Play games of chance and detect cheating." },
+    "dragonchess-set": { description: "Play the strategic game of dragonchess." },
+    "playing-card-set": { description: "Play card games and perform card tricks." },
+    "three-dragon-ante-set": { description: "Play the popular gambling game Three-Dragon Ante." },
+    // Musical Instruments
+    bagpipes: { description: "Perform music with this wind instrument." },
+    drum: { description: "Perform percussion music and keep rhythm." },
+    dulcimer: { description: "Perform music with this stringed instrument." },
+    flute: { description: "Perform music with this wind instrument." },
+    horn: { description: "Perform music with this brass instrument." },
+    lute: { description: "Perform music with this popular stringed instrument." },
+    lyre: { description: "Perform music with this ancient stringed instrument." },
+    "pan-flute": { description: "Perform music with this traditional wind instrument." },
+    shawm: { description: "Perform music with this double-reed wind instrument." },
+    viol: { description: "Perform music with this bowed stringed instrument." },
+    // Other Tools
+    "disguise-kit": { description: "Create disguises and alter your appearance." },
+    "forgery-kit": { description: "Forge documents, identify forgeries, and copy handwriting." },
+    "herbalism-kit": { description: "Identify plants, create antitoxins and potions of healing." },
+    "navigator's-tools": { description: "Plot courses, navigate by stars, and determine location." },
+    "poisoner's-kit": { description: "Create poisons, apply them to weapons, and identify toxins." },
+    "thieves'-tools": { description: "Pick locks, disable traps, and bypass security." },
+    // Vehicles
+    "vehicles-land": { description: "Operate land vehicles like carts, wagons, and chariots." },
+    "vehicles-water": { description: "Operate water vehicles like boats, ships, and galleys." },
+  },
+
   _renderSkills(parsed) {
     const hasSkillModifiers =
       parsed.skillModifiers && Object.keys(parsed.skillModifiers).length > 0;
@@ -2195,20 +2270,38 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderToolProficiencies(parsed) {
-    const toolsMarkup = `<ul class="sheet-list text-dim">${parsed.toolProficiencies
-      .map((tool) => {
-        const label = this.escapeHtml(this.formatSkillName(tool));
-        return `<li>${label}</li>`;
-      })
-      .join('')}</ul>`;
+    // Render tool items with descriptions (like skill proficiencies)
+    const renderToolItem = (tool) => {
+      // Normalize tool name for lookup (lowercase, spaces to hyphens)
+      const normalizedTool = tool.toLowerCase().replace(/\s+/g, '-').replace(/[']/g, "'");
+      const toolDef = this._toolDefinitions[normalizedTool] || {};
+      const name = this.formatSkillName(tool);
+      const description = toolDef.description || '';
+      
+      return `
+        <li class="tool-prof-item">
+          <div class="tool-prof-header">
+            <span class="tool-prof-name">${this.escapeHtml(name)}</span>
+          </div>
+          ${description ? `<span class="tool-prof-desc">${this.escapeHtml(description)}</span>` : ''}
+        </li>
+      `;
+    };
+
+    const toolsHtml = parsed.toolProficiencies
+      .map(tool => renderToolItem(tool))
+      .join('');
 
     return `
-      <div class="sheet-section">
-        <div class="sheet-header">
+      <div class="sheet-section sheet-section--collapsible" id="tool-proficiencies-section">
+        <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
           <div class="sheet-header-title">[ TOOL PROFICIENCIES ]</div>
-        </div>
-        <div class="sheet-content">
-          ${toolsMarkup}
+          <span class="sheet-header-toggle">^</span>
+        </button>
+        <div class="sheet-collapsible-content">
+          <ul class="tool-prof-list">
+            ${toolsHtml}
+          </ul>
         </div>
       </div>
     `;

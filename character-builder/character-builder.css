@@ -1664,8 +1664,8 @@
     flex: 1;
     /* Contain scroll to prevent page bounce */
     overscroll-behavior: contain;
-    /* Allow vertical scroll only */
-    touch-action: pan-y;
+    /* Allow vertical scroll and pinch-zoom (so users can escape iOS input zoom) */
+    touch-action: pan-y pinch-zoom;
   }
   
   .right-panel {
@@ -1677,13 +1677,13 @@
     flex: 1;
     /* Contain scroll to prevent page bounce */
     overscroll-behavior: contain;
-    /* Allow vertical scroll only */
-    touch-action: pan-y;
+    /* Allow vertical scroll and pinch-zoom (so users can escape iOS input zoom) */
+    touch-action: pan-y pinch-zoom;
   }
   
   /* Modal bodies need touch scrolling too */
   .modal-body {
-    touch-action: pan-y;
+    touch-action: pan-y pinch-zoom;
   }
   
   .auth-container {

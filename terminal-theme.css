@@ -1500,16 +1500,8 @@ body::before {
   color: var(--sheet-value-color);
 }
 
-.class-features-group--current {
-  border-left-color: var(--sheet-value-color);
-  background: var(--sheet-box-bg);
-  padding: 16px;
-  border-radius: 0 4px 4px 0;
-  text-align: left;
-  color: var(--sheet-value-color);
-}
 
-.class-features-level {
+.class-features-group-label {
   font-size: 11px;
   font-weight: bold;
   color: var(--sheet-value-color);
@@ -1517,10 +1509,6 @@ body::before {
   letter-spacing: 0.5px;
   margin-bottom: 4px;
   display: block;
-}
-
-.class-features-level--current {
-  color: var(--sheet-value-color);
 }
 
 .class-features-list {
@@ -1560,24 +1548,30 @@ body::before {
   opacity: 0.85;
 }
 
-.class-features-show-all {
+.class-features-toggle-links {
   display: block;
-  width: 100%;
   margin-top: var(--spacing-sm);
-  padding: 8px;
-  background: var(--sheet-box-bg);
-  border: 1px solid var(--sheet-border-color);
-  color: var(--sheet-accent);
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  text-align: center;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  padding: 4px 0;
+  text-align: left;
 }
 
-.class-features-show-all:hover {
-  background: color-mix(in srgb, var(--sheet-accent) 10%, transparent);
-  border-color: var(--sheet-accent);
+.class-features-see-more,
+.class-features-see-less {
+  color: var(--sheet-value-color);
+  font-family: inherit;
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.class-features-see-more:hover,
+.class-features-see-less:hover {
+  opacity: 1;
 }
 
 /* Skill Proficiencies styles (matches class features pattern) */
@@ -1626,6 +1620,45 @@ body::before {
 }
 
 .skill-prof-desc {
+  color: var(--sheet-value-color);
+  font-size: 11px;
+  opacity: 0.85;
+  line-height: 1.4;
+}
+
+/* Tool Proficiencies styles (matches skill proficiencies pattern) */
+.tool-prof-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.tool-prof-item {
+  padding: 12px 16px;
+  border-left: 2px solid var(--sheet-value-color);
+  background: var(--sheet-box-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tool-prof-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tool-prof-name {
+  color: var(--sheet-value-color);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tool-prof-desc {
   color: var(--sheet-value-color);
   font-size: 11px;
   opacity: 0.85;
@@ -2898,13 +2931,13 @@ body.selector-menu-open .splash-art {
     -webkit-overflow-scrolling: touch;
     /* Contain scroll to prevent page bounce */
     overscroll-behavior: contain;
-    /* Allow vertical scroll only; horizontal swipes handled by JS */
-    touch-action: pan-y;
+    /* Allow vertical scroll and pinch-zoom (so users can escape iOS input zoom) */
+    touch-action: pan-y pinch-zoom;
   }
   
   /* Modal bodies need touch scrolling too */
   .modal-body {
-    touch-action: pan-y;
+    touch-action: pan-y pinch-zoom;
   }
 }
 
