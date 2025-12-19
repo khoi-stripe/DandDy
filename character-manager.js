@@ -2067,7 +2067,7 @@ async function saveEditDetails() {
         return Number.isFinite(value) ? value : null;
     };
 
-    const levelValue = getNumber('editLevel');
+    let levelValue = getNumber('editLevel');
     const experiencePointsValue = getNumber('editExperiencePoints');
     
     // Validate level range (D&D 5e: 1-20)
@@ -2078,6 +2078,23 @@ async function saveEditDetails() {
         }
         showAlertDialog(`Level must be between 1 and 20.\n\nYou entered: ${levelValue}`);
         return;
+    }
+    
+    // Check if XP increase should trigger automatic level-up
+    const currentLevel = levelValue ?? originalEditLevel ?? 1;
+    let xpTriggeredLevelUp = false;
+    if (experiencePointsValue !== null) {
+        const levelFromXP = calculateLevelFromXP(experiencePointsValue);
+        if (levelFromXP > currentLevel) {
+            // XP warrants a higher level - auto-update the level
+            levelValue = levelFromXP;
+            xpTriggeredLevelUp = true;
+            // Update the form field to show the new level
+            const levelEl = document.getElementById('editLevel');
+            if (levelEl) {
+                levelEl.value = levelFromXP;
+            }
+        }
     }
     
     // Check if level has changed - prompt user for stat recalculation choice
@@ -2095,7 +2112,7 @@ async function saveEditDetails() {
             loadingOverlay.classList.remove('is-visible');
         }
         
-        levelChangeChoice = await showLevelChangeDialog(originalEditLevel, safeLevel);
+        levelChangeChoice = await showLevelChangeDialog(originalEditLevel, safeLevel, xpTriggeredLevelUp);
         
         if (levelChangeChoice === 'cancel' || levelChangeChoice === 'manual') {
             // User cancelled or chose manual - return to edit form without saving
@@ -4859,7 +4876,7 @@ function animateModalContentSwap(modalContent, newHtml, onComplete) {
 // Show dialog when user changes level in character editor
 // Transforms the existing edit modal content instead of overlaying a new modal
 // Returns a promise that resolves to: 'auto' | 'manual' | 'cancel'
-function showLevelChangeDialog(oldLevel, newLevel) {
+function showLevelChangeDialog(oldLevel, newLevel, xpTriggered = false) {
     return new Promise((resolve) => {
         const editModal = document.getElementById('editDetailsModal');
         if (!editModal) {
@@ -4880,14 +4897,24 @@ function showLevelChangeDialog(oldLevel, newLevel) {
         const direction = levelDiff > 0 ? 'up' : 'down';
         const levelText = Math.abs(levelDiff) === 1 ? 'level' : 'levels';
 
+        // Customize message based on whether this was triggered by XP increase
+        let titleText, mainText;
+        if (xpTriggered && levelDiff > 0) {
+            titleText = 'LEVEL UP!';
+            mainText = `Your XP has reached the threshold for<strong>Level\u00A0${newLevel}</strong>!\u00A0(${Math.abs(levelDiff)}\u00A0${levelText}\u00A0${direction})`;
+        } else {
+            titleText = 'LEVEL CHANGE';
+            mainText = `You're changing from<strong>Level\u00A0${oldLevel}</strong>to<strong>Level\u00A0${newLevel}</strong>\u00A0(${Math.abs(levelDiff)}\u00A0${levelText}\u00A0${direction}).`;
+        }
+
         // Create new content for level change dialog
         const levelChangeHtml = `
           <div class="modal-header">
-            <h2 class="modal-title">LEVEL CHANGE</h2>
+            <h2 class="modal-title">${titleText}</h2>
             <button class="modal-close" id="levelChangeClose">&times;</button>
           </div>
           <div class="modal-body">
-            <p class="terminal-text level-change-text">You're changing from<strong>Level\u00A0${oldLevel}</strong>to<strong>Level\u00A0${newLevel}</strong>\u00A0(${Math.abs(levelDiff)}\u00A0${levelText}\u00A0${direction}).</p>
+            <p class="terminal-text level-change-text">${mainText}</p>
             <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">
               Would you like to automatically recalculate stats&nbsp;(HP,&nbsp;Proficiency&nbsp;Bonus,&nbsp;Spell&nbsp;Slots)&nbsp;for the new level, or update them manually?
             </p>
@@ -4958,6 +4985,46 @@ function showLevelChangeDialog(oldLevel, newLevel) {
             autoBtn?.focus();
         });
     });
+}
+
+// D&D 5e XP thresholds for each level (same as CharacterSheet.XP_THRESHOLDS)
+const XP_THRESHOLDS = [
+    0,       // Level 1
+    300,     // Level 2
+    900,     // Level 3
+    2700,    // Level 4
+    6500,    // Level 5
+    14000,   // Level 6
+    23000,   // Level 7
+    34000,   // Level 8
+    48000,   // Level 9
+    64000,   // Level 10
+    85000,   // Level 11
+    100000,  // Level 12
+    120000,  // Level 13
+    140000,  // Level 14
+    165000,  // Level 15
+    195000,  // Level 16
+    225000,  // Level 17
+    265000,  // Level 18
+    305000,  // Level 19
+    355000,  // Level 20
+];
+
+/**
+ * Calculate the level a character should be at based on their XP.
+ * @param {number} xp - Current experience points
+ * @returns {number} - Level (1-20)
+ */
+function calculateLevelFromXP(xp) {
+    const currentXP = xp || 0;
+    // Find the highest level where XP >= threshold
+    for (let level = 20; level >= 1; level--) {
+        if (currentXP >= XP_THRESHOLDS[level - 1]) {
+            return level;
+        }
+    }
+    return 1;
 }
 
 // Calculate derived stats for a given level
@@ -7224,6 +7291,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('passwordResetModal').addEventListener('click', (e) => {
         if (e.target.id === 'passwordResetModal') {
             closePasswordResetModal();
+        }
+    });
+
+    // Mobile: tap on shared tag to reveal tooltip, tap again or outside to close
+    // Use event delegation for dynamically rendered content
+    document.addEventListener('click', (e) => {
+        // Check if touch device (coarse pointer)
+        const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
+        if (!isTouch) return;
+        
+        const sharedTag = e.target.closest('.sheet-shared-tag.has-tooltip');
+        const clickedTooltip = e.target.closest('.custom-tooltip');
+        const activeTag = document.querySelector('.sheet-shared-tag.tooltip-active');
+        
+        if (sharedTag) {
+            // Tapped on a shared tag (or its tooltip) - toggle its tooltip
+            e.stopPropagation();
+            
+            // If there's already an active tooltip on a different tag, close it
+            if (activeTag && activeTag !== sharedTag) {
+                activeTag.classList.remove('tooltip-active');
+            }
+            
+            // Toggle the tapped tag's tooltip
+            sharedTag.classList.toggle('tooltip-active');
+        } else if (clickedTooltip) {
+            // Tapped directly on a tooltip - close its parent tag's tooltip
+            e.stopPropagation();
+            const parentTag = clickedTooltip.closest('.sheet-shared-tag.has-tooltip');
+            if (parentTag) {
+                parentTag.classList.remove('tooltip-active');
+            }
+        } else {
+            // Tapped outside - close any open tooltip
+            if (activeTag) {
+                activeTag.classList.remove('tooltip-active');
+            }
         }
     });
 

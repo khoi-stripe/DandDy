@@ -2380,7 +2380,7 @@
     cursor: help;
 }
 
-/* Shared tag tooltip - show on hover (CSS-only) */
+/* Shared tag tooltip - show on hover (CSS-only, desktop) */
 .sheet-shared-tag.has-tooltip:hover .custom-tooltip {
     opacity: 1;
     transform: scale(1);
@@ -2390,6 +2390,22 @@
 .sheet-shared-tag .custom-tooltip {
     white-space: nowrap;
     text-align: left;
+}
+
+/* Mobile: allow tap-to-show tooltip on shared tag */
+@media (hover: none), (pointer: coarse) {
+    .sheet-shared-tag.has-tooltip {
+        /* Ensure tap target is easy to hit */
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Show tooltip when parent has active state (JS-toggled) */
+    .sheet-shared-tag.has-tooltip.tooltip-active .custom-tooltip {
+        opacity: 1;
+        transform: scale(1);
+        pointer-events: auto;
+    }
 }
 
 /* ========================================

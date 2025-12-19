@@ -472,11 +472,11 @@ const CharacterSheet = (window.CharacterSheet = {
       
       ${parsed.hasCombatStats ? this._renderCombatStats(parsed, context) : ''}
       
+      ${parsed.hasSavingThrows ? this._renderSavingThrows(parsed) : ''}
+      
       ${parsed.hasClassResources ? this._renderClassResources(parsed) : ''}
       
       ${this._shouldShowClassFeatures(parsed) ? this._renderClassFeatures(parsed) : ''}
-      
-      ${parsed.hasSavingThrows ? this._renderSavingThrows(parsed) : ''}
       
       ${parsed.hasSkills ? this._renderSkills(parsed) : ''}
       
@@ -1190,7 +1190,12 @@ const CharacterSheet = (window.CharacterSheet = {
     const classDisplayName = this._formatClassName(parsed.className);
 
     // Build feature items grouped by level (reversed so current level is at top)
-    const featureGroups = [...featuresData].reverse().map(levelData => {
+    const allGroups = [...featuresData].reverse();
+    const visibleGroups = allGroups.slice(0, 3);
+    const hiddenGroups = allGroups.slice(3);
+    const hasHiddenGroups = hiddenGroups.length > 0;
+
+    const renderGroup = (levelData) => {
       const levelLabel = levelData.isCurrentLevel 
         ? `<span class="class-features-level class-features-level--current">Level ${levelData.level}</span>`
         : `<span class="class-features-level">Level ${levelData.level}</span>`;
@@ -1219,21 +1224,31 @@ const CharacterSheet = (window.CharacterSheet = {
           </ul>
         </div>
       `;
-    }).join('');
+    };
+
+    const visibleGroupsHtml = visibleGroups.map(renderGroup).join('');
+    const hiddenGroupsHtml = hasHiddenGroups 
+      ? `<div class="class-features-hidden" style="display: none;">${hiddenGroups.map(renderGroup).join('')}</div>`
+      : '';
+    const showAllLink = hasHiddenGroups
+      ? `<button class="class-features-show-all" onclick="CharacterSheet.showAllClassFeatures(this)">Show all (${hiddenGroups.length} more)</button>`
+      : '';
 
     return `
       <div class="sheet-section sheet-section--collapsible" id="class-features-section">
         <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
           <div class="sheet-header-title">[ CLASS FEATURES: ${this.escapeHtml(classDisplayName.toUpperCase())} ]</div>
-          <span class="sheet-header-toggle">▼</span>
+          <span class="sheet-header-toggle">^</span>
         </button>
         <div class="sheet-collapsible-content">
           <div class="class-features-legend">
-            <span class="class-features-choice">◆</span> = requires choice &nbsp;•&nbsp; <span class="class-features-level--current-indicator">highlighted</span> = gained at current level
+            <span class="class-features-choice">◆</span> = requires choice
           </div>
           <div class="class-features-groups">
-            ${featureGroups}
+            ${visibleGroupsHtml}
+            ${hiddenGroupsHtml}
           </div>
+          ${showAllLink}
         </div>
       </div>
     `;
@@ -1267,13 +1282,35 @@ const CharacterSheet = (window.CharacterSheet = {
       // Collapse
       headerEl.setAttribute('aria-expanded', 'false');
       if (content) content.classList.add('is-collapsed');
-      if (toggle) toggle.textContent = '▶';
+      if (toggle) {
+        toggle.classList.remove('is-expanded');
+        toggle.classList.add('is-collapsed');
+      }
     } else {
       // Expand
       headerEl.setAttribute('aria-expanded', 'true');
       if (content) content.classList.remove('is-collapsed');
-      if (toggle) toggle.textContent = '▼';
+      if (toggle) {
+        toggle.classList.remove('is-collapsed');
+        toggle.classList.add('is-expanded');
+      }
     }
+  },
+
+  /**
+   * Show all hidden class features
+   * @param {HTMLElement} buttonEl - The "show all" button element
+   */
+  showAllClassFeatures(buttonEl) {
+    if (!buttonEl) return;
+    const section = buttonEl.closest('.sheet-collapsible-content');
+    if (!section) return;
+    
+    const hiddenGroups = section.querySelector('.class-features-hidden');
+    if (hiddenGroups) {
+      hiddenGroups.style.display = 'block';
+    }
+    buttonEl.style.display = 'none';
   },
 
   _renderAbilities(parsed, context) {
@@ -1892,19 +1929,22 @@ const CharacterSheet = (window.CharacterSheet = {
   _renderSavingThrows(parsed) {
     if (!parsed.savingThrowModifiers) return '';
 
+    const abilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+
     return `
       <div class="sheet-section">
         <div class="sheet-header">
           <div class="sheet-header-title">[ SAVING THROWS ]</div>
         </div>
-        <div class="sheet-content">
-          ${Object.entries(parsed.savingThrowModifiers)
-            .map(([ability, value]) => {
+        <div class="ability-grid">
+          ${abilities
+            .map((ability) => {
+              const value = parsed.savingThrowModifiers[ability];
               const isProficient = parsed.savingThrows?.includes(ability);
               return `
-                <div class="stat-line">
-                  <span class="stat-label">${ability.toUpperCase()}:</span>
-                  <span class="stat-value">${isProficient ? '★' : ''}${this.formatModifier(value)}</span>
+                <div class="ability-box">
+                  <div class="ability-name">${ability.toUpperCase()}${isProficient ? '★' : ''}</div>
+                  <div class="ability-score">${this.formatModifier(value)}</div>
                 </div>
               `;
             })
