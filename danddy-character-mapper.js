@@ -390,6 +390,7 @@
         isShared: apiChar.is_shared || false,
         ownerEmail: apiChar.owner_email || null,
         permission: apiChar.permission || null,
+        collaboratorCount: apiChar.collaborator_count || 0,
 
         asciiPortrait: apiChar.ascii_portrait,
         originalPortraitUrl: apiChar.original_portrait_url,
