@@ -1218,9 +1218,10 @@ const CharacterSheet = (window.CharacterSheet = {
         const description = feature.description 
           ? `<span class="class-features-desc">${this.escapeHtml(feature.description)}</span>` 
           : '';
+        const placeholderClass = feature.placeholder ? ' class-features-item--placeholder' : '';
         
         return `
-          <li class="class-features-item${levelData.isCurrentLevel ? ' class-features-item--new' : ''}">
+          <li class="class-features-item${levelData.isCurrentLevel ? ' class-features-item--new' : ''}${placeholderClass}">
             <span class="class-features-name">${choiceIndicator}${this.escapeHtml(feature.name)}</span>
             ${description}
           </li>
@@ -1324,7 +1325,7 @@ const CharacterSheet = (window.CharacterSheet = {
     
     const hiddenGroups = section.querySelector('.class-features-hidden');
     if (hiddenGroups) {
-      hiddenGroups.style.display = 'block';
+      hiddenGroups.style.display = 'flex';
     }
     linkEl.style.display = 'none';
     const seeLessLink = section.querySelector('.class-features-see-less');

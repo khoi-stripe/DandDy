@@ -1477,7 +1477,6 @@ body::before {
   display: inline-block;
   /* Default state: expanded (caret points up) */
   transform: scaleY(1);
-  transition: transform 0.2s ease;
 }
 
 /* Flip animation: close in towards center, then invert */
@@ -1489,11 +1488,6 @@ body::before {
 .sheet-header-toggle.is-expanded {
   transform: scaleY(1); /* Hold expanded state */
   animation: caret-flip-up 0.25s ease forwards;
-}
-
-/* Hover preview: flip caret down when hovering section headers */
-.sheet-header--collapsible:hover .sheet-header-toggle {
-  transform: scaleY(-1);
 }
 
 @keyframes caret-flip-down {
@@ -1559,6 +1553,12 @@ body::before {
   color: var(--sheet-value-color);
 }
 
+.class-features-hidden {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
 .class-features-group {
   padding: 16px;
   border-left: 2px solid var(--sheet-accent-dim);
@@ -1594,6 +1594,11 @@ body::before {
 
 .class-features-item--new {
   /* Newly gained features at current level */
+}
+
+.class-features-item--placeholder .class-features-name {
+  opacity: 0.4;
+  font-style: italic;
 }
 
 .class-features-name {
