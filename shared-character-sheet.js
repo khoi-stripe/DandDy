@@ -1954,6 +1954,30 @@ const CharacterSheet = (window.CharacterSheet = {
     `;
   },
 
+  /**
+   * Skill definitions for D&D 5e with ability and description.
+   */
+  _skillDefinitions: {
+    acrobatics: { ability: 'DEX', description: 'Balance, tumbling, diving, and acrobatic feats.' },
+    'animal-handling': { ability: 'WIS', description: 'Calm, control, or intuit animal intentions.' },
+    arcana: { ability: 'INT', description: 'Recall lore about spells, magic items, and planes.' },
+    athletics: { ability: 'STR', description: 'Climb, jump, swim, and physical feats of strength.' },
+    deception: { ability: 'CHA', description: 'Hide the truth through disguise, misdirection, or lies.' },
+    history: { ability: 'INT', description: 'Recall lore about historical events and legends.' },
+    insight: { ability: 'WIS', description: 'Determine true intentions and detect deception.' },
+    intimidation: { ability: 'CHA', description: 'Threaten, coerce, or inspire fear in others.' },
+    investigation: { ability: 'INT', description: 'Search for clues and deduce from evidence.' },
+    medicine: { ability: 'WIS', description: 'Stabilize the dying and diagnose illnesses.' },
+    nature: { ability: 'INT', description: 'Recall lore about terrain, plants, and animals.' },
+    perception: { ability: 'WIS', description: 'Spot, hear, or detect presence of something.' },
+    performance: { ability: 'CHA', description: 'Delight an audience with music, dance, or acting.' },
+    persuasion: { ability: 'CHA', description: 'Influence others with tact or diplomacy.' },
+    religion: { ability: 'INT', description: 'Recall lore about deities, rites, and holy symbols.' },
+    'sleight-of-hand': { ability: 'DEX', description: 'Pick pockets, conceal objects, manual trickery.' },
+    stealth: { ability: 'DEX', description: 'Hide, sneak, and avoid detection.' },
+    survival: { ability: 'WIS', description: 'Track creatures, hunt, and navigate the wilderness.' },
+  },
+
   _renderSkills(parsed) {
     const hasSkillModifiers =
       parsed.skillModifiers && Object.keys(parsed.skillModifiers).length > 0;
@@ -1962,9 +1986,9 @@ const CharacterSheet = (window.CharacterSheet = {
 
     if (!hasSkillModifiers && !hasSkillProfs) return '';
 
-    // When we have both full skill modifiers and an explicit list of
-    // proficiencies (e.g. edited in manager), show the numeric skills first
-    // and then any *extra* proficiencies as a simple bullet list.
+    // Build a unified list of skills to display
+    // When we have modifiers, those are the primary display
+    // Extra proficiencies (not in modifiers) are shown separately
     const modifierKeys = hasSkillModifiers
       ? Object.keys(parsed.skillModifiers)
       : [];
@@ -1976,53 +2000,58 @@ const CharacterSheet = (window.CharacterSheet = {
           )
         : parsed.skillProficiencies || [];
 
-    const skillsMarkup = hasSkillModifiers
-      ? Object.entries(parsed.skillModifiers)
-          .map(
-            ([skill, value]) => `
-          <div class="stat-line">
-            <span class="stat-label">${this.escapeHtml(
-              this.formatSkillName(skill),
-            )}:</span>
-            <span class="stat-value">${this.formatModifier(value)} ★</span>
+    // Render skill items with descriptions (like class features)
+    const renderSkillItem = (skill, modifier = null) => {
+      const skillDef = this._skillDefinitions[skill] || {};
+      const name = this.formatSkillName(skill);
+      const ability = skillDef.ability || '';
+      const description = skillDef.description || '';
+      
+      const modifierDisplay = modifier !== null 
+        ? `<span class="skill-prof-modifier">${this.formatModifier(modifier)}</span>` 
+        : '';
+      
+      return `
+        <li class="skill-prof-item">
+          <div class="skill-prof-header">
+            <span class="skill-prof-name">${this.escapeHtml(name)}</span>
+            ${ability ? `<span class="skill-prof-ability">(${ability})</span>` : ''}
+            ${modifierDisplay}
           </div>
-        `,
-          )
+          ${description ? `<span class="skill-prof-desc">${this.escapeHtml(description)}</span>` : ''}
+        </li>
+      `;
+    };
+
+    // Build main skills list (with modifiers if available)
+    const mainSkillsHtml = hasSkillModifiers
+      ? Object.entries(parsed.skillModifiers)
+          .map(([skill, value]) => renderSkillItem(skill, value))
           .join('')
       : '';
 
-    const extraProfsMarkup =
-      extraProfs && extraProfs.length
-        ? `<ul class="sheet-list text-dim">${extraProfs
-            .map((skill) => {
-              const label = this.escapeHtml(this.formatSkillName(skill));
-              return `<li>${label}</li>`;
-            })
-            .join('')}</ul>`
-        : '';
+    // Build extra proficiencies list (no modifiers)
+    const extraProfsHtml = extraProfs.length > 0
+      ? extraProfs.map(skill => renderSkillItem(skill)).join('')
+      : '';
+
+    // Combine both lists
+    const allSkillsHtml = mainSkillsHtml + extraProfsHtml;
 
     const headerTitle = hasSkillModifiers
-      ? 'SKILLS'
+      ? 'SKILL PROFICIENCIES'
       : 'SKILL PROFICIENCIES';
 
-    let contentMarkup;
-    if (skillsMarkup && extraProfsMarkup) {
-      contentMarkup = `
-        ${skillsMarkup}
-        <div class="sheet-divider"></div>
-        ${extraProfsMarkup}
-      `;
-    } else {
-      contentMarkup = skillsMarkup || extraProfsMarkup;
-    }
-
     return `
-      <div class="sheet-section">
-        <div class="sheet-header">
+      <div class="sheet-section sheet-section--collapsible" id="skill-proficiencies-section">
+        <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
           <div class="sheet-header-title">[ ${headerTitle} ]</div>
-        </div>
-        <div class="sheet-content">
-          ${contentMarkup}
+          <span class="sheet-header-toggle">^</span>
+        </button>
+        <div class="sheet-collapsible-content">
+          <ul class="skill-prof-list">
+            ${allSkillsHtml}
+          </ul>
         </div>
       </div>
     `;
