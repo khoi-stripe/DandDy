@@ -54,10 +54,15 @@ def get_characters(
     # Build response with sharing metadata
     result = []
     
-    # Add owned characters
+    # Add owned characters (include collaborator count so owner knows it's shared)
     for char in owned:
         char_dict = CharacterResponse.model_validate(char).model_dump()
         char_dict['is_shared'] = False
+        # Count how many collaborators this character has
+        collab_count = db.query(CharacterCollaborator).filter(
+            CharacterCollaborator.character_id == char.id
+        ).count()
+        char_dict['collaborator_count'] = collab_count
         result.append(char_dict)
     
     # Add shared characters with metadata
@@ -67,6 +72,7 @@ def get_characters(
             char_dict['is_shared'] = True
             char_dict['owner_email'] = collab.character.owner.email if collab.character.owner else None
             char_dict['permission'] = collab.permission.value
+            char_dict['collaborator_count'] = 0  # Not relevant for collaborators
             result.append(char_dict)
     
     return result

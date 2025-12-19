@@ -421,6 +421,8 @@ const CharacterSheet = (window.CharacterSheet = {
       onShare = null,
       onLeave = null,  // For shared characters: option to leave/unsubscribe
       isShared = false,  // Whether this character is shared with current user
+      hasCollaborators = false,  // Whether owner has shared with others
+      collaboratorCount = 0,  // Number of collaborators (for owner's view)
       ownerEmail = null,  // Email of character owner (for shared characters)
       hideOverflowMenu = false,
     } = options;
@@ -443,6 +445,8 @@ const CharacterSheet = (window.CharacterSheet = {
         onShare,
         onLeave,
         isShared,
+        hasCollaborators,
+        collaboratorCount,
         ownerEmail,
         hideOverflowMenu,
       })}
@@ -512,6 +516,8 @@ const CharacterSheet = (window.CharacterSheet = {
       onShare,
       onLeave,
       isShared,
+      hasCollaborators,
+      collaboratorCount,
       ownerEmail,
       hideOverflowMenu,
     } = callbacks;
@@ -742,9 +748,15 @@ const CharacterSheet = (window.CharacterSheet = {
         : '[ CHARACTER SHEET ]';
 
     // Shared character badge
-    const sharedBadgeHtml = isShared
-      ? `<span class="sheet-shared-badge" title="Shared by ${this.escapeHtml(ownerEmail || 'another user')}">SHARED</span>`
-      : '';
+    // - isShared: user is a collaborator viewing someone else's character
+    // - hasCollaborators: owner has shared this character with others
+    let sharedBadgeHtml = '';
+    if (isShared) {
+      sharedBadgeHtml = `<span class="sheet-shared-badge" title="Shared by ${this.escapeHtml(ownerEmail || 'another user')}">SHARED</span>`;
+    } else if (hasCollaborators) {
+      const tooltip = collaboratorCount === 1 ? 'Shared with 1 person' : `Shared with ${collaboratorCount} people`;
+      sharedBadgeHtml = `<span class="sheet-shared-badge" title="${tooltip}">SHARED</span>`;
+    }
 
     return `
       <div class="sheet-title-header">

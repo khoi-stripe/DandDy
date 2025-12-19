@@ -1274,12 +1274,24 @@ const UI = {
         const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
         const demoTagHtml = isDemo ? '<span class="card-demo-tag">SAMPLE</span>' : '';
         
-        // Check if this is a shared character (synced, not owned by current user)
-        const isShared = character.is_shared || character.isShared;
-        const sharedTagHtml = isShared ? '<span class="card-shared-tag" title="Shared with you">SHARED</span>' : '';
+        // Check if this is a shared character:
+        // - is_shared = true means current user is a collaborator (not owner)
+        // - collaborator_count > 0 means owner has shared with others
+        const isSharedWithMe = character.is_shared || character.isShared;
+        const collaboratorCount = character.collaborator_count || character.collaboratorCount || 0;
+        const hasCollaborators = collaboratorCount > 0;
+        const showSharedTag = isSharedWithMe || hasCollaborators;
+        
+        let sharedTagHtml = '';
+        if (isSharedWithMe) {
+            sharedTagHtml = '<span class="card-shared-tag" title="Shared with you">SHARED</span>';
+        } else if (hasCollaborators) {
+            const tooltip = collaboratorCount === 1 ? 'Shared with 1 person' : `Shared with ${collaboratorCount} people`;
+            sharedTagHtml = `<span class="card-shared-tag" title="${tooltip}">SHARED</span>`;
+        }
 
         return `
-            <div class="character-card${isShared ? ' is-shared' : ''}" data-id="${character.id}" onclick="viewCharacter('${character.id}')">
+            <div class="character-card${showSharedTag ? ' is-shared' : ''}" data-id="${character.id}" onclick="viewCharacter('${character.id}')">
                 ${demoTagHtml}
                 ${sharedTagHtml}
                 ${thumbnailHtml}
@@ -1325,9 +1337,12 @@ const UI = {
         // Check if user is in demo mode (not authenticated) - sharing requires login
         const isDemoMode = window.DemoCharacters && window.DemoCharacters.isDemoMode();
         // Check if this is a shared character (not owned by current user)
-        const isShared = character.is_shared || character.isShared;
+        const isSharedWithMe = character.is_shared || character.isShared;
+        // Check if owner has shared this character with others
+        const collaboratorCount = character.collaborator_count || character.collaboratorCount || 0;
+        const hasCollaborators = collaboratorCount > 0;
         // Check permission level for shared characters
-        const canEdit = !isDemo && (!isShared || character.permission === 'edit');
+        const canEdit = !isDemo && (!isSharedWithMe || character.permission === 'edit');
         
         // Use the shared CharacterSheet component
         // Demo characters cannot be edited, renamed, deleted, or have portraits generated
@@ -1335,14 +1350,16 @@ const UI = {
         sheetContainer.innerHTML = CharacterSheet.render(character, {
             context: 'manager',
             showPortrait: true,
-            onRename: !isDemo && !isShared,  // Only owner can rename
+            onRename: !isDemo && !isSharedWithMe,  // Only owner can rename
             onEdit: canEdit,
-            onDelete: !isDemo && !isShared,  // Only owner can delete
+            onDelete: !isDemo && !isSharedWithMe,  // Only owner can delete
             onGeneratePortrait: canEdit,
             onPrint: true,
-            onShare: !isDemo && !isDemoMode && !isShared,  // Only owner can share
-            onLeave: isShared,  // Show "Leave" option for shared characters
-            isShared: isShared,
+            onShare: !isDemo && !isDemoMode && !isSharedWithMe,  // Only owner can share
+            onLeave: isSharedWithMe,  // Show "Leave" option for shared characters
+            isShared: isSharedWithMe,
+            hasCollaborators: hasCollaborators,
+            collaboratorCount: collaboratorCount,
             ownerEmail: character.owner_email || character.ownerEmail,
         });
         
