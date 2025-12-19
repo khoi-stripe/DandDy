@@ -1042,34 +1042,37 @@ const CharacterSheet = (window.CharacterSheet = {
     const hasCombatStats = parsed.hpMax > 0;
 
     return `
-      <div class="sheet-section">
-        <div class="${headerClass}">
+      <div class="sheet-section sheet-section--collapsible" id="combat-stats-section">
+        <button class="sheet-header sheet-header--collapsible ${context === 'builder' ? 'sheet-header--no-divider' : ''}" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
           <div class="sheet-header-title">[ COMBAT STATS ]</div>
-        </div>
-        <div class="stat-grid">
-          <div class="stat-box">
-            <div class="stat-box-label">HIT POINTS</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hpCurrent} / ${parsed.hpMax}`}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">ARMOR CLASS</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : parsed.armorClass}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">INITIATIVE</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : this.formatModifier(parsed.initiative)}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">SPEED</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.speed} ft`}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">PROF BONUS</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `+${parsed.proficiencyBonus}`}</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">HIT DICE</div>
-            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hitDiceCurrent}/${parsed.hitDiceMax} d${parsed.hitDie}`}</div>
+          <span class="sheet-header-toggle">^</span>
+        </button>
+        <div class="sheet-collapsible-content">
+          <div class="stat-grid">
+            <div class="stat-box">
+              <div class="stat-box-label">HIT POINTS</div>
+              <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hpCurrent} / ${parsed.hpMax}`}</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-label">ARMOR CLASS</div>
+              <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : parsed.armorClass}</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-label">INITIATIVE</div>
+              <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : this.formatModifier(parsed.initiative)}</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-label">SPEED</div>
+              <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.speed} ft`}</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-label">PROF BONUS</div>
+              <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `+${parsed.proficiencyBonus}`}</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-box-label">HIT DICE</div>
+              <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hitDiceCurrent}/${parsed.hitDiceMax} d${parsed.hitDie}`}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1133,16 +1136,19 @@ const CharacterSheet = (window.CharacterSheet = {
     if (!resourceItems) return '';
 
     return `
-      <div class="sheet-section">
-        <div class="sheet-header">
+      <div class="sheet-section sheet-section--collapsible" id="class-resources-section">
+        <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
           <div class="sheet-header-title">[ CLASS RESOURCES ]</div>
+          <span class="sheet-header-toggle">^</span>
+        </button>
+        <div class="sheet-collapsible-content">
+          <div class="resource-legend-box">
+            <span class="resource-legend-icon">⟳</span>&nbsp;Short Rest &nbsp;&bull;&nbsp; <span class="resource-legend-icon">☽</span>&nbsp;Long Rest
+          </div>
+          <ul class="sheet-list resource-list">
+            ${resourceItems}
+          </ul>
         </div>
-        <div class="resource-legend-box">
-          <span class="resource-legend-icon">⟳</span>&nbsp;Short Rest &nbsp;&bull;&nbsp; <span class="resource-legend-icon">☽</span>&nbsp;Long Rest
-        </div>
-        <ul class="sheet-list resource-list">
-          ${resourceItems}
-        </ul>
       </div>
     `;
   },
@@ -1972,23 +1978,26 @@ const CharacterSheet = (window.CharacterSheet = {
     const abilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
     return `
-      <div class="sheet-section">
-        <div class="sheet-header">
+      <div class="sheet-section sheet-section--collapsible" id="saving-throws-section">
+        <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
           <div class="sheet-header-title">[ SAVING THROWS ]</div>
-        </div>
-        <div class="ability-grid">
-          ${abilities
-            .map((ability) => {
-              const value = parsed.savingThrowModifiers[ability];
-              const isProficient = parsed.savingThrows?.includes(ability);
-              return `
-                <div class="ability-box">
-                  <div class="ability-name">${ability.toUpperCase()}${isProficient ? '★' : ''}</div>
-                  <div class="ability-score">${this.formatModifier(value)}</div>
-                </div>
-              `;
-            })
-            .join('')}
+          <span class="sheet-header-toggle">^</span>
+        </button>
+        <div class="sheet-collapsible-content">
+          <div class="ability-grid">
+            ${abilities
+              .map((ability) => {
+                const value = parsed.savingThrowModifiers[ability];
+                const isProficient = parsed.savingThrows?.includes(ability);
+                return `
+                  <div class="ability-box">
+                    <div class="ability-name">${ability.toUpperCase()}${isProficient ? '★' : ''}</div>
+                    <div class="ability-score">${this.formatModifier(value)}</div>
+                  </div>
+                `;
+              })
+              .join('')}
+          </div>
         </div>
       </div>
     `;
@@ -2220,7 +2229,7 @@ const CharacterSheet = (window.CharacterSheet = {
       
       spellsContent += `
         <div class="sheet-subsection">
-          <div class="sheet-subsection-title">SPELL SLOTS</div>
+          <div class="sheet-subsection-title">SPELL SLOTS BY LEVEL</div>
           <div class="spell-slots-grid">${slotBoxes}</div>
         </div>
       `;
@@ -2256,16 +2265,17 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Edit link for manager context - opens dedicated spell edit modal
     const editLink = context === 'manager' && onEdit && characterId
-      ? `<a href="#" class="sheet-section-edit-link" onclick="openSpellEditModal('${characterId}'); return false;">✎ Edit</a>`
+      ? `<a href="#" class="sheet-section-edit-link sheet-header-edit-link" onclick="event.stopPropagation(); openSpellEditModal('${characterId}'); return false;">✎ Edit</a>`
       : '';
 
     return `
-      <div class="sheet-section">
-        <div class="sheet-header">
+      <div class="sheet-section sheet-section--collapsible" id="spells-section">
+        <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
           <div class="sheet-header-title">[ SPELLS ]</div>
           ${editLink}
-        </div>
-        <div class="sheet-content">
+          <span class="sheet-header-toggle">^</span>
+        </button>
+        <div class="sheet-collapsible-content">
           ${spellsContent}
         </div>
       </div>
@@ -2278,11 +2288,12 @@ const CharacterSheet = (window.CharacterSheet = {
       .join('')}</ul>`;
 
     return `
-      <div class="sheet-section">
-        <div class="sheet-header">
+      <div class="sheet-section sheet-section--collapsible" id="racial-traits-section">
+        <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
           <div class="sheet-header-title">[ RACIAL TRAITS ]</div>
-        </div>
-        <div class="sheet-content">
+          <span class="sheet-header-toggle">^</span>
+        </button>
+        <div class="sheet-collapsible-content">
           ${traitsMarkup}
         </div>
       </div>
@@ -2298,11 +2309,12 @@ const CharacterSheet = (window.CharacterSheet = {
       .join('')}</ul>`;
 
     return `
-      <div class="sheet-section">
-        <div class="sheet-header">
+      <div class="sheet-section sheet-section--collapsible" id="equipment-section">
+        <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
           <div class="sheet-header-title">[ ${parsed.hasClassEquipment ? 'EQUIPMENT' : 'CLASS EQUIPMENT'} ]</div>
-        </div>
-        <div class="sheet-content">
+          <span class="sheet-header-toggle">^</span>
+        </button>
+        <div class="sheet-collapsible-content">
           ${equipmentMarkup}
         </div>
       </div>
@@ -2356,11 +2368,12 @@ const CharacterSheet = (window.CharacterSheet = {
     }
     
     return `
-      <div class="sheet-section">
-        <div class="sheet-header">
+      <div class="sheet-section sheet-section--collapsible" id="languages-section">
+        <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
           <div class="sheet-header-title">[ LANGUAGES ]</div>
-        </div>
-        <div class="sheet-content">
+          <span class="sheet-header-toggle">^</span>
+        </button>
+        <div class="sheet-collapsible-content">
           ${
             hasLanguages
               ? `<ul class="sheet-list text-dim">${parsed.languages
@@ -2386,11 +2399,12 @@ const CharacterSheet = (window.CharacterSheet = {
     );
 
     return `
-      <div class="sheet-section">
-        <div class="sheet-header">
+      <div class="sheet-section sheet-section--collapsible" id="background-feature-section">
+        <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
           <div class="sheet-header-title">[ BACKGROUND FEATURE ]</div>
-        </div>
-        <div class="sheet-content">
+          <span class="sheet-header-toggle">^</span>
+        </button>
+        <div class="sheet-collapsible-content">
           <div class="stat-line"><span class="stat-label">${name}</span></div>
           <div class="text-dim mt-sm">${description}</div>
         </div>
@@ -2402,11 +2416,12 @@ const CharacterSheet = (window.CharacterSheet = {
     const backstory = this.escapeHtml(parsed.backstory || '');
 
     return `
-      <div class="sheet-section">
-        <div class="sheet-header">
+      <div class="sheet-section sheet-section--collapsible" id="backstory-section">
+        <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
           <div class="sheet-header-title">[ BACKSTORY ]</div>
-        </div>
-        <div class="sheet-content text-dim">
+          <span class="sheet-header-toggle">^</span>
+        </button>
+        <div class="sheet-collapsible-content text-dim">
           ${backstory}
         </div>
       </div>
@@ -2420,11 +2435,12 @@ const CharacterSheet = (window.CharacterSheet = {
     const version = this.escapeHtml(character.exportVersion || '1.0');
 
     return `
-      <div class="sheet-section">
-        <div class="sheet-header">
+      <div class="sheet-section sheet-section--collapsible" id="export-info-section">
+        <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
           <div class="sheet-header-title">[ EXPORT INFO ]</div>
-        </div>
-        <div class="sheet-content">
+          <span class="sheet-header-toggle">^</span>
+        </button>
+        <div class="sheet-collapsible-content">
           <div class="stat-line">
             <span class="stat-label">Exported:</span>
             <span class="stat-value">${new Date(

@@ -1145,6 +1145,19 @@ body::before {
   text-decoration: underline;
 }
 
+/* Inline edit link in collapsible headers (next to caret) */
+.sheet-header-edit-link {
+  margin-left: auto;
+  margin-right: 12px;
+  font-size: 14px;
+  color: var(--sheet-accent);
+  opacity: 0.8;
+}
+
+.sheet-header-edit-link:hover {
+  opacity: 1;
+}
+
 /* Optional variant for headers that should not show the dividing line
    below the title (used by certain sections in the builder sheet). */
 .sheet-header--no-divider {
@@ -1257,19 +1270,23 @@ body::before {
 
 /* Spell slot boxes - compact grid layout */
 .spell-slots-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
-  gap: var(--spacing-xs);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
   margin-top: var(--spacing-xs);
 }
 
 .spell-slot-box {
+  /* Width calculated for 9 items per row with 8 gaps of 4px = 32px */
+  width: calc((100% - 32px) / 9);
+  min-width: 50px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   background: var(--sheet-box-bg);
   padding: 4px 8px;
+  box-sizing: border-box;
 }
 
 .spell-slot-label {
@@ -1499,7 +1516,7 @@ body::before {
 
 .sheet-collapsible-content {
   max-height: 5000px;
-  overflow: hidden;
+  overflow: visible;
   transition: max-height 0.3s ease, opacity 0.3s ease;
   opacity: 1;
 }
@@ -1509,6 +1526,7 @@ body::before {
   opacity: 0;
   margin: 0;
   padding: 0;
+  overflow: hidden;
 }
 
 /* Class Features specific styles */

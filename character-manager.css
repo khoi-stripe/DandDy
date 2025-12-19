@@ -624,6 +624,7 @@
 .sheet-subsection-title {
     margin-top: 4px;
     padding-top: 8px;
+    color: var(--sheet-accent);
 }
 
 /* Character sheet bullet lists - proper hanging indent */
