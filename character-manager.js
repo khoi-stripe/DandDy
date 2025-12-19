@@ -2391,7 +2391,7 @@ async function openShareModal(characterId) {
 
     const safeName = Utils.escapeHtml(character.name || 'Unnamed');
     const modalHtml = `
-      <div id="shareModal" class="modal show">
+      <div id="shareModal" class="modal modal-yellow show">
         <div class="modal-content">
           <div class="modal-header">
             <h2 class="modal-title">SHARE CHARACTER</h2>
@@ -2400,18 +2400,16 @@ async function openShareModal(characterId) {
           <div class="modal-body">
             <p class="terminal-text">Sharing <strong>${safeName}</strong></p>
             
-            <div class="share-section" style="margin-top: 1.25rem;">
+            <div id="shareCollaboratorsSection" class="share-section" style="margin-top: 1.25rem; display: none;">
               <label class="terminal-text-small modal-section-label">PEOPLE WITH ACCESS</label>
-              <div id="shareCollaboratorsList" class="share-collaborators-list">
-                <div class="share-collaborators-loading terminal-text-small terminal-text-dim">Loading...</div>
-              </div>
+              <div id="shareCollaboratorsList" class="share-collaborators-list"></div>
             </div>
             
             <div class="share-section" style="margin-top: 1.25rem;">
               <label class="terminal-text-small modal-section-label" for="shareEmailInput">ADD PERSON</label>
               <div class="share-add-row">
                 <input type="email" id="shareEmailInput" class="terminal-input" placeholder="email@example.com">
-                <button class="terminal-btn terminal-btn-primary" id="shareAddBtn">ADD</button>
+                <button class="terminal-btn" id="shareAddBtn">ADD</button>
               </div>
               <p id="shareEmailError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
             </div>
@@ -2429,6 +2427,7 @@ async function openShareModal(characterId) {
     const errorEl = document.getElementById('shareEmailError');
     const addBtn = document.getElementById('shareAddBtn');
     const doneBtn = document.getElementById('shareDoneBtn');
+    const collaboratorsSection = document.getElementById('shareCollaboratorsSection');
     const collaboratorsList = document.getElementById('shareCollaboratorsList');
 
     const close = () => {
@@ -2453,14 +2452,14 @@ async function openShareModal(characterId) {
     // Render collaborators list
     const renderCollaborators = (collaborators) => {
         if (!collaborators || collaborators.length === 0) {
-            collaboratorsList.innerHTML = `
-                <div class="share-collaborators-empty terminal-text-small terminal-text-dim">
-                    No one else has access yet
-                </div>
-            `;
+            // Hide the entire section if no collaborators
+            collaboratorsSection.style.display = 'none';
+            collaboratorsList.innerHTML = '';
             return;
         }
 
+        // Show section when there are collaborators
+        collaboratorsSection.style.display = 'block';
         collaboratorsList.innerHTML = collaborators.map(collab => `
             <div class="share-collaborator-item" data-id="${collab.id}">
                 <span class="share-collaborator-email">${Utils.escapeHtml(collab.user_email)}</span>

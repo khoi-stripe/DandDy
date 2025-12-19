@@ -192,10 +192,10 @@ def get_character(
     has_access, is_owner, permission = _check_character_access(character, current_user, db)
     
     if not has_access:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this character"
-        )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to access this character"
+            )
     
     # Build response with sharing metadata
     char_dict = CharacterResponse.model_validate(character).model_dump()

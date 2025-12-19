@@ -2380,7 +2380,61 @@
 
 /* ========================================
    SHARE MODAL - Unified add/manage access
+   Uses modal-accent (yellow) theme colors
    ======================================== */
+
+/* Yellow theme for share modal */
+.modal-yellow .modal-content {
+    border-color: var(--modal-accent);
+    box-shadow: 0 0 30px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.2);
+}
+
+.modal-yellow .modal-title,
+.modal-yellow .modal-close,
+.modal-yellow .terminal-text,
+.modal-yellow .terminal-text strong,
+.modal-yellow .modal-section-label {
+    color: var(--modal-accent);
+}
+
+.modal-yellow .modal-close:hover {
+    color: var(--modal-accent-bright);
+}
+
+.modal-yellow .terminal-input {
+    border-color: var(--modal-accent-dim);
+    color: var(--modal-accent);
+}
+
+.modal-yellow .terminal-input::placeholder {
+    color: var(--modal-accent-dim);
+}
+
+.modal-yellow .terminal-input:focus {
+    border-color: var(--modal-accent);
+    box-shadow: 0 0 0 2px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.2);
+}
+
+.modal-yellow .terminal-btn {
+    border-color: var(--modal-accent-dim);
+    color: var(--modal-accent);
+}
+
+.modal-yellow .terminal-btn:hover {
+    border-color: var(--modal-accent);
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.15);
+}
+
+.modal-yellow .terminal-btn-primary {
+    background-color: var(--modal-accent);
+    border-color: var(--modal-accent);
+    color: var(--terminal-bg);
+}
+
+.modal-yellow .terminal-btn-primary:hover {
+    background-color: var(--modal-accent-bright);
+    border-color: var(--modal-accent-bright);
+}
 
 .share-section {
     margin-top: 1.25rem;
@@ -2409,17 +2463,11 @@
 
 /* Collaborators list */
 .share-collaborators-list {
-    border: 1px solid var(--terminal-border);
+    border: 1px solid var(--modal-accent-dim);
     border-radius: 4px;
     background: var(--terminal-bg-dim);
     max-height: 180px;
     overflow-y: auto;
-}
-
-.share-collaborators-loading,
-.share-collaborators-empty {
-    padding: 1rem;
-    text-align: center;
 }
 
 .share-collaborator-item {
@@ -2427,7 +2475,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--terminal-border);
+    border-bottom: 1px solid var(--modal-accent-dim);
     transition: opacity 0.2s ease, background-color 0.15s ease;
 }
 
@@ -2436,7 +2484,7 @@
 }
 
 .share-collaborator-item:hover {
-    background-color: hsla(var(--theme-terminal-h), 50%, 50%, 0.08);
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.08);
 }
 
 .share-collaborator-item.removing {
@@ -2446,7 +2494,7 @@
 
 .share-collaborator-email {
     font-size: var(--font-size-sm);
-    color: var(--terminal-fg);
+    color: var(--modal-accent);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2459,7 +2507,7 @@
     height: 24px;
     border: none;
     background: transparent;
-    color: var(--terminal-dim);
+    color: var(--modal-accent-dim);
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
