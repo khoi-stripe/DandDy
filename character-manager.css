@@ -380,7 +380,7 @@
     font-family: var(--font-mono);
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: var(--accent-color, #0af);
+    color: var(--terminal-fg);
     background-color: rgba(0, 0, 0, 0.85);
     padding: 2px 6px;
     line-height: 1;
@@ -389,7 +389,7 @@
 
 /* Shared character card - subtle border accent */
 .character-card.is-shared {
-    border-left: 2px solid var(--accent-color, #0af);
+    border-left: 2px solid var(--terminal-fg);
 }
 
 /* Hover and keyboard focus (unselected) - bright green outline, text, and ASCII */
