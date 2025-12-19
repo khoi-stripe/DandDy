@@ -2439,8 +2439,8 @@
 /* Shared character tag - overlays portrait in sheet view (same position as demo) */
 .sheet-shared-tag {
     position: absolute;
-    top: 12px;
-    left: 12px;
+    top: 8px;
+    left: 8px;
     z-index: 5;
     padding: 0 4px;
     font-size: 11px;
@@ -2465,31 +2465,13 @@
     text-align: left;
 }
 
-/* Mobile: allow tap-to-show tooltip on shared tag */
+/* Mobile: shared tag is display-only (no tap interaction to avoid lightbox collision) */
 @media (hover: none), (pointer: coarse) {
     .sheet-shared-tag.has-tooltip {
-        /* Ensure tap target is easy to hit */
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
-    }
-    
-    /* Expand touch target with invisible pseudo-element */
-    .sheet-shared-tag.has-tooltip::before {
-        content: '';
-        position: absolute;
-        top: -12px;
-        left: -12px;
-        right: -12px;
-        bottom: -12px;
-        /* Invisible but tappable */
-        background: transparent;
-    }
-    
-    /* Show tooltip when parent has active state (JS-toggled) */
-    .sheet-shared-tag.has-tooltip.tooltip-active .custom-tooltip {
-        opacity: 1;
-        transform: scale(1);
-        pointer-events: auto;
+        /* Remove pointer cursor - not tappable on mobile */
+        cursor: default;
+        /* Allow taps to pass through to portrait for lightbox */
+        pointer-events: none;
     }
 }
 
