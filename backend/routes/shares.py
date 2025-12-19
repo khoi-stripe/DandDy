@@ -137,6 +137,91 @@ def get_pending_shares(
     return result
 
 
+@router.get("/character/{character_id}/pending", response_model=List[dict])
+def get_character_pending_shares(
+    character_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all pending shares for a specific character (owner only).
+    
+    Returns list of pending invitations with recipient email.
+    """
+    character = db.query(Character).filter(Character.id == character_id).first()
+    
+    if not character:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Character not found"
+        )
+    
+    # Only owner can see pending shares
+    if character.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the owner can view pending shares"
+        )
+    
+    pending_shares = db.query(CharacterShare).filter(
+        CharacterShare.character_id == character_id,
+        CharacterShare.status == ShareStatus.PENDING
+    ).all()
+    
+    return [
+        {
+            "id": share.id,
+            "to_email": share.to_email,
+            "created_at": share.created_at.isoformat() if share.created_at else None
+        }
+        for share in pending_shares
+    ]
+
+
+@router.delete("/character/{character_id}/pending/{share_id}", status_code=status.HTTP_204_NO_CONTENT)
+def cancel_pending_share(
+    character_id: int,
+    share_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Cancel a pending share invitation (owner only).
+    """
+    character = db.query(Character).filter(Character.id == character_id).first()
+    
+    if not character:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Character not found"
+        )
+    
+    # Only owner can cancel pending shares
+    if character.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the owner can cancel pending shares"
+        )
+    
+    share = db.query(CharacterShare).filter(
+        CharacterShare.id == share_id,
+        CharacterShare.character_id == character_id,
+        CharacterShare.status == ShareStatus.PENDING
+    ).first()
+    
+    if not share:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pending share not found"
+        )
+    
+    # Delete the share record entirely
+    db.delete(share)
+    db.commit()
+    
+    return None
+
+
 @router.post("/{share_id}/accept", response_model=dict)
 def accept_share(
     share_id: int,

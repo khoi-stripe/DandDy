@@ -2449,36 +2449,51 @@ async function openShareModal(characterId) {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     };
 
-    // Render collaborators list
-    const renderCollaborators = (collaborators) => {
-        if (!collaborators || collaborators.length === 0) {
-            // Hide the entire section if no collaborators
+    // Render collaborators and pending shares list
+    const renderAccessList = (collaborators, pendingShares) => {
+        const hasCollaborators = collaborators && collaborators.length > 0;
+        const hasPending = pendingShares && pendingShares.length > 0;
+        
+        if (!hasCollaborators && !hasPending) {
+            // Hide the entire section if nothing to show
             collaboratorsSection.style.display = 'none';
             collaboratorsList.innerHTML = '';
             return;
         }
 
-        // Show section when there are collaborators
+        // Show section
         collaboratorsSection.style.display = 'block';
-        collaboratorsList.innerHTML = collaborators.map(collab => `
-            <div class="share-collaborator-item" data-id="${collab.id}">
+        
+        // Build HTML for collaborators (accepted)
+        const collabHtml = (collaborators || []).map(collab => `
+            <div class="share-collaborator-item" data-id="${collab.id}" data-type="collaborator">
                 <span class="share-collaborator-email">${Utils.escapeHtml(collab.user_email)}</span>
-                <button class="share-collaborator-remove" title="Remove access" data-id="${collab.id}">&times;</button>
+                <button class="share-collaborator-remove" title="Remove access" data-id="${collab.id}" data-type="collaborator">&times;</button>
             </div>
         `).join('');
+        
+        // Build HTML for pending shares
+        const pendingHtml = (pendingShares || []).map(share => `
+            <div class="share-collaborator-item share-collaborator-pending" data-id="${share.id}" data-type="pending">
+                <span class="share-collaborator-email">${Utils.escapeHtml(share.to_email)}</span>
+                <span class="share-collaborator-status">PENDING</span>
+                <button class="share-collaborator-remove" title="Cancel invitation" data-id="${share.id}" data-type="pending">&times;</button>
+            </div>
+        `).join('');
+        
+        collaboratorsList.innerHTML = collabHtml + pendingHtml;
 
-        // Attach remove handlers
-        collaboratorsList.querySelectorAll('.share-collaborator-remove').forEach(btn => {
+        // Attach remove handlers for collaborators
+        collaboratorsList.querySelectorAll('.share-collaborator-remove[data-type="collaborator"]').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const collabId = e.target.dataset.id;
-                const itemEl = collaboratorsList.querySelector(`.share-collaborator-item[data-id="${collabId}"]`);
+                const itemEl = collaboratorsList.querySelector(`.share-collaborator-item[data-id="${collabId}"][data-type="collaborator"]`);
                 if (itemEl) {
                     itemEl.classList.add('removing');
                 }
                 try {
                     await CharacterCloudStorage.removeCollaborator(characterId, collabId);
-                    // Refresh the list
-                    await loadCollaborators();
+                    await loadAccessList();
                     showNotification('Access removed');
                 } catch (error) {
                     if (itemEl) {
@@ -2488,25 +2503,45 @@ async function openShareModal(characterId) {
                 }
             });
         });
+        
+        // Attach remove handlers for pending shares
+        collaboratorsList.querySelectorAll('.share-collaborator-remove[data-type="pending"]').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const shareId = e.target.dataset.id;
+                const itemEl = collaboratorsList.querySelector(`.share-collaborator-item[data-id="${shareId}"][data-type="pending"]`);
+                if (itemEl) {
+                    itemEl.classList.add('removing');
+                }
+                try {
+                    await CharacterCloudStorage.cancelPendingShare(characterId, shareId);
+                    await loadAccessList();
+                    showNotification('Invitation canceled');
+                } catch (error) {
+                    if (itemEl) {
+                        itemEl.classList.remove('removing');
+                    }
+                    showNotification(error.message || 'Failed to cancel invitation', 'error');
+                }
+            });
+        });
     };
 
-    // Load collaborators
-    const loadCollaborators = async () => {
+    // Load collaborators and pending shares
+    const loadAccessList = async () => {
         try {
-            const collaborators = await CharacterCloudStorage.getCollaborators(characterId);
-            renderCollaborators(collaborators);
+            const [collaborators, pendingShares] = await Promise.all([
+                CharacterCloudStorage.getCollaborators(characterId),
+                CharacterCloudStorage.getPendingSharesForCharacter(characterId)
+            ]);
+            renderAccessList(collaborators, pendingShares);
         } catch (error) {
-            console.error('Failed to load collaborators:', error);
-            collaboratorsList.innerHTML = `
-                <div class="share-collaborators-empty terminal-text-small terminal-text-dim">
-                    Could not load collaborators
-                </div>
-            `;
+            console.error('Failed to load access list:', error);
+            collaboratorsSection.style.display = 'none';
         }
     };
 
-    // Load collaborators on modal open
-    loadCollaborators();
+    // Load access list on modal open
+    loadAccessList();
 
     doneBtn.addEventListener('click', close);
     
@@ -2540,9 +2575,9 @@ async function openShareModal(characterId) {
         try {
             await CharacterCloudStorage.shareCharacter(characterId, email);
             input.value = '';
-            showNotification(`Shared with ${email}`);
-            // Refresh the collaborators list
-            await loadCollaborators();
+            showNotification(`Invitation sent to ${email}`);
+            // Refresh the access list (shows pending invitation)
+            await loadAccessList();
         } catch (error) {
             showError(error.message || 'Failed to share character');
         } finally {

@@ -500,6 +500,50 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       throw error;
     }
   },
+
+  /**
+   * Get pending share invitations for a character (owner only).
+   * @param {number|string} characterId - The character ID
+   * @returns {Promise<Array>} List of pending shares with id, to_email, created_at
+   */
+  async getPendingSharesForCharacter(characterId) {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Fetching pending shares for character', characterId);
+      }
+      const shares = await this._apiRequest(`/shares/character/${characterId}/pending`);
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Found', shares.length, 'pending shares');
+      }
+      return shares;
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to fetch pending shares:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Cancel a pending share invitation (owner only).
+   * @param {number|string} characterId - The character ID
+   * @param {number} shareId - The share record ID to cancel
+   * @returns {Promise<void>}
+   */
+  async cancelPendingShare(characterId, shareId) {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Canceling pending share', shareId, 'for character', characterId);
+      }
+      await this._apiRequest(`/shares/character/${characterId}/pending/${shareId}`, {
+        method: 'DELETE',
+      });
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Pending share canceled');
+      }
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to cancel pending share:', error);
+      throw error;
+    }
+  },
 });
 
 // ========================================

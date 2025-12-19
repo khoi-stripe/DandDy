@@ -2499,6 +2499,21 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
+    flex: 1;
+}
+
+.share-collaborator-status {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--modal-accent-dim);
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+}
+
+.share-collaborator-pending .share-collaborator-email {
+    opacity: 0.7;
 }
 
 .share-collaborator-remove {
