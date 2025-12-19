@@ -1477,6 +1477,7 @@ body::before {
   display: inline-block;
   /* Default state: expanded (caret points up) */
   transform: scaleY(1);
+  transition: transform 0.2s ease;
 }
 
 /* Flip animation: close in towards center, then invert */
@@ -1490,21 +1491,9 @@ body::before {
   animation: caret-flip-up 0.25s ease forwards;
 }
 
-/* Hover preview: flip caret up when hovering section headers */
+/* Hover preview: flip caret down when hovering section headers */
 .sheet-header--collapsible:hover .sheet-header-toggle {
-  animation: caret-hover-flip 0.35s ease-in-out;
-}
-
-@keyframes caret-hover-flip {
-  0% {
-    transform: scaleY(1);
-  }
-  50% {
-    transform: scaleY(-1);
-  }
-  100% {
-    transform: scaleY(1);
-  }
+  transform: scaleY(-1);
 }
 
 @keyframes caret-flip-down {

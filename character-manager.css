@@ -376,15 +376,15 @@
     top: 6px;
     left: 6px;
     z-index: 5;
+    padding: 0 4px;
     font-size: 10px;
+    font-weight: 500;
     font-family: var(--font-mono);
+    letter-spacing: 0.05em;
     text-transform: uppercase;
-    letter-spacing: 1px;
     color: var(--terminal-fg);
     background-color: rgba(0, 0, 0, 0.85);
-    padding: 2px 6px;
-    line-height: 1;
-    border-radius: 2px;
+    border-radius: 3px;
 }
 
 
@@ -2439,11 +2439,11 @@
 /* Shared character tag - overlays portrait in sheet view (same position as demo) */
 .sheet-shared-tag {
     position: absolute;
-    top: 8px;
-    left: 8px;
+    top: 12px;
+    left: 12px;
     z-index: 5;
     padding: 0 4px;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 500;
     letter-spacing: 0.05em;
     text-transform: uppercase;
