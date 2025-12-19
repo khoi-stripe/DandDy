@@ -2281,6 +2281,13 @@ async function renameCharacter(id) {
     const character = await CharacterStorage.getById(id);
     if (!character) return;
 
+    // Only owner can rename - check if this is a shared character
+    const isShared = character.is_shared || character.isShared;
+    if (isShared) {
+        showNotification('Only the owner can rename this character', 'error');
+        return;
+    }
+
     const existing = document.getElementById('renameModal');
     if (existing) existing.remove();
 

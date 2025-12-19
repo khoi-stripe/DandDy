@@ -227,6 +227,17 @@ def update_character(
     
     # Update only provided fields
     update_data = character_update.model_dump(exclude_unset=True)
+    
+    # Owner-only fields - collaborators cannot change these
+    owner_only_fields = {'name'}
+    if not is_owner:
+        restricted_fields = owner_only_fields & set(update_data.keys())
+        if restricted_fields:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Only the owner can change: {', '.join(restricted_fields)}"
+            )
+    
     for field, value in update_data.items():
         setattr(character, field, value)
     

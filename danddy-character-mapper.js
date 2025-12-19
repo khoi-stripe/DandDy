@@ -386,6 +386,11 @@
         createdAt: apiChar.created_at,
         updatedAt: apiChar.updated_at,
 
+        // Sharing metadata
+        isShared: apiChar.is_shared || false,
+        ownerEmail: apiChar.owner_email || null,
+        permission: apiChar.permission || null,
+
         asciiPortrait: apiChar.ascii_portrait,
         originalPortraitUrl: apiChar.original_portrait_url,
         customPortraitAscii: apiChar.custom_portrait_ascii,
