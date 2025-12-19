@@ -22,7 +22,7 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.PLAYER, nullable=False)
 
     # Relationships
-    characters = relationship("Character", back_populates="owner")
+    characters = relationship("Character", back_populates="owner", foreign_keys="[Character.owner_id]")
     campaigns_owned = relationship("Campaign", back_populates="dm")
     prompt_entries = relationship("PromptEntry", back_populates="owner")
     shared_characters = relationship("CharacterCollaborator", back_populates="user")
