@@ -4901,10 +4901,10 @@ function showLevelChangeDialog(oldLevel, newLevel, xpTriggered = false) {
         let titleText, mainText;
         if (xpTriggered && levelDiff > 0) {
             titleText = 'LEVEL UP!';
-            mainText = `Your XP has reached the threshold for<strong>Level\u00A0${newLevel}</strong>!\u00A0(${Math.abs(levelDiff)}\u00A0${levelText}\u00A0${direction})`;
+            mainText = `Your XP has reached the threshold for <strong>Level\u00A0${newLevel}</strong>! (${Math.abs(levelDiff)} ${levelText} ${direction})`;
         } else {
             titleText = 'LEVEL CHANGE';
-            mainText = `You're changing from<strong>Level\u00A0${oldLevel}</strong>to<strong>Level\u00A0${newLevel}</strong>\u00A0(${Math.abs(levelDiff)}\u00A0${levelText}\u00A0${direction}).`;
+            mainText = `You're changing from <strong>Level\u00A0${oldLevel}</strong> to <strong>Level\u00A0${newLevel}</strong> (${Math.abs(levelDiff)} ${levelText} ${direction}).`;
         }
 
         // Create new content for level change dialog
@@ -4916,7 +4916,7 @@ function showLevelChangeDialog(oldLevel, newLevel, xpTriggered = false) {
           <div class="modal-body">
             <p class="terminal-text level-change-text">${mainText}</p>
             <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">
-              Would you like to automatically recalculate stats&nbsp;(HP,&nbsp;Proficiency&nbsp;Bonus,&nbsp;Spell&nbsp;Slots)&nbsp;for the new level, or update them manually?
+              Would you like to automatically recalculate stats (HP, Proficiency Bonus, Spell Slots) for the new level, or update them manually?
             </p>
           </div>
           <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">
