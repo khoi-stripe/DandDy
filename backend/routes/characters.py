@@ -63,6 +63,8 @@ def get_characters(
             CharacterCollaborator.character_id == char.id
         ).count()
         char_dict['collaborator_count'] = collab_count
+        # Include who last updated (if tracked)
+        char_dict['last_updated_by_email'] = char.last_updated_by.email if char.last_updated_by else None
         result.append(char_dict)
     
     # Add shared characters with metadata
@@ -73,6 +75,8 @@ def get_characters(
             char_dict['owner_email'] = collab.character.owner.email if collab.character.owner else None
             char_dict['permission'] = collab.permission.value
             char_dict['collaborator_count'] = 0  # Not relevant for collaborators
+            # Include who last updated (if tracked)
+            char_dict['last_updated_by_email'] = collab.character.last_updated_by.email if collab.character.last_updated_by else None
             result.append(char_dict)
     
     return result
@@ -196,6 +200,7 @@ def get_character(
     # Build response with sharing metadata
     char_dict = CharacterResponse.model_validate(character).model_dump()
     char_dict['is_shared'] = not is_owner
+    char_dict['last_updated_by_email'] = character.last_updated_by.email if character.last_updated_by else None
     if not is_owner:
         char_dict['owner_email'] = character.owner.email if character.owner else None
         char_dict['permission'] = permission
@@ -247,12 +252,16 @@ def update_character(
     for field, value in update_data.items():
         setattr(character, field, value)
     
+    # Track who made this update
+    character.last_updated_by_id = current_user.id
+    
     db.commit()
     db.refresh(character)
     
     # Build response with sharing metadata
     char_dict = CharacterResponse.model_validate(character).model_dump()
     char_dict['is_shared'] = not is_owner
+    char_dict['last_updated_by_email'] = current_user.email
     if not is_owner:
         char_dict['owner_email'] = character.owner.email if character.owner else None
         char_dict['permission'] = permission

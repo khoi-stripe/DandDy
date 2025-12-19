@@ -424,6 +424,7 @@ const CharacterSheet = (window.CharacterSheet = {
       hasCollaborators = false,  // Whether owner has shared with others
       collaboratorCount = 0,  // Number of collaborators (for owner's view)
       ownerEmail = null,  // Email of character owner (for shared characters)
+      lastUpdatedByEmail = null,  // Email of user who last updated
       hideOverflowMenu = false,
     } = options;
 
@@ -460,6 +461,7 @@ const CharacterSheet = (window.CharacterSheet = {
               hasCollaborators,
               collaboratorCount,
               ownerEmail,
+              lastUpdatedByEmail,
             })
           : ''}
         
@@ -767,6 +769,7 @@ const CharacterSheet = (window.CharacterSheet = {
       hasCollaborators,
       collaboratorCount,
       ownerEmail,
+      lastUpdatedByEmail,
     } = callbacks;
 
     // Check if this is a demo character - show tag on portrait
@@ -845,10 +848,18 @@ const CharacterSheet = (window.CharacterSheet = {
         }
       }
       
+      // Format who last updated
+      const lastUpdatedBy = lastUpdatedByEmail ? this.escapeHtml(lastUpdatedByEmail) : null;
+      
       if (isShared) {
         // Collaborator's view
         const sharedByLine = `Shared by ${this.escapeHtml(ownerEmail || 'unknown')}`;
-        const updatedLine = lastUpdatedText ? `Last updated: ${lastUpdatedText}` : '';
+        let updatedLine = '';
+        if (lastUpdatedText) {
+          updatedLine = lastUpdatedBy 
+            ? `Last updated: ${lastUpdatedText}<br>by ${lastUpdatedBy}`
+            : `Last updated: ${lastUpdatedText}`;
+        }
         const tooltipContent = updatedLine ? `${sharedByLine}<br>${updatedLine}` : sharedByLine;
         sharedTagHtml = `
           <span class="sheet-shared-tag has-tooltip">
@@ -858,7 +869,12 @@ const CharacterSheet = (window.CharacterSheet = {
       } else if (hasCollaborators) {
         // Owner's view
         const sharedWithLine = collaboratorCount === 1 ? 'Shared with 1 user' : `Shared with ${collaboratorCount} users`;
-        const updatedLine = lastUpdatedText ? `Last updated: ${lastUpdatedText}` : '';
+        let updatedLine = '';
+        if (lastUpdatedText) {
+          updatedLine = lastUpdatedBy 
+            ? `Last updated: ${lastUpdatedText}<br>by ${lastUpdatedBy}`
+            : `Last updated: ${lastUpdatedText}`;
+        }
         const tooltipContent = updatedLine ? `${sharedWithLine}<br>${updatedLine}` : sharedWithLine;
         sharedTagHtml = `
           <span class="sheet-shared-tag has-tooltip">

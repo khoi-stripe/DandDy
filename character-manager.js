@@ -1361,6 +1361,7 @@ const UI = {
             hasCollaborators: hasCollaborators,
             collaboratorCount: collaboratorCount,
             ownerEmail: character.owner_email || character.ownerEmail,
+            lastUpdatedByEmail: character.last_updated_by_email || character.lastUpdatedByEmail,
         });
         
         // Populate ASCII portrait after rendering

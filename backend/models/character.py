@@ -133,8 +133,12 @@ class Character(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
+    # Track who last updated (for shared characters)
+    last_updated_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
     # Relationships
-    owner = relationship("User", back_populates="characters")
+    owner = relationship("User", back_populates="characters", foreign_keys=[owner_id])
+    last_updated_by = relationship("User", foreign_keys=[last_updated_by_id])
     campaign = relationship("Campaign", back_populates="characters")
     collaborators = relationship("CharacterCollaborator", back_populates="character", cascade="all, delete-orphan")
 

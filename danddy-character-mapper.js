@@ -391,6 +391,7 @@
         ownerEmail: apiChar.owner_email || null,
         permission: apiChar.permission || null,
         collaboratorCount: apiChar.collaborator_count || 0,
+        lastUpdatedByEmail: apiChar.last_updated_by_email || null,
 
         asciiPortrait: apiChar.ascii_portrait,
         originalPortraitUrl: apiChar.original_portrait_url,

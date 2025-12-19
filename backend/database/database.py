@@ -373,6 +373,24 @@ def ensure_character_collaborators_table():
         conn.commit()
 
 
+def ensure_last_updated_by_column():
+    """
+    Lightweight migration helper for tracking who last updated a character.
+    Adds last_updated_by_id column to characters table.
+    """
+    inspector = inspect(engine)
+    if not inspector.has_table("characters"):
+        return
+
+    existing_cols = {col["name"] for col in inspector.get_columns("characters")}
+
+    with engine.connect() as conn:
+        if "last_updated_by_id" not in existing_cols:
+            conn.execute(text("ALTER TABLE characters ADD COLUMN last_updated_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL"))
+
+        conn.commit()
+
+
 def get_db():
     db = SessionLocal()
     try:

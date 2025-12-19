@@ -162,6 +162,7 @@ class CharacterResponse(CharacterBase):
     owner_email: Optional[str] = None  # Email of owner (for shared characters)
     permission: Optional[str] = None  # "edit" or "view" (for shared characters)
     collaborator_count: Optional[int] = None  # Number of people this character is shared with (for owners)
+    last_updated_by_email: Optional[str] = None  # Email of user who last updated (for shared characters)
     
     class Config:
         from_attributes = True
