@@ -1083,51 +1083,113 @@ const CharacterSheet = (window.CharacterSheet = {
     
     if (resourceKeys.length === 0) return '';
 
-    // Human-readable names for resources
-    const RESOURCE_NAMES = {
-      ki: 'Ki Points',
-      rage: 'Rage',
-      rageDamage: 'Rage Damage',
-      sorceryPoints: 'Sorcery Points',
-      bardicInspiration: 'Bardic Inspiration',
-      bardicInspirationDie: 'Inspiration Die',
-      channelDivinity: 'Channel Divinity',
-      layOnHands: 'Lay on Hands',
-      wildShape: 'Wild Shape',
-      secondWind: 'Second Wind',
-      actionSurge: 'Action Surge',
-      indomitable: 'Indomitable',
-      sneakAttack: 'Sneak Attack',
-      mysticArcanum: 'Mystic Arcanum',
-      arcaneRecovery: 'Arcane Recovery',
+    // Human-readable names and descriptions for resources
+    const RESOURCE_DATA = {
+      ki: {
+        name: 'Ki Points',
+        description: 'Fuel monk abilities: Flurry of Blows (2 unarmed strikes), Patient Defense (Dodge as bonus action), Step of the Wind (Dash or Disengage as bonus action, jump distance doubled)'
+      },
+      rage: {
+        name: 'Rage',
+        description: 'Bonus action to enter rage for 1 minute. Advantage on STR checks/saves, bonus rage damage on STR melee attacks, resistance to bludgeoning/piercing/slashing damage'
+      },
+      rageDamage: {
+        name: 'Rage Damage',
+        description: 'Extra damage added to STR-based melee weapon attacks while raging'
+      },
+      sorceryPoints: {
+        name: 'Sorcery Points',
+        description: 'Fuel Metamagic options and convert to/from spell slots. Create spell slot: 2 pts (1st), 3 pts (2nd), 5 pts (3rd), 6 pts (4th), 7 pts (5th)'
+      },
+      bardicInspiration: {
+        name: 'Bardic Inspiration',
+        description: 'Bonus action to grant an ally an inspiration die. They can add it to one ability check, attack roll, or saving throw within 10 minutes'
+      },
+      bardicInspirationDie: {
+        name: 'Inspiration Die',
+        description: 'Die size for Bardic Inspiration and Song of Rest'
+      },
+      channelDivinity: {
+        name: 'Channel Divinity',
+        description: 'Channel divine energy for Turn Undead (undead must flee) or domain-specific abilities'
+      },
+      layOnHands: {
+        name: 'Lay on Hands',
+        description: 'Touch to restore HP from your pool, or spend 5 HP to cure one disease or neutralize one poison'
+      },
+      divineSense: {
+        name: 'Divine Sense',
+        description: 'Action to detect celestials, fiends, and undead within 60 feet, and consecrated/desecrated locations'
+      },
+      wildShape: {
+        name: 'Wild Shape',
+        description: 'Action to transform into a beast you have seen. Max CR and movement types depend on druid level'
+      },
+      secondWind: {
+        name: 'Second Wind',
+        description: 'Bonus action to regain 1d10 + fighter level hit points'
+      },
+      actionSurge: {
+        name: 'Action Surge',
+        description: 'Take one additional action on your turn (on top of regular action and bonus action)'
+      },
+      indomitable: {
+        name: 'Indomitable',
+        description: 'Reroll a failed saving throw. You must use the new roll'
+      },
+      sneakAttack: {
+        name: 'Sneak Attack',
+        description: 'Extra damage once per turn when you hit with a finesse or ranged weapon and have advantage, or an enemy of your target is within 5 feet'
+      },
+      mysticArcanum: {
+        name: 'Mystic Arcanum',
+        description: 'Cast a high-level warlock spell once without expending a spell slot'
+      },
+      arcaneRecovery: {
+        name: 'Arcane Recovery',
+        description: 'During a short rest, recover expended spell slots with combined level up to half your wizard level (rounded up)'
+      },
     };
 
     const resourceItems = resourceKeys
       .filter(key => {
         const r = resources[key];
-        // Filter out meta-resources that don't have current/max (like rageDamage, bardicInspirationDie)
+        // Filter out meta-resources that don't have current/max (like bardicInspirationDie)
         return r && (r.current !== undefined || r.value !== undefined);
       })
       .map(key => {
         const r = resources[key];
-        const name = RESOURCE_NAMES[key] || key;
+        const data = RESOURCE_DATA[key] || { name: key, description: '' };
+        const name = data.name;
+        const description = data.description;
         
-        // For value-only resources (like sneakAttack, rageDamage)
+        // Build the value display
+        let valueDisplay = '';
         if (r.value !== undefined) {
-          return `<li class="resource-item">
-            <span class="resource-name">${this.escapeHtml(name)}</span> <span class="resource-value">${this.escapeHtml(String(r.value))}</span>
-          </li>`;
+          // Value-only resources (like sneakAttack, rageDamage)
+          valueDisplay = `<span class="skill-prof-modifier">${this.escapeHtml(String(r.value))}</span>`;
+        } else {
+          // Resources with current/max
+          const current = r.unlimited ? '∞' : r.current;
+          const max = r.unlimited ? '∞' : r.max;
+          const refreshIcon = r.refresh === 'short' ? '⟳' : r.refresh === 'long' ? '☽' : '';
+          const note = r.note ? ` (${this.escapeHtml(r.note)})` : '';
+          valueDisplay = `<span class="skill-prof-modifier">${current}/${max} ${refreshIcon}${note}</span>`;
         }
         
-        // For resources with current/max
-        const current = r.unlimited ? '∞' : r.current;
-        const max = r.unlimited ? '∞' : r.max;
-        const refreshIcon = r.refresh === 'short' ? '⟳' : r.refresh === 'long' ? '☽' : '';
-        const note = r.note ? `(${this.escapeHtml(r.note)})` : '';
+        const descriptionHtml = description 
+          ? `<span class="skill-prof-desc">${this.escapeHtml(description)}</span>` 
+          : '';
         
-        return `<li class="resource-item">
-          <span class="resource-name">${this.escapeHtml(name)}${note ? ' ' + note : ''}</span> <span class="resource-value">${current}/${max} ${refreshIcon}</span>
-        </li>`;
+        return `
+          <li class="skill-prof-item">
+            <div class="skill-prof-header">
+              <span class="skill-prof-name">${this.escapeHtml(name)}</span>
+              ${valueDisplay}
+            </div>
+            ${descriptionHtml}
+          </li>
+        `;
       })
       .join('');
 
@@ -1143,7 +1205,7 @@ const CharacterSheet = (window.CharacterSheet = {
           <div class="resource-legend-box">
             <span class="resource-legend-icon">⟳</span>&nbsp;Short Rest &nbsp;&bull;&nbsp; <span class="resource-legend-icon">☽</span>&nbsp;Long Rest
           </div>
-          <ul class="sheet-list resource-list">
+          <ul class="skill-prof-list">
             ${resourceItems}
           </ul>
         </div>
