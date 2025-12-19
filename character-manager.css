@@ -2473,6 +2473,18 @@
         -webkit-tap-highlight-color: transparent;
     }
     
+    /* Expand touch target with invisible pseudo-element */
+    .sheet-shared-tag.has-tooltip::before {
+        content: '';
+        position: absolute;
+        top: -12px;
+        left: -12px;
+        right: -12px;
+        bottom: -12px;
+        /* Invisible but tappable */
+        background: transparent;
+    }
+    
     /* Show tooltip when parent has active state (JS-toggled) */
     .sheet-shared-tag.has-tooltip.tooltip-active .custom-tooltip {
         opacity: 1;
