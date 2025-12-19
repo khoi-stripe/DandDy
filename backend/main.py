@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse
 from database.database import (
     engine,
     Base,
@@ -90,6 +91,25 @@ app.include_router(users.router, prefix="/api")
 app.include_router(ai.router, prefix="/api/ai")
 app.include_router(prompt_entries.router, prefix="/api")
 app.include_router(shares.router, prefix="/api")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Global exception handler that ensures errors return proper JSON
+    and that CORS headers are included (handled by the middleware).
+    This prevents 500 errors from returning plain text without CORS.
+    """
+    import traceback
+    error_msg = str(exc)
+    # Log the full traceback for debugging
+    print(f"🔥 Unhandled exception on {request.method} {request.url.path}:")
+    print(traceback.format_exc())
+    
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error", "message": error_msg}
+    )
+
 
 @app.get("/")
 def root():
