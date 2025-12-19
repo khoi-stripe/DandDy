@@ -1221,19 +1221,24 @@ const UI = {
             if (isMobile) {
                 // On mobile with URL character, render sheet then open modal
                 // Use openMobileModal: false here since we handle modal opening manually
-                viewCharacter(targetId, { skipKeyboardSync: true, updateUrl: false, openMobileModal: false });
-                if (urlCharacterId) {
-                    // Use double requestAnimationFrame to ensure DOM has painted
-                    // before cloning. This is more reliable than a fixed timeout.
-                    requestAnimationFrame(() => {
+                // IMPORTANT: viewCharacter is async - we must wait for it to complete
+                // before opening the mobile view, otherwise the sheet may be empty
+                const openMobileAfterLoad = async () => {
+                    await viewCharacter(targetId, { skipKeyboardSync: true, updateUrl: false, openMobileModal: false });
+                    if (urlCharacterId) {
+                        // Use double requestAnimationFrame to ensure DOM has painted
+                        // before cloning. This is more reliable than a fixed timeout.
                         requestAnimationFrame(() => {
-                            // Verify this is still the selected character
-                            if (AppState.selectedCharacterId === targetId) {
-                                MobileView.open(targetId);
-                            }
+                            requestAnimationFrame(() => {
+                                // Verify this is still the selected character
+                                if (AppState.selectedCharacterId === targetId) {
+                                    MobileView.open(targetId);
+                                }
+                            });
                         });
-                    });
-                }
+                    }
+                };
+                openMobileAfterLoad();
             } else {
                 // Desktop: render sheet in right panel as usual
                 viewCharacter(targetId, { skipKeyboardSync: true, updateUrl: !urlCharacterId, openMobileModal: false });
