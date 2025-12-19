@@ -1814,6 +1814,10 @@ async function editCharacter(id, options = {}) {
     originalEditLevel = level;
     setValue('editLevel', level);
 
+    // EXPERIENCE POINTS
+    const xp = parsed.experiencePoints != null ? Number(parsed.experiencePoints) : Number(character.experiencePoints || 0);
+    setValue('editExperiencePoints', xp);
+
     // ALIGNMENT (default to 'n' - True Neutral if not set)
     const alignmentValue = character.alignment || 'n';
     setValue('editAlignment', alignmentValue);
@@ -2017,6 +2021,7 @@ async function saveEditDetails() {
     };
 
     const levelValue = getNumber('editLevel');
+    const experiencePointsValue = getNumber('editExperiencePoints');
     
     // Validate level range (D&D 5e: 1-20)
     if (levelValue !== null && (levelValue < 1 || levelValue > 20)) {
@@ -2133,6 +2138,10 @@ async function saveEditDetails() {
 
     if (levelValue !== null) {
         updates.level = levelValue;
+    }
+
+    if (experiencePointsValue !== null) {
+        updates.experiencePoints = experiencePointsValue;
     }
 
     if (alignmentValue) {

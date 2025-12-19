@@ -867,9 +867,59 @@ const CharacterSheet = (window.CharacterSheet = {
             <span class="stat-label">Level:</span>
             <span class="stat-value">${parsed.level}</span>
           </div>
+          <div class="stat-line">
+            <span class="stat-label">XP:</span>
+            <span class="stat-value">${this._formatXP(parsed.experiencePoints, parsed.level)}</span>
+          </div>
         </div>
       </div>
     `;
+  },
+
+  // D&D 5e XP thresholds for each level
+  XP_THRESHOLDS: [
+    0,       // Level 1
+    300,     // Level 2
+    900,     // Level 3
+    2700,    // Level 4
+    6500,    // Level 5
+    14000,   // Level 6
+    23000,   // Level 7
+    34000,   // Level 8
+    48000,   // Level 9
+    64000,   // Level 10
+    85000,   // Level 11
+    100000,  // Level 12
+    120000,  // Level 13
+    140000,  // Level 14
+    165000,  // Level 15
+    195000,  // Level 16
+    225000,  // Level 17
+    265000,  // Level 18
+    305000,  // Level 19
+    355000,  // Level 20
+  ],
+
+  /**
+   * Format XP display with progress to next level.
+   * @param {number} xp - Current experience points
+   * @param {number} level - Current character level
+   * @returns {string} - Formatted XP string
+   */
+  _formatXP(xp, level) {
+    const currentXP = xp || 0;
+    const formattedXP = currentXP.toLocaleString();
+    
+    // At max level, just show XP
+    if (level >= 20) {
+      return `${formattedXP} (MAX)`;
+    }
+    
+    // Calculate next level threshold
+    const nextLevelXP = this.XP_THRESHOLDS[level] || 0;
+    const formattedNext = nextLevelXP.toLocaleString();
+    
+    return `${formattedXP} / ${formattedNext}`;
   },
 
   _renderCombatStats(parsed, context) {
@@ -2107,6 +2157,7 @@ const CharacterSheet = (window.CharacterSheet = {
       alignment: character.alignment || null,
       sex: character.sex || null,
       level: character.level || 1,
+      experiencePoints: character.experiencePoints || 0,
 
       // Combat stats
       hpMax,
