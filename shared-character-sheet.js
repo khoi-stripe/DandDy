@@ -456,6 +456,10 @@ const CharacterSheet = (window.CharacterSheet = {
           ? this._renderPortrait(character, parsed, context, {
               onGeneratePortrait,
               onTogglePortrait,
+              isShared,
+              hasCollaborators,
+              collaboratorCount,
+              ownerEmail,
             })
           : ''}
         
@@ -747,27 +751,23 @@ const CharacterSheet = (window.CharacterSheet = {
         ? this.escapeHtml(character.name)
         : '[ CHARACTER SHEET ]';
 
-    // Shared character badge
-    // - isShared: user is a collaborator viewing someone else's character
-    // - hasCollaborators: owner has shared this character with others
-    let sharedBadgeHtml = '';
-    if (isShared) {
-      sharedBadgeHtml = `<span class="sheet-shared-badge" title="Shared by ${this.escapeHtml(ownerEmail || 'another user')}">SHARED</span>`;
-    } else if (hasCollaborators) {
-      const tooltip = collaboratorCount === 1 ? 'Shared with 1 person' : `Shared with ${collaboratorCount} people`;
-      sharedBadgeHtml = `<span class="sheet-shared-badge" title="${tooltip}">SHARED</span>`;
-    }
-
     return `
       <div class="sheet-title-header">
-        <div class="sheet-title">${safeTitle}${sharedBadgeHtml}</div>
+        <div class="sheet-title">${safeTitle}</div>
         ${actionsBlock}
       </div>
     `;
   },
 
   _renderPortrait(character, parsed, context, callbacks) {
-    const { onGeneratePortrait, onTogglePortrait } = callbacks;
+    const { 
+      onGeneratePortrait, 
+      onTogglePortrait,
+      isShared,
+      hasCollaborators,
+      collaboratorCount,
+      ownerEmail,
+    } = callbacks;
 
     // Check if this is a demo character - show tag on portrait
     const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
@@ -822,10 +822,22 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Demo tag overlays portrait like on cards
     const demoTagHtml = isDemo ? '<span class="sheet-demo-tag">SAMPLE</span>' : '';
+    
+    // Shared tag overlays portrait (same position as demo tag if not demo)
+    let sharedTagHtml = '';
+    if (!isDemo) {  // Don't show both tags - demo takes precedence
+      if (isShared) {
+        sharedTagHtml = `<span class="sheet-shared-tag" title="Shared by ${this.escapeHtml(ownerEmail || 'another user')}">SHARED</span>`;
+      } else if (hasCollaborators) {
+        const tooltip = collaboratorCount === 1 ? 'Shared with 1 person' : `Shared with ${collaboratorCount} people`;
+        sharedTagHtml = `<span class="sheet-shared-tag" title="${tooltip}">SHARED</span>`;
+      }
+    }
 
     return `
       <div class="portrait-container${showOriginalByDefault ? ' portrait-container--original-mode' : ''}">
         ${demoTagHtml}
+        ${sharedTagHtml}
         <div class="ascii-portrait ${needsPlaceholder ? 'ascii-portrait--placeholder' : ''} ${showOriginalByDefault ? 'is-hidden' : ''}" id="${portraitId}">
           ${needsPlaceholder ? `
             <div class="portrait-placeholder-content">

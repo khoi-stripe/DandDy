@@ -964,21 +964,6 @@ body::before {
   overflow-wrap: break-word;
 }
 
-/* Shared badge in sheet header (next to character name) */
-.sheet-shared-badge {
-  display: inline-block;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--sheet-accent);
-  background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
-  padding: 2px 6px;
-  margin-left: 8px;
-  border-radius: 2px;
-  vertical-align: middle;
-  border: 1px solid var(--sheet-accent);
-}
 
 .sheet-title-buttons {
   display: flex;
