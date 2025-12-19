@@ -782,13 +782,6 @@
           features: features,
           isCurrentLevel: lvl === clampedLevel,
         });
-      } else {
-        // Show placeholder for levels with no new features
-        result.push({
-          level: lvl,
-          features: [{ name: 'No new features', description: '', placeholder: true }],
-          isCurrentLevel: lvl === clampedLevel,
-        });
       }
     }
 

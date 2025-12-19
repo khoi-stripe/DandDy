@@ -1596,11 +1596,6 @@ body::before {
   /* Newly gained features at current level */
 }
 
-.class-features-item--placeholder .class-features-name {
-  opacity: 0.4;
-  font-style: italic;
-}
-
 .class-features-name {
   color: var(--sheet-label-color);
   font-size: 14px;

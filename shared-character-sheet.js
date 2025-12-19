@@ -1218,10 +1218,9 @@ const CharacterSheet = (window.CharacterSheet = {
         const description = feature.description 
           ? `<span class="class-features-desc">${this.escapeHtml(feature.description)}</span>` 
           : '';
-        const placeholderClass = feature.placeholder ? ' class-features-item--placeholder' : '';
         
         return `
-          <li class="class-features-item${levelData.isCurrentLevel ? ' class-features-item--new' : ''}${placeholderClass}">
+          <li class="class-features-item${levelData.isCurrentLevel ? ' class-features-item--new' : ''}">
             <span class="class-features-name">${choiceIndicator}${this.escapeHtml(feature.name)}</span>
             ${description}
           </li>
