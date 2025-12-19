@@ -70,8 +70,8 @@
   --sheet-label-color: hsl(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim));
   --sheet-value-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
   --sheet-box-border-color: hsl(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim));
-  --sheet-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.08);
-  --sheet-ability-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.08);
+  --sheet-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.12);
+  --sheet-ability-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.12);
   
   /* Legacy panel-teal tokens (for backward compatibility with character-builder
      and portrait history components that reference these directly) */

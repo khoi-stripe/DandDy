@@ -9465,6 +9465,7 @@ let spellPickerTempState = {
     originalSelections: [],
     currentSelections: [],
     maxAllowed: null,
+    schoolFilter: '',
 };
 
 function openSpellPickerForSpellEditModal(level) {
@@ -9496,6 +9497,7 @@ function openSpellPickerForSpellEditModal(level) {
         originalSelections: [...currentSelections],
         currentSelections: [...currentSelections],
         maxAllowed,
+        schoolFilter: '',
     };
     
     // Determine title
@@ -9503,69 +9505,93 @@ function openSpellPickerForSpellEditModal(level) {
         `${level === 1 ? '1ST' : level === 2 ? '2ND' : level === 3 ? '3RD' : level + 'TH'} LEVEL SPELLS`;
     const titleText = `SELECT ${levelLabel}`;
     
-    // Animate out current content (collapse vertically)
+    // Show loading overlay on current content
     const currentInner = modalContent.querySelector('.modal-content-inner');
     if (currentInner) {
-        currentInner.classList.add('slide-out-left');
+        // Add loading overlay to current content
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'spell-picker-transition-loader';
+        loadingOverlay.innerHTML = `
+            <div class="panel-loading-cube-container">
+                <div class="panel-loading-cube">
+                    <i></i><i></i><i></i><i></i><i></i><i></i>
+                </div>
+            </div>
+        `;
+        currentInner.appendChild(loadingOverlay);
+        
+        // Small delay to show loader, then load spells
+        setTimeout(() => {
+            loadingOverlay.classList.add('is-visible');
+        }, 10);
     }
     
-    // After collapse animation, show loading then content
+    // Load spells in background (allow UI to show loader)
     setTimeout(() => {
-        // Show loading first
-        const loadingHtml = `
+        const spells = getSpellsForPicker(spellEditModalState.characterClass, level);
+        
+        // Build the full content HTML
+        const spellPickerHtml = `
             <div class="modal-content-inner slide-in-right">
                 <div class="modal-header modal-header-left">
                     <h2 class="modal-title">${titleText}</h2>
                     <button class="modal-close" onclick="ModalManager.requestClose('spellEditModal')">&times;</button>
                 </div>
-                <div class="modal-body spell-picker-loading">
-                    <div class="panel-loading-cube-container">
-                        <div class="panel-loading-cube">
-                            <i></i><i></i><i></i><i></i><i></i><i></i>
+                <div class="modal-body">
+                    <div class="spell-picker-info" id="spellPickerInfoText">
+                        ${getSpellPickerInfoText()}
+                    </div>
+                    <div class="spell-picker-filters">
+                        <input type="text" id="spellEditModalSearchInput" class="terminal-input" placeholder="Search spells..." oninput="filterSpellEditModalPicker()">
+                        <div class="selector-shell selector-shell--listbox" id="spellEditSchoolSelector">
+                            <button type="button" 
+                                    class="terminal-btn-small selector-trigger" 
+                                    id="spellEditSchoolTrigger"
+                                    aria-haspopup="listbox"
+                                    aria-expanded="false"
+                                    onclick="CharacterSheet.toggleSelectorMenu(this)">
+                                <span class="selector-trigger-label">All Schools</span>
+                            </button>
+                            <div class="selector-menu" id="spellEditSchoolMenu" role="listbox">
+                                <button class="selector-option is-selected" role="option" data-value="" onclick="selectSpellEditSchool('')">All Schools</button>
+                                <button class="selector-option" role="option" data-value="Abjuration" onclick="selectSpellEditSchool('Abjuration')">Abjuration</button>
+                                <button class="selector-option" role="option" data-value="Conjuration" onclick="selectSpellEditSchool('Conjuration')">Conjuration</button>
+                                <button class="selector-option" role="option" data-value="Divination" onclick="selectSpellEditSchool('Divination')">Divination</button>
+                                <button class="selector-option" role="option" data-value="Enchantment" onclick="selectSpellEditSchool('Enchantment')">Enchantment</button>
+                                <button class="selector-option" role="option" data-value="Evocation" onclick="selectSpellEditSchool('Evocation')">Evocation</button>
+                                <button class="selector-option" role="option" data-value="Illusion" onclick="selectSpellEditSchool('Illusion')">Illusion</button>
+                                <button class="selector-option" role="option" data-value="Necromancy" onclick="selectSpellEditSchool('Necromancy')">Necromancy</button>
+                                <button class="selector-option" role="option" data-value="Transmutation" onclick="selectSpellEditSchool('Transmutation')">Transmutation</button>
+                            </div>
                         </div>
                     </div>
-                    <span class="panel-loading-text">Loading spells...</span>
+                    <div class="spell-picker-list" id="spellEditModalPickerList">
+                        ${renderSpellPickerListWithState(spells, level)}
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-end">
+                    <button class="terminal-btn" onclick="cancelSpellEditModalPicker()">Cancel</button>
+                    <button id="spellPickerSaveBtn" class="terminal-btn terminal-btn-primary" onclick="saveSpellEditModalPicker()">Done</button>
                 </div>
             </div>
         `;
         
-        modalContent.innerHTML = loadingHtml;
+        // Now animate out and swap content
+        if (currentInner) {
+            currentInner.classList.add('slide-out-left');
+        }
         
-        // Load spells asynchronously
+        // After collapse, show new content
         setTimeout(() => {
-            const spells = getSpellsForPicker(spellEditModalState.characterClass, level);
-            
-            const spellPickerHtml = `
-                <div class="modal-content-inner">
-                    <div class="modal-header modal-header-left">
-                        <h2 class="modal-title">${titleText}</h2>
-                        <button class="modal-close" onclick="ModalManager.requestClose('spellEditModal')">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="spell-picker-info" id="spellPickerInfoText">
-                            ${getSpellPickerInfoText()}
-                        </div>
-                        <div class="spell-picker-filters">
-                            <input type="text" id="spellEditModalSearchInput" class="terminal-input" placeholder="Search spells..." oninput="filterSpellEditModalPicker()">
-                        </div>
-                        <div class="spell-picker-list" id="spellEditModalPickerList">
-                            ${renderSpellPickerListWithState(spells, level)}
-                        </div>
-                    </div>
-                    <div class="modal-footer modal-footer-end">
-                        <button class="terminal-btn" onclick="cancelSpellEditModalPicker()">Cancel</button>
-                        <button id="spellPickerSaveBtn" class="terminal-btn terminal-btn-primary" onclick="saveSpellEditModalPicker()">Save</button>
-                    </div>
-                </div>
-            `;
-            
             modalContent.innerHTML = spellPickerHtml;
             
-            // Focus search input
-            const searchInput = document.getElementById('spellEditModalSearchInput');
-            if (searchInput) searchInput.focus();
-        }, 100);
-    }, currentInner ? 150 : 0);
+            // Focus search input after animation completes
+            setTimeout(() => {
+                const searchInput = document.getElementById('spellEditModalSearchInput');
+                if (searchInput) searchInput.focus();
+            }, 350);
+        }, currentInner ? 150 : 0);
+    }, 50);
 }
 
 /**
@@ -9587,7 +9613,7 @@ function getSpellPickerInfoText() {
     
     if (isOver) {
         const removeCount = Math.abs(remaining);
-        return `<span class="spell-picker-warning">Remove ${removeCount} spell${removeCount !== 1 ? 's' : ''} to save.</span> <span class="${countClass}">${countText}</span>`;
+        return `<span class="spell-picker-warning">Remove ${removeCount} spell${removeCount !== 1 ? 's' : ''} to continue.</span> <span class="${countClass}">${countText}</span>`;
     } else if (remaining === 0) {
         return `Selection complete. <span class="${countClass}">${countText}</span>`;
     } else {
@@ -9647,6 +9673,7 @@ function renderSpellPickerListWithState(spells, level) {
         return `
             <div class="${classes.join(' ')}" 
                  data-spell-name="${escapedName.toLowerCase()}"
+                 data-spell-school="${spell.school || ''}"
                  onclick="toggleSpellInSpellEditModal('${escapedName.replace(/'/g, "\\'")}', '${level}', this)">
                 <div class="spell-picker-item-header">
                     <span class="spell-picker-item-name">${escapedName}</span>
@@ -9773,6 +9800,35 @@ function returnToSpellEditScreen() {
 }
 
 /**
+ * Select a spell school filter in the spell edit modal picker
+ */
+function selectSpellEditSchool(value) {
+    spellPickerTempState.schoolFilter = value;
+    
+    const trigger = document.getElementById('spellEditSchoolTrigger');
+    const menu = document.getElementById('spellEditSchoolMenu');
+    
+    if (trigger) {
+        const label = trigger.querySelector('.selector-trigger-label');
+        if (label) {
+            label.textContent = value || 'All Schools';
+        }
+    }
+    
+    // Update selected state on options
+    if (menu) {
+        menu.querySelectorAll('.selector-option').forEach(opt => {
+            opt.classList.toggle('is-selected', opt.dataset.value === value);
+        });
+    }
+    
+    // Menu is closed automatically by CharacterSheet global option handler
+    
+    // Re-filter the spell list
+    filterSpellEditModalPicker();
+}
+
+/**
  * Filter spell picker in the dedicated spell edit modal
  */
 function filterSpellEditModalPicker() {
@@ -9781,12 +9837,17 @@ function filterSpellEditModalPicker() {
     if (!searchInput || !list) return;
     
     const query = searchInput.value.toLowerCase().trim();
+    const schoolFilter = spellPickerTempState.schoolFilter;
     const items = list.querySelectorAll('.spell-picker-item');
     
     items.forEach(item => {
         const spellName = item.getAttribute('data-spell-name') || '';
-        const matches = !query || spellName.includes(query);
-        item.style.display = matches ? '' : 'none';
+        const spellSchool = item.getAttribute('data-spell-school') || '';
+        
+        const matchesSearch = !query || spellName.includes(query);
+        const matchesSchool = !schoolFilter || spellSchool === schoolFilter;
+        
+        item.style.display = (matchesSearch && matchesSchool) ? '' : 'none';
     });
 }
 
@@ -9798,6 +9859,7 @@ window.removeSpellFromSpellEditModal = removeSpellFromSpellEditModal;
 window.openSpellPickerForSpellEditModal = openSpellPickerForSpellEditModal;
 window.toggleSpellInSpellEditModal = toggleSpellInSpellEditModal;
 window.filterSpellEditModalPicker = filterSpellEditModalPicker;
+window.selectSpellEditSchool = selectSpellEditSchool;
 window.saveSpellEditModalPicker = saveSpellEditModalPicker;
 window.cancelSpellEditModalPicker = cancelSpellEditModalPicker;
 

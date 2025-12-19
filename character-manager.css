@@ -3187,6 +3187,30 @@
     gap: var(--spacing-md);
 }
 
+/* Transition loader overlay - shown while loading spell list */
+.spell-picker-transition-loader {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    z-index: 10;
+}
+
+.spell-picker-transition-loader.is-visible {
+    opacity: 1;
+}
+
+.spell-picker-transition-loader .panel-loading-cube-container {
+    transform: scale(0.7);
+}
+
 .modal-footer-buttons {
     display: flex;
     gap: var(--spacing-sm);
