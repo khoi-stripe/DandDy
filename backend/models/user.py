@@ -25,5 +25,6 @@ class User(Base):
     characters = relationship("Character", back_populates="owner")
     campaigns_owned = relationship("Campaign", back_populates="dm")
     prompt_entries = relationship("PromptEntry", back_populates="owner")
+    shared_characters = relationship("CharacterCollaborator", back_populates="user")
 
 

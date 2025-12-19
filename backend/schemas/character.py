@@ -157,6 +157,11 @@ class CharacterResponse(CharacterBase):
     created_at: datetime
     updated_at: datetime
     
+    # Sharing info (optional, populated by routes when relevant)
+    is_shared: Optional[bool] = None  # True if user is a collaborator (not owner)
+    owner_email: Optional[str] = None  # Email of owner (for shared characters)
+    permission: Optional[str] = None  # "edit" or "view" (for shared characters)
+    
     class Config:
         from_attributes = True
 

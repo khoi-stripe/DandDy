@@ -429,6 +429,28 @@ const StorageService = (window.StorageService = {
     }
   },
 
+  // Show Class Features toggle (display-only reference panel on character sheet).
+  // When enabled, shows a collapsible panel listing class features up to current level.
+  getShowClassFeatures() {
+    try {
+      const raw = localStorage.getItem('dnd_show_class_features');
+      // Default to false (off) - this is an advanced feature users opt into
+      if (raw === null || raw === undefined) return false;
+      return raw === 'true';
+    } catch (e) {
+      console.warn('StorageService.getShowClassFeatures failed', e);
+      return false;
+    }
+  },
+
+  setShowClassFeatures(enabled) {
+    try {
+      localStorage.setItem('dnd_show_class_features', enabled ? 'true' : 'false');
+    } catch (e) {
+      console.warn('StorageService.setShowClassFeatures failed', e);
+    }
+  },
+
   // ==== CHARACTER STORAGE ====
   // Delegates to shared CharacterStorage facade (character-storage.js)
   // which handles cloud/local storage, fallbacks, and timestamp normalization.

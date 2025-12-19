@@ -1,10 +1,12 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from pydantic import BaseModel
 from database.database import get_db
 from models.user import User, UserRole
 from models.character import Character
+from models.character_collaborator import CharacterCollaborator, CollaboratorPermission
 from schemas.character import CharacterCreate, CharacterUpdate, CharacterResponse
 from utils.auth import get_current_active_user, get_current_user_optional
 
@@ -36,9 +38,38 @@ def get_characters(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    # Players see only their characters
-    characters = db.query(Character).filter(Character.owner_id == current_user.id).all()
-    return characters
+    """
+    Get all characters the user has access to:
+    - Characters they own
+    - Characters shared with them (as collaborator)
+    """
+    # Get owned characters
+    owned = db.query(Character).filter(Character.owner_id == current_user.id).all()
+    
+    # Get shared characters (where user is a collaborator)
+    shared_collabs = db.query(CharacterCollaborator).filter(
+        CharacterCollaborator.user_id == current_user.id
+    ).all()
+    
+    # Build response with sharing metadata
+    result = []
+    
+    # Add owned characters
+    for char in owned:
+        char_dict = CharacterResponse.model_validate(char).model_dump()
+        char_dict['is_shared'] = False
+        result.append(char_dict)
+    
+    # Add shared characters with metadata
+    for collab in shared_collabs:
+        if collab.character:  # Character might have been deleted
+            char_dict = CharacterResponse.model_validate(collab.character).model_dump()
+            char_dict['is_shared'] = True
+            char_dict['owner_email'] = collab.character.owner.email if collab.character.owner else None
+            char_dict['permission'] = collab.permission.value
+            result.append(char_dict)
+    
+    return result
 
 
 @router.get("/all", response_model=List[CharacterResponse])
@@ -107,6 +138,33 @@ def toggle_demo_status(
     return character
 
 
+def _check_character_access(character: Character, current_user: User, db: Session, require_edit: bool = False):
+    """
+    Helper to check if user has access to a character.
+    Returns (has_access, is_owner, permission) tuple.
+    """
+    if character.owner_id == current_user.id:
+        return True, True, "owner"
+    
+    # Check if user is a collaborator
+    collab = db.query(CharacterCollaborator).filter(
+        CharacterCollaborator.character_id == character.id,
+        CharacterCollaborator.user_id == current_user.id
+    ).first()
+    
+    if collab:
+        if require_edit and collab.permission == CollaboratorPermission.VIEW:
+            return False, False, "view"
+        return True, False, collab.permission.value
+    
+    # Check DM access for campaigns
+    if current_user.role == UserRole.DM and character.campaign_id:
+        if character.campaign and character.campaign.dm_id == current_user.id:
+            return True, False, "dm"
+    
+    return False, False, None
+
+
 @router.get("/{character_id}", response_model=CharacterResponse)
 def get_character(
     character_id: int,
@@ -121,21 +179,22 @@ def get_character(
             detail="Character not found"
         )
     
-    # Check access: owner can always access, DM can access if in their campaign
-    if character.owner_id != current_user.id:
-        if current_user.role != UserRole.DM or not character.campaign_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to access this character"
-            )
-        # Verify DM owns the campaign
-        if character.campaign.dm_id != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to access this character"
-            )
+    has_access, is_owner, permission = _check_character_access(character, current_user, db)
     
-    return character
+    if not has_access:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this character"
+        )
+    
+    # Build response with sharing metadata
+    char_dict = CharacterResponse.model_validate(character).model_dump()
+    char_dict['is_shared'] = not is_owner
+    if not is_owner:
+        char_dict['owner_email'] = character.owner.email if character.owner else None
+        char_dict['permission'] = permission
+    
+    return char_dict
 
 @router.put("/{character_id}", response_model=CharacterResponse)
 def update_character(
@@ -152,8 +211,15 @@ def update_character(
             detail="Character not found"
         )
     
-    # Only owner can update their character
-    if character.owner_id != current_user.id:
+    # Check access - owner or collaborator with edit permission
+    has_access, is_owner, permission = _check_character_access(character, current_user, db, require_edit=True)
+    
+    if not has_access:
+        if permission == "view":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You have view-only access to this character"
+            )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this character"
@@ -167,7 +233,14 @@ def update_character(
     db.commit()
     db.refresh(character)
     
-    return character
+    # Build response with sharing metadata
+    char_dict = CharacterResponse.model_validate(character).model_dump()
+    char_dict['is_shared'] = not is_owner
+    if not is_owner:
+        char_dict['owner_email'] = character.owner.email if character.owner else None
+        char_dict['permission'] = permission
+    
+    return char_dict
 
 @router.delete("/{character_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_character(
@@ -183,11 +256,11 @@ def delete_character(
             detail="Character not found"
         )
     
-    # Owner can delete their own character, admin can delete any
+    # Only owner can delete (collaborators cannot), admin can delete any
     if character.owner_id != current_user.id and current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this character"
+            detail="Only the owner can delete this character"
         )
     
     db.delete(character)
@@ -211,8 +284,10 @@ def duplicate_character(
             detail="Character not found"
         )
     
-    # Only owner can duplicate their character
-    if original.owner_id != current_user.id:
+    # Owner or collaborator can duplicate (collaborator gets their own copy)
+    has_access, is_owner, permission = _check_character_access(original, current_user, db)
+    
+    if not has_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to duplicate this character"
@@ -296,16 +371,17 @@ def export_character(
             detail="Character not found"
         )
     
-    # Only owner can export their character
-    if character.owner_id != current_user.id:
+    # Owner or collaborator can export
+    has_access, _, _ = _check_character_access(character, current_user, db)
+    
+    if not has_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to export this character"
         )
     
     # Return character data as JSON
-    from schemas.character import CharacterResponse
-    return CharacterResponse.from_orm(character)
+    return CharacterResponse.model_validate(character)
 
 @router.post("/import", response_model=CharacterResponse, status_code=status.HTTP_201_CREATED)
 def import_character(
@@ -324,5 +400,141 @@ def import_character(
     db.refresh(new_character)
     
     return new_character
+
+
+# ==========================================
+# COLLABORATOR MANAGEMENT ENDPOINTS
+# ==========================================
+
+from schemas.character_collaborator import CollaboratorResponse
+
+
+@router.get("/{character_id}/collaborators", response_model=List[CollaboratorResponse])
+def get_collaborators(
+    character_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all collaborators for a character.
+    Only the owner can see the full list of collaborators.
+    """
+    character = db.query(Character).filter(Character.id == character_id).first()
+    
+    if not character:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Character not found"
+        )
+    
+    # Only owner can see collaborators
+    if character.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the owner can view collaborators"
+        )
+    
+    collaborators = db.query(CharacterCollaborator).filter(
+        CharacterCollaborator.character_id == character_id
+    ).all()
+    
+    result = []
+    for collab in collaborators:
+        result.append(CollaboratorResponse(
+            id=collab.id,
+            user_id=collab.user_id,
+            user_email=collab.user.email if collab.user else "Unknown",
+            user_username=collab.user.username if collab.user else None,
+            permission=collab.permission.value,
+            created_at=collab.created_at
+        ))
+    
+    return result
+
+
+@router.delete("/{character_id}/collaborators/{collaborator_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_collaborator(
+    character_id: int,
+    collaborator_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Remove a collaborator from a character.
+    Only the owner can remove collaborators.
+    """
+    character = db.query(Character).filter(Character.id == character_id).first()
+    
+    if not character:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Character not found"
+        )
+    
+    # Only owner can remove collaborators
+    if character.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the owner can remove collaborators"
+        )
+    
+    collab = db.query(CharacterCollaborator).filter(
+        CharacterCollaborator.id == collaborator_id,
+        CharacterCollaborator.character_id == character_id
+    ).first()
+    
+    if not collab:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Collaborator not found"
+        )
+    
+    db.delete(collab)
+    db.commit()
+    
+    return None
+
+
+@router.post("/{character_id}/leave", status_code=status.HTTP_204_NO_CONTENT)
+def leave_shared_character(
+    character_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Leave a shared character (remove yourself as collaborator).
+    Only works if you're a collaborator (not the owner).
+    """
+    character = db.query(Character).filter(Character.id == character_id).first()
+    
+    if not character:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Character not found"
+        )
+    
+    # Owner cannot "leave" their own character
+    if character.owner_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You are the owner of this character. Use delete instead."
+        )
+    
+    # Find and remove the collaborator record
+    collab = db.query(CharacterCollaborator).filter(
+        CharacterCollaborator.character_id == character_id,
+        CharacterCollaborator.user_id == current_user.id
+    ).first()
+    
+    if not collab:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="You are not a collaborator on this character"
+        )
+    
+    db.delete(collab)
+    db.commit()
+    
+    return None
 
 

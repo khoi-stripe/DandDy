@@ -5,6 +5,7 @@ from database.database import get_db
 from models.user import User
 from models.character import Character
 from models.character_share import CharacterShare, ShareStatus
+from models.character_collaborator import CharacterCollaborator, CollaboratorPermission
 from schemas.character_share import (
     CharacterShareCreate,
     CharacterShareResponse,
@@ -145,8 +146,9 @@ def accept_share(
     """
     Accept a pending character share.
     
-    Creates a copy of the shared character owned by the current user.
-    The original character remains with the sender.
+    Adds the current user as a collaborator on the original character.
+    The character remains owned by the original owner but the collaborator
+    can view and edit it (synced, not a copy).
     """
     share = db.query(CharacterShare).filter(CharacterShare.id == share_id).first()
     
@@ -179,82 +181,39 @@ def accept_share(
             detail="The shared character no longer exists"
         )
     
-    # Create a copy of the character for the recipient
-    duplicate_data = {
-        'owner_id': current_user.id,
-        'name': original.name,
-        'race': original.race,
-        'character_class': original.character_class,
-        'level': original.level,
-        'background': original.background,
-        'alignment': original.alignment,
-        'sex': original.sex,
-        'experience_points': original.experience_points,
-        'strength': original.strength,
-        'dexterity': original.dexterity,
-        'constitution': original.constitution,
-        'intelligence': original.intelligence,
-        'wisdom': original.wisdom,
-        'charisma': original.charisma,
-        'hit_points_max': original.hit_points_max,
-        'hit_points_current': original.hit_points_max,  # Full HP for copy
-        'hit_points_temp': 0,
-        'armor_class': original.armor_class,
-        'initiative': original.initiative,
-        'speed': original.speed,
-        'death_save_successes': 0,
-        'death_save_failures': 0,
-        'saving_throw_proficiencies': original.saving_throw_proficiencies,
-        'skill_proficiencies': original.skill_proficiencies,
-        'skill_expertises': original.skill_expertises,
-        'tool_proficiencies': original.tool_proficiencies,
-        'languages': original.languages,
-        'racial_traits': original.racial_traits,
-        'class_features': original.class_features,
-        'feats': original.feats,
-        'background_feature': original.background_feature,
-        'personality_traits': original.personality_traits,
-        'ideals': original.ideals,
-        'bonds': original.bonds,
-        'flaws': original.flaws,
-        'appearance': original.appearance,
-        'backstory': original.backstory,
-        'ascii_portrait': original.ascii_portrait,
-        'original_portrait_url': original.original_portrait_url,
-        'custom_portrait_ascii': original.custom_portrait_ascii,
-        'custom_portrait_count': original.custom_portrait_count,
-        'portrait_metadata': original.portrait_metadata,
-        'inventory': original.inventory,
-        'spellcasting_ability': original.spellcasting_ability,
-        'spell_save_dc': original.spell_save_dc,
-        'spell_attack_bonus': original.spell_attack_bonus,
-        'spell_slots': original.spell_slots,
-        'spell_slots_used': {},  # Reset used slots
-        'cantrips': original.cantrips,
-        'spells_known': original.spells_known,
-        'spells_prepared': original.spells_prepared,
-        'conditions': [],  # Reset conditions
-        'attacks': original.attacks,
-        'copper_pieces': original.copper_pieces,
-        'silver_pieces': original.silver_pieces,
-        'electrum_pieces': original.electrum_pieces,
-        'gold_pieces': original.gold_pieces,
-        'platinum_pieces': original.platinum_pieces,
-        'campaign_id': None  # Don't copy campaign assignment
-    }
+    # Check if user is already a collaborator
+    existing_collab = db.query(CharacterCollaborator).filter(
+        CharacterCollaborator.character_id == original.id,
+        CharacterCollaborator.user_id == current_user.id
+    ).first()
     
-    new_character = Character(**duplicate_data)
-    db.add(new_character)
+    if existing_collab:
+        # Already a collaborator, just mark share as accepted
+        share.status = ShareStatus.ACCEPTED
+        db.commit()
+        return {
+            "message": "You already have access to this character",
+            "character_id": original.id,
+            "is_synced": True
+        }
+    
+    # Add user as collaborator with edit permission
+    collaborator = CharacterCollaborator(
+        character_id=original.id,
+        user_id=current_user.id,
+        permission=CollaboratorPermission.EDIT
+    )
+    db.add(collaborator)
     
     # Mark share as accepted
     share.status = ShareStatus.ACCEPTED
     
     db.commit()
-    db.refresh(new_character)
     
     return {
-        "message": "Character added to your collection",
-        "character_id": new_character.id
+        "message": "Character shared with you - changes will sync automatically",
+        "character_id": original.id,
+        "is_synced": True
     }
 
 

@@ -419,6 +419,9 @@ const CharacterSheet = (window.CharacterSheet = {
       onExport = null,
       onDelete = null,
       onShare = null,
+      onLeave = null,  // For shared characters: option to leave/unsubscribe
+      isShared = false,  // Whether this character is shared with current user
+      ownerEmail = null,  // Email of character owner (for shared characters)
       hideOverflowMenu = false,
     } = options;
 
@@ -438,6 +441,9 @@ const CharacterSheet = (window.CharacterSheet = {
         onGeneratePortrait,
         onTogglePortrait,
         onShare,
+        onLeave,
+        isShared,
+        ownerEmail,
         hideOverflowMenu,
       })}
       
@@ -502,6 +508,9 @@ const CharacterSheet = (window.CharacterSheet = {
       onGeneratePortrait,
       onTogglePortrait,
       onShare,
+      onLeave,
+      isShared,
+      ownerEmail,
       hideOverflowMenu,
     } = callbacks;
     // Function names differ by context
@@ -610,8 +619,8 @@ const CharacterSheet = (window.CharacterSheet = {
       });
     }
 
-    // Manager-only: Share character (only for saved characters with valid IDs)
-    if (context === 'manager' && onShare && hasValidManagerId) {
+    // Manager-only: Share character (only for saved characters with valid IDs, not for shared chars)
+    if (context === 'manager' && onShare && hasValidManagerId && !isShared) {
       headerActions.push({
         icon: '↗',
         label: 'Share character',
@@ -636,6 +645,15 @@ const CharacterSheet = (window.CharacterSheet = {
         label: 'Edit character',
         onclick: editFn,
         id: 'sheet-edit-overflow',
+      });
+    }
+
+    // Manager-only: Leave shared character (for collaborators)
+    if (context === 'manager' && onLeave && isShared && hasValidManagerId) {
+      headerActions.push({
+        icon: '✕',
+        label: 'Leave shared character',
+        onclick: `leaveSharedCharacter('${character.id}')`,
       });
     }
 
@@ -721,9 +739,14 @@ const CharacterSheet = (window.CharacterSheet = {
         ? this.escapeHtml(character.name)
         : '[ CHARACTER SHEET ]';
 
+    // Shared character badge
+    const sharedBadgeHtml = isShared
+      ? `<span class="sheet-shared-badge" title="Shared by ${this.escapeHtml(ownerEmail || 'another user')}">SHARED</span>`
+      : '';
+
     return `
       <div class="sheet-title-header">
-        <div class="sheet-title">${safeTitle}</div>
+        <div class="sheet-title">${safeTitle}${sharedBadgeHtml}</div>
         ${actionsBlock}
       </div>
     `;

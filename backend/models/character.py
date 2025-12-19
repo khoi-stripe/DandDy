@@ -136,5 +136,6 @@ class Character(Base):
     # Relationships
     owner = relationship("User", back_populates="characters")
     campaign = relationship("Campaign", back_populates="characters")
+    collaborators = relationship("CharacterCollaborator", back_populates="character", cascade="all, delete-orphan")
 
 

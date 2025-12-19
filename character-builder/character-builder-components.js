@@ -680,6 +680,27 @@ const Components = (window.Components = {
                     </div>
                   </section>
                 </div>
+
+                <div class="settings-group">
+                  <div class="settings-group-label">[ Character Sheet ]</div>
+                  <section class="settings-section">
+                    <div class="settings-row settings-row--stacked">
+                      <div class="settings-field">
+                        <label class="settings-toggle">
+                          <input
+                            type="checkbox"
+                            class="settings-toggle-input"
+                            id="show-class-features-toggle"
+                            ${StorageService.getShowClassFeatures() ? 'checked' : ''}
+                          >
+                          <span class="settings-toggle-track"></span>
+                          <span class="settings-toggle-label">Show Class Features</span>
+                        </label>
+                        <div class="settings-hint">Display a reference panel of class features gained at each level</div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
               </div>
             </div>
           </div>
@@ -1088,6 +1109,19 @@ const SettingsModal = (window.SettingsModal = {
       StorageService.setImageQuality(imageModelForQuality, imageQualitySelect.value);
     }
 
+    // Save "Show Class Features" toggle
+    // Track if this changed to trigger UI refresh
+    let classFeaturesChanged = false;
+    const classFeaturesToggle = document.getElementById('show-class-features-toggle');
+    if (classFeaturesToggle && window.StorageService && StorageService.setShowClassFeatures) {
+      const oldValue = StorageService.getShowClassFeatures ? StorageService.getShowClassFeatures() : false;
+      const newValue = classFeaturesToggle.checked;
+      if (oldValue !== newValue) {
+        classFeaturesChanged = true;
+      }
+      StorageService.setShowClassFeatures(newValue);
+    }
+
     // Use a non-intrusive toast for settings changes instead of a narrator line
     if (window.App && typeof App.showToast === 'function') {
       App.showToast('Settings saved');
@@ -1097,8 +1131,8 @@ const SettingsModal = (window.SettingsModal = {
 
     this.close();
 
-    // If portrait view mode changed, refresh the UI to update images
-    if (portraitModeChanged) {
+    // If portrait view mode or class features setting changed, refresh the UI
+    if (portraitModeChanged || classFeaturesChanged) {
       // Character Manager context: re-render grid and current sheet
       if (typeof UI !== 'undefined' && UI && typeof UI.renderCharacterGrid === 'function') {
         UI.renderCharacterGrid();

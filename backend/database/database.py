@@ -329,6 +329,50 @@ def ensure_combat_tracking_columns():
     pass
 
 
+def ensure_character_collaborators_table():
+    """
+    Lightweight migration helper for the character_collaborators table.
+    
+    This table enables synced character sharing - when a user accepts a share,
+    they become a collaborator on the original character instead of getting a copy.
+    """
+    inspector = inspect(engine)
+    if inspector.has_table("character_collaborators"):
+        return
+
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS character_collaborators (
+                    id INTEGER PRIMARY KEY,
+                    character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    permission VARCHAR(10) NOT NULL DEFAULT 'edit',
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE (character_id, user_id)
+                )
+                """
+            )
+        )
+        # Create indexes for efficient lookups
+        try:
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_collaborators_user_id ON character_collaborators (user_id)"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_collaborators_character_id ON character_collaborators (character_id)"
+                )
+            )
+        except Exception:
+            pass
+
+        conn.commit()
+
+
 def get_db():
     db = SessionLocal()
     try:

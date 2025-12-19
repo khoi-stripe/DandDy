@@ -12,6 +12,7 @@ from database.database import (
     ensure_ai_creation_portrait_grants_table,
     ensure_is_demo_column,
     ensure_combat_tracking_columns,
+    ensure_character_collaborators_table,
 )
 from routes import auth, characters, campaigns, ai, users, prompt_entries, shares
 import os
@@ -30,6 +31,7 @@ ensure_ai_character_creation_usage_table()
 ensure_ai_creation_portrait_grants_table()
 ensure_is_demo_column()
 ensure_combat_tracking_columns()
+ensure_character_collaborators_table()
 
 app = FastAPI(
     title="DandDy API",

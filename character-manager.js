@@ -1273,10 +1273,15 @@ const UI = {
         // Check if this is a demo character
         const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
         const demoTagHtml = isDemo ? '<span class="card-demo-tag">SAMPLE</span>' : '';
+        
+        // Check if this is a shared character (synced, not owned by current user)
+        const isShared = character.is_shared || character.isShared;
+        const sharedTagHtml = isShared ? '<span class="card-shared-tag" title="Shared with you">SHARED</span>' : '';
 
         return `
-            <div class="character-card" data-id="${character.id}" onclick="viewCharacter('${character.id}')">
+            <div class="character-card${isShared ? ' is-shared' : ''}" data-id="${character.id}" onclick="viewCharacter('${character.id}')">
                 ${demoTagHtml}
+                ${sharedTagHtml}
                 ${thumbnailHtml}
                 <div class="card-details">
                     <div class="card-name">${name}</div>
@@ -1319,18 +1324,26 @@ const UI = {
         const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
         // Check if user is in demo mode (not authenticated) - sharing requires login
         const isDemoMode = window.DemoCharacters && window.DemoCharacters.isDemoMode();
+        // Check if this is a shared character (not owned by current user)
+        const isShared = character.is_shared || character.isShared;
+        // Check permission level for shared characters
+        const canEdit = !isDemo && (!isShared || character.permission === 'edit');
         
         // Use the shared CharacterSheet component
         // Demo characters cannot be edited, renamed, deleted, or have portraits generated
+        // Shared characters with edit permission can edit but not delete/rename
         sheetContainer.innerHTML = CharacterSheet.render(character, {
             context: 'manager',
             showPortrait: true,
-            onRename: !isDemo,
-            onEdit: !isDemo,
-            onDelete: !isDemo,
-            onGeneratePortrait: !isDemo,
+            onRename: !isDemo && !isShared,  // Only owner can rename
+            onEdit: canEdit,
+            onDelete: !isDemo && !isShared,  // Only owner can delete
+            onGeneratePortrait: canEdit,
             onPrint: true,
-            onShare: !isDemo && !isDemoMode,  // Sharing requires login; demo chars can't be shared
+            onShare: !isDemo && !isDemoMode && !isShared,  // Only owner can share
+            onLeave: isShared,  // Show "Leave" option for shared characters
+            isShared: isShared,
+            ownerEmail: character.owner_email || character.ownerEmail,
         });
         
         // Populate ASCII portrait after rendering
@@ -3946,6 +3959,37 @@ async function deleteCharacter(id) {
         UI.render();
         showNotification('Character deleted');
     });
+}
+
+/**
+ * Leave a shared character (remove yourself as a collaborator).
+ * This removes the character from your collection but doesn't delete it for the owner.
+ * @param {string|number} id - The character ID
+ */
+async function leaveSharedCharacter(id) {
+    const character = await CharacterStorage.getById(id);
+    if (!character) return;
+
+    // On mobile, close the sheet view first
+    if (typeof MobileView !== 'undefined' && MobileView.isMobile() && MobileView.isOpen()) {
+        MobileView.close();
+    }
+
+    const ownerEmail = character.owner_email || character.ownerEmail || 'the owner';
+    showConfirmDialog(
+        `Leave shared character "${character.name}"?\n\nThis character was shared with you by ${ownerEmail}. You will no longer have access to it, but the owner will keep it.`,
+        async () => {
+            try {
+                await CharacterCloudStorage.leaveSharedCharacter(id);
+                await AppState.loadCharacters();
+                UI.render();
+                showNotification('Left shared character');
+            } catch (error) {
+                console.error('Failed to leave shared character:', error);
+                showNotification(error.message || 'Failed to leave character', 'error');
+            }
+        }
+    );
 }
 
 let isImporting = false;  // Flag to prevent concurrent imports

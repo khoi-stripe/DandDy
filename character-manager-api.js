@@ -434,6 +434,28 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       throw error;
     }
   },
+
+  /**
+   * Leave a shared character (remove yourself as a collaborator).
+   * @param {number|string} characterId - The character ID to leave
+   * @returns {Promise<void>}
+   */
+  async leaveSharedCharacter(characterId) {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Leaving shared character', characterId);
+      }
+      await this._apiRequest(`/characters/${characterId}/leave`, {
+        method: 'POST',
+      });
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Left shared character');
+      }
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to leave shared character:', error);
+      throw error;
+    }
+  },
 });
 
 // ========================================
