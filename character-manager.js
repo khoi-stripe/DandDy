@@ -1901,6 +1901,22 @@ async function editCharacter(id, options = {}) {
     // SPELLS - Initialize spell editing section
     initializeSpellEditSection(character, parsed);
 
+    // Handle field permissions for shared characters
+    // Only the owner can edit the character name (owner_only_fields on backend)
+    const isSharedWithMe = character.is_shared || character.isShared;
+    const nameInput = document.getElementById('editName');
+    if (nameInput) {
+        if (isSharedWithMe) {
+            nameInput.disabled = true;
+            nameInput.title = 'Only the owner can rename this character';
+            nameInput.classList.add('is-owner-only');
+        } else {
+            nameInput.disabled = false;
+            nameInput.title = '';
+            nameInput.classList.remove('is-owner-only');
+        }
+    }
+
     // Show modal (reuse modal variable from earlier in function)
     if (modal) {
         modal.classList.add('show');
@@ -2161,9 +2177,11 @@ async function saveEditDetails() {
     };
     
     // Only update name if non-empty (prevent accidental wiping)
-    if (nameText) {
+    // Also skip for shared characters - only owner can rename (backend enforces this too)
+    const isSharedWithMe = character.is_shared || character.isShared;
+    if (nameText && !isSharedWithMe) {
         updates.name = nameText;
-    } else {
+    } else if (!nameText) {
         console.warn('⚠️ EDIT: Name field was empty - preserving existing name');
     }
 

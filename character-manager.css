@@ -593,6 +593,20 @@
     min-height: 180px;
 }
 
+/* Disabled inputs for owner-only fields (e.g., name for shared characters) */
+#editDetailsModal .terminal-input:disabled,
+#editDetailsModal .terminal-textarea:disabled,
+#editDetailsModal .terminal-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Owner-only field indicator - subtle lock icon effect */
+#editDetailsModal .terminal-input.is-owner-only {
+    border-style: dashed;
+}
+
 /* Remove border for sections with grid layouts */
 .stat-grid + .sheet-header,
 .ability-grid + .sheet-header,
