@@ -370,11 +370,11 @@
     border-radius: 2px;
 }
 
-/* Shared character tag - top right corner */
+/* Shared character tag - top left corner (matches demo tag position) */
 .card-shared-tag {
     position: absolute;
     top: 6px;
-    right: 6px;
+    left: 6px;
     z-index: 5;
     font-size: 10px;
     font-family: var(--font-mono);
