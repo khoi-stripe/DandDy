@@ -1202,7 +1202,31 @@
   opacity: 1;
 }
 
-/* Close hint at bottom */
+/* Character name below image */
+.portrait-lightbox-name {
+  position: absolute;
+  bottom: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--terminal-bg, #1a1a1a);
+  pointer-events: none;
+  max-width: 80vw;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Fade in after image appears */
+  opacity: 0;
+  transition: opacity 0.3s ease 0.15s;
+}
+
+.portrait-lightbox.is-open .portrait-lightbox-name {
+  opacity: 1;
+}
+
+/* Close hint at bottom - styled like SHARED/SAMPLE tags */
 .portrait-lightbox-hint {
   position: absolute;
   bottom: 24px;
@@ -1210,9 +1234,14 @@
   transform: translateX(-50%);
   font-family: var(--font-mono);
   font-size: 11px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.05em;
+  /* Container styling like sheet-demo-tag/sheet-shared-tag */
+  padding: 3px 8px;
+  color: var(--sheet-accent, hsl(181, 100%, 41%));
+  background-color: var(--terminal-bg, #1a1a1a);
+  border-radius: 3px;
   pointer-events: none;
   /* Fade in after image appears */
   opacity: 0;

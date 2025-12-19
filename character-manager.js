@@ -991,6 +991,7 @@ const PortraitLightbox = {
         lightbox.innerHTML = `
             <div class="portrait-lightbox-backdrop"></div>
             <img class="portrait-lightbox-image" src="" alt="Portrait">
+            <div class="portrait-lightbox-name"></div>
             <div class="portrait-lightbox-hint">Tap to close</div>
         `;
         document.body.appendChild(lightbox);
@@ -1023,15 +1024,22 @@ const PortraitLightbox = {
         return this._lightbox && this._lightbox.classList.contains('is-open');
     },
     
-    /** Open the lightbox with the given image URL */
-    open(imageUrl) {
+    /** Open the lightbox with the given image URL and optional character name */
+    open(imageUrl, characterName = '') {
         if (!imageUrl) return;
         
         const lightbox = this._ensureLightbox();
         const img = lightbox.querySelector('.portrait-lightbox-image');
+        const nameEl = lightbox.querySelector('.portrait-lightbox-name');
         
         // Set the image source
         img.src = imageUrl;
+        
+        // Set the character name
+        if (nameEl) {
+            nameEl.textContent = characterName;
+            nameEl.style.display = characterName ? '' : 'none';
+        }
         
         // Prevent body scroll while lightbox is open
         document.body.style.overflow = 'hidden';
@@ -1075,7 +1083,13 @@ const PortraitLightbox = {
             if (imageUrl) {
                 e.preventDefault();
                 e.stopPropagation();
-                this.open(imageUrl);
+                
+                // Find character name from the sheet
+                const sheet = portrait.closest('.character-sheet');
+                const nameEl = sheet?.querySelector('.sheet-title');
+                const characterName = nameEl?.textContent?.trim() || '';
+                
+                this.open(imageUrl, characterName);
             }
         }, true); // Use capture to get click before other handlers
     }
