@@ -7409,7 +7409,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Mobile: tap on shared/spell tag to reveal tooltip, tap again or outside to close
+    // Mobile: tap on spell tag to reveal tooltip, tap again or outside to close
+    // (shared tag excluded to avoid collision with portrait lightbox)
     // Use event delegation for dynamically rendered content
     document.addEventListener('click', (e) => {
         // Guard against non-element targets (text nodes, etc.)
@@ -7419,10 +7420,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isTouch = window.matchMedia('(hover: none), (pointer: coarse)').matches;
         if (!isTouch) return;
         
-        // Find any tooltip-enabled tag that was tapped (shared tag or spell tag)
-        const tappedTag = e.target.closest('.sheet-shared-tag.has-tooltip, .sheet-spell-tag.has-tooltip');
+        // Find spell tag that was tapped (shared tag excluded on mobile)
+        const tappedTag = e.target.closest('.sheet-spell-tag.has-tooltip');
         const clickedTooltip = e.target.closest('.custom-tooltip');
-        const activeTag = document.querySelector('.sheet-shared-tag.tooltip-active, .sheet-spell-tag.tooltip-active');
+        const activeTag = document.querySelector('.sheet-spell-tag.tooltip-active');
         
         if (tappedTag) {
             // Tapped on a tag with tooltip - toggle its tooltip
@@ -7443,7 +7444,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (clickedTooltip) {
             // Tapped directly on a tooltip - close its parent tag's tooltip
             e.stopPropagation();
-            const parentTag = clickedTooltip.closest('.sheet-shared-tag.has-tooltip, .sheet-spell-tag.has-tooltip');
+            const parentTag = clickedTooltip.closest('.sheet-spell-tag.has-tooltip');
             if (parentTag) {
                 parentTag.classList.remove('tooltip-active');
             }

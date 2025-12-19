@@ -1043,37 +1043,34 @@ const CharacterSheet = (window.CharacterSheet = {
     const hasCombatStats = parsed.hpMax > 0;
 
     return `
-      <div class="sheet-section sheet-section--collapsible" id="combat-stats-section">
-        <button class="sheet-header sheet-header--collapsible ${context === 'builder' ? 'sheet-header--no-divider' : ''}" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
+      <div class="sheet-section" id="combat-stats-section">
+        <div class="sheet-header ${context === 'builder' ? 'sheet-header--no-divider' : ''}">
           <div class="sheet-header-title">[ COMBAT STATS ]</div>
-          <span class="sheet-header-toggle">^</span>
-        </button>
-        <div class="sheet-collapsible-content">
-          <div class="stat-grid">
-            <div class="stat-box">
-              <div class="stat-box-label">HIT POINTS</div>
-              <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hpCurrent} / ${parsed.hpMax}`}</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-box-label">ARMOR CLASS</div>
-              <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : parsed.armorClass}</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-box-label">INITIATIVE</div>
-              <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : this.formatModifier(parsed.initiative)}</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-box-label">SPEED</div>
-              <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.speed} ft`}</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-box-label">PROF BONUS</div>
-              <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `+${parsed.proficiencyBonus}`}</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-box-label">HIT DICE</div>
-              <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hitDiceCurrent}/${parsed.hitDiceMax} d${parsed.hitDie}`}</div>
-            </div>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="stat-box-label">HIT POINTS</div>
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hpCurrent} / ${parsed.hpMax}`}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">ARMOR CLASS</div>
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : parsed.armorClass}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">INITIATIVE</div>
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : this.formatModifier(parsed.initiative)}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">SPEED</div>
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.speed} ft`}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">PROF BONUS</div>
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `+${parsed.proficiencyBonus}`}</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">HIT DICE</div>
+            <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hitDiceCurrent}/${parsed.hitDiceMax} d${parsed.hitDie}`}</div>
           </div>
         </div>
       </div>
@@ -1979,26 +1976,23 @@ const CharacterSheet = (window.CharacterSheet = {
     const abilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
     return `
-      <div class="sheet-section sheet-section--collapsible" id="saving-throws-section">
-        <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
+      <div class="sheet-section" id="saving-throws-section">
+        <div class="sheet-header">
           <div class="sheet-header-title">[ SAVING THROWS ]</div>
-          <span class="sheet-header-toggle">^</span>
-        </button>
-        <div class="sheet-collapsible-content">
-          <div class="ability-grid">
-            ${abilities
-              .map((ability) => {
-                const value = parsed.savingThrowModifiers[ability];
-                const isProficient = parsed.savingThrows?.includes(ability);
-                return `
-                  <div class="ability-box">
-                    <div class="ability-name">${ability.toUpperCase()}${isProficient ? '★' : ''}</div>
-                    <div class="ability-score">${this.formatModifier(value)}</div>
-                  </div>
-                `;
-              })
-              .join('')}
-          </div>
+        </div>
+        <div class="ability-grid">
+          ${abilities
+            .map((ability) => {
+              const value = parsed.savingThrowModifiers[ability];
+              const isProficient = parsed.savingThrows?.includes(ability);
+              return `
+                <div class="ability-box">
+                  <div class="ability-name">${ability.toUpperCase()}${isProficient ? '★' : ''}</div>
+                  <div class="ability-score">${this.formatModifier(value)}</div>
+                </div>
+              `;
+            })
+            .join('')}
         </div>
       </div>
     `;
