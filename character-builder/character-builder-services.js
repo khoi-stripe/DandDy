@@ -434,12 +434,12 @@ const StorageService = (window.StorageService = {
   getShowClassFeatures() {
     try {
       const raw = localStorage.getItem('dnd_show_class_features');
-      // Default to false (off) - this is an advanced feature users opt into
-      if (raw === null || raw === undefined) return false;
+      // Default to true (on) - show class features by default
+      if (raw === null || raw === undefined) return true;
       return raw === 'true';
     } catch (e) {
       console.warn('StorageService.getShowClassFeatures failed', e);
-      return false;
+      return true;
     }
   },
 

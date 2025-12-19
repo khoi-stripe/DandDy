@@ -464,6 +464,8 @@ const CharacterSheet = (window.CharacterSheet = {
       
       ${parsed.hasClassResources ? this._renderClassResources(parsed) : ''}
       
+      ${this._shouldShowClassFeatures(parsed) ? this._renderClassFeatures(parsed) : ''}
+      
       ${parsed.hasSavingThrows ? this._renderSavingThrows(parsed) : ''}
       
       ${parsed.hasSkills ? this._renderSkills(parsed) : ''}
@@ -1060,6 +1062,144 @@ const CharacterSheet = (window.CharacterSheet = {
         </ul>
       </div>
     `;
+  },
+
+  /**
+   * Check if class features should be shown based on user settings and data availability.
+   * @param {object} parsed - Parsed character data
+   * @returns {boolean} True if features should be rendered
+   */
+  _shouldShowClassFeatures(parsed) {
+    // Check if the setting is enabled
+    if (typeof StorageService !== 'undefined' && StorageService.getShowClassFeatures) {
+      if (!StorageService.getShowClassFeatures()) {
+        return false;
+      }
+    } else {
+      // If StorageService not available, don't show (default off)
+      return false;
+    }
+
+    // Check if we have the necessary data
+    if (!parsed.className || !parsed.level) {
+      return false;
+    }
+
+    // Check if ClassFeaturesData is available
+    if (typeof ClassFeaturesData === 'undefined' || !ClassFeaturesData.hasClassFeatures) {
+      return false;
+    }
+
+    // Check if this class has feature data
+    return ClassFeaturesData.hasClassFeatures(parsed.className);
+  },
+
+  /**
+   * Render the class features reference panel.
+   * Shows features grouped by level up to the character's current level.
+   * @param {object} parsed - Parsed character data
+   * @returns {string} HTML for the class features section
+   */
+  _renderClassFeatures(parsed) {
+    if (!parsed.className || !parsed.level) {
+      return '';
+    }
+
+    // Get features data
+    const featuresData = ClassFeaturesData.getFeaturesUpToLevel(parsed.className, parsed.level);
+    
+    if (!featuresData || featuresData.length === 0) {
+      return '';
+    }
+
+    // Format class name for display
+    const classDisplayName = this._formatClassName(parsed.className);
+
+    // Build feature items grouped by level (reversed so current level is at top)
+    const featureGroups = [...featuresData].reverse().map(levelData => {
+      const levelLabel = levelData.isCurrentLevel 
+        ? `<span class="class-features-level class-features-level--current">Level ${levelData.level}</span>`
+        : `<span class="class-features-level">Level ${levelData.level}</span>`;
+
+      const featureItems = levelData.features.map(feature => {
+        const choiceIndicator = feature.choice 
+          ? '<span class="class-features-choice" title="Requires a choice">◆</span>' 
+          : '';
+        const description = feature.description 
+          ? `<span class="class-features-desc">${this.escapeHtml(feature.description)}</span>` 
+          : '';
+        
+        return `
+          <li class="class-features-item${levelData.isCurrentLevel ? ' class-features-item--new' : ''}">
+            <span class="class-features-name">${choiceIndicator}${this.escapeHtml(feature.name)}</span>
+            ${description}
+          </li>
+        `;
+      }).join('');
+
+      return `
+        <div class="class-features-group${levelData.isCurrentLevel ? ' class-features-group--current' : ''}">
+          ${levelLabel}
+          <ul class="class-features-list">
+            ${featureItems}
+          </ul>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="sheet-section sheet-section--collapsible" id="class-features-section">
+        <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
+          <div class="sheet-header-title">[ CLASS FEATURES: ${this.escapeHtml(classDisplayName.toUpperCase())} ]</div>
+          <span class="sheet-header-toggle">▼</span>
+        </button>
+        <div class="sheet-collapsible-content">
+          <div class="class-features-legend">
+            <span class="class-features-choice">◆</span> = requires choice &nbsp;•&nbsp; <span class="class-features-level--current-indicator">highlighted</span> = gained at current level
+          </div>
+          <div class="class-features-groups">
+            ${featureGroups}
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  /**
+   * Format a class name for display (e.g., "fighter" -> "Fighter")
+   * @param {string} className - Raw class name
+   * @returns {string} Formatted class name
+   */
+  _formatClassName(className) {
+    if (!className) return '';
+    const str = String(className).trim().replace(/-/g, ' ');
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  },
+
+  /**
+   * Toggle a collapsible section
+   * @param {HTMLElement} headerEl - The header button element
+   */
+  toggleCollapsible(headerEl) {
+    if (!headerEl) return;
+    const section = headerEl.closest('.sheet-section--collapsible');
+    if (!section) return;
+    
+    const content = section.querySelector('.sheet-collapsible-content');
+    const toggle = headerEl.querySelector('.sheet-header-toggle');
+    const isExpanded = headerEl.getAttribute('aria-expanded') === 'true';
+    
+    if (isExpanded) {
+      // Collapse
+      headerEl.setAttribute('aria-expanded', 'false');
+      if (content) content.classList.add('is-collapsed');
+      if (toggle) toggle.textContent = '▶';
+    } else {
+      // Expand
+      headerEl.setAttribute('aria-expanded', 'true');
+      if (content) content.classList.remove('is-collapsed');
+      if (toggle) toggle.textContent = '▼';
+    }
   },
 
   _renderAbilities(parsed, context) {

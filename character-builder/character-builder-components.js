@@ -686,17 +686,16 @@ const Components = (window.Components = {
                   <section class="settings-section">
                     <div class="settings-row settings-row--stacked">
                       <div class="settings-field">
-                        <label class="settings-toggle">
+                        <label class="settings-checkbox-label">
                           <input
                             type="checkbox"
-                            class="settings-toggle-input"
+                            class="settings-checkbox"
                             id="show-class-features-toggle"
                             ${StorageService.getShowClassFeatures() ? 'checked' : ''}
                           >
-                          <span class="settings-toggle-track"></span>
-                          <span class="settings-toggle-label">Show Class Features</span>
+                          <span class="settings-checkbox-text">Show Class Features</span>
                         </label>
-                        <div class="settings-hint">Display a reference panel of class features gained at each level</div>
+                        <div class="settings-hint settings-hint--small">Display a reference panel of class features gained at each level</div>
                       </div>
                     </div>
                   </section>

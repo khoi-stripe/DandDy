@@ -10,6 +10,7 @@ globs:
   - shared-portrait-data.js
   - default-portraits.js
   - character-name-data.js
+  - class-features-data.js
   - shared-character-sheet.js
   - character-manager-api.js
   - character-storage.js

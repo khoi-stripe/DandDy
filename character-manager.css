@@ -939,6 +939,9 @@
     display: block;
     margin-bottom: var(--spacing-sm);
     color: var(--context-accent);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.5px;
 }
 
 .settings-radio-label {
@@ -1001,6 +1004,64 @@
    escape overflow clipping automatically. Modal can scroll normally. */
 .builder-settings-modal .selector-menu {
     z-index: 999;
+}
+
+/* Settings checkbox (similar to spell picker checkbox) */
+.settings-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    user-select: none;
+}
+
+.settings-checkbox {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid var(--modal-accent);
+    border-radius: 2px;
+    background-color: transparent;
+    position: relative;
+}
+
+.settings-checkbox:checked {
+    border-color: var(--modal-accent);
+    background-color: var(--modal-accent);
+}
+
+.settings-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--terminal-bg);
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.settings-checkbox:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--context-hover);
+}
+
+.settings-checkbox-text {
+    color: var(--modal-accent);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.settings-hint--small {
+    font-size: 14px;
+    color: var(--modal-accent);
+    margin-top: 4px;
+    margin-left: 22px; /* align with checkbox label (14px checkbox + 8px gap) */
 }
 
 #userInfoDisplay {

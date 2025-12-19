@@ -1382,6 +1382,149 @@ body::before {
   font-size: 14px;
 }
 
+/* ==== CLASS FEATURES SECTION ==== */
+/* Collapsible section for displaying class features reference */
+
+.sheet-section--collapsible {
+  /* No special styles needed, just a marker class */
+}
+
+.sheet-header--collapsible {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--sheet-border-color);
+  padding: var(--spacing-xs) 0;
+  margin-bottom: var(--spacing-sm);
+  font-family: inherit;
+  text-align: left;
+}
+
+.sheet-header--collapsible:hover {
+  background: color-mix(in srgb, var(--sheet-accent) 5%, transparent);
+}
+
+.sheet-header--collapsible:focus-visible {
+  outline: 1px solid var(--sheet-accent);
+  outline-offset: 2px;
+}
+
+.sheet-header-toggle {
+  color: var(--sheet-accent);
+  font-size: 0.75em;
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+}
+
+.sheet-collapsible-content {
+  max-height: 1000px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+  opacity: 1;
+}
+
+.sheet-collapsible-content.is-collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* Class Features specific styles */
+.class-features-legend {
+  background: var(--sheet-box-bg);
+  padding: 4px 8px;
+  margin-bottom: var(--spacing-sm);
+  color: var(--sheet-value-color);
+  font-size: 11px;
+  text-align: left;
+  border-radius: 2px;
+}
+
+.class-features-level--current-indicator {
+  background: color-mix(in srgb, var(--sheet-value-color) 20%, transparent);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.class-features-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  color: var(--sheet-value-color);
+}
+
+.class-features-group {
+  padding: 16px;
+  border-left: 2px solid var(--sheet-value-color);
+  text-align: left;
+  color: var(--sheet-value-color);
+}
+
+.class-features-group--current {
+  border-left-color: var(--sheet-value-color);
+  background: var(--sheet-box-bg);
+  padding: 16px;
+  border-radius: 0 4px 4px 0;
+  text-align: left;
+  color: var(--sheet-value-color);
+}
+
+.class-features-level {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--sheet-value-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.class-features-level--current {
+  color: var(--sheet-value-color);
+}
+
+.class-features-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  color: var(--sheet-value-color);
+}
+
+.class-features-item {
+  padding: 2px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--sheet-value-color);
+}
+
+.class-features-item--new {
+  /* Newly gained features at current level */
+}
+
+.class-features-name {
+  color: var(--sheet-value-color);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.class-features-choice {
+  color: var(--sheet-value-color);
+  margin-right: 4px;
+  font-size: 10px;
+}
+
+.class-features-desc {
+  color: var(--sheet-value-color);
+  font-size: 11px;
+  opacity: 0.85;
+}
+
 /* Character sheet inputs/selects use teal borders and focus states */
 .character-sheet .terminal-input,
 .character-sheet .terminal-select,
