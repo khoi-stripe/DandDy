@@ -2363,6 +2363,19 @@
     color: var(--terminal-bg);
     background-color: var(--sheet-accent);
     border-radius: 3px;
+    cursor: help;
+}
+
+/* Shared tag tooltip - show on hover (CSS-only) */
+.sheet-shared-tag.has-tooltip:hover .custom-tooltip {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Shared tag tooltip - multiline content */
+.sheet-shared-tag .custom-tooltip {
+    white-space: nowrap;
+    text-align: left;
 }
 
 /* ========================================

@@ -824,13 +824,47 @@ const CharacterSheet = (window.CharacterSheet = {
     const demoTagHtml = isDemo ? '<span class="sheet-demo-tag">SAMPLE</span>' : '';
     
     // Shared tag overlays portrait (same position as demo tag if not demo)
+    // Uses custom tooltip with multiline content
     let sharedTagHtml = '';
     if (!isDemo) {  // Don't show both tags - demo takes precedence
+      // Format the last updated time
+      const updatedAt = character.updatedAt || character.updated_at;
+      let lastUpdatedText = '';
+      if (updatedAt) {
+        try {
+          const date = new Date(updatedAt);
+          lastUpdatedText = date.toLocaleString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+          });
+        } catch (e) {
+          lastUpdatedText = '';
+        }
+      }
+      
       if (isShared) {
-        sharedTagHtml = `<span class="sheet-shared-tag" title="Shared by ${this.escapeHtml(ownerEmail || 'another user')}">SHARED</span>`;
+        // Collaborator's view
+        const sharedByLine = `Shared by ${this.escapeHtml(ownerEmail || 'unknown')}`;
+        const updatedLine = lastUpdatedText ? `Last updated: ${lastUpdatedText}` : '';
+        const tooltipContent = updatedLine ? `${sharedByLine}<br>${updatedLine}` : sharedByLine;
+        sharedTagHtml = `
+          <span class="sheet-shared-tag has-tooltip">
+            SHARED
+            <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
+          </span>`;
       } else if (hasCollaborators) {
-        const tooltip = collaboratorCount === 1 ? 'Shared with 1 person' : `Shared with ${collaboratorCount} people`;
-        sharedTagHtml = `<span class="sheet-shared-tag" title="${tooltip}">SHARED</span>`;
+        // Owner's view
+        const sharedWithLine = collaboratorCount === 1 ? 'Shared with 1 user' : `Shared with ${collaboratorCount} users`;
+        const updatedLine = lastUpdatedText ? `Last updated: ${lastUpdatedText}` : '';
+        const tooltipContent = updatedLine ? `${sharedWithLine}<br>${updatedLine}` : sharedWithLine;
+        sharedTagHtml = `
+          <span class="sheet-shared-tag has-tooltip">
+            SHARED
+            <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
+          </span>`;
       }
     }
 
