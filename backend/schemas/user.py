@@ -60,3 +60,8 @@ class PasswordResetConfirm(BaseModel):
     new_password: str
 
 
+class PinnedCharactersUpdate(BaseModel):
+    """Payload for updating user's pinned character IDs."""
+    pinned_character_ids: list[str]
+
+

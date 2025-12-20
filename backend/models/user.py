@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum
+from sqlalchemy import Column, Integer, String, Enum, Text
 from sqlalchemy.orm import relationship
 import enum
 from database.database import Base
@@ -20,6 +20,9 @@ class User(Base):
     username = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.PLAYER, nullable=False)
+    # Pinned character IDs stored as JSON array string, e.g. '["1", "5", "3"]'
+    # Order in array = pin order (first pinned appears first)
+    pinned_character_ids = Column(Text, nullable=True, default="[]")
 
     # Relationships
     characters = relationship("Character", back_populates="owner", foreign_keys="[Character.owner_id]")

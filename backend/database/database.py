@@ -391,6 +391,24 @@ def ensure_last_updated_by_column():
         conn.commit()
 
 
+def ensure_pinned_character_ids_column():
+    """
+    Lightweight migration helper for user preferences.
+    Adds pinned_character_ids column to users table (stores JSON array of IDs).
+    """
+    inspector = inspect(engine)
+    if not inspector.has_table("users"):
+        return
+
+    existing_cols = {col["name"] for col in inspector.get_columns("users")}
+
+    with engine.connect() as conn:
+        if "pinned_character_ids" not in existing_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN pinned_character_ids TEXT DEFAULT '[]'"))
+
+        conn.commit()
+
+
 def get_db():
     db = SessionLocal()
     try:

@@ -14,7 +14,9 @@ from schemas.user import (
     Token,
     PasswordResetRequest,
     PasswordResetConfirm,
+    PinnedCharactersUpdate,
 )
+import json
 from utils.auth import (
     get_password_hash,
     verify_password,
@@ -213,5 +215,41 @@ def reset_password(data: PasswordResetConfirm, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(get_current_active_user)):
     return current_user
+
+
+@router.get("/pinned")
+def get_pinned_characters(
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get the current user's pinned character IDs.
+    Returns an array of character ID strings in pin order.
+    """
+    try:
+        pinned = json.loads(current_user.pinned_character_ids or "[]")
+        return {"pinned_character_ids": pinned}
+    except (json.JSONDecodeError, TypeError):
+        return {"pinned_character_ids": []}
+
+
+@router.put("/pinned")
+def update_pinned_characters(
+    data: PinnedCharactersUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Update the current user's pinned character IDs.
+    Accepts an array of character ID strings in desired pin order.
+    """
+    # Validate: ensure all IDs are strings
+    pinned_ids = [str(id) for id in data.pinned_character_ids]
+    
+    # Store as JSON string
+    current_user.pinned_character_ids = json.dumps(pinned_ids)
+    db.add(current_user)
+    db.commit()
+    
+    return {"pinned_character_ids": pinned_ids}
 
 

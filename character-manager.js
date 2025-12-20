@@ -410,26 +410,110 @@ function toSentenceCase(text) {
 // ========================================
 const PINNED_STORAGE_KEY = 'danddy_pinned_characters';
 
+// In-memory cache of pinned IDs (synced from cloud or localStorage)
+let _pinnedCharacterIdsCache = [];
+let _pinnedCacheLoaded = false;
+
 /**
- * Get array of pinned character IDs (in pinned order).
+ * Get array of pinned character IDs (in pinned order) - synchronous.
+ * Returns cached value. Call loadPinnedCharacterIds() first to populate cache.
  * @returns {string[]}
  */
 function getPinnedCharacterIds() {
-    try {
-        const raw = localStorage.getItem(PINNED_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
-    } catch {
-        return [];
-    }
+    return _pinnedCharacterIdsCache;
 }
 
 /**
- * Save pinned character IDs to localStorage.
+ * Load pinned character IDs from cloud (if authenticated) or localStorage.
+ * Populates the cache for synchronous access.
+ * @returns {Promise<string[]>}
+ */
+async function loadPinnedCharacterIds() {
+    // If authenticated, fetch from cloud API
+    if (window.AuthService && AuthService.isAuthenticated()) {
+        try {
+            const token = AuthService.getToken();
+            const { API_BASE_URL } = window.DanddyConfig || {};
+            const response = await fetch(`${API_BASE_URL}/auth/pinned`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                _pinnedCharacterIdsCache = data.pinned_character_ids || [];
+                _pinnedCacheLoaded = true;
+                if (DEBUG_MANAGER) {
+                    console.log('📌 Loaded pinned characters from cloud:', _pinnedCharacterIdsCache);
+                }
+                return _pinnedCharacterIdsCache;
+            } else if (response.status === 401) {
+                // Session expired, fall through to localStorage
+                console.warn('📌 Session expired, using localStorage for pinned characters');
+            }
+        } catch (error) {
+            console.warn('📌 Failed to load pinned from cloud, falling back to localStorage:', error);
+        }
+    }
+    
+    // Fallback to localStorage
+    try {
+        const raw = localStorage.getItem(PINNED_STORAGE_KEY);
+        _pinnedCharacterIdsCache = raw ? JSON.parse(raw) : [];
+    } catch {
+        _pinnedCharacterIdsCache = [];
+    }
+    _pinnedCacheLoaded = true;
+    
+    if (DEBUG_MANAGER) {
+        console.log('📌 Loaded pinned characters from localStorage:', _pinnedCharacterIdsCache);
+    }
+    return _pinnedCharacterIdsCache;
+}
+
+/**
+ * Save pinned character IDs to cloud (if authenticated) or localStorage.
  * @param {string[]} ids
  */
-function savePinnedCharacterIds(ids) {
+async function savePinnedCharacterIds(ids) {
+    const pinnedIds = ids || [];
+    _pinnedCharacterIdsCache = pinnedIds;
+    
+    // If authenticated, save to cloud API
+    if (window.AuthService && AuthService.isAuthenticated()) {
+        try {
+            const token = AuthService.getToken();
+            const { API_BASE_URL } = window.DanddyConfig || {};
+            const response = await fetch(`${API_BASE_URL}/auth/pinned`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ pinned_character_ids: pinnedIds }),
+            });
+            
+            if (response.ok) {
+                if (DEBUG_MANAGER) {
+                    console.log('📌 Saved pinned characters to cloud:', pinnedIds);
+                }
+                return;
+            } else if (response.status === 401) {
+                console.warn('📌 Session expired, saving pinned to localStorage instead');
+            }
+        } catch (error) {
+            console.warn('📌 Failed to save pinned to cloud, saving to localStorage:', error);
+        }
+    }
+    
+    // Fallback to localStorage
     try {
-        localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(ids || []));
+        localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(pinnedIds));
+        if (DEBUG_MANAGER) {
+            console.log('📌 Saved pinned characters to localStorage:', pinnedIds);
+        }
     } catch (e) {
         console.warn('Failed to save pinned characters:', e);
     }
@@ -450,11 +534,11 @@ function isCharacterPinned(characterId) {
  * If pinning, adds to the end of the pinned list (appears last among pinned).
  * If unpinning, removes from the list.
  * @param {string} characterId
- * @returns {boolean} New pinned state
+ * @returns {Promise<boolean>} New pinned state
  */
-function togglePinCharacter(characterId) {
+async function togglePinCharacter(characterId) {
     const idStr = String(characterId);
-    const pinned = getPinnedCharacterIds();
+    const pinned = [...getPinnedCharacterIds()];
     const index = pinned.indexOf(idStr);
     
     let newState;
@@ -474,6 +558,7 @@ function togglePinCharacter(characterId) {
         }
     }
     
+    // Save (async but we don't wait for UI update)
     savePinnedCharacterIds(pinned);
     
     // Re-apply filters and re-render
@@ -491,6 +576,7 @@ function togglePinCharacter(characterId) {
 // Expose globally for onclick handlers
 window.togglePinCharacter = togglePinCharacter;
 window.isCharacterPinned = isCharacterPinned;
+window.loadPinnedCharacterIds = loadPinnedCharacterIds;
 
 // ========================================
 // APP STATE
@@ -507,6 +593,8 @@ const AppState = {
     loading: false,
 
     async init() {
+        // Load pinned characters first (from cloud or localStorage)
+        await loadPinnedCharacterIds();
         await this.loadCharacters();
     },
 
@@ -6429,7 +6517,8 @@ async function handleRegister() {
             else if (shouldShowDemoMigration()) {
                 showDemoMigrationModal();
             } else {
-                // Reload characters from cloud
+                // Reload pinned characters and characters from cloud
+                await loadPinnedCharacterIds();
                 await AppState.loadCharacters();
                 UI.render();
             }
@@ -6690,6 +6779,9 @@ async function handleLogout() {
     window.AuthService.logout();
     updateAuthUI();
     showNotification('✓ Logged out');
+    
+    // Reload pinned characters (now from localStorage since logged out)
+    await loadPinnedCharacterIds();
     
     // Reload with local/demo characters
     await AppState.loadCharacters();
