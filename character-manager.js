@@ -866,6 +866,221 @@ const ExpandedView = (window.ExpandedView = {
 });
 
 // ========================================
+// CAMPAIGN UI
+// ========================================
+// Handles campaign modals and campaign panel interactions
+
+const CampaignUI = (window.CampaignUI = {
+    // Currently selected character's campaign data (cached)
+    _currentCampaign: null,
+
+    // ========================================
+    // CREATE CAMPAIGN MODAL
+    // ========================================
+    
+    openCreateModal() {
+        const modal = document.getElementById('createCampaignModal');
+        if (!modal) return;
+        
+        // Clear form
+        document.getElementById('createCampaignName').value = '';
+        document.getElementById('createCampaignDesc').value = '';
+        
+        modal.classList.add('show');
+        
+        // Focus name input
+        setTimeout(() => {
+            document.getElementById('createCampaignName')?.focus();
+        }, 100);
+    },
+
+    closeCreateModal() {
+        const modal = document.getElementById('createCampaignModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+    },
+
+    async submitCreateCampaign() {
+        const nameInput = document.getElementById('createCampaignName');
+        const descInput = document.getElementById('createCampaignDesc');
+        
+        const name = nameInput?.value?.trim();
+        const description = descInput?.value?.trim() || null;
+        
+        if (!name) {
+            nameInput?.focus();
+            return;
+        }
+        
+        try {
+            const campaign = await CampaignAPI.createCampaign({ name, description });
+            
+            // Close create modal
+            this.closeCreateModal();
+            
+            // Show success modal with invite code
+            this.showCampaignCreatedModal(campaign.invite_code);
+            
+            // Refresh campaign panel
+            ExpandedView._loadCampaignPanel();
+            
+        } catch (error) {
+            console.error('Failed to create campaign:', error);
+            showAlertDialog(error.message || 'Failed to create campaign. Please try again.');
+        }
+    },
+
+    // ========================================
+    // JOIN CAMPAIGN MODAL
+    // ========================================
+    
+    openJoinModal() {
+        const modal = document.getElementById('joinCampaignModal');
+        if (!modal) return;
+        
+        // Clear form
+        document.getElementById('joinCampaignCode').value = '';
+        const errorEl = document.getElementById('joinCampaignError');
+        if (errorEl) {
+            errorEl.textContent = '';
+            errorEl.classList.add('is-hidden');
+        }
+        
+        modal.classList.add('show');
+        
+        // Focus code input
+        setTimeout(() => {
+            document.getElementById('joinCampaignCode')?.focus();
+        }, 100);
+    },
+
+    closeJoinModal() {
+        const modal = document.getElementById('joinCampaignModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+    },
+
+    async submitJoinCampaign() {
+        const codeInput = document.getElementById('joinCampaignCode');
+        const errorEl = document.getElementById('joinCampaignError');
+        
+        const inviteCode = codeInput?.value?.trim().toUpperCase();
+        
+        if (!inviteCode) {
+            codeInput?.focus();
+            return;
+        }
+        
+        // Hide previous error
+        if (errorEl) {
+            errorEl.classList.add('is-hidden');
+        }
+        
+        try {
+            // Get the currently selected character ID to assign to the campaign
+            const characterId = AppState.selectedCharacterId;
+            
+            const result = await CampaignAPI.joinCampaign(inviteCode, characterId);
+            
+            // Close modal
+            this.closeJoinModal();
+            
+            // Show success message
+            showAlertDialog(`You've joined "${result.campaign.name}"!`);
+            
+            // Refresh campaign panel
+            ExpandedView._loadCampaignPanel();
+            
+        } catch (error) {
+            console.error('Failed to join campaign:', error);
+            
+            // Show error in modal
+            if (errorEl) {
+                errorEl.textContent = error.message || 'Invalid invite code. Please check and try again.';
+                errorEl.classList.remove('is-hidden');
+            }
+        }
+    },
+
+    // ========================================
+    // CAMPAIGN CREATED SUCCESS MODAL
+    // ========================================
+    
+    showCampaignCreatedModal(inviteCode) {
+        const modal = document.getElementById('campaignCreatedModal');
+        const codeEl = document.getElementById('campaignInviteCode');
+        
+        if (!modal) return;
+        
+        if (codeEl) {
+            codeEl.textContent = inviteCode;
+        }
+        
+        modal.classList.add('show');
+    },
+
+    closeCampaignCreatedModal() {
+        const modal = document.getElementById('campaignCreatedModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+    },
+
+    copyInviteCode() {
+        const codeEl = document.getElementById('campaignInviteCode');
+        const code = codeEl?.textContent;
+        
+        if (code && navigator.clipboard) {
+            navigator.clipboard.writeText(code).then(() => {
+                // Brief visual feedback
+                const btn = event.target.closest('button');
+                if (btn) {
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<span class="copy-icon">✓</span> Copied!';
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                    }, 1500);
+                }
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+    },
+
+    // ========================================
+    // CAMPAIGN DATA LOADING
+    // ========================================
+    
+    /**
+     * Get campaign for a character (if any)
+     * @param {number} characterId
+     * @returns {Promise<Object|null>} Campaign data or null
+     */
+    async getCharacterCampaign(characterId) {
+        try {
+            // Get all campaigns user is a member of
+            const campaigns = await CampaignAPI.getCampaigns();
+            
+            // Find campaign where this character is assigned
+            for (const campaign of campaigns) {
+                const members = await CampaignAPI.getCampaignMembers(campaign.id);
+                const myMembership = members.find(m => m.character_id === characterId);
+                if (myMembership) {
+                    return { campaign, membership: myMembership, members };
+                }
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('Failed to get character campaign:', error);
+            return null;
+        }
+    }
+});
+
+// ========================================
 // MOBILE VIEW HANDLING
 // ========================================
 const MOBILE_BREAKPOINT = 768;
@@ -5214,6 +5429,9 @@ function closeAllEditorModals() {
         'genericConfirmModal',
         'genericAlertModal',
         'sessionExpiredModal',
+        'createCampaignModal',
+        'joinCampaignModal',
+        'campaignCreatedModal',
     ];
     
     modalIds.forEach(id => {

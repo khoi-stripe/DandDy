@@ -46,66 +46,49 @@
     margin-left: auto;
 }
 
-/* Center panel (sheet) uses teal scrollbars to match character sheet theme */
-/* Note: Scrollbar vars now set in .center-panel below */
-
-/* ===== PANEL SLIDER SYSTEM ===== */
-/* Three-panel slider: [Grid | Sheet | Campaign] */
-/* Only two panels visible at a time, one always clipped off-screen */
-/* Collapsed: Grid + Sheet visible, Campaign off-screen right */
-/* Expanded: Sheet + Campaign visible, Grid off-screen left */
-
-/* Ensure split-layout clips the overflowing slider */
-.split-layout {
-    overflow: hidden;
-}
-
-.panel-slider {
-    display: flex;
-    width: 150%; /* 3 panels x 50% of terminal each */
-    height: 100%;
-    transition: transform 0.3s ease;
-}
-
-/* Each panel is 50% of the terminal (split-layout) width */
-.panel-slider > .left-panel,
-.panel-slider > .center-panel,
-.panel-slider > .right-panel {
-    flex: 0 0 calc(100% / 3); /* 33.33% of slider = 50% of terminal */
-    width: calc(100% / 3);
-    min-height: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-/* Center panel (character sheet) styling */
-.center-panel {
+/* Right panel uses teal scrollbars to match character sheet theme */
+.right-panel {
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: var(--spacing-xl);
     padding-bottom: 0;
-    border-top: 1px solid var(--sheet-accent-dim);
-    border-left: 1px solid var(--sheet-accent-dim);
-    border-right: 1px solid var(--sheet-accent-dim);
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
-/* Remove border from character sheet (border is on panel instead) */
-.center-panel .character-sheet {
+/* ===== EXPANDED CHARACTER SHEET VIEW ===== */
+/* Container that holds sheet + campaign panel side by side */
+.expanded-view-container {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Character sheet column - fills right-panel in collapsed state */
+.expanded-sheet-column {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    border-top: 1px solid var(--sheet-accent-dim);
+    border-left: 1px solid var(--sheet-accent-dim);
+    border-right: 1px solid var(--sheet-accent-dim);
+}
+
+/* Remove border from character sheet (border is on column instead) */
+.expanded-sheet-column .character-sheet {
     border: none;
 }
 
-/* Campaign panel styling */
+/* Campaign panel column - hidden in collapsed state */
 .campaign-panel-column {
-    overflow-y: auto;
-    overflow-x: hidden;
+    flex: 0;
+    width: 0;
+    overflow: hidden;
     border-left: 1px solid var(--sheet-border-color);
+    min-height: 0;
     background: var(--terminal-bg);
-    padding: var(--spacing-xl);
 }
 
 /* Campaign panel content */
@@ -130,9 +113,26 @@
 }
 
 /* ===== EXPANDED VIEW STATE ===== */
-/* Slide left by one panel (33.33% of slider = 50% of terminal) */
-.split-layout.is-expanded .panel-slider {
-    transform: translateX(calc(-100% / 3));
+/* Hide left panel when expanded */
+.split-layout.is-expanded .left-panel {
+    display: none;
+}
+
+/* Right panel takes full width */
+.split-layout.is-expanded .right-panel {
+    flex: 1;
+}
+
+/* Sheet keeps 50% width when expanded */
+.split-layout.is-expanded .expanded-sheet-column {
+    flex: 0 0 50%;
+}
+
+/* Campaign panel takes remaining 50% */
+.split-layout.is-expanded .campaign-panel-column {
+    flex: 0 0 50%;
+    width: 50%;
+    overflow-y: auto;
 }
 
 /* Campaign panel content styles */
@@ -1004,6 +1004,45 @@
 
 .modal-footer-end {
     justify-content: flex-end;
+}
+
+/* ===== CAMPAIGN MODALS ===== */
+/* Narrow modal variant for simple forms */
+.modal-content--narrow {
+    max-width: 420px;
+}
+
+/* Code input styling (for invite codes) */
+.terminal-input--code {
+    font-family: var(--font-mono);
+    font-size: 1.2em;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+/* Invite code display */
+.invite-code-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
+    background: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.1);
+    border: 1px solid var(--modal-accent-dim);
+    border-radius: 4px;
+}
+
+.invite-code-text {
+    font-family: var(--font-mono);
+    font-size: 1.8em;
+    font-weight: bold;
+    letter-spacing: 0.2em;
+    color: var(--modal-accent);
+}
+
+.campaign-created-body {
+    text-align: center;
 }
 
 /* ===== AUTH UI / HEADER THEMING ===== */
