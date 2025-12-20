@@ -766,8 +766,8 @@ const ExpandedView = (window.ExpandedView = {
         // Load campaign panel content
         this._loadCampaignPanel();
         
-        // Store preference in session
-        sessionStorage.setItem('expandedView', 'true');
+        // Update URL to track expanded state
+        this._updateUrl(true);
         
         if (DEBUG_MANAGER) {
             console.log('📐 Expanded view: ON');
@@ -784,8 +784,8 @@ const ExpandedView = (window.ExpandedView = {
         // Update button text
         this._updateButtonText(false);
         
-        // Clear session preference
-        sessionStorage.removeItem('expandedView');
+        // Update URL to remove expanded state
+        this._updateUrl(false);
         
         if (DEBUG_MANAGER) {
             console.log('📐 Expanded view: OFF');
@@ -945,9 +945,22 @@ const ExpandedView = (window.ExpandedView = {
         return text.substring(0, maxLength).trim() + '...';
     },
 
-    /** Restore expanded state from session storage */
+    /** Update URL to reflect expanded state */
+    _updateUrl(expanded) {
+        const url = new URL(window.location.href);
+        if (expanded) {
+            url.searchParams.set('view', 'expanded');
+        } else {
+            url.searchParams.delete('view');
+        }
+        // Use replaceState to avoid cluttering browser history
+        window.history.replaceState({}, '', url.toString());
+    },
+
+    /** Restore expanded state from URL parameter */
     restore() {
-        if (sessionStorage.getItem('expandedView') === 'true') {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('view') === 'expanded') {
             this.expand();
         }
     }
