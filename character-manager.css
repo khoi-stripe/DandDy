@@ -53,6 +53,11 @@
 /* Three-panel slider: [Grid | Sheet | Campaign] */
 /* Collapsed shows Grid+Sheet, Expanded shows Sheet+Campaign */
 
+/* Ensure split-layout clips the slider */
+.split-layout {
+    overflow: hidden !important;
+}
+
 .panel-slider {
     display: flex;
     width: 150%; /* 3 panels x 50% each */
@@ -61,11 +66,13 @@
 }
 
 /* All three panels are equal width (50% of viewport = 33.33% of slider) */
+/* Use !important to override terminal-theme.css flex:1 on .left-panel */
 .panel-slider > .left-panel,
 .panel-slider > .center-panel,
 .panel-slider > .right-panel {
-    flex: 0 0 33.3333%;
-    width: 33.3333%;
+    flex: 0 0 33.3333% !important;
+    width: 33.3333% !important;
+    max-width: 33.3333% !important;
     min-height: 0;
 }
 
