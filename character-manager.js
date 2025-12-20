@@ -8320,6 +8320,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize app state after demo characters are loaded
         await AppState.init();
         
+        // Restore expanded view state from URL if present
+        ExpandedView.restore();
+        
         // Check for pending character shares if authenticated
         // (delay slightly to not block the initial render)
         if (isAuthenticated) {
