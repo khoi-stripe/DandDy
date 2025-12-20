@@ -46,52 +46,57 @@
     margin-left: auto;
 }
 
-/* Right panel uses teal scrollbars to match character sheet theme */
-.right-panel {
+/* Center panel (sheet) uses teal scrollbars to match character sheet theme */
+/* Note: Scrollbar vars now set in .center-panel below */
+
+/* ===== PANEL SLIDER SYSTEM ===== */
+/* Three-panel slider: [Grid | Sheet | Campaign] */
+/* Collapsed shows Grid+Sheet, Expanded shows Sheet+Campaign */
+
+.panel-slider {
+    display: flex;
+    width: 150%; /* 3 panels x 50% each */
+    height: 100%;
+    transition: transform 0.3s ease;
+}
+
+/* All three panels are equal width (50% of viewport = 33.33% of slider) */
+.panel-slider > .left-panel,
+.panel-slider > .center-panel,
+.panel-slider > .right-panel {
+    flex: 0 0 33.3333%;
+    width: 33.3333%;
+    min-height: 0;
+}
+
+/* Center panel (character sheet) styling */
+.center-panel {
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: var(--spacing-xl);
     padding-bottom: 0;
+    border-top: 1px solid var(--sheet-accent-dim);
+    border-left: 1px solid var(--sheet-accent-dim);
+    border-right: 1px solid var(--sheet-accent-dim);
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
-/* ===== EXPANDED CHARACTER SHEET VIEW ===== */
-/* Container that holds sheet + campaign panel side by side */
-.expanded-view-container {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-}
-
-/* Character sheet column - fills right-panel in collapsed state */
-.expanded-sheet-column {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    min-height: 0;
-    border-top: 1px solid var(--sheet-accent-dim);
-    border-left: 1px solid var(--sheet-accent-dim);
-    border-right: 1px solid var(--sheet-accent-dim);
-}
-
-/* Remove border from character sheet (border is on column instead) */
-.expanded-sheet-column .character-sheet {
+/* Remove border from character sheet (border is on panel instead) */
+.center-panel .character-sheet {
     border: none;
 }
 
-/* Campaign panel column - hidden in collapsed state */
+/* Campaign panel styling */
 .campaign-panel-column {
-    flex: 0;
-    width: 0;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     border-left: 1px solid var(--sheet-border-color);
-    min-height: 0;
     background: var(--terminal-bg);
-    /* Slide animation */
-    transform: translateX(100%);
-    transition: transform 0.25s ease-out;
+    padding: var(--spacing-xl);
 }
 
 /* Campaign panel content */
@@ -116,27 +121,9 @@
 }
 
 /* ===== EXPANDED VIEW STATE ===== */
-/* Hide left panel when expanded */
-.split-layout.is-expanded .left-panel {
-    display: none;
-}
-
-/* Right panel takes full width */
-.split-layout.is-expanded .right-panel {
-    flex: 1;
-}
-
-/* Sheet keeps 50% width when expanded */
-.split-layout.is-expanded .expanded-sheet-column {
-    flex: 0 0 50%;
-}
-
-/* Campaign panel slides in from right and takes remaining 50% */
-.split-layout.is-expanded .campaign-panel-column {
-    flex: 0 0 50%;
-    width: 50%;
-    overflow-y: auto;
-    transform: translateX(0);
+/* Slide the panel-slider left by one panel width (33.33% of slider = 50vw) */
+.split-layout.is-expanded .panel-slider {
+    transform: translateX(-33.3333%);
 }
 
 /* Campaign panel content styles */

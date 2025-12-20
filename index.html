@@ -144,6 +144,8 @@
 
     <!-- Split Layout -->
     <div class="split-layout">
+        <!-- Panel Slider: slides left/right to show different panel combinations -->
+        <div class="panel-slider" id="panelSlider">
         <!-- Left Panel: Character List -->
         <div class="left-panel" id="character-list-panel">
             <!-- Mobile Back Bar (shown when viewing character sheet on mobile) -->
@@ -224,32 +226,26 @@
             </div>
         </div>
 
-        <!-- Right Panel: Character Sheet (hidden on mobile) -->
-        <div class="right-panel" id="character-sheet-panel">
+        <!-- Center Panel: Character Sheet -->
+        <div class="center-panel" id="character-sheet-panel">
             <div class="sheet-placeholder"></div>
-            
-            <!-- Expanded View Container (wraps sheet + campaign panel) -->
-            <div class="expanded-view-container">
-                <!-- Character Sheet Column -->
-                <div class="expanded-sheet-column">
-                    <div id="characterSheet" class="character-sheet is-hidden">
-                        <!-- Character sheet will be rendered here -->
-                    </div>
-                </div>
-                
-                <!-- Campaign Panel Column (visible in expanded view) -->
-                <div class="campaign-panel-column" id="campaignPanelColumn">
-                    <div class="campaign-panel" id="campaignPanel">
-                        <!-- Campaign panel content will be rendered here -->
-                        <div class="campaign-panel-placeholder">
-                            <div class="campaign-panel-placeholder-text">
-                                Campaign info will appear here when you expand the character sheet.
-                            </div>
-                        </div>
+            <div id="characterSheet" class="character-sheet is-hidden">
+                <!-- Character sheet will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Right Panel: Campaign Panel (revealed when expanded) -->
+        <div class="right-panel campaign-panel-column" id="campaignPanelColumn">
+            <div class="campaign-panel" id="campaignPanel">
+                <!-- Campaign panel content will be rendered here -->
+                <div class="campaign-panel-placeholder">
+                    <div class="campaign-panel-placeholder-text">
+                        Campaign info will appear here when you expand the character sheet.
                     </div>
                 </div>
             </div>
         </div>
+        </div><!-- end panel-slider -->
 
         <!-- Centered Loading Row spanning both panels -->
         <div class="panel-loading-row">
