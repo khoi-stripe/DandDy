@@ -1242,6 +1242,64 @@
     text-align: center;
 }
 
+/* ===== CHARACTER UPDATE MODAL ===== */
+.terminal-input--short {
+    width: 80px;
+}
+
+.terminal-select--narrow {
+    width: 50px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.hp-input-group,
+.gold-input-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.hp-divider {
+    color: var(--terminal-dim);
+}
+
+.hp-max {
+    color: var(--terminal-dim);
+    min-width: 30px;
+}
+
+.condition-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm) var(--spacing-lg);
+}
+
+.condition-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    cursor: pointer;
+    color: var(--terminal-text);
+    font-size: var(--font-size-small);
+}
+
+.condition-checkbox input[type="checkbox"] {
+    accent-color: var(--sheet-accent);
+}
+
+/* Settings row inline variant for side-by-side label + input */
+.settings-row--inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+}
+
+.settings-row--inline .settings-label {
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+
 /* ===== AUTH UI / HEADER THEMING ===== */
 /* Make the manager header content use the teal sheet theme:
    - Title: bright teal

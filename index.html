@@ -425,6 +425,97 @@
         </div>
     </div>
 
+    <!-- Journal Entry Modal (Add/Edit) -->
+    <div id="journalEntryModal" class="modal">
+        <div class="modal-content modal-content--narrow">
+            <div class="modal-header">
+                <h2 class="modal-title" id="journalEntryModalTitle">Add Journal Entry</h2>
+                <button class="modal-close" onclick="CampaignUI.closeJournalEntryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-row settings-row--stacked mb-md">
+                    <label class="settings-label" for="journalEntryTitle">Title</label>
+                    <input type="text" id="journalEntryTitle" class="terminal-input" placeholder="e.g., The Amber Temple" maxlength="100">
+                </div>
+                <div class="settings-row settings-row--stacked mb-md">
+                    <label class="settings-label" for="journalEntryDate">Date</label>
+                    <input type="date" id="journalEntryDate" class="terminal-input">
+                </div>
+                <div class="settings-row settings-row--stacked">
+                    <label class="settings-label" for="journalEntryContent">What happened?</label>
+                    <textarea id="journalEntryContent" class="terminal-textarea" rows="6" placeholder="Record your adventure..."></textarea>
+                </div>
+                <input type="hidden" id="journalEntryId" value="">
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="CampaignUI.closeJournalEntryModal()">CANCEL</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.saveJournalEntry()">SAVE ENTRY</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Update Prompt Modal (after journal entry) -->
+    <div id="characterUpdateModal" class="modal">
+        <div class="modal-content modal-content--narrow">
+            <div class="modal-header">
+                <h2 class="modal-title">Update <span id="characterUpdateName">Character</span>?</h2>
+                <button class="modal-close" onclick="CampaignUI.closeCharacterUpdateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="terminal-text-small terminal-text-dim mb-md">
+                    Did anything change for your character this session?
+                </p>
+                <div class="settings-row settings-row--inline mb-md">
+                    <label class="settings-label" for="charUpdateXp">XP Gained</label>
+                    <input type="number" id="charUpdateXp" class="terminal-input terminal-input--short" min="0" value="0">
+                </div>
+                <div class="settings-row settings-row--inline mb-md">
+                    <label class="settings-label" for="charUpdateHp">Current HP</label>
+                    <div class="hp-input-group">
+                        <input type="number" id="charUpdateHp" class="terminal-input terminal-input--short" min="0">
+                        <span class="hp-divider">/</span>
+                        <span id="charUpdateHpMax" class="hp-max">--</span>
+                    </div>
+                </div>
+                <div class="settings-row settings-row--inline mb-md">
+                    <label class="settings-label" for="charUpdateGold">Gold Change</label>
+                    <div class="gold-input-group">
+                        <select id="charUpdateGoldSign" class="terminal-select terminal-select--narrow">
+                            <option value="+">+</option>
+                            <option value="-">-</option>
+                        </select>
+                        <input type="number" id="charUpdateGold" class="terminal-input terminal-input--short" min="0" value="0">
+                    </div>
+                </div>
+                <div class="settings-row settings-row--stacked mb-md">
+                    <label class="settings-label" for="charUpdateItems">Items Acquired</label>
+                    <input type="text" id="charUpdateItems" class="terminal-input" placeholder="Potion of Healing, Silver Sword...">
+                </div>
+                <div class="settings-row settings-row--stacked">
+                    <label class="settings-label">Status Conditions</label>
+                    <div class="condition-checkboxes">
+                        <label class="condition-checkbox">
+                            <input type="checkbox" id="charUpdatePoisoned"> Poisoned
+                        </label>
+                        <label class="condition-checkbox">
+                            <input type="checkbox" id="charUpdateExhausted"> Exhausted
+                        </label>
+                        <label class="condition-checkbox">
+                            <input type="checkbox" id="charUpdateDiseased"> Diseased
+                        </label>
+                        <label class="condition-checkbox">
+                            <input type="checkbox" id="charUpdateCursed"> Cursed
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="CampaignUI.skipCharacterUpdate()">SKIP</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.saveCharacterUpdate()">UPDATE CHARACTER</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Edit Details Modal -->
     <div id="editDetailsModal" class="modal">
         <div class="modal-content">

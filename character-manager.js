@@ -1165,6 +1165,269 @@ const CampaignUI = (window.CampaignUI = {
             console.error('Failed to get character campaign:', error);
             return null;
         }
+    },
+
+    // ========================================
+    // JOURNAL ENTRY MODAL
+    // ========================================
+    
+    // Track the entry being edited (null for new entry)
+    _editingEntryId: null,
+    // Track the saved entry for character update prompt
+    _savedJournalEntry: null,
+
+    openJournalEntryModal(entryId = null) {
+        const modal = document.getElementById('journalEntryModal');
+        if (!modal) return;
+
+        this._editingEntryId = entryId;
+        
+        // Update title
+        const titleEl = document.getElementById('journalEntryModalTitle');
+        if (titleEl) {
+            titleEl.textContent = entryId ? 'Edit Journal Entry' : 'Add Journal Entry';
+        }
+
+        // Clear or populate form
+        const titleInput = document.getElementById('journalEntryTitle');
+        const dateInput = document.getElementById('journalEntryDate');
+        const contentInput = document.getElementById('journalEntryContent');
+        const idInput = document.getElementById('journalEntryId');
+
+        if (entryId) {
+            // TODO: Load existing entry data
+            // For now, just clear
+            if (titleInput) titleInput.value = '';
+            if (contentInput) contentInput.value = '';
+        } else {
+            // New entry - set defaults
+            if (titleInput) titleInput.value = '';
+            if (contentInput) contentInput.value = '';
+        }
+
+        // Set date to today by default
+        if (dateInput) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+        if (idInput) {
+            idInput.value = entryId || '';
+        }
+
+        modal.classList.add('show');
+
+        // Focus title input
+        setTimeout(() => titleInput?.focus(), 100);
+    },
+
+    closeJournalEntryModal() {
+        const modal = document.getElementById('journalEntryModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        this._editingEntryId = null;
+    },
+
+    async saveJournalEntry() {
+        const titleInput = document.getElementById('journalEntryTitle');
+        const dateInput = document.getElementById('journalEntryDate');
+        const contentInput = document.getElementById('journalEntryContent');
+
+        const title = titleInput?.value?.trim() || '';
+        const entryDate = dateInput?.value || new Date().toISOString().split('T')[0];
+        const content = contentInput?.value?.trim() || '';
+
+        if (!title && !content) {
+            showAlertDialog('Please enter a title or content for your journal entry.');
+            return;
+        }
+
+        const characterId = AppState.selectedCharacterId;
+        if (!characterId) {
+            showAlertDialog('No character selected.');
+            return;
+        }
+
+        try {
+            // Create the journal entry object
+            const entryData = {
+                character_id: characterId,
+                title: title || 'Untitled',
+                entry_date: entryDate,
+                content: content,
+            };
+
+            // TODO: Call API to save entry
+            // For now, store locally and show success
+            this._savedJournalEntry = {
+                ...entryData,
+                id: this._editingEntryId || Date.now(), // Temp ID
+            };
+
+            // Close journal modal
+            this.closeJournalEntryModal();
+
+            // Show character update prompt
+            this.openCharacterUpdateModal();
+
+        } catch (error) {
+            console.error('Failed to save journal entry:', error);
+            showAlertDialog(error.message || 'Failed to save journal entry.');
+        }
+    },
+
+    editJournalEntry(entryId) {
+        this.openJournalEntryModal(entryId);
+    },
+
+    // ========================================
+    // CHARACTER UPDATE MODAL
+    // ========================================
+
+    openCharacterUpdateModal() {
+        const modal = document.getElementById('characterUpdateModal');
+        if (!modal) return;
+
+        // Get character info
+        const characterId = AppState.selectedCharacterId;
+        const character = AppState.characters?.find(c => 
+            c.id === characterId || c.cloudId === characterId
+        );
+
+        // Update character name in title
+        const nameEl = document.getElementById('characterUpdateName');
+        if (nameEl && character) {
+            nameEl.textContent = character.name || 'Character';
+        }
+
+        // Pre-fill current HP
+        const hpInput = document.getElementById('charUpdateHp');
+        const hpMaxEl = document.getElementById('charUpdateHpMax');
+        if (character) {
+            if (hpInput) hpInput.value = character.hp_current || character.hp_max || '';
+            if (hpMaxEl) hpMaxEl.textContent = character.hp_max || '--';
+        }
+
+        // Reset other fields
+        const xpInput = document.getElementById('charUpdateXp');
+        const goldInput = document.getElementById('charUpdateGold');
+        const goldSign = document.getElementById('charUpdateGoldSign');
+        const itemsInput = document.getElementById('charUpdateItems');
+
+        if (xpInput) xpInput.value = '0';
+        if (goldInput) goldInput.value = '0';
+        if (goldSign) goldSign.value = '+';
+        if (itemsInput) itemsInput.value = '';
+
+        // Reset checkboxes
+        ['charUpdatePoisoned', 'charUpdateExhausted', 'charUpdateDiseased', 'charUpdateCursed'].forEach(id => {
+            const cb = document.getElementById(id);
+            if (cb) cb.checked = false;
+        });
+
+        modal.classList.add('show');
+    },
+
+    closeCharacterUpdateModal() {
+        const modal = document.getElementById('characterUpdateModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        this._savedJournalEntry = null;
+    },
+
+    skipCharacterUpdate() {
+        // Just close without updating character
+        this.closeCharacterUpdateModal();
+        
+        // Refresh the campaign panel to show the new entry
+        ExpandedView._loadCampaignPanel();
+        
+        showNotification('✓ Journal entry saved');
+    },
+
+    async saveCharacterUpdate() {
+        const characterId = AppState.selectedCharacterId;
+        if (!characterId) {
+            this.closeCharacterUpdateModal();
+            return;
+        }
+
+        try {
+            // Gather update data
+            const xpGained = parseInt(document.getElementById('charUpdateXp')?.value) || 0;
+            const hpCurrent = parseInt(document.getElementById('charUpdateHp')?.value) || null;
+            const goldSign = document.getElementById('charUpdateGoldSign')?.value || '+';
+            const goldAmount = parseInt(document.getElementById('charUpdateGold')?.value) || 0;
+            const goldChange = goldSign === '-' ? -goldAmount : goldAmount;
+            const itemsAcquired = document.getElementById('charUpdateItems')?.value?.trim() || '';
+
+            // Get conditions
+            const conditions = [];
+            if (document.getElementById('charUpdatePoisoned')?.checked) conditions.push('poisoned');
+            if (document.getElementById('charUpdateExhausted')?.checked) conditions.push('exhausted');
+            if (document.getElementById('charUpdateDiseased')?.checked) conditions.push('diseased');
+            if (document.getElementById('charUpdateCursed')?.checked) conditions.push('cursed');
+
+            // TODO: Call API to update character with these values
+            // For now, just log and close
+            console.log('Character update:', {
+                characterId,
+                xpGained,
+                hpCurrent,
+                goldChange,
+                itemsAcquired,
+                conditions,
+                journalEntryId: this._savedJournalEntry?.id,
+            });
+
+            this.closeCharacterUpdateModal();
+            
+            // Refresh the campaign panel
+            ExpandedView._loadCampaignPanel();
+            
+            showNotification('✓ Journal entry saved & character updated');
+
+        } catch (error) {
+            console.error('Failed to update character:', error);
+            showAlertDialog(error.message || 'Failed to update character.');
+        }
+    },
+
+    // ========================================
+    // LEAVE CAMPAIGN
+    // ========================================
+
+    async leaveCampaign(campaignId) {
+        const confirmed = await new Promise(resolve => {
+            showConfirmDialog(
+                'Are you sure you want to leave this campaign? Your journal entries will be preserved.',
+                () => resolve(true)
+            );
+            // If they cancel, resolve false after a delay (modal closed)
+            setTimeout(() => resolve(false), 100);
+        });
+
+        if (!confirmed) return;
+
+        try {
+            await CampaignAPI.leaveCampaign(campaignId);
+            showNotification('✓ Left campaign');
+            ExpandedView._loadCampaignPanel();
+        } catch (error) {
+            console.error('Failed to leave campaign:', error);
+            showAlertDialog(error.message || 'Failed to leave campaign.');
+        }
+    },
+
+    // Copy invite code (updated to accept code parameter)
+    copyInviteCodeFromPanel(code) {
+        if (code && navigator.clipboard) {
+            navigator.clipboard.writeText(code).then(() => {
+                showNotification('✓ Invite code copied');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
     }
 });
 
@@ -5520,6 +5783,8 @@ function closeAllEditorModals() {
         'createCampaignModal',
         'joinCampaignModal',
         'campaignCreatedModal',
+        'journalEntryModal',
+        'characterUpdateModal',
     ];
     
     modalIds.forEach(id => {
