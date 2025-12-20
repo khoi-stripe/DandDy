@@ -1399,7 +1399,7 @@ body::before {
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-sm);
+  gap: 4px;
   margin-top: var(--spacing-sm);
 }
 
@@ -1517,7 +1517,7 @@ body::before {
 .ability-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-sm);
+  gap: 4px;
   margin-top: var(--spacing-sm);
 }
 
@@ -1702,24 +1702,27 @@ body::before {
 .class-features-groups {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  align-items: stretch;
+  gap: 4px;
   color: var(--sheet-value-color);
+  text-align: left;
 }
 
 .class-features-hidden {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  align-items: stretch;
+  gap: 4px;
+  text-align: left;
 }
 
 .class-features-group {
-  padding: 16px;
+  padding: 10px 16px;
   border-left: 2px solid var(--sheet-accent-dim);
   text-align: left;
   color: var(--sheet-value-color);
   background: var(--sheet-box-bg);
 }
-
 
 .class-features-group-label {
   font-size: 11px;
@@ -1727,8 +1730,9 @@ body::before {
   color: var(--sheet-value-color);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   display: block;
+  text-align: left;
 }
 
 .class-features-list {
@@ -1736,14 +1740,17 @@ body::before {
   padding: 0;
   margin: 0;
   color: var(--sheet-value-color);
+  text-align: left;
 }
 
 .class-features-item {
   padding: 2px 0;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 2px;
   color: var(--sheet-value-color);
+  text-align: left;
 }
 
 .class-features-item--new {
@@ -1754,7 +1761,8 @@ body::before {
   color: var(--sheet-label-color);
   font-size: 14px;
   font-weight: 500;
-  margin-top: 4px;
+  margin-top: 2px;
+  text-align: left;
 }
 
 .class-features-choice {
@@ -1766,6 +1774,7 @@ body::before {
 .class-features-desc {
   color: var(--sheet-label-color);
   font-size: 14px;
+  text-align: left;
 }
 
 .class-features-toggle-links {
@@ -1801,7 +1810,8 @@ body::before {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: 4px;
+  text-align: left;
 }
 
 .skill-prof-item {
@@ -1809,15 +1819,19 @@ body::before {
   border-left: 2px solid var(--sheet-accent-dim);
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 4px;
   background: var(--sheet-box-bg);
+  text-align: left;
 }
 
 .skill-prof-header {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .skill-prof-name {
@@ -1852,7 +1866,8 @@ body::before {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: 4px;
+  text-align: left;
 }
 
 .tool-prof-item {
@@ -1860,14 +1875,18 @@ body::before {
   border-left: 2px solid var(--sheet-accent-dim);
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 4px;
   background: var(--sheet-box-bg);
+  text-align: left;
 }
 
 .tool-prof-header {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 8px;
+  width: 100%;
   flex-wrap: wrap;
 }
 
@@ -1881,6 +1900,90 @@ body::before {
   color: var(--sheet-label-color);
   font-size: 14px;
   line-height: 1.4;
+}
+
+/* ==== DESCRIPTION TOOLTIPS ==== */
+/* Shown when "Show Descriptions" setting is disabled */
+
+.has-tooltip {
+  position: relative;
+  cursor: help;
+}
+
+/* Tooltip popup on hover */
+.has-tooltip[data-tooltip]:hover::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  z-index: 1000;
+  left: 0;
+  bottom: calc(100% + 8px);
+  max-width: 300px;
+  padding: 8px 12px;
+  background: var(--terminal-bg);
+  border: 1px solid var(--sheet-accent);
+  border-radius: 4px;
+  color: var(--sheet-label-color);
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: normal;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  animation: tooltip-fade-in 0.15s ease;
+}
+
+/* Position tooltip below if near top of viewport */
+.has-tooltip.tooltip-bottom[data-tooltip]:hover::before {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Compact mode for skill/tool prof items when descriptions hidden */
+.skill-prof-item.has-tooltip,
+.tool-prof-item.has-tooltip {
+  padding: 8px 16px;
+}
+
+/* Info icon indicator - placed on the name/header elements, not the list item */
+.skill-prof-item.has-tooltip .skill-prof-name::after,
+.tool-prof-item.has-tooltip .tool-prof-name::after,
+.class-features-item.has-tooltip .class-features-name::after {
+  content: 'ⓘ';
+  color: var(--sheet-accent-dim);
+  font-size: 10px;
+  margin-left: 6px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+  vertical-align: middle;
+}
+
+.skill-prof-item.has-tooltip:hover .skill-prof-name::after,
+.tool-prof-item.has-tooltip:hover .tool-prof-name::after,
+.class-features-item.has-tooltip:hover .class-features-name::after {
+  opacity: 1;
+}
+
+/* Class features compact mode when descriptions hidden */
+.class-features-item.has-tooltip {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 2px 0;
+}
+
+.class-features-item.has-tooltip .class-features-name {
+  margin-top: 0;
+  text-align: left;
 }
 
 /* Character sheet inputs/selects use teal borders and focus states */

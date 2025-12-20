@@ -3249,7 +3249,10 @@
 
 .spell-limits-summary.at-limit {
     color: var(--modal-accent, #ffd700);
-    border-left-color: var(--modal-accent, #ffd700);
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
 }
 
 .spell-limits-summary.over-limit {

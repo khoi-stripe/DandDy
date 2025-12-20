@@ -144,6 +144,18 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   /**
+   * Check if descriptions should be shown inline or hidden (shown as tooltips).
+   * @returns {boolean} True if descriptions should be shown inline
+   */
+  shouldShowDescriptions() {
+    if (typeof StorageService !== 'undefined' && StorageService.getShowDescriptions) {
+      return StorageService.getShowDescriptions();
+    }
+    // Default to true if StorageService not available
+    return true;
+  },
+
+  /**
    * Look up spell data (school, description) by spell name.
    * First checks SPELL_DATA (if available, e.g., in builder), then falls back to built-in lookup.
    * Feature flag: window.FEATURE_SPELL_LOOKUP (default: false)
@@ -1162,6 +1174,9 @@ const CharacterSheet = (window.CharacterSheet = {
       },
     };
 
+    // Check if descriptions should be shown inline
+    const showDescriptions = this.shouldShowDescriptions();
+
     const resourceItems = resourceKeys
       .filter(key => {
         const r = resources[key];
@@ -1188,12 +1203,17 @@ const CharacterSheet = (window.CharacterSheet = {
           valueDisplay = `<span class="skill-prof-modifier">${current}/${max} ${refreshIcon}${note}</span>`;
         }
         
-        const descriptionHtml = description 
+        // When descriptions are hidden, add tooltip attribute
+        const tooltipAttr = (!showDescriptions && description)
+          ? ` data-tooltip="${this.escapeHtml(description)}" class="skill-prof-item has-tooltip"`
+          : ' class="skill-prof-item"';
+        
+        const descriptionHtml = (showDescriptions && description)
           ? `<span class="skill-prof-desc">${this.escapeHtml(description)}</span>` 
           : '';
         
         return `
-          <li class="skill-prof-item">
+          <li${tooltipAttr}>
             <div class="skill-prof-header">
               <span class="skill-prof-name">${this.escapeHtml(name)}</span>
               ${valueDisplay}
@@ -1281,6 +1301,9 @@ const CharacterSheet = (window.CharacterSheet = {
     const hiddenGroups = allGroups.slice(3);
     const hasHiddenGroups = hiddenGroups.length > 0;
 
+    // Check if descriptions should be shown inline
+    const showDescriptions = this.shouldShowDescriptions();
+
     const renderGroup = (levelData) => {
       const levelLabel = `<span class="class-features-group-label">Level ${levelData.level}</span>`;
 
@@ -1288,12 +1311,19 @@ const CharacterSheet = (window.CharacterSheet = {
         const choiceIndicator = feature.choice 
           ? '<span class="class-features-choice" title="Requires a choice">◆</span>' 
           : '';
-        const description = feature.description 
+        
+        // When descriptions are hidden, add tooltip attribute
+        const tooltipAttr = (!showDescriptions && feature.description)
+          ? ` data-tooltip="${this.escapeHtml(feature.description)}"`
+          : '';
+        const tooltipClass = (!showDescriptions && feature.description) ? ' has-tooltip' : '';
+        
+        const description = (showDescriptions && feature.description) 
           ? `<span class="class-features-desc">${this.escapeHtml(feature.description)}</span>` 
           : '';
         
         return `
-          <li class="class-features-item${levelData.isCurrentLevel ? ' class-features-item--new' : ''}">
+          <li class="class-features-item${levelData.isCurrentLevel ? ' class-features-item--new' : ''}${tooltipClass}"${tooltipAttr}>
             <span class="class-features-name">${choiceIndicator}${this.escapeHtml(feature.name)}</span>
             ${description}
           </li>
@@ -2167,7 +2197,10 @@ const CharacterSheet = (window.CharacterSheet = {
           )
         : parsed.skillProficiencies || [];
 
-    // Render skill items with descriptions (like class features)
+    // Check if descriptions should be shown inline
+    const showDescriptions = this.shouldShowDescriptions();
+
+    // Render skill items with descriptions (inline or tooltip based on setting)
     const renderSkillItem = (skill, modifier = null) => {
       const skillDef = this._skillDefinitions[skill] || {};
       const name = this.formatSkillName(skill);
@@ -2178,14 +2211,19 @@ const CharacterSheet = (window.CharacterSheet = {
         ? `<span class="skill-prof-modifier">${this.formatModifier(modifier)}</span>` 
         : '';
       
+      // When descriptions are hidden, add tooltip attribute
+      const tooltipAttr = (!showDescriptions && description)
+        ? ` data-tooltip="${this.escapeHtml(description)}" class="skill-prof-item has-tooltip"`
+        : ' class="skill-prof-item"';
+      
       return `
-        <li class="skill-prof-item">
+        <li${tooltipAttr}>
           <div class="skill-prof-header">
             <span class="skill-prof-name">${this.escapeHtml(name)}</span>
             ${ability ? `<span class="skill-prof-ability">(${ability})</span>` : ''}
             ${modifierDisplay}
           </div>
-          ${description ? `<span class="skill-prof-desc">${this.escapeHtml(description)}</span>` : ''}
+          ${showDescriptions && description ? `<span class="skill-prof-desc">${this.escapeHtml(description)}</span>` : ''}
         </li>
       `;
     };
@@ -2351,16 +2389,26 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderRacialTraits(parsed) {
-    // Build trait items with descriptions from RacialTraitsData
+    // Check if descriptions should be shown inline
+    const showDescriptions = this.shouldShowDescriptions();
+
+    // Build trait items with descriptions from RacialTraitsData (inline or tooltip based on setting)
     const traitItems = parsed.racialTraits.map(traitName => {
       // Look up description from RacialTraitsData if available
       const traitData = window.RacialTraitsData?.getTrait(traitName);
-      const description = traitData?.description
-        ? `<span class="skill-prof-desc">${this.escapeHtml(traitData.description)}</span>`
+      const descText = traitData?.description || '';
+      
+      // When descriptions are hidden, add tooltip attribute
+      const tooltipAttr = (!showDescriptions && descText)
+        ? ` data-tooltip="${this.escapeHtml(descText)}" class="skill-prof-item has-tooltip"`
+        : ' class="skill-prof-item"';
+      
+      const description = (showDescriptions && descText)
+        ? `<span class="skill-prof-desc">${this.escapeHtml(descText)}</span>`
         : '';
       
       return `
-        <li class="skill-prof-item">
+        <li${tooltipAttr}>
           <div class="skill-prof-header">
             <span class="skill-prof-name">${this.escapeHtml(traitName)}</span>
           </div>
@@ -2406,7 +2454,10 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   _renderToolProficiencies(parsed) {
-    // Render tool items with descriptions (like skill proficiencies)
+    // Check if descriptions should be shown inline
+    const showDescriptions = this.shouldShowDescriptions();
+
+    // Render tool items with descriptions (inline or tooltip based on setting)
     const renderToolItem = (tool) => {
       // Normalize tool name for lookup (lowercase, spaces to hyphens)
       const normalizedTool = tool.toLowerCase().replace(/\s+/g, '-').replace(/[']/g, "'");
@@ -2414,12 +2465,17 @@ const CharacterSheet = (window.CharacterSheet = {
       const name = this.formatSkillName(tool);
       const description = toolDef.description || '';
       
+      // When descriptions are hidden, add tooltip attribute
+      const tooltipAttr = (!showDescriptions && description)
+        ? ` data-tooltip="${this.escapeHtml(description)}" class="tool-prof-item has-tooltip"`
+        : ' class="tool-prof-item"';
+      
       return `
-        <li class="tool-prof-item">
+        <li${tooltipAttr}>
           <div class="tool-prof-header">
             <span class="tool-prof-name">${this.escapeHtml(name)}</span>
           </div>
-          ${description ? `<span class="tool-prof-desc">${this.escapeHtml(description)}</span>` : ''}
+          ${showDescriptions && description ? `<span class="tool-prof-desc">${this.escapeHtml(description)}</span>` : ''}
         </li>
       `;
     };

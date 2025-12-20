@@ -451,6 +451,33 @@ const StorageService = (window.StorageService = {
     }
   },
 
+  // Show Descriptions toggle (global setting for character sheet).
+  // When enabled, descriptions are shown inline for skills, class resources, features, etc.
+  // When disabled, descriptions are hidden and shown on hover via tooltips.
+  getShowDescriptions() {
+    try {
+      const raw = localStorage.getItem('dnd_show_descriptions');
+      // Default to true (on) - show descriptions by default
+      if (raw === null || raw === undefined) return true;
+      return raw === 'true';
+    } catch (e) {
+      console.warn('StorageService.getShowDescriptions failed', e);
+      return true;
+    }
+  },
+
+  setShowDescriptions(enabled) {
+    try {
+      localStorage.setItem('dnd_show_descriptions', enabled ? 'true' : 'false');
+      // Dispatch event so any open character sheet can react
+      window.dispatchEvent(new CustomEvent('danddy:showDescriptionsChanged', {
+        detail: { showDescriptions: enabled }
+      }));
+    } catch (e) {
+      console.warn('StorageService.setShowDescriptions failed', e);
+    }
+  },
+
   // ==== CHARACTER STORAGE ====
   // Delegates to shared CharacterStorage facade (character-storage.js)
   // which handles cloud/local storage, fallbacks, and timestamp normalization.

@@ -690,12 +690,12 @@ const Components = (window.Components = {
                           <input
                             type="checkbox"
                             class="settings-checkbox"
-                            id="show-class-features-toggle"
-                            ${StorageService.getShowClassFeatures() ? 'checked' : ''}
+                            id="show-descriptions-toggle"
+                            ${StorageService.getShowDescriptions() ? 'checked' : ''}
                           >
-                          <span class="settings-checkbox-text">Show Class Features</span>
+                          <span class="settings-checkbox-text">Show Descriptions</span>
                         </label>
-                        <div class="settings-hint settings-hint--small">Display a reference panel of class features gained at each level</div>
+                        <div class="settings-hint settings-hint--small">Show inline descriptions for skills, class resources, traits, etc. When disabled, descriptions appear on hover.</div>
                       </div>
                     </div>
                   </section>
@@ -1108,17 +1108,17 @@ const SettingsModal = (window.SettingsModal = {
       StorageService.setImageQuality(imageModelForQuality, imageQualitySelect.value);
     }
 
-    // Save "Show Class Features" toggle
+    // Save "Show Descriptions" toggle
     // Track if this changed to trigger UI refresh
-    let classFeaturesChanged = false;
-    const classFeaturesToggle = document.getElementById('show-class-features-toggle');
-    if (classFeaturesToggle && window.StorageService && StorageService.setShowClassFeatures) {
-      const oldValue = StorageService.getShowClassFeatures ? StorageService.getShowClassFeatures() : false;
-      const newValue = classFeaturesToggle.checked;
+    let descriptionsChanged = false;
+    const descriptionsToggle = document.getElementById('show-descriptions-toggle');
+    if (descriptionsToggle && window.StorageService && StorageService.setShowDescriptions) {
+      const oldValue = StorageService.getShowDescriptions ? StorageService.getShowDescriptions() : true;
+      const newValue = descriptionsToggle.checked;
       if (oldValue !== newValue) {
-        classFeaturesChanged = true;
+        descriptionsChanged = true;
       }
-      StorageService.setShowClassFeatures(newValue);
+      StorageService.setShowDescriptions(newValue);
     }
 
     // Use a non-intrusive toast for settings changes instead of a narrator line
@@ -1130,8 +1130,8 @@ const SettingsModal = (window.SettingsModal = {
 
     this.close();
 
-    // If portrait view mode or class features setting changed, refresh the UI
-    if (portraitModeChanged || classFeaturesChanged) {
+    // If portrait view mode or descriptions setting changed, refresh the UI
+    if (portraitModeChanged || descriptionsChanged) {
       // Character Manager context: re-render grid and current sheet
       if (typeof UI !== 'undefined' && UI && typeof UI.renderCharacterGrid === 'function') {
         UI.renderCharacterGrid();
