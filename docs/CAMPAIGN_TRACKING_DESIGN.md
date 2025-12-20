@@ -1,6 +1,6 @@
 # Campaign Tracking System Design
 
-> Expanding DandDy from character creation to campaign-based session tracking.
+> Expanding DandDy from character creation to campaign-based character tracking.
 
 ---
 
@@ -9,9 +9,8 @@
 Transform DandDy into a living character tracker that follows players throughout their campaigns. Key concepts:
 
 - **Campaigns** group characters and players together
-- **Sessions** represent individual play sessions
-- **Check-in/out** creates intentional moments around active play
-- **Post-session prompts** ensure characters stay updated
+- **Journal entries** record adventures and optionally update character stats
+- **Character-centric** - campaigns are accessed through the character sheet, not separately
 
 ---
 
@@ -24,8 +23,8 @@ Transform DandDy into a living character tracker that follows players throughout
 - Share campaigns via invite code (great funnel for new users!)
 - Assign their character(s) to a campaign
 - A character can only belong to **one campaign at a time**
-- Start/end play sessions for their characters
-- Update character post-session
+- Add journal entries to record their adventures
+- Optionally update character stats when adding journal entries
 
 > **Future consideration:** DM role with special privileges
 
@@ -71,60 +70,29 @@ Existing user enters invite code
 
 ---
 
-### 3. Starting a Session (Check-out)
+### 3. Adding a Journal Entry
 
 ```
-Player opens their character → clicks "Start Session" / "Check Out"
-  → Character is marked as "in session"
-  → Timestamp recorded
-  → Character sheet shows "IN SESSION" indicator
+Player clicks "Add Entry" in the journal section
+  → Entry modal opens with:
+      - Title (e.g., "The Amber Temple")
+      - Date (defaults to today, can backdate)
+      - Notes (textarea for the adventure log)
+  → On save, optional prompt appears:
+      "Update [Character Name]'s stats?"
+      - XP gained
+      - Current HP
+      - Gold change (+/-)
+      - Items acquired/lost
+      - Status conditions
+  → Entry saved, character optionally updated
 ```
-
-This is **self-directed** - each player manages their own session state. No need for coordinated start/end times.
 
 **Decisions:**
-- Per-character sessions (not campaign-wide)
-- Session name (short label) + journal (longer notes) are separate fields
-- No "quick session" vs "full session" distinction
-
----
-
-### 4. During Active Play
-
-While session is active:
-- Character sheet shows "IN SESSION" indicator
-- (Optional) Quick actions: take damage, spend spell slot, etc.
-- (Future) Live status conditions toggle
-
-**Open questions:**
-- [Not yet ] Any special "active play" mode features?
-- [Interesting, but not yet ] Mobile-optimized view for at-the-table use?
-
----
-
-### 5. Ending Session / Check-in
-
-```
-Player clicks "End Session" / "Check In"
-  → Post-session update modal appears
-  → Player fills out:
-      - Session name (short label, e.g., "The Amber Temple")
-      - XP gained (number input)
-      - HP changes (gained/lost, current state)
-      - Gold gained/spent
-      - Items acquired (text list)
-      - Status conditions (poisoned, exhausted, etc.)
-      - Level up? (if XP threshold crossed, prompt level-up flow)
-      - Journal entry (optional textarea)
-  → Changes apply to character
-  → Session log is saved
-```
-
-**Open questions:**
-- [All fields optional ] Required vs optional fields?
-- [Yes ] Auto-detect level up based on XP?
-- [ Yes] Death/resurrection tracking?
-- [Yes ] "I forgot to check out" - allow backdated session entry?
+- Journal entries are the primary interaction (replaces check-in/check-out)
+- Character stat updates are **optional** - can skip entirely
+- Entries can be backdated for missed sessions
+- Entries are editable after creation
 
 ---
 
@@ -153,35 +121,31 @@ Player clicks "End Session" / "Check In"
 | joined_at | Timestamp | |
 | status | Enum | active, inactive, left |
 
-### Session (per-character, self-directed)
+### JournalEntry
 | Field | Type | Notes |
 |-------|------|-------|
 | id | UUID | Primary key |
-| campaign_id | Campaign ID | FK (optional - could be unattached) |
 | character_id | Character ID | FK |
+| campaign_id | Campaign ID | FK (optional - for standalone entries) |
 | user_id | User ID | FK |
-| session_number | Integer | Auto-increment per character |
-| name | String | Optional, e.g., "The Amber Temple" |
-| started_at | Timestamp | |
-| ended_at | Timestamp | Null while active |
-| status | Enum | active, completed, cancelled |
+| title | String | e.g., "The Amber Temple" |
+| content | Text | The journal entry text |
+| entry_date | Date | When the session happened (can backdate) |
+| created_at | Timestamp | When entry was created |
+| updated_at | Timestamp | Last edit |
 
-### SessionLog (Post-session character updates)
+### CharacterUpdate (optional stats change linked to journal entry)
 | Field | Type | Notes |
 |-------|------|-------|
 | id | UUID | Primary key |
-| session_id | Session ID | FK |
+| journal_entry_id | JournalEntry ID | FK |
 | character_id | Character ID | FK |
-| user_id | User ID | FK |
 | xp_gained | Integer | |
 | gold_change | Integer | Can be negative |
-| hp_before | Integer | Snapshot |
-| hp_after | Integer | New value |
+| hp_change | Integer | Delta from previous |
 | items_acquired | JSON | Array of item names |
 | items_lost | JSON | Array of item names |
 | conditions | JSON | Active status conditions |
-| journal | Text | Player's session journal |
-| submitted_at | Timestamp | |
 
 ### Status Conditions (persistent between sessions)
 Focus on conditions that persist across long rests:
@@ -207,38 +171,82 @@ This reinforces the app as a **character management tool**, not a campaign manag
 │         CHARACTER SHEET          │         CAMPAIGN PANEL           │
 │           (left side)            │          (right side)            │
 ├──────────────────────────────────┼──────────────────────────────────┤
-│                                  │ CURSE OF STRAHD                  │
-│  [ Existing character sheet ]    │ Invite: STRAHD-8K2X [Copy]       │
+│                                  │ ┌────────────────────────────┐   │
+│  [ Existing character sheet ]    │ │ CAMPAIGN AREA              │   │
+│                                  │ │                            │   │
+│  - Portrait                      │ │ CURSE OF STRAHD            │   │
+│  - Stats                         │ │ Invite: STRAHD-8K2X [Copy] │   │
+│  - Combat                        │ │                            │   │
+│  - Skills                        │ │ PARTY (4)                  │   │
+│  - Spells                        │ │ • Thorin (you) - Dwarf 5   │   │
+│  - etc.                          │ │ • Lyra - Elf Wizard 5      │   │
+│                                  │ │ • Zook - Gnome Rogue 5     │   │
+│                                  │ │ • Aria - Human Cleric 5    │   │
+│                                  │ │                            │   │
+│                                  │ │ [Leave Campaign]           │   │
+│                                  │ └────────────────────────────┘   │
 │                                  │                                  │
-│  - Portrait                      │ ─────────────────────────────    │
-│  - Stats                         │ PARTY (4)                        │
-│  - Combat                        │ • Thorin (you) - Dwarf Lvl 5 🟢  │
-│  - Skills                        │ • Lyra - Elf Wizard Lvl 5        │
-│  - Spells                        │ • Zook - Gnome Rogue Lvl 5 🟢    │
-│  - etc.                          │ • Aria - Human Cleric Lvl 5      │
-│                                  │   [View Sheet]                   │
-│                                  │                                  │
-│                                  │ ─────────────────────────────    │
-│                                  │ SESSIONS                         │
-│                                  │ #5 - The Amber Temple (2d ago)   │
-│                                  │ #4 - Death House (1w ago)        │
-│                                  │                                  │
-│                                  │ [Start Session]                  │
-│                                  │ ─────────────────────────────    │
-│                                  │ [Leave Campaign]                 │
-├──────────────────────────────────┴──────────────────────────────────┤
-│                        [Return to Grid View]                        │
-└─────────────────────────────────────────────────────────────────────┘
+│                                  │ ┌────────────────────────────┐   │
+│                                  │ │ JOURNAL          [+ Add]   │   │
+│                                  │ │                            │   │
+│                                  │ │ Dec 15 - The Amber Temple  │   │
+│                                  │ │   We defeated the vampire  │   │
+│                                  │ │   spawn in the basement... │   │
+│                                  │ │                     [Edit] │   │
+│                                  │ │                            │   │
+│                                  │ │ Dec 8 - Death House        │   │
+│                                  │ │   Our first session! We    │   │
+│                                  │ │   explored the creepy...   │   │
+│                                  │ │                     [Edit] │   │
+│                                  │ └────────────────────────────┘   │
+└──────────────────────────────────┴──────────────────────────────────┘
 ```
 
-### Post-Session Modal
+### Campaign Panel Structure
+
+The campaign panel is divided into two sections:
+
+**Top: Campaign Area**
+- Campaign name and status
+- Invite code with copy button
+- Party members list (name, race, class, level)
+- Actions: Leave Campaign, Invite (for creator: manage/delete)
+- If no campaign: "Join Campaign" / "Create Campaign" buttons
+
+**Bottom: Journal**
+- Reverse chronological list (newest first)
+- Each entry shows: date, title, preview of content
+- "Add Entry" button at top
+- Entries are expandable and editable
+
+### Journal Entry Modal
 ```
 ┌─────────────────────────────────────────────────┐
-│ SESSION COMPLETE                           [X]  │
-│ How did it go, Thorin?                          │
+│ ADD JOURNAL ENTRY                          [X]  │
 ├─────────────────────────────────────────────────┤
-│ Session Name  [__The Amber Temple__________]    │
+│ Title         [__The Amber Temple__________]    │
 │                                                 │
+│ Date          [__Dec 15, 2024__] 📅             │
+│                                                 │
+│ What happened?                                  │
+│ ┌───────────────────────────────────────────┐   │
+│ │ We finally defeated the vampire spawn in │   │
+│ │ the basement. Lyra almost died but I     │   │
+│ │ managed to stabilize her with my last    │   │
+│ │ healing potion. Found a Silver Sword in  │   │
+│ │ the treasure hoard!                      │   │
+│ └───────────────────────────────────────────┘   │
+│                                                 │
+│                        [Cancel]  [Save Entry]   │
+└─────────────────────────────────────────────────┘
+```
+
+### Character Update Prompt (after saving journal entry)
+```
+┌─────────────────────────────────────────────────┐
+│ UPDATE THORIN?                             [X]  │
+│ Did anything change for your character?         │
+├─────────────────────────────────────────────────┤
 │ XP Gained     [____300____]                     │
 │                                                 │
 │ Current HP    [___42___] / 58                   │
@@ -252,15 +260,7 @@ This reinforces the app as a **character management tool**, not a campaign manag
 │ [ ] Poisoned  [ ] Exhausted (Lvl _)  [ ] Cursed │
 │ [ ] Diseased  [ ] Other: [____________]         │
 │                                                 │
-│ Journal (optional)                              │
-│ ┌───────────────────────────────────────────┐   │
-│ │ We finally defeated the vampire spawn in │   │
-│ │ the basement. Lyra almost died but I     │   │
-│ │ managed to stabilize her with my last    │   │
-│ │ healing potion...                        │   │
-│ └───────────────────────────────────────────┘   │
-│                                                 │
-│              [Skip]  [Save & Update Character]  │
+│                  [Skip]  [Update Character]     │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -269,50 +269,51 @@ This reinforces the app as a **character management tool**, not a campaign manag
 ## Character Sheet Changes
 
 ### Campaign Badge
-- Show campaign name badge on character card
-- Show "IN SESSION" indicator when active
+- Show campaign name badge on character card in the grid view
 
 ### Expanded Character Sheet View
 The character sheet can expand to full-screen view:
 - **Left side:** Character sheet (as it is today)
-- **Right side:** Campaign panel
-  - Campaign name, invite code
-  - Party members (full character sheets viewable!)
-  - Session history for this character
-  - Assign/change campaign
-  - Journal entries
+- **Right side:** Campaign panel (two sections)
+  - **Campaign Area:** name, invite code, party members, actions
+  - **Journal:** chronological adventure entries
 
 This keeps the app **character-centric** - campaigns are accessed through your character, not as a separate section.
 
 ### Leaving a Campaign
 - Character can be removed from campaign
-- Session history is preserved (archived)
+- Journal entries are preserved (but no longer linked to campaign)
 - Character becomes available to join another campaign
 
 ---
 
-## Adventure Log / Journal
+## Journal Features
 
-If we want to expand journaling:
-- Timeline view of all session entries for a character
-- Shared session notes visible to campaign members
-- Export adventure log as PDF/markdown?
+Core journal functionality:
+- Reverse chronological display (newest first)
+- Entries can be backdated for missed sessions
+- Entries are editable after creation
+- Optional character stat updates on each entry
+
+Future enhancements:
+- Shared journal visibility to campaign members
+- Export adventure log as PDF/markdown
+- Tags/categories for entries
 
 ---
 
 ## Resolved Questions
 
-1. **Offline support?** Not needed - app is for before/after sessions, not during active play
+1. **Offline support?** Not needed - app is for before/after sessions
 2. **Multiple characters in same campaign?** Yes
-3. **Sessions without campaign?** Yes - standalone session tracking for one-shots
-4. **Session visibility?** Yes - campaign members can see each other's session notes
+3. **Journal without campaign?** Yes - standalone journaling for one-shots
+4. **Journal visibility?** Campaign members can see each other's entries (future)
 5. **What can members see?** Full character sheets of party members
-6. **Leaving campaigns?** Session history preserved (archived)
-
-## Open Design Questions
-
-1. ~~**Character death?**~~ Let player handle manually (no special system)
-2. ~~**How to join campaign if no character yet?**~~ Join characterless, assign later
+6. **Leaving campaigns?** Journal entries preserved
+7. **Character death?** Let player handle manually (no special system)
+8. **How to join campaign if no character yet?** Join characterless, assign later
+9. **Session tracking vs Journal?** Journal-first approach - no check-in/check-out
+10. **Character updates required?** Optional - can skip when adding journal entry
 
 *All major questions resolved!*
 
@@ -321,20 +322,23 @@ If we want to expand journaling:
 ## Implementation Phases
 
 ### Phase 1: Campaign Organization (MVP)
-- [ ] Campaign model + CRUD endpoints
-- [ ] Invite code generation + join flow
-- [ ] Campaign list and detail views
-- [ ] Character assignment to campaigns
+- [x] Campaign model + CRUD endpoints
+- [x] Invite code generation + join flow
+- [x] Expanded character sheet view
+- [x] Campaign panel UI (placeholder)
+- [x] Create/Join campaign modals
 
-### Phase 2: Session Tracking
-- [ ] Session model + start/end flow (per-character)
-- [ ] Post-session update form
-- [ ] Session history view (per character + per campaign)
-- [ ] Character updates from session logs
+### Phase 2: Journal System
+- [ ] Journal entry model + CRUD endpoints
+- [ ] Campaign panel: campaign area section
+- [ ] Campaign panel: journal section
+- [ ] Add/edit journal entry modal
+- [ ] Character update prompt (optional)
+- [ ] Display journal entries (reverse chronological)
 
 ### Phase 3: Polish & Extras
-- [ ] Journaling improvements
-- [ ] Shared session notes
+- [ ] Party member display with character info
+- [ ] Shared journal visibility
 - [ ] Adventure log export
 - [ ] Mobile optimizations
 
