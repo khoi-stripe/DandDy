@@ -388,6 +388,115 @@ const CampaignAPI = (window.CampaignAPI = {
       throw error;
     }
   },
+
+  // ========================================
+  // JOURNAL ENTRY METHODS
+  // ========================================
+
+  /**
+   * Get journal entries for a character
+   * @param {number} characterId
+   * @param {number} limit - Max entries to return
+   * @returns {Promise<Array>} List of journal entries (newest first)
+   */
+  async getJournalEntries(characterId, limit = 50) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('📖 JOURNAL: Fetching entries for character', characterId);
+      return await this._apiRequest(`/journal/character/${characterId}?limit=${limit}`);
+    } catch (error) {
+      console.error('📖 JOURNAL ERROR: Failed to fetch entries:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get a single journal entry
+   * @param {number} entryId
+   * @returns {Promise<Object>} Journal entry
+   */
+  async getJournalEntry(entryId) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('📖 JOURNAL: Fetching entry', entryId);
+      return await this._apiRequest(`/journal/${entryId}`);
+    } catch (error) {
+      console.error('📖 JOURNAL ERROR: Failed to fetch entry:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new journal entry
+   * @param {Object} data - { character_id, title, content, entry_date, campaign_id? }
+   * @returns {Promise<Object>} Created journal entry
+   */
+  async createJournalEntry(data) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('📖 JOURNAL: Creating entry:', data.title);
+      const entry = await this._apiRequest('/journal/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      if (DEBUG_CAMPAIGN) console.log('📖 JOURNAL: Created entry', entry.id);
+      return entry;
+    } catch (error) {
+      console.error('📖 JOURNAL ERROR: Failed to create entry:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update a journal entry
+   * @param {number} entryId
+   * @param {Object} data - { title?, content?, entry_date? }
+   * @returns {Promise<Object>} Updated journal entry
+   */
+  async updateJournalEntry(entryId, data) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('📖 JOURNAL: Updating entry', entryId);
+      return await this._apiRequest(`/journal/${entryId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      });
+    } catch (error) {
+      console.error('📖 JOURNAL ERROR: Failed to update entry:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a journal entry
+   * @param {number} entryId
+   * @returns {Promise<void>}
+   */
+  async deleteJournalEntry(entryId) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('📖 JOURNAL: Deleting entry', entryId);
+      await this._apiRequest(`/journal/${entryId}`, { method: 'DELETE' });
+      if (DEBUG_CAMPAIGN) console.log('📖 JOURNAL: Deleted entry', entryId);
+    } catch (error) {
+      console.error('📖 JOURNAL ERROR: Failed to delete entry:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a character update linked to a journal entry
+   * @param {number} entryId - Journal entry to link
+   * @param {Object} data - { xp_gained, gold_change, hp_change, items_acquired, items_lost, conditions }
+   * @returns {Promise<Object>} Character update record
+   */
+  async createCharacterUpdate(entryId, data) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('📖 JOURNAL: Creating character update for entry', entryId);
+      return await this._apiRequest(`/journal/${entryId}/character-update`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    } catch (error) {
+      console.error('📖 JOURNAL ERROR: Failed to create character update:', error);
+      throw error;
+    }
+  },
 });
 
 if (DEBUG_CAMPAIGN) {
