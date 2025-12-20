@@ -797,11 +797,8 @@ const ExpandedView = (window.ExpandedView = {
         const btn = document.querySelector('.sheet-expand-btn');
         if (!btn) return;
         
-        const label = btn.querySelector('.expand-label');
-        if (label) {
-            label.textContent = isExpanded ? 'Collapse' : 'Expand';
-        }
-        
+        // Update button text with icon
+        btn.textContent = isExpanded ? '⇤ Collapse' : '⇥ Expand';
         btn.title = isExpanded ? 'Return to grid view' : 'Expand to show campaign info';
     },
 

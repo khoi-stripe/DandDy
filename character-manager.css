@@ -118,13 +118,9 @@
     display: block;
 }
 
-/* Expand button icon changes when expanded */
-.expand-icon::before {
-    content: '▸';
-}
-
-.split-layout.is-expanded .expand-icon::before {
-    content: '◂';
+/* Expand button changes icon when in expanded state */
+.split-layout.is-expanded .sheet-expand-btn {
+    /* Button text is updated via JS, but we ensure consistent styling here */
 }
 
 /* Campaign panel content styles */

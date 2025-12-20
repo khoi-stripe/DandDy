@@ -710,18 +710,16 @@ const CharacterSheet = (window.CharacterSheet = {
     }
 
     // Manager-only: Expand button to show campaign panel
-    // Uses same style as the old Edit button, hidden on mobile
+    // Uses same style as the Edit button, hidden on mobile
     const expandButtonHtml =
       context === 'manager' && hasValidManagerId
         ? `
         <button
-          class="terminal-btn-small sheet-edit-btn hide-on-mobile"
+          class="terminal-btn-small sheet-edit-btn sheet-expand-btn hide-on-mobile"
           type="button"
           onclick="ExpandedView.toggle()"
           title="Expand to show campaign info"
-        >
-          <span class="expand-icon" aria-hidden="true"></span> Expand
-        </button>
+        >⇥ Expand</button>
       `
         : '';
 
