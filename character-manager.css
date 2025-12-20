@@ -64,23 +64,25 @@
     overflow: hidden;
 }
 
-/* Character sheet column - takes full width by default */
+/* Character sheet column - fills right-panel by default */
 .expanded-sheet-column {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
+    transition: flex 0.3s ease;
 }
 
-/* Campaign panel column - hidden by default, shown in expanded view */
+/* Campaign panel column - hidden off-screen by default */
 .campaign-panel-column {
-    display: none;
-    flex: 0 0 380px;
+    flex: 0 0 0;
+    width: 0;
     border-left: 1px solid var(--sheet-border-color);
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
     min-height: 0;
     background: var(--terminal-bg);
+    opacity: 0;
+    transition: flex 0.3s ease, width 0.3s ease, opacity 0.3s ease;
 }
 
 /* Campaign panel content */
@@ -105,22 +107,35 @@
 }
 
 /* ===== EXPANDED VIEW STATE ===== */
-/* When split-layout has .is-expanded, hide left panel and show campaign panel */
+/* Animate left panel collapsing (width transition instead of display:none) */
+.split-layout .left-panel {
+    transition: flex 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+}
+
 .split-layout.is-expanded .left-panel {
-    display: none;
+    flex: 0 0 0;
+    padding: 0;
+    opacity: 0;
+    overflow: hidden;
+    border-right: none;
 }
 
 .split-layout.is-expanded .right-panel {
     flex: 1;
 }
 
-.split-layout.is-expanded .campaign-panel-column {
-    display: block;
+/* Sheet maintains its visual width (50% of total) when expanded */
+.split-layout.is-expanded .expanded-sheet-column {
+    flex: 0 0 50vw; /* Lock to viewport width, roughly same as original */
+    max-width: calc(50vw - var(--spacing-xl)); /* Account for padding */
 }
 
-/* Expand button changes icon when in expanded state */
-.split-layout.is-expanded .sheet-expand-btn {
-    /* Button text is updated via JS, but we ensure consistent styling here */
+/* Campaign panel expands to fill remaining space */
+.split-layout.is-expanded .campaign-panel-column {
+    flex: 1;
+    width: auto;
+    opacity: 1;
+    overflow-y: auto;
 }
 
 /* Campaign panel content styles */
