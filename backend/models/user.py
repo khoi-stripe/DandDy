@@ -29,5 +29,10 @@ class User(Base):
     campaigns_owned = relationship("Campaign", back_populates="dm")
     prompt_entries = relationship("PromptEntry", back_populates="owner")
     shared_characters = relationship("CharacterCollaborator", back_populates="user")
+    
+    # Campaign tracking relationships
+    campaign_memberships = relationship("CampaignMember", back_populates="user")
+    sessions = relationship("Session", back_populates="user")
+    session_logs = relationship("SessionLog", back_populates="user")
 
 

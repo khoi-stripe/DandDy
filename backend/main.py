@@ -17,7 +17,7 @@ from database.database import (
     ensure_last_updated_by_column,
     ensure_pinned_character_ids_column,
 )
-from routes import auth, characters, campaigns, ai, users, prompt_entries, shares
+from routes import auth, characters, campaigns, sessions, ai, users, prompt_entries, shares
 import os
 from dotenv import load_dotenv
 
@@ -89,6 +89,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.include_router(auth.router, prefix="/api")
 app.include_router(characters.router, prefix="/api")
 app.include_router(campaigns.router, prefix="/api")
+app.include_router(sessions.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(ai.router, prefix="/api/ai")
 app.include_router(prompt_entries.router, prefix="/api")

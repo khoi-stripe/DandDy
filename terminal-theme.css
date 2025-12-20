@@ -1609,14 +1609,14 @@ body::before {
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--sheet-border-color);
-  padding: 6px 10px;
+  padding: 6px 10px 6px 0;
   margin-bottom: var(--spacing-sm);
   font-family: inherit;
   text-align: left;
 }
 
-.sheet-header--collapsible:hover {
-  background: color-mix(in srgb, var(--sheet-accent) 8%, transparent);
+.sheet-header--collapsible:hover .sheet-header-toggle {
+  transform: scaleY(-1);
 }
 
 .sheet-header--collapsible:focus-visible {
@@ -1632,6 +1632,7 @@ body::before {
   display: inline-block;
   /* Default state: expanded (caret points up) */
   transform: scaleY(1);
+  transition: transform 0.2s ease;
 }
 
 /* Flip animation: close in towards center, then invert */
