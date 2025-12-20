@@ -709,34 +709,18 @@ const CharacterSheet = (window.CharacterSheet = {
       headerActions.push(deleteAction);
     }
 
-    // Manager-only inline Edit button (to the left of the overflow menu)
-    // Hidden on narrow viewports where it moves into the overflow menu
-    const editButtonHtml =
-      context === 'manager' && onEdit && editFn
-        ? `
-        <button
-          class="terminal-btn-small sheet-edit-btn"
-          type="button"
-          onclick="${editFn}"
-        >
-          ✎ Edit
-        </button>
-      `
-        : '';
-
     // Manager-only: Expand button to show campaign panel
-    // Hidden on mobile where expanded view doesn't make sense
+    // Uses same style as the old Edit button, hidden on mobile
     const expandButtonHtml =
       context === 'manager' && hasValidManagerId
         ? `
         <button
-          class="sheet-expand-btn hide-on-mobile"
+          class="terminal-btn-small sheet-edit-btn hide-on-mobile"
           type="button"
           onclick="ExpandedView.toggle()"
           title="Expand to show campaign info"
         >
-          <span class="expand-icon" aria-hidden="true"></span>
-          <span class="expand-label">Expand</span>
+          <span class="expand-icon" aria-hidden="true"></span> Expand
         </button>
       `
         : '';
@@ -789,11 +773,10 @@ const CharacterSheet = (window.CharacterSheet = {
         : '';
 
     const actionsBlock =
-      editButtonHtml || headerMenu || expandButtonHtml
+      expandButtonHtml || headerMenu
         ? `
         <div class="sheet-title-actions">
           ${expandButtonHtml}
-          ${editButtonHtml}
           ${headerMenu}
         </div>
       `

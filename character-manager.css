@@ -118,58 +118,13 @@
     display: block;
 }
 
-/* Expand button in character sheet header */
-.sheet-expand-btn {
-    background: transparent;
-    border: 1px solid var(--sheet-border-color);
-    color: var(--sheet-accent);
-    padding: 4px 10px;
-    font-size: var(--font-size-small);
-    font-family: inherit;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.sheet-expand-btn:hover {
-    background: color-mix(in srgb, var(--sheet-accent) 15%, transparent);
-    border-color: var(--sheet-accent);
-}
-
-.sheet-expand-btn .expand-icon {
-    font-size: 1.1em;
-}
-
-/* Change button text/icon when expanded */
-.split-layout.is-expanded .sheet-expand-btn .expand-icon::before {
-    content: '◂';
-}
-
-.sheet-expand-btn .expand-icon::before {
+/* Expand button icon changes when expanded */
+.expand-icon::before {
     content: '▸';
 }
 
-/* Back to grid button (shown in expanded view) */
-.back-to-grid-btn {
-    background: transparent;
-    border: 1px solid var(--sheet-border-color);
-    color: var(--sheet-text);
-    padding: 4px 12px;
-    font-size: var(--font-size-small);
-    font-family: inherit;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.2s ease;
-    margin-bottom: var(--spacing-md);
-}
-
-.back-to-grid-btn:hover {
-    background: color-mix(in srgb, var(--sheet-accent) 10%, transparent);
-    border-color: var(--sheet-accent);
-    color: var(--sheet-accent);
+.split-layout.is-expanded .expand-icon::before {
+    content: '◂';
 }
 
 /* Campaign panel content styles */
