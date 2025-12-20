@@ -817,44 +817,132 @@ const ExpandedView = (window.ExpandedView = {
         panel.innerHTML = this._renderCampaignPanelContent(characterId);
     },
 
-    /** Render placeholder content when no campaign is assigned */
-    _renderNoCampaign() {
+    /** Render the full campaign panel with both sections */
+    _renderCampaignPanelContent(characterId, campaignData = null) {
         return `
-            <div class="campaign-panel-empty">
-                <div class="campaign-panel-empty-icon">⚔</div>
-                <div class="campaign-panel-empty-title">No Campaign</div>
-                <div class="campaign-panel-empty-text">
-                    This character isn't part of a campaign yet.
-                </div>
-                <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJoinModal()">
-                    Join Campaign
-                </button>
-                <button class="terminal-btn terminal-btn-small terminal-btn-secondary" onclick="CampaignUI.openCreateModal()">
-                    Create Campaign
-                </button>
+            <div class="campaign-panel-layout">
+                ${this._renderCampaignArea(campaignData)}
+                ${this._renderJournalSection(characterId)}
             </div>
         `;
     },
 
-    /** Render campaign panel content (placeholder for now) */
-    _renderCampaignPanelContent(characterId) {
-        // TODO: Fetch actual campaign data and render
-        return `
-            <div class="campaign-panel-content">
-                <div class="campaign-panel-header">
-                    <h3 class="campaign-panel-title">Campaign Panel</h3>
+    /** Render the Campaign Area section (top) */
+    _renderCampaignArea(campaignData) {
+        if (!campaignData) {
+            // No campaign - show join/create buttons
+            return `
+                <div class="campaign-area">
+                    <div class="campaign-area-header">
+                        <h3 class="campaign-area-title">Campaign</h3>
+                    </div>
+                    <div class="campaign-area-empty">
+                        <div class="campaign-area-empty-icon">⚔</div>
+                        <div class="campaign-area-empty-text">
+                            Not in a campaign yet
+                        </div>
+                        <div class="campaign-area-actions">
+                            <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJoinModal()">
+                                Join Campaign
+                            </button>
+                            <button class="terminal-btn terminal-btn-small terminal-btn-secondary" onclick="CampaignUI.openCreateModal()">
+                                Create Campaign
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="campaign-panel-body">
-                    <p class="text-dim">Campaign features coming soon!</p>
-                    <p class="text-dim" style="font-size: 0.85em; margin-top: 1em;">
-                        • Join or create campaigns<br>
-                        • See party members<br>
-                        • Track play sessions<br>
-                        • Write session journals
-                    </p>
+            `;
+        }
+
+        // Has campaign - show campaign info
+        const { campaign, members } = campaignData;
+        const partyHtml = members && members.length > 0 
+            ? members.map(m => `
+                <div class="party-member">
+                    <span class="party-member-name">${m.character_name || 'No character'}</span>
+                    <span class="party-member-info">${m.character_info || ''}</span>
+                </div>
+            `).join('')
+            : '<div class="party-empty">No party members yet</div>';
+
+        return `
+            <div class="campaign-area">
+                <div class="campaign-area-header">
+                    <h3 class="campaign-area-title">${campaign.name}</h3>
+                </div>
+                <div class="campaign-area-invite">
+                    <span class="invite-label">Invite:</span>
+                    <code class="invite-code">${campaign.invite_code}</code>
+                    <button class="terminal-btn-icon" onclick="CampaignUI.copyInviteCode('${campaign.invite_code}')" title="Copy invite code">
+                        ⎘
+                    </button>
+                </div>
+                <div class="campaign-area-party">
+                    <div class="party-header">Party</div>
+                    <div class="party-list">
+                        ${partyHtml}
+                    </div>
+                </div>
+                <div class="campaign-area-actions">
+                    <button class="terminal-btn terminal-btn-small terminal-btn-danger" onclick="CampaignUI.leaveCampaign(${campaign.id})">
+                        Leave Campaign
+                    </button>
                 </div>
             </div>
         `;
+    },
+
+    /** Render the Journal section (bottom) */
+    _renderJournalSection(characterId, entries = []) {
+        const entriesHtml = entries.length > 0
+            ? entries.map(entry => `
+                <div class="journal-entry" data-entry-id="${entry.id}">
+                    <div class="journal-entry-header">
+                        <span class="journal-entry-date">${this._formatDate(entry.entry_date)}</span>
+                        <span class="journal-entry-title">${entry.title || 'Untitled'}</span>
+                    </div>
+                    <div class="journal-entry-preview">
+                        ${this._truncateText(entry.content, 100)}
+                    </div>
+                    <button class="journal-entry-edit terminal-btn-icon" onclick="CampaignUI.editJournalEntry(${entry.id})" title="Edit entry">
+                        ✎
+                    </button>
+                </div>
+            `).join('')
+            : `
+                <div class="journal-empty">
+                    <div class="journal-empty-text">No journal entries yet</div>
+                    <div class="journal-empty-hint">Record your adventures!</div>
+                </div>
+            `;
+
+        return `
+            <div class="journal-section">
+                <div class="journal-header">
+                    <h3 class="journal-title">Journal</h3>
+                    <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJournalEntryModal()">
+                        + Add Entry
+                    </button>
+                </div>
+                <div class="journal-entries">
+                    ${entriesHtml}
+                </div>
+            </div>
+        `;
+    },
+
+    /** Format a date for display */
+    _formatDate(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    },
+
+    /** Truncate text with ellipsis */
+    _truncateText(text, maxLength) {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength).trim() + '...';
     },
 
     /** Restore expanded state from session storage */

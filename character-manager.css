@@ -135,58 +135,255 @@
     overflow-y: auto;
 }
 
-/* Campaign panel content styles */
-.campaign-panel-content {
+/* ===== CAMPAIGN PANEL TWO-SECTION LAYOUT ===== */
+.campaign-panel-layout {
+    display: flex;
+    flex-direction: column;
     height: 100%;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-lg);
 }
 
-.campaign-panel-header {
-    border-bottom: 1px solid var(--sheet-border-color);
-    padding-bottom: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
+/* ===== CAMPAIGN AREA (TOP SECTION) ===== */
+.campaign-area {
+    flex-shrink: 0;
+    border: 1px solid var(--terminal-border-color);
+    border-radius: 4px;
+    padding: var(--spacing-md);
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 5%, 0.5);
 }
 
-.campaign-panel-title {
+.campaign-area-header {
+    margin-bottom: var(--spacing-md);
+}
+
+.campaign-area-title {
     font-size: 1.1em;
     color: var(--sheet-accent);
     margin: 0;
     font-weight: 500;
 }
 
-.campaign-panel-body {
-    color: var(--terminal-text);
-}
-
-/* Empty campaign state */
-.campaign-panel-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
+/* No campaign state */
+.campaign-area-empty {
     text-align: center;
-    padding: var(--spacing-xl);
-    gap: var(--spacing-md);
+    padding: var(--spacing-md);
 }
 
-.campaign-panel-empty-icon {
-    font-size: 3em;
+.campaign-area-empty-icon {
+    font-size: 2em;
     opacity: 0.3;
     margin-bottom: var(--spacing-sm);
 }
 
-.campaign-panel-empty-title {
-    font-size: 1.2em;
+.campaign-area-empty-text {
+    color: var(--terminal-dim);
+    font-size: var(--font-size-small);
+    margin-bottom: var(--spacing-md);
+}
+
+.campaign-area-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: var(--spacing-md);
+}
+
+/* Invite code display */
+.campaign-area-invite {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: var(--terminal-bg-dark);
+    border-radius: 4px;
+    margin-bottom: var(--spacing-md);
+}
+
+.invite-label {
+    color: var(--terminal-dim);
+    font-size: var(--font-size-small);
+}
+
+.invite-code {
+    font-family: var(--font-mono);
     color: var(--sheet-accent);
+    letter-spacing: 0.1em;
+}
+
+.terminal-btn-icon {
+    background: transparent;
+    border: none;
+    color: var(--terminal-dim);
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    font-size: 1em;
+    line-height: 1;
+    transition: color var(--transition-speed);
+}
+
+.terminal-btn-icon:hover {
+    color: var(--sheet-accent);
+}
+
+/* Party members */
+.campaign-area-party {
+    margin-bottom: var(--spacing-md);
+}
+
+.party-header {
+    font-size: var(--font-size-small);
+    color: var(--terminal-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--terminal-border-color);
+    padding-bottom: var(--spacing-xs);
+}
+
+.party-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.party-member {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-xs) 0;
+}
+
+.party-member-name {
+    color: var(--terminal-text);
+}
+
+.party-member-info {
+    color: var(--terminal-dim);
+    font-size: var(--font-size-small);
+}
+
+.party-empty {
+    color: var(--terminal-dim);
+    font-size: var(--font-size-small);
+    font-style: italic;
+    padding: var(--spacing-sm) 0;
+}
+
+/* ===== JOURNAL SECTION (BOTTOM) ===== */
+.journal-section {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--terminal-border-color);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.journal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--terminal-border-color);
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 5%, 0.5);
+    flex-shrink: 0;
+}
+
+.journal-title {
+    font-size: 1em;
+    color: var(--sheet-accent);
+    margin: 0;
     font-weight: 500;
 }
 
-.campaign-panel-empty-text {
+.journal-entries {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-sm);
+}
+
+/* Individual journal entry */
+.journal-entry {
+    position: relative;
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--terminal-border-color);
+    transition: background var(--transition-speed);
+}
+
+.journal-entry:last-child {
+    border-bottom: none;
+}
+
+.journal-entry:hover {
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 10%, 0.3);
+}
+
+.journal-entry-header {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: baseline;
+    margin-bottom: var(--spacing-xs);
+}
+
+.journal-entry-date {
     color: var(--terminal-dim);
     font-size: var(--font-size-small);
-    max-width: 200px;
-    line-height: 1.5;
-    margin-bottom: var(--spacing-md);
+    flex-shrink: 0;
+}
+
+.journal-entry-title {
+    color: var(--sheet-accent);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.journal-entry-preview {
+    color: var(--terminal-dim);
+    font-size: var(--font-size-small);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.journal-entry-edit {
+    position: absolute;
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    opacity: 0;
+    transition: opacity var(--transition-speed);
+}
+
+.journal-entry:hover .journal-entry-edit {
+    opacity: 1;
+}
+
+/* Empty journal state */
+.journal-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+    text-align: center;
+    height: 100%;
+}
+
+.journal-empty-text {
+    color: var(--terminal-dim);
+    margin-bottom: var(--spacing-xs);
+}
+
+.journal-empty-hint {
+    color: var(--terminal-dim);
+    font-size: var(--font-size-small);
+    opacity: 0.7;
 }
 
 /* Hide on mobile utility */
