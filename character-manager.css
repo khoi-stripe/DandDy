@@ -89,6 +89,9 @@
     border-left: 1px solid var(--sheet-border-color);
     min-height: 0;
     background: var(--terminal-bg);
+    /* Slide animation */
+    transform: translateX(100%);
+    transition: transform 0.25s ease-out;
 }
 
 /* Campaign panel content */
@@ -128,11 +131,12 @@
     flex: 0 0 50%;
 }
 
-/* Campaign panel takes remaining 50% */
+/* Campaign panel slides in from right and takes remaining 50% */
 .split-layout.is-expanded .campaign-panel-column {
     flex: 0 0 50%;
     width: 50%;
     overflow-y: auto;
+    transform: translateX(0);
 }
 
 /* Campaign panel content styles */
