@@ -756,18 +756,9 @@ const ExpandedView = (window.ExpandedView = {
     /** Expand to show campaign panel */
     expand() {
         const splitLayout = document.querySelector('.split-layout');
-        const sheetColumn = document.querySelector('.expanded-sheet-column');
-        if (!splitLayout || !sheetColumn) return;
+        if (!splitLayout) return;
 
-        // Set starting position for slide animation
-        sheetColumn.classList.add('slide-from-center');
-        
-        // Trigger layout change
         splitLayout.classList.add('is-expanded');
-        
-        // Force reflow, then animate slide
-        sheetColumn.offsetHeight; // eslint-disable-line no-unused-expressions
-        sheetColumn.classList.remove('slide-from-center');
         
         // Update button text
         this._updateButtonText(true);
@@ -786,17 +777,9 @@ const ExpandedView = (window.ExpandedView = {
     /** Collapse back to grid view */
     collapse() {
         const splitLayout = document.querySelector('.split-layout');
-        const sheetColumn = document.querySelector('.expanded-sheet-column');
-        if (!splitLayout || !sheetColumn) return;
+        if (!splitLayout) return;
 
-        // Animate slide back to center
-        sheetColumn.classList.add('slide-from-center');
-        
-        // Wait for animation, then remove expanded state
-        setTimeout(() => {
-            splitLayout.classList.remove('is-expanded');
-            sheetColumn.classList.remove('slide-from-center');
-        }, 300); // Match CSS transition duration
+        splitLayout.classList.remove('is-expanded');
         
         // Update button text
         this._updateButtonText(false);
