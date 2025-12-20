@@ -62,29 +62,26 @@
     flex: 1;
     min-height: 0;
     overflow: hidden;
-    /* Slide animation - starts shifted right so sheet appears centered */
-    transform: translateX(50%);
-    transition: transform 0.3s ease;
 }
 
-/* Character sheet column - fixed width (50% of viewport) */
+/* Character sheet column - fills right-panel in collapsed state */
 .expanded-sheet-column {
-    flex: 0 0 50%;
-    width: 50%;
+    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
+    transition: flex 0.3s ease;
 }
 
-/* Campaign panel column - always exists, revealed by container slide */
+/* Campaign panel column - hidden in collapsed state */
 .campaign-panel-column {
-    flex: 0 0 50%;
-    width: 50%;
+    flex: 0 0 0;
+    width: 0;
+    overflow: hidden;
     border-left: 1px solid var(--sheet-border-color);
-    overflow-y: auto;
-    overflow-x: hidden;
     min-height: 0;
     background: var(--terminal-bg);
+    transition: flex 0.3s ease, width 0.3s ease;
 }
 
 /* Campaign panel content */
@@ -109,7 +106,7 @@
 }
 
 /* ===== EXPANDED VIEW STATE ===== */
-/* Hide left panel instantly when expanded */
+/* Hide left panel when expanded */
 .split-layout.is-expanded .left-panel {
     display: none;
 }
@@ -119,9 +116,16 @@
     flex: 1;
 }
 
-/* Slide the container left to reveal campaign panel */
-.split-layout.is-expanded .expanded-view-container {
-    transform: translateX(0);
+/* Sheet stays same absolute width (50% of full terminal = 50% of expanded right-panel) */
+.split-layout.is-expanded .expanded-sheet-column {
+    flex: 0 0 50%;
+}
+
+/* Campaign panel slides in to take remaining 50% */
+.split-layout.is-expanded .campaign-panel-column {
+    flex: 0 0 50%;
+    width: 50%;
+    overflow-y: auto;
 }
 
 /* Campaign panel content styles */
