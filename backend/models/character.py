@@ -141,5 +141,10 @@ class Character(Base):
     last_updated_by = relationship("User", foreign_keys=[last_updated_by_id])
     campaign = relationship("Campaign", back_populates="characters")
     collaborators = relationship("CharacterCollaborator", back_populates="character", cascade="all, delete-orphan")
+    
+    # Campaign tracking relationships
+    campaign_membership = relationship("CampaignMember", back_populates="character", uselist=False)
+    sessions = relationship("Session", back_populates="character", cascade="all, delete-orphan")
+    session_logs = relationship("SessionLog", back_populates="character", cascade="all, delete-orphan")
 
 
