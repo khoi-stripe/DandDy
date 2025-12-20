@@ -70,6 +70,8 @@
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
+    /* Always have transition ready for slide animation */
+    transition: transform 0.3s ease;
 }
 
 /* Campaign panel column - hidden in collapsed state */
@@ -114,11 +116,9 @@
     flex: 1;
 }
 
-/* Sheet keeps 50% width, slides via transform */
+/* Sheet keeps 50% width when expanded */
 .split-layout.is-expanded .expanded-sheet-column {
     flex: 0 0 50%;
-    transform: translateX(0);
-    transition: transform 0.3s ease;
 }
 
 /* Start position for slide animation (added via JS before expanding) */
