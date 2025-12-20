@@ -134,6 +134,7 @@ manager_parts = [
     "character-builder/character-builder-components.js",
     "shared-character-sheet.js",
     "character-manager-api.js",
+    "campaign-api.js",
     "demo-characters.js",
     "character-storage.js",
     "portraits-ui.js",
