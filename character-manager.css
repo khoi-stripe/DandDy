@@ -55,6 +55,11 @@
 /* Collapsed: Grid + Sheet visible, Campaign off-screen right */
 /* Expanded: Sheet + Campaign visible, Grid off-screen left */
 
+/* Ensure split-layout clips the overflowing slider */
+.split-layout {
+    overflow: hidden;
+}
+
 .panel-slider {
     display: flex;
     width: 150%; /* 3 panels x 50% of terminal each */
