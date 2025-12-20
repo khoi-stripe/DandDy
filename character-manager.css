@@ -62,27 +62,29 @@
     flex: 1;
     min-height: 0;
     overflow: hidden;
+    /* Slide animation - starts shifted right so sheet appears centered */
+    transform: translateX(50%);
+    transition: transform 0.3s ease;
 }
 
-/* Character sheet column - fills right-panel by default */
+/* Character sheet column - fixed width (50% of viewport) */
 .expanded-sheet-column {
-    flex: 1;
+    flex: 0 0 50%;
+    width: 50%;
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
-    transition: flex 0.3s ease;
 }
 
-/* Campaign panel column - hidden off-screen by default */
+/* Campaign panel column - always exists, revealed by container slide */
 .campaign-panel-column {
-    flex: 0 0 0;
-    width: 0;
+    flex: 0 0 50%;
+    width: 50%;
     border-left: 1px solid var(--sheet-border-color);
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     min-height: 0;
     background: var(--terminal-bg);
-    opacity: 0;
-    transition: flex 0.3s ease, width 0.3s ease, opacity 0.3s ease;
 }
 
 /* Campaign panel content */
@@ -107,35 +109,19 @@
 }
 
 /* ===== EXPANDED VIEW STATE ===== */
-/* Animate left panel collapsing (width transition instead of display:none) */
-.split-layout .left-panel {
-    transition: flex 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
-}
-
+/* Hide left panel instantly when expanded */
 .split-layout.is-expanded .left-panel {
-    flex: 0 0 0;
-    padding: 0;
-    opacity: 0;
-    overflow: hidden;
-    border-right: none;
+    display: none;
 }
 
+/* Right panel takes full width */
 .split-layout.is-expanded .right-panel {
     flex: 1;
 }
 
-/* Sheet maintains its visual width (50% of total) when expanded */
-.split-layout.is-expanded .expanded-sheet-column {
-    flex: 0 0 50vw; /* Lock to viewport width, roughly same as original */
-    max-width: calc(50vw - var(--spacing-xl)); /* Account for padding */
-}
-
-/* Campaign panel expands to fill remaining space */
-.split-layout.is-expanded .campaign-panel-column {
-    flex: 1;
-    width: auto;
-    opacity: 1;
-    overflow-y: auto;
+/* Slide the container left to reveal campaign panel */
+.split-layout.is-expanded .expanded-view-container {
+    transform: translateX(0);
 }
 
 /* Campaign panel content styles */
