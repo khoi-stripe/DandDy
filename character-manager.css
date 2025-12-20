@@ -141,7 +141,6 @@
     flex-direction: column;
     height: 100%;
     gap: var(--spacing-lg);
-    padding: var(--spacing-lg);
 }
 
 /* ===== CAMPAIGN AREA (TOP SECTION) ===== */
