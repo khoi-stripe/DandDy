@@ -217,11 +217,10 @@ if settings.debug:
 
 ### 1.4 Backup Files Cluttering Codebase 🟢
 
-**Issue:** 8 `.bak` files found in repository.
+**Issue:** `.bak` files found in repository.
 
 **Files:**
 ```
-character-builder/character-builder-services-secure.js.bak
 scripts/generate_all_portraits_gemini.py.bak
 scripts/generate_all_portraits.py.bak
 character-manager.js.bak

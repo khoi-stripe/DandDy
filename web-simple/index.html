@@ -345,9 +345,12 @@
                     const raceLower = race.toLowerCase().replace(/ /g, '-');
                     const classLower = characterClass.toLowerCase();
                     
+                    const buildAsciiUrl = (slug) =>
+                        new URL(`generated_portraits/ascii/${slug}.txt`, window.location.href).toString();
+
                     // Try race-class combo first
                     try {
-                        const response = await fetch(`/generated_portraits/ascii/${raceLower}-${classLower}.txt`);
+                        const response = await fetch(buildAsciiUrl(`${raceLower}-${classLower}`));
                         if (response.ok) {
                             setAsciiArt(await response.text());
                             setLoadingArt(false);
@@ -357,7 +360,7 @@
                     
                     // Fallback to race only
                     try {
-                        const response = await fetch(`/generated_portraits/ascii/${raceLower}.txt`);
+                        const response = await fetch(buildAsciiUrl(raceLower));
                         if (response.ok) {
                             setAsciiArt(await response.text());
                         } else {

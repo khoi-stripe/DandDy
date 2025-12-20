@@ -27,8 +27,8 @@ MAX_REQUESTS_PER_USER_PER_DAY=100
 ALLOWED_ORIGINS=http://localhost:5173
 ```
 
-### 3. **Secure Frontend Service** (`character-builder/character-builder-services-secure.js`)
-Drop-in replacement for your current AI service that calls the backend instead of OpenAI directly.
+### 3. **Secure Frontend Service** (`character-builder/character-builder-services.js`)
+Your existing frontend AI service is wired to call the backend proxy (no browser API keys).
 
 ### 4. **Test Suite** (`backend/test_ai_api.py`)
 Automated tests for all endpoints:
@@ -61,7 +61,7 @@ uvicorn main:app --reload
 # 4. Test it (in another terminal)
 python test_ai_api.py
 
-# 5. Update frontend to use SecureAIService instead of AIService
+# 5. Point the frontend at the backend proxy (and remove browser-stored keys)
 ```
 
 See `QUICKSTART_SECURE_API.md` for details.
@@ -120,7 +120,7 @@ backend/
   └── test_ai_api.py        ← Test suite (NEW)
 
 character-builder/
-  └── character-builder-services-secure.js  ← Secure service wrapper (NEW)
+  └── character-builder-services.js         ← Secure service (UPDATED)
 
 Documentation:
   ├── QUICKSTART_SECURE_API.md      (NEW)
@@ -166,22 +166,17 @@ Keep both systems running during transition:
 
 1. ✅ Backend is ready (done!)
 2. Test backend with `python test_ai_api.py`
-3. Update one feature at a time to use `SecureAIService`
-4. Once all features migrated, remove old code
+3. Ensure `BACKEND_URL` points at your backend
+4. Remove any code that stores/reads OpenAI keys in the browser (localStorage/UI inputs)
+5. Once confirmed, delete any leftover “direct OpenAI from browser” code paths
 
 ### Option 2: Quick Switch
 
 Replace all at once:
 
 ```javascript
-// Find & replace in character-builder-services.js:
-AIService → SecureAIService
-
-// Or add to your HTML:
-<script src="character-builder-services-secure.js"></script>
-
-// Then use:
-const comment = await SecureAIService.generateNarratorComment(context);
+// In this repo, AIService is bundled and should call the backend proxy.
+// Remove browser key storage + direct OpenAI fetch() calls, then test the flows.
 ```
 
 ### Option 3: Keep Insecure (Not Recommended)
@@ -337,7 +332,7 @@ console.log(await response.json());
 A: No, but you should. Your current setup exposes your API key to anyone.
 
 **Q: Will this break my existing code?**  
-A: Not if you use `SecureAIService` alongside `AIService`. Migrate gradually.
+A: Not if you point the frontend at the backend proxy (`BACKEND_URL`) and remove browser-stored keys. Keep using `AIService`.
 
 **Q: What about the Python script for generating portraits?**  
 A: That's fine! It's server-side code. Use: `export OPENAI_API_KEY='sk-...' && python generate_all_portraits.py`
@@ -377,7 +372,7 @@ External resources:
 
 ### Integration (30 minutes)
 - [ ] Add `BACKEND_URL` to your frontend config
-- [ ] Replace `AIService` with `SecureAIService` in one feature
+- [ ] Remove any browser API key UI/localStorage usage and verify `AIService` calls the backend proxy
 - [ ] Test that feature works
 - [ ] Migrate remaining features
 - [ ] Remove API key input from settings UI

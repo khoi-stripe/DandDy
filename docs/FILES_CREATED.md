@@ -40,14 +40,12 @@ backend/
 
 ```
 character-builder/
-└── character-builder-services-secure.js    [NEW] Secure service wrapper
+└── character-builder-services.js           [UPDATED] Uses backend proxy (secure)
 ```
 
-**character-builder-services-secure.js** (275 lines)
-- Drop-in replacement for AIService
-- Calls backend instead of OpenAI directly
-- Same API as AIService for easy migration
-- Usage examples included in comments
+**character-builder-services.js**
+- Uses the backend proxy routes for AI calls (no client-side API keys)
+- Bundled into `manager.bundle.js` and `character-builder/builder.bundle.js`
 
 ---
 
@@ -180,7 +178,7 @@ character-builder/
 👉 Tests: `backend/test_ai_api.py`
 
 ### For Frontend Code
-👉 Secure service: `character-builder/character-builder-services-secure.js`
+👉 Secure service: `character-builder/character-builder-services.js`
 
 ---
 
@@ -198,7 +196,7 @@ character-builder/
 │   └── main.py                                 ✅ UPDATED
 │
 ├── character-builder/
-│   ├── character-builder-services-secure.js    ✨ NEW
+│   ├── character-builder-services.js           ✅ UPDATED
 │   └── character-builder-config.js             ✅ UPDATED
 │
 └── Documentation/
@@ -225,7 +223,7 @@ character-builder/
 | **backend/routes/ai.py** | API implementation | Backend runs this |
 | **backend/env.example** | Config template | DevOps |
 | **backend/test_ai_api.py** | Test suite | QA/Developers |
-| **character-builder-services-secure.js** | Secure service | Frontend uses this |
+| **character-builder-services.js** | Secure service | Frontend uses this |
 
 ---
 
@@ -241,7 +239,7 @@ character-builder/
 🧪 Run `python backend/test_ai_api.py` (1 minute)
 
 ### Step 4: Integrate
-🔧 Use `SecureAIService` in frontend (30 minutes)
+🔧 Use the bundled `AIService` with `BACKEND_URL` pointing at your backend (30 minutes)
 
 ### Step 5: Deploy
 🚀 Follow production guide in [SECURE_API_GUIDE.md](SECURE_API_GUIDE.md)

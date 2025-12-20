@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Glow Lab</title>
+
+    <link rel="stylesheet" href="../terminal-theme.css" />
+
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--terminal-bg);
+        color: var(--terminal-fg);
+        font-family: var(--font-mono);
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      .panel {
+        border: 1px solid var(--terminal-border);
+        background: rgba(0, 255, 0, 0.03);
+        box-shadow:
+          0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.25),
+          0 0 24px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.12);
+        border-radius: 2px;
+      }
+
+      .controls-panel {
+        width: min(440px, 100%);
+        padding: 16px 16px 18px;
+        overflow: auto;
+      }
+
+      .preview-panel {
+        flex: 1;
+        min-width: 320px;
+        padding: 18px;
+        display: grid;
+        place-items: center;
+        position: relative;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 18px;
+        color: var(--terminal-fg);
+      }
+
+      .subtitle {
+        margin: 0 0 14px;
+        color: var(--terminal-dim);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      h2 {
+        margin: 16px 0 10px;
+        font-size: 14px;
+        color: var(--terminal-warning);
+      }
+
+      .control-group {
+        margin-bottom: 12px;
+      }
+
+      .control-label {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 12px;
+        color: var(--terminal-dim);
+        margin-bottom: 6px;
+      }
+
+      .control-value {
+        color: var(--terminal-fg);
+      }
+
+      .control-input {
+        width: 100%;
+      }
+
+      .btn-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+
+      .terminal-btn-small {
+        appearance: none;
+        border: 1px solid var(--terminal-border);
+        background: transparent;
+        color: var(--terminal-fg);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        padding: 8px 10px;
+        cursor: pointer;
+      }
+
+      .terminal-btn-small:hover {
+        background: var(--terminal-hover);
+      }
+
+      .glow-demo {
+        display: grid;
+        place-items: center;
+        width: min(520px, 100%);
+      }
+
+      /* A "safe area" frame so you can see if you're risking clipping */
+      .safe-frame {
+        width: min(440px, 100%);
+        height: min(420px, 70vh);
+        border: 1px dashed hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.6);
+        display: grid;
+        place-items: center;
+        padding: 18px;
+        box-sizing: border-box;
+      }
+
+      .logo-scale {
+        width: clamp(160px, 30vw, 240px);
+        height: auto;
+        display: block;
+      }
+
+      pre {
+        margin: 14px 0 0;
+        padding: 10px 12px;
+        border: 1px solid hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.25);
+        background: rgba(0, 0, 0, 0.4);
+        color: var(--terminal-dim);
+        font-size: 11px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      @media (max-width: 980px) {
+        body {
+          flex-direction: column;
+        }
+        .controls-panel {
+          width: 100%;
+          max-height: 46vh;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="panel controls-panel">
+      <h1>Glow Lab</h1>
+      <p class="subtitle">
+        Adjust the variables that drive <code>.splash-logo-wrap</code> /
+        <code>.splash-logo-glow::before</code> in <code>terminal-theme.css</code>.
+        This glow is no longer on the real splash screen.
+      </p>
+
+      <h2>Motion</h2>
+
+      <div class="control-group">
+        <label class="control-label" for="duration">
+          Duration <span class="control-value" id="duration-value"></span>
+        </label>
+        <input id="duration" class="control-input" type="range" min="3" max="40" step="0.5" />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="rotate-base">
+          Rotate base <span class="control-value" id="rotate-base-value"></span>
+        </label>
+        <input id="rotate-base" class="control-input" type="range" min="0" max="360" step="1" />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="rotate-wobble">
+          Rotate wobble <span class="control-value" id="rotate-wobble-value"></span>
+        </label>
+        <input id="rotate-wobble" class="control-input" type="range" min="0" max="30" step="0.5" />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="drift">
+          Drift <span class="control-value" id="drift-value"></span>
+        </label>
+        <input id="drift" class="control-input" type="range" min="0" max="12" step="0.5" />
+      </div>
+
+      <h2>Size / peek</h2>
+
+      <div class="control-group">
+        <label class="control-label" for="pad">
+          Wrapper padding <span class="control-value" id="pad-value"></span>
+        </label>
+        <input id="pad" class="control-input" type="range" min="0" max="40" step="1" />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="inset">
+          Glow inset <span class="control-value" id="inset-value"></span>
+        </label>
+        <input id="inset" class="control-input" type="range" min="0" max="30" step="1" />
+      </div>
+
+      <h2>Intensity</h2>
+
+      <div class="control-group">
+        <label class="control-label" for="opacity-min">
+          Opacity min <span class="control-value" id="opacity-min-value"></span>
+        </label>
+        <input id="opacity-min" class="control-input" type="range" min="0" max="1" step="0.01" />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="opacity-max">
+          Opacity max <span class="control-value" id="opacity-max-value"></span>
+        </label>
+        <input id="opacity-max" class="control-input" type="range" min="0" max="1" step="0.01" />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="blur-min">
+          Blur min <span class="control-value" id="blur-min-value"></span>
+        </label>
+        <input id="blur-min" class="control-input" type="range" min="0" max="40" step="1" />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="blur-max">
+          Blur max <span class="control-value" id="blur-max-value"></span>
+        </label>
+        <input id="blur-max" class="control-input" type="range" min="0" max="70" step="1" />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="brightness-min">
+          Brightness min <span class="control-value" id="brightness-min-value"></span>
+        </label>
+        <input id="brightness-min" class="control-input" type="range" min="0.5" max="2.0" step="0.01" />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="brightness-max">
+          Brightness max <span class="control-value" id="brightness-max-value"></span>
+        </label>
+        <input id="brightness-max" class="control-input" type="range" min="0.5" max="2.5" step="0.01" />
+      </div>
+
+      <h2>Palette (alphas)</h2>
+
+      <div class="control-group">
+        <label class="control-label" for="teal-a">
+          Teal alpha <span class="control-value" id="teal-a-value"></span>
+        </label>
+        <input id="teal-a" class="control-input" type="range" min="0" max="1" step="0.01" />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="green-a">
+          Green alpha <span class="control-value" id="green-a-value"></span>
+        </label>
+        <input id="green-a" class="control-input" type="range" min="0" max="1" step="0.01" />
+      </div>
+
+      <div class="control-group">
+        <label class="control-label" for="yellow-a">
+          Yellow alpha <span class="control-value" id="yellow-a-value"></span>
+        </label>
+        <input id="yellow-a" class="control-input" type="range" min="0" max="1" step="0.01" />
+      </div>
+
+      <div class="btn-row">
+        <button id="reset" class="terminal-btn-small" type="button">Reset defaults</button>
+        <button id="copy" class="terminal-btn-small" type="button">Copy variables</button>
+      </div>
+
+      <pre id="varsOut"></pre>
+    </section>
+
+    <section class="panel preview-panel">
+      <div class="glow-demo" id="demo">
+        <div class="safe-frame">
+          <div class="splash-logo-wrap splash-logo-glow">
+            <img
+              src="../splash-logo.svg?v=3"
+              alt="DandDy"
+              class="splash-logo-img logo-scale"
+              width="200"
+              height="293"
+              draggable="false"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <script>
+      (function () {
+        const demo = document.getElementById("demo");
+        const varsOut = document.getElementById("varsOut");
+
+        const controls = {
+          duration: { el: document.getElementById("duration"), out: document.getElementById("duration-value"), var: "--splash-glow-duration", unit: "s" },
+          rotateBase: { el: document.getElementById("rotate-base"), out: document.getElementById("rotate-base-value"), var: "--splash-glow-rotate-base", unit: "deg" },
+          rotateWobble: { el: document.getElementById("rotate-wobble"), out: document.getElementById("rotate-wobble-value"), var: "--splash-glow-rotate-wobble", unit: "deg" },
+          drift: { el: document.getElementById("drift"), out: document.getElementById("drift-value"), var: "--splash-glow-drift", unit: "px" },
+          pad: { el: document.getElementById("pad"), out: document.getElementById("pad-value"), var: "--splash-glow-pad", unit: "px" },
+          inset: { el: document.getElementById("inset"), out: document.getElementById("inset-value"), var: "--splash-glow-inset", unit: "px" },
+
+          opacityMin: { el: document.getElementById("opacity-min"), out: document.getElementById("opacity-min-value"), var: "--splash-glow-opacity-min", unit: "" },
+          opacityMax: { el: document.getElementById("opacity-max"), out: document.getElementById("opacity-max-value"), var: "--splash-glow-opacity-max", unit: "" },
+
+          blurMin: { el: document.getElementById("blur-min"), out: document.getElementById("blur-min-value"), var: "--splash-glow-blur-min", unit: "px" },
+          blurMax: { el: document.getElementById("blur-max"), out: document.getElementById("blur-max-value"), var: "--splash-glow-blur-max", unit: "px" },
+
+          brightnessMin: { el: document.getElementById("brightness-min"), out: document.getElementById("brightness-min-value"), var: "--splash-glow-brightness-min", unit: "" },
+          brightnessMax: { el: document.getElementById("brightness-max"), out: document.getElementById("brightness-max-value"), var: "--splash-glow-brightness-max", unit: "" },
+
+          tealA: { el: document.getElementById("teal-a"), out: document.getElementById("teal-a-value"), var: "--splash-glow-teal-a", unit: "" },
+          greenA: { el: document.getElementById("green-a"), out: document.getElementById("green-a-value"), var: "--splash-glow-green-a", unit: "" },
+          yellowA: { el: document.getElementById("yellow-a"), out: document.getElementById("yellow-a-value"), var: "--splash-glow-yellow-a", unit: "" },
+        };
+
+        const defaults = {
+          duration: 9.5,
+          rotateBase: 46,
+          rotateWobble: 6,
+          drift: 1,
+          pad: 14,
+          inset: 2,
+          opacityMin: 0.5,
+          opacityMax: 0.9,
+          blurMin: 12,
+          blurMax: 18,
+          brightnessMin: 0.95,
+          brightnessMax: 1.28,
+          tealA: 0.92,
+          greenA: 0.82,
+          yellowA: 0.62,
+        };
+
+        function setVar(name, value) {
+          demo.style.setProperty(name, value);
+        }
+
+        function fmt(name, value) {
+          if (name === "duration") return value.toFixed(1) + "s";
+          if (name === "rotateBase" || name === "rotateWobble") return value.toFixed(1).replace(/\.0$/, "") + "°";
+          if (name === "pad" || name === "inset" || name === "blurMin" || name === "blurMax" || name === "drift") return value.toFixed(1).replace(/\.0$/, "") + "px";
+          return value.toFixed(2).replace(/0$/, "").replace(/\.?$/, (m) => (m === "." ? "" : m));
+        }
+
+        function recomputeMids() {
+          const opacityMin = parseFloat(controls.opacityMin.el.value);
+          const opacityMax = parseFloat(controls.opacityMax.el.value);
+          const blurMin = parseFloat(controls.blurMin.el.value);
+          const blurMax = parseFloat(controls.blurMax.el.value);
+          const bMin = parseFloat(controls.brightnessMin.el.value);
+          const bMax = parseFloat(controls.brightnessMax.el.value);
+
+          const opacityMid = (opacityMin + opacityMax) / 2;
+          const blurMid = (blurMin + blurMax) / 2;
+          const bMid = (bMin + bMax) / 2;
+
+          setVar("--splash-glow-opacity-mid", String(opacityMid));
+          setVar("--splash-glow-blur-mid", blurMid + "px");
+          setVar("--splash-glow-brightness-mid", String(bMid));
+
+          // Keep saturate mids proportional (simple, but good enough for exploration)
+          setVar("--splash-glow-saturate-min", "1.10");
+          setVar("--splash-glow-saturate-mid", "1.18");
+          setVar("--splash-glow-saturate-max", "1.23");
+
+          // Scales (fixed defaults for now; can be added as sliders later)
+          setVar("--splash-glow-scale-min", "0.99");
+          setVar("--splash-glow-scale-mid", "1.02");
+          setVar("--splash-glow-scale-max", "1.04");
+        }
+
+        function updateOutput() {
+          const lines = [];
+          for (const [key, c] of Object.entries(controls)) {
+            const raw = c.el.value;
+            const value = c.unit ? raw + c.unit : raw;
+            lines.push(`${c.var}: ${value};`);
+          }
+          // also include derived mids
+          const derived = [
+            "--splash-glow-opacity-mid",
+            "--splash-glow-blur-mid",
+            "--splash-glow-brightness-mid",
+          ];
+          const computed = getComputedStyle(demo);
+          for (const v of derived) {
+            lines.push(`${v}: ${computed.getPropertyValue(v).trim()};`);
+          }
+          varsOut.textContent = lines.join("\n");
+        }
+
+        function syncOne(name) {
+          const c = controls[name];
+          const v = parseFloat(c.el.value);
+          c.out.textContent = fmt(name, v);
+          setVar(c.var, c.unit ? c.el.value + c.unit : c.el.value);
+        }
+
+        function syncAll() {
+          for (const name of Object.keys(controls)) syncOne(name);
+          recomputeMids();
+          updateOutput();
+        }
+
+        function setDefaults() {
+          for (const [name, value] of Object.entries(defaults)) {
+            controls[name].el.value = String(value);
+          }
+          syncAll();
+        }
+
+        for (const name of Object.keys(controls)) {
+          controls[name].el.addEventListener("input", () => {
+            syncOne(name);
+            recomputeMids();
+            updateOutput();
+          });
+        }
+
+        document.getElementById("reset").addEventListener("click", setDefaults);
+
+        document.getElementById("copy").addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(varsOut.textContent);
+          } catch (e) {
+            // Fallback: select text
+            const range = document.createRange();
+            range.selectNodeContents(varsOut);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        });
+
+        setDefaults();
+      })();
+    </script>
+  </body>
+</html>
+
+

@@ -55,15 +55,15 @@ backend/
 ```
 character-builder/
 ├── character-builder-config.js             ✅ UPDATED - Added BACKEND_URL
-└── character-builder-services-secure.js    ✨ NEW - Secure service wrapper
+└── character-builder-services.js           ✅ UPDATED - Calls the backend proxy (no client-side API keys)
 ```
 
 **Usage:**
 ```javascript
-// Instead of AIService (insecure)
-const comment = await SecureAIService.generateNarratorComment(context);
-const names = await SecureAIService.generateNames('elf', 'wizard', 3);
-const backstory = await SecureAIService.generateBackstory(character);
+// Use AIService (it calls the backend proxy; no browser key required)
+const comment = await AIService.generateNarratorComment(context);
+const names = await AIService.generateNames('elf', 'wizard', 3);
+const backstory = await AIService.generateBackstory(character);
 ```
 
 ### Documentation
@@ -98,15 +98,8 @@ cd backend
 python test_ai_api.py
 
 # 5. Update frontend (in your HTML)
-<script src="character-builder-services-secure.js"></script>
-<script>
-  // Use SecureAIService instead of AIService
-  const comment = await SecureAIService.generateNarratorComment({
-    choice: 'dwarf',
-    question: 'race',
-    characterSoFar: {}
-  });
-</script>
+# No extra script tag needed: the app ships via the bundled JS (manager.bundle.js / builder.bundle.js).
+# Ensure your frontend config has BACKEND_URL pointing at your backend.
 ```
 
 **That's it!** Your API keys are now secure. 🎉
@@ -317,14 +310,14 @@ Plus you can:
 4. Test with `test_ai_api.py`
 
 ### Phase 2: Test Integration (10 min)
-1. Add `SecureAIService` to your HTML
-2. Test one feature (e.g., narrator comments)
-3. Verify it works
+1. Ensure `BACKEND_URL` points at your backend
+2. Test one feature (e.g., narrator comments) using `AIService`
+3. Verify it works (no browser API key required)
 
 ### Phase 3: Full Migration (30 min)
-1. Replace all `AIService` calls with `SecureAIService`
-2. Remove API key input from UI
-3. Remove localStorage API key code
+1. Remove API key input from UI (no longer needed)
+2. Remove any localStorage-based API key code
+3. Ensure all AI calls go through the backend proxy
 4. Test all features
 
 ### Phase 4: Cleanup
@@ -358,10 +351,10 @@ See [SECURE_API_GUIDE.md](SECURE_API_GUIDE.md) for production deployment guide.
 ## ❓ FAQ
 
 **Q: Is this compatible with my current code?**  
-A: Yes! Use `SecureAIService` alongside `AIService` during migration.
+A: Yes. Point the frontend at the backend proxy (`BACKEND_URL`) and keep using `AIService`.
 
 **Q: Do I need to change my frontend?**  
-A: Minimal changes. Just replace `AIService` with `SecureAIService`.
+A: Minimal. Remove client-side API key storage/UI and ensure `BACKEND_URL` is set.
 
 **Q: What about the Python portrait generator script?**  
 A: That's server-side code, it's fine to use API keys there:

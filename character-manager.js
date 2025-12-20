@@ -6430,12 +6430,13 @@ function closeAuthModal(animate = false) {
     }
 }
 
-function showLoginForm() {
-    document.getElementById('loginForm').classList.remove('is-hidden');
-    document.getElementById('registerForm').classList.add('is-hidden');
-    document.getElementById('authModalTitle').textContent = 'LOG IN';
-    document.getElementById('loginBtn').classList.remove('is-hidden');
-    document.getElementById('registerBtn').classList.add('is-hidden');
+function applyAuthFormState(target) {
+    const isRegister = target === 'register';
+    document.getElementById('loginForm').classList.toggle('is-hidden', isRegister);
+    document.getElementById('registerForm').classList.toggle('is-hidden', !isRegister);
+    document.getElementById('authModalTitle').textContent = isRegister ? 'REGISTER' : 'LOG IN';
+    document.getElementById('loginBtn').classList.toggle('is-hidden', isRegister);
+    document.getElementById('registerBtn').classList.toggle('is-hidden', !isRegister);
     document.getElementById('authError').classList.add('is-hidden');
 
     const modal = document.getElementById('authModal');
@@ -6444,18 +6445,103 @@ function showLoginForm() {
     }
 }
 
-function showRegisterForm() {
-    document.getElementById('loginForm').classList.add('is-hidden');
-    document.getElementById('registerForm').classList.remove('is-hidden');
-    document.getElementById('authModalTitle').textContent = 'REGISTER';
-    document.getElementById('loginBtn').classList.add('is-hidden');
-    document.getElementById('registerBtn').classList.remove('is-hidden');
-    document.getElementById('authError').classList.add('is-hidden');
-
+function shouldAnimateAuthFormSwap() {
     const modal = document.getElementById('authModal');
-    if (modal) {
-        focusFirstFieldInModal(modal);
+    if (!modal) return false;
+    if (!modal.classList.contains('show')) return false;
+    if (modal.classList.contains('closing')) return false;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    return true;
+}
+
+function animateAuthFormSwap(target) {
+    const modal = document.getElementById('authModal');
+    if (!modal) {
+        applyAuthFormState(target);
+        return;
     }
+
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const body = modal.querySelector('.modal-body');
+    if (!loginForm || !registerForm || !body) {
+        applyAuthFormState(target);
+        return;
+    }
+
+    const isRegister = target === 'register';
+    const fromEl = isRegister ? loginForm : registerForm;
+    const toEl = isRegister ? registerForm : loginForm;
+
+    // If already showing requested form, no-op
+    if (!toEl.classList.contains('is-hidden')) {
+        applyAuthFormState(target);
+        return;
+    }
+
+    // Avoid overlapping animations
+    if (modal.dataset.authSwapAnimating === '1') return;
+    modal.dataset.authSwapAnimating = '1';
+
+    const startHeight = body.offsetHeight;
+    body.style.overflow = 'hidden';
+    body.style.height = `${startHeight}px`;
+
+    // Fade out current form quickly
+    fromEl.style.transition = 'opacity 120ms ease-out';
+    fromEl.style.opacity = '0';
+
+    setTimeout(() => {
+        // Switch state (visibility, title/buttons) before measuring
+        applyAuthFormState(target);
+
+        // Ensure the new form starts hidden for fade-in
+        toEl.style.transition = 'none';
+        toEl.style.opacity = '0';
+
+        // Measure the new height
+        body.style.height = 'auto';
+        const endHeight = body.offsetHeight;
+
+        // Reset to start height so we can animate to end height
+        body.style.height = `${startHeight}px`;
+        void body.offsetHeight; // reflow
+
+        // Animate height and fade in new form
+        body.style.transition = 'height 260ms cubic-bezier(0.4, 0, 0.2, 1)';
+        body.style.height = `${endHeight}px`;
+
+        toEl.style.transition = 'opacity 180ms ease-out 80ms';
+        toEl.style.opacity = '1';
+
+        setTimeout(() => {
+            // Cleanup
+            body.style.transition = '';
+            body.style.height = '';
+            body.style.overflow = '';
+            fromEl.style.transition = '';
+            fromEl.style.opacity = '';
+            toEl.style.transition = '';
+            toEl.style.opacity = '';
+            delete modal.dataset.authSwapAnimating;
+        }, 360);
+    }, 120);
+}
+
+function showLoginForm() {
+    if (shouldAnimateAuthFormSwap()) {
+        animateAuthFormSwap('login');
+        return;
+    }
+    applyAuthFormState('login');
+}
+
+function showRegisterForm() {
+    if (shouldAnimateAuthFormSwap()) {
+        animateAuthFormSwap('register');
+        return;
+    }
+    applyAuthFormState('register');
 }
 
 function setAuthLoading(isLoading, message) {
@@ -9559,13 +9645,98 @@ let spellEditModalState = {
 // Store original content for spell picker back navigation
 let spellEditModalOriginalContent = null;
 let spellEditModalFormValues = null;
+// Cache the base modal markup so we can always restore it (e.g. if the user
+// closes the modal while in the spell picker view, which replaces innerHTML).
+let _spellEditModalBaseContent = null;
+
+function _ensureSpellEditModalBaseContentRestored() {
+    const modal = document.getElementById('spellEditModal');
+    if (!modal) return;
+    const modalContent = modal.querySelector('.modal-content');
+    if (!modalContent) return;
+
+    // Capture base content once (the original DOM from index.html)
+    if (!_spellEditModalBaseContent) {
+        _spellEditModalBaseContent = modalContent.innerHTML;
+    }
+
+    const hasMainIds =
+        !!modalContent.querySelector('#spellEditModalSection') &&
+        !!modalContent.querySelector('#spellEditLoading') &&
+        !!modalContent.querySelector('#spellEditModalLimitsSummary');
+
+    if (!hasMainIds) {
+        modalContent.innerHTML = _spellEditModalBaseContent;
+    }
+
+    // Clear any stale picker-back content; we only want it when actively in picker
+    spellEditModalOriginalContent = null;
+}
+
+function _getCachedCharacterById(characterId) {
+    const idStr = String(characterId);
+    if (typeof AppState !== 'undefined' && AppState) {
+        if (Array.isArray(AppState.filteredCharacters)) {
+            const c = AppState.filteredCharacters.find(ch => ch && String(ch.id) === idStr);
+            if (c) return c;
+        }
+        if (Array.isArray(AppState.characters)) {
+            const c = AppState.characters.find(ch => ch && String(ch.id) === idStr);
+            if (c) return c;
+        }
+    }
+    return null;
+}
 
 /**
  * Open the dedicated spell edit modal
  */
 async function openSpellEditModal(characterId) {
-    const character = await CharacterStorage.getById(characterId);
-    if (!character) return;
+    // Ensure the modal DOM is in its canonical "edit spells" layout.
+    // The picker view swaps innerHTML; closing from that view previously left the
+    // modal in a broken state on the next open.
+    _ensureSpellEditModalBaseContentRestored();
+
+    const modal = document.getElementById('spellEditModal');
+    if (modal) {
+        modal.classList.add('show');
+    }
+
+    // Show a loading overlay immediately so "fresh load" clicks feel responsive,
+    // even if cloud storage / parsing is slow.
+    const loadingOverlay = document.getElementById('spellEditLoading');
+    if (loadingOverlay) {
+        const label = loadingOverlay.querySelector('.panel-loading-text');
+        if (label) label.textContent = 'Loading...';
+        loadingOverlay.classList.add('is-visible');
+    }
+
+    // Prefer cached characters to avoid a slow cloud getById() fetch.
+    let character = _getCachedCharacterById(characterId);
+    if (!character) {
+        try {
+            character = await CharacterStorage.getById(characterId);
+        } catch (error) {
+            if (error && error.message && error.message.toLowerCase().includes('session has expired')) {
+                if (typeof showSessionExpiredModal === 'function') {
+                    showSessionExpiredModal();
+                }
+            } else {
+                console.warn('Failed to load character for spell edit modal:', error);
+                if (typeof showNotification === 'function') {
+                    showNotification('Failed to load character', 'error');
+                }
+            }
+            if (loadingOverlay) loadingOverlay.classList.remove('is-visible');
+            // If we opened the modal, keep it open so user sees feedback; otherwise just return.
+            return;
+        }
+    }
+
+    if (!character) {
+        if (loadingOverlay) loadingOverlay.classList.remove('is-visible');
+        return;
+    }
     
     const className = (character.class || '').toLowerCase();
     const spellcasting = SPELLCASTING_CLASSES[className];
@@ -9653,11 +9824,14 @@ async function openSpellEditModal(characterId) {
     
     // Render spell tags
     renderSpellEditModalTags();
-    
-    // Show the modal
-    const modal = document.getElementById('spellEditModal');
+
+    // Hide loading overlay now that content is ready
+    if (loadingOverlay) {
+        loadingOverlay.classList.remove('is-visible');
+    }
+
+    // Snapshot after first paint
     if (modal) {
-        modal.classList.add('show');
         setTimeout(() => ModalManager.snapshotForm('spellEditModal'), 50);
     }
 }
@@ -9682,6 +9856,8 @@ function closeSpellEditModal() {
         removeOnClose: false,
         onClosed: () => {
             spellEditModalState.characterId = null;
+            // Always restore base modal content in case we were closed from the picker view.
+            _ensureSpellEditModalBaseContentRestored();
         },
     });
 }
@@ -9711,6 +9887,8 @@ async function saveSpellEditModal() {
     // Show loading overlay
     const loadingOverlay = document.getElementById('spellEditLoading');
     if (loadingOverlay) {
+        const label = loadingOverlay.querySelector('.panel-loading-text');
+        if (label) label.textContent = 'Saving...';
         loadingOverlay.classList.add('is-visible');
     }
     
@@ -10184,9 +10362,15 @@ function returnToSpellEditScreen() {
     
     // After animation, restore original content
     setTimeout(() => {
-        const wrappedContent = `<div class="modal-content-inner slide-in-left">${spellEditModalOriginalContent}</div>`;
-        modalContent.innerHTML = wrappedContent;
+        // Restore exactly what we captured (it already contains the loading overlay + inner wrapper).
+        modalContent.innerHTML = spellEditModalOriginalContent;
         spellEditModalOriginalContent = null;
+
+        // Add animation class to the restored inner wrapper (if present)
+        const restoredInner = modalContent.querySelector('.modal-content-inner');
+        if (restoredInner) {
+            restoredInner.classList.add('slide-in-left');
+        }
         
         // Clear temp state
         spellPickerTempState = { level: null, originalSelections: [], currentSelections: [], maxAllowed: null };

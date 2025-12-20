@@ -49,21 +49,15 @@ You should see all tests pass! ✅
 
 ## Step 5: Use in Frontend (1 min)
 
-### Option A: Use the secure service wrapper
+### Option A: Use the built-in (bundled) AI service (recommended)
 
-Add to your HTML:
-```html
-<script src="character-builder-services-secure.js"></script>
-```
+No extra `<script>` tag is needed in this repo — the app ships via `manager.bundle.js` / `character-builder/builder.bundle.js`.
 
-Replace calls to `AIService` with `SecureAIService`:
+Ensure your frontend config sets `BACKEND_URL` (see `character-builder/character-builder-config.js`), then call `AIService` as usual:
 
 ```javascript
-// OLD (insecure)
+// AIService calls the backend proxy (no browser API key required)
 const comment = await AIService.generateNarratorComment(context);
-
-// NEW (secure)
-const comment = await SecureAIService.generateNarratorComment(context);
 ```
 
 ### Option B: Direct fetch calls

@@ -80,21 +80,107 @@ function closeAuthModal() {
 }
 
 function showLoginForm() {
-    document.getElementById('loginForm').classList.remove('is-hidden');
-    document.getElementById('registerForm').classList.add('is-hidden');
-    document.getElementById('authModalTitle').textContent = 'LOG IN';
-    document.getElementById('loginBtn').classList.remove('is-hidden');
-    document.getElementById('registerBtn').classList.add('is-hidden');
-    document.getElementById('authError').classList.add('is-hidden');
+    if (shouldAnimateAuthFormSwap()) {
+        animateAuthFormSwap('login');
+        return;
+    }
+    applyAuthFormState('login');
 }
 
 function showRegisterForm() {
-    document.getElementById('loginForm').classList.add('is-hidden');
-    document.getElementById('registerForm').classList.remove('is-hidden');
-    document.getElementById('authModalTitle').textContent = 'REGISTER';
-    document.getElementById('loginBtn').classList.add('is-hidden');
-    document.getElementById('registerBtn').classList.remove('is-hidden');
+    if (shouldAnimateAuthFormSwap()) {
+        animateAuthFormSwap('register');
+        return;
+    }
+    applyAuthFormState('register');
+}
+
+function applyAuthFormState(target) {
+    const isRegister = target === 'register';
+    document.getElementById('loginForm').classList.toggle('is-hidden', isRegister);
+    document.getElementById('registerForm').classList.toggle('is-hidden', !isRegister);
+    document.getElementById('authModalTitle').textContent = isRegister ? 'REGISTER' : 'LOG IN';
+    document.getElementById('loginBtn').classList.toggle('is-hidden', isRegister);
+    document.getElementById('registerBtn').classList.toggle('is-hidden', !isRegister);
     document.getElementById('authError').classList.add('is-hidden');
+
+    const modal = document.getElementById('authModal');
+    if (modal && typeof window.focusFirstFieldInModal === 'function') {
+        window.focusFirstFieldInModal(modal);
+    }
+}
+
+function shouldAnimateAuthFormSwap() {
+    const modal = document.getElementById('authModal');
+    if (!modal) return false;
+    if (!modal.classList.contains('show')) return false;
+    if (modal.classList.contains('closing')) return false;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+    return true;
+}
+
+function animateAuthFormSwap(target) {
+    const modal = document.getElementById('authModal');
+    if (!modal) {
+        applyAuthFormState(target);
+        return;
+    }
+
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const body = modal.querySelector('.modal-body');
+    if (!loginForm || !registerForm || !body) {
+        applyAuthFormState(target);
+        return;
+    }
+
+    const isRegister = target === 'register';
+    const fromEl = isRegister ? loginForm : registerForm;
+    const toEl = isRegister ? registerForm : loginForm;
+
+    if (!toEl.classList.contains('is-hidden')) {
+        applyAuthFormState(target);
+        return;
+    }
+
+    if (modal.dataset.authSwapAnimating === '1') return;
+    modal.dataset.authSwapAnimating = '1';
+
+    const startHeight = body.offsetHeight;
+    body.style.overflow = 'hidden';
+    body.style.height = `${startHeight}px`;
+
+    fromEl.style.transition = 'opacity 120ms ease-out';
+    fromEl.style.opacity = '0';
+
+    setTimeout(() => {
+        applyAuthFormState(target);
+
+        toEl.style.transition = 'none';
+        toEl.style.opacity = '0';
+
+        body.style.height = 'auto';
+        const endHeight = body.offsetHeight;
+        body.style.height = `${startHeight}px`;
+        void body.offsetHeight;
+
+        body.style.transition = 'height 260ms cubic-bezier(0.4, 0, 0.2, 1)';
+        body.style.height = `${endHeight}px`;
+
+        toEl.style.transition = 'opacity 180ms ease-out 80ms';
+        toEl.style.opacity = '1';
+
+        setTimeout(() => {
+            body.style.transition = '';
+            body.style.height = '';
+            body.style.overflow = '';
+            fromEl.style.transition = '';
+            fromEl.style.opacity = '';
+            toEl.style.transition = '';
+            toEl.style.opacity = '';
+            delete modal.dataset.authSwapAnimating;
+        }, 360);
+    }, 120);
 }
 
 async function handleLogin() {

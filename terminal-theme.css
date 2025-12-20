@@ -444,6 +444,161 @@ body::before {
   width: auto;
 }
 
+/* Glow wrapper for the splash icosahedron/logo (glow morphs, image stays fixed) */
+.splash-logo-wrap {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  isolation: isolate;
+  /* Keep glow safely inside containers that may scroll/clip (e.g. welcome modal). */
+  --splash-glow-pad: 14px;
+  --splash-glow-inset: 2px;
+  --splash-glow-duration: 9.5s;
+  --splash-glow-ease: cubic-bezier(0.37, 0, 0.63, 1);
+
+  --splash-glow-rotate-base: 46deg;
+  --splash-glow-rotate-wobble: 6deg;
+  --splash-glow-scale-min: 0.99;
+  --splash-glow-scale-mid: 1.02;
+  --splash-glow-scale-max: 1.04;
+  --splash-glow-drift: 1px;
+
+  --splash-glow-opacity-min: 0.50;
+  --splash-glow-opacity-mid: 0.72;
+  --splash-glow-opacity-max: 0.90;
+
+  --splash-glow-blur-min: 12px;
+  --splash-glow-blur-mid: 15px;
+  --splash-glow-blur-max: 18px;
+
+  --splash-glow-brightness-min: 0.95;
+  --splash-glow-brightness-mid: 1.12;
+  --splash-glow-brightness-max: 1.28;
+
+  --splash-glow-saturate-min: 1.10;
+  --splash-glow-saturate-mid: 1.18;
+  --splash-glow-saturate-max: 1.23;
+
+  --splash-glow-teal-a: 0.92;
+  --splash-glow-green-a: 0.82;
+  --splash-glow-yellow-a: 0.62;
+  padding: var(--splash-glow-pad);
+}
+
+.splash-logo-wrap > .splash-logo-img {
+  position: relative;
+  z-index: 1;
+}
+
+.splash-logo-glow::before {
+  content: "";
+  position: absolute;
+  /* Render the glow inside the padded wrapper so it only peeks out */
+  inset: var(--splash-glow-inset);
+  z-index: 0;
+  pointer-events: none;
+
+  /* Glow-only morph shape */
+  border-radius: 42% 58% 55% 45% / 45% 40% 60% 55%;
+
+  /* Palette: teal + terminal green + yellow (no purple/pink) */
+  background:
+    radial-gradient(
+      circle at 28% 30%,
+      hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), var(--splash-glow-teal-a)),
+      transparent 58%
+    ),
+    radial-gradient(
+      circle at 72% 55%,
+      hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), var(--splash-glow-green-a)),
+      transparent 58%
+    ),
+    radial-gradient(
+      circle at 52% 85%,
+      hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), var(--splash-glow-yellow-a)),
+      transparent 62%
+    );
+
+  opacity: 0.7;
+  transform: scale(0.98) rotate(var(--splash-glow-rotate-base));
+  filter: blur(14px) brightness(1.05) saturate(1.15);
+
+  /* Slow, undulous motion (less "pulse", more "drift") */
+  animation: splash-logo-glow-morph var(--splash-glow-duration) var(--splash-glow-ease) infinite;
+}
+
+@keyframes splash-logo-glow-morph {
+  0% {
+    border-radius: 42% 58% 55% 45% / 45% 40% 60% 55%;
+    opacity: var(--splash-glow-opacity-min);
+    transform:
+      scale(var(--splash-glow-scale-min))
+      rotate(var(--splash-glow-rotate-base))
+      translate(0, 0);
+    filter:
+      blur(var(--splash-glow-blur-min))
+      brightness(var(--splash-glow-brightness-min))
+      saturate(var(--splash-glow-saturate-min));
+  }
+  25% {
+    border-radius: 58% 42% 48% 52% / 50% 60% 40% 50%;
+    opacity: var(--splash-glow-opacity-mid);
+    transform:
+      scale(var(--splash-glow-scale-mid))
+      rotate(calc(var(--splash-glow-rotate-base) + (var(--splash-glow-rotate-wobble) * 0.5)))
+      translate(var(--splash-glow-drift), calc(var(--splash-glow-drift) * -1));
+    filter:
+      blur(var(--splash-glow-blur-mid))
+      brightness(var(--splash-glow-brightness-mid))
+      saturate(var(--splash-glow-saturate-mid));
+  }
+  50% {
+    border-radius: 62% 38% 33% 67% / 54% 66% 34% 46%;
+    opacity: var(--splash-glow-opacity-max);
+    transform:
+      scale(var(--splash-glow-scale-max))
+      rotate(calc(var(--splash-glow-rotate-base) + var(--splash-glow-rotate-wobble)))
+      translate(0, var(--splash-glow-drift));
+    filter:
+      blur(var(--splash-glow-blur-max))
+      brightness(var(--splash-glow-brightness-max))
+      saturate(var(--splash-glow-saturate-max));
+  }
+  75% {
+    border-radius: 46% 54% 60% 40% / 62% 42% 58% 38%;
+    opacity: var(--splash-glow-opacity-mid);
+    transform:
+      scale(var(--splash-glow-scale-mid))
+      rotate(calc(var(--splash-glow-rotate-base) + (var(--splash-glow-rotate-wobble) * 0.33)))
+      translate(calc(var(--splash-glow-drift) * -1), 0);
+    filter:
+      blur(var(--splash-glow-blur-mid))
+      brightness(var(--splash-glow-brightness-mid))
+      saturate(var(--splash-glow-saturate-mid));
+  }
+  100% {
+    border-radius: 42% 58% 55% 45% / 45% 40% 60% 55%;
+    opacity: var(--splash-glow-opacity-min);
+    transform:
+      scale(var(--splash-glow-scale-min))
+      rotate(var(--splash-glow-rotate-base))
+      translate(0, 0);
+    filter:
+      blur(var(--splash-glow-blur-min))
+      brightness(var(--splash-glow-brightness-min))
+      saturate(var(--splash-glow-saturate-min));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-logo-glow::before {
+    animation: none;
+    opacity: 0.6;
+    transform: scale(1) rotate(46deg);
+    filter: blur(14px) brightness(1.1) saturate(1.15);
+  }
+}
+
 .splash-text {
   display: flex;
   flex-direction: column;
@@ -1131,6 +1286,7 @@ body::before {
   align-items: center;
 }
 
+
 /* Edit link in section headers */
 .sheet-section-edit-link {
   font-size: 0.85rem;
@@ -1426,7 +1582,6 @@ body::before {
 }
 
 .character-sheet .resource-legend-box {
-  background: var(--sheet-box-bg);
   padding: 2px 8px;
   margin-bottom: var(--spacing-sm);
   color: var(--sheet-accent-dim);
@@ -1451,17 +1606,17 @@ body::before {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  background: none;
+  background: transparent;
   border: none;
   border-bottom: 1px solid var(--sheet-border-color);
-  padding: var(--spacing-xs) 0;
+  padding: 6px 10px;
   margin-bottom: var(--spacing-sm);
   font-family: inherit;
   text-align: left;
 }
 
 .sheet-header--collapsible:hover {
-  background: color-mix(in srgb, var(--sheet-accent) 5%, transparent);
+  background: color-mix(in srgb, var(--sheet-accent) 8%, transparent);
 }
 
 .sheet-header--collapsible:focus-visible {
@@ -1531,13 +1686,11 @@ body::before {
 
 /* Class Features specific styles */
 .class-features-legend {
-  background: var(--sheet-box-bg);
   padding: 4px 8px;
   margin-bottom: var(--spacing-sm);
   color: var(--sheet-value-color);
   font-size: 11px;
   text-align: left;
-  border-radius: 2px;
 }
 
 .class-features-level--current-indicator {
@@ -1564,6 +1717,7 @@ body::before {
   border-left: 2px solid var(--sheet-accent-dim);
   text-align: left;
   color: var(--sheet-value-color);
+  background: var(--sheet-box-bg);
 }
 
 
@@ -1656,6 +1810,7 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  background: var(--sheet-box-bg);
 }
 
 .skill-prof-header {
@@ -1706,6 +1861,7 @@ body::before {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  background: var(--sheet-box-bg);
 }
 
 .tool-prof-header {
