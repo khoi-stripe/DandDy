@@ -51,29 +51,26 @@
 
 /* ===== PANEL SLIDER SYSTEM ===== */
 /* Three-panel slider: [Grid | Sheet | Campaign] */
-/* Collapsed shows Grid+Sheet, Expanded shows Sheet+Campaign */
-
-/* Ensure split-layout clips the slider */
-.split-layout {
-    overflow: hidden !important;
-}
+/* Only two panels visible at a time, one always clipped off-screen */
+/* Collapsed: Grid + Sheet visible, Campaign off-screen right */
+/* Expanded: Sheet + Campaign visible, Grid off-screen left */
 
 .panel-slider {
     display: flex;
-    width: 150%; /* 3 panels x 50% each */
+    width: 150vw; /* 3 panels x 50vw each */
     height: 100%;
     transition: transform 0.3s ease;
 }
 
-/* All three panels are equal width (50% of viewport = 33.33% of slider) */
-/* Use !important to override terminal-theme.css flex:1 on .left-panel */
+/* Each panel is exactly 50vw (half the viewport) */
 .panel-slider > .left-panel,
 .panel-slider > .center-panel,
 .panel-slider > .right-panel {
-    flex: 0 0 33.3333% !important;
-    width: 33.3333% !important;
-    max-width: 33.3333% !important;
+    flex: 0 0 50vw;
+    width: 50vw;
     min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* Center panel (character sheet) styling */
@@ -128,9 +125,9 @@
 }
 
 /* ===== EXPANDED VIEW STATE ===== */
-/* Slide the panel-slider left by one panel width (33.33% of slider = 50vw) */
+/* Slide left by one panel (50vw) to hide Grid and reveal Campaign */
 .split-layout.is-expanded .panel-slider {
-    transform: translateX(-33.3333%);
+    transform: translateX(-50vw);
 }
 
 /* Campaign panel content styles */
