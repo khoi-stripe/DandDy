@@ -70,18 +70,16 @@
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
-    transition: flex 0.3s ease;
 }
 
 /* Campaign panel column - hidden in collapsed state */
 .campaign-panel-column {
-    flex: 0 0 0;
+    flex: 0;
     width: 0;
     overflow: hidden;
     border-left: 1px solid var(--sheet-border-color);
     min-height: 0;
     background: var(--terminal-bg);
-    transition: flex 0.3s ease, width 0.3s ease;
 }
 
 /* Campaign panel content */
@@ -116,12 +114,19 @@
     flex: 1;
 }
 
-/* Sheet stays same absolute width (50% of full terminal = 50% of expanded right-panel) */
+/* Sheet keeps 50% width, slides via transform */
 .split-layout.is-expanded .expanded-sheet-column {
     flex: 0 0 50%;
+    transform: translateX(0);
+    transition: transform 0.3s ease;
 }
 
-/* Campaign panel slides in to take remaining 50% */
+/* Start position for slide animation (added via JS before expanding) */
+.expanded-sheet-column.slide-from-center {
+    transform: translateX(50%);
+}
+
+/* Campaign panel takes remaining 50% */
 .split-layout.is-expanded .campaign-panel-column {
     flex: 0 0 50%;
     width: 50%;
