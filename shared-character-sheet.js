@@ -724,6 +724,23 @@ const CharacterSheet = (window.CharacterSheet = {
       `
         : '';
 
+    // Manager-only: Expand button to show campaign panel
+    // Hidden on mobile where expanded view doesn't make sense
+    const expandButtonHtml =
+      context === 'manager' && hasValidManagerId
+        ? `
+        <button
+          class="sheet-expand-btn hide-on-mobile"
+          type="button"
+          onclick="ExpandedView.toggle()"
+          title="Expand to show campaign info"
+        >
+          <span class="expand-icon" aria-hidden="true"></span>
+          <span class="expand-label">Expand</span>
+        </button>
+      `
+        : '';
+
     const headerMenu =
       headerActions.length > 0 && !hideOverflowMenu
         ? `
@@ -772,9 +789,10 @@ const CharacterSheet = (window.CharacterSheet = {
         : '';
 
     const actionsBlock =
-      editButtonHtml || headerMenu
+      editButtonHtml || headerMenu || expandButtonHtml
         ? `
         <div class="sheet-title-actions">
+          ${expandButtonHtml}
           ${editButtonHtml}
           ${headerMenu}
         </div>

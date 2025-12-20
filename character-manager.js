@@ -728,6 +728,147 @@ const AppState = {
 let latestViewCharacterRequestId = 0;
 
 // ========================================
+// EXPANDED VIEW HANDLING
+// ========================================
+// Handles the expanded character sheet view with campaign panel
+
+const ExpandedView = (window.ExpandedView = {
+    /** Check if expanded view is currently active */
+    isExpanded() {
+        const splitLayout = document.querySelector('.split-layout');
+        return splitLayout && splitLayout.classList.contains('is-expanded');
+    },
+
+    /** Toggle expanded view on/off */
+    toggle() {
+        const splitLayout = document.querySelector('.split-layout');
+        if (!splitLayout) return;
+
+        const isCurrentlyExpanded = this.isExpanded();
+        
+        if (isCurrentlyExpanded) {
+            this.collapse();
+        } else {
+            this.expand();
+        }
+    },
+
+    /** Expand to show campaign panel */
+    expand() {
+        const splitLayout = document.querySelector('.split-layout');
+        if (!splitLayout) return;
+
+        splitLayout.classList.add('is-expanded');
+        
+        // Update button text
+        this._updateButtonText(true);
+        
+        // Load campaign panel content
+        this._loadCampaignPanel();
+        
+        // Store preference in session
+        sessionStorage.setItem('expandedView', 'true');
+        
+        if (DEBUG_MANAGER) {
+            console.log('📐 Expanded view: ON');
+        }
+    },
+
+    /** Collapse back to grid view */
+    collapse() {
+        const splitLayout = document.querySelector('.split-layout');
+        if (!splitLayout) return;
+
+        splitLayout.classList.remove('is-expanded');
+        
+        // Update button text
+        this._updateButtonText(false);
+        
+        // Clear session preference
+        sessionStorage.removeItem('expandedView');
+        
+        if (DEBUG_MANAGER) {
+            console.log('📐 Expanded view: OFF');
+        }
+    },
+
+    /** Update the expand button text based on state */
+    _updateButtonText(isExpanded) {
+        const btn = document.querySelector('.sheet-expand-btn');
+        if (!btn) return;
+        
+        const label = btn.querySelector('.expand-label');
+        if (label) {
+            label.textContent = isExpanded ? 'Collapse' : 'Expand';
+        }
+        
+        btn.title = isExpanded ? 'Return to grid view' : 'Expand to show campaign info';
+    },
+
+    /** Load campaign panel content for the current character */
+    async _loadCampaignPanel() {
+        const panel = document.getElementById('campaignPanel');
+        if (!panel) return;
+        
+        const characterId = AppState.selectedCharacterId;
+        if (!characterId) {
+            panel.innerHTML = this._renderNoCampaign();
+            return;
+        }
+        
+        // For now, render placeholder - will be populated with real data later
+        panel.innerHTML = this._renderCampaignPanelContent(characterId);
+    },
+
+    /** Render placeholder content when no campaign is assigned */
+    _renderNoCampaign() {
+        return `
+            <div class="campaign-panel-empty">
+                <div class="campaign-panel-empty-icon">⚔</div>
+                <div class="campaign-panel-empty-title">No Campaign</div>
+                <div class="campaign-panel-empty-text">
+                    This character isn't part of a campaign yet.
+                </div>
+                <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJoinModal()">
+                    Join Campaign
+                </button>
+                <button class="terminal-btn terminal-btn-small terminal-btn-secondary" onclick="CampaignUI.openCreateModal()">
+                    Create Campaign
+                </button>
+            </div>
+        `;
+    },
+
+    /** Render campaign panel content (placeholder for now) */
+    _renderCampaignPanelContent(characterId) {
+        // TODO: Fetch actual campaign data and render
+        return `
+            <div class="campaign-panel-content">
+                <div class="campaign-panel-header">
+                    <h3 class="campaign-panel-title">Campaign Panel</h3>
+                </div>
+                <div class="campaign-panel-body">
+                    <p class="text-dim">Campaign features coming soon!</p>
+                    <p class="text-dim" style="font-size: 0.85em; margin-top: 1em;">
+                        • Join or create campaigns<br>
+                        • See party members<br>
+                        • Track play sessions<br>
+                        • Write session journals
+                    </p>
+                </div>
+            </div>
+        `;
+    },
+
+    /** Restore expanded state from session storage */
+    restore() {
+        if (sessionStorage.getItem('expandedView') === 'true') {
+            this.expand();
+        }
+    }
+});
+
+// ========================================
 // MOBILE VIEW HANDLING
 // ========================================
 const MOBILE_BREAKPOINT = 768;

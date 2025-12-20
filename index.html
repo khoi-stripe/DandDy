@@ -227,8 +227,27 @@
         <!-- Right Panel: Character Sheet (hidden on mobile) -->
         <div class="right-panel" id="character-sheet-panel">
             <div class="sheet-placeholder"></div>
-            <div id="characterSheet" class="character-sheet is-hidden">
-                <!-- Character sheet will be rendered here -->
+            
+            <!-- Expanded View Container (wraps sheet + campaign panel) -->
+            <div class="expanded-view-container">
+                <!-- Character Sheet Column -->
+                <div class="expanded-sheet-column">
+                    <div id="characterSheet" class="character-sheet is-hidden">
+                        <!-- Character sheet will be rendered here -->
+                    </div>
+                </div>
+                
+                <!-- Campaign Panel Column (visible in expanded view) -->
+                <div class="campaign-panel-column" id="campaignPanelColumn">
+                    <div class="campaign-panel" id="campaignPanel">
+                        <!-- Campaign panel content will be rendered here -->
+                        <div class="campaign-panel-placeholder">
+                            <div class="campaign-panel-placeholder-text">
+                                Campaign info will appear here when you expand the character sheet.
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 

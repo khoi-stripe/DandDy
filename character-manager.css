@@ -55,6 +55,193 @@
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
+/* ===== EXPANDED CHARACTER SHEET VIEW ===== */
+/* Container that holds sheet + campaign panel side by side */
+.expanded-view-container {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Character sheet column - takes full width by default */
+.expanded-sheet-column {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+/* Campaign panel column - hidden by default, shown in expanded view */
+.campaign-panel-column {
+    display: none;
+    flex: 0 0 380px;
+    border-left: 1px solid var(--sheet-border-color);
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    background: var(--terminal-bg);
+}
+
+/* Campaign panel content */
+.campaign-panel {
+    padding: var(--spacing-lg);
+    height: 100%;
+}
+
+.campaign-panel-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--terminal-dim);
+    text-align: center;
+    padding: var(--spacing-xl);
+}
+
+.campaign-panel-placeholder-text {
+    font-size: var(--font-size-small);
+    line-height: 1.5;
+}
+
+/* ===== EXPANDED VIEW STATE ===== */
+/* When split-layout has .is-expanded, hide left panel and show campaign panel */
+.split-layout.is-expanded .left-panel {
+    display: none;
+}
+
+.split-layout.is-expanded .right-panel {
+    flex: 1;
+}
+
+.split-layout.is-expanded .campaign-panel-column {
+    display: block;
+}
+
+/* Expand button in character sheet header */
+.sheet-expand-btn {
+    background: transparent;
+    border: 1px solid var(--sheet-border-color);
+    color: var(--sheet-accent);
+    padding: 4px 10px;
+    font-size: var(--font-size-small);
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sheet-expand-btn:hover {
+    background: color-mix(in srgb, var(--sheet-accent) 15%, transparent);
+    border-color: var(--sheet-accent);
+}
+
+.sheet-expand-btn .expand-icon {
+    font-size: 1.1em;
+}
+
+/* Change button text/icon when expanded */
+.split-layout.is-expanded .sheet-expand-btn .expand-icon::before {
+    content: '◂';
+}
+
+.sheet-expand-btn .expand-icon::before {
+    content: '▸';
+}
+
+/* Back to grid button (shown in expanded view) */
+.back-to-grid-btn {
+    background: transparent;
+    border: 1px solid var(--sheet-border-color);
+    color: var(--sheet-text);
+    padding: 4px 12px;
+    font-size: var(--font-size-small);
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+    margin-bottom: var(--spacing-md);
+}
+
+.back-to-grid-btn:hover {
+    background: color-mix(in srgb, var(--sheet-accent) 10%, transparent);
+    border-color: var(--sheet-accent);
+    color: var(--sheet-accent);
+}
+
+/* Campaign panel content styles */
+.campaign-panel-content {
+    height: 100%;
+}
+
+.campaign-panel-header {
+    border-bottom: 1px solid var(--sheet-border-color);
+    padding-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.campaign-panel-title {
+    font-size: 1.1em;
+    color: var(--sheet-accent);
+    margin: 0;
+    font-weight: 500;
+}
+
+.campaign-panel-body {
+    color: var(--terminal-text);
+}
+
+/* Empty campaign state */
+.campaign-panel-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    padding: var(--spacing-xl);
+    gap: var(--spacing-md);
+}
+
+.campaign-panel-empty-icon {
+    font-size: 3em;
+    opacity: 0.3;
+    margin-bottom: var(--spacing-sm);
+}
+
+.campaign-panel-empty-title {
+    font-size: 1.2em;
+    color: var(--sheet-accent);
+    font-weight: 500;
+}
+
+.campaign-panel-empty-text {
+    color: var(--terminal-dim);
+    font-size: var(--font-size-small);
+    max-width: 200px;
+    line-height: 1.5;
+    margin-bottom: var(--spacing-md);
+}
+
+/* Hide on mobile utility */
+@media (max-width: 768px) {
+    .hide-on-mobile {
+        display: none !important;
+    }
+    
+    /* Don't show expanded view on mobile */
+    .split-layout.is-expanded .left-panel {
+        display: flex;
+    }
+    
+    .split-layout.is-expanded .campaign-panel-column {
+        display: none;
+    }
+}
+
 /* ===== LEFT PANEL ===== */
 .left-panel {
     padding-top: 0;
