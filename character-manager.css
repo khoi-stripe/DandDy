@@ -71,6 +71,14 @@
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
+    border-top: 1px solid var(--sheet-accent-dim);
+    border-left: 1px solid var(--sheet-accent-dim);
+    border-right: 1px solid var(--sheet-accent-dim);
+}
+
+/* Remove border from character sheet (border is on column instead) */
+.expanded-sheet-column .character-sheet {
+    border: none;
 }
 
 /* Campaign panel column - hidden in collapsed state */
