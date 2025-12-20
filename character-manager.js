@@ -6255,20 +6255,126 @@ function dismissSplash(instant = false) {
     }
 }
 
+// ========================================
+// MODAL ANIMATION HELPERS
+// ========================================
+
+// Duration must match CSS --modal-animation-duration (350ms)
+const MODAL_ANIMATION_DURATION = 350;
+
+const AUTH_FLOW_MODAL_IDS = ['welcomeModal', 'authModal', 'passwordResetModal'];
+
+function getModalOverlayHost() {
+    return document.querySelector('.terminal-frame');
+}
+
+function syncAuthFlowDim() {
+    const host = getModalOverlayHost();
+    if (!host) return;
+    const anyOpen = AUTH_FLOW_MODAL_IDS.some((id) => {
+        const el = document.getElementById(id);
+        return el && (el.classList.contains('show') || el.classList.contains('closing'));
+    });
+    host.classList.toggle('auth-flow-dim', anyOpen);
+}
+
+function setAuthFlowDim(active) {
+    const host = getModalOverlayHost();
+    if (!host) return;
+    host.classList.toggle('auth-flow-dim', !!active);
+}
+
+/**
+ * Animate a modal closing with the collapse animation.
+ * @param {HTMLElement|string} modal - The modal element or its ID
+ * @returns {Promise} Resolves when the close animation completes
+ */
+function animateModalClose(modal) {
+    const el = typeof modal === 'string' ? document.getElementById(modal) : modal;
+    if (!el || !el.classList.contains('show')) {
+        return Promise.resolve();
+    }
+    
+    return new Promise((resolve) => {
+        el.classList.add('closing');
+        setTimeout(() => {
+            el.classList.remove('show', 'closing');
+            syncAuthFlowDim();
+            resolve();
+        }, MODAL_ANIMATION_DURATION);
+    });
+}
+
+/**
+ * Transition from one modal to another with smooth collapse/expand animation.
+ * The outgoing modal collapses, then the incoming modal expands.
+ * For auth-flow modals, the dim overlay is owned by `.terminal-frame::before`
+ * so we can keep it stable through the swap.
+ * @param {HTMLElement|string} outgoingModal - The modal to close
+ * @param {HTMLElement|string} incomingModal - The modal to open
+ * @param {Function} [onOpen] - Optional callback after incoming modal starts opening
+ */
+async function animateModalTransition(outgoingModal, incomingModal, onOpen) {
+    const outgoingEl = typeof outgoingModal === 'string' 
+        ? document.getElementById(outgoingModal) 
+        : outgoingModal;
+    const incomingEl = typeof incomingModal === 'string' 
+        ? document.getElementById(incomingModal) 
+        : incomingModal;
+    
+    // Force dim on for the duration of the swap (prevents any flash)
+    setAuthFlowDim(true);
+
+    // Open incoming immediately (behind outgoing); keeps UX snappy and avoids any gap.
+    if (incomingEl && !incomingEl.classList.contains('show')) {
+        incomingEl.classList.add('show');
+        if (onOpen) onOpen(incomingEl);
+    } else if (incomingEl && onOpen) {
+        onOpen(incomingEl);
+    }
+
+    // Close outgoing with animation (if present)
+    if (outgoingEl && outgoingEl.classList.contains('show')) {
+        outgoingEl.classList.add('closing');
+        await new Promise((resolve) => setTimeout(resolve, MODAL_ANIMATION_DURATION));
+        outgoingEl.classList.remove('show', 'closing');
+    }
+
+    // Let overlay follow actual open/close state
+    syncAuthFlowDim();
+}
+
 // When the user explicitly cancels out of the auth flow (Escape, "X",
 // or CANCEL button), close the auth modal and, if it was launched from
 // the welcome splash, return to that splash screen instead of leaving
 // them on the main dashboard.
-function cancelAuthFlow() {
-    closeAuthModal();
-
+async function cancelAuthFlow() {
     if (authOpenedFromWelcome) {
-        const welcomeModal = document.getElementById('welcomeModal');
-        if (welcomeModal) {
-            welcomeModal.classList.add('show');
-            // Don't auto-focus any button - let the user choose
+        // Animate transition back to welcome modal
+        await animateModalTransition('authModal', 'welcomeModal');
+        // Clear auth form fields after animation
+        document.getElementById('authError').classList.add('is-hidden');
+        document.getElementById('loginEmail').value = '';
+        const loginPassword = document.getElementById('loginPassword');
+        if (loginPassword) {
+            loginPassword.value = '';
+            loginPassword.type = 'password';
+        }
+        document.getElementById('registerEmail').value = '';
+        const registerPassword = document.getElementById('registerPassword');
+        if (registerPassword) {
+            registerPassword.value = '';
+            registerPassword.type = 'password';
+        }
+        const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
+        if (registerPasswordConfirm) {
+            registerPasswordConfirm.value = '';
+            registerPasswordConfirm.type = 'password';
         }
         authOpenedFromWelcome = false;
+    } else {
+        // Just close with animation
+        await closeAuthModal(true);
     }
 }
 
@@ -6282,28 +6388,45 @@ function showAuthModal() {
         modal.classList.add('show');
     }
     showLoginForm();
+    syncAuthFlowDim();
 }
 
-function closeAuthModal() {
-    document.getElementById('authModal').classList.remove('show');
-    document.getElementById('authError').classList.add('is-hidden');
-    // Clear form fields
-    document.getElementById('loginEmail').value = '';
-    const loginPassword = document.getElementById('loginPassword');
-    if (loginPassword) {
-        loginPassword.value = '';
-        loginPassword.type = 'password';
-    }
-    document.getElementById('registerEmail').value = '';
-    const registerPassword = document.getElementById('registerPassword');
-    if (registerPassword) {
-        registerPassword.value = '';
-        registerPassword.type = 'password';
-    }
-    const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
-    if (registerPasswordConfirm) {
-        registerPasswordConfirm.value = '';
-        registerPasswordConfirm.type = 'password';
+/**
+ * Close the auth modal, optionally with animation.
+ * @param {boolean} [animate=false] - Whether to animate the close
+ * @returns {Promise|void} Returns a Promise if animated
+ */
+function closeAuthModal(animate = false) {
+    const modal = document.getElementById('authModal');
+    
+    const cleanup = () => {
+        document.getElementById('authError').classList.add('is-hidden');
+        // Clear form fields
+        document.getElementById('loginEmail').value = '';
+        const loginPassword = document.getElementById('loginPassword');
+        if (loginPassword) {
+            loginPassword.value = '';
+            loginPassword.type = 'password';
+        }
+        document.getElementById('registerEmail').value = '';
+        const registerPassword = document.getElementById('registerPassword');
+        if (registerPassword) {
+            registerPassword.value = '';
+            registerPassword.type = 'password';
+        }
+        const registerPasswordConfirm = document.getElementById('registerPasswordConfirm');
+        if (registerPasswordConfirm) {
+            registerPasswordConfirm.value = '';
+            registerPasswordConfirm.type = 'password';
+        }
+    };
+    
+    if (animate && modal) {
+        return animateModalClose(modal).then(cleanup);
+    } else {
+        if (modal) modal.classList.remove('show');
+        cleanup();
+        syncAuthFlowDim();
     }
 }
 
@@ -6541,10 +6664,53 @@ async function handleRegister() {
 // PASSWORD RESET UI HANDLERS
 // ========================================
 
-function openPasswordResetFromLogin() {
-    // Close the auth modal to reduce clutter and then open the reset flow.
-    closeAuthModal();
-    showPasswordResetModal();
+async function openPasswordResetFromLogin() {
+    // Animate transition from auth modal to password reset modal
+    await animateModalTransition('authModal', 'passwordResetModal', (modal) => {
+        // Reset sections and fields to initial state
+        const modalTitle = document.getElementById('passwordResetModalTitle');
+        const requestSection = document.getElementById('passwordResetRequestSection');
+        const successSection = document.getElementById('passwordResetSuccessSection');
+        const confirmSection = document.getElementById('passwordResetConfirmSection');
+        const cancelBtn = document.getElementById('passwordResetCancelBtn');
+        const closeBtn = document.getElementById('passwordResetCloseBtn');
+        const requestBtn = document.getElementById('passwordResetRequestBtn');
+        const confirmBtn = document.getElementById('passwordResetConfirmBtn');
+        const messageEl = document.getElementById('passwordResetMessage');
+        const confirmMessageEl = document.getElementById('passwordResetConfirmMessage');
+        const emailInput = document.getElementById('passwordResetEmail');
+        const tokenInput = document.getElementById('passwordResetToken');
+        const newPasswordInput = document.getElementById('passwordResetNewPassword');
+
+        if (modalTitle) modalTitle.textContent = 'RESET PASSWORD';
+        if (requestSection) requestSection.classList.remove('is-hidden');
+        if (successSection) successSection.classList.add('is-hidden');
+        if (confirmSection) confirmSection.classList.add('is-hidden');
+        if (cancelBtn) cancelBtn.classList.remove('is-hidden');
+        if (closeBtn) closeBtn.classList.add('is-hidden');
+        if (requestBtn) requestBtn.classList.remove('is-hidden');
+        if (confirmBtn) confirmBtn.classList.add('is-hidden');
+        if (messageEl) {
+            messageEl.textContent = '';
+            messageEl.classList.remove('terminal-text-error');
+            messageEl.classList.add('terminal-text-dim');
+        }
+        if (confirmMessageEl) {
+            confirmMessageEl.textContent = '';
+            confirmMessageEl.classList.remove('terminal-text-error');
+            confirmMessageEl.classList.add('terminal-text-dim');
+        }
+        if (emailInput) emailInput.value = '';
+        if (tokenInput) tokenInput.value = '';
+        if (newPasswordInput) newPasswordInput.value = '';
+        
+        if (typeof focusFirstFieldInModal === 'function') {
+            focusFirstFieldInModal(modal);
+        }
+    });
+    
+    // Clear auth form fields after transition
+    closeAuthModal(false);
 }
 
 function showPasswordResetModal() {
@@ -6592,15 +6758,19 @@ function showPasswordResetModal() {
     if (typeof focusFirstFieldInModal === 'function') {
         focusFirstFieldInModal(modal);
     }
+    syncAuthFlowDim();
 }
 
-function closePasswordResetModal() {
+/**
+ * Close the password reset modal, optionally with animation.
+ * @param {boolean} [animate=true] - Whether to animate the close
+ * @returns {Promise|void} Returns a Promise if animated
+ */
+function closePasswordResetModal(animate = true) {
     const modal = document.getElementById('passwordResetModal');
     if (!modal) return;
-    modal.classList.remove('show');
     
-    // Reset to initial state when closing
-    setTimeout(() => {
+    const resetState = () => {
         const modalTitle = document.getElementById('passwordResetModalTitle');
         const requestSection = document.getElementById('passwordResetRequestSection');
         const successSection = document.getElementById('passwordResetSuccessSection');
@@ -6636,7 +6806,16 @@ function closePasswordResetModal() {
         if (emailInput) emailInput.value = '';
         if (tokenInput) tokenInput.value = '';
         if (newPasswordInput) newPasswordInput.value = '';
-    }, 300); // Wait for modal close animation
+    };
+    
+    if (animate) {
+        return animateModalClose(modal).then(resetState);
+    } else {
+        modal.classList.remove('show');
+        // Reset to initial state after a brief delay
+        setTimeout(resetState, 50);
+        syncAuthFlowDim();
+    }
 }
 
 async function handlePasswordResetRequest() {
@@ -6748,14 +6927,11 @@ async function handlePasswordResetConfirm() {
             throw new Error(errorData.detail || 'Password reset failed');
         }
 
-        // Password reset successful - close this modal and open login modal
+        // Password reset successful - animate transition to login modal
         showNotification('✓ Password updated successfully! Please log in with your new password.');
-        closePasswordResetModal();
-        
-        // Open the login modal after a brief delay
-        setTimeout(() => {
+        await animateModalTransition('passwordResetModal', 'authModal', () => {
             showLoginForm();
-        }, 300);
+        });
         
     } catch (error) {
         messageEl.textContent = error.message || 'Password reset failed. Please try again.';
@@ -6805,6 +6981,8 @@ async function handleLogout() {
     const welcomeModal = document.getElementById('welcomeModal');
     if (welcomeModal) {
         welcomeModal.classList.add('show');
+        // Ensure shared auth-flow dim overlay is active immediately
+        syncAuthFlowDim();
     }
 }
 
@@ -7156,32 +7334,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Wire welcome modal buttons: LOG IN, CREATE ACCOUNT, GUEST MODE
     const welcomeLoginBtn = document.getElementById('welcomeLoginBtn');
     if (welcomeLoginBtn) {
-        welcomeLoginBtn.addEventListener('click', () => {
+        welcomeLoginBtn.addEventListener('click', async () => {
             authOpenedFromWelcome = true;
             // Don't set dismissed flag yet - only set it on successful login
-            if (welcomeModal) welcomeModal.classList.remove('show');
-            showAuthModal();
+            // Animate transition: welcome modal collapses → auth modal expands
+            await animateModalTransition(welcomeModal, 'authModal', () => {
+                showLoginForm();
+            });
         });
     }
 
     const welcomeRegisterBtn = document.getElementById('welcomeRegisterBtn');
     if (welcomeRegisterBtn) {
-        welcomeRegisterBtn.addEventListener('click', () => {
+        welcomeRegisterBtn.addEventListener('click', async () => {
             authOpenedFromWelcome = true;
             // Don't set dismissed flag yet - only set it on successful registration
-            if (welcomeModal) welcomeModal.classList.remove('show');
-            showAuthModal();
-            showRegisterForm();
+            // Animate transition: welcome modal collapses → auth modal expands (with register form)
+            await animateModalTransition(welcomeModal, 'authModal', () => {
+                showRegisterForm();
+            });
         });
     }
 
     const welcomeDemoBtn = document.getElementById('welcomeDemoBtn');
     if (welcomeDemoBtn) {
-        welcomeDemoBtn.addEventListener('click', () => {
+        welcomeDemoBtn.addEventListener('click', async () => {
             // Mark splash as dismissed so it won't reappear when returning from builder
             sessionStorage.setItem('welcomeSplashDismissed', 'true');
-            // Close the modal
-            if (welcomeModal) welcomeModal.classList.remove('show');
+            // Close the modal with animation
+            await animateModalClose(welcomeModal);
             // Show guest notice to explain limits and encourage account creation
             setTimeout(() => {
                 maybeShowGuestNotice();
@@ -7213,6 +7394,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!isAuthenticated && !splashDismissed && !fromBuilder) {
             welcomeModal.classList.add('show');
             // Don't auto-focus any button - let the user choose
+            // Ensure shared auth-flow dim overlay is active immediately on first paint
+            syncAuthFlowDim();
         }
 
         welcomeModal.addEventListener('keydown', (e) => {

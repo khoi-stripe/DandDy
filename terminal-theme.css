@@ -2550,6 +2550,45 @@ body.selector-menu-open .splash-art {
   animation: modal-overlay-close 350ms var(--ease-bounce) forwards;
 }
 
+/* === AUTH FLOW (WELCOME / AUTH / PASSWORD RESET) ===
+   These three modals transition between each other. We keep the background dimmer
+   owned by the terminal frame (pseudo-element), not by the modals themselves,
+   to avoid any one-frame “blink” when swapping modals. */
+.terminal-frame {
+  position: relative;
+}
+
+.terminal-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 9999; /* Below .modal (10000), above app content */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.terminal-frame.auth-flow-dim::before {
+  opacity: 1;
+}
+
+/* Make auth-flow modals transparent and disable their overlay animations. */
+#welcomeModal.modal,
+#authModal.modal,
+#passwordResetModal.modal {
+  background-color: transparent;
+}
+
+#welcomeModal.modal.show,
+#authModal.modal.show,
+#passwordResetModal.modal.show,
+#welcomeModal.modal.show.closing,
+#authModal.modal.show.closing,
+#passwordResetModal.modal.show.closing {
+  animation: none;
+}
+
 .modal-content {
   /* Apply yellow theme context for all nested elements */
   --context-accent: var(--modal-accent);
