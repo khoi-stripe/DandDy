@@ -26,7 +26,7 @@ class Campaign(Base):
     __tablename__ = "campaigns"
     __table_args__ = (
         Index("idx_campaigns_invite_code", "invite_code"),
-        Index("idx_campaigns_created_by", "created_by"),
+        Index("idx_campaigns_dm_id", "dm_id"),
     )
     
     id = Column(Integer, primary_key=True, index=True)
