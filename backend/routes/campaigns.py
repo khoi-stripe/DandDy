@@ -457,66 +457,102 @@ def invite_user_by_email(
     db: Session = Depends(get_db)
 ):
     """Invite a user to a campaign by email. Only the creator can invite."""
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    
-    if not campaign:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Campaign not found"
-        )
-    
-    # Only creator can invite
-    if campaign.dm_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the campaign creator can invite users"
-        )
-    
-    # Find user by email
-    invited_user = db.query(User).filter(User.email == invite_data.email).first()
-    
-    if not invited_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No user found with that email address"
-        )
-    
-    if invited_user.id == current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You cannot invite yourself"
-        )
-    
-    # Check if already a member or invited
-    existing = db.query(CampaignMember).filter(
-        CampaignMember.campaign_id == campaign_id,
-        CampaignMember.user_id == invited_user.id,
-        CampaignMember.status.in_([MemberStatus.ACTIVE, MemberStatus.INVITED])
-    ).first()
-    
-    if existing:
-        if existing.status == MemberStatus.ACTIVE:
+    # #region agent log - debug wrapper
+    import traceback
+    debug_step = "start"
+    try:
+        debug_step = "campaign_lookup"
+        # #endregion
+        campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+        
+        if not campaign:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Campaign not found"
+            )
+        
+        # Only creator can invite
+        # #region agent log
+        debug_step = "permission_check"
+        # #endregion
+        if campaign.dm_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the campaign creator can invite users"
+            )
+        
+        # Find user by email
+        # #region agent log
+        debug_step = "user_lookup"
+        # #endregion
+        invited_user = db.query(User).filter(User.email == invite_data.email).first()
+        
+        if not invited_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No user found with that email address"
+            )
+        
+        if invited_user.id == current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This user is already a member of the campaign"
+                detail="You cannot invite yourself"
             )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This user has already been invited"
-            )
-    
-    # Create invitation (membership with INVITED status)
-    invitation = CampaignMember(
-        campaign_id=campaign_id,
-        user_id=invited_user.id,
-        is_creator=False,
-        status=MemberStatus.INVITED
-    )
-    db.add(invitation)
-    db.commit()
-    
-    return {"message": f"Invitation sent to {invite_data.email}"}
+        
+        # Check if already a member or invited
+        # #region agent log
+        debug_step = "existing_member_query"
+        # #endregion
+        existing = db.query(CampaignMember).filter(
+            CampaignMember.campaign_id == campaign_id,
+            CampaignMember.user_id == invited_user.id,
+            CampaignMember.status.in_([MemberStatus.ACTIVE, MemberStatus.INVITED])
+        ).first()
+        
+        if existing:
+            if existing.status == MemberStatus.ACTIVE:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This user is already a member of the campaign"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This user has already been invited"
+                )
+        
+        # Create invitation (membership with INVITED status)
+        # #region agent log
+        debug_step = "create_invitation"
+        # #endregion
+        invitation = CampaignMember(
+            campaign_id=campaign_id,
+            user_id=invited_user.id,
+            is_creator=False,
+            status=MemberStatus.INVITED
+        )
+        # #region agent log
+        debug_step = "db_add"
+        # #endregion
+        db.add(invitation)
+        # #region agent log
+        debug_step = "db_commit"
+        # #endregion
+        db.commit()
+        
+        return {"message": f"Invitation sent to {invite_data.email}"}
+    # #region agent log - debug error handler
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        error_detail = f"[DEBUG] Failed at step '{debug_step}': {type(e).__name__}: {str(e)}\n{traceback.format_exc()}"
+        print(error_detail)  # Log to Render console
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=error_detail
+        )
+    # #endregion
 
 
 @router.post("/{campaign_id}/accept-invitation", response_model=CampaignJoinResponse)
