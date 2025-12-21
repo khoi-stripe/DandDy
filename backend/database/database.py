@@ -437,11 +437,22 @@ def ensure_campaign_tracking_columns():
             conn.execute(text("ALTER TABLE campaigns ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
 
         # Generate invite codes for existing campaigns that don't have one
-        conn.execute(text("""
-            UPDATE campaigns 
-            SET invite_code = UPPER(SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 5) || '-' || SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 4))
-            WHERE invite_code IS NULL
-        """))
+        # Use SQLite-compatible syntax (SQLite doesn't have MD5 or RANDOM::TEXT)
+        is_sqlite = settings.database_url.startswith("sqlite")
+        if is_sqlite:
+            # For SQLite, we'll use Python to generate codes for existing rows
+            from models.campaign import generate_invite_code
+            result = conn.execute(text("SELECT id FROM campaigns WHERE invite_code IS NULL"))
+            for row in result.fetchall():
+                code = generate_invite_code()
+                conn.execute(text("UPDATE campaigns SET invite_code = :code WHERE id = :id"), {"code": code, "id": row[0]})
+        else:
+            # PostgreSQL version
+            conn.execute(text("""
+                UPDATE campaigns 
+                SET invite_code = UPPER(SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 5) || '-' || SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 4))
+                WHERE invite_code IS NULL
+            """))
 
         conn.commit()
 

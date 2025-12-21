@@ -34,5 +34,6 @@ class User(Base):
     campaign_memberships = relationship("CampaignMember", back_populates="user")
     sessions = relationship("Session", back_populates="user")
     session_logs = relationship("SessionLog", back_populates="user")
+    journal_entries = relationship("JournalEntry", back_populates="user")
 
 
