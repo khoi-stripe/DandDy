@@ -1121,9 +1121,6 @@ const ExpandedView = (window.ExpandedView = {
 
     /** Render the Journal section (bottom) */
     _renderJournalSection(characterId, entries = []) {
-        // #region agent log - debug _renderJournalSection
-        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'character-manager.js:_renderJournalSection',message:'Entering _renderJournalSection',data:{characterId,entriesCount:entries?.length,hasUtilsEscapeHtml:typeof Utils?.escapeHtml,hasFormatDate:typeof this._formatDate,hasTruncateText:typeof this._truncateText},timestamp:Date.now(),sessionId:'debug-session',runId:'refactor',hypothesisId:'ROBUST'})}).catch(()=>{});
-        // #endregion
         const entriesHtml = entries.length > 0
             ? entries.map(entry => `
                 <div class="journal-entry" data-entry-id="${entry.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">
