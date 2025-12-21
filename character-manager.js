@@ -728,6 +728,49 @@ const AppState = {
 let latestViewCharacterRequestId = 0;
 
 // ========================================
+// PANEL MANAGER
+// ========================================
+// Manages which 2 of 3 panels are visible at a time
+// Panels: character-grid, character-sheet, campaign
+
+const PanelManager = (window.PanelManager = {
+    views: {
+        'grid-sheet': ['character-grid', 'character-sheet'],
+        'sheet-campaign': ['character-sheet', 'campaign']
+    },
+    
+    /** Get the current view name */
+    getCurrentView() {
+        const splitLayout = document.querySelector('.split-layout');
+        return splitLayout?.dataset.view || 'grid-sheet';
+    },
+    
+    /** Set the current view by name */
+    setView(viewName) {
+        const splitLayout = document.querySelector('.split-layout');
+        if (!splitLayout) return;
+        
+        if (!this.views[viewName]) {
+            console.warn(`Unknown panel view: ${viewName}`);
+            return;
+        }
+        
+        splitLayout.dataset.view = viewName;
+        
+        if (DEBUG_MANAGER) {
+            console.log(`📐 Panel view: ${viewName}`);
+        }
+    },
+    
+    /** Check if a specific panel is currently visible */
+    isPanelVisible(panelName) {
+        const currentView = this.getCurrentView();
+        const visiblePanels = this.views[currentView] || [];
+        return visiblePanels.includes(panelName);
+    }
+});
+
+// ========================================
 // EXPANDED VIEW HANDLING
 // ========================================
 // Handles the expanded character sheet view with campaign panel
@@ -735,30 +778,21 @@ let latestViewCharacterRequestId = 0;
 const ExpandedView = (window.ExpandedView = {
     /** Check if expanded view is currently active */
     isExpanded() {
-        const splitLayout = document.querySelector('.split-layout');
-        return splitLayout && splitLayout.classList.contains('is-expanded');
+        return PanelManager.getCurrentView() === 'sheet-campaign';
     },
 
     /** Toggle expanded view on/off */
     toggle() {
-        const splitLayout = document.querySelector('.split-layout');
-        if (!splitLayout) return;
-
-        const isCurrentlyExpanded = this.isExpanded();
-        
-        if (isCurrentlyExpanded) {
+        if (this.isExpanded()) {
             this.collapse();
         } else {
             this.expand();
         }
     },
 
-    /** Expand to show campaign panel */
+    /** Expand to show campaign panel (sheet + campaign view) */
     expand() {
-        const splitLayout = document.querySelector('.split-layout');
-        if (!splitLayout) return;
-
-        splitLayout.classList.add('is-expanded');
+        PanelManager.setView('sheet-campaign');
         
         // Update button text
         this._updateButtonText(true);
@@ -774,12 +808,9 @@ const ExpandedView = (window.ExpandedView = {
         }
     },
 
-    /** Collapse back to grid view */
+    /** Collapse back to grid view (grid + sheet view) */
     collapse() {
-        const splitLayout = document.querySelector('.split-layout');
-        if (!splitLayout) return;
-
-        splitLayout.classList.remove('is-expanded');
+        PanelManager.setView('grid-sheet');
         
         // Update button text
         this._updateButtonText(false);
@@ -1074,6 +1105,7 @@ const CampaignUI = (window.CampaignUI = {
             
             // Auto-assign current character to the new campaign
             const characterId = AppState.selectedCharacterId;
+            let assignmentWarning = null;
             console.log('🏰 Auto-assign: characterId =', characterId, 'campaignId =', campaign.id);
             if (characterId && !String(characterId).startsWith('demo_')) {
                 try {
@@ -1083,7 +1115,10 @@ const CampaignUI = (window.CampaignUI = {
                     console.log('🏰 Character assigned successfully');
                 } catch (assignError) {
                     console.warn('🏰 Could not auto-assign character:', assignError);
-                    // Don't fail the whole flow if assignment fails
+                    // Check if character is already in another campaign
+                    if (assignError.message?.includes('already in another campaign')) {
+                        assignmentWarning = 'Your character is already in another campaign. Leave that campaign first to join this one.';
+                    }
                 }
             } else {
                 console.log('🏰 Skipping auto-assign: no character or demo character');
@@ -1092,8 +1127,8 @@ const CampaignUI = (window.CampaignUI = {
             // Close create modal
             this.closeCreateModal();
             
-            // Show success modal with invite code
-            this.showCampaignCreatedModal(campaign.invite_code);
+            // Show success modal with invite code (and warning if applicable)
+            this.showCampaignCreatedModal(campaign.invite_code, assignmentWarning);
             
             // Refresh character data to get updated campaign_id
             await AppState.loadCharacters();
@@ -1187,7 +1222,7 @@ const CampaignUI = (window.CampaignUI = {
     // CAMPAIGN CREATED SUCCESS MODAL
     // ========================================
     
-    showCampaignCreatedModal(inviteCode) {
+    showCampaignCreatedModal(inviteCode, warning = null) {
         const modal = document.getElementById('campaignCreatedModal');
         const codeEl = document.getElementById('campaignInviteCode');
         
@@ -1195,6 +1230,25 @@ const CampaignUI = (window.CampaignUI = {
         
         if (codeEl) {
             codeEl.textContent = inviteCode;
+        }
+        
+        // Show/hide warning message
+        let warningEl = modal.querySelector('.campaign-created-warning');
+        if (warning) {
+            if (!warningEl) {
+                // Create warning element if it doesn't exist
+                warningEl = document.createElement('div');
+                warningEl.className = 'campaign-created-warning terminal-text-small mt-md';
+                warningEl.style.cssText = 'color: var(--warning-color, #f0ad4e); padding: var(--spacing-sm); border: 1px solid currentColor; border-radius: 4px;';
+                const modalBody = modal.querySelector('.modal-body');
+                if (modalBody) {
+                    modalBody.appendChild(warningEl);
+                }
+            }
+            warningEl.textContent = warning;
+            warningEl.classList.remove('is-hidden');
+        } else if (warningEl) {
+            warningEl.classList.add('is-hidden');
         }
         
         modal.classList.add('show');
@@ -1561,8 +1615,8 @@ const MobileView = {
     
     /** Initialize scroll handler for mobile header collapse */
     initScrollHandler() {
-        const leftPanel = document.getElementById('character-list-panel');
-        if (!leftPanel) return;
+        const gridPanel = document.getElementById('characterGridPanel');
+        if (!gridPanel) return;
         
         const header = document.querySelector('.terminal-header');
         if (!header) return;
@@ -1579,10 +1633,10 @@ const MobileView = {
             }
         });
         
-        leftPanel.addEventListener('scroll', () => {
+        gridPanel.addEventListener('scroll', () => {
             if (!this.isMobile()) return;
             
-            const scrollTop = leftPanel.scrollTop;
+            const scrollTop = gridPanel.scrollTop;
             
             // Add/remove scrolled class based on scroll position
             // CSS handles the max-height transition
@@ -1598,12 +1652,12 @@ const MobileView = {
     
     /** Initialize swipe gesture handlers for mobile navigation */
     initSwipeHandlers() {
-        const leftPanel = document.getElementById('character-list-panel');
-        if (!leftPanel) return;
+        const gridPanel = document.getElementById('characterGridPanel');
+        if (!gridPanel) return;
         
         // Use pointer events for better compatibility with Chrome DevTools simulator
         // pointerdown - start tracking
-        leftPanel.addEventListener('pointerdown', (e) => {
+        gridPanel.addEventListener('pointerdown', (e) => {
             if (e.pointerType === 'touch' || e.pointerType === 'pen' || this.isMobile()) {
                 this._touchStartX = e.clientX;
                 this._touchStartY = e.clientY;
@@ -1616,7 +1670,7 @@ const MobileView = {
         }, { passive: true });
         
         // pointermove - track movement and determine direction intent
-        leftPanel.addEventListener('pointermove', (e) => {
+        gridPanel.addEventListener('pointermove', (e) => {
             if (!this._isSwiping) return;
             if (!this.isOpen()) return; // Only handle when viewing a sheet
             
@@ -1634,7 +1688,7 @@ const MobileView = {
                 if (absX > absY * 1.5) {
                     this._swipeDirection = 'horizontal';
                     // Add class to indicate horizontal swipe in progress (prevents scroll)
-                    leftPanel.classList.add('is-swiping-horizontal');
+                    gridPanel.classList.add('is-swiping-horizontal');
                 } else if (absY > absX * 1.5) {
                     this._swipeDirection = 'vertical';
                 }
@@ -1648,30 +1702,30 @@ const MobileView = {
         }, { passive: false }); // passive: false so we can preventDefault
         
         // pointerup - complete the gesture
-        leftPanel.addEventListener('pointerup', (e) => {
+        gridPanel.addEventListener('pointerup', (e) => {
             if (this._isSwiping) {
                 this._touchCurrentX = e.clientX;
                 this._touchCurrentY = e.clientY;
                 this._isSwiping = false;
-                leftPanel.classList.remove('is-swiping-horizontal');
+                gridPanel.classList.remove('is-swiping-horizontal');
                 this._pointerId = null;
                 this.handleSwipe();
             }
         }, { passive: true });
         
         // pointercancel - abort the gesture
-        leftPanel.addEventListener('pointercancel', () => {
+        gridPanel.addEventListener('pointercancel', () => {
             this._isSwiping = false;
             this._swipeDirection = null;
-            leftPanel.classList.remove('is-swiping-horizontal');
+            gridPanel.classList.remove('is-swiping-horizontal');
         }, { passive: true });
         
         // Also handle pointerleave to clean up if finger leaves the element
-        leftPanel.addEventListener('pointerleave', (e) => {
+        gridPanel.addEventListener('pointerleave', (e) => {
             // Only cancel if we haven't locked direction yet
             if (this._isSwiping && this._swipeDirection === null) {
                 this._isSwiping = false;
-                leftPanel.classList.remove('is-swiping-horizontal');
+                gridPanel.classList.remove('is-swiping-horizontal');
             }
         }, { passive: true });
     },
@@ -1792,9 +1846,9 @@ const MobileView = {
             
             if (wasModalOpen) {
                 // Close the modal view without clearing selection (don't use this.close())
-                const leftPanel = document.getElementById('character-list-panel');
-                if (leftPanel) {
-                    leftPanel.classList.remove('is-viewing-sheet');
+                const gridPanel = document.getElementById('characterGridPanel');
+                if (gridPanel) {
+                    gridPanel.classList.remove('is-viewing-sheet');
                 }
             }
             // Clear scroll state on header when going to desktop
@@ -1812,16 +1866,16 @@ const MobileView = {
 
     /** Check if mobile sheet view is open */
     isOpen() {
-        const leftPanel = document.getElementById('character-list-panel');
-        return leftPanel && leftPanel.classList.contains('is-viewing-sheet');
+        const gridPanel = document.getElementById('characterGridPanel');
+        return gridPanel && gridPanel.classList.contains('is-viewing-sheet');
     },
 
     /** Open the mobile sheet view for a character (swaps grid for sheet) */
     open(characterId) {
-        const leftPanel = document.getElementById('character-list-panel');
+        const gridPanel = document.getElementById('characterGridPanel');
         const container = document.getElementById('mobileSheetContainer');
         
-        if (!leftPanel || !container) return;
+        if (!gridPanel || !container) return;
         
         // Check if we're in a swipe transition (loader was shown)
         const isSwipeTransition = this._isSwipeLoading;
@@ -1838,13 +1892,13 @@ const MobileView = {
         }
         
         // Swap to sheet view
-        leftPanel.classList.add('is-viewing-sheet');
+        gridPanel.classList.add('is-viewing-sheet');
         
         // Update character count display
         this.updateCharacterCount(characterId);
         
         // Scroll to top
-        leftPanel.scrollTop = 0;
+        gridPanel.scrollTop = 0;
         
         // Wait for portrait image to load before hiding the loader
         if (isSwipeTransition) {
@@ -1945,10 +1999,10 @@ const MobileView = {
 
     /** Close the mobile sheet view (returns to grid) */
     close() {
-        const leftPanel = document.getElementById('character-list-panel');
-        if (!leftPanel) return;
+        const gridPanel = document.getElementById('characterGridPanel');
+        if (!gridPanel) return;
         
-        leftPanel.classList.remove('is-viewing-sheet');
+        gridPanel.classList.remove('is-viewing-sheet');
         
         // Clear selection state on mobile when going back
         if (typeof AppState !== 'undefined' && AppState) {
@@ -2099,25 +2153,30 @@ function closeMobileSheet() {
 // ========================================
 const UI = {
     setLoadingState(isLoading) {
-        const leftLoading = document.getElementById('leftPanelLoading');
-        const rightLoading = document.getElementById('rightPanelLoading');
+        const gridLoading = document.getElementById('gridPanelLoading');
+        const sheetLoading = document.getElementById('sheetPanelLoading');
+        const campaignLoading = document.getElementById('campaignPanelLoading');
         const grid = document.getElementById('characterGrid');
         const emptyState = document.getElementById('emptyState');
         const sheetPlaceholder = document.querySelector('.sheet-placeholder');
         const characterSheet = document.getElementById('characterSheet');
+        const campaignPlaceholder = document.querySelector('.campaign-panel-placeholder');
 
         if (isLoading) {
-            if (leftLoading) leftLoading.classList.remove('is-hidden');
-            if (rightLoading) rightLoading.classList.remove('is-hidden');
+            if (gridLoading) gridLoading.classList.remove('is-hidden');
+            if (sheetLoading) sheetLoading.classList.remove('is-hidden');
+            if (campaignLoading) campaignLoading.classList.remove('is-hidden');
             if (grid) grid.classList.add('is-hidden');
             if (emptyState) emptyState.classList.add('is-hidden');
             if (sheetPlaceholder) sheetPlaceholder.classList.add('is-hidden');
             if (characterSheet) characterSheet.classList.add('is-hidden');
+            if (campaignPlaceholder) campaignPlaceholder.classList.add('is-hidden');
         } else {
-            if (leftLoading) leftLoading.classList.add('is-hidden');
-            if (rightLoading) rightLoading.classList.add('is-hidden');
+            if (gridLoading) gridLoading.classList.add('is-hidden');
+            if (sheetLoading) sheetLoading.classList.add('is-hidden');
+            if (campaignLoading) campaignLoading.classList.add('is-hidden');
             if (grid) grid.classList.remove('is-hidden');
-            // empty state and sheet visibility will be controlled by UI.render()
+            // empty state, sheet, and campaign visibility will be controlled by UI.render()
         }
     },
 
@@ -8104,6 +8163,13 @@ function shouldShowDemoMigration() {
 // ========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // FIRST: Restore panel view state from URL BEFORE anything renders
+    // This prevents flash of wrong view (e.g., showing grid when URL has view=expanded)
+    const initialUrl = new URL(window.location.href);
+    if (initialUrl.searchParams.get('view') === 'expanded') {
+        PanelManager.setView('sheet-campaign');
+    }
+    
     // Initialize modal behaviors (backdrop click, dirty checking)
     ModalManager.init();
     

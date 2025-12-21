@@ -21,9 +21,9 @@
     
     <title>D&Dy</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="terminal-theme.css?v=20251215e">
-    <link rel="stylesheet" href="portraits.css?v=20251215f">
-    <link rel="stylesheet" href="character-manager.css?v=20251210i">
+    <link rel="stylesheet" href="terminal-theme.css?v=20251221d">
+    <link rel="stylesheet" href="portraits.css?v=20251221d">
+    <link rel="stylesheet" href="character-manager.css?v=20251221d">
 </head>
 <body>
     <div class="terminal-frame">
@@ -142,10 +142,10 @@
         </div>
     </header>
 
-    <!-- Split Layout -->
-    <div class="split-layout">
-        <!-- Left Panel: Character List -->
-        <div class="left-panel" id="character-list-panel">
+    <!-- Split Layout - shows 2 of 3 panels at a time -->
+    <div class="split-layout" data-view="grid-sheet">
+        <!-- Panel: Character Grid -->
+        <div class="panel panel-character-grid" id="characterGridPanel">
             <!-- Mobile Back Bar (shown when viewing character sheet on mobile) -->
             <div class="mobile-back-bar" id="mobileBackBar">
                 <a href="#" class="mobile-back-link" onclick="closeMobileSheet(); return false;">
@@ -224,37 +224,28 @@
             </div>
         </div>
 
-        <!-- Right Panel: Character Sheet (hidden on mobile) -->
-        <div class="right-panel" id="character-sheet-panel">
+        <!-- Panel: Character Sheet -->
+        <div class="panel panel-character-sheet" id="characterSheetPanel">
             <div class="sheet-placeholder"></div>
-            
-            <!-- Expanded View Container (wraps sheet + campaign panel) -->
-            <div class="expanded-view-container">
-                <!-- Character Sheet Column -->
-                <div class="expanded-sheet-column">
-                    <div id="characterSheet" class="character-sheet is-hidden">
-                        <!-- Character sheet will be rendered here -->
-                    </div>
-                </div>
-                
-                <!-- Campaign Panel Column (visible in expanded view) -->
-                <div class="campaign-panel-column" id="campaignPanelColumn">
-                    <div class="campaign-panel" id="campaignPanel">
-                        <!-- Campaign panel content will be rendered here -->
-                        <div class="campaign-panel-placeholder">
-                            <div class="campaign-panel-placeholder-text">
-                                Campaign info will appear here when you expand the character sheet.
-                            </div>
-                        </div>
-                    </div>
+            <div id="characterSheet" class="character-sheet is-hidden">
+                <!-- Character sheet will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Panel: Campaign -->
+        <div class="panel panel-campaign" id="campaignPanel">
+            <!-- Campaign panel content will be rendered here -->
+            <div class="campaign-panel-placeholder">
+                <div class="campaign-panel-placeholder-text">
+                    Campaign info will appear here when you expand the character sheet.
                 </div>
             </div>
         </div>
 
-        <!-- Centered Loading Row spanning both panels -->
+        <!-- Centered Loading Row spanning panels -->
         <div class="panel-loading-row">
-            <!-- Left Panel Loading Indicator (shown while characters load) -->
-            <div id="leftPanelLoading" class="loading-indicator" aria-live="polite">
+            <!-- Grid Panel Loading Indicator -->
+            <div id="gridPanelLoading" class="loading-indicator" aria-live="polite">
                 <div class="panel-loading-cube-container">
                     <div class="panel-loading-cube">
                         <i></i><i></i><i></i><i></i><i></i><i></i>
@@ -263,14 +254,24 @@
                 <div class="panel-loading-text">Loading characters...</div>
             </div>
 
-            <!-- Right Panel Loading Indicator (shown while characters load) -->
-            <div id="rightPanelLoading" class="loading-indicator" aria-live="polite">
+            <!-- Sheet Panel Loading Indicator -->
+            <div id="sheetPanelLoading" class="loading-indicator" aria-live="polite">
                 <div class="panel-loading-cube-container">
                     <div class="panel-loading-cube">
                         <i></i><i></i><i></i><i></i><i></i><i></i>
                     </div>
                 </div>
                 <div class="panel-loading-text">Preparing character sheet...</div>
+            </div>
+
+            <!-- Campaign Panel Loading Indicator -->
+            <div id="campaignPanelLoading" class="loading-indicator is-hidden" aria-live="polite">
+                <div class="panel-loading-cube-container">
+                    <div class="panel-loading-cube">
+                        <i></i><i></i><i></i><i></i><i></i><i></i>
+                    </div>
+                </div>
+                <div class="panel-loading-text">Loading campaign...</div>
             </div>
         </div>
     </div>
@@ -1006,6 +1007,6 @@
     </div><!-- /terminal-frame -->
     
     <!-- Concatenated manager bundle (see scripts/simple_bundle.py) -->
-    <script src="manager.bundle.js?v=20251221a"></script>
+    <script src="manager.bundle.js?v=20251221d"></script>
 </body>
 </html>

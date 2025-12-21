@@ -2,10 +2,14 @@
    CHARACTER MANAGER SPECIFIC STYLES
    Base terminal theme loaded from terminal-theme.css
    
+   PANEL SYSTEM:
+   Three panels (character-grid, character-sheet, campaign) shown 2 at a time.
+   Each panel handles its own padding. View state controlled via data-view attribute.
+   
    SCROLLBAR STRUCTURE:
-   - Left panel (character grid): scrolls when content overflows
-   - Right panel (character sheet): scrolls when content overflows
-   - Splash content: scrolls if ASCII art is too large
+   - Character grid panel: amber theme scrollbars
+   - Character sheet panel: teal theme scrollbars
+   - Campaign panel: teal theme scrollbars (matches sheet)
    - Modal content: scrolls if form content is too large
    All scrollbars inherit from terminal-theme.css custom scrollbar styles
    ======================================== */
@@ -46,49 +50,38 @@
     margin-left: auto;
 }
 
-/* Right panel uses teal scrollbars to match character sheet theme */
-.right-panel {
-    display: flex;
-    flex-direction: column;
-    padding-bottom: 0;
+/* ===== PANEL: CHARACTER GRID ===== */
+.panel-character-grid {
+    padding: var(--spacing-xl);
+    padding-top: 0;
+    border-right: 1px solid var(--terminal-border);
+}
+
+/* ===== PANEL: CHARACTER SHEET ===== */
+.panel-character-sheet {
+    padding: 32px;
+    border-top: 1px solid var(--sheet-accent-dim);
+    border-left: 1px solid var(--sheet-accent-dim);
+    border-right: 1px solid var(--sheet-accent-dim);
+    /* Teal scrollbar theme */
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
-/* ===== EXPANDED CHARACTER SHEET VIEW ===== */
-/* Container that holds sheet + campaign panel side by side */
-.expanded-view-container {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
+/* Teal border around character sheet */
+.panel-character-sheet .character-sheet {
+    border: 1px solid var(--sheet-accent-dim);
 }
 
-/* Character sheet column - fills right-panel in collapsed state */
-.expanded-sheet-column {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    min-height: 0;
-    border-top: 1px solid var(--sheet-accent-dim);
-    border-left: 1px solid var(--sheet-accent-dim);
-    border-right: 1px solid var(--sheet-accent-dim);
+/* When sheet panel is first (left position), adjust borders */
+.split-layout[data-view="sheet-campaign"] .panel-character-sheet {
+    border-right: none;
 }
 
-/* Remove border from character sheet (border is on column instead) */
-.expanded-sheet-column .character-sheet {
-    border: none;
-}
-
-/* Campaign panel column - hidden in collapsed state */
-/* Uses teal/green theme to match character sheet */
-.campaign-panel-column {
-    flex: 0;
-    width: 0;
-    overflow: hidden;
-    border-left: 1px solid var(--sheet-border-color);
-    min-height: 0;
+/* ===== PANEL: CAMPAIGN ===== */
+.panel-campaign {
+    padding: 32px 32px 0 32px;
     background: var(--terminal-bg);
     
     /* Apply teal theme context */
@@ -96,55 +89,55 @@
     --context-accent-dim: var(--sheet-accent-dim);
     --context-border: var(--sheet-border-color);
     color: var(--sheet-accent);
+    
+    /* Teal scrollbar theme */
+    --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
+    --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
+    --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
 /* Override terminal colors with teal in campaign panel */
-.campaign-panel-column .terminal-btn {
+.panel-campaign .terminal-btn {
     color: var(--sheet-accent);
     border-color: var(--sheet-accent-dim);
 }
 
-.campaign-panel-column .terminal-btn:hover {
+.panel-campaign .terminal-btn:hover {
     border-color: var(--sheet-accent);
     box-shadow: 0 0 8px var(--sheet-accent-dim);
 }
 
-.campaign-panel-column .terminal-btn-primary {
+.panel-campaign .terminal-btn-primary {
     background: var(--sheet-accent);
     border-color: var(--sheet-accent);
     color: var(--terminal-bg);
 }
 
-.campaign-panel-column .terminal-btn-primary:hover {
+.panel-campaign .terminal-btn-primary:hover {
     background: var(--sheet-accent-bright);
     border-color: var(--sheet-accent-bright);
 }
 
-.campaign-panel-column .terminal-btn-danger {
+.panel-campaign .terminal-btn-danger {
     color: var(--error-color);
     border-color: var(--error-color);
 }
 
-.campaign-panel-column .terminal-input,
-.campaign-panel-column .terminal-textarea,
-.campaign-panel-column .terminal-select {
+.panel-campaign .terminal-input,
+.panel-campaign .terminal-textarea,
+.panel-campaign .terminal-select {
     border-color: var(--sheet-accent-dim);
     color: var(--sheet-accent);
 }
 
-.campaign-panel-column .terminal-input:focus,
-.campaign-panel-column .terminal-textarea:focus,
-.campaign-panel-column .terminal-select:focus {
+.panel-campaign .terminal-input:focus,
+.panel-campaign .terminal-textarea:focus,
+.panel-campaign .terminal-select:focus {
     border-color: var(--sheet-accent);
     box-shadow: 0 0 5px var(--sheet-accent-dim);
 }
 
-/* Campaign panel content */
-.campaign-panel {
-    padding: 0 var(--spacing-lg) var(--spacing-lg) var(--spacing-lg);
-    height: 100%;
-}
-
+/* Campaign panel placeholder */
 .campaign-panel-placeholder {
     display: flex;
     align-items: center;
@@ -158,29 +151,6 @@
 .campaign-panel-placeholder-text {
     font-size: var(--font-size-small);
     line-height: 1.5;
-}
-
-/* ===== EXPANDED VIEW STATE ===== */
-/* Hide left panel when expanded */
-.split-layout.is-expanded .left-panel {
-    display: none;
-}
-
-/* Right panel takes full width */
-.split-layout.is-expanded .right-panel {
-    flex: 1;
-}
-
-/* Sheet keeps 50% width when expanded */
-.split-layout.is-expanded .expanded-sheet-column {
-    flex: 0 0 50%;
-}
-
-/* Campaign panel takes remaining 50% */
-.split-layout.is-expanded .campaign-panel-column {
-    flex: 0 0 50%;
-    width: 50%;
-    overflow-y: auto;
 }
 
 /* ===== CAMPAIGN PANEL TWO-SECTION LAYOUT ===== */
@@ -349,7 +319,6 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--sheet-border-color);
     border-radius: 4px;
     overflow: hidden;
 }
@@ -464,19 +433,15 @@
         display: none !important;
     }
     
-    /* Don't show expanded view on mobile */
-    .split-layout.is-expanded .left-panel {
-        display: flex;
-    }
-    
-    .split-layout.is-expanded .campaign-panel-column {
+    /* On mobile, only show grid panel regardless of view state */
+    .split-layout[data-view="sheet-campaign"] .panel-character-sheet,
+    .split-layout[data-view="sheet-campaign"] .panel-campaign {
         display: none;
     }
-}
-
-/* ===== LEFT PANEL ===== */
-.left-panel {
-    padding-top: 0;
+    
+    .split-layout[data-view="sheet-campaign"] .panel-character-grid {
+        display: flex;
+    }
 }
 
 /* ===== CONTROLS SECTION ===== */
@@ -487,7 +452,7 @@
     background-color: var(--terminal-bg);
     /* Extend background padding to cover scrolling content behind */
     padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-md) var(--spacing-xl);
-    /* Negative margins to counteract left-panel padding so we go edge-to-edge */
+    /* Negative margins to counteract panel padding so we go edge-to-edge */
     margin: 0 calc(-1 * var(--spacing-xl)) var(--spacing-md) calc(-1 * var(--spacing-xl));
 }
 
@@ -1848,6 +1813,24 @@
     pointer-events: none; /* let clicks fall through to underlying UI */
 }
 
+/* In sheet-campaign view, hide grid loading and reposition sheet/campaign loading */
+.split-layout[data-view="sheet-campaign"] #gridPanelLoading {
+    display: none;
+}
+
+.split-layout[data-view="sheet-campaign"] #sheetPanelLoading {
+    grid-column: 1;
+}
+
+.split-layout[data-view="sheet-campaign"] #campaignPanelLoading {
+    grid-column: 2;
+}
+
+/* In grid-sheet view, hide campaign loading */
+.split-layout[data-view="grid-sheet"] #campaignPanelLoading {
+    display: none;
+}
+
 .loading-text {
     color: var(--terminal-accent);
     font-family: var(--font-mono);
@@ -2129,12 +2112,13 @@
         overscroll-behavior: none;
     }
     
-    /* Hide right panel entirely on mobile - character sheet shown via modal */
-    .left-panel {
-        flex: 1;
+    /* On mobile, only grid panel is shown - sheet shown inline via mobile-sheet-container */
+    .panel-character-grid {
+        flex: 1 1 100%;
         border-right: none;
         border-bottom: none;
         padding: var(--spacing-md);
+        padding-top: 0;
         /* Enable smooth momentum scrolling on iOS, vertical only */
         overflow-y: auto;
         overflow-x: hidden;
@@ -2145,15 +2129,16 @@
         overscroll-behavior: contain;
     }
     
+    /* Hide sheet and campaign panels on mobile */
+    .panel-character-sheet,
+    .panel-campaign {
+        display: none !important;
+    }
+    
     /* Adjust controls section for mobile */
     .controls-section {
         padding: 16px;
         margin: 0 calc(-1 * var(--spacing-md)) 0 calc(-1 * var(--spacing-md));
-    }
-    
-    /* Remove top padding from left panel on mobile */
-    .left-panel {
-        padding-top: 0;
     }
     
     /* Remove bottom margin on search bar */
@@ -2178,16 +2163,12 @@
         display: block !important;
     }
     
-    .right-panel {
-        display: none !important;
-    }
-    
-    /* Hide the right-side loading indicator on mobile */
+    /* Hide the sheet loading indicator on mobile */
     .panel-loading-row {
         grid-template-columns: 1fr;
     }
     
-    #rightPanelLoading {
+    #sheetPanelLoading {
         display: none;
     }
     
@@ -2313,7 +2294,7 @@
     }
     
     /* Show back bar when viewing character sheet on mobile */
-    .left-panel.is-viewing-sheet .mobile-back-bar {
+    .panel-character-grid.is-viewing-sheet .mobile-back-bar {
         display: flex;
     }
     
@@ -2324,15 +2305,15 @@
     }
     
     /* Hide grid and controls when viewing sheet */
-    .left-panel.is-viewing-sheet .controls-section,
-    .left-panel.is-viewing-sheet .character-grid,
-    .left-panel.is-viewing-sheet .empty-state,
-    .left-panel.is-viewing-sheet .character-count {
+    .panel-character-grid.is-viewing-sheet .controls-section,
+    .panel-character-grid.is-viewing-sheet .character-grid,
+    .panel-character-grid.is-viewing-sheet .empty-state,
+    .panel-character-grid.is-viewing-sheet .character-count {
         display: none !important;
     }
     
     /* Show the inline character sheet on mobile */
-    .left-panel.is-viewing-sheet .mobile-sheet-container {
+    .panel-character-grid.is-viewing-sheet .mobile-sheet-container {
         display: block;
     }
 }
@@ -2378,8 +2359,8 @@
     transform: scale(0.5);
 }
 
-/* When viewing sheet on mobile, apply teal UI theme to the left panel */
-.left-panel.is-viewing-sheet {
+/* When viewing sheet on mobile, apply teal UI theme to the grid panel */
+.panel-character-grid.is-viewing-sheet {
     touch-action: pan-y pinch-zoom; /* Allow vertical scroll, capture horizontal swipes */
     --ui-primary-color: var(--sheet-accent);
     --ui-primary-color-dim: var(--sheet-accent-dim);
@@ -2396,14 +2377,14 @@
 
 
 /* Use teal scrollbar theme when viewing sheet */
-.left-panel.is-viewing-sheet {
+.panel-character-grid.is-viewing-sheet {
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
 /* During active horizontal swipe, prevent all scrolling */
-.left-panel.is-swiping-horizontal {
+.panel-character-grid.is-swiping-horizontal {
     touch-action: none !important;
     overflow: hidden !important;
 }
@@ -2661,9 +2642,10 @@
     .terminal-frame,
     .main-content,
     .split-layout,
-    .left-panel,
-    .right-panel,
-    #character-sheet-panel {
+    .panel,
+    .panel-character-grid,
+    .panel-character-sheet,
+    .panel-campaign {
         background: #fff !important;
         background-color: #fff !important;
         background-image: none !important;
@@ -2675,8 +2657,7 @@
     .terminal-frame,
     .main-content,
     .split-layout,
-    .right-panel,
-    #character-sheet-panel,
+    .panel-character-sheet,
     #characterSheet,
     .character-sheet {
         display: block !important;
@@ -2690,15 +2671,14 @@
         overflow-y: visible !important;
     }
 
-    /* Hide left panel (character list) in print */
-    .left-panel,
-    #character-list-panel {
+    /* Hide grid and campaign panels in print */
+    .panel-character-grid,
+    .panel-campaign {
         display: none !important;
     }
 
-    /* Show right panel as block, full width */
-    .right-panel,
-    #character-sheet-panel {
+    /* Show character sheet panel as block, full width */
+    .panel-character-sheet {
         display: block !important;
         position: static !important;
         width: 100% !important;
