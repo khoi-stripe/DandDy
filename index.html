@@ -416,6 +416,36 @@
         </div>
     </div>
 
+    <!-- Invite Players Modal -->
+    <div id="invitePlayersModal" class="modal modal-yellow">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">INVITE PLAYERS</h2>
+                <button class="modal-close" onclick="CampaignUI.closeInviteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="terminal-text">Inviting to <strong id="inviteModalCampaignName"></strong></p>
+                
+                <div id="inviteModalExistingSection" class="share-section" style="margin-top: 1.25rem; display: none;">
+                    <label class="terminal-text-small modal-section-label">PENDING INVITES</label>
+                    <div id="inviteModalExistingList" class="share-collaborators-list"></div>
+                </div>
+                
+                <div class="share-section" style="margin-top: 1.25rem;">
+                    <label class="terminal-text-small modal-section-label" for="inviteModalEmail">ADD PERSON</label>
+                    <div class="share-add-row">
+                        <input type="email" id="inviteModalEmail" class="terminal-input" placeholder="email@example.com" autocomplete="off" data-1p-ignore onkeydown="if(event.key==='Enter'){event.preventDefault();CampaignUI.addPendingInviteFromModal();}">
+                        <button type="button" class="terminal-btn" id="inviteAddBtn" onclick="CampaignUI.addPendingInviteFromModal()">ADD</button>
+                    </div>
+                    <p id="inviteModalError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.sendInvitations()">DONE</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Manage Campaign Modal -->
     <div id="manageCampaignModal" class="modal">
         <div class="modal-content">
@@ -428,20 +458,9 @@
                     <label class="settings-label" for="manageCampaignName">Campaign Name</label>
                     <input type="text" id="manageCampaignName" class="terminal-input" placeholder="e.g. Curse of Strahd" maxlength="100" required>
                 </div>
-                <div class="settings-row settings-row--stacked mb-lg">
+                <div class="settings-row settings-row--stacked">
                     <label class="settings-label" for="manageCampaignDesc">Description <span class="terminal-text-dim">(optional)</span></label>
                     <textarea id="manageCampaignDesc" class="terminal-textarea" rows="3" placeholder="A brief description of your campaign..." maxlength="500"></textarea>
-                </div>
-                
-                <div class="invite-section">
-                    <label class="invite-section-title">Invite Players</label>
-                    <div class="invite-input-row">
-                        <input type="email" id="inviteEmail" class="terminal-input" placeholder="player@email.com" onkeydown="if(event.key==='Enter'){event.preventDefault();CampaignUI.addPendingInvite();}">
-                        <button type="button" class="terminal-btn terminal-btn-small" onclick="CampaignUI.addPendingInvite()">Add</button>
-                    </div>
-                    <div id="pendingInvitesList" class="pending-invites-list">
-                        <div class="pending-invites-empty">No invitations queued</div>
-                    </div>
                 </div>
                 
                 <div id="manageCampaignError" class="terminal-text-small terminal-text-error mt-sm is-hidden"></div>
@@ -863,7 +882,7 @@
 
     <!-- Auth Modal (Login/Register) -->
     <div id="authModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-content--narrow">
             <div class="modal-header">
                 <h2 class="modal-title" id="authModalTitle">LOG IN</h2>
                 <button class="modal-close" onclick="cancelAuthFlow()">&times;</button>
@@ -914,7 +933,7 @@
     
     <!-- Password Reset Modal -->
     <div id="passwordResetModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-content--narrow">
             <div class="modal-header">
                 <h2 class="modal-title" id="passwordResetModalTitle">RESET PASSWORD</h2>
                 <button class="modal-close" onclick="closePasswordResetModal()">&times;</button>
@@ -957,7 +976,7 @@
     
     <!-- Migration Modal -->
     <div id="migrationModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-content--narrow">
             <div class="modal-header">
                 <h2 class="modal-title">MIGRATE TO CLOUD</h2>
                 <button class="modal-close" onclick="closeMigrationModal()">&times;</button>
@@ -977,7 +996,7 @@
     
     <!-- Demo Character Migration Modal -->
     <div id="demoMigrationModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-content--narrow">
             <div class="modal-header">
                 <h2 class="modal-title">KEEP SAMPLE CHARACTERS?</h2>
                 <button class="modal-close" onclick="closeDemoMigrationModal(false)">&times;</button>

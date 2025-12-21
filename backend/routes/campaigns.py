@@ -10,7 +10,8 @@ from models.character_collaborator import CharacterCollaborator, CollaboratorPer
 from schemas.campaign import (
     CampaignCreate, CampaignUpdate, CampaignResponse, CampaignWithCharacters,
     CampaignMemberResponse, CampaignJoin, CampaignJoinResponse,
-    CampaignInviteByEmail, CampaignInvitationResponse, AcceptInvitation
+    CampaignInviteByEmail, CampaignInvitationResponse, AcceptInvitation,
+    CampaignPendingInviteResponse
 )
 from utils.auth import get_current_active_user
 
@@ -612,6 +613,47 @@ def invite_user_by_email(
     # #endregion
 
 
+@router.get("/{campaign_id}/pending-invitations", response_model=List[CampaignPendingInviteResponse])
+def get_campaign_pending_invitations(
+    campaign_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get all pending invitations sent from this campaign. Only the creator can view."""
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    
+    if not campaign:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Campaign not found"
+        )
+    
+    # Only creator can view pending invitations
+    if campaign.dm_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the campaign creator can view pending invitations"
+        )
+    
+    # Get all pending invitations with user email
+    invitations = db.query(CampaignMember).options(
+        joinedload(CampaignMember.user)
+    ).filter(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.status == MemberStatus.INVITED
+    ).all()
+    
+    return [
+        CampaignPendingInviteResponse(
+            id=inv.id,
+            user_id=inv.user_id,
+            email=inv.user.email,
+            invited_at=inv.joined_at
+        )
+        for inv in invitations
+    ]
+
+
 @router.post("/{campaign_id}/accept-invitation", response_model=CampaignJoinResponse)
 def accept_invitation(
     campaign_id: int,
@@ -682,6 +724,47 @@ def decline_invitation(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No pending invitation found for this campaign"
+        )
+    
+    db.delete(invitation)
+    db.commit()
+    
+    return None
+
+
+@router.delete("/{campaign_id}/revoke-invitation/{invitation_id}", status_code=status.HTTP_204_NO_CONTENT)
+def revoke_invitation(
+    campaign_id: int,
+    invitation_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Revoke a campaign invitation. Only the campaign creator can revoke."""
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    
+    if not campaign:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Campaign not found"
+        )
+    
+    # Only creator can revoke
+    if campaign.dm_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the campaign creator can revoke invitations"
+        )
+    
+    invitation = db.query(CampaignMember).filter(
+        CampaignMember.id == invitation_id,
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.status == MemberStatus.INVITED
+    ).first()
+    
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found"
         )
     
     db.delete(invitation)

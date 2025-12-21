@@ -103,3 +103,13 @@ class AcceptInvitation(BaseModel):
     character_id: Optional[int] = None  # Optional - can accept without assigning character
 
 
+class CampaignPendingInviteResponse(BaseModel):
+    """Pending invitation sent from a campaign (for DM to see who's been invited)"""
+    id: int  # membership id
+    user_id: int
+    email: str
+    invited_at: datetime
+    
+    class Config:
+        from_attributes = True
+

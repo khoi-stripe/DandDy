@@ -278,6 +278,23 @@ const CampaignAPI = (window.CampaignAPI = {
   },
 
   /**
+   * Get pending invitations sent from a campaign (for DM to see who's been invited)
+   * @param {number} campaignId
+   * @returns {Promise<Array>} List of pending invitations with email
+   */
+  async getCampaignPendingInvitations(campaignId) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Fetching pending invitations for campaign', campaignId);
+      const invitations = await this._apiRequest(`/campaigns/${campaignId}/pending-invitations`);
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Found', invitations.length, 'pending invitations');
+      return invitations;
+    } catch (error) {
+      console.error('🏰 CAMPAIGN ERROR: Failed to fetch campaign pending invitations:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Accept a campaign invitation
    * @param {number} campaignId
    * @param {number?} characterId - Optional character to assign
@@ -310,6 +327,23 @@ const CampaignAPI = (window.CampaignAPI = {
       if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Declined invitation');
     } catch (error) {
       console.error('🏰 CAMPAIGN ERROR: Failed to decline invitation:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Revoke a campaign invitation (DM only)
+   * @param {number} campaignId
+   * @param {number} invitationId - The membership/invitation ID to revoke
+   * @returns {Promise<void>}
+   */
+  async revokeInvitation(campaignId, invitationId) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Revoking invitation', invitationId, 'for campaign', campaignId);
+      await this._apiRequest(`/campaigns/${campaignId}/revoke-invitation/${invitationId}`, { method: 'DELETE' });
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Revoked invitation');
+    } catch (error) {
+      console.error('🏰 CAMPAIGN ERROR: Failed to revoke invitation:', error);
       throw error;
     }
   },
