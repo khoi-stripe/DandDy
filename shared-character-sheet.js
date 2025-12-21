@@ -707,8 +707,21 @@ const CharacterSheet = (window.CharacterSheet = {
       });
     }
 
-    // Manager-only: Campaign button in header
-    // - "Campaign →" in grid-sheet view (hidden in sheet-campaign view via CSS)
+    // Manager-only: Navigation buttons in header
+    // - "← Characters" to go back to grid view
+    // - "Campaign →" to expand campaign panel (hidden in sheet-campaign view via CSS)
+    const charactersButtonHtml =
+      context === 'manager' && hasValidManagerId
+        ? `
+        <button
+          class="terminal-btn-small sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-characters hide-on-mobile"
+          type="button"
+          onclick="ExpandedView.collapse()"
+          title="Return to character grid"
+        >← Characters</button>
+      `
+        : '';
+
     const campaignButtonHtml =
       context === 'manager' && hasValidManagerId
         ? `
@@ -769,9 +782,10 @@ const CharacterSheet = (window.CharacterSheet = {
         : '';
 
     const actionsBlock =
-      campaignButtonHtml || headerMenu
+      charactersButtonHtml || campaignButtonHtml || headerMenu
         ? `
         <div class="sheet-title-actions">
+          ${charactersButtonHtml}
           ${campaignButtonHtml}
           ${headerMenu}
         </div>
@@ -1672,6 +1686,9 @@ const CharacterSheet = (window.CharacterSheet = {
           // measure from a clean baseline. Use fixed/absolute positioning during
           // measurement so getBoundingClientRect returns consistent values.
           menu.style.maxHeight = '';
+          menu.style.width = '';
+          menu.style.minWidth = '';
+          menu.style.maxWidth = '';
           menu.style.position = useFixedPositioning ? 'fixed' : 'absolute';
           menu.style.top = '0';
           menu.style.left = '0';
@@ -1869,6 +1886,9 @@ const CharacterSheet = (window.CharacterSheet = {
             }
 
             let targetLeft;
+            // Declare at higher scope so it's accessible after the if/else block
+            const isSheetActionsMenu = menu.classList.contains('sheet-actions-menu');
+            
             if (inPortraitModal) {
               const sideGapX = 8;
               const spaceRight = hostRight - triggerRect.right;
@@ -1899,7 +1919,15 @@ const CharacterSheet = (window.CharacterSheet = {
               const fitsLeft =
                 triggerRect.right - menuWidth >= hostLeft;
 
-              if (fitsRight && !fitsLeft) {
+              // Sheet actions menu should always open to the left (right-aligned with trigger)
+              if (isSheetActionsMenu) {
+                // Use right positioning instead of left - this anchors the menu's right edge
+                // to the trigger's right edge regardless of menu width (avoids measurement issues)
+                menu.style.left = 'auto';
+                menu.style.right = `${window.innerWidth - triggerRect.right}px`;
+                // Set targetLeft to a dummy value since we won't use it
+                targetLeft = 0;
+              } else if (fitsRight && !fitsLeft) {
                 // Enough room to the right but not to the left: open to the right.
                 targetLeft = triggerRect.left;
               } else if (!fitsRight && fitsLeft) {
@@ -1921,8 +1949,11 @@ const CharacterSheet = (window.CharacterSheet = {
               }
             }
 
-            menu.style.left = `${targetLeft}px`;
-            menu.style.right = 'auto';
+            // For sheet-actions-menu, we already set right positioning above, so skip left
+            if (!isSheetActionsMenu) {
+              menu.style.left = `${targetLeft}px`;
+              menu.style.right = 'auto';
+            }
             // Ensure the menu appears above modals and other content.
             // Modal overlay is z-index: 10000, so detached menus need to be above that.
             menu.style.zIndex = inModal ? '10001' : '1000';

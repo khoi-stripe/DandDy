@@ -2738,6 +2738,7 @@ const UI = {
         const sheetPlaceholder = document.querySelector('.sheet-placeholder');
         const characterSheet = document.getElementById('characterSheet');
         const campaignPlaceholder = document.querySelector('.campaign-panel-placeholder');
+        const sheetNavBar = document.getElementById('sheetNavBar');
 
         if (isLoading) {
             if (gridLoading) gridLoading.classList.remove('is-hidden');
@@ -2748,11 +2749,13 @@ const UI = {
             if (sheetPlaceholder) sheetPlaceholder.classList.add('is-hidden');
             if (characterSheet) characterSheet.classList.add('is-hidden');
             if (campaignPlaceholder) campaignPlaceholder.classList.add('is-hidden');
+            if (sheetNavBar) sheetNavBar.classList.add('is-hidden');
         } else {
             if (gridLoading) gridLoading.classList.add('is-hidden');
             if (sheetLoading) sheetLoading.classList.add('is-hidden');
             if (campaignLoading) campaignLoading.classList.add('is-hidden');
             if (grid) grid.classList.remove('is-hidden');
+            if (sheetNavBar) sheetNavBar.classList.remove('is-hidden');
             // empty state, sheet, and campaign visibility will be controlled by UI.render()
         }
     },
@@ -2782,7 +2785,7 @@ const UI = {
         if (!characters.length) {
             if (placeholder) placeholder.classList.remove('is-hidden');
             if (sheetEl) sheetEl.classList.add('is-hidden');
-            if (navBarEl) navBarEl.classList.add('is-hidden');
+            // Don't hide navBar - keep it visible
             if (typeof AppState !== 'undefined' && AppState) {
                 AppState.selectedCharacterId = null;
             }
@@ -3103,19 +3106,7 @@ const UI = {
         placeholder.classList.add('is-hidden');
         sheetContainer.classList.remove('is-hidden');
         
-        // Show nav bar with "← Characters" button (only in manager context)
-        // Campaign button is in the sheet header
-        if (navBar && character.id) {
-            navBar.classList.remove('is-hidden');
-            navBar.innerHTML = `
-                <button
-                    class="terminal-btn-small sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-characters hide-on-mobile"
-                    type="button"
-                    onclick="ExpandedView.collapse()"
-                    title="Return to character grid"
-                >← Characters</button>
-            `;
-        }
+        // Nav bar is kept visible but empty - the "← Characters" button is now inside the sheet header
         
         // Check if this is a demo character - disable editing if so
         const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);

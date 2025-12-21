@@ -1211,7 +1211,7 @@ body::before {
   /* Use the same geometry as .terminal-btn-small so heights match exactly */
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .sheet-actions-icon {
@@ -2370,6 +2370,8 @@ body.selector-menu-open .splash-art {
 .sheet-actions-menu.selector-menu,
 .portrait-actions-menu.selector-menu {
   transform: scaleY(0.15);
+  right: 0;  /* Align menu to right edge of trigger */
+  left: auto;
 }
 
 .sheet-actions-menu.selector-menu.is-open,
