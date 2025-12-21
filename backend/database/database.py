@@ -409,6 +409,43 @@ def ensure_pinned_character_ids_column():
         conn.commit()
 
 
+def ensure_campaign_tracking_columns():
+    """
+    Lightweight migration helper for campaign tracking feature.
+    Adds new columns to the existing campaigns table:
+    - invite_code: unique code for joining campaigns
+    - status: campaign state (active, paused, completed, archived)
+    - created_at, updated_at: timestamps
+    """
+    inspector = inspect(engine)
+    if not inspector.has_table("campaigns"):
+        return
+
+    existing_cols = {col["name"] for col in inspector.get_columns("campaigns")}
+
+    with engine.connect() as conn:
+        if "invite_code" not in existing_cols:
+            conn.execute(text("ALTER TABLE campaigns ADD COLUMN invite_code VARCHAR UNIQUE"))
+        
+        if "status" not in existing_cols:
+            conn.execute(text("ALTER TABLE campaigns ADD COLUMN status VARCHAR DEFAULT 'active'"))
+        
+        if "created_at" not in existing_cols:
+            conn.execute(text("ALTER TABLE campaigns ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+        
+        if "updated_at" not in existing_cols:
+            conn.execute(text("ALTER TABLE campaigns ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+
+        # Generate invite codes for existing campaigns that don't have one
+        conn.execute(text("""
+            UPDATE campaigns 
+            SET invite_code = UPPER(SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 5) || '-' || SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 4))
+            WHERE invite_code IS NULL
+        """))
+
+        conn.commit()
+
+
 def get_db():
     db = SessionLocal()
     try:
