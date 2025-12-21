@@ -93,7 +93,7 @@
 
 /* Campaign panel content */
 .campaign-panel {
-    padding: var(--spacing-lg);
+    padding: 0 var(--spacing-lg) var(--spacing-lg) var(--spacing-lg);
     height: 100%;
 }
 
