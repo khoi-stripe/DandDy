@@ -466,25 +466,18 @@ def ensure_campaign_member_status_column():
             conn.execute(text("UPDATE campaign_members SET status = 'active' WHERE status IS NULL"))
         
         # For PostgreSQL, ensure the memberstatus enum type has all values
-        # (in case 'invited' was added after initial table creation)
+        # SQLAlchemy uses enum NAMES (uppercase) not values (lowercase) for native enums
         if is_postgres:
             try:
-                # Check if 'invited' exists in the enum type
-                result = conn.execute(text("""
-                    SELECT EXISTS (
-                        SELECT 1 FROM pg_enum 
-                        WHERE enumlabel = 'invited' 
-                        AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'memberstatus')
-                    )
-                """))
-                has_invited = result.scalar()
-                
-                if not has_invited:
-                    # Add 'invited' to the enum type
-                    conn.execute(text("ALTER TYPE memberstatus ADD VALUE IF NOT EXISTS 'invited'"))
+                # Add all required enum values (uppercase names, not lowercase values)
+                for enum_name in ['INVITED', 'ACTIVE', 'INACTIVE', 'LEFT']:
+                    try:
+                        conn.execute(text(f"ALTER TYPE memberstatus ADD VALUE IF NOT EXISTS '{enum_name}'"))
+                    except Exception:
+                        pass  # Value already exists or other minor error
             except Exception as e:
                 # If the enum type doesn't exist or other error, log and continue
-                print(f"Note: Could not verify/add memberstatus enum value: {e}")
+                print(f"Note: Could not verify/add memberstatus enum values: {e}")
 
         conn.commit()
 
