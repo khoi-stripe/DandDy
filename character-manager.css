@@ -2,10 +2,14 @@
    CHARACTER MANAGER SPECIFIC STYLES
    Base terminal theme loaded from terminal-theme.css
    
+   PANEL SYSTEM:
+   Three panels (character-grid, character-sheet, campaign) shown 2 at a time.
+   Each panel handles its own padding. View state controlled via data-view attribute.
+   
    SCROLLBAR STRUCTURE:
-   - Left panel (character grid): scrolls when content overflows
-   - Right panel (character sheet): scrolls when content overflows
-   - Splash content: scrolls if ASCII art is too large
+   - Character grid panel: amber theme scrollbars
+   - Character sheet panel: teal theme scrollbars
+   - Campaign panel: teal theme scrollbars (matches sheet)
    - Modal content: scrolls if form content is too large
    All scrollbars inherit from terminal-theme.css custom scrollbar styles
    ======================================== */
@@ -46,18 +50,683 @@
     margin-left: auto;
 }
 
-/* Right panel uses teal scrollbars to match character sheet theme */
-.right-panel {
-    display: flex;
-    flex-direction: column;
+/* ===== PANEL: CHARACTER GRID ===== */
+.panel-character-grid {
+    padding: var(--spacing-xl);
+    padding-top: 0;
+    border-right: 1px solid var(--terminal-border);
+}
+
+/* ===== PANEL: CHARACTER SHEET ===== */
+.panel-character-sheet {
+    padding: 32px;
+    border-right: 1px solid var(--sheet-accent-dim);
+    /* Teal scrollbar theme */
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
-/* ===== LEFT PANEL ===== */
-.left-panel {
-    padding-top: 0;
+/* Teal border around character sheet */
+.panel-character-sheet .character-sheet {
+    border: 1px solid var(--sheet-accent-dim);
+}
+
+/* When sheet panel is first (left position), adjust borders */
+.split-layout[data-view="sheet-campaign"] .panel-character-sheet {
+    border-right: none;
+}
+
+/* ===== PANEL: CAMPAIGN ===== */
+.panel-campaign {
+    padding: 32px 32px 0 0;
+    background: var(--terminal-bg);
+    
+    /* Apply teal theme context */
+    --context-accent: var(--sheet-accent);
+    --context-accent-dim: var(--sheet-accent-dim);
+    --context-border: var(--sheet-border-color);
+    color: var(--sheet-accent);
+    
+    /* Teal scrollbar theme */
+    --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
+    --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
+    --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
+}
+
+/* Override terminal colors with teal in campaign panel */
+.panel-campaign .terminal-btn {
+    color: var(--sheet-accent);
+    border-color: var(--sheet-accent-dim);
+}
+
+.panel-campaign .terminal-btn:hover {
+    border-color: var(--sheet-accent);
+    box-shadow: 0 0 8px var(--sheet-accent-dim);
+}
+
+.panel-campaign .terminal-btn-primary {
+    background: var(--sheet-accent);
+    border-color: var(--sheet-accent);
+    color: var(--terminal-bg);
+}
+
+.panel-campaign .terminal-btn-primary:hover {
+    background: var(--sheet-accent-bright);
+    border-color: var(--sheet-accent-bright);
+}
+
+.panel-campaign .terminal-btn-danger {
+    color: var(--error-color);
+    border-color: var(--error-color);
+}
+
+.panel-campaign .terminal-input,
+.panel-campaign .terminal-textarea,
+.panel-campaign .terminal-select {
+    border-color: var(--sheet-accent-dim);
+    color: var(--sheet-accent);
+}
+
+.panel-campaign .terminal-input:focus,
+.panel-campaign .terminal-textarea:focus,
+.panel-campaign .terminal-select:focus {
+    border-color: var(--sheet-accent);
+    box-shadow: 0 0 5px var(--sheet-accent-dim);
+}
+
+/* Campaign panel placeholder */
+.campaign-panel-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--terminal-dim);
+    text-align: center;
+    padding: var(--spacing-xl);
+}
+
+.campaign-panel-placeholder-text {
+    font-size: var(--font-size-small);
+    line-height: 1.5;
+}
+
+/* ===== CAMPAIGN PANEL TWO-SECTION LAYOUT ===== */
+.campaign-panel-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: var(--spacing-lg);
+}
+
+/* ===== CAMPAIGN AREA (TOP SECTION) ===== */
+.campaign-area {
+    flex-shrink: 0;
+    border: 1px solid var(--sheet-border-color);
+    border-radius: 4px;
+    padding: var(--spacing-md);
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 5%, 0.5);
+    /* Allow overflow menu to escape bounds */
+    overflow: visible;
+}
+
+.campaign-area-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.campaign-area-title {
+    font-size: 18px;
+    color: var(--sheet-accent);
+    margin: 0;
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Campaign overflow menu */
+.campaign-overflow {
+    flex-shrink: 0;
+    position: relative;
+}
+
+.campaign-overflow-trigger {
+    padding: 4px 6px;
+    min-width: 28px;
+    border-color: var(--sheet-accent-dim);
+}
+
+/* Hover handled by overflow-trigger + ui-theme-teal classes */
+
+.campaign-overflow-trigger .sheet-actions-dot {
+    background-color: var(--sheet-accent-dim);
+}
+
+.campaign-overflow-trigger:hover .sheet-actions-dot {
+    background-color: var(--sheet-accent);
+}
+
+.campaign-overflow-menu {
+    /* Let JS handle positioning - just override the transform animation */
+    min-width: 180px;
+    transform: none;
+    /* Teal theme */
+    background: var(--terminal-bg);
+    border-color: var(--sheet-accent-dim);
+}
+
+.campaign-overflow-menu.is-open {
+    transform: none;
+}
+
+/* Teal themed menu options */
+.campaign-overflow-menu .selector-option {
+    color: var(--sheet-accent);
+}
+
+.campaign-overflow-menu .selector-option:hover {
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 20%, 0.3);
+    color: var(--sheet-accent-bright);
+}
+
+.campaign-overflow-menu .selector-option-icon {
+    color: var(--sheet-accent);
+}
+
+.campaign-overflow-menu .selector-option:hover .selector-option-icon {
+    color: var(--sheet-accent-bright);
+}
+
+/* Override danger to use teal like other options */
+.campaign-overflow-menu .selector-option.is-danger {
+    color: var(--sheet-accent);
+}
+
+.campaign-overflow-menu .selector-option.is-danger:hover {
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 20%, 0.3);
+    color: var(--sheet-accent-bright);
+}
+
+.campaign-overflow-menu .selector-option.is-danger .selector-option-icon {
+    color: var(--sheet-accent);
+}
+
+.campaign-overflow-menu .selector-option.is-danger:hover .selector-option-icon {
+    color: var(--sheet-accent-bright);
+}
+
+/* No campaign state */
+.campaign-area-empty {
+    text-align: center;
+    padding: var(--spacing-md);
+}
+
+.campaign-area-empty-icon {
+    font-size: 2em;
+    opacity: 0.3;
+    margin-bottom: var(--spacing-sm);
+}
+
+.campaign-area-empty-text {
+    color: var(--sheet-accent-dim);
+    font-size: var(--font-size-small);
+    margin-bottom: var(--spacing-md);
+}
+
+.campaign-area-empty-text.has-invitations {
+    color: var(--sheet-accent);
+    font-weight: 500;
+}
+
+.campaign-area-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: var(--spacing-md);
+}
+
+/* Invite code display */
+.campaign-area-invite {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    background: var(--terminal-bg-dark);
+    border-radius: 4px;
+    margin-bottom: var(--spacing-md);
+}
+
+.invite-label {
+    color: var(--sheet-accent-dim);
+    font-size: var(--font-size-small);
+}
+
+.invite-code {
+    font-family: var(--font-mono);
+    color: var(--sheet-accent);
+    letter-spacing: 0.1em;
+}
+
+/* ===== MANAGE CAMPAIGN MODAL - INVITE SECTION ===== */
+/* Uses same styling as share modal */
+.invite-section {
+    margin-top: var(--spacing-md);
+}
+
+.invite-section-title {
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--modal-accent-dim);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.invite-input-row {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.invite-input-row .terminal-input {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Pending invites list - matches share modal collaborators styling */
+.pending-invites-list {
+    border: 1px solid var(--modal-accent-dim);
+    border-radius: 4px;
+    background: var(--terminal-bg-dim);
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.pending-invites-empty {
+    color: var(--modal-accent-dim);
+    font-size: var(--font-size-sm);
+    text-align: center;
+    padding: 0.75rem;
+}
+
+.pending-invite-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--modal-accent-dim);
+    transition: background-color 0.15s ease;
+}
+
+.pending-invite-item:last-child {
+    border-bottom: none;
+}
+
+.pending-invite-item:hover {
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.08);
+}
+
+.pending-invite-email {
+    font-size: var(--font-size-sm);
+    color: var(--modal-accent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1;
+}
+
+.pending-invite-remove {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: var(--modal-accent-dim);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.pending-invite-remove:hover {
+    color: var(--error-color, #f44);
+    background-color: hsla(0, 70%, 50%, 0.15);
+}
+
+/* Modal footer with items spread (delete left, save/cancel right) */
+.modal-footer-spread {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-footer-right {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+/* ===== JOIN CAMPAIGN - INVITATIONS LIST ===== */
+.invitations-list {
+    border: 1px solid var(--modal-accent-dim);
+    border-radius: 4px;
+    background: var(--terminal-bg-dim);
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.invitations-loading,
+.invitations-empty {
+    color: var(--modal-accent-dim);
+    font-size: var(--font-size-sm);
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.invitation-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--modal-accent-dim);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.invitation-item:last-child {
+    border-bottom: none;
+}
+
+.invitation-item:hover {
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.08);
+}
+
+.invitation-item.is-selected {
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.15);
+}
+
+.invitation-radio {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--modal-accent-dim);
+    border-radius: 50%;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease;
+}
+
+.invitation-item:hover .invitation-radio {
+    border-color: var(--modal-accent);
+}
+
+.invitation-item.is-selected .invitation-radio {
+    border-color: var(--modal-accent);
+}
+
+.invitation-item.is-selected .invitation-radio::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background-color: var(--modal-accent);
+    border-radius: 50%;
+}
+
+.invitation-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.invitation-name {
+    font-size: var(--font-size-base);
+    color: var(--modal-accent);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.invitation-desc {
+    font-size: var(--font-size-sm);
+    color: var(--modal-accent-dim);
+    margin-top: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.terminal-btn-icon {
+    background: transparent;
+    border: none;
+    color: var(--sheet-accent-dim);
+    cursor: pointer;
+    padding: var(--spacing-xs);
+    font-size: 1em;
+    line-height: 1;
+    transition: color var(--transition-speed);
+}
+
+.terminal-btn-icon:hover {
+    color: var(--sheet-accent);
+}
+
+/* Party members */
+.campaign-area-party {
+    margin-bottom: var(--spacing-md);
+}
+
+/* Party section uses sheet-header--collapsible - teal themed */
+.campaign-area-party .sheet-header--collapsible {
+    color: var(--sheet-accent-dim);
+    border-color: var(--sheet-border-color);
+}
+
+.campaign-area-party .sheet-header--collapsible:hover {
+    color: var(--sheet-accent);
+    border-color: var(--sheet-accent-dim);
+}
+
+.campaign-area-party .sheet-header-toggle {
+    color: var(--sheet-accent-dim);
+}
+
+.campaign-area-party .sheet-header--collapsible:hover .sheet-header-toggle {
+    color: var(--sheet-accent);
+}
+
+.party-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.party-member {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-xs) 0;
+}
+
+.party-member-name {
+    color: var(--sheet-accent);
+}
+
+.party-member-info {
+    color: var(--sheet-accent-dim);
+    font-size: var(--font-size-small);
+}
+
+.party-empty {
+    color: var(--sheet-accent-dim);
+    font-size: var(--font-size-small);
+    font-style: italic;
+    padding: var(--spacing-sm) 0;
+}
+
+.party-member--no-char .party-member-name {
+    color: var(--sheet-accent-dim);
+    font-style: italic;
+}
+
+.party-member-badge {
+    font-size: var(--font-size-tiny);
+    color: var(--sheet-accent-dim);
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 20%, 0.3);
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: var(--spacing-xs);
+}
+
+/* Campaign description */
+.campaign-area-description {
+    color: var(--sheet-accent-dim);
+    font-size: var(--font-size-small);
+    line-height: 1.4;
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm);
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 5%, 0.3);
+    border-radius: 4px;
+}
+
+/* ===== JOURNAL SECTION (BOTTOM) ===== */
+.journal-section {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.journal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--sheet-border-color);
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 5%, 0.5);
+    flex-shrink: 0;
+}
+
+.journal-title {
+    font-size: 1em;
+    color: var(--sheet-accent);
+    margin: 0;
+    font-weight: 500;
+}
+
+.journal-entries {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-sm);
+}
+
+/* Individual journal entry */
+.journal-entry {
+    position: relative;
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--sheet-border-color);
+    transition: background var(--transition-speed);
+}
+
+.journal-entry:last-child {
+    border-bottom: none;
+}
+
+.journal-entry:hover {
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 10%, 0.3);
+}
+
+.journal-entry-header {
+    display: flex;
+    gap: var(--spacing-sm);
+    align-items: baseline;
+    margin-bottom: var(--spacing-xs);
+}
+
+.journal-entry-date {
+    color: var(--sheet-accent-dim);
+    font-size: var(--font-size-small);
+    flex-shrink: 0;
+}
+
+.journal-entry-title {
+    color: var(--sheet-accent);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.journal-entry-preview {
+    color: var(--sheet-accent-dim);
+    font-size: var(--font-size-small);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.journal-entry-edit {
+    position: absolute;
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    opacity: 0;
+    transition: opacity var(--transition-speed);
+}
+
+.journal-entry:hover .journal-entry-edit {
+    opacity: 1;
+}
+
+/* Empty journal state */
+.journal-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+    text-align: center;
+    height: 100%;
+}
+
+.journal-empty-text {
+    color: var(--sheet-accent-dim);
+    margin-bottom: var(--spacing-xs);
+}
+
+.journal-empty-hint {
+    color: var(--sheet-accent-dim);
+    font-size: var(--font-size-small);
+    opacity: 0.7;
+}
+
+/* Hide on mobile utility */
+@media (max-width: 768px) {
+    .hide-on-mobile {
+        display: none !important;
+    }
+    
+    /* On mobile, only show grid panel regardless of view state */
+    .split-layout[data-view="sheet-campaign"] .panel-character-sheet,
+    .split-layout[data-view="sheet-campaign"] .panel-campaign {
+        display: none;
+    }
+    
+    .split-layout[data-view="sheet-campaign"] .panel-character-grid {
+        display: flex;
+    }
 }
 
 /* ===== CONTROLS SECTION ===== */
@@ -68,7 +737,7 @@
     background-color: var(--terminal-bg);
     /* Extend background padding to cover scrolling content behind */
     padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-md) var(--spacing-xl);
-    /* Negative margins to counteract left-panel padding so we go edge-to-edge */
+    /* Negative margins to counteract panel padding so we go edge-to-edge */
     margin: 0 calc(-1 * var(--spacing-xl)) var(--spacing-md) calc(-1 * var(--spacing-xl));
 }
 
@@ -856,6 +1525,103 @@
     justify-content: flex-end;
 }
 
+/* ===== CAMPAIGN MODALS ===== */
+/* Narrow modal variant for simple forms */
+.modal-content--narrow {
+    max-width: 420px;
+}
+
+/* Code input styling (for invite codes) */
+.terminal-input--code {
+    font-family: var(--font-mono);
+    font-size: 1.2em;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+/* Invite code display */
+.invite-code-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg);
+    background: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.1);
+    border: 1px solid var(--modal-accent-dim);
+    border-radius: 4px;
+}
+
+.invite-code-text {
+    font-family: var(--font-mono);
+    font-size: 1.8em;
+    font-weight: bold;
+    letter-spacing: 0.2em;
+    color: var(--modal-accent);
+}
+
+.campaign-created-body {
+    text-align: center;
+}
+
+/* ===== CHARACTER UPDATE MODAL ===== */
+.terminal-input--short {
+    width: 80px;
+}
+
+.terminal-select--narrow {
+    width: 50px;
+    padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.hp-input-group,
+.gold-input-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.hp-divider {
+    color: var(--terminal-dim);
+}
+
+.hp-max {
+    color: var(--terminal-dim);
+    min-width: 30px;
+}
+
+.condition-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm) var(--spacing-lg);
+}
+
+.condition-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    cursor: pointer;
+    color: var(--terminal-text);
+    font-size: var(--font-size-small);
+}
+
+.condition-checkbox input[type="checkbox"] {
+    accent-color: var(--sheet-accent);
+}
+
+/* Settings row inline variant for side-by-side label + input */
+.settings-row--inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+}
+
+.settings-row--inline .settings-label {
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+
 /* ===== AUTH UI / HEADER THEMING ===== */
 /* Make the manager header content use the teal sheet theme:
    - Title: bright teal
@@ -1332,6 +2098,24 @@
     pointer-events: none; /* let clicks fall through to underlying UI */
 }
 
+/* In sheet-campaign view, hide grid loading and reposition sheet/campaign loading */
+.split-layout[data-view="sheet-campaign"] #gridPanelLoading {
+    display: none;
+}
+
+.split-layout[data-view="sheet-campaign"] #sheetPanelLoading {
+    grid-column: 1;
+}
+
+.split-layout[data-view="sheet-campaign"] #campaignPanelLoading {
+    grid-column: 2;
+}
+
+/* In grid-sheet view, hide campaign loading */
+.split-layout[data-view="grid-sheet"] #campaignPanelLoading {
+    display: none;
+}
+
 .loading-text {
     color: var(--terminal-accent);
     font-family: var(--font-mono);
@@ -1613,12 +2397,13 @@
         overscroll-behavior: none;
     }
     
-    /* Hide right panel entirely on mobile - character sheet shown via modal */
-    .left-panel {
-        flex: 1;
+    /* On mobile, only grid panel is shown - sheet shown inline via mobile-sheet-container */
+    .panel-character-grid {
+        flex: 1 1 100%;
         border-right: none;
         border-bottom: none;
         padding: var(--spacing-md);
+        padding-top: 0;
         /* Enable smooth momentum scrolling on iOS, vertical only */
         overflow-y: auto;
         overflow-x: hidden;
@@ -1629,15 +2414,16 @@
         overscroll-behavior: contain;
     }
     
+    /* Hide sheet and campaign panels on mobile */
+    .panel-character-sheet,
+    .panel-campaign {
+        display: none !important;
+    }
+    
     /* Adjust controls section for mobile */
     .controls-section {
         padding: 16px;
         margin: 0 calc(-1 * var(--spacing-md)) 0 calc(-1 * var(--spacing-md));
-    }
-    
-    /* Remove top padding from left panel on mobile */
-    .left-panel {
-        padding-top: 0;
     }
     
     /* Remove bottom margin on search bar */
@@ -1662,16 +2448,12 @@
         display: block !important;
     }
     
-    .right-panel {
-        display: none !important;
-    }
-    
-    /* Hide the right-side loading indicator on mobile */
+    /* Hide the sheet loading indicator on mobile */
     .panel-loading-row {
         grid-template-columns: 1fr;
     }
     
-    #rightPanelLoading {
+    #sheetPanelLoading {
         display: none;
     }
     
@@ -1797,7 +2579,7 @@
     }
     
     /* Show back bar when viewing character sheet on mobile */
-    .left-panel.is-viewing-sheet .mobile-back-bar {
+    .panel-character-grid.is-viewing-sheet .mobile-back-bar {
         display: flex;
     }
     
@@ -1808,15 +2590,15 @@
     }
     
     /* Hide grid and controls when viewing sheet */
-    .left-panel.is-viewing-sheet .controls-section,
-    .left-panel.is-viewing-sheet .character-grid,
-    .left-panel.is-viewing-sheet .empty-state,
-    .left-panel.is-viewing-sheet .character-count {
+    .panel-character-grid.is-viewing-sheet .controls-section,
+    .panel-character-grid.is-viewing-sheet .character-grid,
+    .panel-character-grid.is-viewing-sheet .empty-state,
+    .panel-character-grid.is-viewing-sheet .character-count {
         display: none !important;
     }
     
     /* Show the inline character sheet on mobile */
-    .left-panel.is-viewing-sheet .mobile-sheet-container {
+    .panel-character-grid.is-viewing-sheet .mobile-sheet-container {
         display: block;
     }
 }
@@ -1862,8 +2644,8 @@
     transform: scale(0.5);
 }
 
-/* When viewing sheet on mobile, apply teal UI theme to the left panel */
-.left-panel.is-viewing-sheet {
+/* When viewing sheet on mobile, apply teal UI theme to the grid panel */
+.panel-character-grid.is-viewing-sheet {
     touch-action: pan-y pinch-zoom; /* Allow vertical scroll, capture horizontal swipes */
     --ui-primary-color: var(--sheet-accent);
     --ui-primary-color-dim: var(--sheet-accent-dim);
@@ -1880,14 +2662,14 @@
 
 
 /* Use teal scrollbar theme when viewing sheet */
-.left-panel.is-viewing-sheet {
+.panel-character-grid.is-viewing-sheet {
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
 /* During active horizontal swipe, prevent all scrolling */
-.left-panel.is-swiping-horizontal {
+.panel-character-grid.is-swiping-horizontal {
     touch-action: none !important;
     overflow: hidden !important;
 }
@@ -2145,9 +2927,10 @@
     .terminal-frame,
     .main-content,
     .split-layout,
-    .left-panel,
-    .right-panel,
-    #character-sheet-panel {
+    .panel,
+    .panel-character-grid,
+    .panel-character-sheet,
+    .panel-campaign {
         background: #fff !important;
         background-color: #fff !important;
         background-image: none !important;
@@ -2159,8 +2942,7 @@
     .terminal-frame,
     .main-content,
     .split-layout,
-    .right-panel,
-    #character-sheet-panel,
+    .panel-character-sheet,
     #characterSheet,
     .character-sheet {
         display: block !important;
@@ -2174,15 +2956,14 @@
         overflow-y: visible !important;
     }
 
-    /* Hide left panel (character list) in print */
-    .left-panel,
-    #character-list-panel {
+    /* Hide grid and campaign panels in print */
+    .panel-character-grid,
+    .panel-campaign {
         display: none !important;
     }
 
-    /* Show right panel as block, full width */
-    .right-panel,
-    #character-sheet-panel {
+    /* Show character sheet panel as block, full width */
+    .panel-character-sheet {
         display: block !important;
         position: static !important;
         width: 100% !important;

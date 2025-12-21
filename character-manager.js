@@ -728,6 +728,1342 @@ const AppState = {
 let latestViewCharacterRequestId = 0;
 
 // ========================================
+// PANEL MANAGER
+// ========================================
+// Manages which 2 of 3 panels are visible at a time
+// Panels: character-grid, character-sheet, campaign
+
+const PanelManager = (window.PanelManager = {
+    views: {
+        'grid-sheet': ['character-grid', 'character-sheet'],
+        'sheet-campaign': ['character-sheet', 'campaign']
+    },
+    
+    /** Get the current view name */
+    getCurrentView() {
+        const splitLayout = document.querySelector('.split-layout');
+        return splitLayout?.dataset.view || 'grid-sheet';
+    },
+    
+    /** Set the current view by name */
+    setView(viewName) {
+        const splitLayout = document.querySelector('.split-layout');
+        if (!splitLayout) return;
+        
+        if (!this.views[viewName]) {
+            console.warn(`Unknown panel view: ${viewName}`);
+            return;
+        }
+        
+        splitLayout.dataset.view = viewName;
+        
+        if (DEBUG_MANAGER) {
+            console.log(`📐 Panel view: ${viewName}`);
+        }
+    },
+    
+    /** Check if a specific panel is currently visible */
+    isPanelVisible(panelName) {
+        const currentView = this.getCurrentView();
+        const visiblePanels = this.views[currentView] || [];
+        return visiblePanels.includes(panelName);
+    }
+});
+
+// ========================================
+// EXPANDED VIEW HANDLING
+// ========================================
+// Handles the expanded character sheet view with campaign panel
+
+const ExpandedView = (window.ExpandedView = {
+    /** Check if expanded view is currently active */
+    isExpanded() {
+        return PanelManager.getCurrentView() === 'sheet-campaign';
+    },
+
+    /** Toggle expanded view on/off */
+    toggle() {
+        if (this.isExpanded()) {
+            this.collapse();
+        } else {
+            this.expand();
+        }
+    },
+
+    /** Expand to show campaign panel (sheet + campaign view) */
+    expand() {
+        PanelManager.setView('sheet-campaign');
+        
+        // Update button text
+        this._updateButtonText(true);
+        
+        // Load campaign panel content
+        this._loadCampaignPanel();
+        
+        // Update URL to track expanded state
+        this._updateUrl(true);
+        
+        if (DEBUG_MANAGER) {
+            console.log('📐 Expanded view: ON');
+        }
+    },
+
+    /** Collapse back to grid view (grid + sheet view) */
+    collapse() {
+        PanelManager.setView('grid-sheet');
+        
+        // Update button text
+        this._updateButtonText(false);
+        
+        // Update URL to remove expanded state
+        this._updateUrl(false);
+        
+        if (DEBUG_MANAGER) {
+            console.log('📐 Expanded view: OFF');
+        }
+    },
+
+    /** Update the expand button text based on state */
+    _updateButtonText(isExpanded) {
+        const btn = document.querySelector('.sheet-expand-btn');
+        if (!btn) return;
+        
+        // Update button text with icon
+        btn.textContent = isExpanded ? '⇤ Collapse' : '⇥ Expand';
+        btn.title = isExpanded ? 'Return to grid view' : 'Expand to show campaign info';
+    },
+
+    /** Toggle campaign description expand/collapse */
+    toggleDescription(btn) {
+        const container = btn.closest('.campaign-area-description');
+        if (!container) return;
+        
+        const isExpanded = container.dataset.expanded === 'true';
+        container.dataset.expanded = !isExpanded;
+        btn.textContent = isExpanded ? 'More' : 'Less';
+    },
+
+    /** Initialize description truncation check after content loads */
+    _initDescriptionTruncation() {
+        const descEl = document.querySelector('.campaign-area-description');
+        if (!descEl) return;
+        
+        const textEl = descEl.querySelector('.campaign-desc-text');
+        if (!textEl) return;
+        
+        // Check if text is actually truncated (content overflows 3 lines)
+        // Compare scrollHeight vs clientHeight
+        requestAnimationFrame(() => {
+            if (textEl.scrollHeight > textEl.clientHeight) {
+                descEl.classList.add('is-truncatable');
+            } else {
+                descEl.classList.remove('is-truncatable');
+            }
+        });
+    },
+
+    /** Load campaign panel content for the current character */
+    async _loadCampaignPanel() {
+        const panel = document.getElementById('campaignPanel');
+        if (!panel) return;
+        
+        const characterId = AppState.selectedCharacterId;
+        if (!characterId) {
+            panel.innerHTML = this._renderNoCampaign();
+            return;
+        }
+        
+        // Check if user is authenticated before making API calls
+        const isAuthenticated = window.AuthService && AuthService.isAuthenticated();
+        
+        // Get the character's campaignId
+        const character = AppState.characters?.find(c => String(c.id) === String(characterId));
+        const campaignId = character?.campaignId;
+        
+        if (!campaignId) {
+            // No campaign - fetch pending invitations and show empty state
+            let pendingCount = 0;
+            if (isAuthenticated) {
+                try {
+                    const invitations = await CampaignAPI.getPendingInvitations();
+                    pendingCount = invitations?.length || 0;
+                } catch (e) {
+                    console.warn('Could not fetch pending invitations:', e);
+                }
+            }
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, pendingCount);
+            return;
+        }
+        
+        // If not authenticated, show empty state (can't fetch campaign data)
+        if (!isAuthenticated) {
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null);
+            return;
+        }
+        
+        // Show loading state
+        panel.innerHTML = `
+            <div class="campaign-panel-layout">
+                <div class="campaign-area">
+                    <div class="campaign-area-header">
+                        <h3 class="campaign-area-title">Loading...</h3>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        try {
+            // Fetch campaign details and members
+            const [campaign, members] = await Promise.all([
+                CampaignAPI.getCampaign(campaignId),
+                CampaignAPI.getCampaignMembers(campaignId)
+            ]);
+            
+            const campaignData = { campaign, members };
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, campaignData);
+            this._initDescriptionTruncation();
+            
+        } catch (error) {
+            console.error('Failed to load campaign:', error);
+            // Show empty state on error
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null);
+        }
+    },
+
+    /** Render the full campaign panel with both sections */
+    _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0) {
+        return `
+            <div class="campaign-panel-layout">
+                ${this._renderCampaignArea(campaignData, pendingInvitationCount)}
+                ${this._renderJournalSection(characterId)}
+            </div>
+        `;
+    },
+
+    /** Render the Campaign Area section (top) */
+    _renderCampaignArea(campaignData, pendingInvitationCount = 0) {
+        if (!campaignData) {
+            // No campaign - show join/create buttons with invitation count
+            const hasInvitations = pendingInvitationCount > 0;
+            const invitationText = hasInvitations 
+                ? `${pendingInvitationCount} campaign${pendingInvitationCount === 1 ? '' : 's'} available`
+                : 'Not in a campaign yet';
+            
+            return `
+                <div class="campaign-area">
+                    <div class="campaign-area-header">
+                        <h3 class="campaign-area-title">Campaign</h3>
+                    </div>
+                    <div class="campaign-area-empty">
+                        <div class="campaign-area-empty-icon">${hasInvitations ? '📬' : '⚔'}</div>
+                        <div class="campaign-area-empty-text ${hasInvitations ? 'has-invitations' : ''}">
+                            ${invitationText}
+                        </div>
+                        <div class="campaign-area-actions">
+                            <button class="terminal-btn terminal-btn-small ui-theme-teal ${hasInvitations ? 'terminal-btn-primary' : ''}" onclick="CampaignUI.openJoinModal()">
+                                Join${hasInvitations ? '' : ' Campaign'}
+                            </button>
+                            <button class="terminal-btn terminal-btn-small ui-theme-teal" onclick="CampaignUI.openCreateModal()">
+                                Create${hasInvitations ? '' : ' Campaign'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Has campaign - show campaign info
+        const { campaign, members } = campaignData;
+        
+        // Check if current user is the campaign creator
+        const currentUserId = window.AuthService?.getCurrentUser()?.id;
+        const isCreator = campaign.dm_id === currentUserId;
+        
+        // Build party list from members with character info
+        const partyHtml = members && members.length > 0 
+            ? members.map(m => {
+                const char = m.character;
+                const creatorTag = m.is_creator ? '<span class="party-member-creator-tag">Creator</span>' : '';
+                if (char) {
+                    return `
+                        <div class="party-member">
+                            <span class="party-member-name">${char.name}${creatorTag}</span>
+                            <span class="party-member-info">Lvl ${char.level} ${char.character_class || ''}</span>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="party-member party-member--no-char">
+                            <span class="party-member-name">No character assigned${creatorTag}</span>
+                        </div>
+                    `;
+                }
+            }).join('')
+            : '<div class="party-empty">No party members yet</div>';
+
+        // Description section with truncation (3 lines max, expandable)
+        const descriptionHtml = campaign.description 
+            ? `<div class="campaign-area-description" data-expanded="false">
+                   <div class="campaign-desc-text">${campaign.description}</div>
+                   <button class="campaign-desc-toggle" onclick="ExpandedView.toggleDescription(this)">More</button>
+               </div>`
+            : '';
+
+        // Overflow menu items
+        const menuItems = [];
+        if (isCreator) {
+            menuItems.push({
+                icon: '✉',
+                label: 'Invite',
+                onclick: `CampaignUI.openInviteModal(${campaign.id})`,
+            });
+            menuItems.push({
+                icon: '⚙',
+                label: 'Manage Campaign',
+                onclick: `CampaignUI.openManageModal(${campaign.id})`,
+            });
+        }
+        menuItems.push({
+            icon: '↩',
+            label: 'Leave Campaign',
+            onclick: `CampaignUI.leaveCampaign(${campaign.id})`,
+            danger: true,
+        });
+
+        const overflowMenuHtml = `
+            <div class="campaign-overflow selector-shell selector-shell--actions">
+                <button
+                    class="terminal-btn-small ui-theme-teal selector-trigger overflow-trigger campaign-overflow-trigger"
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-label="Campaign actions"
+                    onclick="CharacterSheet.toggleSelectorMenu(this)"
+                >
+                    <span class="sheet-actions-icon" aria-hidden="true">
+                        <span class="sheet-actions-dot dot-1"></span>
+                        <span class="sheet-actions-dot dot-2"></span>
+                        <span class="sheet-actions-dot dot-3"></span>
+                    </span>
+                </button>
+                <div class="selector-menu campaign-overflow-menu" role="menu" aria-hidden="true">
+                    ${menuItems.map(item => `
+                        <button
+                            class="selector-option${item.danger ? ' is-danger' : ''}"
+                            type="button"
+                            role="menuitem"
+                            onclick="${item.onclick}"
+                        >
+                            <span class="selector-option-icon">${item.icon}</span>
+                            <span class="selector-option-label">${item.label}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        return `
+            <div class="campaign-area">
+                <div class="campaign-area-header">
+                    <h3 class="campaign-area-title">${campaign.name}</h3>
+                    ${overflowMenuHtml}
+                </div>
+                ${descriptionHtml}
+                <div class="campaign-area-party sheet-section sheet-section--collapsible">
+                    <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
+                        <div class="sheet-header-title">[ PARTY (${members?.length || 0}) ]</div>
+                        <span class="sheet-header-toggle">^</span>
+                    </button>
+                    <div class="sheet-collapsible-content">
+                        <div class="party-list">
+                            ${partyHtml}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    /** Render the Journal section (bottom) */
+    _renderJournalSection(characterId, entries = []) {
+        const entriesHtml = entries.length > 0
+            ? entries.map(entry => `
+                <div class="journal-entry" data-entry-id="${entry.id}">
+                    <div class="journal-entry-header">
+                        <span class="journal-entry-date">${this._formatDate(entry.entry_date)}</span>
+                        <span class="journal-entry-title">${entry.title || 'Untitled'}</span>
+                    </div>
+                    <div class="journal-entry-preview">
+                        ${this._truncateText(entry.content, 100)}
+                    </div>
+                    <button class="journal-entry-edit terminal-btn-icon" onclick="CampaignUI.editJournalEntry(${entry.id})" title="Edit entry">
+                        ✎
+                    </button>
+                </div>
+            `).join('')
+            : `
+                <div class="journal-empty">
+                    <div class="journal-empty-text">No journal entries yet</div>
+                    <div class="journal-empty-hint">Record your adventures!</div>
+                </div>
+            `;
+
+        return `
+            <div class="journal-section">
+                <div class="journal-header">
+                    <h3 class="journal-title">Journal</h3>
+                    <button class="terminal-btn terminal-btn-small ui-theme-teal" onclick="CampaignUI.openJournalEntryModal()">
+                        + Add Entry
+                    </button>
+                </div>
+                <div class="journal-entries">
+                    ${entriesHtml}
+                </div>
+            </div>
+        `;
+    },
+
+    /** Format a date for display */
+    _formatDate(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    },
+
+    /** Truncate text with ellipsis */
+    _truncateText(text, maxLength) {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength).trim() + '...';
+    },
+
+    /** Update URL to reflect expanded state */
+    _updateUrl(expanded) {
+        const url = new URL(window.location.href);
+        if (expanded) {
+            url.searchParams.set('view', 'expanded');
+        } else {
+            url.searchParams.delete('view');
+        }
+        // Use replaceState to avoid cluttering browser history
+        window.history.replaceState({}, '', url.toString());
+    },
+
+    /** Restore expanded state from URL parameter */
+    restore() {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('view') === 'expanded') {
+            this.expand();
+        }
+    }
+});
+
+// ========================================
+// CAMPAIGN UI
+// ========================================
+// Handles campaign modals and campaign panel interactions
+
+const CampaignUI = (window.CampaignUI = {
+    // Currently selected character's campaign data (cached)
+    _currentCampaign: null,
+
+    // ========================================
+    // CREATE CAMPAIGN MODAL
+    // ========================================
+    
+    openCreateModal() {
+        const modal = document.getElementById('createCampaignModal');
+        if (!modal) return;
+        
+        // Clear form
+        document.getElementById('createCampaignName').value = '';
+        document.getElementById('createCampaignDesc').value = '';
+        
+        modal.classList.add('show');
+        
+        // Focus name input
+        setTimeout(() => {
+            document.getElementById('createCampaignName')?.focus();
+        }, 100);
+    },
+
+    closeCreateModal() {
+        const modal = document.getElementById('createCampaignModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+    },
+
+    async submitCreateCampaign() {
+        const nameInput = document.getElementById('createCampaignName');
+        const descInput = document.getElementById('createCampaignDesc');
+        
+        const name = nameInput?.value?.trim();
+        const description = descInput?.value?.trim() || null;
+        
+        if (!name) {
+            nameInput?.focus();
+            return;
+        }
+        
+        try {
+            const campaign = await CampaignAPI.createCampaign({ name, description });
+            
+            // Auto-assign current character to the new campaign
+            const characterId = AppState.selectedCharacterId;
+            let assignmentWarning = null;
+            console.log('🏰 Auto-assign: characterId =', characterId, 'campaignId =', campaign.id);
+            if (characterId && !String(characterId).startsWith('demo_')) {
+                try {
+                    const numericCharId = parseInt(characterId, 10);
+                    console.log('🏰 Assigning character', numericCharId, 'to campaign', campaign.id);
+                    await CampaignAPI.assignCharacter(campaign.id, numericCharId);
+                    console.log('🏰 Character assigned successfully');
+                } catch (assignError) {
+                    console.warn('🏰 Could not auto-assign character:', assignError);
+                    // Check if character is already in another campaign
+                    if (assignError.message?.includes('already in another campaign')) {
+                        assignmentWarning = 'Your character is already in another campaign. Leave that campaign first to join this one.';
+                    }
+                }
+            } else {
+                console.log('🏰 Skipping auto-assign: no character or demo character');
+            }
+            
+            // Close create modal
+            this.closeCreateModal();
+            
+            // Show success modal with invite code (and warning if applicable)
+            this.showCampaignCreatedModal(campaign.invite_code, assignmentWarning);
+            
+            // Refresh character data to get updated campaignId
+            await AppState.loadCharacters();
+            
+            // Refresh campaign panel
+            ExpandedView._loadCampaignPanel();
+            
+        } catch (error) {
+            console.error('Failed to create campaign:', error);
+            showAlertDialog(error.message || 'Failed to create campaign. Please try again.');
+        }
+    },
+
+    // ========================================
+    // JOIN CAMPAIGN MODAL
+    // ========================================
+    
+    // Store selected invitation
+    _selectedInvitationId: null,
+
+    async openJoinModal() {
+        const modal = document.getElementById('joinCampaignModal');
+        if (!modal) return;
+        
+        // Reset selection
+        this._selectedInvitationId = null;
+        
+        // Clear error
+        const errorEl = document.getElementById('joinCampaignError');
+        if (errorEl) {
+            errorEl.textContent = '';
+            errorEl.classList.add('is-hidden');
+        }
+        
+        // Disable join button
+        const joinBtn = document.getElementById('joinCampaignBtn');
+        if (joinBtn) joinBtn.disabled = true;
+        
+        // Show loading state
+        const listEl = document.getElementById('joinCampaignInvitations');
+        if (listEl) {
+            listEl.innerHTML = '<div class="invitations-loading">Loading invitations...</div>';
+        }
+        
+        modal.classList.add('show');
+        
+        // Fetch pending invitations
+        try {
+            const invitations = await CampaignAPI.getPendingInvitations();
+            this._renderInvitationsList(invitations);
+        } catch (error) {
+            console.error('Failed to load invitations:', error);
+            // Show empty state on error (endpoint may not be deployed yet)
+            if (listEl) {
+                listEl.innerHTML = '<div class="invitations-empty">No pending invitations</div>';
+            }
+        }
+    },
+    
+    _renderInvitationsList(invitations) {
+        const listEl = document.getElementById('joinCampaignInvitations');
+        if (!listEl) return;
+        
+        if (!invitations || invitations.length === 0) {
+            listEl.innerHTML = '<div class="invitations-empty">No pending invitations</div>';
+            return;
+        }
+        
+        listEl.innerHTML = invitations.map(inv => `
+            <div class="invitation-item" data-campaign-id="${inv.campaign_id}" onclick="CampaignUI.selectInvitation(${inv.campaign_id})">
+                <div class="invitation-radio"></div>
+                <div class="invitation-info">
+                    <div class="invitation-name">${this._escapeHtml(inv.campaign_name)}</div>
+                    ${inv.campaign_description ? `<div class="invitation-desc">${this._escapeHtml(inv.campaign_description)}</div>` : ''}
+                </div>
+            </div>
+        `).join('');
+    },
+    
+    selectInvitation(campaignId) {
+        this._selectedInvitationId = campaignId;
+        
+        // Update visual selection
+        const items = document.querySelectorAll('#joinCampaignInvitations .invitation-item');
+        items.forEach(item => {
+            if (parseInt(item.dataset.campaignId, 10) === campaignId) {
+                item.classList.add('is-selected');
+            } else {
+                item.classList.remove('is-selected');
+            }
+        });
+        
+        // Enable join button
+        const joinBtn = document.getElementById('joinCampaignBtn');
+        if (joinBtn) joinBtn.disabled = false;
+    },
+    
+    _escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    },
+
+    closeJoinModal() {
+        const modal = document.getElementById('joinCampaignModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        this._selectedInvitationId = null;
+    },
+
+    async submitJoinCampaign() {
+        const errorEl = document.getElementById('joinCampaignError');
+        
+        if (!this._selectedInvitationId) {
+            return;
+        }
+        
+        // Hide previous error
+        if (errorEl) {
+            errorEl.classList.add('is-hidden');
+        }
+        
+        try {
+            // Get the currently selected character ID to assign to the campaign
+            const characterId = AppState.selectedCharacterId;
+            
+            const result = await CampaignAPI.acceptInvitation(this._selectedInvitationId, characterId);
+            
+            // Close modal
+            this.closeJoinModal();
+            
+            // Show success message
+            showAlertDialog(`You've joined "${result.campaign.name}"!`);
+            
+            // Refresh character data to get updated campaign_id
+            await AppState.loadCharacters();
+            
+            // Refresh campaign panel
+            ExpandedView._loadCampaignPanel();
+            
+        } catch (error) {
+            console.error('Failed to join campaign:', error);
+            
+            // Show error in modal
+            if (errorEl) {
+                errorEl.textContent = error.message || 'Failed to join campaign. Please try again.';
+                errorEl.classList.remove('is-hidden');
+            }
+        }
+    },
+
+    // ========================================
+    // CAMPAIGN CREATED SUCCESS MODAL
+    // ========================================
+    
+    showCampaignCreatedModal(inviteCode, warning = null) {
+        const modal = document.getElementById('campaignCreatedModal');
+        const codeEl = document.getElementById('campaignInviteCode');
+        
+        if (!modal) return;
+        
+        if (codeEl) {
+            codeEl.textContent = inviteCode;
+        }
+        
+        // Show/hide warning message
+        let warningEl = modal.querySelector('.campaign-created-warning');
+        if (warning) {
+            if (!warningEl) {
+                // Create warning element if it doesn't exist
+                warningEl = document.createElement('div');
+                warningEl.className = 'campaign-created-warning terminal-text-small mt-md';
+                warningEl.style.cssText = 'color: var(--warning-color, #f0ad4e); padding: var(--spacing-sm); border: 1px solid currentColor; border-radius: 4px;';
+                const modalBody = modal.querySelector('.modal-body');
+                if (modalBody) {
+                    modalBody.appendChild(warningEl);
+                }
+            }
+            warningEl.textContent = warning;
+            warningEl.classList.remove('is-hidden');
+        } else if (warningEl) {
+            warningEl.classList.add('is-hidden');
+        }
+        
+        modal.classList.add('show');
+    },
+
+    closeCampaignCreatedModal() {
+        const modal = document.getElementById('campaignCreatedModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+    },
+
+    copyInviteCode() {
+        const codeEl = document.getElementById('campaignInviteCode');
+        const code = codeEl?.textContent;
+        
+        if (code && navigator.clipboard) {
+            navigator.clipboard.writeText(code).then(() => {
+                // Brief visual feedback
+                const btn = event.target.closest('button');
+                if (btn) {
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<span class="copy-icon">✓</span> Copied!';
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                    }, 1500);
+                }
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+    },
+
+    // ========================================
+    // INVITE PLAYERS MODAL
+    // ========================================
+    
+    _invitingCampaign: null,
+    _existingInvitations: [], // Invitations already sent (from server)
+    
+    async openInviteModal(campaignId) {
+        try {
+            const campaign = await CampaignAPI.getCampaign(campaignId);
+            this._invitingCampaign = campaign;
+            
+            const modal = document.getElementById('invitePlayersModal');
+            if (!modal) return;
+            
+            // Set campaign name
+            const campaignNameEl = document.getElementById('inviteModalCampaignName');
+            if (campaignNameEl) {
+                campaignNameEl.textContent = campaign.name || 'Unnamed Campaign';
+            }
+            
+            // Clear email input
+            const emailInput = document.getElementById('inviteModalEmail');
+            if (emailInput) emailInput.value = '';
+            
+            // Clear any error messages
+            const errorEl = document.getElementById('inviteModalError');
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.style.display = 'none';
+            }
+            
+            // Load existing pending invitations from server
+            await this._loadExistingInvitations(campaignId);
+            
+            modal.classList.add('show');
+            
+            // Focus email input
+            setTimeout(() => {
+                document.getElementById('inviteModalEmail')?.focus();
+            }, 100);
+            
+        } catch (error) {
+            console.error('Failed to load campaign for invites:', error);
+            showAlertDialog('Failed to load campaign details. Please try again.');
+        }
+    },
+    
+    async _loadExistingInvitations(campaignId) {
+        try {
+            this._existingInvitations = await CampaignAPI.getCampaignPendingInvitations(campaignId);
+        } catch (error) {
+            console.warn('Failed to load existing invitations:', error);
+            this._existingInvitations = [];
+        }
+        this._renderExistingInvitations();
+    },
+    
+    _renderExistingInvitations() {
+        const container = document.getElementById('inviteModalExistingList');
+        const section = document.getElementById('inviteModalExistingSection');
+        if (!container) return;
+        
+        if (this._existingInvitations.length === 0) {
+            container.innerHTML = '';
+            if (section) section.style.display = 'none';
+            return;
+        }
+        
+        if (section) section.style.display = 'block';
+        
+        container.innerHTML = this._existingInvitations.map(inv => `
+            <div class="share-collaborator-item share-collaborator-pending" data-invite-id="${inv.id}">
+                <span class="share-collaborator-email">${Utils.escapeHtml(inv.email)}</span>
+                <span class="share-collaborator-status">PENDING</span>
+                <button type="button" class="share-collaborator-remove" onclick="CampaignUI.revokeInvitation(${inv.id})" title="Remove">×</button>
+            </div>
+        `).join('');
+    },
+    
+    async revokeInvitation(invitationId) {
+        if (!this._invitingCampaign) return;
+        
+        // Mark as removing
+        const item = document.querySelector(`.share-collaborator-item[data-invite-id="${invitationId}"]`);
+        if (item) item.classList.add('removing');
+        
+        try {
+            await CampaignAPI.revokeInvitation(this._invitingCampaign.id, invitationId);
+            // Remove from local list
+            this._existingInvitations = this._existingInvitations.filter(inv => inv.id !== invitationId);
+            this._renderExistingInvitations();
+        } catch (error) {
+            console.error('Failed to revoke invitation:', error);
+            if (item) item.classList.remove('removing');
+            const errorEl = document.getElementById('inviteModalError');
+            if (errorEl) {
+                errorEl.textContent = error.message || 'Failed to revoke invitation';
+                errorEl.style.display = 'block';
+            }
+        }
+    },
+    
+    closeInviteModal() {
+        const modal = document.getElementById('invitePlayersModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        this._invitingCampaign = null;
+        this._existingInvitations = [];
+    },
+    
+    async addPendingInviteFromModal() {
+        const input = document.getElementById('inviteModalEmail');
+        const addBtn = document.getElementById('inviteAddBtn');
+        const email = input?.value?.trim().toLowerCase();
+        const errorEl = document.getElementById('inviteModalError');
+        
+        if (!email) return;
+        
+        // Basic email validation
+        if (!email.includes('@') || !email.includes('.')) {
+            if (errorEl) {
+                errorEl.textContent = 'Please enter a valid email address';
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
+        
+        // Check for duplicates in existing invitations
+        if (this._existingInvitations.some(inv => inv.email.toLowerCase() === email)) {
+            if (errorEl) {
+                errorEl.textContent = 'This person has already been invited';
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
+        
+        // Clear error
+        if (errorEl) {
+            errorEl.style.display = 'none';
+        }
+        
+        // Disable button while sending
+        if (addBtn) {
+            addBtn.disabled = true;
+            addBtn.textContent = '...';
+        }
+        
+        try {
+            // Send invitation immediately
+            await CampaignAPI.inviteByEmail(this._invitingCampaign.id, email);
+            
+            // Refresh the list
+            await this._loadExistingInvitations(this._invitingCampaign.id);
+            
+            // Clear input
+            input.value = '';
+            input.focus();
+            
+        } catch (error) {
+            console.error('Failed to send invitation:', error);
+            if (errorEl) {
+                errorEl.textContent = error.message || 'Failed to send invitation';
+                errorEl.style.display = 'block';
+            }
+        } finally {
+            // Re-enable button
+            if (addBtn) {
+                addBtn.disabled = false;
+                addBtn.textContent = 'ADD';
+            }
+        }
+    },
+    
+    // Just close the modal - invitations are sent immediately on ADD
+    sendInvitations() {
+        this.closeInviteModal();
+    },
+
+    // ========================================
+    // MANAGE CAMPAIGN MODAL
+    // ========================================
+    
+    // Cache current campaign data for the manage modal
+    _managingCampaign: null,
+    
+    async openManageModal(campaignId) {
+        try {
+            // Fetch campaign details
+            const campaign = await CampaignAPI.getCampaign(campaignId);
+            this._managingCampaign = campaign;
+            
+            const modal = document.getElementById('manageCampaignModal');
+            if (!modal) return;
+            
+            // Populate form fields
+            document.getElementById('manageCampaignName').value = campaign.name || '';
+            document.getElementById('manageCampaignDesc').value = campaign.description || '';
+            
+            // Clear any error messages
+            const errorEl = document.getElementById('manageCampaignError');
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.classList.add('is-hidden');
+            }
+            
+            modal.classList.add('show');
+            
+            // Focus name input
+            setTimeout(() => {
+                document.getElementById('manageCampaignName')?.focus();
+            }, 100);
+            
+        } catch (error) {
+            console.error('Failed to load campaign for management:', error);
+            showAlertDialog('Failed to load campaign details. Please try again.');
+        }
+    },
+    
+    closeManageModal() {
+        const modal = document.getElementById('manageCampaignModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        this._managingCampaign = null;
+    },
+    
+    async submitManageCampaign() {
+        if (!this._managingCampaign) return;
+        
+        const nameInput = document.getElementById('manageCampaignName');
+        const descInput = document.getElementById('manageCampaignDesc');
+        const errorEl = document.getElementById('manageCampaignError');
+        
+        const name = nameInput?.value?.trim();
+        const description = descInput?.value?.trim() || null;
+        
+        if (!name) {
+            if (errorEl) {
+                errorEl.textContent = 'Campaign name is required';
+                errorEl.classList.remove('is-hidden');
+            }
+            nameInput?.focus();
+            return;
+        }
+        
+        try {
+            // Update campaign details
+            await CampaignAPI.updateCampaign(this._managingCampaign.id, { name, description });
+            
+            // Close modal
+            this.closeManageModal();
+            
+            // Refresh campaign panel
+            ExpandedView._loadCampaignPanel();
+            
+        } catch (error) {
+            console.error('Failed to update campaign:', error);
+            if (errorEl) {
+                errorEl.textContent = error.message || 'Failed to update campaign';
+                errorEl.classList.remove('is-hidden');
+            }
+        }
+    },
+    
+    // ========================================
+    // LEAVE / DELETE CAMPAIGN
+    // ========================================
+    
+    async leaveCampaign(campaignId) {
+        if (!confirm('Are you sure you want to leave this campaign? Your character will be removed from the party.')) {
+            return;
+        }
+        
+        try {
+            await CampaignAPI.leaveCampaign(campaignId);
+            
+            // Refresh character data
+            await AppState.loadCharacters();
+            
+            // Refresh campaign panel (will show empty state)
+            ExpandedView._loadCampaignPanel();
+            
+            showAlertDialog('You have left the campaign.');
+        } catch (error) {
+            console.error('Failed to leave campaign:', error);
+            showAlertDialog(error.message || 'Failed to leave campaign. Please try again.');
+        }
+    },
+    
+    async confirmDeleteCampaignFromModal() {
+        if (!this._managingCampaign) return;
+        
+        if (!confirm('Are you sure you want to DELETE this campaign? This action cannot be undone and will remove all members.')) {
+            return;
+        }
+        
+        try {
+            await CampaignAPI.deleteCampaign(this._managingCampaign.id);
+            
+            // Close the modal
+            this.closeManageModal();
+            
+            // Refresh character data
+            await AppState.loadCharacters();
+            
+            // Refresh campaign panel (will show empty state)
+            ExpandedView._loadCampaignPanel();
+            
+            showAlertDialog('Campaign deleted successfully.');
+        } catch (error) {
+            console.error('Failed to delete campaign:', error);
+            showAlertDialog(error.message || 'Failed to delete campaign. Please try again.');
+        }
+    },
+
+    // ========================================
+    // CAMPAIGN DATA LOADING
+    // ========================================
+    
+    /**
+     * Get campaign for a character (if any)
+     * @param {number} characterId
+     * @returns {Promise<Object|null>} Campaign data or null
+     */
+    async getCharacterCampaign(characterId) {
+        try {
+            // Get all campaigns user is a member of
+            const campaigns = await CampaignAPI.getCampaigns();
+            
+            // Find campaign where this character is assigned
+            for (const campaign of campaigns) {
+                const members = await CampaignAPI.getCampaignMembers(campaign.id);
+                const myMembership = members.find(m => m.character_id === characterId);
+                if (myMembership) {
+                    return { campaign, membership: myMembership, members };
+                }
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('Failed to get character campaign:', error);
+            return null;
+        }
+    },
+
+    // ========================================
+    // JOURNAL ENTRY MODAL
+    // ========================================
+    
+    // Track the entry being edited (null for new entry)
+    _editingEntryId: null,
+    // Track the saved entry for character update prompt
+    _savedJournalEntry: null,
+
+    openJournalEntryModal(entryId = null) {
+        const modal = document.getElementById('journalEntryModal');
+        if (!modal) return;
+
+        this._editingEntryId = entryId;
+        
+        // Update title
+        const titleEl = document.getElementById('journalEntryModalTitle');
+        if (titleEl) {
+            titleEl.textContent = entryId ? 'Edit Journal Entry' : 'Add Journal Entry';
+        }
+
+        // Clear or populate form
+        const titleInput = document.getElementById('journalEntryTitle');
+        const dateInput = document.getElementById('journalEntryDate');
+        const contentInput = document.getElementById('journalEntryContent');
+        const idInput = document.getElementById('journalEntryId');
+
+        if (entryId) {
+            // TODO: Load existing entry data
+            // For now, just clear
+            if (titleInput) titleInput.value = '';
+            if (contentInput) contentInput.value = '';
+        } else {
+            // New entry - set defaults
+            if (titleInput) titleInput.value = '';
+            if (contentInput) contentInput.value = '';
+        }
+
+        // Set date to today by default
+        if (dateInput) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+        if (idInput) {
+            idInput.value = entryId || '';
+        }
+
+        modal.classList.add('show');
+
+        // Focus title input
+        setTimeout(() => titleInput?.focus(), 100);
+    },
+
+    closeJournalEntryModal() {
+        const modal = document.getElementById('journalEntryModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        this._editingEntryId = null;
+    },
+
+    async saveJournalEntry() {
+        const titleInput = document.getElementById('journalEntryTitle');
+        const dateInput = document.getElementById('journalEntryDate');
+        const contentInput = document.getElementById('journalEntryContent');
+
+        const title = titleInput?.value?.trim() || '';
+        const entryDate = dateInput?.value || new Date().toISOString().split('T')[0];
+        const content = contentInput?.value?.trim() || '';
+
+        if (!title && !content) {
+            showAlertDialog('Please enter a title or content for your journal entry.');
+            return;
+        }
+
+        const characterId = AppState.selectedCharacterId;
+        if (!characterId) {
+            showAlertDialog('No character selected.');
+            return;
+        }
+
+        try {
+            // Create the journal entry object
+            const entryData = {
+                character_id: characterId,
+                title: title || 'Untitled',
+                entry_date: entryDate,
+                content: content,
+            };
+
+            // TODO: Call API to save entry
+            // For now, store locally and show success
+            this._savedJournalEntry = {
+                ...entryData,
+                id: this._editingEntryId || Date.now(), // Temp ID
+            };
+
+            // Close journal modal
+            this.closeJournalEntryModal();
+
+            // Show character update prompt
+            this.openCharacterUpdateModal();
+
+        } catch (error) {
+            console.error('Failed to save journal entry:', error);
+            showAlertDialog(error.message || 'Failed to save journal entry.');
+        }
+    },
+
+    editJournalEntry(entryId) {
+        this.openJournalEntryModal(entryId);
+    },
+
+    // ========================================
+    // CHARACTER UPDATE MODAL
+    // ========================================
+
+    openCharacterUpdateModal() {
+        const modal = document.getElementById('characterUpdateModal');
+        if (!modal) return;
+
+        // Get character info
+        const characterId = AppState.selectedCharacterId;
+        const character = AppState.characters?.find(c => 
+            c.id === characterId || c.cloudId === characterId
+        );
+
+        // Update character name in title
+        const nameEl = document.getElementById('characterUpdateName');
+        if (nameEl && character) {
+            nameEl.textContent = character.name || 'Character';
+        }
+
+        // Pre-fill current HP
+        const hpInput = document.getElementById('charUpdateHp');
+        const hpMaxEl = document.getElementById('charUpdateHpMax');
+        if (character) {
+            if (hpInput) hpInput.value = character.hp_current || character.hp_max || '';
+            if (hpMaxEl) hpMaxEl.textContent = character.hp_max || '--';
+        }
+
+        // Reset other fields
+        const xpInput = document.getElementById('charUpdateXp');
+        const goldInput = document.getElementById('charUpdateGold');
+        const goldSign = document.getElementById('charUpdateGoldSign');
+        const itemsInput = document.getElementById('charUpdateItems');
+
+        if (xpInput) xpInput.value = '0';
+        if (goldInput) goldInput.value = '0';
+        if (goldSign) goldSign.value = '+';
+        if (itemsInput) itemsInput.value = '';
+
+        // Reset checkboxes
+        ['charUpdatePoisoned', 'charUpdateExhausted', 'charUpdateDiseased', 'charUpdateCursed'].forEach(id => {
+            const cb = document.getElementById(id);
+            if (cb) cb.checked = false;
+        });
+
+        modal.classList.add('show');
+    },
+
+    closeCharacterUpdateModal() {
+        const modal = document.getElementById('characterUpdateModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        this._savedJournalEntry = null;
+    },
+
+    skipCharacterUpdate() {
+        // Just close without updating character
+        this.closeCharacterUpdateModal();
+        
+        // Refresh the campaign panel to show the new entry
+        ExpandedView._loadCampaignPanel();
+        
+        showNotification('✓ Journal entry saved');
+    },
+
+    async saveCharacterUpdate() {
+        const characterId = AppState.selectedCharacterId;
+        if (!characterId) {
+            this.closeCharacterUpdateModal();
+            return;
+        }
+
+        try {
+            // Gather update data
+            const xpGained = parseInt(document.getElementById('charUpdateXp')?.value) || 0;
+            const hpCurrent = parseInt(document.getElementById('charUpdateHp')?.value) || null;
+            const goldSign = document.getElementById('charUpdateGoldSign')?.value || '+';
+            const goldAmount = parseInt(document.getElementById('charUpdateGold')?.value) || 0;
+            const goldChange = goldSign === '-' ? -goldAmount : goldAmount;
+            const itemsAcquired = document.getElementById('charUpdateItems')?.value?.trim() || '';
+
+            // Get conditions
+            const conditions = [];
+            if (document.getElementById('charUpdatePoisoned')?.checked) conditions.push('poisoned');
+            if (document.getElementById('charUpdateExhausted')?.checked) conditions.push('exhausted');
+            if (document.getElementById('charUpdateDiseased')?.checked) conditions.push('diseased');
+            if (document.getElementById('charUpdateCursed')?.checked) conditions.push('cursed');
+
+            // TODO: Call API to update character with these values
+            // For now, just log and close
+            console.log('Character update:', {
+                characterId,
+                xpGained,
+                hpCurrent,
+                goldChange,
+                itemsAcquired,
+                conditions,
+                journalEntryId: this._savedJournalEntry?.id,
+            });
+
+            this.closeCharacterUpdateModal();
+            
+            // Refresh the campaign panel
+            ExpandedView._loadCampaignPanel();
+            
+            showNotification('✓ Journal entry saved & character updated');
+
+        } catch (error) {
+            console.error('Failed to update character:', error);
+            showAlertDialog(error.message || 'Failed to update character.');
+        }
+    },
+
+    // ========================================
+    // LEAVE CAMPAIGN
+    // ========================================
+
+    async leaveCampaign(campaignId) {
+        const confirmed = await new Promise(resolve => {
+            showConfirmDialog(
+                'Are you sure you want to leave this campaign? Your journal entries will be preserved.',
+                () => resolve(true)
+            );
+            // If they cancel, resolve false after a delay (modal closed)
+            setTimeout(() => resolve(false), 100);
+        });
+
+        if (!confirmed) return;
+
+        try {
+            await CampaignAPI.leaveCampaign(campaignId);
+            showNotification('✓ Left campaign');
+            ExpandedView._loadCampaignPanel();
+        } catch (error) {
+            console.error('Failed to leave campaign:', error);
+            showAlertDialog(error.message || 'Failed to leave campaign.');
+        }
+    },
+
+    // Copy invite code (updated to accept code parameter)
+    copyInviteCodeFromPanel(code) {
+        if (code && navigator.clipboard) {
+            navigator.clipboard.writeText(code).then(() => {
+                showNotification('✓ Invite code copied');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+    }
+});
+
+// ========================================
 // MOBILE VIEW HANDLING
 // ========================================
 const MOBILE_BREAKPOINT = 768;
@@ -766,8 +2102,8 @@ const MobileView = {
     
     /** Initialize scroll handler for mobile header collapse */
     initScrollHandler() {
-        const leftPanel = document.getElementById('character-list-panel');
-        if (!leftPanel) return;
+        const gridPanel = document.getElementById('characterGridPanel');
+        if (!gridPanel) return;
         
         const header = document.querySelector('.terminal-header');
         if (!header) return;
@@ -784,10 +2120,10 @@ const MobileView = {
             }
         });
         
-        leftPanel.addEventListener('scroll', () => {
+        gridPanel.addEventListener('scroll', () => {
             if (!this.isMobile()) return;
             
-            const scrollTop = leftPanel.scrollTop;
+            const scrollTop = gridPanel.scrollTop;
             
             // Add/remove scrolled class based on scroll position
             // CSS handles the max-height transition
@@ -803,12 +2139,12 @@ const MobileView = {
     
     /** Initialize swipe gesture handlers for mobile navigation */
     initSwipeHandlers() {
-        const leftPanel = document.getElementById('character-list-panel');
-        if (!leftPanel) return;
+        const gridPanel = document.getElementById('characterGridPanel');
+        if (!gridPanel) return;
         
         // Use pointer events for better compatibility with Chrome DevTools simulator
         // pointerdown - start tracking
-        leftPanel.addEventListener('pointerdown', (e) => {
+        gridPanel.addEventListener('pointerdown', (e) => {
             if (e.pointerType === 'touch' || e.pointerType === 'pen' || this.isMobile()) {
                 this._touchStartX = e.clientX;
                 this._touchStartY = e.clientY;
@@ -821,7 +2157,7 @@ const MobileView = {
         }, { passive: true });
         
         // pointermove - track movement and determine direction intent
-        leftPanel.addEventListener('pointermove', (e) => {
+        gridPanel.addEventListener('pointermove', (e) => {
             if (!this._isSwiping) return;
             if (!this.isOpen()) return; // Only handle when viewing a sheet
             
@@ -839,7 +2175,7 @@ const MobileView = {
                 if (absX > absY * 1.5) {
                     this._swipeDirection = 'horizontal';
                     // Add class to indicate horizontal swipe in progress (prevents scroll)
-                    leftPanel.classList.add('is-swiping-horizontal');
+                    gridPanel.classList.add('is-swiping-horizontal');
                 } else if (absY > absX * 1.5) {
                     this._swipeDirection = 'vertical';
                 }
@@ -853,30 +2189,30 @@ const MobileView = {
         }, { passive: false }); // passive: false so we can preventDefault
         
         // pointerup - complete the gesture
-        leftPanel.addEventListener('pointerup', (e) => {
+        gridPanel.addEventListener('pointerup', (e) => {
             if (this._isSwiping) {
                 this._touchCurrentX = e.clientX;
                 this._touchCurrentY = e.clientY;
                 this._isSwiping = false;
-                leftPanel.classList.remove('is-swiping-horizontal');
+                gridPanel.classList.remove('is-swiping-horizontal');
                 this._pointerId = null;
                 this.handleSwipe();
             }
         }, { passive: true });
         
         // pointercancel - abort the gesture
-        leftPanel.addEventListener('pointercancel', () => {
+        gridPanel.addEventListener('pointercancel', () => {
             this._isSwiping = false;
             this._swipeDirection = null;
-            leftPanel.classList.remove('is-swiping-horizontal');
+            gridPanel.classList.remove('is-swiping-horizontal');
         }, { passive: true });
         
         // Also handle pointerleave to clean up if finger leaves the element
-        leftPanel.addEventListener('pointerleave', (e) => {
+        gridPanel.addEventListener('pointerleave', (e) => {
             // Only cancel if we haven't locked direction yet
             if (this._isSwiping && this._swipeDirection === null) {
                 this._isSwiping = false;
-                leftPanel.classList.remove('is-swiping-horizontal');
+                gridPanel.classList.remove('is-swiping-horizontal');
             }
         }, { passive: true });
     },
@@ -997,9 +2333,9 @@ const MobileView = {
             
             if (wasModalOpen) {
                 // Close the modal view without clearing selection (don't use this.close())
-                const leftPanel = document.getElementById('character-list-panel');
-                if (leftPanel) {
-                    leftPanel.classList.remove('is-viewing-sheet');
+                const gridPanel = document.getElementById('characterGridPanel');
+                if (gridPanel) {
+                    gridPanel.classList.remove('is-viewing-sheet');
                 }
             }
             // Clear scroll state on header when going to desktop
@@ -1017,16 +2353,16 @@ const MobileView = {
 
     /** Check if mobile sheet view is open */
     isOpen() {
-        const leftPanel = document.getElementById('character-list-panel');
-        return leftPanel && leftPanel.classList.contains('is-viewing-sheet');
+        const gridPanel = document.getElementById('characterGridPanel');
+        return gridPanel && gridPanel.classList.contains('is-viewing-sheet');
     },
 
     /** Open the mobile sheet view for a character (swaps grid for sheet) */
     open(characterId) {
-        const leftPanel = document.getElementById('character-list-panel');
+        const gridPanel = document.getElementById('characterGridPanel');
         const container = document.getElementById('mobileSheetContainer');
         
-        if (!leftPanel || !container) return;
+        if (!gridPanel || !container) return;
         
         // Check if we're in a swipe transition (loader was shown)
         const isSwipeTransition = this._isSwipeLoading;
@@ -1043,13 +2379,13 @@ const MobileView = {
         }
         
         // Swap to sheet view
-        leftPanel.classList.add('is-viewing-sheet');
+        gridPanel.classList.add('is-viewing-sheet');
         
         // Update character count display
         this.updateCharacterCount(characterId);
         
         // Scroll to top
-        leftPanel.scrollTop = 0;
+        gridPanel.scrollTop = 0;
         
         // Wait for portrait image to load before hiding the loader
         if (isSwipeTransition) {
@@ -1150,10 +2486,10 @@ const MobileView = {
 
     /** Close the mobile sheet view (returns to grid) */
     close() {
-        const leftPanel = document.getElementById('character-list-panel');
-        if (!leftPanel) return;
+        const gridPanel = document.getElementById('characterGridPanel');
+        if (!gridPanel) return;
         
-        leftPanel.classList.remove('is-viewing-sheet');
+        gridPanel.classList.remove('is-viewing-sheet');
         
         // Clear selection state on mobile when going back
         if (typeof AppState !== 'undefined' && AppState) {
@@ -1304,25 +2640,30 @@ function closeMobileSheet() {
 // ========================================
 const UI = {
     setLoadingState(isLoading) {
-        const leftLoading = document.getElementById('leftPanelLoading');
-        const rightLoading = document.getElementById('rightPanelLoading');
+        const gridLoading = document.getElementById('gridPanelLoading');
+        const sheetLoading = document.getElementById('sheetPanelLoading');
+        const campaignLoading = document.getElementById('campaignPanelLoading');
         const grid = document.getElementById('characterGrid');
         const emptyState = document.getElementById('emptyState');
         const sheetPlaceholder = document.querySelector('.sheet-placeholder');
         const characterSheet = document.getElementById('characterSheet');
+        const campaignPlaceholder = document.querySelector('.campaign-panel-placeholder');
 
         if (isLoading) {
-            if (leftLoading) leftLoading.classList.remove('is-hidden');
-            if (rightLoading) rightLoading.classList.remove('is-hidden');
+            if (gridLoading) gridLoading.classList.remove('is-hidden');
+            if (sheetLoading) sheetLoading.classList.remove('is-hidden');
+            if (campaignLoading) campaignLoading.classList.remove('is-hidden');
             if (grid) grid.classList.add('is-hidden');
             if (emptyState) emptyState.classList.add('is-hidden');
             if (sheetPlaceholder) sheetPlaceholder.classList.add('is-hidden');
             if (characterSheet) characterSheet.classList.add('is-hidden');
+            if (campaignPlaceholder) campaignPlaceholder.classList.add('is-hidden');
         } else {
-            if (leftLoading) leftLoading.classList.add('is-hidden');
-            if (rightLoading) rightLoading.classList.add('is-hidden');
+            if (gridLoading) gridLoading.classList.add('is-hidden');
+            if (sheetLoading) sheetLoading.classList.add('is-hidden');
+            if (campaignLoading) campaignLoading.classList.add('is-hidden');
             if (grid) grid.classList.remove('is-hidden');
-            // empty state and sheet visibility will be controlled by UI.render()
+            // empty state, sheet, and campaign visibility will be controlled by UI.render()
         }
     },
 
@@ -2757,7 +4098,7 @@ async function openShareModal(characterId) {
             <div class="share-section" style="margin-top: 1.25rem;">
               <label class="terminal-text-small modal-section-label" for="shareEmailInput">ADD PERSON</label>
               <div class="share-add-row">
-                <input type="email" id="shareEmailInput" class="terminal-input" placeholder="email@example.com">
+                <input type="email" id="shareEmailInput" class="terminal-input" placeholder="email@example.com" autocomplete="off" data-1p-ignore>
                 <button class="terminal-btn" id="shareAddBtn">ADD</button>
               </div>
               <p id="shareEmailError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
@@ -5076,6 +6417,11 @@ function closeAllEditorModals() {
         'genericConfirmModal',
         'genericAlertModal',
         'sessionExpiredModal',
+        'createCampaignModal',
+        'joinCampaignModal',
+        'campaignCreatedModal',
+        'journalEntryModal',
+        'characterUpdateModal',
     ];
     
     modalIds.forEach(id => {
@@ -5109,7 +6455,7 @@ function showConfirmDialog(message, onConfirm) {
     const escapedMessage = Utils.escapeHtml(message).replace(/\n/g, '<br>');
     const modalHtml = `
       <div id="genericConfirmModal" class="modal show">
-        <div class="modal-content">
+        <div class="modal-content modal-content--narrow">
           <div class="modal-header">
             <h2 class="modal-title">CONFIRM</h2>
             <button class="modal-close" onclick="closeGenericConfirmModal()">&times;</button>
@@ -7304,6 +8650,13 @@ function shouldShowDemoMigration() {
 // ========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // FIRST: Restore panel view state from URL BEFORE anything renders
+    // This prevents flash of wrong view (e.g., showing grid when URL has view=expanded)
+    const initialUrl = new URL(window.location.href);
+    if (initialUrl.searchParams.get('view') === 'expanded') {
+        PanelManager.setView('sheet-campaign');
+    }
+    
     // Initialize modal behaviors (backdrop click, dirty checking)
     ModalManager.init();
     
@@ -7597,6 +8950,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Initialize app state after demo characters are loaded
         await AppState.init();
+        
+        // Restore expanded view state from URL if present
+        ExpandedView.restore();
         
         // Check for pending character shares if authenticated
         // (delay slightly to not block the initial render)
@@ -8608,7 +9964,7 @@ function showSpellLimitModal(validation, level) {
     
     const modalHtml = `
         <div id="spellLimitModal" class="modal">
-            <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-content modal-content--narrow">
                 <div class="modal-header">
                     <h2 class="modal-title">Too Many ${isCantrips ? 'Cantrips' : 'Spells'}</h2>
                     <button class="modal-close" onclick="closeSpellLimitModal()">&times;</button>
@@ -8661,7 +10017,7 @@ function showSpellLimitSaveModal(validation) {
     
     const modalHtml = `
         <div id="spellLimitSaveModal" class="modal">
-            <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-content modal-content--narrow">
                 <div class="modal-header">
                     <h2 class="modal-title">Over Spell Limit</h2>
                     <button class="modal-close" onclick="closeSpellLimitSaveModal()">&times;</button>

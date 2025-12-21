@@ -709,18 +709,17 @@ const CharacterSheet = (window.CharacterSheet = {
       headerActions.push(deleteAction);
     }
 
-    // Manager-only inline Edit button (to the left of the overflow menu)
-    // Hidden on narrow viewports where it moves into the overflow menu
-    const editButtonHtml =
-      context === 'manager' && onEdit && editFn
+    // Manager-only: Expand button to show campaign panel
+    // Uses same style as the Edit button, hidden on mobile
+    const expandButtonHtml =
+      context === 'manager' && hasValidManagerId
         ? `
         <button
-          class="terminal-btn-small sheet-edit-btn"
+          class="terminal-btn-small sheet-edit-btn sheet-expand-btn hide-on-mobile"
           type="button"
-          onclick="${editFn}"
-        >
-          ✎ Edit
-        </button>
+          onclick="ExpandedView.toggle()"
+          title="Expand to show campaign info"
+        >⇥ Expand</button>
       `
         : '';
 
@@ -772,10 +771,10 @@ const CharacterSheet = (window.CharacterSheet = {
         : '';
 
     const actionsBlock =
-      editButtonHtml || headerMenu
+      expandButtonHtml || headerMenu
         ? `
         <div class="sheet-title-actions">
-          ${editButtonHtml}
+          ${expandButtonHtml}
           ${headerMenu}
         </div>
       `
@@ -1635,7 +1634,8 @@ const CharacterSheet = (window.CharacterSheet = {
           // so the dropdown stays anchored to its button during page scroll.
           const inSearchActions = !!triggerEl.closest('.search-actions');
           const inHeaderOverflow = !!triggerEl.closest('.header-overflow');
-          const useFixedPositioning = !inSearchActions && !inHeaderOverflow;
+          const inCampaignOverflow = !!triggerEl.closest('.campaign-overflow');
+          const useFixedPositioning = !inSearchActions && !inHeaderOverflow && !inCampaignOverflow;
 
           // Measure menu size without affecting final animation. Temporarily
           // neutralize transforms so we get the *full* height instead of the
@@ -1928,8 +1928,8 @@ const CharacterSheet = (window.CharacterSheet = {
             menu.style.bottom = 'auto';
 
             // Horizontal positioning for absolute menus
-            if (inHeaderOverflow) {
-              // Header overflow: right-align menu with trigger (opens leftward)
+            if (inHeaderOverflow || inCampaignOverflow) {
+              // Header/campaign overflow: right-align menu with trigger (opens leftward)
               const right = shellRect.right - triggerRect.right;
               menu.style.left = 'auto';
               menu.style.right = `${right}px`;

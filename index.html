@@ -21,9 +21,9 @@
     
     <title>D&Dy</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="terminal-theme.css?v=20251215e">
-    <link rel="stylesheet" href="portraits.css?v=20251215f">
-    <link rel="stylesheet" href="character-manager.css?v=20251210i">
+    <link rel="stylesheet" href="terminal-theme.css?v=20251221d">
+    <link rel="stylesheet" href="portraits.css?v=20251221d">
+    <link rel="stylesheet" href="character-manager.css?v=20251221j">
 </head>
 <body>
     <div class="terminal-frame">
@@ -142,10 +142,10 @@
         </div>
     </header>
 
-    <!-- Split Layout -->
-    <div class="split-layout">
-        <!-- Left Panel: Character List -->
-        <div class="left-panel" id="character-list-panel">
+    <!-- Split Layout - shows 2 of 3 panels at a time -->
+    <div class="split-layout" data-view="grid-sheet">
+        <!-- Panel: Character Grid -->
+        <div class="panel panel-character-grid" id="characterGridPanel">
             <!-- Mobile Back Bar (shown when viewing character sheet on mobile) -->
             <div class="mobile-back-bar" id="mobileBackBar">
                 <a href="#" class="mobile-back-link" onclick="closeMobileSheet(); return false;">
@@ -224,18 +224,28 @@
             </div>
         </div>
 
-        <!-- Right Panel: Character Sheet (hidden on mobile) -->
-        <div class="right-panel" id="character-sheet-panel">
+        <!-- Panel: Character Sheet -->
+        <div class="panel panel-character-sheet" id="characterSheetPanel">
             <div class="sheet-placeholder"></div>
             <div id="characterSheet" class="character-sheet is-hidden">
                 <!-- Character sheet will be rendered here -->
             </div>
         </div>
 
-        <!-- Centered Loading Row spanning both panels -->
+        <!-- Panel: Campaign -->
+        <div class="panel panel-campaign" id="campaignPanel">
+            <!-- Campaign panel content will be rendered here -->
+            <div class="campaign-panel-placeholder">
+                <div class="campaign-panel-placeholder-text">
+                    Campaign info will appear here when you expand the character sheet.
+                </div>
+            </div>
+        </div>
+
+        <!-- Centered Loading Row spanning panels -->
         <div class="panel-loading-row">
-            <!-- Left Panel Loading Indicator (shown while characters load) -->
-            <div id="leftPanelLoading" class="loading-indicator" aria-live="polite">
+            <!-- Grid Panel Loading Indicator -->
+            <div id="gridPanelLoading" class="loading-indicator" aria-live="polite">
                 <div class="panel-loading-cube-container">
                     <div class="panel-loading-cube">
                         <i></i><i></i><i></i><i></i><i></i><i></i>
@@ -244,14 +254,24 @@
                 <div class="panel-loading-text">Loading characters...</div>
             </div>
 
-            <!-- Right Panel Loading Indicator (shown while characters load) -->
-            <div id="rightPanelLoading" class="loading-indicator" aria-live="polite">
+            <!-- Sheet Panel Loading Indicator -->
+            <div id="sheetPanelLoading" class="loading-indicator" aria-live="polite">
                 <div class="panel-loading-cube-container">
                     <div class="panel-loading-cube">
                         <i></i><i></i><i></i><i></i><i></i><i></i>
                     </div>
                 </div>
                 <div class="panel-loading-text">Preparing character sheet...</div>
+            </div>
+
+            <!-- Campaign Panel Loading Indicator -->
+            <div id="campaignPanelLoading" class="loading-indicator is-hidden" aria-live="polite">
+                <div class="panel-loading-cube-container">
+                    <div class="panel-loading-cube">
+                        <i></i><i></i><i></i><i></i><i></i><i></i>
+                    </div>
+                </div>
+                <div class="panel-loading-text">Loading campaign...</div>
             </div>
         </div>
     </div>
@@ -327,6 +347,221 @@
             <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="closeManagerSettings()">CANCEL</button>
                 <button class="terminal-btn terminal-btn-primary" onclick="saveManagerSettings()">SAVE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Campaign Modal -->
+    <div id="createCampaignModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Create Campaign</h2>
+                <button class="modal-close" onclick="CampaignUI.closeCreateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-row settings-row--stacked mb-lg">
+                    <label class="settings-label" for="createCampaignName">Campaign Name</label>
+                    <input type="text" id="createCampaignName" class="terminal-input" placeholder="e.g. Curse of Strahd" maxlength="100" required>
+                </div>
+                <div class="settings-row settings-row--stacked">
+                    <label class="settings-label" for="createCampaignDesc">Description <span class="terminal-text-dim">(optional)</span></label>
+                    <textarea id="createCampaignDesc" class="terminal-textarea" rows="3" placeholder="A brief description of your campaign..." maxlength="500"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="CampaignUI.closeCreateModal()">CANCEL</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.submitCreateCampaign()">CREATE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Join Campaign Modal -->
+    <div id="joinCampaignModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Join Campaign</h2>
+                <button class="modal-close" onclick="CampaignUI.closeJoinModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="terminal-text-small terminal-text-dim mb-md">
+                    Select a campaign you've been invited to.
+                </p>
+                <div id="joinCampaignInvitations" class="invitations-list">
+                    <div class="invitations-loading">Loading invitations...</div>
+                </div>
+                <div id="joinCampaignError" class="terminal-text-small terminal-text-error mt-sm is-hidden"></div>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="CampaignUI.closeJoinModal()">CANCEL</button>
+                <button class="terminal-btn terminal-btn-primary" id="joinCampaignBtn" onclick="CampaignUI.submitJoinCampaign()" disabled>JOIN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Campaign Created Success Modal -->
+    <div id="campaignCreatedModal" class="modal">
+        <div class="modal-content modal-content--narrow">
+            <div class="modal-header">
+                <h2 class="modal-title">Campaign Created!</h2>
+                <button class="modal-close" onclick="CampaignUI.closeCampaignCreatedModal()">&times;</button>
+            </div>
+            <div class="modal-body campaign-created-body">
+                <p class="terminal-text mb-md">
+                    Your campaign is ready! Invite players by managing your campaign.
+                </p>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.closeCampaignCreatedModal()">DONE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invite Players Modal -->
+    <div id="invitePlayersModal" class="modal modal-yellow">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">INVITE PLAYERS</h2>
+                <button class="modal-close" onclick="CampaignUI.closeInviteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="terminal-text">Inviting to <strong id="inviteModalCampaignName"></strong></p>
+                
+                <div id="inviteModalExistingSection" class="share-section" style="margin-top: 1.25rem; display: none;">
+                    <label class="terminal-text-small modal-section-label">PENDING INVITES</label>
+                    <div id="inviteModalExistingList" class="share-collaborators-list"></div>
+                </div>
+                
+                <div class="share-section" style="margin-top: 1.25rem;">
+                    <label class="terminal-text-small modal-section-label" for="inviteModalEmail">ADD PERSON</label>
+                    <div class="share-add-row">
+                        <input type="email" id="inviteModalEmail" class="terminal-input" placeholder="email@example.com" autocomplete="off" data-1p-ignore onkeydown="if(event.key==='Enter'){event.preventDefault();CampaignUI.addPendingInviteFromModal();}">
+                        <button type="button" class="terminal-btn" id="inviteAddBtn" onclick="CampaignUI.addPendingInviteFromModal()">ADD</button>
+                    </div>
+                    <p id="inviteModalError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.sendInvitations()">DONE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Campaign Modal -->
+    <div id="manageCampaignModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Manage Campaign</h2>
+                <button class="modal-close" onclick="CampaignUI.closeManageModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-row settings-row--stacked mb-md">
+                    <label class="settings-label" for="manageCampaignName">Campaign Name</label>
+                    <input type="text" id="manageCampaignName" class="terminal-input" placeholder="e.g. Curse of Strahd" maxlength="100" required>
+                </div>
+                <div class="settings-row settings-row--stacked">
+                    <label class="settings-label" for="manageCampaignDesc">Description <span class="terminal-text-dim">(optional)</span></label>
+                    <textarea id="manageCampaignDesc" class="terminal-textarea" rows="3" placeholder="A brief description of your campaign..." maxlength="500"></textarea>
+                </div>
+                
+                <div id="manageCampaignError" class="terminal-text-small terminal-text-error mt-sm is-hidden"></div>
+            </div>
+            <div class="modal-footer modal-footer-spread">
+                <button class="terminal-btn terminal-btn-danger" onclick="CampaignUI.confirmDeleteCampaignFromModal()">DELETE CAMPAIGN</button>
+                <div class="modal-footer-right">
+                    <button class="terminal-btn" onclick="CampaignUI.closeManageModal()">CANCEL</button>
+                    <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.submitManageCampaign()">SAVE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Journal Entry Modal (Add/Edit) -->
+    <div id="journalEntryModal" class="modal">
+        <div class="modal-content modal-content--narrow">
+            <div class="modal-header">
+                <h2 class="modal-title" id="journalEntryModalTitle">Add Journal Entry</h2>
+                <button class="modal-close" onclick="CampaignUI.closeJournalEntryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-row settings-row--stacked mb-md">
+                    <label class="settings-label" for="journalEntryTitle">Title</label>
+                    <input type="text" id="journalEntryTitle" class="terminal-input" placeholder="e.g., The Amber Temple" maxlength="100">
+                </div>
+                <div class="settings-row settings-row--stacked mb-md">
+                    <label class="settings-label" for="journalEntryDate">Date</label>
+                    <input type="date" id="journalEntryDate" class="terminal-input">
+                </div>
+                <div class="settings-row settings-row--stacked">
+                    <label class="settings-label" for="journalEntryContent">What happened?</label>
+                    <textarea id="journalEntryContent" class="terminal-textarea" rows="6" placeholder="Record your adventure..."></textarea>
+                </div>
+                <input type="hidden" id="journalEntryId" value="">
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="CampaignUI.closeJournalEntryModal()">CANCEL</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.saveJournalEntry()">SAVE ENTRY</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Character Update Prompt Modal (after journal entry) -->
+    <div id="characterUpdateModal" class="modal">
+        <div class="modal-content modal-content--narrow">
+            <div class="modal-header">
+                <h2 class="modal-title">Update <span id="characterUpdateName">Character</span>?</h2>
+                <button class="modal-close" onclick="CampaignUI.closeCharacterUpdateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="terminal-text-small terminal-text-dim mb-md">
+                    Did anything change for your character this session?
+                </p>
+                <div class="settings-row settings-row--inline mb-md">
+                    <label class="settings-label" for="charUpdateXp">XP Gained</label>
+                    <input type="number" id="charUpdateXp" class="terminal-input terminal-input--short" min="0" value="0">
+                </div>
+                <div class="settings-row settings-row--inline mb-md">
+                    <label class="settings-label" for="charUpdateHp">Current HP</label>
+                    <div class="hp-input-group">
+                        <input type="number" id="charUpdateHp" class="terminal-input terminal-input--short" min="0">
+                        <span class="hp-divider">/</span>
+                        <span id="charUpdateHpMax" class="hp-max">--</span>
+                    </div>
+                </div>
+                <div class="settings-row settings-row--inline mb-md">
+                    <label class="settings-label" for="charUpdateGold">Gold Change</label>
+                    <div class="gold-input-group">
+                        <select id="charUpdateGoldSign" class="terminal-select terminal-select--narrow">
+                            <option value="+">+</option>
+                            <option value="-">-</option>
+                        </select>
+                        <input type="number" id="charUpdateGold" class="terminal-input terminal-input--short" min="0" value="0">
+                    </div>
+                </div>
+                <div class="settings-row settings-row--stacked mb-md">
+                    <label class="settings-label" for="charUpdateItems">Items Acquired</label>
+                    <input type="text" id="charUpdateItems" class="terminal-input" placeholder="Potion of Healing, Silver Sword...">
+                </div>
+                <div class="settings-row settings-row--stacked">
+                    <label class="settings-label">Status Conditions</label>
+                    <div class="condition-checkboxes">
+                        <label class="condition-checkbox">
+                            <input type="checkbox" id="charUpdatePoisoned"> Poisoned
+                        </label>
+                        <label class="condition-checkbox">
+                            <input type="checkbox" id="charUpdateExhausted"> Exhausted
+                        </label>
+                        <label class="condition-checkbox">
+                            <input type="checkbox" id="charUpdateDiseased"> Diseased
+                        </label>
+                        <label class="condition-checkbox">
+                            <input type="checkbox" id="charUpdateCursed"> Cursed
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="CampaignUI.skipCharacterUpdate()">SKIP</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.saveCharacterUpdate()">UPDATE CHARACTER</button>
             </div>
         </div>
     </div>
@@ -647,7 +882,7 @@
 
     <!-- Auth Modal (Login/Register) -->
     <div id="authModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-content--narrow">
             <div class="modal-header">
                 <h2 class="modal-title" id="authModalTitle">LOG IN</h2>
                 <button class="modal-close" onclick="cancelAuthFlow()">&times;</button>
@@ -698,7 +933,7 @@
     
     <!-- Password Reset Modal -->
     <div id="passwordResetModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-content--narrow">
             <div class="modal-header">
                 <h2 class="modal-title" id="passwordResetModalTitle">RESET PASSWORD</h2>
                 <button class="modal-close" onclick="closePasswordResetModal()">&times;</button>
@@ -741,7 +976,7 @@
     
     <!-- Migration Modal -->
     <div id="migrationModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-content--narrow">
             <div class="modal-header">
                 <h2 class="modal-title">MIGRATE TO CLOUD</h2>
                 <button class="modal-close" onclick="closeMigrationModal()">&times;</button>
@@ -761,7 +996,7 @@
     
     <!-- Demo Character Migration Modal -->
     <div id="demoMigrationModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-content--narrow">
             <div class="modal-header">
                 <h2 class="modal-title">KEEP SAMPLE CHARACTERS?</h2>
                 <button class="modal-close" onclick="closeDemoMigrationModal(false)">&times;</button>
@@ -821,6 +1056,6 @@
     </div><!-- /terminal-frame -->
     
     <!-- Concatenated manager bundle (see scripts/simple_bundle.py) -->
-    <script src="manager.bundle.js?v=20251215b"></script>
+    <script src="manager.bundle.js?v=20251221o"></script>
 </body>
 </html>
