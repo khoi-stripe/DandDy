@@ -104,10 +104,11 @@ class AcceptInvitation(BaseModel):
 
 
 class CampaignPendingInviteResponse(BaseModel):
-    """Pending invitation sent from a campaign (for DM to see who's been invited)"""
+    """Member/invitation for campaign management (for DM to see roster)"""
     id: int  # membership id
     user_id: int
     email: str
+    status: str  # "invited" or "active"
     invited_at: datetime
     
     class Config:
