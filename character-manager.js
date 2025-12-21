@@ -919,10 +919,10 @@ const ExpandedView = (window.ExpandedView = {
                             ${invitationText}
                         </div>
                         <div class="campaign-area-actions">
-                            <button class="terminal-btn terminal-btn-small ${hasInvitations ? 'terminal-btn-primary' : ''}" onclick="CampaignUI.openJoinModal()">
+                            <button class="terminal-btn terminal-btn-small ui-theme-teal ${hasInvitations ? 'terminal-btn-primary' : ''}" onclick="CampaignUI.openJoinModal()">
                                 Join${hasInvitations ? '' : ' Campaign'}
                             </button>
-                            <button class="terminal-btn terminal-btn-small terminal-btn-secondary" onclick="CampaignUI.openCreateModal()">
+                            <button class="terminal-btn terminal-btn-small ui-theme-teal" onclick="CampaignUI.openCreateModal()">
                                 Create${hasInvitations ? '' : ' Campaign'}
                             </button>
                         </div>
@@ -1064,7 +1064,7 @@ const ExpandedView = (window.ExpandedView = {
             <div class="journal-section">
                 <div class="journal-header">
                     <h3 class="journal-title">Journal</h3>
-                    <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJournalEntryModal()">
+                    <button class="terminal-btn terminal-btn-small ui-theme-teal" onclick="CampaignUI.openJournalEntryModal()">
                         + Add Entry
                     </button>
                 </div>

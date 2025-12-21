@@ -40,6 +40,12 @@
   --theme-warning-s: 100%;
   --theme-warning-l: 50%;
   
+  /* Campaign Pink Theme */
+  --theme-pink-h: 330;
+  --theme-pink-s: 85%;
+  --theme-pink-l-bright: 65%;
+  --theme-pink-l-dim: 55%;
+  
   /* ===== DERIVED COLOR TOKENS ===== */
   /* Background & Neutrals */
   --terminal-bg: #000000;
@@ -77,6 +83,10 @@
      and portrait history components that reference these directly) */
   --panel-teal: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
   --panel-teal-dim: hsl(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim));
+  
+  /* Campaign Pink Tokens */
+  --campaign-accent: hsl(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright));
+  --campaign-accent-dim: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-dim), 0.75);
   
   /* Scrollbar Tokens (derived from terminal green) */
   --scrollbar-thumb-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-dim), 0.45);
@@ -151,6 +161,14 @@
   --ui-on-primary-color: var(--terminal-bg);
 }
 
+.ui-theme-pink {
+  --ui-border-color: var(--campaign-accent);
+  --ui-fg-color: var(--campaign-accent);
+  --ui-dim-color: var(--campaign-accent-dim);
+  --ui-primary-bg-color: var(--campaign-accent);
+  --ui-on-primary-color: var(--terminal-bg);
+}
+
 /* ===== CONTEXT THEME CLASSES =====
    Apply these to any container to set the color theme for all nested elements.
    Components should use var(--context-accent) etc. to inherit the theme.
@@ -186,6 +204,14 @@
   --context-accent-dim: var(--terminal-accent-dim);
   --context-border: var(--terminal-accent);
   --context-hover: hsla(var(--theme-cyan-h), var(--theme-cyan-s), var(--theme-cyan-l-bright), 0.1);
+}
+
+/* Pink theme (used by campaign modals/panels) */
+.theme-pink {
+  --context-accent: var(--campaign-accent);
+  --context-accent-dim: var(--campaign-accent-dim);
+  --context-border: var(--campaign-accent);
+  --context-hover: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright), 0.1);
 }
 
 /* ===== BASE STYLES ===== */
