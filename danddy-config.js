@@ -12,11 +12,11 @@
 
   // Single source of truth for backend origin & API base URL.
   //
-  // IMPORTANT: Even when running the UI locally (localhost / file://), we now
-  // ALWAYS talk to the production Render backend so that auth + cloud data are
-  // consistent with the live site. If you ever need to point at a local
-  // backend again, temporarily change BACKEND_ORIGIN below.
-  const BACKEND_ORIGIN = 'https://danddy-api.onrender.com';
+  // For campaign development: use local backend when running locally.
+  // Production frontend still uses production backend.
+  const BACKEND_ORIGIN = isLocalEnvironment 
+    ? 'http://127.0.0.1:8000'
+    : 'https://danddy-api.onrender.com';
 
   // Many callers use either "<origin>/api" or "<origin>/api/..." directly.
   const API_BASE_URL = `${BACKEND_ORIGIN}/api`;
