@@ -1017,6 +1017,17 @@ const CampaignUI = (window.CampaignUI = {
         try {
             const campaign = await CampaignAPI.createCampaign({ name, description });
             
+            // Auto-assign current character to the new campaign
+            const characterId = AppState.selectedCharacterId;
+            if (characterId && !String(characterId).startsWith('demo_')) {
+                try {
+                    await CampaignAPI.assignCharacter(campaign.id, characterId);
+                } catch (assignError) {
+                    console.warn('Could not auto-assign character:', assignError);
+                    // Don't fail the whole flow if assignment fails
+                }
+            }
+            
             // Close create modal
             this.closeCreateModal();
             
