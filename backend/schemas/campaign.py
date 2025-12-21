@@ -82,3 +82,24 @@ class CampaignJoinResponse(BaseModel):
     membership: CampaignMemberResponse
 
 
+# Email invitation schemas
+class CampaignInviteByEmail(BaseModel):
+    email: str
+
+
+class CampaignInvitationResponse(BaseModel):
+    """Pending invitation for a user"""
+    id: int  # membership id
+    campaign_id: int
+    campaign_name: str
+    campaign_description: Optional[str] = None
+    invited_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class AcceptInvitation(BaseModel):
+    character_id: Optional[int] = None  # Optional - can accept without assigning character
+
+

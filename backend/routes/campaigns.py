@@ -8,7 +8,8 @@ from models.campaign_member import CampaignMember, MemberStatus
 from models.character import Character
 from schemas.campaign import (
     CampaignCreate, CampaignUpdate, CampaignResponse, CampaignWithCharacters,
-    CampaignMemberResponse, CampaignJoin, CampaignJoinResponse
+    CampaignMemberResponse, CampaignJoin, CampaignJoinResponse,
+    CampaignInviteByEmail, CampaignInvitationResponse, AcceptInvitation
 )
 from utils.auth import get_current_active_user
 
@@ -416,6 +417,183 @@ def leave_campaign(
         if character:
             character.campaign_id = None
     
+    db.commit()
+    
+    return None
+
+
+# ============ Email Invitations ============
+
+@router.get("/invitations/pending", response_model=List[CampaignInvitationResponse])
+def get_pending_invitations(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get all pending campaign invitations for the current user."""
+    invitations = db.query(CampaignMember).options(
+        joinedload(CampaignMember.campaign)
+    ).filter(
+        CampaignMember.user_id == current_user.id,
+        CampaignMember.status == MemberStatus.INVITED
+    ).all()
+    
+    return [
+        CampaignInvitationResponse(
+            id=inv.id,
+            campaign_id=inv.campaign_id,
+            campaign_name=inv.campaign.name,
+            campaign_description=inv.campaign.description,
+            invited_at=inv.joined_at
+        )
+        for inv in invitations
+    ]
+
+
+@router.post("/{campaign_id}/invite", status_code=status.HTTP_201_CREATED)
+def invite_user_by_email(
+    campaign_id: int,
+    invite_data: CampaignInviteByEmail,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Invite a user to a campaign by email. Only the creator can invite."""
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    
+    if not campaign:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Campaign not found"
+        )
+    
+    # Only creator can invite
+    if campaign.dm_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the campaign creator can invite users"
+        )
+    
+    # Find user by email
+    invited_user = db.query(User).filter(User.email == invite_data.email).first()
+    
+    if not invited_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No user found with that email address"
+        )
+    
+    if invited_user.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot invite yourself"
+        )
+    
+    # Check if already a member or invited
+    existing = db.query(CampaignMember).filter(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.user_id == invited_user.id,
+        CampaignMember.status.in_([MemberStatus.ACTIVE, MemberStatus.INVITED])
+    ).first()
+    
+    if existing:
+        if existing.status == MemberStatus.ACTIVE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This user is already a member of the campaign"
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This user has already been invited"
+            )
+    
+    # Create invitation (membership with INVITED status)
+    invitation = CampaignMember(
+        campaign_id=campaign_id,
+        user_id=invited_user.id,
+        is_creator=False,
+        status=MemberStatus.INVITED
+    )
+    db.add(invitation)
+    db.commit()
+    
+    return {"message": f"Invitation sent to {invite_data.email}"}
+
+
+@router.post("/{campaign_id}/accept-invitation", response_model=CampaignJoinResponse)
+def accept_invitation(
+    campaign_id: int,
+    accept_data: AcceptInvitation,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Accept a campaign invitation."""
+    # Find the pending invitation
+    invitation = db.query(CampaignMember).filter(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.user_id == current_user.id,
+        CampaignMember.status == MemberStatus.INVITED
+    ).first()
+    
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No pending invitation found for this campaign"
+        )
+    
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    
+    # Validate and assign character if provided
+    if accept_data.character_id:
+        character = db.query(Character).filter(
+            Character.id == accept_data.character_id,
+            Character.owner_id == current_user.id
+        ).first()
+        
+        if not character:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Character not found or not owned by you"
+            )
+        
+        if character.campaign_id and character.campaign_id != campaign_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This character is already in another campaign"
+            )
+        
+        invitation.character_id = accept_data.character_id
+        character.campaign_id = campaign_id
+    
+    # Update invitation to active membership
+    invitation.status = MemberStatus.ACTIVE
+    
+    db.commit()
+    db.refresh(invitation)
+    db.refresh(campaign)
+    
+    return CampaignJoinResponse(campaign=campaign, membership=invitation)
+
+
+@router.delete("/{campaign_id}/decline-invitation", status_code=status.HTTP_204_NO_CONTENT)
+def decline_invitation(
+    campaign_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Decline a campaign invitation."""
+    invitation = db.query(CampaignMember).filter(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.user_id == current_user.id,
+        CampaignMember.status == MemberStatus.INVITED
+    ).first()
+    
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No pending invitation found for this campaign"
+        )
+    
+    db.delete(invitation)
     db.commit()
     
     return None

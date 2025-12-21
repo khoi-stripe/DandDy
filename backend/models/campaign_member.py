@@ -6,6 +6,7 @@ from database.database import Base
 
 
 class MemberStatus(enum.Enum):
+    INVITED = "invited"  # User has been invited but hasn't accepted yet
     ACTIVE = "active"
     INACTIVE = "inactive"
     LEFT = "left"
