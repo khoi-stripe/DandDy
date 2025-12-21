@@ -17429,13 +17429,19 @@ const CampaignUI = (window.CampaignUI = {
             
             // Auto-assign current character to the new campaign
             const characterId = AppState.selectedCharacterId;
+            console.log('🏰 Auto-assign: characterId =', characterId, 'campaignId =', campaign.id);
             if (characterId && !String(characterId).startsWith('demo_')) {
                 try {
-                    await CampaignAPI.assignCharacter(campaign.id, characterId);
+                    const numericCharId = parseInt(characterId, 10);
+                    console.log('🏰 Assigning character', numericCharId, 'to campaign', campaign.id);
+                    await CampaignAPI.assignCharacter(campaign.id, numericCharId);
+                    console.log('🏰 Character assigned successfully');
                 } catch (assignError) {
-                    console.warn('Could not auto-assign character:', assignError);
+                    console.warn('🏰 Could not auto-assign character:', assignError);
                     // Don't fail the whole flow if assignment fails
                 }
+            } else {
+                console.log('🏰 Skipping auto-assign: no character or demo character');
             }
             
             // Close create modal
