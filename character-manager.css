@@ -82,6 +82,7 @@
 }
 
 /* Campaign panel column - hidden in collapsed state */
+/* Uses teal/green theme to match character sheet */
 .campaign-panel-column {
     flex: 0;
     width: 0;
@@ -89,6 +90,53 @@
     border-left: 1px solid var(--sheet-border-color);
     min-height: 0;
     background: var(--terminal-bg);
+    
+    /* Apply teal theme context */
+    --context-accent: var(--sheet-accent);
+    --context-accent-dim: var(--sheet-accent-dim);
+    --context-border: var(--sheet-border-color);
+    color: var(--sheet-accent);
+}
+
+/* Override terminal colors with teal in campaign panel */
+.campaign-panel-column .terminal-btn {
+    color: var(--sheet-accent);
+    border-color: var(--sheet-accent-dim);
+}
+
+.campaign-panel-column .terminal-btn:hover {
+    border-color: var(--sheet-accent);
+    box-shadow: 0 0 8px var(--sheet-accent-dim);
+}
+
+.campaign-panel-column .terminal-btn-primary {
+    background: var(--sheet-accent);
+    border-color: var(--sheet-accent);
+    color: var(--terminal-bg);
+}
+
+.campaign-panel-column .terminal-btn-primary:hover {
+    background: var(--sheet-accent-bright);
+    border-color: var(--sheet-accent-bright);
+}
+
+.campaign-panel-column .terminal-btn-danger {
+    color: var(--error-color);
+    border-color: var(--error-color);
+}
+
+.campaign-panel-column .terminal-input,
+.campaign-panel-column .terminal-textarea,
+.campaign-panel-column .terminal-select {
+    border-color: var(--sheet-accent-dim);
+    color: var(--sheet-accent);
+}
+
+.campaign-panel-column .terminal-input:focus,
+.campaign-panel-column .terminal-textarea:focus,
+.campaign-panel-column .terminal-select:focus {
+    border-color: var(--sheet-accent);
+    box-shadow: 0 0 5px var(--sheet-accent-dim);
 }
 
 /* Campaign panel content */
@@ -146,7 +194,7 @@
 /* ===== CAMPAIGN AREA (TOP SECTION) ===== */
 .campaign-area {
     flex-shrink: 0;
-    border: 1px solid var(--terminal-border-color);
+    border: 1px solid var(--sheet-border-color);
     border-radius: 4px;
     padding: var(--spacing-md);
     background: hsla(var(--theme-teal-h), var(--theme-teal-s), 5%, 0.5);
@@ -176,7 +224,7 @@
 }
 
 .campaign-area-empty-text {
-    color: var(--terminal-dim);
+    color: var(--sheet-accent-dim);
     font-size: var(--font-size-small);
     margin-bottom: var(--spacing-md);
 }
@@ -201,7 +249,7 @@
 }
 
 .invite-label {
-    color: var(--terminal-dim);
+    color: var(--sheet-accent-dim);
     font-size: var(--font-size-small);
 }
 
@@ -214,7 +262,7 @@
 .terminal-btn-icon {
     background: transparent;
     border: none;
-    color: var(--terminal-dim);
+    color: var(--sheet-accent-dim);
     cursor: pointer;
     padding: var(--spacing-xs);
     font-size: 1em;
@@ -233,11 +281,11 @@
 
 .party-header {
     font-size: var(--font-size-small);
-    color: var(--terminal-dim);
+    color: var(--sheet-accent-dim);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: var(--spacing-sm);
-    border-bottom: 1px solid var(--terminal-border-color);
+    border-bottom: 1px solid var(--sheet-border-color);
     padding-bottom: var(--spacing-xs);
 }
 
@@ -255,16 +303,16 @@
 }
 
 .party-member-name {
-    color: var(--terminal-text);
+    color: var(--sheet-accent);
 }
 
 .party-member-info {
-    color: var(--terminal-dim);
+    color: var(--sheet-accent-dim);
     font-size: var(--font-size-small);
 }
 
 .party-empty {
-    color: var(--terminal-dim);
+    color: var(--sheet-accent-dim);
     font-size: var(--font-size-small);
     font-style: italic;
     padding: var(--spacing-sm) 0;
@@ -276,7 +324,7 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    border: 1px solid var(--terminal-border-color);
+    border: 1px solid var(--sheet-border-color);
     border-radius: 4px;
     overflow: hidden;
 }
@@ -286,7 +334,7 @@
     justify-content: space-between;
     align-items: center;
     padding: var(--spacing-md);
-    border-bottom: 1px solid var(--terminal-border-color);
+    border-bottom: 1px solid var(--sheet-border-color);
     background: hsla(var(--theme-teal-h), var(--theme-teal-s), 5%, 0.5);
     flex-shrink: 0;
 }
@@ -308,7 +356,7 @@
 .journal-entry {
     position: relative;
     padding: var(--spacing-md);
-    border-bottom: 1px solid var(--terminal-border-color);
+    border-bottom: 1px solid var(--sheet-border-color);
     transition: background var(--transition-speed);
 }
 
@@ -328,7 +376,7 @@
 }
 
 .journal-entry-date {
-    color: var(--terminal-dim);
+    color: var(--sheet-accent-dim);
     font-size: var(--font-size-small);
     flex-shrink: 0;
 }
@@ -342,7 +390,7 @@
 }
 
 .journal-entry-preview {
-    color: var(--terminal-dim);
+    color: var(--sheet-accent-dim);
     font-size: var(--font-size-small);
     line-height: 1.4;
     display: -webkit-box;
@@ -375,12 +423,12 @@
 }
 
 .journal-empty-text {
-    color: var(--terminal-dim);
+    color: var(--sheet-accent-dim);
     margin-bottom: var(--spacing-xs);
 }
 
 .journal-empty-hint {
-    color: var(--terminal-dim);
+    color: var(--sheet-accent-dim);
     font-size: var(--font-size-small);
     opacity: 0.7;
 }
