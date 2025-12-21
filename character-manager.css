@@ -318,6 +318,31 @@
     padding: var(--spacing-sm) 0;
 }
 
+.party-member--no-char .party-member-name {
+    color: var(--sheet-accent-dim);
+    font-style: italic;
+}
+
+.party-member-badge {
+    font-size: var(--font-size-tiny);
+    color: var(--sheet-accent-dim);
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 20%, 0.3);
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: var(--spacing-xs);
+}
+
+/* Campaign description */
+.campaign-area-description {
+    color: var(--sheet-accent-dim);
+    font-size: var(--font-size-small);
+    line-height: 1.4;
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm);
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 5%, 0.3);
+    border-radius: 4px;
+}
+
 /* ===== JOURNAL SECTION (BOTTOM) ===== */
 .journal-section {
     flex: 1;

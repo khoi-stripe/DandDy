@@ -17223,8 +17223,42 @@ const ExpandedView = (window.ExpandedView = {
             return;
         }
         
-        // For now, render placeholder - will be populated with real data later
-        panel.innerHTML = this._renderCampaignPanelContent(characterId);
+        // Get the character's campaign_id
+        const character = AppState.characters?.find(c => String(c.id) === String(characterId));
+        const campaignId = character?.campaign_id;
+        
+        if (!campaignId) {
+            // No campaign - show empty state
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null);
+            return;
+        }
+        
+        // Show loading state
+        panel.innerHTML = `
+            <div class="campaign-panel-layout">
+                <div class="campaign-area">
+                    <div class="campaign-area-header">
+                        <h3 class="campaign-area-title">Loading...</h3>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        try {
+            // Fetch campaign details and members
+            const [campaign, members] = await Promise.all([
+                CampaignAPI.getCampaign(campaignId),
+                CampaignAPI.getCampaignMembers(campaignId)
+            ]);
+            
+            const campaignData = { campaign, members };
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, campaignData);
+            
+        } catch (error) {
+            console.error('Failed to load campaign:', error);
+            // Show empty state on error
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null);
+        }
     },
 
     /** Render the full campaign panel with both sections */
@@ -17266,29 +17300,50 @@ const ExpandedView = (window.ExpandedView = {
 
         // Has campaign - show campaign info
         const { campaign, members } = campaignData;
+        
+        // Build party list from members with character info
         const partyHtml = members && members.length > 0 
-            ? members.map(m => `
-                <div class="party-member">
-                    <span class="party-member-name">${m.character_name || 'No character'}</span>
-                    <span class="party-member-info">${m.character_info || ''}</span>
-                </div>
-            `).join('')
+            ? members.map(m => {
+                const char = m.character;
+                if (char) {
+                    return `
+                        <div class="party-member">
+                            <span class="party-member-name">${char.name}</span>
+                            <span class="party-member-info">Lvl ${char.level} ${char.character_class || ''}</span>
+                            ${m.is_creator ? '<span class="party-member-badge">Creator</span>' : ''}
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="party-member party-member--no-char">
+                            <span class="party-member-name">No character assigned</span>
+                            ${m.is_creator ? '<span class="party-member-badge">Creator</span>' : ''}
+                        </div>
+                    `;
+                }
+            }).join('')
             : '<div class="party-empty">No party members yet</div>';
+
+        // Description section
+        const descriptionHtml = campaign.description 
+            ? `<div class="campaign-area-description">${campaign.description}</div>`
+            : '';
 
         return `
             <div class="campaign-area">
                 <div class="campaign-area-header">
                     <h3 class="campaign-area-title">${campaign.name}</h3>
                 </div>
+                ${descriptionHtml}
                 <div class="campaign-area-invite">
-                    <span class="invite-label">Invite:</span>
-                    <code class="invite-code">${campaign.invite_code}</code>
+                    <span class="invite-label">Invite Code:</span>
+                    <code class="invite-code">${campaign.invite_code || 'N/A'}</code>
                     <button class="terminal-btn-icon" onclick="CampaignUI.copyInviteCode('${campaign.invite_code}')" title="Copy invite code">
                         ⎘
                     </button>
                 </div>
                 <div class="campaign-area-party">
-                    <div class="party-header">Party</div>
+                    <div class="party-header">Party (${members?.length || 0})</div>
                     <div class="party-list">
                         ${partyHtml}
                     </div>
