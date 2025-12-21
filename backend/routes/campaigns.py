@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from database.database import get_db
 from models.user import User
 from models.campaign import Campaign, CampaignStatus, generate_invite_code
@@ -312,7 +312,9 @@ def get_campaign_members(
             detail="Not authorized to view this campaign's members"
         )
     
-    members = db.query(CampaignMember).filter(
+    members = db.query(CampaignMember).options(
+        joinedload(CampaignMember.character)
+    ).filter(
         CampaignMember.campaign_id == campaign_id,
         CampaignMember.status == MemberStatus.ACTIVE
     ).all()

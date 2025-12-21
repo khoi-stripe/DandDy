@@ -47,6 +47,17 @@ class CampaignMemberCreate(CampaignMemberBase):
     pass
 
 
+class CampaignMemberCharacterInfo(BaseModel):
+    """Minimal character info for member display"""
+    id: int
+    name: str
+    character_class: Optional[str] = None
+    level: int = 1
+    
+    class Config:
+        from_attributes = True
+
+
 class CampaignMemberResponse(CampaignMemberBase):
     id: int
     campaign_id: int
@@ -54,6 +65,7 @@ class CampaignMemberResponse(CampaignMemberBase):
     is_creator: bool
     status: str
     joined_at: datetime
+    character: Optional[CampaignMemberCharacterInfo] = None
     
     class Config:
         from_attributes = True
