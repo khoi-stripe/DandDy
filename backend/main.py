@@ -17,6 +17,7 @@ from database.database import (
     ensure_last_updated_by_column,
     ensure_pinned_character_ids_column,
     ensure_campaign_tracking_columns,
+    ensure_campaign_member_status_column,
 )
 from routes import auth, characters, campaigns, sessions, ai, users, prompt_entries, shares
 import os
@@ -39,6 +40,7 @@ ensure_character_collaborators_table()
 ensure_last_updated_by_column()
 ensure_pinned_character_ids_column()
 ensure_campaign_tracking_columns()
+ensure_campaign_member_status_column()
 
 app = FastAPI(
     title="DandDy API",

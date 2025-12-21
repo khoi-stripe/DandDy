@@ -446,6 +446,26 @@ def ensure_campaign_tracking_columns():
         conn.commit()
 
 
+def ensure_campaign_member_status_column():
+    """
+    Lightweight migration helper for campaign_members table.
+    Adds the status column for tracking invitation state (invited, active, inactive, left).
+    """
+    inspector = inspect(engine)
+    if not inspector.has_table("campaign_members"):
+        return
+
+    existing_cols = {col["name"] for col in inspector.get_columns("campaign_members")}
+
+    with engine.connect() as conn:
+        if "status" not in existing_cols:
+            conn.execute(text("ALTER TABLE campaign_members ADD COLUMN status VARCHAR DEFAULT 'active'"))
+            # Backfill existing members to have status = 'active'
+            conn.execute(text("UPDATE campaign_members SET status = 'active' WHERE status IS NULL"))
+
+        conn.commit()
+
+
 def get_db():
     db = SessionLocal()
     try:
