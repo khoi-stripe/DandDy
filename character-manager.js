@@ -1095,6 +1095,9 @@ const CampaignUI = (window.CampaignUI = {
             // Show success modal with invite code
             this.showCampaignCreatedModal(campaign.invite_code);
             
+            // Refresh character data to get updated campaign_id
+            await AppState.loadCharacters();
+            
             // Refresh campaign panel
             ExpandedView._loadCampaignPanel();
             
@@ -1162,6 +1165,9 @@ const CampaignUI = (window.CampaignUI = {
             
             // Show success message
             showAlertDialog(`You've joined "${result.campaign.name}"!`);
+            
+            // Refresh character data to get updated campaign_id
+            await AppState.loadCharacters();
             
             // Refresh campaign panel
             ExpandedView._loadCampaignPanel();
