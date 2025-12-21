@@ -19,7 +19,7 @@ from database.database import (
     ensure_campaign_tracking_columns,
     ensure_campaign_member_status_column,
 )
-from routes import auth, characters, campaigns, sessions, ai, users, prompt_entries, shares
+from routes import auth, characters, campaigns, sessions, journal, ai, users, prompt_entries, shares
 import os
 from dotenv import load_dotenv
 
@@ -94,6 +94,7 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(characters.router, prefix="/api")
 app.include_router(campaigns.router, prefix="/api")
 app.include_router(sessions.router, prefix="/api")
+app.include_router(journal.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(ai.router, prefix="/api/ai")
 app.include_router(prompt_entries.router, prefix="/api")

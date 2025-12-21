@@ -55,5 +55,6 @@ class Campaign(Base):
     characters = relationship("Character", back_populates="campaign")
     members = relationship("CampaignMember", back_populates="campaign", cascade="all, delete-orphan")
     sessions = relationship("Session", back_populates="campaign", cascade="all, delete-orphan")
+    journal_entries = relationship("JournalEntry", back_populates="campaign")
 
 

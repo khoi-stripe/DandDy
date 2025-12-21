@@ -146,5 +146,9 @@ class Character(Base):
     campaign_membership = relationship("CampaignMember", back_populates="character", uselist=False)
     sessions = relationship("Session", back_populates="character", cascade="all, delete-orphan")
     session_logs = relationship("SessionLog", back_populates="character", cascade="all, delete-orphan")
+    
+    # Journal relationships
+    journal_entries = relationship("JournalEntry", back_populates="character", cascade="all, delete-orphan")
+    character_updates = relationship("CharacterUpdate", back_populates="character", cascade="all, delete-orphan")
 
 
