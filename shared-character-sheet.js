@@ -684,17 +684,6 @@ const CharacterSheet = (window.CharacterSheet = {
       });
     }
 
-    // Manager-only: Add Edit to overflow menu (visible only on narrow viewports via CSS)
-    // Placed at top of menu on mobile
-    if (context === 'manager' && onEdit && editFn) {
-      headerActions.unshift({
-        icon: '✎',
-        label: 'Edit character',
-        onclick: editFn,
-        id: 'sheet-edit-overflow',
-      });
-    }
-
     // Manager-only: Leave shared character (for collaborators)
     if (context === 'manager' && onLeave && isShared && hasValidManagerId) {
       headerActions.push({
@@ -709,17 +698,32 @@ const CharacterSheet = (window.CharacterSheet = {
       headerActions.push(deleteAction);
     }
 
-    // Manager-only: Expand button to show campaign panel
-    // Uses same style as the Edit button, hidden on mobile
-    const expandButtonHtml =
+    // Manager-only: Add Edit to overflow menu
+    if (context === 'manager' && onEdit && editFn) {
+      headerActions.unshift({
+        icon: '✎',
+        label: 'Edit character',
+        onclick: editFn,
+      });
+    }
+
+    // Manager-only: View navigation buttons
+    // - "Campaign →" in grid-sheet view, "← Characters" in sheet-campaign view
+    const viewNavButtonHtml =
       context === 'manager' && hasValidManagerId
         ? `
         <button
-          class="terminal-btn-small sheet-edit-btn sheet-expand-btn hide-on-mobile"
+          class="terminal-btn-small sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-campaign hide-on-mobile"
           type="button"
-          onclick="ExpandedView.toggle()"
-          title="Expand to show campaign info"
-        >⇥ Expand</button>
+          onclick="ExpandedView.expand()"
+          title="View campaign info"
+        >Campaign →</button>
+        <button
+          class="terminal-btn-small sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-characters hide-on-mobile"
+          type="button"
+          onclick="ExpandedView.collapse()"
+          title="Return to character grid"
+        >← Characters</button>
       `
         : '';
 
@@ -771,10 +775,10 @@ const CharacterSheet = (window.CharacterSheet = {
         : '';
 
     const actionsBlock =
-      expandButtonHtml || headerMenu
+      viewNavButtonHtml || headerMenu
         ? `
         <div class="sheet-title-actions">
-          ${expandButtonHtml}
+          ${viewNavButtonHtml}
           ${headerMenu}
         </div>
       `
@@ -1742,7 +1746,10 @@ const CharacterSheet = (window.CharacterSheet = {
               hostBottom = Math.min(hostBottom, footerRect.top - padding);
             }
           } else {
+            // In expanded view, character sheet menus should stay within their panel
+            // (the left-panel), not overflow into the campaign panel on the right.
             host =
+              triggerEl.closest('.left-panel') ||
               triggerEl.closest('.terminal-frame, .terminal-container') ||
               document.documentElement;
             const hostRect = host.getBoundingClientRect();

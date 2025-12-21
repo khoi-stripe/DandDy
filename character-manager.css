@@ -54,7 +54,6 @@
 .panel-character-grid {
     padding: var(--spacing-xl);
     padding-top: 0;
-    border-right: 1px solid var(--terminal-border);
 }
 
 /* ===== PANEL: CHARACTER SHEET ===== */
@@ -75,6 +74,17 @@
 /* When sheet panel is first (left position), adjust borders */
 .split-layout[data-view="sheet-campaign"] .panel-character-sheet {
     border-right: none;
+}
+
+/* View navigation buttons - show/hide based on current view */
+/* In grid+sheet view: show "Campaign ->" button, hide "<- Characters" */
+.split-layout[data-view="grid-sheet"] .sheet-nav-btn--to-characters {
+    display: none !important;
+}
+
+/* In sheet+campaign view: show "<- Characters" button, hide "Campaign ->" */
+.split-layout[data-view="sheet-campaign"] .sheet-nav-btn--to-campaign {
+    display: none !important;
 }
 
 /* ===== PANEL: CAMPAIGN ===== */
@@ -578,13 +588,32 @@
     font-style: italic;
 }
 
-.party-member-badge {
-    font-size: var(--font-size-tiny);
-    color: var(--sheet-accent-dim);
-    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 20%, 0.3);
-    padding: 2px 6px;
+/* Creator tag - styled like shared/sample tags but with teal background */
+.party-member-creator-tag {
+    font-size: 10px;
+    font-weight: 500;
+    font-family: var(--font-mono);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--terminal-bg);
+    background-color: var(--sheet-accent);
     border-radius: 3px;
-    margin-left: var(--spacing-xs);
+    padding: 0 4px;
+    margin-left: var(--spacing-sm);
+}
+
+/* See more link for party members when >3 */
+.party-see-more {
+    font-size: 11px;
+    color: var(--sheet-accent);
+    text-decoration: underline;
+    cursor: pointer;
+    margin-top: var(--spacing-xs);
+    display: inline-block;
+}
+
+.party-see-more:hover {
+    color: var(--sheet-accent-bright, var(--sheet-accent));
 }
 
 /* Campaign description */
@@ -594,8 +623,47 @@
     line-height: 1.4;
     margin-bottom: var(--spacing-md);
     padding: var(--spacing-sm);
-    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 5%, 0.3);
+    background: var(--sheet-box-bg);
     border-radius: 4px;
+}
+
+.campaign-desc-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: pre-line;
+}
+
+.campaign-area-description[data-expanded="true"] .campaign-desc-text {
+    display: block;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+}
+
+.campaign-desc-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--sheet-accent);
+    font-size: var(--font-size-small);
+    font-family: var(--font-mono);
+    padding: 0;
+    margin-top: var(--spacing-xs);
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.campaign-desc-toggle:hover {
+    opacity: 0.8;
+}
+
+.campaign-area-description.is-truncatable {
+    padding: 16px;
+}
+
+.campaign-area-description.is-truncatable .campaign-desc-toggle {
+    display: inline-block;
 }
 
 /* ===== JOURNAL SECTION (BOTTOM) ===== */
@@ -1526,9 +1594,37 @@
 }
 
 /* ===== CAMPAIGN MODALS ===== */
+/* Manage Campaign modal fixed height */
+#manageCampaignModal .modal-content {
+    height: 480px;
+    display: flex;
+    flex-direction: column;
+}
+
+#manageCampaignModal .modal-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+/* Make the description row fill remaining space (use nth-child since error div is last-of-type) */
+#manageCampaignModal .modal-body > .settings-row--stacked:nth-child(2) {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#manageCampaignDesc {
+    flex: 1;
+    min-height: 0;
+    resize: none;
+}
+
 /* Narrow modal variant for simple forms */
 .modal-content--narrow {
-    max-width: 420px;
+    max-width: 480px;
 }
 
 /* Code input styling (for invite codes) */

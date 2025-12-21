@@ -794,9 +794,6 @@ const ExpandedView = (window.ExpandedView = {
     expand() {
         PanelManager.setView('sheet-campaign');
         
-        // Update button text
-        this._updateButtonText(true);
-        
         // Load campaign panel content
         this._loadCampaignPanel();
         
@@ -812,25 +809,12 @@ const ExpandedView = (window.ExpandedView = {
     collapse() {
         PanelManager.setView('grid-sheet');
         
-        // Update button text
-        this._updateButtonText(false);
-        
         // Update URL to remove expanded state
         this._updateUrl(false);
         
         if (DEBUG_MANAGER) {
             console.log('📐 Expanded view: OFF');
         }
-    },
-
-    /** Update the expand button text based on state */
-    _updateButtonText(isExpanded) {
-        const btn = document.querySelector('.sheet-expand-btn');
-        if (!btn) return;
-        
-        // Update button text with icon
-        btn.textContent = isExpanded ? '⇤ Collapse' : '⇥ Expand';
-        btn.title = isExpanded ? 'Return to grid view' : 'Expand to show campaign info';
     },
 
     /** Toggle campaign description expand/collapse */
@@ -881,23 +865,28 @@ const ExpandedView = (window.ExpandedView = {
         const campaignId = character?.campaignId;
         
         if (!campaignId) {
-            // No campaign - fetch pending invitations and show empty state
+            // No campaign - fetch pending invitations and journal entries
             let pendingCount = 0;
+            let journalEntries = [];
             if (isAuthenticated) {
                 try {
-                    const invitations = await CampaignAPI.getPendingInvitations();
+                    const [invitations, entries] = await Promise.all([
+                        CampaignAPI.getPendingInvitations().catch(() => []),
+                        CampaignAPI.getJournalEntries(characterId).catch(() => [])
+                    ]);
                     pendingCount = invitations?.length || 0;
+                    journalEntries = entries || [];
                 } catch (e) {
-                    console.warn('Could not fetch pending invitations:', e);
+                    console.warn('Could not fetch data:', e);
                 }
             }
-            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, pendingCount);
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, pendingCount, journalEntries);
             return;
         }
         
         // If not authenticated, show empty state (can't fetch campaign data)
         if (!isAuthenticated) {
-            panel.innerHTML = this._renderCampaignPanelContent(characterId, null);
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, 0, []);
             return;
         }
         
@@ -913,14 +902,18 @@ const ExpandedView = (window.ExpandedView = {
         `;
         
         try {
-            // Fetch campaign details and members
-            const [campaign, members] = await Promise.all([
+            // Fetch campaign details, members, and journal entries in parallel
+            const [campaign, members, journalEntries] = await Promise.all([
                 CampaignAPI.getCampaign(campaignId),
-                CampaignAPI.getCampaignMembers(campaignId)
+                CampaignAPI.getCampaignMembers(campaignId),
+                CampaignAPI.getJournalEntries(characterId).catch(e => {
+                    console.warn('Could not fetch journal entries:', e);
+                    return [];
+                })
             ]);
             
             const campaignData = { campaign, members };
-            panel.innerHTML = this._renderCampaignPanelContent(characterId, campaignData);
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, campaignData, 0, journalEntries);
             this._initDescriptionTruncation();
             
         } catch (error) {
@@ -931,11 +924,11 @@ const ExpandedView = (window.ExpandedView = {
     },
 
     /** Render the full campaign panel with both sections */
-    _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0) {
+    _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0, journalEntries = []) {
         return `
             <div class="campaign-panel-layout">
                 ${this._renderCampaignArea(campaignData, pendingInvitationCount)}
-                ${this._renderJournalSection(characterId)}
+                ${this._renderJournalSection(characterId, journalEntries)}
             </div>
         `;
     },
@@ -979,9 +972,14 @@ const ExpandedView = (window.ExpandedView = {
         const currentUserId = window.AuthService?.getCurrentUser()?.id;
         const isCreator = campaign.dm_id === currentUserId;
         
-        // Build party list from members with character info
-        const partyHtml = members && members.length > 0 
-            ? members.map(m => {
+        // Build party list from members with character info (limited to 3)
+        const MAX_PARTY_DISPLAY = 3;
+        let partyHtml = '';
+        if (members && members.length > 0) {
+            const displayMembers = members.slice(0, MAX_PARTY_DISPLAY);
+            const remainingCount = members.length - MAX_PARTY_DISPLAY;
+            
+            partyHtml = displayMembers.map(m => {
                 const char = m.character;
                 const creatorTag = m.is_creator ? '<span class="party-member-creator-tag">Creator</span>' : '';
                 if (char) {
@@ -998,8 +996,14 @@ const ExpandedView = (window.ExpandedView = {
                         </div>
                     `;
                 }
-            }).join('')
-            : '<div class="party-empty">No party members yet</div>';
+            }).join('');
+            
+            if (remainingCount > 0) {
+                partyHtml += `<a class="party-see-more" href="#" onclick="CampaignUI.openManageModal(${campaign.id}); return false;">See more</a>`;
+            }
+        } else {
+            partyHtml = '<div class="party-empty">No party members yet</div>';
+        }
 
         // Description section with truncation (3 lines max, expandable)
         const descriptionHtml = campaign.description 
@@ -1501,9 +1505,18 @@ const CampaignUI = (window.CampaignUI = {
     },
     
     async _loadExistingInvitations(campaignId) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'character-manager.js:_loadExistingInvitations',message:'Loading invitations',data:{campaignId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+        // #endregion
         try {
             this._existingInvitations = await CampaignAPI.getCampaignPendingInvitations(campaignId);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'character-manager.js:_loadExistingInvitations',message:'Loaded invitations success',data:{count:this._existingInvitations?.length,invitations:this._existingInvitations},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
+            // #endregion
         } catch (error) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'character-manager.js:_loadExistingInvitations',message:'Error caught - setting empty',data:{errorMessage:error.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3,H4'})}).catch(()=>{});
+            // #endregion
             console.warn('Failed to load existing invitations:', error);
             this._existingInvitations = [];
         }
@@ -1523,33 +1536,39 @@ const CampaignUI = (window.CampaignUI = {
         
         if (section) section.style.display = 'block';
         
-        container.innerHTML = this._existingInvitations.map(inv => `
-            <div class="share-collaborator-item share-collaborator-pending" data-invite-id="${inv.id}">
+        container.innerHTML = this._existingInvitations.map(inv => {
+            const isPending = inv.status === 'invited';
+            const statusLabel = isPending ? 'PENDING' : 'MEMBER';
+            const statusClass = isPending ? 'share-collaborator-pending' : '';
+            return `
+            <div class="share-collaborator-item ${statusClass}" data-invite-id="${inv.id}">
                 <span class="share-collaborator-email">${Utils.escapeHtml(inv.email)}</span>
-                <span class="share-collaborator-status">PENDING</span>
-                <button type="button" class="share-collaborator-remove" onclick="CampaignUI.revokeInvitation(${inv.id})" title="Remove">×</button>
+                <span class="share-collaborator-status">${statusLabel}</span>
+                <button type="button" class="share-collaborator-remove" onclick="CampaignUI.removeMember(${inv.id}, ${isPending})" title="${isPending ? 'Cancel invite' : 'Remove from campaign'}">×</button>
             </div>
-        `).join('');
+        `;
+        }).join('');
     },
     
-    async revokeInvitation(invitationId) {
+    async removeMember(memberId, isPending) {
         if (!this._invitingCampaign) return;
         
         // Mark as removing
-        const item = document.querySelector(`.share-collaborator-item[data-invite-id="${invitationId}"]`);
+        const item = document.querySelector(`.share-collaborator-item[data-invite-id="${memberId}"]`);
         if (item) item.classList.add('removing');
         
         try {
-            await CampaignAPI.revokeInvitation(this._invitingCampaign.id, invitationId);
+            // Use same endpoint for both - it removes the membership
+            await CampaignAPI.revokeInvitation(this._invitingCampaign.id, memberId);
             // Remove from local list
-            this._existingInvitations = this._existingInvitations.filter(inv => inv.id !== invitationId);
+            this._existingInvitations = this._existingInvitations.filter(inv => inv.id !== memberId);
             this._renderExistingInvitations();
         } catch (error) {
-            console.error('Failed to revoke invitation:', error);
+            console.error('Failed to remove member:', error);
             if (item) item.classList.remove('removing');
             const errorEl = document.getElementById('inviteModalError');
             if (errorEl) {
-                errorEl.textContent = error.message || 'Failed to revoke invitation';
+                errorEl.textContent = error.message || 'Failed to remove member';
                 errorEl.style.display = 'block';
             }
         }
@@ -1808,7 +1827,7 @@ const CampaignUI = (window.CampaignUI = {
     // Track the saved entry for character update prompt
     _savedJournalEntry: null,
 
-    openJournalEntryModal(entryId = null) {
+    async openJournalEntryModal(entryId = null) {
         const modal = document.getElementById('journalEntryModal');
         if (!modal) return;
 
@@ -1827,20 +1846,24 @@ const CampaignUI = (window.CampaignUI = {
         const idInput = document.getElementById('journalEntryId');
 
         if (entryId) {
-            // TODO: Load existing entry data
-            // For now, just clear
-            if (titleInput) titleInput.value = '';
-            if (contentInput) contentInput.value = '';
+            // Load existing entry data
+            try {
+                const entry = await CampaignAPI.getJournalEntry(entryId);
+                if (titleInput) titleInput.value = entry.title || '';
+                if (contentInput) contentInput.value = entry.content || '';
+                if (dateInput) dateInput.value = entry.entry_date || new Date().toISOString().split('T')[0];
+            } catch (error) {
+                console.error('Failed to load journal entry:', error);
+                showAlertDialog('Failed to load journal entry.');
+                return;
+            }
         } else {
             // New entry - set defaults
             if (titleInput) titleInput.value = '';
             if (contentInput) contentInput.value = '';
+            if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
         }
 
-        // Set date to today by default
-        if (dateInput) {
-            dateInput.value = new Date().toISOString().split('T')[0];
-        }
         if (idInput) {
             idInput.value = entryId || '';
         }
@@ -1879,36 +1902,26 @@ const CampaignUI = (window.CampaignUI = {
             return;
         }
 
-        try {
-            // Create the journal entry object
-            const entryData = {
-                character_id: characterId,
-                title: title || 'Untitled',
-                entry_date: entryDate,
-                content: content,
-            };
+        // Store the journal entry data for later API call
+        // (We wait until character update modal is handled to send to API)
+        this._pendingJournalEntry = {
+            character_id: characterId,
+            title: title || 'Untitled',
+            entry_date: entryDate,
+            content: content,
+            isEdit: !!this._editingEntryId,
+            editId: this._editingEntryId,
+        };
 
-            // TODO: Call API to save entry
-            // For now, store locally and show success
-            this._savedJournalEntry = {
-                ...entryData,
-                id: this._editingEntryId || Date.now(), // Temp ID
-            };
+        // Close journal modal
+        this.closeJournalEntryModal();
 
-            // Close journal modal
-            this.closeJournalEntryModal();
-
-            // Show character update prompt
-            this.openCharacterUpdateModal();
-
-        } catch (error) {
-            console.error('Failed to save journal entry:', error);
-            showAlertDialog(error.message || 'Failed to save journal entry.');
-        }
+        // Show character update prompt
+        this.openCharacterUpdateModal();
     },
 
-    editJournalEntry(entryId) {
-        this.openJournalEntryModal(entryId);
+    async editJournalEntry(entryId) {
+        await this.openJournalEntryModal(entryId);
     },
 
     // ========================================
@@ -1967,14 +1980,43 @@ const CampaignUI = (window.CampaignUI = {
         this._savedJournalEntry = null;
     },
 
-    skipCharacterUpdate() {
-        // Just close without updating character
-        this.closeCharacterUpdateModal();
-        
-        // Refresh the campaign panel to show the new entry
-        ExpandedView._loadCampaignPanel();
-        
-        showNotification('✓ Journal entry saved');
+    async skipCharacterUpdate() {
+        // Save journal entry without character update
+        try {
+            const entryData = this._pendingJournalEntry;
+            if (!entryData) {
+                this.closeCharacterUpdateModal();
+                return;
+            }
+
+            if (entryData.isEdit) {
+                // Update existing entry
+                await CampaignAPI.updateJournalEntry(entryData.editId, {
+                    title: entryData.title,
+                    content: entryData.content,
+                    entry_date: entryData.entry_date,
+                });
+            } else {
+                // Create new entry (without character update)
+                await CampaignAPI.createJournalEntry({
+                    character_id: entryData.character_id,
+                    title: entryData.title,
+                    content: entryData.content,
+                    entry_date: entryData.entry_date,
+                });
+            }
+
+            this._pendingJournalEntry = null;
+            this.closeCharacterUpdateModal();
+            
+            // Refresh the campaign panel to show the new entry
+            ExpandedView._loadCampaignPanel();
+            
+            showNotification('✓ Journal entry saved');
+        } catch (error) {
+            console.error('Failed to save journal entry:', error);
+            showAlertDialog(error.message || 'Failed to save journal entry.');
+        }
     },
 
     async saveCharacterUpdate() {
@@ -1985,13 +2027,21 @@ const CampaignUI = (window.CampaignUI = {
         }
 
         try {
-            // Gather update data
+            // Gather character update data
             const xpGained = parseInt(document.getElementById('charUpdateXp')?.value) || 0;
-            const hpCurrent = parseInt(document.getElementById('charUpdateHp')?.value) || null;
             const goldSign = document.getElementById('charUpdateGoldSign')?.value || '+';
             const goldAmount = parseInt(document.getElementById('charUpdateGold')?.value) || 0;
             const goldChange = goldSign === '-' ? -goldAmount : goldAmount;
-            const itemsAcquired = document.getElementById('charUpdateItems')?.value?.trim() || '';
+            const itemsText = document.getElementById('charUpdateItems')?.value?.trim() || '';
+            const itemsAcquired = itemsText ? itemsText.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+            // Calculate HP change
+            const character = AppState.characters?.find(c => 
+                c.id === characterId || c.cloudId === characterId
+            );
+            const currentHp = character?.hp_current || character?.hit_points_current || 0;
+            const newHp = parseInt(document.getElementById('charUpdateHp')?.value) || currentHp;
+            const hpChange = newHp - currentHp;
 
             // Get conditions
             const conditions = [];
@@ -2000,28 +2050,63 @@ const CampaignUI = (window.CampaignUI = {
             if (document.getElementById('charUpdateDiseased')?.checked) conditions.push('diseased');
             if (document.getElementById('charUpdateCursed')?.checked) conditions.push('cursed');
 
-            // TODO: Call API to update character with these values
-            // For now, just log and close
-            console.log('Character update:', {
-                characterId,
-                xpGained,
-                hpCurrent,
-                goldChange,
-                itemsAcquired,
-                conditions,
-                journalEntryId: this._savedJournalEntry?.id,
-            });
+            const entryData = this._pendingJournalEntry;
+            if (!entryData) {
+                this.closeCharacterUpdateModal();
+                showAlertDialog('No journal entry to save.');
+                return;
+            }
 
+            if (entryData.isEdit) {
+                // Update existing entry
+                await CampaignAPI.updateJournalEntry(entryData.editId, {
+                    title: entryData.title,
+                    content: entryData.content,
+                    entry_date: entryData.entry_date,
+                });
+                // Add/update character update separately
+                await CampaignAPI.createCharacterUpdate(entryData.editId, {
+                    xp_gained: xpGained,
+                    gold_change: goldChange,
+                    hp_change: hpChange,
+                    items_acquired: itemsAcquired,
+                    items_lost: [],
+                    conditions: conditions,
+                });
+            } else {
+                // Create new entry with character update in one call
+                await CampaignAPI.createJournalEntry({
+                    character_id: entryData.character_id,
+                    title: entryData.title,
+                    content: entryData.content,
+                    entry_date: entryData.entry_date,
+                    character_update: {
+                        xp_gained: xpGained,
+                        gold_change: goldChange,
+                        hp_change: hpChange,
+                        items_acquired: itemsAcquired,
+                        items_lost: [],
+                        conditions: conditions,
+                    },
+                });
+            }
+
+            this._pendingJournalEntry = null;
             this.closeCharacterUpdateModal();
             
-            // Refresh the campaign panel
+            // Refresh the campaign panel and character data
             ExpandedView._loadCampaignPanel();
+            
+            // Refresh character to show updated stats
+            if (typeof loadCharacters === 'function') {
+                loadCharacters();
+            }
             
             showNotification('✓ Journal entry saved & character updated');
 
         } catch (error) {
-            console.error('Failed to update character:', error);
-            showAlertDialog(error.message || 'Failed to update character.');
+            console.error('Failed to save journal entry with update:', error);
+            showAlertDialog(error.message || 'Failed to save journal entry.');
         }
     },
 

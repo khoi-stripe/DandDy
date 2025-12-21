@@ -21,6 +21,7 @@ Transform DandDy into a living character tracker that follows players throughout
 ### Players Can:
 - Create campaigns (lightweight - just a name/label)
 - Share campaigns via invite code (great funnel for new users!)
+- Invite specific users by email
 - Assign their character(s) to a campaign
 - A character can only belong to **one campaign at a time**
 - Add journal entries to record their adventures
@@ -37,7 +38,7 @@ Transform DandDy into a living character tracker that follows players throughout
 ```
 Player clicks "Create Campaign"
   → Enters campaign name, description
-  → System generates unique invite code (e.g., "DRAGON-HEIST-7X2K")
+  → System generates unique invite code (e.g., "XYZAB-7X2K")
   → Player shares code with their group
   → Creator is automatically added as first member
 ```
@@ -51,6 +52,7 @@ Player clicks "Create Campaign"
 
 ### 2. Joining a Campaign
 
+**Via Invite Code:**
 ```
 New user receives invite code
   → Code takes them to signup flow
@@ -60,6 +62,14 @@ New user receives invite code
 Existing user enters invite code
   → Joins campaign (characterless)
   → Assigns character later from expanded character sheet
+```
+
+**Via Email Invitation:**
+```
+Campaign creator invites user by email
+  → User sees pending invitation in Join modal
+  → Accepts/declines invitation
+  → On accept, joins campaign (can assign character)
 ```
 
 **Decisions:**
@@ -98,48 +108,78 @@ Player clicks "Add Entry" in the journal section
 
 ## Data Model
 
-### Campaign
+### Campaign ✅ IMPLEMENTED
 | Field | Type | Notes |
 |-------|------|-------|
-| id | UUID | Primary key |
+| id | Integer | Primary key |
 | name | String | e.g., "Curse of Strahd" |
 | description | Text | Optional campaign notes |
-| invite_code | String | Unique, shareable (e.g., "STRAHD-8K2X") |
-| created_by | User ID | Creator (can delete/manage) |
+| invite_code | String | Unique, shareable (e.g., "XYZAB-7X2K") |
+| dm_id | Integer FK | Creator (can delete/manage) - named `dm_id` for backward compat |
 | status | Enum | active, paused, completed, archived |
 | created_at | Timestamp | |
 | updated_at | Timestamp | |
 
-### CampaignMember
+### CampaignMember ✅ IMPLEMENTED
 | Field | Type | Notes |
 |-------|------|-------|
-| id | UUID | Primary key |
-| campaign_id | Campaign ID | FK |
-| user_id | User ID | FK |
-| character_id | Character ID | FK, nullable until assigned |
+| id | Integer | Primary key |
+| campaign_id | Integer FK | |
+| user_id | Integer FK | |
+| character_id | Integer FK | Nullable until assigned |
 | is_creator | Boolean | True for campaign creator |
+| status | Enum | **invited**, active, inactive, left |
 | joined_at | Timestamp | |
-| status | Enum | active, inactive, left |
 
-### JournalEntry
+### Session ✅ IMPLEMENTED
 | Field | Type | Notes |
 |-------|------|-------|
-| id | UUID | Primary key |
-| character_id | Character ID | FK |
-| campaign_id | Campaign ID | FK (optional - for standalone entries) |
-| user_id | User ID | FK |
+| id | Integer | Primary key |
+| campaign_id | Integer FK | Optional - for standalone tracking |
+| character_id | Integer FK | |
+| user_id | Integer FK | |
+| session_number | Integer | Auto-increment per character |
+| name | String | Optional label, e.g., "The Amber Temple" |
+| started_at | Timestamp | |
+| ended_at | Timestamp | Null while active |
+| status | Enum | active, completed, cancelled |
+
+### SessionLog ✅ IMPLEMENTED
+| Field | Type | Notes |
+|-------|------|-------|
+| id | Integer | Primary key |
+| session_id | Integer FK | Unique |
+| character_id | Integer FK | |
+| user_id | Integer FK | |
+| xp_gained | Integer | |
+| gold_change | Integer | Can be negative |
+| hp_before | Integer | |
+| hp_after | Integer | |
+| items_acquired | JSON | Array of item names |
+| items_lost | JSON | Array of item names |
+| conditions | JSON | Active status conditions |
+| journal | Text | Free-form notes |
+| submitted_at | Timestamp | |
+
+### JournalEntry ✅ IMPLEMENTED
+| Field | Type | Notes |
+|-------|------|-------|
+| id | Integer | Primary key |
+| character_id | Integer FK | |
+| campaign_id | Integer FK | Optional - for standalone entries |
+| user_id | Integer FK | |
 | title | String | e.g., "The Amber Temple" |
 | content | Text | The journal entry text |
 | entry_date | Date | When the session happened (can backdate) |
 | created_at | Timestamp | When entry was created |
 | updated_at | Timestamp | Last edit |
 
-### CharacterUpdate (optional stats change linked to journal entry)
+### CharacterUpdate ✅ IMPLEMENTED
 | Field | Type | Notes |
 |-------|------|-------|
-| id | UUID | Primary key |
-| journal_entry_id | JournalEntry ID | FK |
-| character_id | Character ID | FK |
+| id | Integer | Primary key |
+| journal_entry_id | Integer FK | |
+| character_id | Integer FK | |
 | xp_gained | Integer | |
 | gold_change | Integer | Can be negative |
 | hp_change | Integer | Delta from previous |
@@ -159,13 +199,70 @@ Focus on conditions that persist across long rests:
 
 ---
 
+## API Endpoints
+
+### Campaign Endpoints ✅ IMPLEMENTED
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/campaigns/` | Create a new campaign |
+| GET | `/campaigns/` | Get all campaigns user is member of |
+| GET | `/campaigns/{id}` | Get campaign with characters |
+| PUT | `/campaigns/{id}` | Update campaign (creator only) |
+| DELETE | `/campaigns/{id}` | Delete campaign (creator only) |
+| POST | `/campaigns/join` | Join via invite code |
+| POST | `/campaigns/{id}/regenerate-code` | Regenerate invite code (creator only) |
+
+### Member Endpoints ✅ IMPLEMENTED
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/campaigns/{id}/members` | Get all campaign members |
+| PUT | `/campaigns/{id}/members/assign-character` | Assign character to membership |
+| DELETE | `/campaigns/{id}/members/leave` | Leave campaign |
+
+### Invitation Endpoints ✅ IMPLEMENTED
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/campaigns/invitations/pending` | Get pending invitations |
+| POST | `/campaigns/{id}/invite` | Invite user by email (creator only) |
+| POST | `/campaigns/{id}/accept-invitation` | Accept invitation |
+| DELETE | `/campaigns/{id}/decline-invitation` | Decline invitation |
+
+### Session Endpoints ✅ IMPLEMENTED
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/sessions/start` | Start a new session |
+| POST | `/sessions/{id}/end` | End session with optional log |
+| POST | `/sessions/{id}/cancel` | Cancel session without log |
+| GET | `/sessions/active` | Get active session for character |
+| GET | `/sessions/character/{id}` | Get session history for character |
+| GET | `/sessions/campaign/{id}` | Get all sessions for campaign |
+| GET | `/sessions/{id}` | Get specific session |
+| POST | `/sessions/{id}/log` | Add/update session log |
+
+### Journal Endpoints ✅ IMPLEMENTED
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/journal/` | Create journal entry (with optional character_update) |
+| GET | `/journal/character/{id}` | Get entries for character |
+| GET | `/journal/{id}` | Get specific entry |
+| PUT | `/journal/{id}` | Update entry |
+| DELETE | `/journal/{id}` | Delete entry |
+| POST | `/journal/{id}/character-update` | Create character update for entry |
+
+---
+
 ## UI Design Notes
 
 ### No Separate Campaign Navigation
 Campaigns are accessed through the expanded character sheet, not a separate nav item.
 This reinforces the app as a **character management tool**, not a campaign manager.
 
-### Expanded Character Sheet (Full-screen)
+### Expanded Character Sheet (Full-screen) ✅ IMPLEMENTED
 ```
 ┌──────────────────────────────────┬──────────────────────────────────┐
 │         CHARACTER SHEET          │         CAMPAIGN PANEL           │
@@ -174,16 +271,14 @@ This reinforces the app as a **character management tool**, not a campaign manag
 │                                  │ ┌────────────────────────────┐   │
 │  [ Existing character sheet ]    │ │ CAMPAIGN AREA              │   │
 │                                  │ │                            │   │
-│  - Portrait                      │ │ CURSE OF STRAHD            │   │
-│  - Stats                         │ │ Invite: STRAHD-8K2X [Copy] │   │
+│  - Portrait                      │ │ CURSE OF STRAHD       [⋮]  │   │
+│  - Stats                         │ │ Invite: XYZAB-8K2X [Copy]  │   │
 │  - Combat                        │ │                            │   │
 │  - Skills                        │ │ PARTY (4)                  │   │
-│  - Spells                        │ │ • Thorin (you) - Dwarf 5   │   │
-│  - etc.                          │ │ • Lyra - Elf Wizard 5      │   │
-│                                  │ │ • Zook - Gnome Rogue 5     │   │
-│                                  │ │ • Aria - Human Cleric 5    │   │
-│                                  │ │                            │   │
-│                                  │ │ [Leave Campaign]           │   │
+│  - Spells                        │ │ • Thorin - Lvl 5 Fighter   │   │
+│  - etc.                          │ │ • Lyra - Lvl 5 Wizard      │   │
+│                                  │ │ • Zook - Lvl 5 Rogue       │   │
+│                                  │ │ • Aria - Lvl 5 Cleric      │   │
 │                                  │ └────────────────────────────┘   │
 │                                  │                                  │
 │                                  │ ┌────────────────────────────┐   │
@@ -202,16 +297,17 @@ This reinforces the app as a **character management tool**, not a campaign manag
 └──────────────────────────────────┴──────────────────────────────────┘
 ```
 
-### Campaign Panel Structure
+### Campaign Panel Structure ✅ IMPLEMENTED
 
 The campaign panel is divided into two sections:
 
 **Top: Campaign Area**
 - Campaign name and status
 - Invite code with copy button
-- Party members list (name, race, class, level)
-- Actions: Leave Campaign, Invite (for creator: manage/delete)
+- Party members list (name, class, level)
+- Overflow menu: Manage (for creator), Leave Campaign
 - If no campaign: "Join Campaign" / "Create Campaign" buttons
+- Shows pending invitation count
 
 **Bottom: Journal**
 - Reverse chronological list (newest first)
@@ -219,7 +315,17 @@ The campaign panel is divided into two sections:
 - "Add Entry" button at top
 - Entries are expandable and editable
 
-### Journal Entry Modal
+### Create Campaign Modal ✅ IMPLEMENTED
+- Name input (required)
+- Description textarea (optional)
+- Creates campaign and shows invite code
+
+### Join Campaign Modal ✅ IMPLEMENTED
+- Invite code input
+- Pending invitations list (if any)
+- Accept/decline invitation buttons
+
+### Journal Entry Modal ✅ UI IMPLEMENTED (backend pending)
 ```
 ┌─────────────────────────────────────────────────┐
 │ ADD JOURNAL ENTRY                          [X]  │
@@ -241,7 +347,7 @@ The campaign panel is divided into two sections:
 └─────────────────────────────────────────────────┘
 ```
 
-### Character Update Prompt (after saving journal entry)
+### Character Update Prompt ✅ UI IMPLEMENTED (backend pending)
 ```
 ┌─────────────────────────────────────────────────┐
 │ UPDATE THORIN?                             [X]  │
@@ -266,39 +372,55 @@ The campaign panel is divided into two sections:
 
 ---
 
-## Character Sheet Changes
+## Frontend Implementation
 
-### Campaign Badge
-- Show campaign name badge on character card in the grid view
+### Files Created/Modified
 
-### Expanded Character Sheet View
-The character sheet can expand to full-screen view:
-- **Left side:** Character sheet (as it is today)
-- **Right side:** Campaign panel (two sections)
-  - **Campaign Area:** name, invite code, party members, actions
-  - **Journal:** chronological adventure entries
+| File | Description |
+|------|-------------|
+| `campaign-api.js` | ✅ Full API service with all campaign, session, and journal methods |
+| `character-manager.js` | ✅ Campaign panel UI, modals, all event handlers |
+| `character-manager.css` | ✅ Campaign panel styles, two-section layout, journal styles |
 
-This keeps the app **character-centric** - campaigns are accessed through your character, not as a separate section.
+### CampaignAPI Methods ✅ IMPLEMENTED
 
-### Leaving a Campaign
-- Character can be removed from campaign
-- Journal entries are preserved (but no longer linked to campaign)
-- Character becomes available to join another campaign
+**Campaign Methods:**
+- `getCampaigns()` - Get all user's campaigns
+- `getCampaign(id)` - Get campaign with characters
+- `createCampaign(data)` - Create new campaign
+- `updateCampaign(id, data)` - Update campaign
+- `deleteCampaign(id)` - Delete campaign
+- `regenerateInviteCode(id)` - Get new invite code
 
----
+**Join/Membership Methods:**
+- `joinCampaign(code, characterId?)` - Join via invite code
+- `getCampaignMembers(id)` - Get all members
+- `assignCharacter(campaignId, characterId)` - Assign character
+- `leaveCampaign(id)` - Leave campaign
 
-## Journal Features
+**Invitation Methods:**
+- `getPendingInvitations()` - Get pending invitations
+- `inviteByEmail(campaignId, email)` - Send email invitation
+- `acceptInvitation(campaignId, characterId?)` - Accept invitation
+- `declineInvitation(campaignId)` - Decline invitation
 
-Core journal functionality:
-- Reverse chronological display (newest first)
-- Entries can be backdated for missed sessions
-- Entries are editable after creation
-- Optional character stat updates on each entry
+**Session Methods:**
+- `startSession(characterId, campaignId?, name?)` - Start session
+- `endSession(sessionId, logData?)` - End with optional log
+- `cancelSession(sessionId)` - Cancel session
+- `getActiveSession(characterId)` - Check for active session
+- `getCharacterSessions(characterId, limit)` - Get session history
+- `getCampaignSessions(campaignId, limit)` - Get campaign sessions
+- `getSession(sessionId)` - Get specific session
+- `addSessionLog(sessionId, logData)` - Add/update log
 
-Future enhancements:
-- Shared journal visibility to campaign members
-- Export adventure log as PDF/markdown
-- Tags/categories for entries
+**Journal Methods (API ready, backend pending):**
+- `getJournalEntries(characterId, limit)` - Get entries
+- `getJournalEntry(id)` - Get specific entry
+- `createJournalEntry(data)` - Create entry
+- `updateJournalEntry(id, data)` - Update entry
+- `deleteJournalEntry(id)` - Delete entry
+- `createCharacterUpdate(entryId, data)` - Create character update
 
 ---
 
@@ -319,28 +441,62 @@ Future enhancements:
 
 ---
 
-## Implementation Phases
+## Implementation Status
 
-### Phase 1: Campaign Organization (MVP)
+### Phase 1: Campaign Organization (MVP) ✅ COMPLETE
 - [x] Campaign model + CRUD endpoints
+- [x] CampaignMember model + membership endpoints
 - [x] Invite code generation + join flow
+- [x] Email invitation system (invite, accept, decline)
 - [x] Expanded character sheet view
-- [x] Campaign panel UI (placeholder)
+- [x] Campaign panel UI (two-section layout)
 - [x] Create/Join campaign modals
+- [x] Campaign overflow menu (manage, leave)
+- [x] Party member display
 
-### Phase 2: Journal System
-- [ ] Journal entry model + CRUD endpoints
-- [ ] Campaign panel: campaign area section
-- [ ] Campaign panel: journal section
-- [ ] Add/edit journal entry modal
-- [ ] Character update prompt (optional)
-- [ ] Display journal entries (reverse chronological)
+### Phase 1.5: Session System ✅ COMPLETE
+- [x] Session model + CRUD endpoints
+- [x] SessionLog model for post-session data
+- [x] Start/end/cancel session flow
+- [x] Session history tracking
+- [x] Character stat updates via session logs
+
+### Phase 2: Journal System ✅ COMPLETE
+- [x] Frontend API methods (CampaignAPI.journal*)
+- [x] Journal section UI
+- [x] Add/Edit journal entry modal UI
+- [x] Character update prompt modal UI
+- [x] JournalEntry model
+- [x] CharacterUpdate model
+- [x] Journal backend endpoints (`/journal/*`)
+- [x] Wire up journal UI to backend
+- [x] Display journal entries list
 
 ### Phase 3: Polish & Extras
-- [ ] Party member display with character info
+- [ ] Party member avatars/portraits
 - [ ] Shared journal visibility
 - [ ] Adventure log export
 - [ ] Mobile optimizations
+- [ ] Campaign status badges on character cards
+
+---
+
+## Architecture Notes
+
+### Session vs Journal Approach
+
+The system has both **Session** and **Journal** models:
+
+- **Sessions** track real-time play (start → end) with structured logs
+- **Journal entries** are freeform notes that can be backdated
+
+**Current decision:** Journal-first approach for MVP. Sessions remain for advanced users who want real-time tracking, but the primary UX is through journal entries.
+
+### Why Both?
+- Sessions: Good for users who want to track play time, session numbers
+- Journal: Lower friction, works for backdating, fits narrative style
+
+The journal entry modal flows into the character update prompt, which uses the same data structure as SessionLog. This keeps things consistent while offering a simpler entry point.
 
 ---
 
@@ -348,5 +504,9 @@ Future enhancements:
 
 _Add your thoughts here as you flesh out the design..._
 
-*(Expanded character sheet idea has been integrated into the design above)*
-
+**Potential improvements:**
+- Campaign chat/discussion (very future)
+- DM notes visible only to creator
+- Quest/objective tracking
+- NPC relationship tracking
+- Map/location pins
