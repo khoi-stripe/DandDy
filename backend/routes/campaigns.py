@@ -619,7 +619,7 @@ def get_campaign_pending_invitations(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get all pending invitations sent from this campaign. Only the creator can view."""
+    """Get all invited and active members for this campaign. Only the creator can view."""
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     
     if not campaign:
@@ -628,29 +628,31 @@ def get_campaign_pending_invitations(
             detail="Campaign not found"
         )
     
-    # Only creator can view pending invitations
+    # Only creator can view/manage invitations
     if campaign.dm_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the campaign creator can view pending invitations"
         )
     
-    # Get all pending invitations with user email
-    invitations = db.query(CampaignMember).options(
+    # Get all invited AND active members (excluding the creator themselves)
+    members = db.query(CampaignMember).options(
         joinedload(CampaignMember.user)
     ).filter(
         CampaignMember.campaign_id == campaign_id,
-        CampaignMember.status == MemberStatus.INVITED
+        CampaignMember.status.in_([MemberStatus.INVITED, MemberStatus.ACTIVE]),
+        CampaignMember.user_id != current_user.id  # Exclude creator from list
     ).all()
     
     return [
         CampaignPendingInviteResponse(
-            id=inv.id,
-            user_id=inv.user_id,
-            email=inv.user.email,
-            invited_at=inv.joined_at
+            id=m.id,
+            user_id=m.user_id,
+            email=m.user.email,
+            status=m.status.value,
+            invited_at=m.joined_at
         )
-        for inv in invitations
+        for m in members
     ]
 
 
@@ -739,7 +741,7 @@ def revoke_invitation(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Revoke a campaign invitation. Only the campaign creator can revoke."""
+    """Remove a member or cancel an invitation. Only the campaign creator can do this."""
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     
     if not campaign:
@@ -748,26 +750,34 @@ def revoke_invitation(
             detail="Campaign not found"
         )
     
-    # Only creator can revoke
+    # Only creator can remove members
     if campaign.dm_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the campaign creator can revoke invitations"
+            detail="Only the campaign creator can manage members"
         )
     
-    invitation = db.query(CampaignMember).filter(
+    # Find member (either invited or active)
+    member = db.query(CampaignMember).filter(
         CampaignMember.id == invitation_id,
         CampaignMember.campaign_id == campaign_id,
-        CampaignMember.status == MemberStatus.INVITED
+        CampaignMember.status.in_([MemberStatus.INVITED, MemberStatus.ACTIVE])
     ).first()
     
-    if not invitation:
+    if not member:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Invitation not found"
+            detail="Member not found"
         )
     
-    db.delete(invitation)
+    # Don't allow removing yourself (the creator)
+    if member.user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot remove yourself from your own campaign"
+        )
+    
+    db.delete(member)
     db.commit()
     
     return None
