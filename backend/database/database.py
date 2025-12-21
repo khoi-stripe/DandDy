@@ -450,18 +450,41 @@ def ensure_campaign_member_status_column():
     """
     Lightweight migration helper for campaign_members table.
     Adds the status column for tracking invitation state (invited, active, inactive, left).
+    Also ensures the PostgreSQL enum type has all required values.
     """
     inspector = inspect(engine)
     if not inspector.has_table("campaign_members"):
         return
 
     existing_cols = {col["name"] for col in inspector.get_columns("campaign_members")}
+    is_postgres = not settings.database_url.startswith("sqlite")
 
     with engine.connect() as conn:
         if "status" not in existing_cols:
             conn.execute(text("ALTER TABLE campaign_members ADD COLUMN status VARCHAR DEFAULT 'active'"))
             # Backfill existing members to have status = 'active'
             conn.execute(text("UPDATE campaign_members SET status = 'active' WHERE status IS NULL"))
+        
+        # For PostgreSQL, ensure the memberstatus enum type has all values
+        # (in case 'invited' was added after initial table creation)
+        if is_postgres:
+            try:
+                # Check if 'invited' exists in the enum type
+                result = conn.execute(text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_enum 
+                        WHERE enumlabel = 'invited' 
+                        AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'memberstatus')
+                    )
+                """))
+                has_invited = result.scalar()
+                
+                if not has_invited:
+                    # Add 'invited' to the enum type
+                    conn.execute(text("ALTER TYPE memberstatus ADD VALUE IF NOT EXISTS 'invited'"))
+            except Exception as e:
+                # If the enum type doesn't exist or other error, log and continue
+                print(f"Note: Could not verify/add memberstatus enum value: {e}")
 
         conn.commit()
 
