@@ -707,9 +707,9 @@ const CharacterSheet = (window.CharacterSheet = {
       });
     }
 
-    // Manager-only: View navigation buttons
-    // - "Campaign →" in grid-sheet view, "← Characters" in sheet-campaign view
-    const viewNavButtonHtml =
+    // Manager-only: Campaign button in header
+    // - "Campaign →" in grid-sheet view (hidden in sheet-campaign view via CSS)
+    const campaignButtonHtml =
       context === 'manager' && hasValidManagerId
         ? `
         <button
@@ -718,12 +718,6 @@ const CharacterSheet = (window.CharacterSheet = {
           onclick="ExpandedView.expand()"
           title="View campaign info"
         >Campaign →</button>
-        <button
-          class="terminal-btn-small sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-characters hide-on-mobile"
-          type="button"
-          onclick="ExpandedView.collapse()"
-          title="Return to character grid"
-        >← Characters</button>
       `
         : '';
 
@@ -775,10 +769,10 @@ const CharacterSheet = (window.CharacterSheet = {
         : '';
 
     const actionsBlock =
-      viewNavButtonHtml || headerMenu
+      campaignButtonHtml || headerMenu
         ? `
         <div class="sheet-title-actions">
-          ${viewNavButtonHtml}
+          ${campaignButtonHtml}
           ${headerMenu}
         </div>
       `
@@ -1099,6 +1093,32 @@ const CharacterSheet = (window.CharacterSheet = {
             <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hitDiceCurrent}/${parsed.hitDiceMax} d${parsed.hitDie}`}</div>
           </div>
         </div>
+        ${this._renderConditions(parsed)}
+      </div>
+    `;
+  },
+
+  _renderConditions(parsed) {
+    const conditions = parsed.conditions || [];
+    if (conditions.length === 0) return '';
+
+    // Map condition names to display info
+    const conditionInfo = {
+      poisoned: { label: 'POISONED', icon: '☠' },
+      exhausted: { label: 'EXHAUSTED', icon: '💤' },
+      diseased: { label: 'DISEASED', icon: '🦠' },
+      cursed: { label: 'CURSED', icon: '⚡' },
+    };
+
+    const conditionTags = conditions.map(c => {
+      const info = conditionInfo[c.toLowerCase()] || { label: c.toUpperCase(), icon: '⚠' };
+      return `<span class="condition-tag condition-${c.toLowerCase()}">${info.icon} ${info.label}</span>`;
+    }).join('');
+
+    return `
+      <div class="conditions-display">
+        <span class="conditions-label">STATUS:</span>
+        <div class="conditions-tags">${conditionTags}</div>
       </div>
     `;
   },
@@ -2447,6 +2467,20 @@ const CharacterSheet = (window.CharacterSheet = {
       )
       .join('')}</ul>`;
 
+    // Currency display - only show coins with non-zero values
+    const { cp, sp, ep, gp, pp } = parsed.currency || {};
+    const coinParts = [];
+    if (pp > 0) coinParts.push(`${pp} PP`);
+    if (gp > 0) coinParts.push(`${gp} GP`);
+    if (ep > 0) coinParts.push(`${ep} EP`);
+    if (sp > 0) coinParts.push(`${sp} SP`);
+    if (cp > 0) coinParts.push(`${cp} CP`);
+    
+    const hasCurrency = coinParts.length > 0;
+    const currencyMarkup = hasCurrency 
+      ? `<div class="sheet-currency"><span class="currency-label">Coins:</span> <span class="currency-value">${coinParts.join(' · ')}</span></div>`
+      : '';
+
     return `
       <div class="sheet-section sheet-section--collapsible" id="equipment-section">
         <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
@@ -2455,6 +2489,7 @@ const CharacterSheet = (window.CharacterSheet = {
         </button>
         <div class="sheet-collapsible-content">
           ${equipmentMarkup}
+          ${currencyMarkup}
         </div>
       </div>
     `;
@@ -2707,10 +2742,22 @@ const CharacterSheet = (window.CharacterSheet = {
     const explicitEquipment = character.equipment || [];
     // If player has explicitly edited equipment, treat that as the source of truth.
     // Otherwise, fall back to class equipment + any existing equipment array.
-    const allEquipment =
+    const rawEquipment =
       explicitEquipment && explicitEquipment.length > 0
         ? explicitEquipment
         : [...new Set([...(character.equipment || []), ...classEquipment])];
+    
+    // Extract gold from equipment (e.g., "10 gp", "15 gp") and add to currency
+    let equipmentGold = 0;
+    const goldPattern = /^(\d+)\s*gp$/i;
+    const allEquipment = rawEquipment.filter(item => {
+      const match = item.match(goldPattern);
+      if (match) {
+        equipmentGold += parseInt(match[1], 10);
+        return false; // Remove from equipment list
+      }
+      return true;
+    });
 
     // Handle racial traits
     // Look up race by id or name (case-insensitive) since character.race may be display name
@@ -2798,6 +2845,15 @@ const CharacterSheet = (window.CharacterSheet = {
       // Equipment
       equipment: allEquipment,
 
+      // Currency (support both formats: currency.gp or gold, plus equipment gold)
+      currency: {
+        cp: character.currency?.cp ?? character.copper ?? 0,
+        sp: character.currency?.sp ?? character.silver ?? 0,
+        ep: character.currency?.ep ?? character.electrum ?? 0,
+        gp: (character.currency?.gp ?? character.gold ?? 0) + equipmentGold,
+        pp: character.currency?.pp ?? character.platinum ?? 0,
+      },
+
       // Background
       backgroundFeatureName:
         backgroundFeature?.name || 'Feature',
@@ -2814,6 +2870,9 @@ const CharacterSheet = (window.CharacterSheet = {
 
       // Class Resources (Ki, Rage, etc.)
       classResources: character.classResources || {},
+
+      // Status Conditions (poisoned, exhausted, diseased, cursed)
+      conditions: character.conditions || [],
 
       // Flags for conditional rendering
       // In builder, always show sections (except spells until we know they're a caster)

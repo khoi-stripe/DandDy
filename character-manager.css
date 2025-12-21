@@ -58,7 +58,7 @@
 
 /* ===== PANEL: CHARACTER SHEET ===== */
 .panel-character-sheet {
-    padding: 32px;
+    padding: 0 32px 32px 32px;
     border-right: 1px solid var(--sheet-accent-dim);
     /* Teal scrollbar theme */
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
@@ -66,14 +66,43 @@
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
-/* Teal border around character sheet */
+/* Teal border around character sheet (no top border - nav bar has bottom border) */
 .panel-character-sheet .character-sheet {
     border: 1px solid var(--sheet-accent-dim);
+    border-top: none;
 }
 
 /* When sheet panel is first (left position), adjust borders */
 .split-layout[data-view="sheet-campaign"] .panel-character-sheet {
     border-right: none;
+}
+
+/* ===== SHEET NAV BAR (above character sheet) ===== */
+.sheet-nav-bar {
+    padding: 32px 0 0 0;
+    border-bottom: 1px solid var(--sheet-accent);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    background: var(--terminal-bg);
+    z-index: 10;
+}
+
+.sheet-nav-bar.is-hidden {
+    display: none;
+}
+
+/* Teal theme for nav bar buttons */
+.sheet-nav-bar .terminal-btn-small {
+    color: var(--sheet-accent);
+    border-color: var(--sheet-accent);
+}
+
+.sheet-nav-bar .terminal-btn-small:hover {
+    background: var(--sheet-accent);
+    color: var(--terminal-bg);
 }
 
 /* View navigation buttons - show/hide based on current view */
@@ -806,7 +835,7 @@
     /* Extend background padding to cover scrolling content behind */
     padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-md) var(--spacing-xl);
     /* Negative margins to counteract panel padding so we go edge-to-edge */
-    margin: 0 calc(-1 * var(--spacing-xl)) var(--spacing-md) calc(-1 * var(--spacing-xl));
+    margin: 0 calc(-1 * var(--spacing-xl)) 0 calc(-1 * var(--spacing-xl));
 }
 
 /* Session in progress notice */
@@ -1401,6 +1430,81 @@
     padding-left: 1.5em;
     margin-top: 2px;
     margin-bottom: 4px;
+}
+
+/* Currency display in equipment section */
+.sheet-currency {
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-dim);
+    font-size: 0.95em;
+}
+
+.sheet-currency .currency-label {
+    color: var(--sheet-accent);
+}
+
+.sheet-currency .currency-value {
+    color: var(--sheet-accent);
+    font-weight: 500;
+}
+
+/* Status conditions display */
+.conditions-display {
+    margin-top: 12px;
+    padding: 8px 10px;
+    background: rgba(255, 60, 60, 0.08);
+    border: 1px solid rgba(255, 60, 60, 0.3);
+    border-radius: 4px;
+}
+
+.conditions-label {
+    color: var(--sheet-accent);
+    font-size: 0.85em;
+    margin-right: 8px;
+}
+
+.conditions-tags {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.condition-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    font-size: 0.8em;
+    font-weight: 600;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.condition-poisoned {
+    background: rgba(80, 200, 80, 0.2);
+    color: #50c850;
+    border: 1px solid rgba(80, 200, 80, 0.4);
+}
+
+.condition-exhausted {
+    background: rgba(180, 140, 80, 0.2);
+    color: #c8a050;
+    border: 1px solid rgba(180, 140, 80, 0.4);
+}
+
+.condition-diseased {
+    background: rgba(160, 100, 160, 0.2);
+    color: #b080b0;
+    border: 1px solid rgba(160, 100, 160, 0.4);
+}
+
+.condition-cursed {
+    background: rgba(200, 60, 200, 0.2);
+    color: #d050d0;
+    border: 1px solid rgba(200, 60, 200, 0.4);
 }
 
 /* Hide print-only name on screen - only shown in print */
@@ -2716,6 +2820,11 @@
     display: none;
     padding: var(--spacing-md);
     touch-action: pan-y pinch-zoom; /* Allow vertical scroll, capture horizontal swipes */
+}
+
+/* Remove top border from character sheet in mobile container */
+.mobile-sheet-container.character-sheet {
+    border-top: none;
 }
 
 /* Swipe loading overlay - positioned over the portrait area only */

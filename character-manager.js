@@ -1017,14 +1017,14 @@ const ExpandedView = (window.ExpandedView = {
         const menuItems = [];
         if (isCreator) {
             menuItems.push({
-                icon: '✉',
-                label: 'Invite',
-                onclick: `CampaignUI.openInviteModal(${campaign.id})`,
-            });
-            menuItems.push({
                 icon: '⚙',
                 label: 'Manage Campaign',
                 onclick: `CampaignUI.openManageModal(${campaign.id})`,
+            });
+            menuItems.push({
+                icon: '✉',
+                label: 'Invite',
+                onclick: `CampaignUI.openInviteModal(${campaign.id})`,
             });
         }
         menuItems.push({
@@ -2094,13 +2094,18 @@ const CampaignUI = (window.CampaignUI = {
             this._pendingJournalEntry = null;
             this.closeCharacterUpdateModal();
             
-            // Refresh the campaign panel and character data
-            ExpandedView._loadCampaignPanel();
+            // Refresh character data from server
+            await AppState.loadCharacters();
             
-            // Refresh character to show updated stats
-            if (typeof loadCharacters === 'function') {
-                loadCharacters();
+            // Re-select the character to update the sheet view with new stats
+            // (characterId is already defined at the top of this function)
+            if (characterId) {
+                // viewCharacter reloads the sheet from AppState.characters
+                viewCharacter(characterId);
             }
+            
+            // Refresh the campaign panel
+            ExpandedView._loadCampaignPanel();
             
             showNotification('✓ Journal entry saved & character updated');
 
@@ -2772,10 +2777,12 @@ const UI = {
                 : [];
         const placeholder = document.querySelector('.sheet-placeholder');
         const sheetEl = document.getElementById('characterSheet');
+        const navBarEl = document.getElementById('sheetNavBar');
 
         if (!characters.length) {
             if (placeholder) placeholder.classList.remove('is-hidden');
             if (sheetEl) sheetEl.classList.add('is-hidden');
+            if (navBarEl) navBarEl.classList.add('is-hidden');
             if (typeof AppState !== 'undefined' && AppState) {
                 AppState.selectedCharacterId = null;
             }
@@ -2869,6 +2876,7 @@ const UI = {
             // Desktop with no selection and no characters - show placeholder
             if (placeholder) placeholder.classList.remove('is-hidden');
             if (sheetEl) sheetEl.classList.add('is-hidden');
+            if (navBarEl) navBarEl.classList.add('is-hidden');
         }
     },
 
@@ -3090,9 +3098,24 @@ const UI = {
     showCharacterSheet(character) {
         const placeholder = document.querySelector('.sheet-placeholder');
         const sheetContainer = document.getElementById('characterSheet');
+        const navBar = document.getElementById('sheetNavBar');
 
         placeholder.classList.add('is-hidden');
         sheetContainer.classList.remove('is-hidden');
+        
+        // Show nav bar with "← Characters" button (only in manager context)
+        // Campaign button is in the sheet header
+        if (navBar && character.id) {
+            navBar.classList.remove('is-hidden');
+            navBar.innerHTML = `
+                <button
+                    class="terminal-btn-small sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-characters hide-on-mobile"
+                    type="button"
+                    onclick="ExpandedView.collapse()"
+                    title="Return to character grid"
+                >← Characters</button>
+            `;
+        }
         
         // Check if this is a demo character - disable editing if so
         const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
