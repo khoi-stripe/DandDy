@@ -860,33 +860,46 @@ const ExpandedView = (window.ExpandedView = {
         // Check if user is authenticated before making API calls
         const isAuthenticated = window.AuthService && AuthService.isAuthenticated();
         
-        // Get the character's campaignId
+        // Get the character's campaignId from the character object
         const character = AppState.characters?.find(c => String(c.id) === String(characterId));
-        const campaignId = character?.campaignId;
+        let campaignId = character?.campaignId;
+        
+        // If not authenticated, show empty state (can't fetch campaign data)
+        if (!isAuthenticated) {
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, 0, []);
+            return;
+        }
+        
+        // If no campaignId on character, try to find campaign via membership
+        // This handles cases where character.campaign_id wasn't properly set
+        let campaignDataFromMembership = null;
+        if (!campaignId) {
+            try {
+                campaignDataFromMembership = await CampaignUI.getCharacterCampaign(characterId);
+                if (campaignDataFromMembership) {
+                    campaignId = campaignDataFromMembership.campaign.id;
+                    console.log('📋 Found campaign via membership lookup:', campaignId);
+                }
+            } catch (e) {
+                console.warn('Could not check campaign membership:', e);
+            }
+        }
         
         if (!campaignId) {
             // No campaign - fetch pending invitations and journal entries
             let pendingCount = 0;
             let journalEntries = [];
-            if (isAuthenticated) {
-                try {
-                    const [invitations, entries] = await Promise.all([
-                        CampaignAPI.getPendingInvitations().catch(() => []),
-                        CampaignAPI.getJournalEntries(characterId).catch(() => [])
-                    ]);
-                    pendingCount = invitations?.length || 0;
-                    journalEntries = entries || [];
-                } catch (e) {
-                    console.warn('Could not fetch data:', e);
-                }
+            try {
+                const [invitations, entries] = await Promise.all([
+                    CampaignAPI.getPendingInvitations().catch(() => []),
+                    CampaignAPI.getJournalEntries(characterId).catch(() => [])
+                ]);
+                pendingCount = invitations?.length || 0;
+                journalEntries = entries || [];
+            } catch (e) {
+                console.warn('Could not fetch data:', e);
             }
             panel.innerHTML = this._renderCampaignPanelContent(characterId, null, pendingCount, journalEntries);
-            return;
-        }
-        
-        // If not authenticated, show empty state (can't fetch campaign data)
-        if (!isAuthenticated) {
-            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, 0, []);
             return;
         }
         
@@ -902,17 +915,35 @@ const ExpandedView = (window.ExpandedView = {
         `;
         
         try {
-            // Fetch campaign details, members, and journal entries in parallel
-            const [campaign, members, journalEntries] = await Promise.all([
-                CampaignAPI.getCampaign(campaignId),
-                CampaignAPI.getCampaignMembers(campaignId),
-                CampaignAPI.getJournalEntries(characterId).catch(e => {
+            // If we already have campaign data from membership lookup, use it
+            // Otherwise fetch campaign details, members, and journal entries in parallel
+            let campaignData;
+            let journalEntries;
+            
+            if (campaignDataFromMembership) {
+                // We already have campaign and members from the membership lookup
+                campaignData = {
+                    campaign: campaignDataFromMembership.campaign,
+                    members: campaignDataFromMembership.members
+                };
+                journalEntries = await CampaignAPI.getJournalEntries(characterId).catch(e => {
                     console.warn('Could not fetch journal entries:', e);
                     return [];
-                })
-            ]);
+                });
+            } else {
+                // Fetch campaign details, members, and journal entries in parallel
+                const [campaign, members, entries] = await Promise.all([
+                    CampaignAPI.getCampaign(campaignId),
+                    CampaignAPI.getCampaignMembers(campaignId),
+                    CampaignAPI.getJournalEntries(characterId).catch(e => {
+                        console.warn('Could not fetch journal entries:', e);
+                        return [];
+                    })
+                ]);
+                campaignData = { campaign, members };
+                journalEntries = entries;
+            }
             
-            const campaignData = { campaign, members };
             panel.innerHTML = this._renderCampaignPanelContent(characterId, campaignData, 0, journalEntries);
             this._initDescriptionTruncation();
             
@@ -1090,15 +1121,21 @@ const ExpandedView = (window.ExpandedView = {
 
     /** Render the Journal section (bottom) */
     _renderJournalSection(characterId, entries = []) {
+        // #region agent log - debug _renderJournalSection
+        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'character-manager.js:_renderJournalSection',message:'Entering _renderJournalSection',data:{characterId,entriesCount:entries?.length,hasUtilsEscapeHtml:typeof Utils?.escapeHtml,hasFormatDate:typeof this._formatDate,hasTruncateText:typeof this._truncateText},timestamp:Date.now(),sessionId:'debug-session',runId:'refactor',hypothesisId:'ROBUST'})}).catch(()=>{});
+        // #endregion
         const entriesHtml = entries.length > 0
             ? entries.map(entry => `
-                <div class="journal-entry" data-entry-id="${entry.id}">
+                <div class="journal-entry" data-entry-id="${entry.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">
                     <div class="journal-entry-header">
                         <span class="journal-entry-date">${this._formatDate(entry.entry_date)}</span>
                         <span class="journal-entry-title">${entry.title || 'Untitled'}</span>
                     </div>
                     <div class="journal-entry-preview">
                         ${this._truncateText(entry.content, 100)}
+                    </div>
+                    <div class="journal-entry-full">
+                        ${Utils.escapeHtml(entry.content || '').replace(/\n/g, '<br>')}
                     </div>
                     <button class="journal-entry-edit terminal-btn-icon" onclick="CampaignUI.editJournalEntry(${entry.id})" title="Edit entry">
                         ✎
@@ -1115,7 +1152,7 @@ const ExpandedView = (window.ExpandedView = {
         return `
             <div class="journal-section">
                 <div class="journal-header">
-                    <h3 class="journal-title">Journal</h3>
+                    <h3 class="journal-title">[ Journal ]</h3>
                     <button class="terminal-btn terminal-btn-small ui-theme-teal" onclick="CampaignUI.openJournalEntryModal()">
                         + Add Entry
                     </button>
@@ -1311,8 +1348,8 @@ const CampaignUI = (window.CampaignUI = {
             <div class="invitation-item" data-campaign-id="${inv.campaign_id}" onclick="CampaignUI.selectInvitation(${inv.campaign_id})">
                 <div class="invitation-radio"></div>
                 <div class="invitation-info">
-                    <div class="invitation-name">${this._escapeHtml(inv.campaign_name)}</div>
-                    ${inv.campaign_description ? `<div class="invitation-desc">${this._escapeHtml(inv.campaign_description)}</div>` : ''}
+                    <div class="invitation-name">${Utils.escapeHtml(inv.campaign_name)}</div>
+                    ${inv.campaign_description ? `<div class="invitation-desc">${Utils.escapeHtml(inv.campaign_description)}</div>` : ''}
                 </div>
             </div>
         `).join('');
@@ -1334,13 +1371,6 @@ const CampaignUI = (window.CampaignUI = {
         // Enable join button
         const joinBtn = document.getElementById('joinCampaignBtn');
         if (joinBtn) joinBtn.disabled = false;
-    },
-    
-    _escapeHtml(str) {
-        if (!str) return '';
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
     },
 
     closeJoinModal() {
@@ -1794,18 +1824,23 @@ const CampaignUI = (window.CampaignUI = {
     
     /**
      * Get campaign for a character (if any)
-     * @param {number} characterId
+     * Checks campaign memberships to find which campaign this character is assigned to.
+     * @param {number|string} characterId
      * @returns {Promise<Object|null>} Campaign data or null
      */
     async getCharacterCampaign(characterId) {
         try {
+            // Normalize to string for consistent comparison (API returns numbers, frontend uses strings)
+            const charIdStr = String(characterId);
+            
             // Get all campaigns user is a member of
             const campaigns = await CampaignAPI.getCampaigns();
             
             // Find campaign where this character is assigned
             for (const campaign of campaigns) {
                 const members = await CampaignAPI.getCampaignMembers(campaign.id);
-                const myMembership = members.find(m => m.character_id === characterId);
+                // Use String() comparison to handle type mismatches (API returns numbers)
+                const myMembership = members.find(m => String(m.character_id) === charIdStr);
                 if (myMembership) {
                     return { campaign, membership: myMembership, members };
                 }
@@ -1922,6 +1957,15 @@ const CampaignUI = (window.CampaignUI = {
 
     async editJournalEntry(entryId) {
         await this.openJournalEntryModal(entryId);
+    },
+
+    /** Toggle journal entry expanded/collapsed state */
+    toggleJournalEntry(entryEl, event) {
+        // Don't toggle if clicking the edit button
+        if (event.target.closest('.journal-entry-edit')) {
+            return;
+        }
+        entryEl.classList.toggle('is-expanded');
     },
 
     // ========================================
@@ -2755,7 +2799,7 @@ const UI = {
             if (sheetLoading) sheetLoading.classList.add('is-hidden');
             if (campaignLoading) campaignLoading.classList.add('is-hidden');
             if (grid) grid.classList.remove('is-hidden');
-            if (sheetNavBar) sheetNavBar.classList.remove('is-hidden');
+            // sheetNavBar visibility is controlled by showCharacterSheet() to sync with characterSheet
             // empty state, sheet, and campaign visibility will be controlled by UI.render()
         }
     },
@@ -3105,6 +3149,7 @@ const UI = {
 
         placeholder.classList.add('is-hidden');
         sheetContainer.classList.remove('is-hidden');
+        if (navBar) navBar.classList.remove('is-hidden');
         
         // Nav bar is kept visible but empty - the "← Characters" button is now inside the sheet header
         
@@ -4180,7 +4225,7 @@ async function openShareModal(characterId) {
 
     const safeName = Utils.escapeHtml(character.name || 'Unnamed');
     const modalHtml = `
-      <div id="shareModal" class="modal modal-yellow show">
+      <div id="shareModal" class="modal show">
         <div class="modal-content">
           <div class="modal-header">
             <h2 class="modal-title">SHARE CHARACTER</h2>

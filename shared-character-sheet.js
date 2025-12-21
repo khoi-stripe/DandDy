@@ -1080,6 +1080,7 @@ const CharacterSheet = (window.CharacterSheet = {
       <div class="sheet-section" id="combat-stats-section">
         <div class="sheet-header ${context === 'builder' ? 'sheet-header--no-divider' : ''}">
           <div class="sheet-header-title">[ COMBAT STATS ]</div>
+          ${this._renderConditionTags(parsed)}
         </div>
         <div class="stat-grid">
           <div class="stat-box">
@@ -1107,34 +1108,27 @@ const CharacterSheet = (window.CharacterSheet = {
             <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hitDiceCurrent}/${parsed.hitDiceMax} d${parsed.hitDie}`}</div>
           </div>
         </div>
-        ${this._renderConditions(parsed)}
       </div>
     `;
   },
 
-  _renderConditions(parsed) {
+  _renderConditionTags(parsed) {
     const conditions = parsed.conditions || [];
     if (conditions.length === 0) return '';
 
-    // Map condition names to display info
-    const conditionInfo = {
-      poisoned: { label: 'POISONED', icon: '☠' },
-      exhausted: { label: 'EXHAUSTED', icon: '💤' },
-      diseased: { label: 'DISEASED', icon: '🦠' },
-      cursed: { label: 'CURSED', icon: '⚡' },
+    const conditionDefinitions = {
+      poisoned: 'Disadvantage on attack rolls and ability checks.',
+      exhausted: 'Levels of exhaustion cause cumulative penalties to speed, ability checks, attacks, saving throws, and HP maximum.',
+      diseased: 'Various effects depending on the disease. May cause ability score reduction, exhaustion, or other debilitating effects.',
+      cursed: 'Supernatural affliction with effects varying by curse type. May affect abilities, attacks, or impose other penalties.',
     };
 
     const conditionTags = conditions.map(c => {
-      const info = conditionInfo[c.toLowerCase()] || { label: c.toUpperCase(), icon: '⚠' };
-      return `<span class="condition-tag condition-${c.toLowerCase()}">${info.icon} ${info.label}</span>`;
+      const tooltip = conditionDefinitions[c.toLowerCase()] || 'Status condition';
+      return `<span class="condition-tag condition-${c.toLowerCase()} has-tooltip" data-tooltip="${this.escapeHtml(tooltip)}">${c.toUpperCase()}</span>`;
     }).join('');
 
-    return `
-      <div class="conditions-display">
-        <span class="conditions-label">STATUS:</span>
-        <div class="conditions-tags">${conditionTags}</div>
-      </div>
-    `;
+    return `<div class="conditions-tags">${conditionTags}</div>`;
   },
 
   _renderClassResources(parsed) {
