@@ -60,8 +60,6 @@
 /* ===== PANEL: CHARACTER SHEET ===== */
 .panel-character-sheet {
     padding: 32px;
-    border-top: 1px solid var(--sheet-accent-dim);
-    border-left: 1px solid var(--sheet-accent-dim);
     border-right: 1px solid var(--sheet-accent-dim);
     /* Teal scrollbar theme */
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
@@ -81,7 +79,7 @@
 
 /* ===== PANEL: CAMPAIGN ===== */
 .panel-campaign {
-    padding: 32px 32px 0 32px;
+    padding: 32px 32px 0 0;
     background: var(--terminal-bg);
     
     /* Apply teal theme context */
@@ -168,17 +166,99 @@
     border-radius: 4px;
     padding: var(--spacing-md);
     background: hsla(var(--theme-teal-h), var(--theme-teal-s), 5%, 0.5);
+    /* Allow overflow menu to escape bounds */
+    overflow: visible;
 }
 
 .campaign-area-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
     margin-bottom: var(--spacing-md);
 }
 
 .campaign-area-title {
-    font-size: 1.1em;
+    font-size: 18px;
     color: var(--sheet-accent);
     margin: 0;
     font-weight: 500;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Campaign overflow menu */
+.campaign-overflow {
+    flex-shrink: 0;
+    position: relative;
+}
+
+.campaign-overflow-trigger {
+    padding: 4px 6px;
+    min-width: 28px;
+    border-color: var(--sheet-accent-dim);
+}
+
+/* Hover handled by overflow-trigger + ui-theme-teal classes */
+
+.campaign-overflow-trigger .sheet-actions-dot {
+    background-color: var(--sheet-accent-dim);
+}
+
+.campaign-overflow-trigger:hover .sheet-actions-dot {
+    background-color: var(--sheet-accent);
+}
+
+.campaign-overflow-menu {
+    /* Let JS handle positioning - just override the transform animation */
+    min-width: 180px;
+    transform: none;
+    /* Teal theme */
+    background: var(--terminal-bg);
+    border-color: var(--sheet-accent-dim);
+}
+
+.campaign-overflow-menu.is-open {
+    transform: none;
+}
+
+/* Teal themed menu options */
+.campaign-overflow-menu .selector-option {
+    color: var(--sheet-accent);
+}
+
+.campaign-overflow-menu .selector-option:hover {
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 20%, 0.3);
+    color: var(--sheet-accent-bright);
+}
+
+.campaign-overflow-menu .selector-option-icon {
+    color: var(--sheet-accent);
+}
+
+.campaign-overflow-menu .selector-option:hover .selector-option-icon {
+    color: var(--sheet-accent-bright);
+}
+
+/* Override danger to use teal like other options */
+.campaign-overflow-menu .selector-option.is-danger {
+    color: var(--sheet-accent);
+}
+
+.campaign-overflow-menu .selector-option.is-danger:hover {
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 20%, 0.3);
+    color: var(--sheet-accent-bright);
+}
+
+.campaign-overflow-menu .selector-option.is-danger .selector-option-icon {
+    color: var(--sheet-accent);
+}
+
+.campaign-overflow-menu .selector-option.is-danger:hover .selector-option-icon {
+    color: var(--sheet-accent-bright);
 }
 
 /* No campaign state */
@@ -197,6 +277,11 @@
     color: var(--sheet-accent-dim);
     font-size: var(--font-size-small);
     margin-bottom: var(--spacing-md);
+}
+
+.campaign-area-empty-text.has-invitations {
+    color: var(--sheet-accent);
+    font-weight: 500;
 }
 
 .campaign-area-actions {
@@ -229,6 +314,197 @@
     letter-spacing: 0.1em;
 }
 
+/* ===== MANAGE CAMPAIGN MODAL - INVITE SECTION ===== */
+/* Uses same styling as share modal */
+.invite-section {
+    margin-top: var(--spacing-md);
+}
+
+.invite-section-title {
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--modal-accent-dim);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.invite-input-row {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.invite-input-row .terminal-input {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Pending invites list - matches share modal collaborators styling */
+.pending-invites-list {
+    border: 1px solid var(--modal-accent-dim);
+    border-radius: 4px;
+    background: var(--terminal-bg-dim);
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.pending-invites-empty {
+    color: var(--modal-accent-dim);
+    font-size: var(--font-size-sm);
+    text-align: center;
+    padding: 0.75rem;
+}
+
+.pending-invite-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--modal-accent-dim);
+    transition: background-color 0.15s ease;
+}
+
+.pending-invite-item:last-child {
+    border-bottom: none;
+}
+
+.pending-invite-item:hover {
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.08);
+}
+
+.pending-invite-email {
+    font-size: var(--font-size-sm);
+    color: var(--modal-accent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1;
+}
+
+.pending-invite-remove {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: var(--modal-accent-dim);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.pending-invite-remove:hover {
+    color: var(--error-color, #f44);
+    background-color: hsla(0, 70%, 50%, 0.15);
+}
+
+/* Modal footer with items spread (delete left, save/cancel right) */
+.modal-footer-spread {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-footer-right {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+/* ===== JOIN CAMPAIGN - INVITATIONS LIST ===== */
+.invitations-list {
+    border: 1px solid var(--modal-accent-dim);
+    border-radius: 4px;
+    background: var(--terminal-bg-dim);
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.invitations-loading,
+.invitations-empty {
+    color: var(--modal-accent-dim);
+    font-size: var(--font-size-sm);
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.invitation-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--modal-accent-dim);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.invitation-item:last-child {
+    border-bottom: none;
+}
+
+.invitation-item:hover {
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.08);
+}
+
+.invitation-item.is-selected {
+    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.15);
+}
+
+.invitation-radio {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--modal-accent-dim);
+    border-radius: 50%;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease;
+}
+
+.invitation-item:hover .invitation-radio {
+    border-color: var(--modal-accent);
+}
+
+.invitation-item.is-selected .invitation-radio {
+    border-color: var(--modal-accent);
+}
+
+.invitation-item.is-selected .invitation-radio::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background-color: var(--modal-accent);
+    border-radius: 50%;
+}
+
+.invitation-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.invitation-name {
+    font-size: var(--font-size-base);
+    color: var(--modal-accent);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.invitation-desc {
+    font-size: var(--font-size-sm);
+    color: var(--modal-accent-dim);
+    margin-top: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .terminal-btn-icon {
     background: transparent;
     border: none;
@@ -249,14 +525,23 @@
     margin-bottom: var(--spacing-md);
 }
 
-.party-header {
-    font-size: var(--font-size-small);
+/* Party section uses sheet-header--collapsible - teal themed */
+.campaign-area-party .sheet-header--collapsible {
     color: var(--sheet-accent-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: var(--spacing-sm);
-    border-bottom: 1px solid var(--sheet-border-color);
-    padding-bottom: var(--spacing-xs);
+    border-color: var(--sheet-border-color);
+}
+
+.campaign-area-party .sheet-header--collapsible:hover {
+    color: var(--sheet-accent);
+    border-color: var(--sheet-accent-dim);
+}
+
+.campaign-area-party .sheet-header-toggle {
+    color: var(--sheet-accent-dim);
+}
+
+.campaign-area-party .sheet-header--collapsible:hover .sheet-header-toggle {
+    color: var(--sheet-accent);
 }
 
 .party-list {

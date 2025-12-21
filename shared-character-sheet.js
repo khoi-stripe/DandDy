@@ -1634,7 +1634,8 @@ const CharacterSheet = (window.CharacterSheet = {
           // so the dropdown stays anchored to its button during page scroll.
           const inSearchActions = !!triggerEl.closest('.search-actions');
           const inHeaderOverflow = !!triggerEl.closest('.header-overflow');
-          const useFixedPositioning = !inSearchActions && !inHeaderOverflow;
+          const inCampaignOverflow = !!triggerEl.closest('.campaign-overflow');
+          const useFixedPositioning = !inSearchActions && !inHeaderOverflow && !inCampaignOverflow;
 
           // Measure menu size without affecting final animation. Temporarily
           // neutralize transforms so we get the *full* height instead of the
@@ -1927,8 +1928,8 @@ const CharacterSheet = (window.CharacterSheet = {
             menu.style.bottom = 'auto';
 
             // Horizontal positioning for absolute menus
-            if (inHeaderOverflow) {
-              // Header overflow: right-align menu with trigger (opens leftward)
+            if (inHeaderOverflow || inCampaignOverflow) {
+              // Header/campaign overflow: right-align menu with trigger (opens leftward)
               const right = shellRect.right - triggerRect.right;
               menu.style.left = 'auto';
               menu.style.right = `${right}px`;

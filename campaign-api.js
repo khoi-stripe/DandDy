@@ -239,6 +239,82 @@ const CampaignAPI = (window.CampaignAPI = {
   },
 
   // ========================================
+  // INVITATION METHODS
+  // ========================================
+
+  /**
+   * Get pending campaign invitations for the current user
+   * @returns {Promise<Array>} List of pending invitations
+   */
+  async getPendingInvitations() {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Fetching pending invitations...');
+      const invitations = await this._apiRequest('/campaigns/invitations/pending');
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Found', invitations.length, 'pending invitations');
+      return invitations;
+    } catch (error) {
+      console.error('🏰 CAMPAIGN ERROR: Failed to fetch invitations:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Invite a user to a campaign by email
+   * @param {number} campaignId
+   * @param {string} email
+   * @returns {Promise<Object>} Invitation result
+   */
+  async inviteByEmail(campaignId, email) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Inviting', email, 'to campaign', campaignId);
+      return await this._apiRequest(`/campaigns/${campaignId}/invite`, {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+    } catch (error) {
+      console.error('🏰 CAMPAIGN ERROR: Failed to invite user:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Accept a campaign invitation
+   * @param {number} campaignId
+   * @param {number?} characterId - Optional character to assign
+   * @returns {Promise<Object>} { campaign, membership }
+   */
+  async acceptInvitation(campaignId, characterId = null) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Accepting invitation for campaign', campaignId);
+      const result = await this._apiRequest(`/campaigns/${campaignId}/accept-invitation`, {
+        method: 'POST',
+        body: JSON.stringify({ character_id: characterId }),
+      });
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Accepted invitation, now member of', result.campaign.name);
+      return result;
+    } catch (error) {
+      console.error('🏰 CAMPAIGN ERROR: Failed to accept invitation:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Decline a campaign invitation
+   * @param {number} campaignId
+   * @returns {Promise<void>}
+   */
+  async declineInvitation(campaignId) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Declining invitation for campaign', campaignId);
+      await this._apiRequest(`/campaigns/${campaignId}/decline-invitation`, { method: 'DELETE' });
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Declined invitation');
+    } catch (error) {
+      console.error('🏰 CAMPAIGN ERROR: Failed to decline invitation:', error);
+      throw error;
+    }
+  },
+
+  // ========================================
   // SESSION METHODS
   // ========================================
 

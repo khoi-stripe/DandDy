@@ -844,13 +844,20 @@ const ExpandedView = (window.ExpandedView = {
             return;
         }
         
-        // Get the character's campaign_id
+        // Get the character's campaignId
         const character = AppState.characters?.find(c => String(c.id) === String(characterId));
-        const campaignId = character?.campaign_id;
+        const campaignId = character?.campaignId;
         
         if (!campaignId) {
-            // No campaign - show empty state
-            panel.innerHTML = this._renderCampaignPanelContent(characterId, null);
+            // No campaign - fetch pending invitations and show empty state
+            let pendingCount = 0;
+            try {
+                const invitations = await CampaignAPI.getPendingInvitations();
+                pendingCount = invitations?.length || 0;
+            } catch (e) {
+                console.warn('Could not fetch pending invitations:', e);
+            }
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, pendingCount);
             return;
         }
         
@@ -883,35 +890,40 @@ const ExpandedView = (window.ExpandedView = {
     },
 
     /** Render the full campaign panel with both sections */
-    _renderCampaignPanelContent(characterId, campaignData = null) {
+    _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0) {
         return `
             <div class="campaign-panel-layout">
-                ${this._renderCampaignArea(campaignData)}
+                ${this._renderCampaignArea(campaignData, pendingInvitationCount)}
                 ${this._renderJournalSection(characterId)}
             </div>
         `;
     },
 
     /** Render the Campaign Area section (top) */
-    _renderCampaignArea(campaignData) {
+    _renderCampaignArea(campaignData, pendingInvitationCount = 0) {
         if (!campaignData) {
-            // No campaign - show join/create buttons
+            // No campaign - show join/create buttons with invitation count
+            const hasInvitations = pendingInvitationCount > 0;
+            const invitationText = hasInvitations 
+                ? `${pendingInvitationCount} campaign${pendingInvitationCount === 1 ? '' : 's'} available`
+                : 'Not in a campaign yet';
+            
             return `
                 <div class="campaign-area">
                     <div class="campaign-area-header">
                         <h3 class="campaign-area-title">Campaign</h3>
                     </div>
                     <div class="campaign-area-empty">
-                        <div class="campaign-area-empty-icon">⚔</div>
-                        <div class="campaign-area-empty-text">
-                            Not in a campaign yet
+                        <div class="campaign-area-empty-icon">${hasInvitations ? '📬' : '⚔'}</div>
+                        <div class="campaign-area-empty-text ${hasInvitations ? 'has-invitations' : ''}">
+                            ${invitationText}
                         </div>
                         <div class="campaign-area-actions">
-                            <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJoinModal()">
-                                Join Campaign
+                            <button class="terminal-btn terminal-btn-small ${hasInvitations ? 'terminal-btn-primary' : ''}" onclick="CampaignUI.openJoinModal()">
+                                Join${hasInvitations ? '' : ' Campaign'}
                             </button>
                             <button class="terminal-btn terminal-btn-small terminal-btn-secondary" onclick="CampaignUI.openCreateModal()">
-                                Create Campaign
+                                Create${hasInvitations ? '' : ' Campaign'}
                             </button>
                         </div>
                     </div>
@@ -921,6 +933,10 @@ const ExpandedView = (window.ExpandedView = {
 
         // Has campaign - show campaign info
         const { campaign, members } = campaignData;
+        
+        // Check if current user is the campaign creator
+        const currentUserId = window.AuthService?.getCurrentUser()?.id;
+        const isCreator = campaign.dm_id === currentUserId;
         
         // Build party list from members with character info
         const partyHtml = members && members.length > 0 
@@ -950,29 +966,71 @@ const ExpandedView = (window.ExpandedView = {
             ? `<div class="campaign-area-description">${campaign.description}</div>`
             : '';
 
+        // Overflow menu items
+        const menuItems = [];
+        if (isCreator) {
+            menuItems.push({
+                icon: '⚙',
+                label: 'Manage Campaign',
+                onclick: `CampaignUI.openManageModal(${campaign.id})`,
+            });
+        }
+        menuItems.push({
+            icon: '↩',
+            label: 'Leave Campaign',
+            onclick: `CampaignUI.leaveCampaign(${campaign.id})`,
+            danger: true,
+        });
+
+        const overflowMenuHtml = `
+            <div class="campaign-overflow selector-shell selector-shell--actions">
+                <button
+                    class="terminal-btn-small ui-theme-teal selector-trigger overflow-trigger campaign-overflow-trigger"
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-label="Campaign actions"
+                    onclick="CharacterSheet.toggleSelectorMenu(this)"
+                >
+                    <span class="sheet-actions-icon" aria-hidden="true">
+                        <span class="sheet-actions-dot dot-1"></span>
+                        <span class="sheet-actions-dot dot-2"></span>
+                        <span class="sheet-actions-dot dot-3"></span>
+                    </span>
+                </button>
+                <div class="selector-menu campaign-overflow-menu" role="menu" aria-hidden="true">
+                    ${menuItems.map(item => `
+                        <button
+                            class="selector-option${item.danger ? ' is-danger' : ''}"
+                            type="button"
+                            role="menuitem"
+                            onclick="${item.onclick}"
+                        >
+                            <span class="selector-option-icon">${item.icon}</span>
+                            <span class="selector-option-label">${item.label}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
         return `
             <div class="campaign-area">
                 <div class="campaign-area-header">
                     <h3 class="campaign-area-title">${campaign.name}</h3>
+                    ${overflowMenuHtml}
                 </div>
                 ${descriptionHtml}
-                <div class="campaign-area-invite">
-                    <span class="invite-label">Invite Code:</span>
-                    <code class="invite-code">${campaign.invite_code || 'N/A'}</code>
-                    <button class="terminal-btn-icon" onclick="CampaignUI.copyInviteCode('${campaign.invite_code}')" title="Copy invite code">
-                        ⎘
+                <div class="campaign-area-party sheet-section sheet-section--collapsible">
+                    <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
+                        <div class="sheet-header-title">[ PARTY (${members?.length || 0}) ]</div>
+                        <span class="sheet-header-toggle">^</span>
                     </button>
-                </div>
-                <div class="campaign-area-party">
-                    <div class="party-header">Party (${members?.length || 0})</div>
-                    <div class="party-list">
-                        ${partyHtml}
+                    <div class="sheet-collapsible-content">
+                        <div class="party-list">
+                            ${partyHtml}
+                        </div>
                     </div>
-                </div>
-                <div class="campaign-area-actions">
-                    <button class="terminal-btn terminal-btn-small terminal-btn-danger" onclick="CampaignUI.leaveCampaign(${campaign.id})">
-                        Leave Campaign
-                    </button>
                 </div>
             </div>
         `;
@@ -1130,7 +1188,7 @@ const CampaignUI = (window.CampaignUI = {
             // Show success modal with invite code (and warning if applicable)
             this.showCampaignCreatedModal(campaign.invite_code, assignmentWarning);
             
-            // Refresh character data to get updated campaign_id
+            // Refresh character data to get updated campaignId
             await AppState.loadCharacters();
             
             // Refresh campaign panel
@@ -1146,24 +1204,91 @@ const CampaignUI = (window.CampaignUI = {
     // JOIN CAMPAIGN MODAL
     // ========================================
     
-    openJoinModal() {
+    // Store selected invitation
+    _selectedInvitationId: null,
+
+    async openJoinModal() {
         const modal = document.getElementById('joinCampaignModal');
         if (!modal) return;
         
-        // Clear form
-        document.getElementById('joinCampaignCode').value = '';
+        // Reset selection
+        this._selectedInvitationId = null;
+        
+        // Clear error
         const errorEl = document.getElementById('joinCampaignError');
         if (errorEl) {
             errorEl.textContent = '';
             errorEl.classList.add('is-hidden');
         }
         
+        // Disable join button
+        const joinBtn = document.getElementById('joinCampaignBtn');
+        if (joinBtn) joinBtn.disabled = true;
+        
+        // Show loading state
+        const listEl = document.getElementById('joinCampaignInvitations');
+        if (listEl) {
+            listEl.innerHTML = '<div class="invitations-loading">Loading invitations...</div>';
+        }
+        
         modal.classList.add('show');
         
-        // Focus code input
-        setTimeout(() => {
-            document.getElementById('joinCampaignCode')?.focus();
-        }, 100);
+        // Fetch pending invitations
+        try {
+            const invitations = await CampaignAPI.getPendingInvitations();
+            this._renderInvitationsList(invitations);
+        } catch (error) {
+            console.error('Failed to load invitations:', error);
+            // Show empty state on error (endpoint may not be deployed yet)
+            if (listEl) {
+                listEl.innerHTML = '<div class="invitations-empty">No pending invitations</div>';
+            }
+        }
+    },
+    
+    _renderInvitationsList(invitations) {
+        const listEl = document.getElementById('joinCampaignInvitations');
+        if (!listEl) return;
+        
+        if (!invitations || invitations.length === 0) {
+            listEl.innerHTML = '<div class="invitations-empty">No pending invitations</div>';
+            return;
+        }
+        
+        listEl.innerHTML = invitations.map(inv => `
+            <div class="invitation-item" data-campaign-id="${inv.campaign_id}" onclick="CampaignUI.selectInvitation(${inv.campaign_id})">
+                <div class="invitation-radio"></div>
+                <div class="invitation-info">
+                    <div class="invitation-name">${this._escapeHtml(inv.campaign_name)}</div>
+                    ${inv.campaign_description ? `<div class="invitation-desc">${this._escapeHtml(inv.campaign_description)}</div>` : ''}
+                </div>
+            </div>
+        `).join('');
+    },
+    
+    selectInvitation(campaignId) {
+        this._selectedInvitationId = campaignId;
+        
+        // Update visual selection
+        const items = document.querySelectorAll('#joinCampaignInvitations .invitation-item');
+        items.forEach(item => {
+            if (parseInt(item.dataset.campaignId, 10) === campaignId) {
+                item.classList.add('is-selected');
+            } else {
+                item.classList.remove('is-selected');
+            }
+        });
+        
+        // Enable join button
+        const joinBtn = document.getElementById('joinCampaignBtn');
+        if (joinBtn) joinBtn.disabled = false;
+    },
+    
+    _escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     },
 
     closeJoinModal() {
@@ -1171,16 +1296,13 @@ const CampaignUI = (window.CampaignUI = {
         if (modal) {
             animateModalClose(modal, { removeOnClose: false });
         }
+        this._selectedInvitationId = null;
     },
 
     async submitJoinCampaign() {
-        const codeInput = document.getElementById('joinCampaignCode');
         const errorEl = document.getElementById('joinCampaignError');
         
-        const inviteCode = codeInput?.value?.trim().toUpperCase();
-        
-        if (!inviteCode) {
-            codeInput?.focus();
+        if (!this._selectedInvitationId) {
             return;
         }
         
@@ -1193,7 +1315,7 @@ const CampaignUI = (window.CampaignUI = {
             // Get the currently selected character ID to assign to the campaign
             const characterId = AppState.selectedCharacterId;
             
-            const result = await CampaignAPI.joinCampaign(inviteCode, characterId);
+            const result = await CampaignAPI.acceptInvitation(this._selectedInvitationId, characterId);
             
             // Close modal
             this.closeJoinModal();
@@ -1212,7 +1334,7 @@ const CampaignUI = (window.CampaignUI = {
             
             // Show error in modal
             if (errorEl) {
-                errorEl.textContent = error.message || 'Invalid invite code. Please check and try again.';
+                errorEl.textContent = error.message || 'Failed to join campaign. Please try again.';
                 errorEl.classList.remove('is-hidden');
             }
         }
@@ -1279,6 +1401,232 @@ const CampaignUI = (window.CampaignUI = {
             }).catch(err => {
                 console.error('Failed to copy:', err);
             });
+        }
+    },
+
+    // ========================================
+    // MANAGE CAMPAIGN MODAL
+    // ========================================
+    
+    // Cache current campaign data for the manage modal
+    _managingCampaign: null,
+    _pendingInvites: [],
+    
+    async openManageModal(campaignId) {
+        try {
+            // Fetch campaign details
+            const campaign = await CampaignAPI.getCampaign(campaignId);
+            this._managingCampaign = campaign;
+            
+            const modal = document.getElementById('manageCampaignModal');
+            if (!modal) return;
+            
+            // Populate form fields
+            document.getElementById('manageCampaignName').value = campaign.name || '';
+            document.getElementById('manageCampaignDesc').value = campaign.description || '';
+            
+            // Clear invite email input
+            document.getElementById('inviteEmail').value = '';
+            
+            // Clear pending invites list
+            this._pendingInvites = [];
+            this._renderPendingInvites();
+            
+            // Clear any error messages
+            const errorEl = document.getElementById('manageCampaignError');
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.classList.add('is-hidden');
+            }
+            
+            modal.classList.add('show');
+            
+            // Focus name input
+            setTimeout(() => {
+                document.getElementById('manageCampaignName')?.focus();
+            }, 100);
+            
+        } catch (error) {
+            console.error('Failed to load campaign for management:', error);
+            showAlertDialog('Failed to load campaign details. Please try again.');
+        }
+    },
+    
+    closeManageModal() {
+        const modal = document.getElementById('manageCampaignModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        this._managingCampaign = null;
+        this._pendingInvites = [];
+    },
+    
+    addPendingInvite() {
+        const input = document.getElementById('inviteEmail');
+        const email = input?.value?.trim().toLowerCase();
+        
+        if (!email) return;
+        
+        // Basic email validation
+        if (!email.includes('@') || !email.includes('.')) {
+            const errorEl = document.getElementById('manageCampaignError');
+            if (errorEl) {
+                errorEl.textContent = 'Please enter a valid email address';
+                errorEl.classList.remove('is-hidden');
+            }
+            return;
+        }
+        
+        // Check for duplicates
+        if (this._pendingInvites.includes(email)) {
+            const errorEl = document.getElementById('manageCampaignError');
+            if (errorEl) {
+                errorEl.textContent = 'This email is already in the invite list';
+                errorEl.classList.remove('is-hidden');
+            }
+            return;
+        }
+        
+        // Clear error
+        const errorEl = document.getElementById('manageCampaignError');
+        if (errorEl) {
+            errorEl.classList.add('is-hidden');
+        }
+        
+        // Add to pending list
+        this._pendingInvites.push(email);
+        this._renderPendingInvites();
+        
+        // Clear input
+        input.value = '';
+        input.focus();
+    },
+    
+    removePendingInvite(email) {
+        this._pendingInvites = this._pendingInvites.filter(e => e !== email);
+        this._renderPendingInvites();
+    },
+    
+    _renderPendingInvites() {
+        const container = document.getElementById('pendingInvitesList');
+        if (!container) return;
+        
+        if (this._pendingInvites.length === 0) {
+            container.innerHTML = '<div class="pending-invites-empty">No invitations queued</div>';
+            return;
+        }
+        
+        container.innerHTML = this._pendingInvites.map(email => `
+            <div class="pending-invite-item">
+                <span class="pending-invite-email">${email}</span>
+                <button type="button" class="terminal-btn-icon pending-invite-remove" onclick="CampaignUI.removePendingInvite('${email}')" title="Remove">×</button>
+            </div>
+        `).join('');
+    },
+    
+    async submitManageCampaign() {
+        if (!this._managingCampaign) return;
+        
+        const nameInput = document.getElementById('manageCampaignName');
+        const descInput = document.getElementById('manageCampaignDesc');
+        const errorEl = document.getElementById('manageCampaignError');
+        
+        const name = nameInput?.value?.trim();
+        const description = descInput?.value?.trim() || null;
+        
+        if (!name) {
+            if (errorEl) {
+                errorEl.textContent = 'Campaign name is required';
+                errorEl.classList.remove('is-hidden');
+            }
+            nameInput?.focus();
+            return;
+        }
+        
+        try {
+            // Update campaign details
+            await CampaignAPI.updateCampaign(this._managingCampaign.id, { name, description });
+            
+            // Send invitations (if any)
+            const inviteErrors = [];
+            for (const email of this._pendingInvites) {
+                try {
+                    await CampaignAPI.inviteByEmail(this._managingCampaign.id, email);
+                } catch (inviteErr) {
+                    inviteErrors.push({ email, error: inviteErr.message });
+                }
+            }
+            
+            // Close modal
+            this.closeManageModal();
+            
+            // Show success (with any invite errors)
+            if (inviteErrors.length > 0) {
+                showAlertDialog(`Campaign updated! However, some invitations failed:\n${inviteErrors.map(e => `• ${e.email}: ${e.error}`).join('\n')}`);
+            } else if (this._pendingInvites.length > 0) {
+                showAlertDialog(`Campaign updated and ${this._pendingInvites.length} invitation(s) sent!`);
+            }
+            
+            // Refresh campaign panel
+            ExpandedView._loadCampaignPanel();
+            
+        } catch (error) {
+            console.error('Failed to update campaign:', error);
+            if (errorEl) {
+                errorEl.textContent = error.message || 'Failed to update campaign';
+                errorEl.classList.remove('is-hidden');
+            }
+        }
+    },
+    
+    // ========================================
+    // LEAVE / DELETE CAMPAIGN
+    // ========================================
+    
+    async leaveCampaign(campaignId) {
+        if (!confirm('Are you sure you want to leave this campaign? Your character will be removed from the party.')) {
+            return;
+        }
+        
+        try {
+            await CampaignAPI.leaveCampaign(campaignId);
+            
+            // Refresh character data
+            await AppState.loadCharacters();
+            
+            // Refresh campaign panel (will show empty state)
+            ExpandedView._loadCampaignPanel();
+            
+            showAlertDialog('You have left the campaign.');
+        } catch (error) {
+            console.error('Failed to leave campaign:', error);
+            showAlertDialog(error.message || 'Failed to leave campaign. Please try again.');
+        }
+    },
+    
+    async confirmDeleteCampaignFromModal() {
+        if (!this._managingCampaign) return;
+        
+        if (!confirm('Are you sure you want to DELETE this campaign? This action cannot be undone and will remove all members.')) {
+            return;
+        }
+        
+        try {
+            await CampaignAPI.deleteCampaign(this._managingCampaign.id);
+            
+            // Close the modal
+            this.closeManageModal();
+            
+            // Refresh character data
+            await AppState.loadCharacters();
+            
+            // Refresh campaign panel (will show empty state)
+            ExpandedView._loadCampaignPanel();
+            
+            showAlertDialog('Campaign deleted successfully.');
+        } catch (error) {
+            console.error('Failed to delete campaign:', error);
+            showAlertDialog(error.message || 'Failed to delete campaign. Please try again.');
         }
     },
 
