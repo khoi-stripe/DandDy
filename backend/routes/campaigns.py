@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from database.database import get_db
@@ -6,6 +6,7 @@ from models.user import User
 from models.campaign import Campaign, CampaignStatus, generate_invite_code
 from models.campaign_member import CampaignMember, MemberStatus
 from models.character import Character
+from models.character_collaborator import CharacterCollaborator, CollaboratorPermission
 from schemas.campaign import (
     CampaignCreate, CampaignUpdate, CampaignResponse, CampaignWithCharacters,
     CampaignMemberResponse, CampaignJoin, CampaignJoinResponse,
@@ -14,6 +15,68 @@ from schemas.campaign import (
 from utils.auth import get_current_active_user
 
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
+
+
+def _can_use_character_for_campaign(
+    character_id: int,
+    current_user: User,
+    target_campaign_id: int,
+    db: Session
+) -> Tuple[Optional[Character], Optional[str]]:
+    """
+    Check if a user can assign a character to a campaign membership.
+    
+    A user can use a character if:
+    1. They own it, OR they are a collaborator with edit permission
+    2. The character is not already in use by another campaign membership
+    
+    Returns:
+        Tuple of (Character, None) if allowed
+        Tuple of (None, error_message) if not allowed
+    """
+    character = db.query(Character).filter(Character.id == character_id).first()
+    
+    if not character:
+        return None, "Character not found"
+    
+    # Check access: owner or collaborator with edit permission
+    is_owner = character.owner_id == current_user.id
+    has_edit_access = False
+    
+    if not is_owner:
+        # Check if user is a collaborator with edit permission
+        collab = db.query(CharacterCollaborator).filter(
+            CharacterCollaborator.character_id == character_id,
+            CharacterCollaborator.user_id == current_user.id,
+            CharacterCollaborator.permission == CollaboratorPermission.EDIT
+        ).first()
+        
+        if collab:
+            has_edit_access = True
+    
+    if not is_owner and not has_edit_access:
+        return None, "Character not found or you don't have permission to use it"
+    
+    # Check if character is already in another campaign
+    if character.campaign_id and character.campaign_id != target_campaign_id:
+        return None, "This character is already in another campaign"
+    
+    # Check if character is already assigned to a different membership in ANY campaign
+    # This prevents a shared character from being used by multiple people simultaneously
+    existing_membership = db.query(CampaignMember).filter(
+        CampaignMember.character_id == character_id,
+        CampaignMember.status == MemberStatus.ACTIVE
+    ).first()
+    
+    if existing_membership:
+        # If the character is already assigned to a membership, only allow if:
+        # - It's the same user's membership in the target campaign
+        if existing_membership.user_id != current_user.id:
+            return None, "This character is already being used by another player"
+        if existing_membership.campaign_id != target_campaign_id:
+            return None, "This character is already in another campaign"
+    
+    return character, None
 
 
 @router.post("/", response_model=CampaignResponse, status_code=status.HTTP_201_CREATED)
@@ -183,7 +246,13 @@ def join_campaign(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Join a campaign using an invite code."""
+    """
+    Join a campaign using an invite code.
+    
+    Users can optionally assign a character when joining. The character can be:
+    - A character they own
+    - A shared character they have edit access to (as long as it's not already in use)
+    """
     campaign = db.query(Campaign).filter(
         Campaign.invite_code == join_data.invite_code
     ).first()
@@ -213,25 +282,16 @@ def join_campaign(
             detail="You are already a member of this campaign"
         )
     
-    # Validate character if provided
+    # Validate character if provided (supports owned AND shared characters)
     character = None
     if join_data.character_id:
-        character = db.query(Character).filter(
-            Character.id == join_data.character_id,
-            Character.owner_id == current_user.id
-        ).first()
-        
-        if not character:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Character not found or not owned by you"
-            )
-        
-        # Check if character is already in another campaign
-        if character.campaign_id and character.campaign_id != campaign.id:
+        character, error = _can_use_character_for_campaign(
+            join_data.character_id, current_user, campaign.id, db
+        )
+        if error:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This character is already in another campaign"
+                detail=error
             )
     
     # Create membership
@@ -330,7 +390,13 @@ def assign_character_to_campaign(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Assign a character to your campaign membership."""
+    """
+    Assign a character to your campaign membership.
+    
+    You can assign:
+    - A character you own
+    - A shared character you have edit access to (as long as it's not already in use)
+    """
     # Find membership
     membership = db.query(CampaignMember).filter(
         CampaignMember.campaign_id == campaign_id,
@@ -344,23 +410,14 @@ def assign_character_to_campaign(
             detail="You are not a member of this campaign"
         )
     
-    # Validate character
-    character = db.query(Character).filter(
-        Character.id == character_id,
-        Character.owner_id == current_user.id
-    ).first()
-    
-    if not character:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Character not found or not owned by you"
-        )
-    
-    # Check if character is in another campaign
-    if character.campaign_id and character.campaign_id != campaign_id:
+    # Validate character (supports owned AND shared characters)
+    character, error = _can_use_character_for_campaign(
+        character_id, current_user, campaign_id, db
+    )
+    if error:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This character is already in another campaign"
+            detail=error
         )
     
     # Update membership and character
@@ -562,7 +619,13 @@ def accept_invitation(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Accept a campaign invitation."""
+    """
+    Accept a campaign invitation.
+    
+    You can optionally assign a character when accepting. The character can be:
+    - A character you own
+    - A shared character you have edit access to (as long as it's not already in use)
+    """
     # Find the pending invitation
     invitation = db.query(CampaignMember).filter(
         CampaignMember.campaign_id == campaign_id,
@@ -578,23 +641,15 @@ def accept_invitation(
     
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     
-    # Validate and assign character if provided
+    # Validate and assign character if provided (supports owned AND shared characters)
     if accept_data.character_id:
-        character = db.query(Character).filter(
-            Character.id == accept_data.character_id,
-            Character.owner_id == current_user.id
-        ).first()
-        
-        if not character:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Character not found or not owned by you"
-            )
-        
-        if character.campaign_id and character.campaign_id != campaign_id:
+        character, error = _can_use_character_for_campaign(
+            accept_data.character_id, current_user, campaign_id, db
+        )
+        if error:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This character is already in another campaign"
+                detail=error
             )
         
         invitation.character_id = accept_data.character_id
