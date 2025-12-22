@@ -138,8 +138,6 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    margin-bottom: 16px;
-    border: 1px solid var(--sheet-accent-dim);
     background: var(--terminal-bg);
     /* Animation properties */
     opacity: 0;
@@ -160,32 +158,24 @@
     transform: translateY(0);
 }
 
-/* Nav buttons - unstyled buttons with hover effect */
+/* Nav buttons - styled as text links */
 .character-nav-bar button {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px;
+    padding: 4px 0;
     background: transparent;
-    border: 1px solid transparent;
+    border: none;
     color: var(--sheet-accent);
     font-family: var(--font-terminal);
     font-size: var(--font-size-sm);
     cursor: pointer;
-    transition: 
-        border-color 0.15s ease,
-        background-color 0.15s ease;
     min-width: 0;
     max-width: 200px;
 }
 
-.character-nav-bar button:hover {
-    border-color: var(--sheet-accent-dim);
-    background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l), 0.1);
-}
-
-.character-nav-bar button:active {
-    background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l), 0.2);
+.character-nav-bar button:hover .nav-name {
+    text-decoration: underline;
 }
 
 /* Arrow glyphs */
@@ -332,13 +322,27 @@
     box-shadow: 0 0 5px var(--sheet-accent-dim);
 }
 
+/* Links in campaign panel should be teal themed */
+.panel-campaign a,
+.panel-campaign .terminal-link,
+.panel-campaign .link-button {
+    color: var(--sheet-accent);
+}
+
+.panel-campaign a:hover,
+.panel-campaign .terminal-link:hover,
+.panel-campaign .link-button:hover {
+    color: var(--sheet-accent-bright);
+    text-shadow: 0 0 5px var(--sheet-accent);
+}
+
 /* Campaign panel placeholder */
 .campaign-panel-placeholder {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: var(--terminal-dim);
+    color: var(--sheet-accent-dim);
     text-align: center;
     padding: var(--spacing-xl);
 }
@@ -407,7 +411,7 @@
     transform: none;
     /* Teal theme */
     background: var(--terminal-bg);
-    border-color: var(--sheet-accent-dim);
+    border: 1px solid var(--sheet-accent-dim);
 }
 
 .campaign-overflow-menu.is-open {
