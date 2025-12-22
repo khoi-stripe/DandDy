@@ -2465,6 +2465,9 @@ const MobileView = {
     /** Track the previous viewport state to detect transitions */
     _wasMobile: null,
     
+    /** Current view in mobile sheet: 'sheet' or 'campaign' */
+    _currentView: 'sheet',
+    
     /** Swipe tracking state */
     _touchStartX: 0,
     _touchStartY: 0,
@@ -2646,6 +2649,9 @@ const MobileView = {
         const nextCharacter = characters[nextIndex];
         
         if (nextCharacter) {
+            // Reset to sheet view when swiping to a new character
+            this._currentView = 'sheet';
+            this._updateViewToggle();
             this.showSwipeLoader();
             viewCharacter(nextCharacter.id, { skipKeyboardSync: false, updateUrl: true });
         }
@@ -2664,6 +2670,9 @@ const MobileView = {
         const prevCharacter = characters[prevIndex];
         
         if (prevCharacter) {
+            // Reset to sheet view when swiping to a new character
+            this._currentView = 'sheet';
+            this._updateViewToggle();
             this.showSwipeLoader();
             viewCharacter(prevCharacter.id, { skipKeyboardSync: false, updateUrl: true });
         }
@@ -2752,6 +2761,10 @@ const MobileView = {
         
         if (!gridPanel || !container) return;
         
+        // Reset to sheet view (not campaign) when opening
+        this._currentView = 'sheet';
+        this._updateViewToggle();
+        
         // Check if we're in a swipe transition (loader was shown)
         const isSwipeTransition = this._isSwipeLoading;
         
@@ -2781,14 +2794,14 @@ const MobileView = {
         }
     },
     
-    /** Update the character count display in the mobile back bar */
+    /** Update the character count display in the mobile back bar (centered, x/y format) */
     updateCharacterCount(characterId) {
-        const countEl = document.getElementById('mobileCharacterCount');
+        const countEl = document.getElementById('mobileNavCount');
         if (!countEl) return;
         
         const characters = AppState.filteredCharacters;
         if (!characters || characters.length === 0) {
-            countEl.textContent = '';
+            countEl.textContent = '1/1';
             return;
         }
         
@@ -2796,7 +2809,166 @@ const MobileView = {
         const currentNum = currentIndex >= 0 ? currentIndex + 1 : 1;
         const total = characters.length;
         
-        countEl.textContent = currentNum + ' of ' + total;
+        countEl.textContent = currentNum + '/' + total;
+    },
+    
+    /** Update the view toggle link text based on current view */
+    _updateViewToggle() {
+        const toggleEl = document.getElementById('mobileViewToggle');
+        if (!toggleEl) return;
+        
+        toggleEl.textContent = this._currentView === 'sheet' ? 'Campaign' : 'Character';
+    },
+    
+    /** Toggle between character sheet and campaign views */
+    toggleCampaign() {
+        const container = document.getElementById('mobileSheetContainer');
+        const gridPanel = document.getElementById('characterGridPanel');
+        if (!container || !gridPanel) return;
+        
+        if (this._currentView === 'sheet') {
+            // Switch to campaign view
+            this._currentView = 'campaign';
+            this._renderCampaignContent(container);
+        } else {
+            // Switch back to sheet view
+            this._currentView = 'sheet';
+            const sourceSheet = document.getElementById('characterSheet');
+            if (sourceSheet) {
+                container.innerHTML = sourceSheet.innerHTML;
+            }
+        }
+        
+        this._updateViewToggle();
+        
+        // Scroll to top when switching views
+        gridPanel.scrollTop = 0;
+    },
+    
+    /** Render campaign content into the mobile container */
+    _renderCampaignContent(container) {
+        // Get the campaign panel slot content from desktop (if available)
+        const campaignSlot = document.querySelector('.campaign-panel-slot');
+        
+        if (campaignSlot && campaignSlot.innerHTML.trim()) {
+            // Clone the campaign content from desktop
+            container.innerHTML = campaignSlot.innerHTML;
+        } else {
+            // Need to fetch and render campaign content
+            this._loadAndRenderCampaign(container);
+        }
+    },
+    
+    /** Load campaign data and render it into the container */
+    async _loadAndRenderCampaign(container) {
+        const characterId = AppState.selectedCharacterId;
+        if (!characterId) {
+            container.innerHTML = this._renderNoCampaign();
+            return;
+        }
+        
+        // Show loading state
+        container.innerHTML = `
+            <div class="campaign-panel-placeholder">
+                <div class="panel-loading-cube-container">
+                    <div class="panel-loading-cube">
+                        <i></i><i></i><i></i><i></i><i></i><i></i>
+                    </div>
+                </div>
+                <div class="panel-loading-text" style="margin-top: 16px;">Loading campaign...</div>
+            </div>
+        `;
+        
+        // Check if user is authenticated
+        const isAuthenticated = window.AuthService && AuthService.isAuthenticated();
+        
+        // Get the character's campaignId
+        const character = AppState.characters?.find(c => String(c.id) === String(characterId));
+        let campaignId = character?.campaignId;
+        
+        if (!isAuthenticated) {
+            // Not authenticated - show empty state
+            container.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+            return;
+        }
+        
+        // Try to find campaign via membership if not on character
+        let campaignDataFromMembership = null;
+        if (!campaignId && typeof CampaignUI !== 'undefined') {
+            try {
+                campaignDataFromMembership = await CampaignUI.getCharacterCampaign(characterId);
+                if (campaignDataFromMembership) {
+                    campaignId = campaignDataFromMembership.campaign.id;
+                }
+            } catch (e) {
+                console.warn('Could not check campaign membership:', e);
+            }
+        }
+        
+        if (!campaignId) {
+            // No campaign - show create/join options
+            container.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+            return;
+        }
+        
+        // Fetch campaign data
+        try {
+            let campaignData, journalEntries = [];
+            
+            if (campaignDataFromMembership) {
+                campaignData = campaignDataFromMembership;
+            } else if (typeof CampaignUI !== 'undefined') {
+                campaignData = await CampaignUI.getCharacterCampaign(characterId);
+            }
+            
+            if (!campaignData) {
+                container.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+                return;
+            }
+            
+            // Fetch journal entries
+            if (typeof CampaignUI !== 'undefined' && campaignData.campaign?.id) {
+                try {
+                    journalEntries = await CampaignUI.getJournalEntries(campaignData.campaign.id, characterId);
+                } catch (e) {
+                    console.warn('Could not fetch journal entries:', e);
+                }
+            }
+            
+            // Render campaign content
+            container.innerHTML = ExpandedView._renderCampaignPanelContent(
+                characterId,
+                campaignData,
+                journalEntries?.length || 0,
+                journalEntries || []
+            );
+            
+            // Initialize any collapsible sections
+            if (typeof ExpandedView !== 'undefined' && ExpandedView._initDescriptionTruncation) {
+                ExpandedView._initDescriptionTruncation();
+            }
+        } catch (e) {
+            console.error('Error loading campaign:', e);
+            container.innerHTML = `
+                <div class="campaign-panel-placeholder">
+                    <div class="campaign-panel-placeholder-text">
+                        Failed to load campaign data.<br>
+                        Please try again.
+                    </div>
+                </div>
+            `;
+        }
+    },
+    
+    /** Render empty campaign state */
+    _renderNoCampaign() {
+        return `
+            <div class="campaign-panel-placeholder">
+                <div class="campaign-panel-placeholder-text">
+                    No campaign selected.
+                </div>
+            </div>
+        `;
     },
     
     /** Add the swipe loader overlay to the portrait container */

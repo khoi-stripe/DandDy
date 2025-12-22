@@ -3196,13 +3196,15 @@
     .mobile-back-bar {
         display: none;
         align-items: center;
-        gap: var(--spacing-md);
+        justify-content: space-between;
         padding: 16px 0;
         border-bottom: 1px solid var(--sheet-accent-dim);
         background: #000;
         position: sticky;
         top: 0;
         z-index: 100;
+        /* Relative positioning for absolutely centered nav count */
+        position: relative;
     }
     
     /* Show back bar when viewing character sheet on mobile */
@@ -3210,10 +3212,28 @@
         display: flex;
     }
     
-    .mobile-character-count {
-        color: var(--terminal-accent);
-        margin-left: auto;
+    /* Centered navigation count (absolute for true center) */
+    .mobile-nav-count {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        color: var(--sheet-accent);
+        font-family: var(--font-mono);
+        font-size: var(--font-size-small);
         white-space: nowrap;
+    }
+    
+    /* Right-pinned view toggle link */
+    .mobile-view-toggle {
+        color: var(--sheet-accent-dim);
+        font-family: var(--font-mono);
+        font-size: var(--font-size-small);
+        text-decoration: none;
+        transition: color var(--transition-speed);
+    }
+    
+    .mobile-view-toggle:hover {
+        color: var(--sheet-accent);
     }
     
     /* Hide grid and controls when viewing sheet */

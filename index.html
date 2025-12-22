@@ -148,10 +148,9 @@
         <div class="panel panel-character-grid" id="characterGridPanel">
             <!-- Mobile Back Bar (shown when viewing character sheet on mobile) -->
             <div class="mobile-back-bar" id="mobileBackBar">
-                <a href="#" class="mobile-back-link" onclick="closeMobileSheet(); return false;">
-                    ← All characters
-                </a>
-                <span class="mobile-character-count" id="mobileCharacterCount"></span>
+                <a href="#" class="mobile-back-link" onclick="closeMobileSheet(); return false;">← All</a>
+                <span class="mobile-nav-count" id="mobileNavCount">1/1</span>
+                <a href="#" class="mobile-view-toggle" id="mobileViewToggle" onclick="MobileView.toggleCampaign(); return false;">Campaign</a>
             </div>
             
             <!-- Mobile Sheet Container (character sheet shown here on mobile) -->
