@@ -137,7 +137,7 @@
     display: none;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
+    padding: 0 16px 12px 16px;
     background: var(--terminal-bg);
     /* Animation properties */
     opacity: 0;
