@@ -3338,10 +3338,14 @@
         text-overflow: ellipsis;
     }
     
-    /* Hide buttons/menu in mobile header - actions are in the back bar */
-    .mobile-sheet-title-header .sheet-title-buttons,
+    /* Hide header-menu-shell in mobile header (not used) */
     .mobile-sheet-title-header .header-menu-shell {
         display: none;
+    }
+    
+    /* Style the actions menu in mobile header */
+    .mobile-sheet-title-header .sheet-title-buttons {
+        flex-shrink: 0;
     }
 }
 
