@@ -979,13 +979,13 @@ const ExpandedView = (window.ExpandedView = {
     /** Collapse back to grid view (grid + sheet view) */
     collapse() {
         const splitLayout = document.querySelector('.split-layout');
-        
-        // Hide character nav bar immediately before collapse animation
-        CharacterNavBar.hide();
-        
+
         // Add collapsing class to trigger the collapse animation
         // Keep is-sheet-expanded to maintain fixed column widths during animation
         splitLayout?.classList.add('is-collapsing');
+
+        // Hide character nav bar at the same time as collapse animation
+        CharacterNavBar.hide();
         
         PanelManager.setView('grid-sheet');
         
