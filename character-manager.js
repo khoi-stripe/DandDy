@@ -824,14 +824,15 @@ const CharacterNavBar = (window.CharacterNavBar = {
         const prevNameEl = document.getElementById('navPrevName');
         const nextNameEl = document.getElementById('navNextName');
         const countEl = document.getElementById('navCount');
+        const countValueEl = countEl?.querySelector('.nav-count-value');
         
-        if (!prevNameEl || !nextNameEl || !countEl) return;
+        if (!prevNameEl || !nextNameEl || !countValueEl) return;
         
         const characters = AppState.filteredCharacters;
         if (!characters || characters.length === 0) {
             prevNameEl.textContent = '';
             nextNameEl.textContent = '';
-            countEl.textContent = '';
+            countValueEl.textContent = '';
             return;
         }
         
@@ -850,7 +851,7 @@ const CharacterNavBar = (window.CharacterNavBar = {
         // Update display
         prevNameEl.textContent = prevChar ? prevChar.name : '';
         nextNameEl.textContent = nextChar ? nextChar.name : '';
-        countEl.textContent = currentNum + '/' + total;
+        countValueEl.textContent = currentNum + '/' + total;
     },
     
     /** Navigate to the previous character (carousel) */
@@ -891,12 +892,17 @@ const CharacterNavBar = (window.CharacterNavBar = {
     init() {
         const prevBtn = document.getElementById('navPrev');
         const nextBtn = document.getElementById('navNext');
+        const countLink = document.getElementById('navCount');
         
         if (prevBtn) {
             prevBtn.addEventListener('click', () => this.navigatePrev());
         }
         if (nextBtn) {
             nextBtn.addEventListener('click', () => this.navigateNext());
+        }
+        // Clicking count link collapses back to grid+sheet view
+        if (countLink) {
+            countLink.addEventListener('click', () => ExpandedView.collapse());
         }
     }
 });

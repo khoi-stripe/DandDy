@@ -121,6 +121,7 @@
     flex-direction: column;
     gap: var(--spacing-lg);
     overflow-y: auto;
+    overflow-x: hidden;
     /* Transition for smooth reveal */
     transition: opacity 0.3s ease 0.1s;
 }
@@ -204,8 +205,8 @@
     text-overflow: ellipsis;
 }
 
-/* Center count display - absolutely positioned for true center */
-.character-nav-bar .nav-count {
+/* Center count link - absolutely positioned for true center */
+.character-nav-bar .nav-count-link {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
@@ -213,6 +214,51 @@
     font-family: var(--font-terminal);
     font-size: var(--font-size-sm);
     white-space: nowrap;
+    background: transparent;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Container for the two text states */
+.character-nav-bar .nav-count-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Count value (e.g., "3/15") - visible by default */
+.character-nav-bar .nav-count-value {
+    display: inline-block;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+/* Hover text - hidden by default */
+.character-nav-bar .nav-count-hover {
+    position: absolute;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    color: var(--sheet-accent);
+}
+
+/* Hover state - swap visibility with subtle slide animation */
+.character-nav-bar .nav-count-link:hover {
+    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
+}
+
+.character-nav-bar .nav-count-link:hover .nav-count-value {
+    opacity: 0;
+    transform: translateY(-4px);
+}
+
+.character-nav-bar .nav-count-link:hover .nav-count-hover {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 /* ===== SHEET NAV BAR (above character sheet) ===== */
@@ -952,7 +998,7 @@
     display: flex;
     flex-direction: column;
     overflow: visible;
-    margin-bottom: 32px;
+    margin-bottom: 16px;
 }
 
 .journal-header {
@@ -987,7 +1033,7 @@
 .journal-entries {
     flex: 1 0 auto;
     overflow: visible;
-    padding: var(--spacing-sm) 0;
+    padding-top: var(--spacing-sm);
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -1392,6 +1438,8 @@
     /* Fixed width sized for longest label "Sort: Date modified" to prevent layout shift
        Override width: 100% from .selector-trigger */
     width: 200px;
+    /* Override fixed height from .terminal-btn-small so it matches search input height */
+    height: auto;
 }
 
 .search-sort-btn:hover {
