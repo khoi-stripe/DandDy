@@ -887,6 +887,15 @@
     font-size: var(--font-size-small);
 }
 
+/* Mobile: single column, info wraps below name */
+@media (max-width: 768px) {
+    .party-member {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+}
+
 .party-empty {
     color: var(--sheet-accent-dim);
     font-size: var(--font-size-small);
