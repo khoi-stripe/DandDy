@@ -3361,7 +3361,7 @@
 /* Container for character sheet on mobile (inside left panel) */
 .mobile-sheet-container {
     display: none;
-    padding: var(--spacing-md);
+    padding: var(--spacing-md) 0;
     touch-action: pan-y pinch-zoom; /* Allow vertical scroll, capture horizontal swipes */
 }
 
