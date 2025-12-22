@@ -2775,17 +2775,19 @@ const MobileView = {
         // Check if we're in a swipe transition (loader was shown)
         const isSwipeTransition = this._isSwipeLoading;
         
-        // Clone the sheet-title-header into mobile header (it's in sheet-scroll-wrapper, not characterSheet)
-        const sourceTitleHeader = document.querySelector('.sheet-scroll-wrapper .sheet-title-header');
-        if (mobileHeader && sourceTitleHeader) {
-            mobileHeader.innerHTML = sourceTitleHeader.innerHTML;
-        }
-        
         // Clone the character sheet content into the container
         const sourceSheet = document.getElementById('characterSheet');
-        if (sourceSheet) {
-            container.innerHTML = sourceSheet.innerHTML;
+        const sourceTitleHeader = document.querySelector('.sheet-scroll-wrapper .sheet-title-header');
+        
+        // Build mobile content: title header + sheet content
+        let mobileContent = '';
+        if (sourceTitleHeader) {
+            mobileContent += '<div class="mobile-sheet-title-header" id="mobileSheetTitleHeader">' + sourceTitleHeader.innerHTML + '</div>';
         }
+        if (sourceSheet) {
+            mobileContent += sourceSheet.innerHTML;
+        }
+        container.innerHTML = mobileContent;
         
         // If this was a swipe transition, re-add the loader overlay
         if (isSwipeTransition) {
