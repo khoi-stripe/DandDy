@@ -222,43 +222,42 @@
     transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Container for the two text states */
+/* Container for the two text states - 3D flip card */
 .character-nav-bar .nav-count-link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    perspective: 200px;
 }
 
-/* Count value (e.g., "3/15") - visible by default */
+/* Count value (e.g., "3/15") - front face */
 .character-nav-bar .nav-count-value {
     display: inline-block;
-    opacity: 1;
-    transform: translateY(0);
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    backface-visibility: hidden;
+    transform: rotateX(0deg);
+    transition: transform 0.3s ease;
 }
 
-/* Hover text - hidden by default */
+/* Hover text - back face (pre-rotated) */
 .character-nav-bar .nav-count-hover {
     position: absolute;
-    opacity: 0;
-    transform: translateY(4px);
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    backface-visibility: hidden;
+    transform: rotateX(-180deg);
+    transition: transform 0.3s ease;
     color: var(--sheet-accent);
 }
 
-/* Hover state - swap visibility with subtle slide animation */
+/* Hover state - flip the card */
 .character-nav-bar .nav-count-link:hover {
     background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
 }
 
 .character-nav-bar .nav-count-link:hover .nav-count-value {
-    opacity: 0;
-    transform: translateY(-4px);
+    transform: rotateX(180deg);
 }
 
 .character-nav-bar .nav-count-link:hover .nav-count-hover {
-    opacity: 1;
-    transform: translateY(0);
+    transform: rotateX(0deg);
 }
 
 /* ===== SHEET NAV BAR (above character sheet) ===== */
