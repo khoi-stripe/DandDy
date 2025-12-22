@@ -429,7 +429,7 @@
 }
 
 .campaign-area-title {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-md);
     color: var(--sheet-accent);
     margin: 0;
     font-weight: var(--font-weight-medium);
@@ -1022,7 +1022,7 @@
 }
 
 .journal-title {
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-md);
     color: var(--sheet-accent);
     margin: 0;
     font-weight: var(--font-weight-medium);
