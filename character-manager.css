@@ -3322,7 +3322,7 @@
         justify-content: space-between;
         align-items: center;
         gap: 12px;
-        padding: 16px 0;
+        padding: 0 0 16px 0;
         background: #000;
     }
     
