@@ -3348,6 +3348,7 @@
     display: none;
     padding: var(--spacing-md) 0;
     touch-action: pan-y pinch-zoom; /* Allow vertical scroll, capture horizontal swipes */
+    overflow-x: hidden;
 }
 
 /* Remove top border from character sheet in mobile container */

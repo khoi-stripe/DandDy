@@ -2774,7 +2774,7 @@ const MobileView = {
         const sourceTitleHeader = document.querySelector('.sheet-scroll-wrapper .sheet-title-header');
         const campaignSlot = document.querySelector('.campaign-panel-slot');
         
-        // Build mobile content: title header + sheet content + campaign content
+        // Build mobile content: title header + sheet content
         let mobileContent = '';
         if (sourceTitleHeader) {
             mobileContent += '<div class="mobile-sheet-title-header" id="mobileSheetTitleHeader">' + sourceTitleHeader.innerHTML + '</div>';
@@ -2782,11 +2782,17 @@ const MobileView = {
         if (sourceSheet) {
             mobileContent += sourceSheet.innerHTML;
         }
-        // Add campaign content at the bottom (if available)
-        if (campaignSlot && campaignSlot.innerHTML.trim()) {
+        // Add campaign content at the bottom (if available from desktop)
+        if (campaignSlot && campaignSlot.innerHTML.trim() && !campaignSlot.classList.contains('is-hidden')) {
             mobileContent += '<div class="mobile-campaign-section">' + campaignSlot.innerHTML + '</div>';
+        } else {
+            // Add placeholder for campaign section - will be loaded async
+            mobileContent += '<div class="mobile-campaign-section" id="mobileCampaignSection"></div>';
         }
         container.innerHTML = mobileContent;
+        
+        // Load campaign content async if not already available
+        this._loadMobileCampaign(characterId);
         
         // If this was a swipe transition, re-add the loader overlay
         if (isSwipeTransition) {
@@ -2805,6 +2811,59 @@ const MobileView = {
         // Wait for portrait image to load before hiding the loader
         if (isSwipeTransition) {
             this.waitForPortraitLoad(container);
+        }
+    },
+    
+    /** Load campaign content for mobile view */
+    async _loadMobileCampaign(characterId) {
+        const section = document.getElementById('mobileCampaignSection');
+        if (!section) return;
+        
+        // Check if already has content (cloned from desktop)
+        if (section.innerHTML.trim()) return;
+        
+        // Show loading skeleton
+        section.innerHTML = ExpandedView._renderCampaignSkeleton();
+        
+        // Load campaign data
+        try {
+            const isAuthenticated = window.AuthService && AuthService.isAuthenticated();
+            if (!isAuthenticated) {
+                section.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+                return;
+            }
+            
+            // Get character's campaign
+            const character = AppState.characters?.find(c => String(c.id) === String(characterId));
+            let campaignId = character?.campaignId;
+            let campaignData = null;
+            
+            if (!campaignId && typeof CampaignUI !== 'undefined') {
+                campaignData = await CampaignUI.getCharacterCampaign(characterId).catch(() => null);
+                if (campaignData) campaignId = campaignData.campaign?.id;
+            }
+            
+            if (!campaignId) {
+                section.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+                return;
+            }
+            
+            // Fetch campaign data if not already have it
+            if (!campaignData && typeof CampaignUI !== 'undefined') {
+                campaignData = await CampaignUI.getCharacterCampaign(characterId).catch(() => null);
+            }
+            
+            // Fetch journal entries
+            let journalEntries = [];
+            if (typeof CampaignAPI !== 'undefined') {
+                journalEntries = await CampaignAPI.getJournalEntries(characterId).catch(() => []);
+            }
+            
+            section.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, campaignData, 0, journalEntries || []);
+            ExpandedView._initDescriptionTruncation();
+        } catch (e) {
+            console.warn('Failed to load mobile campaign:', e);
+            section.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
         }
     },
     
