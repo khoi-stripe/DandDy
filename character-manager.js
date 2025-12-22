@@ -2764,6 +2764,7 @@ const MobileView = {
     open(characterId) {
         const gridPanel = document.getElementById('characterGridPanel');
         const container = document.getElementById('mobileSheetContainer');
+        const mobileHeader = document.getElementById('mobileSheetTitleHeader');
         
         if (!gridPanel || !container) return;
         
@@ -2773,6 +2774,12 @@ const MobileView = {
         
         // Check if we're in a swipe transition (loader was shown)
         const isSwipeTransition = this._isSwipeLoading;
+        
+        // Clone the sheet-title-header into mobile header (it's in sheet-scroll-wrapper, not characterSheet)
+        const sourceTitleHeader = document.querySelector('.sheet-scroll-wrapper .sheet-title-header');
+        if (mobileHeader && sourceTitleHeader) {
+            mobileHeader.innerHTML = sourceTitleHeader.innerHTML;
+        }
         
         // Clone the character sheet content into the container
         const sourceSheet = document.getElementById('characterSheet');
