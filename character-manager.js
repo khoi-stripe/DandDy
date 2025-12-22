@@ -982,19 +982,8 @@ const ExpandedView = (window.ExpandedView = {
             return;
         }
         
-        // Show loading state
-        panel.innerHTML = `
-            <div class="campaign-panel-layout">
-                <div class="campaign-area">
-                    <div class="campaign-area-header">
-                        <h3 class="campaign-area-title">[ Campaign ]</h3>
-                    </div>
-                    <div class="campaign-area-info">
-                        <div class="campaign-name">Loading...</div>
-                    </div>
-                </div>
-            </div>
-        `;
+        // Show skeleton loading state
+        panel.innerHTML = this._renderCampaignSkeleton();
         
         try {
             // If we already have campaign data from membership lookup, use it
@@ -1042,6 +1031,55 @@ const ExpandedView = (window.ExpandedView = {
             <div class="campaign-panel-layout">
                 ${this._renderCampaignArea(campaignData, pendingInvitationCount)}
                 ${this._renderJournalSection(characterId, journalEntries)}
+            </div>
+        `;
+    },
+
+    /** Render skeleton loading state for campaign panel */
+    _renderCampaignSkeleton() {
+        return `
+            <div class="campaign-panel-layout campaign-skeleton">
+                <div class="campaign-area">
+                    <div class="campaign-area-header">
+                        <h3 class="campaign-area-title">[ Campaign ]</h3>
+                    </div>
+                    <div class="campaign-area-info">
+                        <div class="skeleton-line skeleton-line--title"></div>
+                        <div class="skeleton-line skeleton-line--text"></div>
+                    </div>
+                    <div class="campaign-area-party sheet-section">
+                        <div class="sheet-header">
+                            <div class="sheet-header-title">[ PARTY ]</div>
+                        </div>
+                        <div class="sheet-collapsible-content">
+                            <div class="skeleton-party-member">
+                                <div class="skeleton-line skeleton-party-name"></div>
+                                <div class="skeleton-line skeleton-party-info"></div>
+                            </div>
+                            <div class="skeleton-party-member">
+                                <div class="skeleton-line skeleton-party-name"></div>
+                                <div class="skeleton-line skeleton-party-info"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="journal-section">
+                    <div class="journal-header">
+                        <h3 class="journal-title">[ Journal ]</h3>
+                    </div>
+                    <div class="journal-list">
+                        <div class="skeleton-journal-entry">
+                            <div class="skeleton-line skeleton-journal-date"></div>
+                            <div class="skeleton-line skeleton-journal-title"></div>
+                            <div class="skeleton-line skeleton-journal-content"></div>
+                        </div>
+                        <div class="skeleton-journal-entry">
+                            <div class="skeleton-line skeleton-journal-date"></div>
+                            <div class="skeleton-line skeleton-journal-title"></div>
+                            <div class="skeleton-line skeleton-journal-content"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
     },
@@ -3585,6 +3623,21 @@ async function viewCharacter(id, options = {}) {
             });
         }
         UI.showCharacterSheet(character);
+        
+        // Handle campaign panel when switching characters
+        const campaignSlot = document.querySelector('.campaign-panel-slot');
+        if (ExpandedView.isExpanded()) {
+            // Expanded view: show skeleton loader and fetch new data
+            if (campaignSlot) {
+                campaignSlot.innerHTML = ExpandedView._renderCampaignSkeleton();
+            }
+            ExpandedView._loadCampaignPanel();
+        } else {
+            // Grid+sheet view: clear campaign panel so skeleton shows on expand
+            if (campaignSlot) {
+                campaignSlot.innerHTML = '';
+            }
+        }
         
         // Update URL with selected character (for sharing/bookmarking)
         if (updateUrl && id) {

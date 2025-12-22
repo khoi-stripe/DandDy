@@ -57,7 +57,6 @@
 .panel-character-grid {
     padding: var(--spacing-xl);
     padding-top: 0;
-    border-right: 1px solid var(--terminal-fg);
 }
 
 /* ===== PANEL: CHARACTER SHEET ===== */
@@ -401,6 +400,80 @@
     justify-content: flex-start;
     flex-wrap: wrap;
     margin-top: var(--spacing-md);
+}
+
+/* ===== CAMPAIGN SKELETON LOADERS ===== */
+.campaign-skeleton {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
+}
+
+.skeleton-line {
+    background: var(--sheet-accent-dim);
+    border-radius: 2px;
+    height: 1em;
+}
+
+.skeleton-line--title {
+    width: 60%;
+    height: 1.25em;
+    margin-bottom: var(--spacing-sm);
+}
+
+.skeleton-line--text {
+    width: 80%;
+    margin-bottom: var(--spacing-xs);
+}
+
+.skeleton-line--text-short {
+    width: 40%;
+}
+
+.skeleton-party-member {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid var(--sheet-border-color);
+}
+
+.skeleton-party-member:last-child {
+    border-bottom: none;
+}
+
+.skeleton-party-name {
+    width: 120px;
+}
+
+.skeleton-party-info {
+    width: 80px;
+}
+
+.skeleton-journal-entry {
+    padding: var(--spacing-md);
+    border: 1px solid var(--sheet-border-color);
+    margin-bottom: var(--spacing-sm);
+}
+
+.skeleton-journal-date {
+    width: 60px;
+    height: 0.85em;
+    margin-bottom: var(--spacing-xs);
+}
+
+.skeleton-journal-title {
+    width: 70%;
+    height: 1.1em;
+    margin-bottom: var(--spacing-sm);
+}
+
+.skeleton-journal-content {
+    width: 90%;
+    margin-bottom: var(--spacing-xs);
 }
 
 /* Invite code display */
