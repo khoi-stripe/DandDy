@@ -908,7 +908,10 @@ const ExpandedView = (window.ExpandedView = {
             <div class="campaign-panel-layout">
                 <div class="campaign-area">
                     <div class="campaign-area-header">
-                        <h3 class="campaign-area-title">Loading...</h3>
+                        <h3 class="campaign-area-title">[ Campaign ]</h3>
+                    </div>
+                    <div class="campaign-area-info">
+                        <div class="campaign-name">Loading...</div>
                     </div>
                 </div>
             </div>
@@ -976,10 +979,10 @@ const ExpandedView = (window.ExpandedView = {
             return `
                 <div class="campaign-area">
                     <div class="campaign-area-header">
-                        <h3 class="campaign-area-title">Campaign</h3>
+                        <h3 class="campaign-area-title">[ Campaign ]</h3>
                     </div>
                     <div class="campaign-area-empty">
-                        <div class="campaign-area-empty-icon">${hasInvitations ? '📬' : '⚔'}</div>
+                        ${hasInvitations ? '<div class="campaign-area-empty-icon">📬</div>' : ''}
                         <div class="campaign-area-empty-text ${hasInvitations ? 'has-invitations' : ''}">
                             ${invitationText}
                         </div>
@@ -1036,13 +1039,17 @@ const ExpandedView = (window.ExpandedView = {
             partyHtml = '<div class="party-empty">No party members yet</div>';
         }
 
-        // Description section with truncation (3 lines max, expandable)
-        const descriptionHtml = campaign.description 
-            ? `<div class="campaign-area-description" data-expanded="false">
-                   <div class="campaign-desc-text">${campaign.description}</div>
-                   <button class="campaign-desc-toggle" onclick="ExpandedView.toggleDescription(this)">More</button>
-               </div>`
-            : '';
+        // Campaign name and description section
+        const descriptionHtml = `
+            <div class="campaign-area-info">
+                <div class="campaign-name">${campaign.name}</div>
+                ${campaign.description 
+                    ? `<div class="campaign-area-description" data-expanded="false">
+                           <div class="campaign-desc-text">${campaign.description}</div>
+                           <button class="campaign-desc-toggle" onclick="ExpandedView.toggleDescription(this)">More</button>
+                       </div>`
+                    : ''}
+            </div>`;
 
         // Overflow menu items
         const menuItems = [];
@@ -1100,7 +1107,7 @@ const ExpandedView = (window.ExpandedView = {
         return `
             <div class="campaign-area">
                 <div class="campaign-area-header">
-                    <h3 class="campaign-area-title">${campaign.name}</h3>
+                    <h3 class="campaign-area-title">[ Campaign ]</h3>
                     ${overflowMenuHtml}
                 </div>
                 ${descriptionHtml}
@@ -1134,9 +1141,14 @@ const ExpandedView = (window.ExpandedView = {
                     <div class="journal-entry-full">
                         ${Utils.escapeHtml(entry.content || '').replace(/\n/g, '<br>')}
                     </div>
-                    <button class="journal-entry-edit terminal-btn-icon" onclick="CampaignUI.editJournalEntry(${entry.id})" title="Edit entry">
-                        ✎
-                    </button>
+                    <div class="journal-entry-actions">
+                        <button class="journal-entry-edit terminal-btn-icon" onclick="CampaignUI.editJournalEntry(${entry.id})" title="Edit entry">
+                            ✎
+                        </button>
+                        <button class="journal-entry-delete terminal-btn-icon" onclick="CampaignUI.deleteJournalEntry(${entry.id})" title="Delete entry">
+                            ×
+                        </button>
+                    </div>
                 </div>
             `).join('')
             : `
@@ -1668,7 +1680,7 @@ const CampaignUI = (window.CampaignUI = {
             // Re-enable button
             if (addBtn) {
                 addBtn.disabled = false;
-                addBtn.textContent = 'ADD';
+                addBtn.textContent = 'Add';
             }
         }
     },
@@ -1958,11 +1970,38 @@ const CampaignUI = (window.CampaignUI = {
 
     /** Toggle journal entry expanded/collapsed state */
     toggleJournalEntry(entryEl, event) {
-        // Don't toggle if clicking the edit button
-        if (event.target.closest('.journal-entry-edit')) {
+        // Don't toggle if clicking the edit or delete button
+        if (event.target.closest('.journal-entry-edit') || event.target.closest('.journal-entry-delete')) {
             return;
         }
+        
+        const isExpanding = !entryEl.classList.contains('is-expanded');
+        
+        // Close all other expanded entries (accordion behavior)
+        if (isExpanding) {
+            const allEntries = entryEl.closest('.journal-entries')?.querySelectorAll('.journal-entry.is-expanded');
+            allEntries?.forEach(entry => entry.classList.remove('is-expanded'));
+        }
+        
         entryEl.classList.toggle('is-expanded');
+    },
+
+    /** Delete a journal entry with confirmation */
+    async deleteJournalEntry(entryId) {
+        showConfirmDialog(
+            'Delete this journal entry?\n\nThis cannot be undone.',
+            async () => {
+                try {
+                    await CampaignAPI.deleteJournalEntry(entryId);
+                    showNotification('Journal entry deleted');
+                    // Refresh the campaign panel to update the journal list
+                    ExpandedView._loadCampaignPanel();
+                } catch (error) {
+                    console.error('Failed to delete journal entry:', error);
+                    showAlertDialog(error.message || 'Failed to delete journal entry.');
+                }
+            }
+        );
     },
 
     // ========================================
@@ -4153,8 +4192,8 @@ async function renameCharacter(id) {
             <input type="text" id="renameInput" class="terminal-input" value="${safeCurrentName}">
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" id="renameCancel">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" id="renameOk">APPLY</button>
+            <button class="terminal-btn" id="renameCancel">Cancel</button>
+            <button class="terminal-btn terminal-btn-primary" id="renameOk">Apply</button>
           </div>
         </div>
       </div>
@@ -4240,13 +4279,13 @@ async function openShareModal(characterId) {
               <label class="terminal-text-small modal-section-label" for="shareEmailInput">ADD PERSON</label>
               <div class="share-add-row">
                 <input type="email" id="shareEmailInput" class="terminal-input" placeholder="email@example.com" autocomplete="off" data-1p-ignore>
-                <button class="terminal-btn" id="shareAddBtn">ADD</button>
+                <button class="terminal-btn" id="shareAddBtn">Add</button>
               </div>
               <p id="shareEmailError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
             </div>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn terminal-btn-primary" id="shareDoneBtn">DONE</button>
+            <button class="terminal-btn terminal-btn-primary" id="shareDoneBtn">Done</button>
           </div>
         </div>
       </div>
@@ -4413,7 +4452,7 @@ async function openShareModal(characterId) {
             showError(error.message || 'Failed to share character');
         } finally {
             addBtn.disabled = false;
-            addBtn.textContent = 'ADD';
+            addBtn.textContent = 'Add';
         }
     });
 
@@ -4522,8 +4561,8 @@ function showPendingSharesModal(shares) {
                   From: ${fromEmail} · ${dateStr}
                 </p>
                 <div class="share-card-actions">
-                  <button class="terminal-btn pending-share-ignore" data-share-id="${share.id}">IGNORE</button>
-                  <button class="terminal-btn pending-share-accept" data-share-id="${share.id}">ADD CHARACTER</button>
+                  <button class="terminal-btn pending-share-ignore" data-share-id="${share.id}">Ignore</button>
+                  <button class="terminal-btn pending-share-accept" data-share-id="${share.id}">Add character</button>
                 </div>
               </div>
             </div>
@@ -4655,7 +4694,7 @@ async function handleDismissShare(shareId) {
     } catch (error) {
         if (ignoreBtn) {
             ignoreBtn.disabled = false;
-            ignoreBtn.textContent = 'IGNORE';
+            ignoreBtn.textContent = 'Ignore';
         }
         showNotification(error.message || 'Failed to dismiss share', 'error');
     }
@@ -6007,7 +6046,7 @@ function closeImportModal() {
         const importButton = getImportModalPrimaryButton();
         if (importButton) {
             importButton.disabled = true;  // Disable for next time modal opens
-            importButton.textContent = 'IMPORT';
+            importButton.textContent = 'Import';
         }
 
         isImporting = false;  // Reset flag when closing
@@ -6210,7 +6249,7 @@ async function importCharacter() {
                 const importButton = getImportModalPrimaryButton();
                 if (importButton) {
                     importButton.disabled = false;
-                    importButton.textContent = 'IMPORT';
+                    importButton.textContent = 'Import';
                 }
                 isImporting = false;  // Reset flag
                 return;
@@ -6232,7 +6271,7 @@ async function importCharacter() {
                 const importButton = getImportModalPrimaryButton();
                 if (importButton) {
                     importButton.disabled = false;
-                    importButton.textContent = 'IMPORT';
+                    importButton.textContent = 'Import';
                 }
                 isImporting = false;  // Reset on error
             }
@@ -6243,7 +6282,7 @@ async function importCharacter() {
             const importButton = getImportModalPrimaryButton();
             if (importButton) {
                 importButton.disabled = false;
-                importButton.textContent = 'IMPORT';
+                importButton.textContent = 'Import';
             }
             isImporting = false;  // Reset on error
         };
@@ -6255,7 +6294,7 @@ async function importCharacter() {
         const importButton = getImportModalPrimaryButton();
         if (importButton) {
             importButton.disabled = false;
-            importButton.textContent = 'IMPORT';
+            importButton.textContent = 'Import';
         }
         isImporting = false;  // Reset flag
     }
@@ -6605,7 +6644,7 @@ function showConfirmDialog(message, onConfirm) {
             <p class="terminal-text">${escapedMessage}</p>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" id="genericConfirmCancel">CANCEL</button>
+            <button class="terminal-btn" id="genericConfirmCancel">Cancel</button>
             <button class="terminal-btn terminal-btn-primary" id="genericConfirmOk">OK</button>
           </div>
         </div>
@@ -6722,8 +6761,8 @@ function showLevelChangeDialog(oldLevel, newLevel, xpTriggered = false) {
             </p>
           </div>
           <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">
-            <button class="terminal-btn" id="levelChangeManual">KEEP MANUAL</button>
-            <button class="terminal-btn terminal-btn-primary" id="levelChangeAuto">AUTO-CALCULATE</button>
+            <button class="terminal-btn" id="levelChangeManual">Keep manual</button>
+            <button class="terminal-btn terminal-btn-primary" id="levelChangeAuto">Auto-calculate</button>
           </div>
         `;
 
@@ -7532,8 +7571,8 @@ function showSessionExpiredModal() {
             <p class="terminal-text">Your local changes are safe, but you'll need to log in again to sync with the cloud.</p>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn terminal-btn-secondary" id="sessionExpiredDismiss">CONTINUE OFFLINE</button>
-            <button class="terminal-btn terminal-btn-primary" id="sessionExpiredLogin">LOG IN</button>
+            <button class="terminal-btn terminal-btn-secondary" id="sessionExpiredDismiss">Continue offline</button>
+            <button class="terminal-btn terminal-btn-primary" id="sessionExpiredLogin">Log in</button>
           </div>
         </div>
       </div>
@@ -8085,7 +8124,7 @@ function setAuthLoading(isLoading, message) {
                 registerBtn.innerHTML = registerBtn.dataset.originalLabel;
                 delete registerBtn.dataset.originalLabel;
             } else {
-                registerBtn.textContent = 'REGISTER';
+                registerBtn.textContent = 'Register';
             }
         }
     }
@@ -8580,12 +8619,12 @@ function updateAuthUI() {
         const user = window.AuthService.getCurrentUser();
         userStatusIcon.textContent = '☁';
         userStatusText.textContent = user ? user.email : 'Logged In';
-        authBtn.textContent = 'LOG OUT';
+        authBtn.textContent = 'Log out';
         authBtn.onclick = handleLogout;
         
         // Update overflow menu
         if (overflowAuthIcon) overflowAuthIcon.textContent = '←';
-        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log Out';
+        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log out';
 
         // Hide guest notice when logged in
         if (guestNotice) {
@@ -10595,8 +10634,8 @@ function openSpellPickerForEdit(level) {
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="closeInlineSpellPicker()">← BACK</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="confirmInlineSpellSelection()">CONFIRM</button>
+                <button class="terminal-btn" onclick="closeInlineSpellPicker()">← Back</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="confirmInlineSpellSelection()">Confirm</button>
             </div>
         `;
         

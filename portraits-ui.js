@@ -188,8 +188,8 @@
               </div>
             </div>
             <div class="modal-footer modal-footer-end">
-              <button class="terminal-btn" onclick="PortraitUI.closeHistory()">CANCEL</button>
-              <button class="terminal-btn terminal-btn-primary" onclick="PortraitUI.confirmSelection()">USE SELECTED</button>
+              <button class="terminal-btn" onclick="PortraitUI.closeHistory()">Cancel</button>
+              <button class="terminal-btn terminal-btn-primary" onclick="PortraitUI.confirmSelection()">Use selected</button>
             </div>
           </div>
         </div>
@@ -722,8 +722,8 @@
       `;
 
       const infoFooterHtml = `
-        <button class="terminal-btn" id="portrait-info-back">BACK</button>
-        ${escapedPrompt ? '<button class="terminal-btn" id="portrait-info-copy">COPY PROMPT</button>' : ''}
+        <button class="terminal-btn" id="portrait-info-back">Back</button>
+        ${escapedPrompt ? '<button class="terminal-btn" id="portrait-info-copy">Copy prompt</button>' : ''}
       `;
 
       // Transform modal to info view
@@ -821,8 +821,8 @@
         `;
 
         const createNewFooterHtml = `
-          <button class="terminal-btn" id="portrait-delete-cancel">CANCEL</button>
-          <button class="terminal-btn terminal-btn-primary" id="portrait-create-new">CREATE NEW</button>
+          <button class="terminal-btn" id="portrait-delete-cancel">Cancel</button>
+          <button class="terminal-btn terminal-btn-primary" id="portrait-create-new">Create new</button>
         `;
 
         this._animateModalContentResize('portraitHistoryModal', () => {
@@ -872,8 +872,8 @@
       `;
 
       const confirmationFooterHtml = `
-        <button class="terminal-btn" id="portrait-delete-cancel">NO</button>
-        <button class="terminal-btn terminal-btn-primary" id="portrait-delete-confirm">YES</button>
+        <button class="terminal-btn" id="portrait-delete-cancel">No</button>
+        <button class="terminal-btn terminal-btn-primary" id="portrait-delete-confirm">Yes</button>
       `;
 
       // Transform modal to confirmation view

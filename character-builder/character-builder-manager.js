@@ -72,7 +72,7 @@ function closeAuthModal() {
     // Reset toggle labels back to SHOW
     document.querySelectorAll('.password-toggle-btn').forEach((btn) => {
         try {
-            btn.textContent = 'SHOW';
+            btn.textContent = 'Show';
             btn.setAttribute('aria-pressed', 'false');
             btn.setAttribute('aria-label', 'Show password');
         } catch (_) {}
@@ -326,7 +326,7 @@ function updateAuthUI() {
         const user = window.AuthService.getCurrentUser();
         userStatusIcon.textContent = '☁';
         userStatusText.textContent = user ? user.email : 'Logged In';
-        authBtn.textContent = 'LOG OUT';
+        authBtn.textContent = 'Log out';
         authBtn.onclick = handleLogout;
     } else {
         userStatusIcon.textContent = '▣';

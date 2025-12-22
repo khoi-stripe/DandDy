@@ -15,6 +15,11 @@
   display: none;
 }
 
+/* Remove right border from left panel in builder */
+.left-panel {
+  border-right: none;
+}
+
 .terminal-status {
   display: flex;
   align-items: center;
@@ -85,7 +90,7 @@
   padding: 0;
   cursor: pointer;
   color: var(--sheet-accent-dim);
-  font-size: 1.4rem;
+  font-size: var(--font-size-xl);
   line-height: 1;
   transition: color 0.2s ease, text-shadow 0.2s ease;
   /* Center the gear icon visually */
@@ -217,10 +222,10 @@
 /* Recommendations */
 .recommendations-header {
   color: var(--terminal-accent);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   font-size: var(--font-size-base);
   margin-bottom: var(--spacing-sm);
-  letter-spacing: 2px;
+  letter-spacing: var(--tracking-widest);
 }
 
 .recommendations-divider {
@@ -369,7 +374,7 @@
   color: var(--terminal-accent-dim);
   padding: 4px 12px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   cursor: pointer;
   transition: all 0.2s;
   border-radius: 2px;
@@ -522,7 +527,7 @@
   /* Print-only character name above stats */
   .print-only-name {
     display: block !important;
-    font-size: 18px !important;
+    font-size: var(--font-size-lg) !important;
     font-weight: 500 !important;
     margin-bottom: 12px !important;
   }
@@ -599,7 +604,7 @@
 .settings-group-label {
   color: var(--terminal-fg);
   font-size: var(--font-size-base);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   text-transform: uppercase;
 }
 
@@ -652,8 +657,8 @@
   margin-bottom: var(--spacing-sm);
   color: var(--context-accent);
   text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.5px;
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--tracking-wider);
 }
 
 .settings-radio-label {
@@ -807,8 +812,8 @@
   left: 50%;
   transform: translate(-50%, -50%);
   color: var(--terminal-bg);
-  font-size: 10px;
-  font-weight: 500;
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
 }
 
 .settings-checkbox:focus-visible {
@@ -818,13 +823,13 @@
 
 .settings-checkbox-text {
   color: var(--modal-accent);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: var(--tracking-wider);
 }
 
 .settings-hint--small {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--modal-accent);
   margin-top: 4px;
   margin-left: 22px; /* align with checkbox label (14px checkbox + 8px gap) */
@@ -839,9 +844,9 @@
 
 .settings-admin-badge {
   display: inline-block;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: var(--tracking-widest);
   color: var(--terminal-dim);
   background: color-mix(in srgb, var(--terminal-dim) 15%, transparent);
   padding: 2px 6px;
@@ -1013,7 +1018,7 @@
 /* Accent + weight emphasis */
 .text-strong {
   color: var(--terminal-accent);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .mt-sm { margin-top: var(--spacing-sm); }
@@ -1040,7 +1045,7 @@
 .spinner {
   display: inline-block;
   animation: spin 1s linear infinite;
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   color: currentColor;
   text-shadow: none;
   vertical-align: middle;
@@ -1180,7 +1185,7 @@
   font-size: var(--font-size-small);
   padding: 0;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: var(--tracking-widest);
 }
 
 .password-toggle-btn:hover {
@@ -1274,7 +1279,7 @@
 
 .auth-screen .spinner,
 .manager-screen .spinner {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--terminal-fg);
   text-shadow: none;
   margin-bottom: var(--spacing-md);
@@ -1405,7 +1410,7 @@
   color: var(--terminal-fg);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   text-shadow: 0 0 5px var(--terminal-fg);
 }
 
@@ -1413,7 +1418,7 @@
   color: var(--terminal-accent);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   text-shadow: 0 0 5px var(--terminal-accent);
 }
 
@@ -1464,7 +1469,7 @@
 
 .card-stats .stat-value {
   color: var(--terminal-fg);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .stat-hp-green {
@@ -1524,7 +1529,7 @@
 }
 
 .empty-icon {
-  font-size: 64px;
+  font-size: var(--font-size-6xl);
   margin-bottom: var(--spacing-lg);
 }
 
@@ -1745,7 +1750,7 @@
 }
 
 .session-resume-modal .modal-header .session-time {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--modal-accent-dim);
   margin-left: auto;
 }

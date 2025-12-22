@@ -39,9 +39,9 @@
                         </div>
                     </div>
                     <div class="welcome-actions">
-                        <button class="terminal-btn terminal-btn-primary" id="welcomeLoginBtn">LOG IN</button>
-                        <button class="terminal-btn" id="welcomeRegisterBtn">CREATE ACCOUNT</button>
-                        <button class="terminal-btn terminal-btn-secondary" id="welcomeDemoBtn">GUEST MODE</button>
+                        <button class="terminal-btn terminal-btn-primary" id="welcomeLoginBtn">Log in</button>
+                        <button class="terminal-btn" id="welcomeRegisterBtn">Create account</button>
+                        <button class="terminal-btn terminal-btn-secondary" id="welcomeDemoBtn">Guest mode</button>
                         <div class="welcome-version">D&Dy v2.2.2</div>
                     </div>
                 </div>
@@ -83,9 +83,9 @@
                     <span id="userStatusIcon" class="user-status-icon" aria-hidden="true"></span>
                     <span id="userStatusText" class="user-status-text"></span>
                 </span>
-                <button id="authBtn" class="terminal-btn terminal-btn-small ui-theme-teal header-action-btn">LOG IN</button>
+                <button id="authBtn" class="terminal-btn terminal-btn-small ui-theme-teal header-action-btn">Log in</button>
                 <span class="has-tooltip">
-                    <button id="newCharacterBtn" class="terminal-btn terminal-btn-primary ui-theme-teal header-action-btn">+ NEW CHARACTER</button>
+                    <button id="newCharacterBtn" class="terminal-btn terminal-btn-primary ui-theme-teal header-action-btn">+ New character</button>
                     <span id="newCharacterTooltip" class="custom-tooltip" data-position="bottom-end"></span>
                 </span>
                 <!-- Mobile overflow menu (shown when scrolling on mobile) -->
@@ -291,12 +291,12 @@
             <div class="modal-body">
                 <p class="terminal-text">Upload a character JSON file:</p>
                 <input type="file" id="importFile" accept=".json" class="file-input-hidden">
-                <button class="terminal-btn" onclick="document.getElementById('importFile').click()">CHOOSE FILE</button>
+                <button class="terminal-btn" onclick="document.getElementById('importFile').click()">Choose file</button>
                 <span id="fileName" class="terminal-text-dim file-name-label"></span>
             </div>
             <div class="modal-footer">
-                <button class="terminal-btn" onclick="closeImportModal()">CANCEL</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="importCharacter()">IMPORT</button>
+                <button class="terminal-btn" onclick="closeImportModal()">Cancel</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="importCharacter()">Import</button>
             </div>
         </div>
     </div>
@@ -322,8 +322,8 @@
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="closeDuplicateModal()">CANCEL</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="saveDuplicateResolution()">SAVE</button>
+                <button class="terminal-btn" onclick="closeDuplicateModal()">Cancel</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="saveDuplicateResolution()">Save</button>
             </div>
         </div>
     </div>
@@ -349,8 +349,8 @@
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="closeManagerSettings()">CANCEL</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="saveManagerSettings()">SAVE</button>
+                <button class="terminal-btn" onclick="closeManagerSettings()">Cancel</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="saveManagerSettings()">Save</button>
             </div>
         </div>
     </div>
@@ -373,8 +373,8 @@
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="CampaignUI.closeCreateModal()">CANCEL</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.submitCreateCampaign()">CREATE</button>
+                <button class="terminal-btn" onclick="CampaignUI.closeCreateModal()">Cancel</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.submitCreateCampaign()">Create</button>
             </div>
         </div>
     </div>
@@ -396,8 +396,8 @@
                 <div id="joinCampaignError" class="terminal-text-small terminal-text-error mt-sm is-hidden"></div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="CampaignUI.closeJoinModal()">CANCEL</button>
-                <button class="terminal-btn terminal-btn-primary" id="joinCampaignBtn" onclick="CampaignUI.submitJoinCampaign()" disabled>JOIN</button>
+                <button class="terminal-btn" onclick="CampaignUI.closeJoinModal()">Cancel</button>
+                <button class="terminal-btn terminal-btn-primary" id="joinCampaignBtn" onclick="CampaignUI.submitJoinCampaign()" disabled>Join</button>
             </div>
         </div>
     </div>
@@ -415,7 +415,7 @@
                 </p>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.closeCampaignCreatedModal()">DONE</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.closeCampaignCreatedModal()">Done</button>
             </div>
         </div>
     </div>
@@ -439,13 +439,13 @@
                     <label class="terminal-text-small modal-section-label" for="inviteModalEmail">ADD PERSON</label>
                     <div class="share-add-row">
                         <input type="email" id="inviteModalEmail" class="terminal-input" placeholder="email@example.com" autocomplete="off" data-1p-ignore onkeydown="if(event.key==='Enter'){event.preventDefault();CampaignUI.addPendingInviteFromModal();}">
-                        <button type="button" class="terminal-btn" id="inviteAddBtn" onclick="CampaignUI.addPendingInviteFromModal()">ADD</button>
+                        <button type="button" class="terminal-btn" id="inviteAddBtn" onclick="CampaignUI.addPendingInviteFromModal()">Add</button>
                     </div>
                     <p id="inviteModalError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.sendInvitations()">DONE</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.sendInvitations()">Done</button>
             </div>
         </div>
     </div>
@@ -470,10 +470,10 @@
                 <div id="manageCampaignError" class="terminal-text-small terminal-text-error mt-sm is-hidden"></div>
             </div>
             <div class="modal-footer modal-footer-spread">
-                <button class="terminal-btn terminal-btn-danger" onclick="CampaignUI.confirmDeleteCampaignFromModal()">DELETE CAMPAIGN</button>
+                <button class="terminal-btn terminal-btn-danger" onclick="CampaignUI.confirmDeleteCampaignFromModal()">Delete campaign</button>
                 <div class="modal-footer-right">
-                    <button class="terminal-btn" onclick="CampaignUI.closeManageModal()">CANCEL</button>
-                    <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.submitManageCampaign()">SAVE</button>
+                    <button class="terminal-btn" onclick="CampaignUI.closeManageModal()">Cancel</button>
+                    <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.submitManageCampaign()">Save</button>
                 </div>
             </div>
         </div>
@@ -502,8 +502,8 @@
                 <input type="hidden" id="journalEntryId" value="">
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="CampaignUI.closeJournalEntryModal()">CANCEL</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.saveJournalEntry()">SAVE ENTRY</button>
+                <button class="terminal-btn" onclick="CampaignUI.closeJournalEntryModal()">Cancel</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.saveJournalEntry()">Save entry</button>
             </div>
         </div>
     </div>
@@ -564,8 +564,8 @@
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="CampaignUI.skipCharacterUpdate()">SKIP</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.saveCharacterUpdate()">UPDATE CHARACTER</button>
+                <button class="terminal-btn" onclick="CampaignUI.skipCharacterUpdate()">Skip</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.saveCharacterUpdate()">Update character</button>
             </div>
         </div>
     </div>
@@ -745,8 +745,8 @@
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="ModalManager.requestClose('editDetailsModal')">CANCEL</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="saveEditDetails()">SAVE</button>
+                <button class="terminal-btn" onclick="ModalManager.requestClose('editDetailsModal')">Cancel</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="saveEditDetails()">Save</button>
             </div>
         </div>
     </div>
@@ -828,8 +828,8 @@
                     </div>
                 </div>
                 <div class="modal-footer modal-footer-end">
-                    <button class="terminal-btn" onclick="ModalManager.requestClose('spellEditModal')">CANCEL</button>
-                    <button class="terminal-btn terminal-btn-primary" onclick="saveSpellEditModal()">SAVE</button>
+                    <button class="terminal-btn" onclick="ModalManager.requestClose('spellEditModal')">Cancel</button>
+                    <button class="terminal-btn terminal-btn-primary" onclick="saveSpellEditModal()">Save</button>
                 </div>
             </div>
         </div>
@@ -877,8 +877,8 @@
             <div class="modal-footer">
                 <div class="spell-picker-selected-count" id="spellPickerSelectedCount">0 selected</div>
                 <div class="modal-footer-buttons">
-                    <button class="terminal-btn" onclick="closeSpellPicker()">CANCEL</button>
-                    <button class="terminal-btn terminal-btn-primary" onclick="confirmSpellSelection()">ADD SELECTED</button>
+                    <button class="terminal-btn" onclick="closeSpellPicker()">Cancel</button>
+                    <button class="terminal-btn terminal-btn-primary" onclick="confirmSpellSelection()">Add selected</button>
                 </div>
             </div>
         </div>
@@ -894,11 +894,11 @@
             <div class="modal-body">
                 <div id="loginForm">
                     <p class="terminal-text-small">Email:</p>
-                    <input type="email" id="loginEmail" class="terminal-input" placeholder="you@example.com">
+                    <input type="email" id="loginEmail" class="terminal-input" placeholder="you@example.com" data-1p-ignore>
                     <p class="terminal-text-small modal-section-label">Password:</p>
                     <div class="password-input-wrapper">
-                        <input type="password" id="loginPassword" class="terminal-input" placeholder="Enter password">                                          
-                        <button type="button" class="password-toggle-btn" data-target="loginPassword" aria-label="Show password">SHOW</button>                  
+                        <input type="password" id="loginPassword" class="terminal-input" placeholder="Enter password" data-1p-ignore>                                          
+                        <button type="button" class="password-toggle-btn" data-target="loginPassword" aria-label="Show password">Show</button>                  
                     </div>
                     <p class="terminal-text-small modal-section-label terminal-text-dim">
                         <button class="link-button" type="button" onclick="openPasswordResetFromLogin()">Forgot your password?</button>
@@ -910,16 +910,16 @@
                 <div id="registerForm" class="is-hidden">
                     <p class="terminal-text">Create an account to sync your characters across devices.</p>
                     <p class="terminal-text-small">Email:</p>
-                    <input type="email" id="registerEmail" class="terminal-input" placeholder="you@example.com">
+                    <input type="email" id="registerEmail" class="terminal-input" placeholder="you@example.com" data-1p-ignore>
                     <p class="terminal-text-small modal-section-label">Password:</p>
                     <div class="password-input-wrapper">
-                        <input type="password" id="registerPassword" class="terminal-input" placeholder="Choose password">                                      
-                        <button type="button" class="password-toggle-btn" data-target="registerPassword" aria-label="Show password">SHOW</button>                
+                        <input type="password" id="registerPassword" class="terminal-input" placeholder="Choose password" data-1p-ignore>                                      
+                        <button type="button" class="password-toggle-btn" data-target="registerPassword" aria-label="Show password">Show</button>                
                     </div>
                     <p class="terminal-text-small modal-section-label">Confirm password:</p>
                     <div class="password-input-wrapper">
-                        <input type="password" id="registerPasswordConfirm" class="terminal-input" placeholder="Re-enter password">                             
-                        <button type="button" class="password-toggle-btn" data-target="registerPasswordConfirm" aria-label="Show password">SHOW</button>         
+                        <input type="password" id="registerPasswordConfirm" class="terminal-input" placeholder="Re-enter password" data-1p-ignore>                             
+                        <button type="button" class="password-toggle-btn" data-target="registerPasswordConfirm" aria-label="Show password">Show</button>         
                     </div>
                     <p class="terminal-text-small modal-section-label terminal-text-dim">
                         Already have an account? <a href="#" onclick="showLoginForm(); return false;" class="terminal-link">Log in here</a>
@@ -928,9 +928,9 @@
                 <div id="authError" class="terminal-text-error is-hidden"></div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button id="authCancelBtn" class="terminal-btn" onclick="cancelAuthFlow()">CANCEL</button>
-                <button id="loginBtn" class="terminal-btn terminal-btn-primary" onclick="handleLogin()">LOG IN</button>
-                <button id="registerBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handleRegister()">REGISTER</button>
+                <button id="authCancelBtn" class="terminal-btn" onclick="cancelAuthFlow()">Cancel</button>
+                <button id="loginBtn" class="terminal-btn terminal-btn-primary" onclick="handleLogin()">Log in</button>
+                <button id="registerBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handleRegister()">Register</button>
             </div>
         </div>
     </div>
@@ -964,16 +964,16 @@
                     <p class="terminal-text-small modal-section-label">New password:</p>
                     <div class="password-input-wrapper">
                         <input type="password" id="passwordResetNewPassword" class="terminal-input" placeholder="Enter new password">
-                        <button type="button" class="password-toggle-btn" data-target="passwordResetNewPassword" aria-label="Show password">SHOW</button>
+                        <button type="button" class="password-toggle-btn" data-target="passwordResetNewPassword" aria-label="Show password">Show</button>
                     </div>
                     <div id="passwordResetConfirmMessage" class="terminal-text-small terminal-text-dim mt-sm"></div>
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button id="passwordResetCancelBtn" class="terminal-btn" onclick="closePasswordResetModal()">CANCEL</button>
-                <button id="passwordResetCloseBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="closePasswordResetModal()">CLOSE</button>
-                <button id="passwordResetRequestBtn" class="terminal-btn terminal-btn-primary" onclick="handlePasswordResetRequest()">SEND RESET LINK</button>
-                <button id="passwordResetConfirmBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handlePasswordResetConfirm()">SET NEW PASSWORD</button>
+                <button id="passwordResetCancelBtn" class="terminal-btn" onclick="closePasswordResetModal()">Cancel</button>
+                <button id="passwordResetCloseBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="closePasswordResetModal()">Close</button>
+                <button id="passwordResetRequestBtn" class="terminal-btn terminal-btn-primary" onclick="handlePasswordResetRequest()">Send reset link</button>
+                <button id="passwordResetConfirmBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handlePasswordResetConfirm()">Set new password</button>
             </div>
         </div>
     </div>
@@ -992,8 +992,8 @@
                 <div id="migrationStatus" class="terminal-text is-hidden"></div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="closeMigrationModal()">SKIP</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="startMigration()">MIGRATE NOW</button>
+                <button class="terminal-btn" onclick="closeMigrationModal()">Skip</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="startMigration()">Migrate now</button>
             </div>
         </div>
     </div>
@@ -1013,8 +1013,8 @@
                 <p class="terminal-text">Would you like to copy them to your account? You can modify or delete them later.</p>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="closeDemoMigrationModal(false)">NO THANKS</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="migrateDemoCharacters()">YES, KEEP THEM</button>
+                <button class="terminal-btn" onclick="closeDemoMigrationModal(false)">No thanks</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="migrateDemoCharacters()">Yes, keep them</button>
             </div>
         </div>
     </div>
@@ -1049,8 +1049,8 @@
                 <textarea id="portraitPrompt" class="terminal-textarea portrait-prompt-textarea" placeholder="Enter custom description..."></textarea>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="surpriseMePortrait()">SURPRISE ME</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="confirmGeneratePortrait()">GENERATE PORTRAIT</button>
+                <button class="terminal-btn" onclick="surpriseMePortrait()">Surprise me</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="confirmGeneratePortrait()">Generate portrait</button>
             </div>
         </div>
     </div>
