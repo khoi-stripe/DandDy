@@ -204,8 +204,11 @@
     text-overflow: ellipsis;
 }
 
-/* Center count display */
+/* Center count display - absolutely positioned for true center */
 .character-nav-bar .nav-count {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     color: var(--sheet-accent);
     font-family: var(--font-terminal);
     font-size: var(--font-size-sm);
