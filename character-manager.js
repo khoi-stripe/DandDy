@@ -796,14 +796,27 @@ const CharacterNavBar = (window.CharacterNavBar = {
         });
     },
 
-    /** Hide the nav bar with animation (called before collapse starts) */
+    /** Hide the nav bar with animation (called before collapse starts) 
+     *  Returns a promise that resolves after the animation completes */
     hide() {
-        const navBar = document.getElementById('characterNavBar');
-        const sheetWrapper = document.querySelector('.sheet-scroll-wrapper');
-        if (!navBar || !sheetWrapper) return;
+        return new Promise((resolve) => {
+            const navBar = document.getElementById('characterNavBar');
+            const sheetWrapper = document.querySelector('.sheet-scroll-wrapper');
+            if (!navBar || !sheetWrapper) {
+                resolve();
+                return;
+            }
 
-        navBar.classList.remove('is-visible');
-        sheetWrapper.style.paddingTop = '0';
+            // First: animate out the nav bar
+            navBar.classList.remove('is-visible');
+            
+            // After nav bar animation completes (0.25s), expand the sheet
+            setTimeout(() => {
+                sheetWrapper.style.paddingTop = '0';
+                // Wait for sheet padding transition (0.25s) then resolve
+                setTimeout(resolve, 250);
+            }, 250);
+        });
     },
     
     /** Update the nav bar content for the current character */
@@ -981,15 +994,16 @@ const ExpandedView = (window.ExpandedView = {
     },
 
     /** Collapse back to grid view (grid + sheet view) */
-    collapse() {
+    async collapse() {
         const splitLayout = document.querySelector('.split-layout');
 
+        // First: hide character nav bar and expand sheet to fill space
+        await CharacterNavBar.hide();
+
+        // Then: start the collapse animation
         // Add collapsing class to trigger the collapse animation
         // Keep is-sheet-expanded to maintain fixed column widths during animation
         splitLayout?.classList.add('is-collapsing');
-
-        // Hide character nav bar at the same time as collapse animation
-        CharacterNavBar.hide();
         
         PanelManager.setView('grid-sheet');
         
