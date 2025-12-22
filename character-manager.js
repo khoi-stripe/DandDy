@@ -793,11 +793,57 @@ const ExpandedView = (window.ExpandedView = {
         }
     },
 
+    /** Calculate and set column widths based on current container size */
+    _updateColumnWidths() {
+        const splitLayout = document.querySelector('.split-layout');
+        const campaignGrid = document.querySelector('.sheet-campaign-grid');
+        
+        if (splitLayout && campaignGrid) {
+            const expandedWidth = splitLayout.offsetWidth - 66; // 64px padding + 2px border
+            const baseColumnWidth = expandedWidth / 2;
+            // Character sheet is 34px narrower, campaign panel is 34px wider
+            campaignGrid.style.setProperty('--sheet-column-width', `${baseColumnWidth - 34}px`);
+            campaignGrid.style.setProperty('--campaign-column-width', `${baseColumnWidth + 34}px`);
+        }
+    },
+    
+    /** Handle viewport resize - recalculate column widths if expanded */
+    _onResize: null, // Will hold the bound resize handler
+    
+    _setupResizeListener() {
+        if (this._onResize) return; // Already set up
+        
+        this._onResize = () => {
+            if (this.isExpanded()) {
+                this._updateColumnWidths();
+            }
+        };
+        window.addEventListener('resize', this._onResize);
+    },
+    
+    _removeResizeListener() {
+        if (this._onResize) {
+            window.removeEventListener('resize', this._onResize);
+            this._onResize = null;
+        }
+    },
+
     /** Expand to show campaign panel (sheet + campaign view) */
     expand() {
+        const splitLayout = document.querySelector('.split-layout');
+        
+        // Calculate column widths based on current container size
+        this._updateColumnWidths();
+        
+        // Set up resize listener to keep columns responsive
+        this._setupResizeListener();
+        
+        // Add animation class to trigger CSS transition
+        splitLayout?.classList.add('is-sheet-expanded');
+        
         PanelManager.setView('sheet-campaign');
         
-        // Show campaign panel slot
+        // Show campaign panel slot (CSS handles the fade-in)
         const campaignSlot = document.querySelector('.campaign-panel-slot');
         if (campaignSlot) {
             campaignSlot.classList.remove('is-hidden');
@@ -816,13 +862,30 @@ const ExpandedView = (window.ExpandedView = {
 
     /** Collapse back to grid view (grid + sheet view) */
     collapse() {
+        const splitLayout = document.querySelector('.split-layout');
+        
+        // Add collapsing class to trigger the collapse animation
+        // Keep is-sheet-expanded to maintain fixed column widths during animation
+        splitLayout?.classList.add('is-collapsing');
+        
         PanelManager.setView('grid-sheet');
         
-        // Hide campaign panel slot when returning to grid view
+        // After animation completes, clean up classes and listeners
         const campaignSlot = document.querySelector('.campaign-panel-slot');
-        if (campaignSlot) {
-            campaignSlot.classList.add('is-hidden');
-        }
+        setTimeout(() => {
+            splitLayout?.classList.remove('is-sheet-expanded', 'is-collapsing');
+            if (campaignSlot) {
+                campaignSlot.classList.add('is-hidden');
+            }
+            // Clear the column width variables
+            const campaignGrid = document.querySelector('.sheet-campaign-grid');
+            if (campaignGrid) {
+                campaignGrid.style.removeProperty('--sheet-column-width');
+                campaignGrid.style.removeProperty('--campaign-column-width');
+            }
+            // Remove resize listener
+            this._removeResizeListener();
+        }, 400); // Match CSS transition duration
         
         // Update URL to remove expanded state
         this._updateUrl(false);
@@ -1178,9 +1241,9 @@ const ExpandedView = (window.ExpandedView = {
             <div class="journal-section">
                 <div class="journal-header">
                     <h3 class="journal-title">[ Journal ]</h3>
-                    <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJournalEntryModal()">
+                    <a href="#" class="journal-add-link" onclick="CampaignUI.openJournalEntryModal(); return false;">
                         + Add Entry
-                    </button>
+                    </a>
                 </div>
                 <div class="journal-entries">
                     ${entriesHtml}
@@ -3210,6 +3273,11 @@ const UI = {
         const sheetCampaignGrid = document.querySelector('.sheet-campaign-grid');
         const titleHeader = sheetContainer.querySelector('.sheet-title-header');
         if (scrollWrapper && sheetCampaignGrid && titleHeader) {
+            // Remove any existing title header from scroll wrapper first
+            const existingHeader = scrollWrapper.querySelector('.sheet-title-header');
+            if (existingHeader) {
+                existingHeader.remove();
+            }
             scrollWrapper.insertBefore(titleHeader, sheetCampaignGrid);
         }
         

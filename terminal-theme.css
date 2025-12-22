@@ -2186,7 +2186,7 @@ body::before {
   background: transparent;
 }
 
-/* Secondary/Small button */
+/* Secondary/Small button - dim style by default */
 .terminal-btn-small,
 .button-secondary {
   background: transparent;
@@ -2204,6 +2204,7 @@ body::before {
   display: inline-flex;
   align-items: center;
   box-sizing: border-box;
+  opacity: 0.7;
 }
 
 .terminal-btn-small:hover:not(:disabled),
@@ -2212,6 +2213,7 @@ body::before {
      (green by default, teal in sheets, yellow in modals, etc.). */
   border-color: var(--ui-fg-color);
   color: var(--ui-fg-color);
+  opacity: 1;
 }
 
 /* KeyboardNav uses an `is-focused` class (not DOM focus). Mirror hover styling
@@ -2220,6 +2222,7 @@ body::before {
   border-color: var(--ui-fg-color);
   color: var(--ui-fg-color);
   background: color-mix(in srgb, var(--ui-primary-bg-color) 10%, transparent);
+  opacity: 1;
 }
 
 /* Teal-themed small buttons (e.g., builder EXIT) should also get a subtle
@@ -2228,6 +2231,7 @@ body::before {
   background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
   border-color: var(--sheet-accent);
   color: var(--sheet-accent);
+  opacity: 1;
 }
 
 /* Filled primary button (character manager style) */

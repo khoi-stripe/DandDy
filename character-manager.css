@@ -103,6 +103,7 @@
     grid-template-columns: 1fr 1fr;
     min-height: 0;
     overflow: hidden;
+    transition: grid-template-columns 0.4s ease;
 }
 
 /* When campaign panel is hidden, character sheet expands to full width */
@@ -117,6 +118,13 @@
     padding: 0 16px 0 24px;
     display: flex;
     flex-direction: column;
+    /* Transition for smooth reveal */
+    transition: opacity 0.3s ease 0.1s;
+}
+
+/* Hidden state with opacity for fade effect */
+.campaign-panel-slot.is-hidden {
+    opacity: 0;
 }
 
 /* When sheet panel is first (left position), adjust borders */
@@ -788,6 +796,18 @@
     padding: 16px 0 var(--spacing-md) 0;
     border-bottom: 1px solid var(--sheet-border-color);
     flex-shrink: 0;
+}
+
+.journal-add-link {
+    color: var(--sheet-accent-dim);
+    text-decoration: none;
+    font-size: var(--font-size-base);
+    transition: color 0.2s ease;
+}
+
+.journal-add-link:hover {
+    color: var(--sheet-accent);
+    text-decoration: none;
 }
 
 .journal-title {
@@ -2468,6 +2488,62 @@
     position: relative;
 }
 
+/* ===== ANIMATED SHEET EXPANSION (Desktop) ===== */
+@media (min-width: 769px) {
+    /* Default state: both panels at 50%, no transform */
+    .panel-character-grid {
+        flex: 0 0 50%;
+        transform: translateX(0);
+        margin-right: 0;
+        transition: 
+            transform 0.4s ease,
+            margin-right 0.4s ease,
+            opacity 0.3s ease;
+    }
+    
+    .panel-character-sheet {
+        flex: 0 0 50%;
+        transition: flex-basis 0.4s ease;
+    }
+    
+    /* Expanded state: grid slides off-screen, maintaining its size */
+    .split-layout.is-sheet-expanded .panel-character-grid {
+        display: flex !important;
+        /* Slide left by its own width */
+        transform: translateX(-100%);
+        /* Collapse its space so sheet can expand */
+        margin-right: -50%;
+        opacity: 0;
+        pointer-events: none;
+    }
+    
+    /* Expanded state: sheet fills full width */
+    .split-layout.is-sheet-expanded .panel-character-sheet {
+        flex: 1 1 100%;
+    }
+    
+    /* Column widths are calculated by JS based on actual expanded container size.
+       --sheet-column-width and --campaign-column-width are set as inline styles.
+       Keep fixed columns during both expand and collapse animations. */
+    .split-layout.is-sheet-expanded .sheet-campaign-grid,
+    .split-layout.is-collapsing .sheet-campaign-grid {
+        grid-template-columns: var(--sheet-column-width) var(--campaign-column-width) !important;
+    }
+    
+    /* During collapse: grid slides back in, sheet shrinks back to 50% */
+    .split-layout.is-collapsing .panel-character-grid {
+        display: flex !important;
+        transform: translateX(0);
+        margin-right: 0;
+        opacity: 1;
+        pointer-events: auto;
+    }
+    
+    .split-layout.is-collapsing .panel-character-sheet {
+        flex: 0 0 50%;
+    }
+}
+
 .panel-loading-row {
     position: absolute;
     /* Fill the split layout and let CSS Grid handle centering so that
@@ -3627,13 +3703,10 @@
     border-radius: 3px;
 }
 
-/* Shared character tag - overlays portrait in sheet view (same position as demo) */
+/* Shared character tag - inline with sheet title */
 .sheet-shared-tag {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    z-index: 5;
-    padding: 0 4px;
+    display: inline-block;
+    padding: 2px 6px;
     font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-medium);
     letter-spacing: var(--tracking-wider);
@@ -3642,6 +3715,7 @@
     background-color: var(--sheet-accent);
     border-radius: 3px;
     cursor: help;
+    vertical-align: middle;
 }
 
 /* Shared tag tooltip - show on hover (CSS-only, desktop) */

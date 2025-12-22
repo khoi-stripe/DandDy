@@ -461,6 +461,7 @@ const CharacterSheet = (window.CharacterSheet = {
         hasCollaborators,
         collaboratorCount,
         ownerEmail,
+        lastUpdatedByEmail,
         hideOverflowMenu,
       })}
       
@@ -537,6 +538,7 @@ const CharacterSheet = (window.CharacterSheet = {
       hasCollaborators,
       collaboratorCount,
       ownerEmail,
+      lastUpdatedByEmail,
       hideOverflowMenu,
     } = callbacks;
     // Function names differ by context
@@ -796,10 +798,67 @@ const CharacterSheet = (window.CharacterSheet = {
         ? this.escapeHtml(character.name)
         : '[ CHARACTER SHEET ]';
 
+    // Generate shared tag for inline display with title
+    let sharedTagHtml = '';
+    if (isShared || hasCollaborators) {
+      // Format the last updated time
+      const updatedAt = character.updatedAt || character.updated_at;
+      let lastUpdatedText = '';
+      if (updatedAt) {
+        try {
+          const date = new Date(updatedAt);
+          lastUpdatedText = date.toLocaleString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+          });
+        } catch (e) {
+          lastUpdatedText = '';
+        }
+      }
+      
+      // Format who last updated
+      const lastUpdatedBy = lastUpdatedByEmail ? this.escapeHtml(lastUpdatedByEmail) : null;
+      
+      if (isShared) {
+        // Collaborator's view
+        const sharedByLine = `Shared by ${this.escapeHtml(ownerEmail || 'unknown')}`;
+        let updatedLine = '';
+        if (lastUpdatedText) {
+          updatedLine = lastUpdatedBy 
+            ? `Last updated: ${lastUpdatedText}<br>by ${lastUpdatedBy}`
+            : `Last updated: ${lastUpdatedText}`;
+        }
+        const tooltipContent = updatedLine ? `${sharedByLine}<br>${updatedLine}` : sharedByLine;
+        sharedTagHtml = `
+          <span class="sheet-shared-tag has-tooltip">
+            SHARED
+            <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
+          </span>`;
+      } else if (hasCollaborators) {
+        // Owner's view
+        const sharedWithLine = collaboratorCount === 1 ? 'Shared with 1 user' : `Shared with ${collaboratorCount} users`;
+        let updatedLine = '';
+        if (lastUpdatedText) {
+          updatedLine = lastUpdatedBy 
+            ? `Last updated: ${lastUpdatedText}<br>by ${lastUpdatedBy}`
+            : `Last updated: ${lastUpdatedText}`;
+        }
+        const tooltipContent = updatedLine ? `${sharedWithLine}<br>${updatedLine}` : sharedWithLine;
+        sharedTagHtml = `
+          <span class="sheet-shared-tag has-tooltip">
+            SHARED
+            <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
+          </span>`;
+      }
+    }
+
     return `
       <div class="sheet-title-header">
         ${headerMenu}
-        <div class="sheet-title">${safeTitle}</div>
+        <div class="sheet-title">${safeTitle}${sharedTagHtml}</div>
         ${navActionsBlock}
       </div>
     `;
@@ -869,69 +928,10 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Demo tag overlays portrait like on cards
     const demoTagHtml = isDemo ? '<span class="sheet-demo-tag">SAMPLE</span>' : '';
-    
-    // Shared tag overlays portrait (same position as demo tag if not demo)
-    // Uses custom tooltip with multiline content
-    let sharedTagHtml = '';
-    if (!isDemo) {  // Don't show both tags - demo takes precedence
-      // Format the last updated time
-      const updatedAt = character.updatedAt || character.updated_at;
-      let lastUpdatedText = '';
-      if (updatedAt) {
-        try {
-          const date = new Date(updatedAt);
-          lastUpdatedText = date.toLocaleString(undefined, {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-          });
-        } catch (e) {
-          lastUpdatedText = '';
-        }
-      }
-      
-      // Format who last updated
-      const lastUpdatedBy = lastUpdatedByEmail ? this.escapeHtml(lastUpdatedByEmail) : null;
-      
-      if (isShared) {
-        // Collaborator's view
-        const sharedByLine = `Shared by ${this.escapeHtml(ownerEmail || 'unknown')}`;
-        let updatedLine = '';
-        if (lastUpdatedText) {
-          updatedLine = lastUpdatedBy 
-            ? `Last updated: ${lastUpdatedText}<br>by ${lastUpdatedBy}`
-            : `Last updated: ${lastUpdatedText}`;
-        }
-        const tooltipContent = updatedLine ? `${sharedByLine}<br>${updatedLine}` : sharedByLine;
-        sharedTagHtml = `
-          <span class="sheet-shared-tag has-tooltip">
-            SHARED
-            <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
-          </span>`;
-      } else if (hasCollaborators) {
-        // Owner's view
-        const sharedWithLine = collaboratorCount === 1 ? 'Shared with 1 user' : `Shared with ${collaboratorCount} users`;
-        let updatedLine = '';
-        if (lastUpdatedText) {
-          updatedLine = lastUpdatedBy 
-            ? `Last updated: ${lastUpdatedText}<br>by ${lastUpdatedBy}`
-            : `Last updated: ${lastUpdatedText}`;
-        }
-        const tooltipContent = updatedLine ? `${sharedWithLine}<br>${updatedLine}` : sharedWithLine;
-        sharedTagHtml = `
-          <span class="sheet-shared-tag has-tooltip">
-            SHARED
-            <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
-          </span>`;
-      }
-    }
 
     return `
       <div class="portrait-container${showOriginalByDefault ? ' portrait-container--original-mode' : ''}">
         ${demoTagHtml}
-        ${sharedTagHtml}
         <div class="ascii-portrait ${needsPlaceholder ? 'ascii-portrait--placeholder' : ''} ${showOriginalByDefault ? 'is-hidden' : ''}" id="${portraitId}">
           ${needsPlaceholder ? `
             <div class="portrait-placeholder-content">
