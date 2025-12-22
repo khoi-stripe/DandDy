@@ -2941,9 +2941,9 @@ const MobileView = {
             }
             
             // Fetch journal entries
-            if (typeof CampaignUI !== 'undefined' && campaignData.campaign?.id) {
+            if (typeof CampaignAPI !== 'undefined') {
                 try {
-                    journalEntries = await CampaignUI.getJournalEntries(campaignData.campaign.id, characterId);
+                    journalEntries = await CampaignAPI.getJournalEntries(characterId);
                 } catch (e) {
                     console.warn('Could not fetch journal entries:', e);
                 }
