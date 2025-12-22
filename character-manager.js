@@ -2774,7 +2774,7 @@ const MobileView = {
         const sourceTitleHeader = document.querySelector('.sheet-scroll-wrapper .sheet-title-header');
         const campaignSlot = document.querySelector('.campaign-panel-slot');
         
-        // Build mobile content: title header + sheet content
+        // Build mobile content: title header + sheet content + campaign placeholder
         let mobileContent = '';
         if (sourceTitleHeader) {
             mobileContent += '<div class="mobile-sheet-title-header" id="mobileSheetTitleHeader">' + sourceTitleHeader.innerHTML + '</div>';
@@ -2782,16 +2782,11 @@ const MobileView = {
         if (sourceSheet) {
             mobileContent += sourceSheet.innerHTML;
         }
-        // Add campaign content at the bottom (if available from desktop)
-        if (campaignSlot && campaignSlot.innerHTML.trim() && !campaignSlot.classList.contains('is-hidden')) {
-            mobileContent += '<div class="mobile-campaign-section">' + campaignSlot.innerHTML + '</div>';
-        } else {
-            // Add placeholder for campaign section - will be loaded async
-            mobileContent += '<div class="mobile-campaign-section" id="mobileCampaignSection"></div>';
-        }
+        // Add placeholder for campaign section - will be loaded async
+        mobileContent += '<div class="mobile-campaign-section" id="mobileCampaignSection"></div>';
         container.innerHTML = mobileContent;
         
-        // Load campaign content async if not already available
+        // Load campaign content async
         this._loadMobileCampaign(characterId);
         
         // If this was a swipe transition, re-add the loader overlay
@@ -2818,9 +2813,6 @@ const MobileView = {
     async _loadMobileCampaign(characterId) {
         const section = document.getElementById('mobileCampaignSection');
         if (!section) return;
-        
-        // Check if already has content (cloned from desktop)
-        if (section.innerHTML.trim()) return;
         
         // Show loading skeleton
         section.innerHTML = ExpandedView._renderCampaignSkeleton();
