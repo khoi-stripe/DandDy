@@ -57,7 +57,7 @@
 .panel-character-grid {
     padding: var(--spacing-xl);
     padding-top: 0;
-    border-right: 1px solid green;
+    border-right: 1px solid var(--terminal-fg);
 }
 
 /* ===== PANEL: CHARACTER SHEET ===== */
@@ -757,11 +757,11 @@
 .journal-entries {
     flex: 1;
     overflow-y: auto;
-    padding: var(--spacing-sm) 0;
+    padding: var(--spacing-sm) 0 32px 0;
     display: flex;
     flex-direction: column;
     gap: 4px;
-    margin-bottom: 32px;
+    margin-bottom: 0;
 }
 
 /* Individual journal entry - matches skill-prof-item pattern */
