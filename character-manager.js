@@ -774,6 +774,117 @@ const PanelManager = (window.PanelManager = {
 });
 
 // ========================================
+// CHARACTER NAV BAR (Desktop Sequential Navigation)
+// ========================================
+// Navigation bar for cycling through characters in expanded view
+
+const CharacterNavBar = (window.CharacterNavBar = {
+    /** Show the nav bar with animation (called after expand transition completes) */
+    show() {
+        const navBar = document.getElementById('characterNavBar');
+        if (!navBar) return;
+        
+        // Update content before showing
+        this.update(AppState.selectedCharacterId);
+        
+        // Trigger animation by adding is-visible class
+        // Small delay ensures CSS display:flex is applied first
+        requestAnimationFrame(() => {
+            navBar.classList.add('is-visible');
+        });
+    },
+    
+    /** Hide the nav bar with animation (called before collapse starts) */
+    hide() {
+        const navBar = document.getElementById('characterNavBar');
+        if (!navBar) return;
+        
+        navBar.classList.remove('is-visible');
+    },
+    
+    /** Update the nav bar content for the current character */
+    update(characterId) {
+        const prevNameEl = document.getElementById('navPrevName');
+        const nextNameEl = document.getElementById('navNextName');
+        const countEl = document.getElementById('navCount');
+        
+        if (!prevNameEl || !nextNameEl || !countEl) return;
+        
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) {
+            prevNameEl.textContent = '';
+            nextNameEl.textContent = '';
+            countEl.textContent = '';
+            return;
+        }
+        
+        const currentIndex = characters.findIndex(c => c.id === characterId);
+        const currentNum = currentIndex >= 0 ? currentIndex + 1 : 1;
+        const total = characters.length;
+        
+        // Get previous character (carousel wrap)
+        const prevIndex = currentIndex <= 0 ? characters.length - 1 : currentIndex - 1;
+        const prevChar = characters[prevIndex];
+        
+        // Get next character (carousel wrap)
+        const nextIndex = currentIndex >= characters.length - 1 ? 0 : currentIndex + 1;
+        const nextChar = characters[nextIndex];
+        
+        // Update display
+        prevNameEl.textContent = prevChar ? prevChar.name : '';
+        nextNameEl.textContent = nextChar ? nextChar.name : '';
+        countEl.textContent = currentNum + '/' + total;
+    },
+    
+    /** Navigate to the previous character (carousel) */
+    navigatePrev() {
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) return;
+        
+        const currentId = AppState.selectedCharacterId;
+        const currentIndex = characters.findIndex(c => c.id === currentId);
+        
+        // Carousel: wrap to last if at beginning
+        const prevIndex = currentIndex <= 0 ? characters.length - 1 : currentIndex - 1;
+        const prevCharacter = characters[prevIndex];
+        
+        if (prevCharacter) {
+            viewCharacter(prevCharacter.id, { skipKeyboardSync: false, updateUrl: true });
+        }
+    },
+    
+    /** Navigate to the next character (carousel) */
+    navigateNext() {
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) return;
+        
+        const currentId = AppState.selectedCharacterId;
+        const currentIndex = characters.findIndex(c => c.id === currentId);
+        
+        // Carousel: wrap to first if at end
+        const nextIndex = currentIndex >= characters.length - 1 ? 0 : currentIndex + 1;
+        const nextCharacter = characters[nextIndex];
+        
+        if (nextCharacter) {
+            viewCharacter(nextCharacter.id, { skipKeyboardSync: false, updateUrl: true });
+        }
+    },
+    
+    /** Initialize click handlers for nav buttons */
+    init() {
+        const prevBtn = document.getElementById('navPrev');
+        const nextBtn = document.getElementById('navNext');
+        
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => this.navigatePrev());
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => this.navigateNext());
+        }
+    }
+});
+
+// ========================================
 // EXPANDED VIEW HANDLING
 // ========================================
 // Handles the expanded character sheet view with campaign panel
@@ -855,6 +966,11 @@ const ExpandedView = (window.ExpandedView = {
         // Update URL to track expanded state
         this._updateUrl(true);
         
+        // Show character nav bar after expand transition completes
+        setTimeout(() => {
+            CharacterNavBar.show();
+        }, 400); // Match CSS transition duration
+        
         if (DEBUG_MANAGER) {
             console.log('📐 Expanded view: ON');
         }
@@ -863,6 +979,9 @@ const ExpandedView = (window.ExpandedView = {
     /** Collapse back to grid view (grid + sheet view) */
     collapse() {
         const splitLayout = document.querySelector('.split-layout');
+        
+        // Hide character nav bar immediately before collapse animation
+        CharacterNavBar.hide();
         
         // Add collapsing class to trigger the collapse animation
         // Keep is-sheet-expanded to maintain fixed column widths during animation
@@ -3317,6 +3436,11 @@ const UI = {
         
         // Populate ASCII portrait after rendering
         CharacterSheet.populatePortrait(character);
+        
+        // Update character nav bar if expanded view is active
+        if (ExpandedView.isExpanded()) {
+            CharacterNavBar.update(character.id);
+        }
     }
 };
 
@@ -8950,6 +9074,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize mobile view handling (resize transitions)
     MobileView.init();
+    
+    // Initialize character nav bar for desktop expanded view
+    CharacterNavBar.init();
     
     // Initialize portrait lightbox for mobile (tap-to-zoom)
     PortraitLightbox.init();

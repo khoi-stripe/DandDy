@@ -226,6 +226,18 @@
 
         <!-- Panel: Character Sheet -->
         <div class="panel panel-character-sheet" id="characterSheetPanel">
+            <!-- Character Nav Bar (visible only in expanded view) -->
+            <div class="character-nav-bar" id="characterNavBar">
+                <button class="nav-prev" id="navPrev" type="button">
+                    <span class="nav-arrow">←</span>
+                    <span class="nav-name" id="navPrevName"></span>
+                </button>
+                <span class="nav-count" id="navCount"></span>
+                <button class="nav-next" id="navNext" type="button">
+                    <span class="nav-name" id="navNextName"></span>
+                    <span class="nav-arrow">→</span>
+                </button>
+            </div>
             <div class="sheet-placeholder"></div>
             <div class="sheet-scroll-wrapper">
                 <div class="sheet-campaign-grid">

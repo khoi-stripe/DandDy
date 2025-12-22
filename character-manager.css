@@ -132,6 +132,85 @@
     border-right: none;
 }
 
+/* ===== CHARACTER NAV BAR (sequential navigation in expanded view) ===== */
+.character-nav-bar {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--sheet-accent-dim);
+    background: var(--terminal-bg);
+    /* Animation properties */
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: 
+        opacity 0.25s ease,
+        transform 0.25s ease;
+}
+
+/* Show nav bar only when expanded view is active */
+.split-layout.is-sheet-expanded .character-nav-bar {
+    display: flex;
+}
+
+/* Animate in after expanded transition completes (handled by JS adding .is-visible) */
+.character-nav-bar.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Nav buttons - unstyled buttons with hover effect */
+.character-nav-bar button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--sheet-accent);
+    font-family: var(--font-terminal);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: 
+        border-color 0.15s ease,
+        background-color 0.15s ease;
+    min-width: 0;
+    max-width: 200px;
+}
+
+.character-nav-bar button:hover {
+    border-color: var(--sheet-accent-dim);
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l), 0.1);
+}
+
+.character-nav-bar button:active {
+    background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l), 0.2);
+}
+
+/* Arrow glyphs */
+.character-nav-bar .nav-arrow {
+    color: var(--sheet-accent);
+    font-size: var(--font-size-base);
+    flex-shrink: 0;
+}
+
+/* Character name in nav - truncate if too long */
+.character-nav-bar .nav-name {
+    color: var(--sheet-accent-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Center count display */
+.character-nav-bar .nav-count {
+    color: var(--sheet-accent);
+    font-family: var(--font-terminal);
+    font-size: var(--font-size-sm);
+    white-space: nowrap;
+}
+
 /* ===== SHEET NAV BAR (above character sheet) ===== */
 .sheet-nav-bar {
     padding: 32px 0 0 0;
@@ -178,7 +257,7 @@
     background: var(--terminal-bg);
     border-left-width: 1px !important;
     border-left-style: solid !important;
-    border-left-color: var(--terminal-fg) !important;
+    border-left-color: var(--sheet-accent-dim) !important;
     
     /* Flex containment for scrollable journal entries */
     display: flex;
@@ -191,6 +270,13 @@
     --context-accent-dim: var(--sheet-accent-dim);
     --context-border: var(--sheet-border-color);
     color: var(--sheet-accent);
+    
+    /* Override UI theme tokens for teal (used by selectors, buttons, etc.) */
+    --ui-border-color: var(--sheet-accent);
+    --ui-fg-color: var(--sheet-accent);
+    --ui-dim-color: var(--sheet-accent-dim);
+    --ui-primary-bg-color: var(--sheet-accent);
+    --ui-on-primary-color: var(--terminal-bg);
     
     /* Teal scrollbar theme */
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
