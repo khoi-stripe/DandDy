@@ -76,8 +76,8 @@
   --sheet-label-color: hsl(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim));
   --sheet-value-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
   --sheet-box-border-color: hsl(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim));
-  --sheet-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.12);
-  --sheet-ability-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.12);
+  --sheet-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.10);
+  --sheet-ability-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.10);
   
   /* Legacy panel-teal tokens (for backward compatibility with character-builder
      and portrait history components that reference these directly) */
@@ -110,13 +110,49 @@
   --context-border: var(--terminal-border);
   --context-hover: var(--terminal-hover);
   
-  /* Typography */
+  /* Typography - Font Family */
   --font-family: 'IBM Plex Mono', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
   --font-mono: 'IBM Plex Mono', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
-  --font-size-base: 14px;
-  --font-size-large: 20px;
-  --font-size-small: 14px;
-  --line-height: 1.6;
+  
+  /* Typography - Font Size Scale */
+  --font-size-2xs: 10px;   /* Tiny labels, tags, badges */
+  --font-size-xs: 11px;    /* Uppercase labels, small metadata */
+  --font-size-sm: 12px;    /* Secondary text, hints, timestamps */
+  --font-size-base: 14px;  /* Body text, inputs, buttons */
+  --font-size-md: 16px;    /* Emphasized body, mobile inputs */
+  --font-size-lg: 18px;    /* Section headers, card titles */
+  --font-size-xl: 20px;    /* Page titles */
+  
+  /* Typography - Display Sizes (admin dashboards, hero elements) */
+  --font-size-2xl: 28px;   /* Large headings */
+  --font-size-3xl: 32px;   /* Hero titles */
+  --font-size-4xl: 36px;   /* Display icons */
+  --font-size-5xl: 42px;   /* Dashboard stats */
+  --font-size-6xl: 64px;   /* Empty state icons */
+  
+  /* Legacy aliases (for backward compatibility during migration) */
+  --font-size-large: var(--font-size-xl);
+  --font-size-small: var(--font-size-sm);
+  
+  /* Typography - Line Height */
+  --line-height-tight: 1.1;    /* Headlines, single-line labels */
+  --line-height-snug: 1.25;    /* Compact UI elements */
+  --line-height-normal: 1.4;   /* Standard body text */
+  --line-height-relaxed: 1.6;  /* Readable paragraphs */
+  --line-height: var(--line-height-relaxed); /* Legacy alias */
+  
+  /* Typography - Letter Spacing */
+  --tracking-tight: -0.01em;   /* Large headlines */
+  --tracking-normal: 0;        /* Body text */
+  --tracking-wide: 0.03em;     /* Titles, headers */
+  --tracking-wider: 0.05em;    /* Uppercase labels */
+  --tracking-widest: 0.1em;    /* Extra-spaced labels */
+  
+  /* Typography - Font Weight */
+  --font-weight-normal: 400;   /* Body text */
+  --font-weight-medium: 500;   /* Emphasis, headers, labels */
+  --font-weight-semibold: 600; /* Strong emphasis */
+  --font-weight-bold: 700;     /* Maximum emphasis */
   
   /* Spacing */
   --spacing-xs: 4px;
@@ -128,6 +164,10 @@
   /* Layout */
   --max-width: 1400px;
   --split-ratio: 50%;
+  
+  /* Button Dimensions */
+  --btn-height: 32px;
+  --btn-height-sm: 28px;
   
   /* Animation */
   --transition-speed: 0.3s;
@@ -259,6 +299,7 @@
 body {
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
   line-height: var(--line-height);
   background-color: #000000;
   /* Subtle dot grid over pure black background */
@@ -342,10 +383,10 @@ body::before {
 
 .terminal-title {
   color: var(--terminal-accent);
-  font-size: 18px;
-  font-weight: 500;
-  line-height: 1.1;
-  letter-spacing: 0.03em;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--tracking-wide);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -353,7 +394,7 @@ body::before {
 
 .title-bracket {
   color: var(--terminal-accent);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 /* ===== TITLE CUBE SPINNER (slow teal cube in header) ===== */
@@ -840,7 +881,7 @@ body::before {
   z-index: 10000;
   
   padding: 4px 8px;
-  line-height: 1.2;
+  line-height: var(--line-height-snug);
   
   /* Dark translucent overlay background */
   background-color: rgba(0, 0, 0, 0.85);
@@ -854,8 +895,8 @@ body::before {
   
   /* Typography */
   font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 400;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
   /* Sentence case - no transform */
   /* Layout: allow multi-line, but avoid breaking words unless necessary */
   display: block;
@@ -1082,10 +1123,12 @@ body::before {
 
 /* ===== SHARED CHARACTER SHEET LAYOUT ===== */
 .character-sheet {
-  border: 1px solid var(--sheet-accent-dim);
-  padding: var(--spacing-md);
   max-width: 100%;
   overflow-wrap: break-word;
+  padding: 0 16px 16px 16px;
+  flex: 1 1 0;
+  overflow-y: auto;
+  min-height: 0;
 
   /* Use teal UI theme tokens inside the sheet */
   --ui-border-color: var(--sheet-accent);
@@ -1151,8 +1194,12 @@ body::before {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-bottom: var(--spacing-md);
-  padding-bottom: var(--spacing-sm);
+  padding: 16px;
+  /* Sticky header - pins to top as content scrolls */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--terminal-bg);
 }
 
 /* Wrapper for inline header actions (e.g., Edit + overflow menu) */
@@ -1168,10 +1215,10 @@ body::before {
 
 .sheet-title {
   color: var(--sheet-accent);
-  font-size: 18px;
-  font-weight: 500;
-  line-height: 1.1;
-  letter-spacing: 0.03em;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--tracking-wide);
   flex: 1 1 auto;
   min-width: 0;
   word-wrap: break-word;
@@ -1211,7 +1258,7 @@ body::before {
   /* Use the same geometry as .terminal-btn-small so heights match exactly */
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .sheet-actions-icon {
@@ -1302,7 +1349,7 @@ body::before {
 .character-sheet .sheet-title-buttons .button-secondary::first-letter,
 .character-sheet .sheet-header-action .terminal-btn-small::first-letter,
 .character-sheet .sheet-header-action .button-secondary::first-letter {
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   line-height: 1;
 }
 
@@ -1318,7 +1365,7 @@ body::before {
 
 /* Inline Edit button icon (✎) should match other button icon sizing. */
 .character-sheet .sheet-edit-btn::first-letter {
-  font-size: 18px;
+  font-size: var(--font-size-lg);
   line-height: 1;
 }
 
@@ -1340,7 +1387,7 @@ body::before {
 
 /* Edit link in section headers */
 .sheet-section-edit-link {
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm);
   color: var(--terminal-accent);
   text-decoration: none;
   opacity: 0.7;
@@ -1356,7 +1403,7 @@ body::before {
 .sheet-header-edit-link {
   margin-left: auto;
   margin-right: 12px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--sheet-accent);
   opacity: 0.8;
 }
@@ -1373,7 +1420,7 @@ body::before {
 
 .sheet-header-title {
   flex: 1;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
   text-transform: uppercase;
 }
 
@@ -1438,8 +1485,8 @@ body::before {
 
 .stat-label {
   color: var(--sheet-label-color);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
 }
 
 .stat-value {
@@ -1464,7 +1511,7 @@ body::before {
 
 .stat-box-label {
   color: var(--sheet-label-color);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   margin-bottom: var(--spacing-xs);
 }
 
@@ -1472,7 +1519,7 @@ body::before {
 .stat-box-value,
 .ability-score {
   color: var(--sheet-value-color);
-  font-weight: 500;
+  font-weight: var(--font-weight-normal);
 }
 
 /* Spell slot boxes - compact grid layout */
@@ -1498,12 +1545,12 @@ body::before {
 
 .spell-slot-label {
   color: var(--sheet-label-color);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .spell-slot-value {
   color: var(--sheet-value-color);
-  font-weight: 500;
+  font-weight: var(--font-weight-normal);
 }
 
 /* Spell tags in character sheet (container style) */
@@ -1521,9 +1568,9 @@ body::before {
   padding: 4px 10px;
   background: var(--sheet-box-bg);
   border: none;
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs);
   color: var(--sheet-value-color);
-  font-weight: 400;
+  font-weight: var(--font-weight-normal);
 }
 
 /* Spell tag tooltip - show on hover (CSS-only, desktop) */
@@ -1543,9 +1590,9 @@ body::before {
   white-space: normal;
   text-align: left;
   max-width: 250px;
-  font-weight: normal;
-  font-size: 0.75rem;
-  line-height: 1.4;
+  font-weight: var(--font-weight-normal);
+  font-size: var(--font-size-2xs);
+  line-height: var(--line-height-normal);
   /* Base transform includes offset variable */
   transform: translateX(calc(-50% + var(--tooltip-offset-x, 0px))) scale(0.95);
 }
@@ -1582,7 +1629,7 @@ body::before {
 
 .ability-name {
   color: var(--sheet-label-color);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   margin-bottom: var(--spacing-xs);
 }
 
@@ -1590,7 +1637,7 @@ body::before {
 .modal-grid-combat-hp label.terminal-text-small,
 .modal-grid-combat-def label.terminal-text-small,
 .modal-grid-abilities label.terminal-text-small {
-  font-size: 12px;
+  font-size: var(--font-size-sm);
 }
 
 .ability-modifier {
@@ -1636,12 +1683,12 @@ body::before {
   padding: 2px 8px;
   margin-bottom: var(--spacing-sm);
   color: var(--sheet-accent-dim);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   text-align: left;
 }
 
 .character-sheet .resource-legend-icon {
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 /* ==== CLASS FEATURES SECTION ==== */
@@ -1678,7 +1725,7 @@ body::before {
 .sheet-header-toggle {
   color: var(--sheet-accent);
   font-size: 0.9em;
-  font-weight: bold;
+  font-weight: var(--font-weight-bold);
   opacity: 0.7;
   display: inline-block;
   /* Default state: expanded (caret points up) */
@@ -1741,7 +1788,7 @@ body::before {
   padding: 4px 8px;
   margin-bottom: var(--spacing-sm);
   color: var(--sheet-value-color);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   text-align: left;
 }
 
@@ -1777,11 +1824,11 @@ body::before {
 }
 
 .class-features-group-label {
-  font-size: 11px;
-  font-weight: bold;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
   color: var(--sheet-value-color);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: var(--tracking-wider);
   margin-bottom: 2px;
   display: block;
   text-align: left;
@@ -1811,8 +1858,8 @@ body::before {
 
 .class-features-name {
   color: var(--sheet-label-color);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
   margin-top: 2px;
   text-align: left;
 }
@@ -1820,12 +1867,12 @@ body::before {
 .class-features-choice {
   color: var(--sheet-value-color);
   margin-right: 4px;
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
 }
 
 .class-features-desc {
   color: var(--sheet-label-color);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   text-align: left;
 }
 
@@ -1840,7 +1887,7 @@ body::before {
 .class-features-see-less {
   color: var(--sheet-value-color);
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   text-decoration: underline;
   cursor: pointer;
   opacity: 0.7;
@@ -1888,27 +1935,27 @@ body::before {
 
 .skill-prof-name {
   color: var(--sheet-label-color);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
 }
 
 .skill-prof-ability {
   color: var(--sheet-value-color);
-  font-size: 11px;
+  font-size: var(--font-size-xs);
   opacity: 0.7;
 }
 
 .skill-prof-modifier {
   color: var(--sheet-accent);
-  font-size: 13px;
-  font-weight: bold;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
   margin-left: auto;
 }
 
 .skill-prof-desc {
   color: var(--sheet-label-color);
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
 }
 
 /* Tool Proficiencies styles (matches skill proficiencies pattern) */
@@ -1944,14 +1991,14 @@ body::before {
 
 .tool-prof-name {
   color: var(--sheet-label-color);
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
 }
 
 .tool-prof-desc {
   color: var(--sheet-label-color);
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
 }
 
 /* ==== DESCRIPTION TOOLTIPS ==== */
@@ -1975,8 +2022,8 @@ body::before {
   border: 1px solid var(--sheet-accent);
   border-radius: 4px;
   color: var(--sheet-label-color);
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
   white-space: normal;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   pointer-events: none;
@@ -2012,7 +2059,7 @@ body::before {
 .class-features-item.has-tooltip .class-features-name::after {
   content: 'ⓘ';
   color: var(--sheet-accent-dim);
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   margin-left: 6px;
   opacity: 0.6;
   transition: opacity 0.15s ease;
@@ -2065,7 +2112,7 @@ body::before {
   opacity: 1; /* Prevent iOS from applying reduced opacity */
   padding: var(--spacing-sm) var(--spacing-md);
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   width: 100%;
   transition: all var(--transition-speed);
 }
@@ -2104,13 +2151,18 @@ body::before {
   border: 1px solid var(--ui-dim-color);
   /* Default text is also dimmed; hover/focus/selected promote to bright theme color. */
   color: var(--ui-dim-color);
-  padding: var(--spacing-xs) var(--spacing-sm);
+  height: var(--btn-height);
+  padding: 0 var(--spacing-sm);
   font-family: var(--font-mono);
-  font-size: var(--font-size-small);
-  font-weight: 400;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
   cursor: pointer;
   transition: all var(--transition-speed);
   text-align: left;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
 }
 
 /* Hover/keyboard-focus (non-selected): bright outline + translucent themed background.
@@ -2134,19 +2186,25 @@ body::before {
   background: transparent;
 }
 
-/* Secondary/Small button */
+/* Secondary/Small button - dim style by default */
 .terminal-btn-small,
 .button-secondary {
   background: transparent;
   border: 1px solid var(--ui-dim-color);
   color: var(--ui-dim-color);
-  padding: var(--spacing-xs) var(--spacing-sm);
+  height: var(--btn-height-sm);
+  padding: 0 var(--spacing-sm);
   font-family: var(--font-mono);
-  font-size: var(--font-size-small);
-  font-weight: 400;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
   cursor: pointer;
   transition: all var(--transition-speed);
   text-align: left;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  opacity: 0.7;
 }
 
 .terminal-btn-small:hover:not(:disabled),
@@ -2155,6 +2213,7 @@ body::before {
      (green by default, teal in sheets, yellow in modals, etc.). */
   border-color: var(--ui-fg-color);
   color: var(--ui-fg-color);
+  opacity: 1;
 }
 
 /* KeyboardNav uses an `is-focused` class (not DOM focus). Mirror hover styling
@@ -2163,6 +2222,7 @@ body::before {
   border-color: var(--ui-fg-color);
   color: var(--ui-fg-color);
   background: color-mix(in srgb, var(--ui-primary-bg-color) 10%, transparent);
+  opacity: 1;
 }
 
 /* Teal-themed small buttons (e.g., builder EXIT) should also get a subtle
@@ -2171,6 +2231,7 @@ body::before {
   background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
   border-color: var(--sheet-accent);
   color: var(--sheet-accent);
+  opacity: 1;
 }
 
 /* Filled primary button (character manager style) */
@@ -2178,8 +2239,18 @@ body::before {
   background-color: var(--ui-primary-bg-color);
   color: var(--ui-on-primary-color);
   border: 1px solid var(--ui-primary-bg-color);
+  height: var(--btn-height);
+  padding: 0 var(--spacing-sm);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
   text-transform: uppercase;
-  font-weight: 400;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: all var(--transition-speed);
 }
 
 .terminal-btn-primary:hover:not(:disabled) {
@@ -2253,9 +2324,10 @@ body::before {
   padding: var(--spacing-sm) var(--spacing-md);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
-  font-weight: 400;
+  font-weight: var(--font-weight-normal);
   cursor: pointer;
   transition: all var(--transition-speed);
+  text-transform: uppercase;
 }
 
 .terminal-btn-warning:hover:not(:disabled) {
@@ -2270,9 +2342,10 @@ body::before {
   padding: var(--spacing-sm) var(--spacing-md);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
-  font-weight: 400;
+  font-weight: var(--font-weight-normal);
   cursor: pointer;
   transition: all var(--transition-speed);
+  text-transform: uppercase;
 }
 
 .terminal-btn-danger:hover:not(:disabled) {
@@ -2308,7 +2381,7 @@ body::before {
 
 .selector-caret {
   margin-left: var(--spacing-xs);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   opacity: 0.8;
   transition: transform 180ms ease-out, opacity 160ms ease-out;
 }
@@ -2367,9 +2440,16 @@ body.selector-menu-open .splash-art {
 
 /* Sheet-level selector menus (header + portrait) should be perfectly
    centered on the trigger without the global vertical offset. */
-.sheet-actions-menu.selector-menu,
+.sheet-actions-menu.selector-menu {
+  transform: scaleY(0.15);
+  left: 0;  /* Align menu to left edge of trigger (opens rightward) */
+  right: auto;
+}
+
 .portrait-actions-menu.selector-menu {
   transform: scaleY(0.15);
+  right: 0;  /* Align menu to right edge of trigger */
+  left: auto;
 }
 
 .sheet-actions-menu.selector-menu.is-open,
@@ -2387,7 +2467,7 @@ body.selector-menu-open .splash-art {
   color: var(--ui-fg-color);
   text-align: left;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   cursor: pointer;
   gap: 8px;
 }
@@ -2407,7 +2487,7 @@ body.selector-menu-open .splash-art {
   width: 18px;
   text-align: center;
   flex-shrink: 0;
-  font-size: 18px;
+  font-size: var(--font-size-lg);
 }
 
 .selector-option-label {
@@ -2469,7 +2549,7 @@ body.selector-menu-open .splash-art {
   position: absolute;
   left: 4px;
   color: var(--ui-fg-color);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .selector-shell--listbox .selector-option {
@@ -2662,7 +2742,7 @@ body.selector-menu-open .splash-art {
     padding: 0;
     background: #fff;
     color: #000;
-    font-size: 12px;
+    font-size: var(--font-size-sm);
   }
 
   /* Don't force a full viewport-height page before content */
@@ -2763,7 +2843,7 @@ body.selector-menu-open .splash-art {
   /* Print-only character name above stats */
   .print-only-name {
     display: block !important;
-    font-size: 18px !important;
+    font-size: var(--font-size-lg) !important;
     font-weight: 500 !important;
     margin-bottom: 12px !important;
   }
@@ -2915,7 +2995,7 @@ body.selector-menu-open .splash-art {
   background-color: var(--terminal-bg);
   border: 2px solid var(--modal-accent);
   border-radius: 4px;
-  max-width: 700px;
+  max-width: 720px;
   width: 90%;
   /* Keep the modal fully within the terminal frame, even on short viewports.
      Height is constrained relative to the terminal container (via .modal),
@@ -2955,14 +3035,14 @@ body.selector-menu-open .splash-art {
 .modal-title {
   font-size: var(--font-size-large);
   color: var(--modal-accent);
-  font-weight: normal;
+  font-weight: var(--font-weight-normal);
 }
 
 .modal-close {
   background: none;
   border: none;
   color: var(--modal-accent);
-  font-size: 20px;
+  font-size: var(--font-size-xl);
   cursor: pointer;
   padding: 0;
   width: 28px;
@@ -3057,7 +3137,7 @@ body.selector-menu-open .splash-art {
 /* Modal secondary/cancel buttons: use modal-yellow hover treatment instead of
    the default terminal green background so they respect the modal color theme. */
 .modal .terminal-btn:hover:not(:disabled):not(.terminal-btn-primary):not(.terminal-btn-warning):not(.terminal-btn-danger) {
-  background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.12);
+  background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.10);
   border-color: var(--ui-fg-color);
   color: var(--ui-fg-color);
 }
@@ -3088,7 +3168,7 @@ body.selector-menu-open .splash-art {
 /* Accent + weight emphasis */
 .terminal-text-strong {
   color: var(--terminal-accent);
-  font-weight: 500;
+  font-weight: var(--font-weight-normal);
 }
 
 /* Level change dialog text - ensure proper wrapping on mobile */
@@ -3294,7 +3374,7 @@ body.selector-menu-open .splash-art {
   }
   
   .terminal-title {
-    font-size: 18px;
+    font-size: var(--font-size-lg);
   }
   
   .button-group {

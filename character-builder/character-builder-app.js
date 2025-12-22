@@ -2830,8 +2830,8 @@ const App = (window.App = {
             ${bodyInnerHtml}
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" onclick="App.closePortraitHistory()">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmPortraitHistorySelection()">USE SELECTED</button>
+            <button class="terminal-btn" onclick="App.closePortraitHistory()">Cancel</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmPortraitHistorySelection()">Use selected</button>
           </div>
         </div>
       </div>
@@ -3188,8 +3188,8 @@ const App = (window.App = {
       `;
 
       const createNewFooterHtml = `
-        <button class="terminal-btn" id="portrait-delete-cancel">CANCEL</button>
-        <button class="terminal-btn terminal-btn-primary" id="portrait-create-new">CREATE NEW</button>
+        <button class="terminal-btn" id="portrait-delete-cancel">Cancel</button>
+        <button class="terminal-btn terminal-btn-primary" id="portrait-create-new">Create new</button>
       `;
 
       this._animateModalContentResize('portraitHistoryModal', () => {
@@ -3244,8 +3244,8 @@ const App = (window.App = {
     `;
 
     const confirmationFooterHtml = `
-      <button class="terminal-btn" id="portrait-delete-cancel">NO</button>
-      <button class="terminal-btn terminal-btn-primary" id="portrait-delete-confirm">YES</button>
+      <button class="terminal-btn" id="portrait-delete-cancel">No</button>
+      <button class="terminal-btn terminal-btn-primary" id="portrait-delete-confirm">Yes</button>
     `;
 
     // Transform modal to confirmation view
@@ -3537,8 +3537,8 @@ const App = (window.App = {
     `;
 
     const infoFooterHtml = `
-      <button class="terminal-btn" id="portrait-info-back">BACK</button>
-      ${escapedPrompt ? '<button class="terminal-btn" id="portrait-info-copy">COPY PROMPT</button>' : ''}
+      <button class="terminal-btn" id="portrait-info-back">Back</button>
+      ${escapedPrompt ? '<button class="terminal-btn" id="portrait-info-copy">Copy prompt</button>' : ''}
     `;
 
     // Transform modal to info view
@@ -3785,8 +3785,8 @@ const App = (window.App = {
             >${defaultPrompt}</textarea>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" onclick="App.surpriseMePortrait()">SURPRISE ME</button>
-            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmPromptModal()">GENERATE PORTRAIT</button>
+            <button class="terminal-btn" onclick="App.surpriseMePortrait()">Surprise me</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmPromptModal()">Generate portrait</button>
           </div>
         </div>
       </div>
@@ -4898,8 +4898,8 @@ const App = (window.App = {
             <div id="level-modal-error" class="terminal-text-error level-modal-error is-hidden"></div>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" onclick="App.closeLevelModal()">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmLevelModal()">APPLY LEVEL</button>
+            <button class="terminal-btn" onclick="App.closeLevelModal()">Cancel</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmLevelModal()">Apply level</button>
           </div>
         </div>
       </div>
@@ -5096,8 +5096,8 @@ const App = (window.App = {
             <div id="name-modal-error" class="terminal-text-error name-modal-error is-hidden"></div>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" onclick="App.closeNameModal()">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmNameModal()">APPLY NAME</button>
+            <button class="terminal-btn" onclick="App.closeNameModal()">Cancel</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="App.confirmNameModal()">Apply name</button>
           </div>
         </div>
       </div>

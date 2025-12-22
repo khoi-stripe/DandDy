@@ -461,6 +461,7 @@ const CharacterSheet = (window.CharacterSheet = {
         hasCollaborators,
         collaboratorCount,
         ownerEmail,
+        lastUpdatedByEmail,
         hideOverflowMenu,
       })}
       
@@ -537,6 +538,7 @@ const CharacterSheet = (window.CharacterSheet = {
       hasCollaborators,
       collaboratorCount,
       ownerEmail,
+      lastUpdatedByEmail,
       hideOverflowMenu,
     } = callbacks;
     // Function names differ by context
@@ -684,17 +686,6 @@ const CharacterSheet = (window.CharacterSheet = {
       });
     }
 
-    // Manager-only: Add Edit to overflow menu (visible only on narrow viewports via CSS)
-    // Placed at top of menu on mobile
-    if (context === 'manager' && onEdit && editFn) {
-      headerActions.unshift({
-        icon: '✎',
-        label: 'Edit character',
-        onclick: editFn,
-        id: 'sheet-edit-overflow',
-      });
-    }
-
     // Manager-only: Leave shared character (for collaborators)
     if (context === 'manager' && onLeave && isShared && hasValidManagerId) {
       headerActions.push({
@@ -709,17 +700,39 @@ const CharacterSheet = (window.CharacterSheet = {
       headerActions.push(deleteAction);
     }
 
-    // Manager-only: Expand button to show campaign panel
-    // Uses same style as the Edit button, hidden on mobile
-    const expandButtonHtml =
+    // Manager-only: Add Edit to overflow menu
+    if (context === 'manager' && onEdit && editFn) {
+      headerActions.unshift({
+        icon: '✎',
+        label: 'Edit character',
+        onclick: editFn,
+      });
+    }
+
+    // Manager-only: Navigation buttons in header
+    // - "← Collapse" to go back to grid view
+    // - "Expand →" to expand campaign panel (hidden in sheet-campaign view via CSS)
+    const charactersButtonHtml =
       context === 'manager' && hasValidManagerId
         ? `
         <button
-          class="terminal-btn-small sheet-edit-btn sheet-expand-btn hide-on-mobile"
+          class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-characters hide-on-mobile"
           type="button"
-          onclick="ExpandedView.toggle()"
-          title="Expand to show campaign info"
-        >⇥ Expand</button>
+          onclick="ExpandedView.collapse()"
+          title="Return to character grid"
+        >← Collapse</button>
+      `
+        : '';
+
+    const campaignButtonHtml =
+      context === 'manager' && hasValidManagerId
+        ? `
+        <button
+          class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-campaign hide-on-mobile"
+          type="button"
+          onclick="ExpandedView.expand()"
+          title="View campaign info"
+        >Expand →</button>
       `
         : '';
 
@@ -770,12 +783,12 @@ const CharacterSheet = (window.CharacterSheet = {
       `
         : '';
 
-    const actionsBlock =
-      expandButtonHtml || headerMenu
+    const navActionsBlock =
+      charactersButtonHtml || campaignButtonHtml
         ? `
         <div class="sheet-title-actions">
-          ${expandButtonHtml}
-          ${headerMenu}
+          ${charactersButtonHtml}
+          ${campaignButtonHtml}
         </div>
       `
         : '';
@@ -785,10 +798,68 @@ const CharacterSheet = (window.CharacterSheet = {
         ? this.escapeHtml(character.name)
         : '[ CHARACTER SHEET ]';
 
+    // Generate shared tag for inline display with title
+    let sharedTagHtml = '';
+    if (isShared || hasCollaborators) {
+      // Format the last updated time
+      const updatedAt = character.updatedAt || character.updated_at;
+      let lastUpdatedText = '';
+      if (updatedAt) {
+        try {
+          const date = new Date(updatedAt);
+          lastUpdatedText = date.toLocaleString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+          });
+        } catch (e) {
+          lastUpdatedText = '';
+        }
+      }
+      
+      // Format who last updated
+      const lastUpdatedBy = lastUpdatedByEmail ? this.escapeHtml(lastUpdatedByEmail) : null;
+      
+      if (isShared) {
+        // Collaborator's view
+        const sharedByLine = `Shared by ${this.escapeHtml(ownerEmail || 'unknown')}`;
+        let updatedLine = '';
+        if (lastUpdatedText) {
+          updatedLine = lastUpdatedBy 
+            ? `Last updated: ${lastUpdatedText}<br>by ${lastUpdatedBy}`
+            : `Last updated: ${lastUpdatedText}`;
+        }
+        const tooltipContent = updatedLine ? `${sharedByLine}<br>${updatedLine}` : sharedByLine;
+        sharedTagHtml = `
+          <span class="sheet-shared-tag has-tooltip">
+            SHARED
+            <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
+          </span>`;
+      } else if (hasCollaborators) {
+        // Owner's view
+        const sharedWithLine = collaboratorCount === 1 ? 'Shared with 1 user' : `Shared with ${collaboratorCount} users`;
+        let updatedLine = '';
+        if (lastUpdatedText) {
+          updatedLine = lastUpdatedBy 
+            ? `Last updated: ${lastUpdatedText}<br>by ${lastUpdatedBy}`
+            : `Last updated: ${lastUpdatedText}`;
+        }
+        const tooltipContent = updatedLine ? `${sharedWithLine}<br>${updatedLine}` : sharedWithLine;
+        sharedTagHtml = `
+          <span class="sheet-shared-tag has-tooltip">
+            SHARED
+            <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
+          </span>`;
+      }
+    }
+
     return `
       <div class="sheet-title-header">
-        <div class="sheet-title">${safeTitle}</div>
-        ${actionsBlock}
+        ${headerMenu}
+        <div class="sheet-title">${safeTitle}${sharedTagHtml}</div>
+        ${navActionsBlock}
       </div>
     `;
   },
@@ -857,69 +928,10 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Demo tag overlays portrait like on cards
     const demoTagHtml = isDemo ? '<span class="sheet-demo-tag">SAMPLE</span>' : '';
-    
-    // Shared tag overlays portrait (same position as demo tag if not demo)
-    // Uses custom tooltip with multiline content
-    let sharedTagHtml = '';
-    if (!isDemo) {  // Don't show both tags - demo takes precedence
-      // Format the last updated time
-      const updatedAt = character.updatedAt || character.updated_at;
-      let lastUpdatedText = '';
-      if (updatedAt) {
-        try {
-          const date = new Date(updatedAt);
-          lastUpdatedText = date.toLocaleString(undefined, {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-          });
-        } catch (e) {
-          lastUpdatedText = '';
-        }
-      }
-      
-      // Format who last updated
-      const lastUpdatedBy = lastUpdatedByEmail ? this.escapeHtml(lastUpdatedByEmail) : null;
-      
-      if (isShared) {
-        // Collaborator's view
-        const sharedByLine = `Shared by ${this.escapeHtml(ownerEmail || 'unknown')}`;
-        let updatedLine = '';
-        if (lastUpdatedText) {
-          updatedLine = lastUpdatedBy 
-            ? `Last updated: ${lastUpdatedText}<br>by ${lastUpdatedBy}`
-            : `Last updated: ${lastUpdatedText}`;
-        }
-        const tooltipContent = updatedLine ? `${sharedByLine}<br>${updatedLine}` : sharedByLine;
-        sharedTagHtml = `
-          <span class="sheet-shared-tag has-tooltip">
-            SHARED
-            <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
-          </span>`;
-      } else if (hasCollaborators) {
-        // Owner's view
-        const sharedWithLine = collaboratorCount === 1 ? 'Shared with 1 user' : `Shared with ${collaboratorCount} users`;
-        let updatedLine = '';
-        if (lastUpdatedText) {
-          updatedLine = lastUpdatedBy 
-            ? `Last updated: ${lastUpdatedText}<br>by ${lastUpdatedBy}`
-            : `Last updated: ${lastUpdatedText}`;
-        }
-        const tooltipContent = updatedLine ? `${sharedWithLine}<br>${updatedLine}` : sharedWithLine;
-        sharedTagHtml = `
-          <span class="sheet-shared-tag has-tooltip">
-            SHARED
-            <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
-          </span>`;
-      }
-    }
 
     return `
       <div class="portrait-container${showOriginalByDefault ? ' portrait-container--original-mode' : ''}">
         ${demoTagHtml}
-        ${sharedTagHtml}
         <div class="ascii-portrait ${needsPlaceholder ? 'ascii-portrait--placeholder' : ''} ${showOriginalByDefault ? 'is-hidden' : ''}" id="${portraitId}">
           ${needsPlaceholder ? `
             <div class="portrait-placeholder-content">
@@ -1068,6 +1080,7 @@ const CharacterSheet = (window.CharacterSheet = {
       <div class="sheet-section" id="combat-stats-section">
         <div class="sheet-header ${context === 'builder' ? 'sheet-header--no-divider' : ''}">
           <div class="sheet-header-title">[ COMBAT STATS ]</div>
+          ${this._renderConditionTags(parsed)}
         </div>
         <div class="stat-grid">
           <div class="stat-box">
@@ -1097,6 +1110,25 @@ const CharacterSheet = (window.CharacterSheet = {
         </div>
       </div>
     `;
+  },
+
+  _renderConditionTags(parsed) {
+    const conditions = parsed.conditions || [];
+    if (conditions.length === 0) return '';
+
+    const conditionDefinitions = {
+      poisoned: 'Disadvantage on attack rolls and ability checks.',
+      exhausted: 'Levels of exhaustion cause cumulative penalties to speed, ability checks, attacks, saving throws, and HP maximum.',
+      diseased: 'Various effects depending on the disease. May cause ability score reduction, exhaustion, or other debilitating effects.',
+      cursed: 'Supernatural affliction with effects varying by curse type. May affect abilities, attacks, or impose other penalties.',
+    };
+
+    const conditionTags = conditions.map(c => {
+      const tooltip = conditionDefinitions[c.toLowerCase()] || 'Status condition';
+      return `<span class="condition-tag condition-${c.toLowerCase()} has-tooltip" data-tooltip="${this.escapeHtml(tooltip)}">${c.toUpperCase()}</span>`;
+    }).join('');
+
+    return `<div class="conditions-tags">${conditionTags}</div>`;
   },
 
   _renderClassResources(parsed) {
@@ -1648,6 +1680,9 @@ const CharacterSheet = (window.CharacterSheet = {
           // measure from a clean baseline. Use fixed/absolute positioning during
           // measurement so getBoundingClientRect returns consistent values.
           menu.style.maxHeight = '';
+          menu.style.width = '';
+          menu.style.minWidth = '';
+          menu.style.maxWidth = '';
           menu.style.position = useFixedPositioning ? 'fixed' : 'absolute';
           menu.style.top = '0';
           menu.style.left = '0';
@@ -1742,7 +1777,10 @@ const CharacterSheet = (window.CharacterSheet = {
               hostBottom = Math.min(hostBottom, footerRect.top - padding);
             }
           } else {
+            // In expanded view, character sheet menus should stay within their panel
+            // (the left-panel), not overflow into the campaign panel on the right.
             host =
+              triggerEl.closest('.left-panel') ||
               triggerEl.closest('.terminal-frame, .terminal-container') ||
               document.documentElement;
             const hostRect = host.getBoundingClientRect();
@@ -1842,6 +1880,9 @@ const CharacterSheet = (window.CharacterSheet = {
             }
 
             let targetLeft;
+            // Declare at higher scope so it's accessible after the if/else block
+            const isSheetActionsMenu = menu.classList.contains('sheet-actions-menu');
+            
             if (inPortraitModal) {
               const sideGapX = 8;
               const spaceRight = hostRight - triggerRect.right;
@@ -1872,7 +1913,15 @@ const CharacterSheet = (window.CharacterSheet = {
               const fitsLeft =
                 triggerRect.right - menuWidth >= hostLeft;
 
-              if (fitsRight && !fitsLeft) {
+              // Sheet actions menu should always open to the right (left-aligned with trigger)
+              if (isSheetActionsMenu) {
+                // Use left positioning - this anchors the menu's left edge
+                // to the trigger's left edge so it opens rightward
+                menu.style.left = `${triggerRect.left}px`;
+                menu.style.right = 'auto';
+                // Set targetLeft to a dummy value since we won't use it
+                targetLeft = 0;
+              } else if (fitsRight && !fitsLeft) {
                 // Enough room to the right but not to the left: open to the right.
                 targetLeft = triggerRect.left;
               } else if (!fitsRight && fitsLeft) {
@@ -1894,8 +1943,11 @@ const CharacterSheet = (window.CharacterSheet = {
               }
             }
 
-            menu.style.left = `${targetLeft}px`;
-            menu.style.right = 'auto';
+            // For sheet-actions-menu, we already set right positioning above, so skip left
+            if (!isSheetActionsMenu) {
+              menu.style.left = `${targetLeft}px`;
+              menu.style.right = 'auto';
+            }
             // Ensure the menu appears above modals and other content.
             // Modal overlay is z-index: 10000, so detached menus need to be above that.
             menu.style.zIndex = inModal ? '10001' : '1000';
@@ -2440,6 +2492,20 @@ const CharacterSheet = (window.CharacterSheet = {
       )
       .join('')}</ul>`;
 
+    // Currency display - only show coins with non-zero values
+    const { cp, sp, ep, gp, pp } = parsed.currency || {};
+    const coinParts = [];
+    if (pp > 0) coinParts.push(`${pp} PP`);
+    if (gp > 0) coinParts.push(`${gp} GP`);
+    if (ep > 0) coinParts.push(`${ep} EP`);
+    if (sp > 0) coinParts.push(`${sp} SP`);
+    if (cp > 0) coinParts.push(`${cp} CP`);
+    
+    const hasCurrency = coinParts.length > 0;
+    const currencyMarkup = hasCurrency 
+      ? `<div class="sheet-currency"><span class="currency-label">Coins:</span> <span class="currency-value">${coinParts.join(' · ')}</span></div>`
+      : '';
+
     return `
       <div class="sheet-section sheet-section--collapsible" id="equipment-section">
         <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
@@ -2448,6 +2514,7 @@ const CharacterSheet = (window.CharacterSheet = {
         </button>
         <div class="sheet-collapsible-content">
           ${equipmentMarkup}
+          ${currencyMarkup}
         </div>
       </div>
     `;
@@ -2700,10 +2767,22 @@ const CharacterSheet = (window.CharacterSheet = {
     const explicitEquipment = character.equipment || [];
     // If player has explicitly edited equipment, treat that as the source of truth.
     // Otherwise, fall back to class equipment + any existing equipment array.
-    const allEquipment =
+    const rawEquipment =
       explicitEquipment && explicitEquipment.length > 0
         ? explicitEquipment
         : [...new Set([...(character.equipment || []), ...classEquipment])];
+    
+    // Extract gold from equipment (e.g., "10 gp", "15 gp") and add to currency
+    let equipmentGold = 0;
+    const goldPattern = /^(\d+)\s*gp$/i;
+    const allEquipment = rawEquipment.filter(item => {
+      const match = item.match(goldPattern);
+      if (match) {
+        equipmentGold += parseInt(match[1], 10);
+        return false; // Remove from equipment list
+      }
+      return true;
+    });
 
     // Handle racial traits
     // Look up race by id or name (case-insensitive) since character.race may be display name
@@ -2791,6 +2870,15 @@ const CharacterSheet = (window.CharacterSheet = {
       // Equipment
       equipment: allEquipment,
 
+      // Currency (support both formats: currency.gp or gold, plus equipment gold)
+      currency: {
+        cp: character.currency?.cp ?? character.copper ?? 0,
+        sp: character.currency?.sp ?? character.silver ?? 0,
+        ep: character.currency?.ep ?? character.electrum ?? 0,
+        gp: (character.currency?.gp ?? character.gold ?? 0) + equipmentGold,
+        pp: character.currency?.pp ?? character.platinum ?? 0,
+      },
+
       // Background
       backgroundFeatureName:
         backgroundFeature?.name || 'Feature',
@@ -2807,6 +2895,9 @@ const CharacterSheet = (window.CharacterSheet = {
 
       // Class Resources (Ki, Rage, etc.)
       classResources: character.classResources || {},
+
+      // Status Conditions (poisoned, exhausted, diseased, cursed)
+      conditions: character.conditions || [],
 
       // Flags for conditional rendering
       // In builder, always show sections (except spells until we know they're a caster)

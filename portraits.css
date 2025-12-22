@@ -6,7 +6,7 @@
 /* ===== MAIN SHEET PORTRAIT AREA ===== */
 .portrait-container {
   position: relative;
-  margin: var(--spacing-md) 0;
+  margin: 0 0 var(--spacing-md) 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -200,8 +200,8 @@
 }
 
 .portrait-placeholder-text {
-  font-size: 14px;
-  line-height: 1.4;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
   color: var(--panel-teal);
   text-align: center;
   padding: 0 var(--spacing-md);
@@ -247,8 +247,8 @@
 .portrait-placeholder-subtext {
   display: block;
   margin-top: 4px;
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
   color: var(--sheet-accent);
 }
 
@@ -325,11 +325,11 @@
   }
 
   .portrait-placeholder-text {
-    font-size: 13px;
+    font-size: var(--font-size-sm);
   }
 
   .portrait-placeholder-subtext {
-    font-size: 11px;
+    font-size: var(--font-size-xs);
   }
 }
 
@@ -542,7 +542,7 @@
 
 .portrait-history-modal .card-name {
   color: var(--modal-accent-dim);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: 1.2;
   margin-bottom: 0;
   overflow: hidden;
@@ -552,7 +552,7 @@
 
 .portrait-history-modal .card-info {
   color: var(--modal-accent-dim);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -752,11 +752,10 @@
   border-color: var(--modal-accent);
   color: var(--modal-accent);
   background: transparent;
-  /* Match the 24px height of .terminal-btn-small sheet header actions */
-  width: 24px;
-  min-width: 24px;
-  height: 24px;
-  padding: 0;
+  /* Compact sizing to match campaign/header overflow buttons */
+  padding: 4px 6px;
+  min-width: 28px;
+  height: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -862,7 +861,7 @@
 /* ===== PORTRAIT PROMPT DISPLAY ===== */
 .portrait-prompt-display {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
   color: var(--modal-accent);
   background: rgba(0, 0, 0, 0.3);
@@ -900,7 +899,7 @@
    - Full width on its own line to avoid collision */
 .portrait-prompt-style-label {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--modal-accent-dim);
   white-space: nowrap;
   /* Full width forces it to its own row below title + close button */
@@ -932,7 +931,7 @@
 
 .image-info-label {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--modal-accent-dim);
   min-width: 70px;
   flex-shrink: 0;
@@ -940,7 +939,7 @@
 
 .image-info-value {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--modal-accent);
 }
 
@@ -952,7 +951,7 @@
 
 .image-info-prompt-label {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--modal-accent-dim);
 }
 
@@ -1016,7 +1015,7 @@
 
 .modal-header .portrait-style-selector label {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   color: var(--modal-accent-dim);
   white-space: nowrap;
 }
@@ -1031,7 +1030,7 @@
 
 .portrait-style-label {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--modal-accent-dim);
   flex-shrink: 0;
 }
@@ -1069,7 +1068,7 @@
 /* Textarea styled to match portrait-prompt-display */
 .portrait-prompt-textarea {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--font-size-sm);
   line-height: 1.5;
   color: var(--modal-accent);
   background: rgba(0, 0, 0, 0.3);
@@ -1207,8 +1206,8 @@
 .portrait-lightbox-name {
   margin-top: 16px;
   font-family: var(--font-mono);
-  font-size: 16px;
-  font-weight: 500;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
   color: var(--terminal-bg, #1a1a1a);
   pointer-events: none;
   max-width: 80vw;
@@ -1231,10 +1230,10 @@
   left: 50%;
   transform: translateX(-50%);
   font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-wider);
   /* Container styling like sheet-demo-tag/sheet-shared-tag */
   padding: 3px 8px;
   color: var(--sheet-accent, hsl(181, 100%, 41%));

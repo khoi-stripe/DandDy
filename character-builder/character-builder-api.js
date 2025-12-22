@@ -62,8 +62,8 @@ const CharacterAPI = (window.CharacterAPI = {
       const response = await fetch(`${CONFIG.BACKEND_URL}${endpoint}`, options);
       
       if (response.status === 401) {
-        // Token expired or invalid
-        AuthService.clearToken();
+        // Token expired or invalid - handle unexpected logout and notify user
+        AuthService.handleUnexpectedLogout?.('builder_api_401');
         throw new Error('Session expired. Please log in again.');
       }
       

@@ -704,8 +704,8 @@ const Components = (window.Components = {
             </div>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" onclick="SettingsModal.close()">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" onclick="SettingsModal.save()">SAVE</button>
+            <button class="terminal-btn" onclick="SettingsModal.close()">Cancel</button>
+            <button class="terminal-btn terminal-btn-primary" onclick="SettingsModal.save()">Save</button>
           </div>
         </div>
       </div>

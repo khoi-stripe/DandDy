@@ -359,13 +359,13 @@
             }
 
             console.warn(
-              '[AuthService] Token rejected by /auth/me; clearing local session.',
+              '[AuthService] Token rejected by /auth/me; handling unexpected logout.',
               {
                 status: response.status,
                 detail: backendDetail,
               }
             );
-            this.clearToken();
+            this.handleUnexpectedLogout('auth_me_401');
             return null;
           }
           if (DEBUG) {
@@ -535,6 +535,40 @@
       // Dispatch custom event for UI components to react
       const event = new CustomEvent('danddy:sessionExpired', {
         detail: { reason: 'token_expired' },
+      });
+      window.dispatchEvent(event);
+
+      // Also trigger the existing updateAuthUI if available
+      if (typeof window.updateAuthUI === 'function') {
+        window.updateAuthUI();
+      }
+    },
+
+    /**
+     * Handle unexpected logout (e.g., 401 from API calls).
+     * This should be called instead of clearToken() when a 401 is received.
+     * It clears the auth state and notifies the user via the sessionExpired event.
+     * @param {string} reason - Optional reason for the logout (for debugging)
+     */
+    handleUnexpectedLogout(reason = 'api_401') {
+      // Prevent duplicate handling if already logged out
+      if (!this.getToken()) {
+        return;
+      }
+
+      if (DEBUG) {
+        console.log('[AuthService] Handling unexpected logout:', reason);
+      }
+
+      // Stop session monitoring
+      this.stopSessionMonitor();
+
+      // Clear local auth state
+      this.clearToken();
+
+      // Dispatch custom event for UI components to react
+      const event = new CustomEvent('danddy:sessionExpired', {
+        detail: { reason },
       });
       window.dispatchEvent(event);
 

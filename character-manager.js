@@ -450,8 +450,9 @@ async function loadPinnedCharacterIds() {
                 }
                 return _pinnedCharacterIdsCache;
             } else if (response.status === 401) {
-                // Session expired, fall through to localStorage
+                // Session expired - notify user and fall through to localStorage
                 console.warn('📌 Session expired, using localStorage for pinned characters');
+                window.AuthService?.handleUnexpectedLogout?.('pinned_load_401');
             }
         } catch (error) {
             console.warn('📌 Failed to load pinned from cloud, falling back to localStorage:', error);
@@ -501,7 +502,9 @@ async function savePinnedCharacterIds(ids) {
                 }
                 return;
             } else if (response.status === 401) {
+                // Session expired - notify user and fall through to localStorage
                 console.warn('📌 Session expired, saving pinned to localStorage instead');
+                window.AuthService?.handleUnexpectedLogout?.('pinned_save_401');
             }
         } catch (error) {
             console.warn('📌 Failed to save pinned to cloud, saving to localStorage:', error);
@@ -771,6 +774,140 @@ const PanelManager = (window.PanelManager = {
 });
 
 // ========================================
+// CHARACTER NAV BAR (Desktop Sequential Navigation)
+// ========================================
+// Navigation bar for cycling through characters in expanded view
+
+const CharacterNavBar = (window.CharacterNavBar = {
+    /** Show the nav bar with animation (called after expand transition completes) */
+    show() {
+        const navBar = document.getElementById('characterNavBar');
+        const sheetWrapper = document.querySelector('.sheet-scroll-wrapper');
+        if (!navBar || !sheetWrapper) return;
+
+        // Update content before showing
+        this.update(AppState.selectedCharacterId);
+
+        // Trigger animation by adding is-visible class
+        // Also add padding to sheet to create space for nav
+        requestAnimationFrame(() => {
+            navBar.classList.add('is-visible');
+            sheetWrapper.style.paddingTop = '44px';
+        });
+    },
+
+    /** Hide the nav bar with animation (called before collapse starts) 
+     *  Returns a promise that resolves after the animation completes */
+    hide() {
+        return new Promise((resolve) => {
+            const navBar = document.getElementById('characterNavBar');
+            const sheetWrapper = document.querySelector('.sheet-scroll-wrapper');
+            if (!navBar || !sheetWrapper) {
+                resolve();
+                return;
+            }
+
+            // First: animate out the nav bar
+            navBar.classList.remove('is-visible');
+            
+            // After nav bar animation completes (0.25s), expand the sheet
+            setTimeout(() => {
+                sheetWrapper.style.paddingTop = '0';
+                // Wait for sheet padding transition (0.25s) then resolve
+                setTimeout(resolve, 250);
+            }, 250);
+        });
+    },
+    
+    /** Update the nav bar content for the current character */
+    update(characterId) {
+        const prevNameEl = document.getElementById('navPrevName');
+        const nextNameEl = document.getElementById('navNextName');
+        const countEl = document.getElementById('navCount');
+        const countValueEl = countEl?.querySelector('.nav-count-value');
+        
+        if (!prevNameEl || !nextNameEl || !countValueEl) return;
+        
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) {
+            prevNameEl.textContent = '';
+            nextNameEl.textContent = '';
+            countValueEl.textContent = '';
+            return;
+        }
+        
+        const currentIndex = characters.findIndex(c => c.id === characterId);
+        const currentNum = currentIndex >= 0 ? currentIndex + 1 : 1;
+        const total = characters.length;
+        
+        // Get previous character (carousel wrap)
+        const prevIndex = currentIndex <= 0 ? characters.length - 1 : currentIndex - 1;
+        const prevChar = characters[prevIndex];
+        
+        // Get next character (carousel wrap)
+        const nextIndex = currentIndex >= characters.length - 1 ? 0 : currentIndex + 1;
+        const nextChar = characters[nextIndex];
+        
+        // Update display
+        prevNameEl.textContent = prevChar ? prevChar.name : '';
+        nextNameEl.textContent = nextChar ? nextChar.name : '';
+        countValueEl.textContent = currentNum + '/' + total;
+    },
+    
+    /** Navigate to the previous character (carousel) */
+    navigatePrev() {
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) return;
+        
+        const currentId = AppState.selectedCharacterId;
+        const currentIndex = characters.findIndex(c => c.id === currentId);
+        
+        // Carousel: wrap to last if at beginning
+        const prevIndex = currentIndex <= 0 ? characters.length - 1 : currentIndex - 1;
+        const prevCharacter = characters[prevIndex];
+        
+        if (prevCharacter) {
+            viewCharacter(prevCharacter.id, { skipKeyboardSync: false, updateUrl: true });
+        }
+    },
+    
+    /** Navigate to the next character (carousel) */
+    navigateNext() {
+        const characters = AppState.filteredCharacters;
+        if (!characters || characters.length === 0) return;
+        
+        const currentId = AppState.selectedCharacterId;
+        const currentIndex = characters.findIndex(c => c.id === currentId);
+        
+        // Carousel: wrap to first if at end
+        const nextIndex = currentIndex >= characters.length - 1 ? 0 : currentIndex + 1;
+        const nextCharacter = characters[nextIndex];
+        
+        if (nextCharacter) {
+            viewCharacter(nextCharacter.id, { skipKeyboardSync: false, updateUrl: true });
+        }
+    },
+    
+    /** Initialize click handlers for nav buttons */
+    init() {
+        const prevBtn = document.getElementById('navPrev');
+        const nextBtn = document.getElementById('navNext');
+        const countLink = document.getElementById('navCount');
+        
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => this.navigatePrev());
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => this.navigateNext());
+        }
+        // Clicking count link collapses back to grid+sheet view
+        if (countLink) {
+            countLink.addEventListener('click', () => ExpandedView.collapse());
+        }
+    }
+});
+
+// ========================================
 // EXPANDED VIEW HANDLING
 // ========================================
 // Handles the expanded character sheet view with campaign panel
@@ -790,12 +927,61 @@ const ExpandedView = (window.ExpandedView = {
         }
     },
 
+    /** Calculate and set column widths based on current container size */
+    _updateColumnWidths() {
+        const splitLayout = document.querySelector('.split-layout');
+        const campaignGrid = document.querySelector('.sheet-campaign-grid');
+        
+        if (splitLayout && campaignGrid) {
+            const expandedWidth = splitLayout.offsetWidth - 66; // 64px padding + 2px border
+            const baseColumnWidth = expandedWidth / 2;
+            // Character sheet is 34px narrower, campaign panel is 34px wider
+            campaignGrid.style.setProperty('--sheet-column-width', `${baseColumnWidth - 34}px`);
+            campaignGrid.style.setProperty('--campaign-column-width', `${baseColumnWidth + 34}px`);
+        }
+    },
+    
+    /** Handle viewport resize - recalculate column widths if expanded */
+    _onResize: null, // Will hold the bound resize handler
+    
+    _setupResizeListener() {
+        if (this._onResize) return; // Already set up
+        
+        this._onResize = () => {
+            if (this.isExpanded()) {
+                this._updateColumnWidths();
+            }
+        };
+        window.addEventListener('resize', this._onResize);
+    },
+    
+    _removeResizeListener() {
+        if (this._onResize) {
+            window.removeEventListener('resize', this._onResize);
+            this._onResize = null;
+        }
+    },
+
     /** Expand to show campaign panel (sheet + campaign view) */
     expand() {
+        const splitLayout = document.querySelector('.split-layout');
+        
+        // Calculate column widths based on current container size
+        this._updateColumnWidths();
+        
+        // Set up resize listener to keep columns responsive
+        this._setupResizeListener();
+        
+        // Add animation class to trigger CSS transition
+        splitLayout?.classList.add('is-sheet-expanded');
+        
         PanelManager.setView('sheet-campaign');
         
-        // Update button text
-        this._updateButtonText(true);
+        // Show campaign panel slot (CSS handles the fade-in)
+        const campaignSlot = document.querySelector('.campaign-panel-slot');
+        if (campaignSlot) {
+            campaignSlot.classList.remove('is-hidden');
+        }
         
         // Load campaign panel content
         this._loadCampaignPanel();
@@ -803,17 +989,46 @@ const ExpandedView = (window.ExpandedView = {
         // Update URL to track expanded state
         this._updateUrl(true);
         
+        // Show character nav bar after expand transition completes
+        setTimeout(() => {
+            CharacterNavBar.show();
+        }, 400); // Match CSS transition duration
+        
         if (DEBUG_MANAGER) {
             console.log('📐 Expanded view: ON');
         }
     },
 
     /** Collapse back to grid view (grid + sheet view) */
-    collapse() {
+    async collapse() {
+        const splitLayout = document.querySelector('.split-layout');
+
+        // First: hide character nav bar and expand sheet to fill space
+        await CharacterNavBar.hide();
+
+        // Then: start the collapse animation
+        // Add collapsing class to trigger the collapse animation
+        // Keep is-sheet-expanded to maintain fixed column widths during animation
+        splitLayout?.classList.add('is-collapsing');
+        
         PanelManager.setView('grid-sheet');
         
-        // Update button text
-        this._updateButtonText(false);
+        // After animation completes, clean up classes and listeners
+        const campaignSlot = document.querySelector('.campaign-panel-slot');
+        setTimeout(() => {
+            splitLayout?.classList.remove('is-sheet-expanded', 'is-collapsing');
+            if (campaignSlot) {
+                campaignSlot.classList.add('is-hidden');
+            }
+            // Clear the column width variables
+            const campaignGrid = document.querySelector('.sheet-campaign-grid');
+            if (campaignGrid) {
+                campaignGrid.style.removeProperty('--sheet-column-width');
+                campaignGrid.style.removeProperty('--campaign-column-width');
+            }
+            // Remove resize listener
+            this._removeResizeListener();
+        }, 400); // Match CSS transition duration
         
         // Update URL to remove expanded state
         this._updateUrl(false);
@@ -821,16 +1036,6 @@ const ExpandedView = (window.ExpandedView = {
         if (DEBUG_MANAGER) {
             console.log('📐 Expanded view: OFF');
         }
-    },
-
-    /** Update the expand button text based on state */
-    _updateButtonText(isExpanded) {
-        const btn = document.querySelector('.sheet-expand-btn');
-        if (!btn) return;
-        
-        // Update button text with icon
-        btn.textContent = isExpanded ? '⇤ Collapse' : '⇥ Expand';
-        btn.title = isExpanded ? 'Return to grid view' : 'Expand to show campaign info';
     },
 
     /** Toggle campaign description expand/collapse */
@@ -864,7 +1069,8 @@ const ExpandedView = (window.ExpandedView = {
 
     /** Load campaign panel content for the current character */
     async _loadCampaignPanel() {
-        const panel = document.getElementById('campaignPanel');
+        // Target the campaign-panel-slot inside sheet-campaign-grid
+        const panel = document.querySelector('.campaign-panel-slot') || document.getElementById('campaignPanel');
         if (!panel) return;
         
         const characterId = AppState.selectedCharacterId;
@@ -876,51 +1082,83 @@ const ExpandedView = (window.ExpandedView = {
         // Check if user is authenticated before making API calls
         const isAuthenticated = window.AuthService && AuthService.isAuthenticated();
         
-        // Get the character's campaignId
+        // Get the character's campaignId from the character object
         const character = AppState.characters?.find(c => String(c.id) === String(characterId));
-        const campaignId = character?.campaignId;
-        
-        if (!campaignId) {
-            // No campaign - fetch pending invitations and show empty state
-            let pendingCount = 0;
-            if (isAuthenticated) {
-                try {
-                    const invitations = await CampaignAPI.getPendingInvitations();
-                    pendingCount = invitations?.length || 0;
-                } catch (e) {
-                    console.warn('Could not fetch pending invitations:', e);
-                }
-            }
-            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, pendingCount);
-            return;
-        }
+        let campaignId = character?.campaignId;
         
         // If not authenticated, show empty state (can't fetch campaign data)
         if (!isAuthenticated) {
-            panel.innerHTML = this._renderCampaignPanelContent(characterId, null);
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, 0, []);
             return;
         }
         
-        // Show loading state
-        panel.innerHTML = `
-            <div class="campaign-panel-layout">
-                <div class="campaign-area">
-                    <div class="campaign-area-header">
-                        <h3 class="campaign-area-title">Loading...</h3>
-                    </div>
-                </div>
-            </div>
-        `;
+        // If no campaignId on character, try to find campaign via membership
+        // This handles cases where character.campaign_id wasn't properly set
+        let campaignDataFromMembership = null;
+        if (!campaignId) {
+            try {
+                campaignDataFromMembership = await CampaignUI.getCharacterCampaign(characterId);
+                if (campaignDataFromMembership) {
+                    campaignId = campaignDataFromMembership.campaign.id;
+                    console.log('📋 Found campaign via membership lookup:', campaignId);
+                }
+            } catch (e) {
+                console.warn('Could not check campaign membership:', e);
+            }
+        }
+        
+        if (!campaignId) {
+            // No campaign - fetch pending invitations and journal entries
+            let pendingCount = 0;
+            let journalEntries = [];
+            try {
+                const [invitations, entries] = await Promise.all([
+                    CampaignAPI.getPendingInvitations().catch(() => []),
+                    CampaignAPI.getJournalEntries(characterId).catch(() => [])
+                ]);
+                pendingCount = invitations?.length || 0;
+                journalEntries = entries || [];
+            } catch (e) {
+                console.warn('Could not fetch data:', e);
+            }
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, pendingCount, journalEntries);
+            return;
+        }
+        
+        // Show skeleton loading state
+        panel.innerHTML = this._renderCampaignSkeleton();
         
         try {
-            // Fetch campaign details and members
-            const [campaign, members] = await Promise.all([
-                CampaignAPI.getCampaign(campaignId),
-                CampaignAPI.getCampaignMembers(campaignId)
-            ]);
+            // If we already have campaign data from membership lookup, use it
+            // Otherwise fetch campaign details, members, and journal entries in parallel
+            let campaignData;
+            let journalEntries;
             
-            const campaignData = { campaign, members };
-            panel.innerHTML = this._renderCampaignPanelContent(characterId, campaignData);
+            if (campaignDataFromMembership) {
+                // We already have campaign and members from the membership lookup
+                campaignData = {
+                    campaign: campaignDataFromMembership.campaign,
+                    members: campaignDataFromMembership.members
+                };
+                journalEntries = await CampaignAPI.getJournalEntries(characterId).catch(e => {
+                    console.warn('Could not fetch journal entries:', e);
+                    return [];
+                });
+            } else {
+                // Fetch campaign details, members, and journal entries in parallel
+                const [campaign, members, entries] = await Promise.all([
+                    CampaignAPI.getCampaign(campaignId),
+                    CampaignAPI.getCampaignMembers(campaignId),
+                    CampaignAPI.getJournalEntries(characterId).catch(e => {
+                        console.warn('Could not fetch journal entries:', e);
+                        return [];
+                    })
+                ]);
+                campaignData = { campaign, members };
+                journalEntries = entries;
+            }
+            
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, campaignData, 0, journalEntries);
             this._initDescriptionTruncation();
             
         } catch (error) {
@@ -931,11 +1169,56 @@ const ExpandedView = (window.ExpandedView = {
     },
 
     /** Render the full campaign panel with both sections */
-    _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0) {
+    _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0, journalEntries = []) {
         return `
-            <div class="campaign-panel-layout">
-                ${this._renderCampaignArea(campaignData, pendingInvitationCount)}
-                ${this._renderJournalSection(characterId)}
+            ${this._renderCampaignArea(campaignData, pendingInvitationCount)}
+            ${this._renderJournalSection(characterId, journalEntries)}
+        `;
+    },
+
+    /** Render skeleton loading state for campaign panel */
+    _renderCampaignSkeleton() {
+        return `
+            <div class="campaign-area campaign-skeleton">
+                <div class="campaign-area-header">
+                    <h3 class="campaign-area-title">[ Campaign ]</h3>
+                </div>
+                <div class="campaign-area-info">
+                    <div class="skeleton-line skeleton-line--title"></div>
+                    <div class="skeleton-line skeleton-line--text"></div>
+                </div>
+                <div class="campaign-area-party sheet-section">
+                    <div class="sheet-header">
+                        <div class="sheet-header-title">[ PARTY ]</div>
+                    </div>
+                    <div class="sheet-collapsible-content">
+                        <div class="skeleton-party-member">
+                            <div class="skeleton-line skeleton-party-name"></div>
+                            <div class="skeleton-line skeleton-party-info"></div>
+                        </div>
+                        <div class="skeleton-party-member">
+                            <div class="skeleton-line skeleton-party-name"></div>
+                            <div class="skeleton-line skeleton-party-info"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="journal-section campaign-skeleton">
+                <div class="journal-header">
+                    <h3 class="journal-title">[ Journal ]</h3>
+                </div>
+                <div class="journal-list">
+                    <div class="skeleton-journal-entry">
+                        <div class="skeleton-line skeleton-journal-date"></div>
+                        <div class="skeleton-line skeleton-journal-title"></div>
+                        <div class="skeleton-line skeleton-journal-content"></div>
+                    </div>
+                    <div class="skeleton-journal-entry">
+                        <div class="skeleton-line skeleton-journal-date"></div>
+                        <div class="skeleton-line skeleton-journal-title"></div>
+                        <div class="skeleton-line skeleton-journal-content"></div>
+                    </div>
+                </div>
             </div>
         `;
     },
@@ -952,18 +1235,18 @@ const ExpandedView = (window.ExpandedView = {
             return `
                 <div class="campaign-area">
                     <div class="campaign-area-header">
-                        <h3 class="campaign-area-title">Campaign</h3>
+                        <h3 class="campaign-area-title">[ Campaign ]</h3>
                     </div>
                     <div class="campaign-area-empty">
-                        <div class="campaign-area-empty-icon">${hasInvitations ? '📬' : '⚔'}</div>
+                        ${hasInvitations ? '<div class="campaign-area-empty-icon">📬</div>' : ''}
                         <div class="campaign-area-empty-text ${hasInvitations ? 'has-invitations' : ''}">
                             ${invitationText}
                         </div>
                         <div class="campaign-area-actions">
-                            <button class="terminal-btn terminal-btn-small ui-theme-teal ${hasInvitations ? 'terminal-btn-primary' : ''}" onclick="CampaignUI.openJoinModal()">
+                            <button class="terminal-btn terminal-btn-small ${hasInvitations ? 'terminal-btn-primary' : ''}" onclick="CampaignUI.openJoinModal()">
                                 Join${hasInvitations ? '' : ' Campaign'}
                             </button>
-                            <button class="terminal-btn terminal-btn-small ui-theme-teal" onclick="CampaignUI.openCreateModal()">
+                            <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openCreateModal()">
                                 Create${hasInvitations ? '' : ' Campaign'}
                             </button>
                         </div>
@@ -979,9 +1262,14 @@ const ExpandedView = (window.ExpandedView = {
         const currentUserId = window.AuthService?.getCurrentUser()?.id;
         const isCreator = campaign.dm_id === currentUserId;
         
-        // Build party list from members with character info
-        const partyHtml = members && members.length > 0 
-            ? members.map(m => {
+        // Build party list from members with character info (limited to 3)
+        const MAX_PARTY_DISPLAY = 3;
+        let partyHtml = '';
+        if (members && members.length > 0) {
+            const displayMembers = members.slice(0, MAX_PARTY_DISPLAY);
+            const remainingCount = members.length - MAX_PARTY_DISPLAY;
+            
+            partyHtml = displayMembers.map(m => {
                 const char = m.character;
                 const creatorTag = m.is_creator ? '<span class="party-member-creator-tag">Creator</span>' : '';
                 if (char) {
@@ -998,29 +1286,39 @@ const ExpandedView = (window.ExpandedView = {
                         </div>
                     `;
                 }
-            }).join('')
-            : '<div class="party-empty">No party members yet</div>';
+            }).join('');
+            
+            if (remainingCount > 0) {
+                partyHtml += `<a class="party-see-more" href="#" onclick="CampaignUI.openManageModal(${campaign.id}); return false;">See more</a>`;
+            }
+        } else {
+            partyHtml = '<div class="party-empty">No party members yet</div>';
+        }
 
-        // Description section with truncation (3 lines max, expandable)
-        const descriptionHtml = campaign.description 
-            ? `<div class="campaign-area-description" data-expanded="false">
-                   <div class="campaign-desc-text">${campaign.description}</div>
-                   <button class="campaign-desc-toggle" onclick="ExpandedView.toggleDescription(this)">More</button>
-               </div>`
-            : '';
+        // Campaign name and description section
+        const descriptionHtml = `
+            <div class="campaign-area-info">
+                <div class="campaign-name">${campaign.name}</div>
+                ${campaign.description 
+                    ? `<div class="campaign-area-description" data-expanded="false">
+                           <div class="campaign-desc-text">${campaign.description}</div>
+                           <button class="campaign-desc-toggle" onclick="ExpandedView.toggleDescription(this)">More</button>
+                       </div>`
+                    : ''}
+            </div>`;
 
         // Overflow menu items
         const menuItems = [];
         if (isCreator) {
             menuItems.push({
-                icon: '✉',
-                label: 'Invite',
-                onclick: `CampaignUI.openInviteModal(${campaign.id})`,
-            });
-            menuItems.push({
                 icon: '⚙',
                 label: 'Manage Campaign',
                 onclick: `CampaignUI.openManageModal(${campaign.id})`,
+            });
+            menuItems.push({
+                icon: '✉',
+                label: 'Invite',
+                onclick: `CampaignUI.openInviteModal(${campaign.id})`,
             });
         }
         menuItems.push({
@@ -1033,7 +1331,7 @@ const ExpandedView = (window.ExpandedView = {
         const overflowMenuHtml = `
             <div class="campaign-overflow selector-shell selector-shell--actions">
                 <button
-                    class="terminal-btn-small ui-theme-teal selector-trigger overflow-trigger campaign-overflow-trigger"
+                    class="terminal-btn-small selector-trigger overflow-trigger campaign-overflow-trigger"
                     type="button"
                     aria-haspopup="menu"
                     aria-expanded="false"
@@ -1065,7 +1363,7 @@ const ExpandedView = (window.ExpandedView = {
         return `
             <div class="campaign-area">
                 <div class="campaign-area-header">
-                    <h3 class="campaign-area-title">${campaign.name}</h3>
+                    <h3 class="campaign-area-title">[ Campaign ]</h3>
                     ${overflowMenuHtml}
                 </div>
                 ${descriptionHtml}
@@ -1088,7 +1386,7 @@ const ExpandedView = (window.ExpandedView = {
     _renderJournalSection(characterId, entries = []) {
         const entriesHtml = entries.length > 0
             ? entries.map(entry => `
-                <div class="journal-entry" data-entry-id="${entry.id}">
+                <div class="journal-entry" data-entry-id="${entry.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">
                     <div class="journal-entry-header">
                         <span class="journal-entry-date">${this._formatDate(entry.entry_date)}</span>
                         <span class="journal-entry-title">${entry.title || 'Untitled'}</span>
@@ -1096,9 +1394,17 @@ const ExpandedView = (window.ExpandedView = {
                     <div class="journal-entry-preview">
                         ${this._truncateText(entry.content, 100)}
                     </div>
-                    <button class="journal-entry-edit terminal-btn-icon" onclick="CampaignUI.editJournalEntry(${entry.id})" title="Edit entry">
-                        ✎
-                    </button>
+                    <div class="journal-entry-full">
+                        ${Utils.escapeHtml(entry.content || '').replace(/\n/g, '<br>')}
+                    </div>
+                    <div class="journal-entry-actions">
+                        <button class="journal-entry-edit terminal-btn-icon" onclick="CampaignUI.editJournalEntry(${entry.id})" title="Edit entry">
+                            ✎
+                        </button>
+                        <button class="journal-entry-delete terminal-btn-icon" onclick="CampaignUI.deleteJournalEntry(${entry.id})" title="Delete entry">
+                            ×
+                        </button>
+                    </div>
                 </div>
             `).join('')
             : `
@@ -1111,10 +1417,10 @@ const ExpandedView = (window.ExpandedView = {
         return `
             <div class="journal-section">
                 <div class="journal-header">
-                    <h3 class="journal-title">Journal</h3>
-                    <button class="terminal-btn terminal-btn-small ui-theme-teal" onclick="CampaignUI.openJournalEntryModal()">
+                    <h3 class="journal-title">[ Journal ]</h3>
+                    <a href="#" class="journal-add-link" onclick="CampaignUI.openJournalEntryModal(); return false;">
                         + Add Entry
-                    </button>
+                    </a>
                 </div>
                 <div class="journal-entries">
                     ${entriesHtml}
@@ -1307,8 +1613,8 @@ const CampaignUI = (window.CampaignUI = {
             <div class="invitation-item" data-campaign-id="${inv.campaign_id}" onclick="CampaignUI.selectInvitation(${inv.campaign_id})">
                 <div class="invitation-radio"></div>
                 <div class="invitation-info">
-                    <div class="invitation-name">${this._escapeHtml(inv.campaign_name)}</div>
-                    ${inv.campaign_description ? `<div class="invitation-desc">${this._escapeHtml(inv.campaign_description)}</div>` : ''}
+                    <div class="invitation-name">${Utils.escapeHtml(inv.campaign_name)}</div>
+                    ${inv.campaign_description ? `<div class="invitation-desc">${Utils.escapeHtml(inv.campaign_description)}</div>` : ''}
                 </div>
             </div>
         `).join('');
@@ -1330,13 +1636,6 @@ const CampaignUI = (window.CampaignUI = {
         // Enable join button
         const joinBtn = document.getElementById('joinCampaignBtn');
         if (joinBtn) joinBtn.disabled = false;
-    },
-    
-    _escapeHtml(str) {
-        if (!str) return '';
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
     },
 
     closeJoinModal() {
@@ -1501,9 +1800,18 @@ const CampaignUI = (window.CampaignUI = {
     },
     
     async _loadExistingInvitations(campaignId) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'character-manager.js:_loadExistingInvitations',message:'Loading invitations',data:{campaignId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+        // #endregion
         try {
             this._existingInvitations = await CampaignAPI.getCampaignPendingInvitations(campaignId);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'character-manager.js:_loadExistingInvitations',message:'Loaded invitations success',data:{count:this._existingInvitations?.length,invitations:this._existingInvitations},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
+            // #endregion
         } catch (error) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'character-manager.js:_loadExistingInvitations',message:'Error caught - setting empty',data:{errorMessage:error.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3,H4'})}).catch(()=>{});
+            // #endregion
             console.warn('Failed to load existing invitations:', error);
             this._existingInvitations = [];
         }
@@ -1523,33 +1831,39 @@ const CampaignUI = (window.CampaignUI = {
         
         if (section) section.style.display = 'block';
         
-        container.innerHTML = this._existingInvitations.map(inv => `
-            <div class="share-collaborator-item share-collaborator-pending" data-invite-id="${inv.id}">
+        container.innerHTML = this._existingInvitations.map(inv => {
+            const isPending = inv.status === 'invited';
+            const statusLabel = isPending ? 'PENDING' : 'MEMBER';
+            const statusClass = isPending ? 'share-collaborator-pending' : '';
+            return `
+            <div class="share-collaborator-item ${statusClass}" data-invite-id="${inv.id}">
                 <span class="share-collaborator-email">${Utils.escapeHtml(inv.email)}</span>
-                <span class="share-collaborator-status">PENDING</span>
-                <button type="button" class="share-collaborator-remove" onclick="CampaignUI.revokeInvitation(${inv.id})" title="Remove">×</button>
+                <span class="share-collaborator-status">${statusLabel}</span>
+                <button type="button" class="share-collaborator-remove" onclick="CampaignUI.removeMember(${inv.id}, ${isPending})" title="${isPending ? 'Cancel invite' : 'Remove from campaign'}">×</button>
             </div>
-        `).join('');
+        `;
+        }).join('');
     },
     
-    async revokeInvitation(invitationId) {
+    async removeMember(memberId, isPending) {
         if (!this._invitingCampaign) return;
         
         // Mark as removing
-        const item = document.querySelector(`.share-collaborator-item[data-invite-id="${invitationId}"]`);
+        const item = document.querySelector(`.share-collaborator-item[data-invite-id="${memberId}"]`);
         if (item) item.classList.add('removing');
         
         try {
-            await CampaignAPI.revokeInvitation(this._invitingCampaign.id, invitationId);
+            // Use same endpoint for both - it removes the membership
+            await CampaignAPI.revokeInvitation(this._invitingCampaign.id, memberId);
             // Remove from local list
-            this._existingInvitations = this._existingInvitations.filter(inv => inv.id !== invitationId);
+            this._existingInvitations = this._existingInvitations.filter(inv => inv.id !== memberId);
             this._renderExistingInvitations();
         } catch (error) {
-            console.error('Failed to revoke invitation:', error);
+            console.error('Failed to remove member:', error);
             if (item) item.classList.remove('removing');
             const errorEl = document.getElementById('inviteModalError');
             if (errorEl) {
-                errorEl.textContent = error.message || 'Failed to revoke invitation';
+                errorEl.textContent = error.message || 'Failed to remove member';
                 errorEl.style.display = 'block';
             }
         }
@@ -1622,7 +1936,7 @@ const CampaignUI = (window.CampaignUI = {
             // Re-enable button
             if (addBtn) {
                 addBtn.disabled = false;
-                addBtn.textContent = 'ADD';
+                addBtn.textContent = 'Add';
             }
         }
     },
@@ -1775,18 +2089,23 @@ const CampaignUI = (window.CampaignUI = {
     
     /**
      * Get campaign for a character (if any)
-     * @param {number} characterId
+     * Checks campaign memberships to find which campaign this character is assigned to.
+     * @param {number|string} characterId
      * @returns {Promise<Object|null>} Campaign data or null
      */
     async getCharacterCampaign(characterId) {
         try {
+            // Normalize to string for consistent comparison (API returns numbers, frontend uses strings)
+            const charIdStr = String(characterId);
+            
             // Get all campaigns user is a member of
             const campaigns = await CampaignAPI.getCampaigns();
             
             // Find campaign where this character is assigned
             for (const campaign of campaigns) {
                 const members = await CampaignAPI.getCampaignMembers(campaign.id);
-                const myMembership = members.find(m => m.character_id === characterId);
+                // Use String() comparison to handle type mismatches (API returns numbers)
+                const myMembership = members.find(m => String(m.character_id) === charIdStr);
                 if (myMembership) {
                     return { campaign, membership: myMembership, members };
                 }
@@ -1800,15 +2119,13 @@ const CampaignUI = (window.CampaignUI = {
     },
 
     // ========================================
-    // JOURNAL ENTRY MODAL
+    // JOURNAL ENTRY MODAL (Combined with Character Update)
     // ========================================
     
     // Track the entry being edited (null for new entry)
     _editingEntryId: null,
-    // Track the saved entry for character update prompt
-    _savedJournalEntry: null,
 
-    openJournalEntryModal(entryId = null) {
+    async openJournalEntryModal(entryId = null) {
         const modal = document.getElementById('journalEntryModal');
         if (!modal) return;
 
@@ -1827,23 +2144,30 @@ const CampaignUI = (window.CampaignUI = {
         const idInput = document.getElementById('journalEntryId');
 
         if (entryId) {
-            // TODO: Load existing entry data
-            // For now, just clear
-            if (titleInput) titleInput.value = '';
-            if (contentInput) contentInput.value = '';
+            // Load existing entry data
+            try {
+                const entry = await CampaignAPI.getJournalEntry(entryId);
+                if (titleInput) titleInput.value = entry.title || '';
+                if (contentInput) contentInput.value = entry.content || '';
+                if (dateInput) dateInput.value = entry.entry_date || new Date().toISOString().split('T')[0];
+            } catch (error) {
+                console.error('Failed to load journal entry:', error);
+                showAlertDialog('Failed to load journal entry.');
+                return;
+            }
         } else {
             // New entry - set defaults
             if (titleInput) titleInput.value = '';
             if (contentInput) contentInput.value = '';
+            if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
         }
 
-        // Set date to today by default
-        if (dateInput) {
-            dateInput.value = new Date().toISOString().split('T')[0];
-        }
         if (idInput) {
             idInput.value = entryId || '';
         }
+
+        // Prepare character update fields
+        this._prepareCharacterUpdateFields();
 
         modal.classList.add('show');
 
@@ -1880,118 +2204,22 @@ const CampaignUI = (window.CampaignUI = {
         }
 
         try {
-            // Create the journal entry object
-            const entryData = {
-                character_id: characterId,
-                title: title || 'Untitled',
-                entry_date: entryDate,
-                content: content,
-            };
-
-            // TODO: Call API to save entry
-            // For now, store locally and show success
-            this._savedJournalEntry = {
-                ...entryData,
-                id: this._editingEntryId || Date.now(), // Temp ID
-            };
-
-            // Close journal modal
-            this.closeJournalEntryModal();
-
-            // Show character update prompt
-            this.openCharacterUpdateModal();
-
-        } catch (error) {
-            console.error('Failed to save journal entry:', error);
-            showAlertDialog(error.message || 'Failed to save journal entry.');
-        }
-    },
-
-    editJournalEntry(entryId) {
-        this.openJournalEntryModal(entryId);
-    },
-
-    // ========================================
-    // CHARACTER UPDATE MODAL
-    // ========================================
-
-    openCharacterUpdateModal() {
-        const modal = document.getElementById('characterUpdateModal');
-        if (!modal) return;
-
-        // Get character info
-        const characterId = AppState.selectedCharacterId;
-        const character = AppState.characters?.find(c => 
-            c.id === characterId || c.cloudId === characterId
-        );
-
-        // Update character name in title
-        const nameEl = document.getElementById('characterUpdateName');
-        if (nameEl && character) {
-            nameEl.textContent = character.name || 'Character';
-        }
-
-        // Pre-fill current HP
-        const hpInput = document.getElementById('charUpdateHp');
-        const hpMaxEl = document.getElementById('charUpdateHpMax');
-        if (character) {
-            if (hpInput) hpInput.value = character.hp_current || character.hp_max || '';
-            if (hpMaxEl) hpMaxEl.textContent = character.hp_max || '--';
-        }
-
-        // Reset other fields
-        const xpInput = document.getElementById('charUpdateXp');
-        const goldInput = document.getElementById('charUpdateGold');
-        const goldSign = document.getElementById('charUpdateGoldSign');
-        const itemsInput = document.getElementById('charUpdateItems');
-
-        if (xpInput) xpInput.value = '0';
-        if (goldInput) goldInput.value = '0';
-        if (goldSign) goldSign.value = '+';
-        if (itemsInput) itemsInput.value = '';
-
-        // Reset checkboxes
-        ['charUpdatePoisoned', 'charUpdateExhausted', 'charUpdateDiseased', 'charUpdateCursed'].forEach(id => {
-            const cb = document.getElementById(id);
-            if (cb) cb.checked = false;
-        });
-
-        modal.classList.add('show');
-    },
-
-    closeCharacterUpdateModal() {
-        const modal = document.getElementById('characterUpdateModal');
-        if (modal) {
-            animateModalClose(modal, { removeOnClose: false });
-        }
-        this._savedJournalEntry = null;
-    },
-
-    skipCharacterUpdate() {
-        // Just close without updating character
-        this.closeCharacterUpdateModal();
-        
-        // Refresh the campaign panel to show the new entry
-        ExpandedView._loadCampaignPanel();
-        
-        showNotification('✓ Journal entry saved');
-    },
-
-    async saveCharacterUpdate() {
-        const characterId = AppState.selectedCharacterId;
-        if (!characterId) {
-            this.closeCharacterUpdateModal();
-            return;
-        }
-
-        try {
-            // Gather update data
+            // Gather character update data
             const xpGained = parseInt(document.getElementById('charUpdateXp')?.value) || 0;
-            const hpCurrent = parseInt(document.getElementById('charUpdateHp')?.value) || null;
             const goldSign = document.getElementById('charUpdateGoldSign')?.value || '+';
             const goldAmount = parseInt(document.getElementById('charUpdateGold')?.value) || 0;
             const goldChange = goldSign === '-' ? -goldAmount : goldAmount;
-            const itemsAcquired = document.getElementById('charUpdateItems')?.value?.trim() || '';
+            const itemsText = document.getElementById('charUpdateItems')?.value?.trim() || '';
+            const itemsAcquired = itemsText ? itemsText.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+            // Calculate HP change
+            const character = AppState.characters?.find(c => 
+                c.id === characterId || c.cloudId === characterId
+            );
+            const currentHp = character?.hp_current || character?.hit_points_current || 
+                (typeof character?.hitPoints === 'number' ? character.hitPoints : character?.hitPoints?.current) || 0;
+            const newHp = parseInt(document.getElementById('charUpdateHp')?.value) || currentHp;
+            const hpChange = newHp - currentHp;
 
             // Get conditions
             const conditions = [];
@@ -2000,28 +2228,194 @@ const CampaignUI = (window.CampaignUI = {
             if (document.getElementById('charUpdateDiseased')?.checked) conditions.push('diseased');
             if (document.getElementById('charUpdateCursed')?.checked) conditions.push('cursed');
 
-            // TODO: Call API to update character with these values
-            // For now, just log and close
-            console.log('Character update:', {
-                characterId,
-                xpGained,
-                hpCurrent,
-                goldChange,
-                itemsAcquired,
-                conditions,
-                journalEntryId: this._savedJournalEntry?.id,
-            });
+            // Check if any character updates were made
+            const hasCharacterUpdate = xpGained !== 0 || goldChange !== 0 || hpChange !== 0 || 
+                itemsAcquired.length > 0 || conditions.length > 0;
 
-            this.closeCharacterUpdateModal();
+            if (this._editingEntryId) {
+                // Update existing entry
+                await CampaignAPI.updateJournalEntry(this._editingEntryId, {
+                    title: title || 'Untitled',
+                    content: content,
+                    entry_date: entryDate,
+                });
+                // Add/update character update if any changes made
+                if (hasCharacterUpdate) {
+                    await CampaignAPI.createCharacterUpdate(this._editingEntryId, {
+                        xp_gained: xpGained,
+                        gold_change: goldChange,
+                        hp_change: hpChange,
+                        items_acquired: itemsAcquired,
+                        items_lost: [],
+                        conditions: conditions,
+                    });
+                }
+            } else {
+                // Create new entry with character update in one call
+                const entryData = {
+                    character_id: characterId,
+                    title: title || 'Untitled',
+                    content: content,
+                    entry_date: entryDate,
+                };
+                
+                if (hasCharacterUpdate) {
+                    entryData.character_update = {
+                        xp_gained: xpGained,
+                        gold_change: goldChange,
+                        hp_change: hpChange,
+                        items_acquired: itemsAcquired,
+                        items_lost: [],
+                        conditions: conditions,
+                    };
+                }
+                
+                await CampaignAPI.createJournalEntry(entryData);
+            }
+
+            this._editingEntryId = null;
+            this.closeJournalEntryModal();
+            
+            // Refresh character data if updates were made
+            if (hasCharacterUpdate) {
+                await AppState.loadCharacters();
+                if (characterId) {
+                    viewCharacter(characterId);
+                }
+            }
             
             // Refresh the campaign panel
             ExpandedView._loadCampaignPanel();
             
-            showNotification('✓ Journal entry saved & character updated');
+            showNotification(hasCharacterUpdate ? '✓ Journal entry saved & character updated' : '✓ Journal entry saved');
 
         } catch (error) {
-            console.error('Failed to update character:', error);
-            showAlertDialog(error.message || 'Failed to update character.');
+            console.error('Failed to save journal entry:', error);
+            showAlertDialog(error.message || 'Failed to save journal entry.');
+        }
+    },
+
+    async editJournalEntry(entryId) {
+        await this.openJournalEntryModal(entryId);
+    },
+
+    /** Toggle journal entry expanded/collapsed state */
+    toggleJournalEntry(entryEl, event) {
+        // Don't toggle if clicking the edit or delete button
+        if (event.target.closest('.journal-entry-edit') || event.target.closest('.journal-entry-delete')) {
+            return;
+        }
+        
+        const isExpanding = !entryEl.classList.contains('is-expanded');
+        
+        // Close all other expanded entries (accordion behavior)
+        if (isExpanding) {
+            const allEntries = entryEl.closest('.journal-entries')?.querySelectorAll('.journal-entry.is-expanded');
+            allEntries?.forEach(entry => entry.classList.remove('is-expanded'));
+        }
+        
+        entryEl.classList.toggle('is-expanded');
+    },
+
+    /** Delete a journal entry with confirmation */
+    async deleteJournalEntry(entryId) {
+        showConfirmDialog(
+            'Delete this journal entry?\n\nThis cannot be undone.',
+            async () => {
+                try {
+                    await CampaignAPI.deleteJournalEntry(entryId);
+                    showNotification('Journal entry deleted');
+                    // Refresh the campaign panel to update the journal list
+                    ExpandedView._loadCampaignPanel();
+                } catch (error) {
+                    console.error('Failed to delete journal entry:', error);
+                    showAlertDialog(error.message || 'Failed to delete journal entry.');
+                }
+            }
+        );
+    },
+
+    // ========================================
+    // CHARACTER UPDATE FIELDS (in combined Journal Entry modal)
+    // ========================================
+
+    /** Prepare character update fields within the journal entry modal */
+    _prepareCharacterUpdateFields() {
+        // Get character info
+        const characterId = AppState.selectedCharacterId;
+        const character = AppState.characters?.find(c => 
+            c.id === characterId || c.cloudId === characterId
+        );
+
+        // Update character name in section header
+        const nameEl = document.getElementById('characterUpdateName');
+        if (nameEl && character) {
+            nameEl.textContent = character.name || 'Character';
+        }
+
+        // Pre-fill current HP (handle both old number format and new object format)
+        const hpInput = document.getElementById('charUpdateHp');
+        const hpMaxEl = document.getElementById('charUpdateHpMax');
+        if (character) {
+            const hp = character.hitPoints || { current: 0, max: 0 };
+            const hpMax = typeof hp === 'number' ? hp : (hp.max || 0);
+            const hpCurrent = typeof hp === 'number' ? hp : (hp.current || hpMax);
+            if (hpInput) hpInput.value = hpCurrent || '';
+            if (hpMaxEl) hpMaxEl.textContent = hpMax || '--';
+        }
+
+        // Reset other fields
+        const xpInput = document.getElementById('charUpdateXp');
+        const goldInput = document.getElementById('charUpdateGold');
+        const goldSign = document.getElementById('charUpdateGoldSign');
+        const goldSignLabel = document.getElementById('charUpdateGoldSign-label');
+        const itemsInput = document.getElementById('charUpdateItems');
+
+        if (xpInput) xpInput.value = '0';
+        if (goldInput) goldInput.value = '0';
+        if (goldSign) goldSign.value = '+';
+        if (goldSignLabel) goldSignLabel.textContent = '+';
+        // Reset gold sign selector options
+        const goldSignSelector = document.querySelector('.gold-sign-selector');
+        if (goldSignSelector) {
+            goldSignSelector.querySelectorAll('.selector-option').forEach(opt => {
+                const isPlus = opt.dataset.value === '+';
+                opt.classList.toggle('is-selected', isPlus);
+                opt.setAttribute('aria-selected', isPlus ? 'true' : 'false');
+            });
+        }
+        if (itemsInput) itemsInput.value = '';
+
+        // Reset checkboxes
+        ['charUpdatePoisoned', 'charUpdateExhausted', 'charUpdateDiseased', 'charUpdateCursed'].forEach(id => {
+            const cb = document.getElementById(id);
+            if (cb) cb.checked = false;
+        });
+    },
+
+    /** Handle gold sign selector selection */
+    selectGoldSign(sign) {
+        const hiddenInput = document.getElementById('charUpdateGoldSign');
+        const label = document.getElementById('charUpdateGoldSign-label');
+        const trigger = document.getElementById('charUpdateGoldSign-trigger');
+        
+        // Update hidden input value (normalize minus sign)
+        if (hiddenInput) hiddenInput.value = sign === '−' ? '-' : '+';
+        if (label) label.textContent = sign;
+        
+        // Update selected state on options
+        const selector = document.querySelector('.gold-sign-selector');
+        if (selector) {
+            selector.querySelectorAll('.selector-option').forEach(opt => {
+                const isSelected = opt.querySelector('.selector-option-label')?.textContent === sign;
+                opt.classList.toggle('is-selected', isSelected);
+                opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+        }
+        
+        // Close the menu
+        if (trigger) {
+            CharacterSheet.closeSelectorMenu(trigger);
         }
     },
 
@@ -2076,6 +2470,9 @@ const MobileView = {
 
     /** Track the previous viewport state to detect transitions */
     _wasMobile: null,
+    
+    /** Current view in mobile sheet: 'sheet' or 'campaign' */
+    _currentView: 'sheet',
     
     /** Swipe tracking state */
     _touchStartX: 0,
@@ -2258,6 +2655,9 @@ const MobileView = {
         const nextCharacter = characters[nextIndex];
         
         if (nextCharacter) {
+            // Reset to sheet view when swiping to a new character
+            this._currentView = 'sheet';
+            this._updateViewToggle();
             this.showSwipeLoader();
             viewCharacter(nextCharacter.id, { skipKeyboardSync: false, updateUrl: true });
         }
@@ -2276,6 +2676,9 @@ const MobileView = {
         const prevCharacter = characters[prevIndex];
         
         if (prevCharacter) {
+            // Reset to sheet view when swiping to a new character
+            this._currentView = 'sheet';
+            this._updateViewToggle();
             this.showSwipeLoader();
             viewCharacter(prevCharacter.id, { skipKeyboardSync: false, updateUrl: true });
         }
@@ -2364,6 +2767,10 @@ const MobileView = {
         
         if (!gridPanel || !container) return;
         
+        // Reset to sheet view (not campaign) when opening
+        this._currentView = 'sheet';
+        this._updateViewToggle();
+        
         // Check if we're in a swipe transition (loader was shown)
         const isSwipeTransition = this._isSwipeLoading;
         
@@ -2393,14 +2800,14 @@ const MobileView = {
         }
     },
     
-    /** Update the character count display in the mobile back bar */
+    /** Update the character count display in the mobile back bar (centered, x/y format) */
     updateCharacterCount(characterId) {
-        const countEl = document.getElementById('mobileCharacterCount');
+        const countEl = document.getElementById('mobileNavCount');
         if (!countEl) return;
         
         const characters = AppState.filteredCharacters;
         if (!characters || characters.length === 0) {
-            countEl.textContent = '';
+            countEl.textContent = '1/1';
             return;
         }
         
@@ -2408,7 +2815,166 @@ const MobileView = {
         const currentNum = currentIndex >= 0 ? currentIndex + 1 : 1;
         const total = characters.length;
         
-        countEl.textContent = currentNum + ' of ' + total;
+        countEl.textContent = currentNum + '/' + total;
+    },
+    
+    /** Update the view toggle link text based on current view */
+    _updateViewToggle() {
+        const toggleEl = document.getElementById('mobileViewToggle');
+        if (!toggleEl) return;
+        
+        toggleEl.textContent = this._currentView === 'sheet' ? 'Campaign' : 'Character';
+    },
+    
+    /** Toggle between character sheet and campaign views */
+    toggleCampaign() {
+        const container = document.getElementById('mobileSheetContainer');
+        const gridPanel = document.getElementById('characterGridPanel');
+        if (!container || !gridPanel) return;
+        
+        if (this._currentView === 'sheet') {
+            // Switch to campaign view
+            this._currentView = 'campaign';
+            this._renderCampaignContent(container);
+        } else {
+            // Switch back to sheet view
+            this._currentView = 'sheet';
+            const sourceSheet = document.getElementById('characterSheet');
+            if (sourceSheet) {
+                container.innerHTML = sourceSheet.innerHTML;
+            }
+        }
+        
+        this._updateViewToggle();
+        
+        // Scroll to top when switching views
+        gridPanel.scrollTop = 0;
+    },
+    
+    /** Render campaign content into the mobile container */
+    _renderCampaignContent(container) {
+        // Get the campaign panel slot content from desktop (if available)
+        const campaignSlot = document.querySelector('.campaign-panel-slot');
+        
+        if (campaignSlot && campaignSlot.innerHTML.trim()) {
+            // Clone the campaign content from desktop
+            container.innerHTML = campaignSlot.innerHTML;
+        } else {
+            // Need to fetch and render campaign content
+            this._loadAndRenderCampaign(container);
+        }
+    },
+    
+    /** Load campaign data and render it into the container */
+    async _loadAndRenderCampaign(container) {
+        const characterId = AppState.selectedCharacterId;
+        if (!characterId) {
+            container.innerHTML = this._renderNoCampaign();
+            return;
+        }
+        
+        // Show loading state
+        container.innerHTML = `
+            <div class="campaign-panel-placeholder">
+                <div class="panel-loading-cube-container">
+                    <div class="panel-loading-cube">
+                        <i></i><i></i><i></i><i></i><i></i><i></i>
+                    </div>
+                </div>
+                <div class="panel-loading-text" style="margin-top: 16px;">Loading campaign...</div>
+            </div>
+        `;
+        
+        // Check if user is authenticated
+        const isAuthenticated = window.AuthService && AuthService.isAuthenticated();
+        
+        // Get the character's campaignId
+        const character = AppState.characters?.find(c => String(c.id) === String(characterId));
+        let campaignId = character?.campaignId;
+        
+        if (!isAuthenticated) {
+            // Not authenticated - show empty state
+            container.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+            return;
+        }
+        
+        // Try to find campaign via membership if not on character
+        let campaignDataFromMembership = null;
+        if (!campaignId && typeof CampaignUI !== 'undefined') {
+            try {
+                campaignDataFromMembership = await CampaignUI.getCharacterCampaign(characterId);
+                if (campaignDataFromMembership) {
+                    campaignId = campaignDataFromMembership.campaign.id;
+                }
+            } catch (e) {
+                console.warn('Could not check campaign membership:', e);
+            }
+        }
+        
+        if (!campaignId) {
+            // No campaign - show create/join options
+            container.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+            return;
+        }
+        
+        // Fetch campaign data
+        try {
+            let campaignData, journalEntries = [];
+            
+            if (campaignDataFromMembership) {
+                campaignData = campaignDataFromMembership;
+            } else if (typeof CampaignUI !== 'undefined') {
+                campaignData = await CampaignUI.getCharacterCampaign(characterId);
+            }
+            
+            if (!campaignData) {
+                container.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+                return;
+            }
+            
+            // Fetch journal entries
+            if (typeof CampaignUI !== 'undefined' && campaignData.campaign?.id) {
+                try {
+                    journalEntries = await CampaignUI.getJournalEntries(campaignData.campaign.id, characterId);
+                } catch (e) {
+                    console.warn('Could not fetch journal entries:', e);
+                }
+            }
+            
+            // Render campaign content
+            container.innerHTML = ExpandedView._renderCampaignPanelContent(
+                characterId,
+                campaignData,
+                journalEntries?.length || 0,
+                journalEntries || []
+            );
+            
+            // Initialize any collapsible sections
+            if (typeof ExpandedView !== 'undefined' && ExpandedView._initDescriptionTruncation) {
+                ExpandedView._initDescriptionTruncation();
+            }
+        } catch (e) {
+            console.error('Error loading campaign:', e);
+            container.innerHTML = `
+                <div class="campaign-panel-placeholder">
+                    <div class="campaign-panel-placeholder-text">
+                        Failed to load campaign data.<br>
+                        Please try again.
+                    </div>
+                </div>
+            `;
+        }
+    },
+    
+    /** Render empty campaign state */
+    _renderNoCampaign() {
+        return `
+            <div class="campaign-panel-placeholder">
+                <div class="campaign-panel-placeholder-text">
+                    No campaign selected.
+                </div>
+            </div>
+        `;
     },
     
     /** Add the swipe loader overlay to the portrait container */
@@ -2648,6 +3214,7 @@ const UI = {
         const sheetPlaceholder = document.querySelector('.sheet-placeholder');
         const characterSheet = document.getElementById('characterSheet');
         const campaignPlaceholder = document.querySelector('.campaign-panel-placeholder');
+        const sheetNavBar = document.getElementById('sheetNavBar');
 
         if (isLoading) {
             if (gridLoading) gridLoading.classList.remove('is-hidden');
@@ -2658,11 +3225,13 @@ const UI = {
             if (sheetPlaceholder) sheetPlaceholder.classList.add('is-hidden');
             if (characterSheet) characterSheet.classList.add('is-hidden');
             if (campaignPlaceholder) campaignPlaceholder.classList.add('is-hidden');
+            if (sheetNavBar) sheetNavBar.classList.add('is-hidden');
         } else {
             if (gridLoading) gridLoading.classList.add('is-hidden');
             if (sheetLoading) sheetLoading.classList.add('is-hidden');
             if (campaignLoading) campaignLoading.classList.add('is-hidden');
             if (grid) grid.classList.remove('is-hidden');
+            // sheetNavBar visibility is controlled by showCharacterSheet() to sync with characterSheet
             // empty state, sheet, and campaign visibility will be controlled by UI.render()
         }
     },
@@ -2687,10 +3256,12 @@ const UI = {
                 : [];
         const placeholder = document.querySelector('.sheet-placeholder');
         const sheetEl = document.getElementById('characterSheet');
+        const navBarEl = document.getElementById('sheetNavBar');
 
         if (!characters.length) {
             if (placeholder) placeholder.classList.remove('is-hidden');
             if (sheetEl) sheetEl.classList.add('is-hidden');
+            // Don't hide navBar - keep it visible
             if (typeof AppState !== 'undefined' && AppState) {
                 AppState.selectedCharacterId = null;
             }
@@ -2784,6 +3355,7 @@ const UI = {
             // Desktop with no selection and no characters - show placeholder
             if (placeholder) placeholder.classList.remove('is-hidden');
             if (sheetEl) sheetEl.classList.add('is-hidden');
+            if (navBarEl) navBarEl.classList.add('is-hidden');
         }
     },
 
@@ -3005,9 +3577,13 @@ const UI = {
     showCharacterSheet(character) {
         const placeholder = document.querySelector('.sheet-placeholder');
         const sheetContainer = document.getElementById('characterSheet');
+        const navBar = document.getElementById('sheetNavBar');
 
         placeholder.classList.add('is-hidden');
         sheetContainer.classList.remove('is-hidden');
+        if (navBar) navBar.classList.remove('is-hidden');
+        
+        // Nav bar is kept visible but empty - the "← Characters" button is now inside the sheet header
         
         // Check if this is a demo character - disable editing if so
         const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
@@ -3041,8 +3617,26 @@ const UI = {
             lastUpdatedByEmail: character.last_updated_by_email || character.lastUpdatedByEmail,
         });
         
+        // Move sheet-title-header out of characterSheet and into sheet-scroll-wrapper (above the grid)
+        const scrollWrapper = document.querySelector('.sheet-scroll-wrapper');
+        const sheetCampaignGrid = document.querySelector('.sheet-campaign-grid');
+        const titleHeader = sheetContainer.querySelector('.sheet-title-header');
+        if (scrollWrapper && sheetCampaignGrid && titleHeader) {
+            // Remove any existing title header from scroll wrapper first
+            const existingHeader = scrollWrapper.querySelector('.sheet-title-header');
+            if (existingHeader) {
+                existingHeader.remove();
+            }
+            scrollWrapper.insertBefore(titleHeader, sheetCampaignGrid);
+        }
+        
         // Populate ASCII portrait after rendering
         CharacterSheet.populatePortrait(character);
+        
+        // Update character nav bar if expanded view is active
+        if (ExpandedView.isExpanded()) {
+            CharacterNavBar.update(character.id);
+        }
     }
 };
 
@@ -3345,6 +3939,21 @@ async function viewCharacter(id, options = {}) {
             });
         }
         UI.showCharacterSheet(character);
+        
+        // Handle campaign panel when switching characters
+        const campaignSlot = document.querySelector('.campaign-panel-slot');
+        if (ExpandedView.isExpanded()) {
+            // Expanded view: show skeleton loader and fetch new data
+            if (campaignSlot) {
+                campaignSlot.innerHTML = ExpandedView._renderCampaignSkeleton();
+            }
+            ExpandedView._loadCampaignPanel();
+        } else {
+            // Grid+sheet view: clear campaign panel so skeleton shows on expand
+            if (campaignSlot) {
+                campaignSlot.innerHTML = '';
+            }
+        }
         
         // Update URL with selected character (for sharing/bookmarking)
         if (updateUrl && id) {
@@ -4012,8 +4621,8 @@ async function renameCharacter(id) {
             <input type="text" id="renameInput" class="terminal-input" value="${safeCurrentName}">
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" id="renameCancel">CANCEL</button>
-            <button class="terminal-btn terminal-btn-primary" id="renameOk">APPLY</button>
+            <button class="terminal-btn" id="renameCancel">Cancel</button>
+            <button class="terminal-btn terminal-btn-primary" id="renameOk">Apply</button>
           </div>
         </div>
       </div>
@@ -4081,7 +4690,7 @@ async function openShareModal(characterId) {
 
     const safeName = Utils.escapeHtml(character.name || 'Unnamed');
     const modalHtml = `
-      <div id="shareModal" class="modal modal-yellow show">
+      <div id="shareModal" class="modal show">
         <div class="modal-content">
           <div class="modal-header">
             <h2 class="modal-title">SHARE CHARACTER</h2>
@@ -4099,13 +4708,13 @@ async function openShareModal(characterId) {
               <label class="terminal-text-small modal-section-label" for="shareEmailInput">ADD PERSON</label>
               <div class="share-add-row">
                 <input type="email" id="shareEmailInput" class="terminal-input" placeholder="email@example.com" autocomplete="off" data-1p-ignore>
-                <button class="terminal-btn" id="shareAddBtn">ADD</button>
+                <button class="terminal-btn" id="shareAddBtn">Add</button>
               </div>
               <p id="shareEmailError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
             </div>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn terminal-btn-primary" id="shareDoneBtn">DONE</button>
+            <button class="terminal-btn terminal-btn-primary" id="shareDoneBtn">Done</button>
           </div>
         </div>
       </div>
@@ -4272,7 +4881,7 @@ async function openShareModal(characterId) {
             showError(error.message || 'Failed to share character');
         } finally {
             addBtn.disabled = false;
-            addBtn.textContent = 'ADD';
+            addBtn.textContent = 'Add';
         }
     });
 
@@ -4381,8 +4990,8 @@ function showPendingSharesModal(shares) {
                   From: ${fromEmail} · ${dateStr}
                 </p>
                 <div class="share-card-actions">
-                  <button class="terminal-btn pending-share-ignore" data-share-id="${share.id}">IGNORE</button>
-                  <button class="terminal-btn pending-share-accept" data-share-id="${share.id}">ADD CHARACTER</button>
+                  <button class="terminal-btn pending-share-ignore" data-share-id="${share.id}">Ignore</button>
+                  <button class="terminal-btn pending-share-accept" data-share-id="${share.id}">Add character</button>
                 </div>
               </div>
             </div>
@@ -4514,7 +5123,7 @@ async function handleDismissShare(shareId) {
     } catch (error) {
         if (ignoreBtn) {
             ignoreBtn.disabled = false;
-            ignoreBtn.textContent = 'IGNORE';
+            ignoreBtn.textContent = 'Ignore';
         }
         showNotification(error.message || 'Failed to dismiss share', 'error');
     }
@@ -5866,7 +6475,7 @@ function closeImportModal() {
         const importButton = getImportModalPrimaryButton();
         if (importButton) {
             importButton.disabled = true;  // Disable for next time modal opens
-            importButton.textContent = 'IMPORT';
+            importButton.textContent = 'Import';
         }
 
         isImporting = false;  // Reset flag when closing
@@ -6069,7 +6678,7 @@ async function importCharacter() {
                 const importButton = getImportModalPrimaryButton();
                 if (importButton) {
                     importButton.disabled = false;
-                    importButton.textContent = 'IMPORT';
+                    importButton.textContent = 'Import';
                 }
                 isImporting = false;  // Reset flag
                 return;
@@ -6091,7 +6700,7 @@ async function importCharacter() {
                 const importButton = getImportModalPrimaryButton();
                 if (importButton) {
                     importButton.disabled = false;
-                    importButton.textContent = 'IMPORT';
+                    importButton.textContent = 'Import';
                 }
                 isImporting = false;  // Reset on error
             }
@@ -6102,7 +6711,7 @@ async function importCharacter() {
             const importButton = getImportModalPrimaryButton();
             if (importButton) {
                 importButton.disabled = false;
-                importButton.textContent = 'IMPORT';
+                importButton.textContent = 'Import';
             }
             isImporting = false;  // Reset on error
         };
@@ -6114,7 +6723,7 @@ async function importCharacter() {
         const importButton = getImportModalPrimaryButton();
         if (importButton) {
             importButton.disabled = false;
-            importButton.textContent = 'IMPORT';
+            importButton.textContent = 'Import';
         }
         isImporting = false;  // Reset flag
     }
@@ -6421,7 +7030,6 @@ function closeAllEditorModals() {
         'joinCampaignModal',
         'campaignCreatedModal',
         'journalEntryModal',
-        'characterUpdateModal',
     ];
     
     modalIds.forEach(id => {
@@ -6464,7 +7072,7 @@ function showConfirmDialog(message, onConfirm) {
             <p class="terminal-text">${escapedMessage}</p>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn" id="genericConfirmCancel">CANCEL</button>
+            <button class="terminal-btn" id="genericConfirmCancel">Cancel</button>
             <button class="terminal-btn terminal-btn-primary" id="genericConfirmOk">OK</button>
           </div>
         </div>
@@ -6581,8 +7189,8 @@ function showLevelChangeDialog(oldLevel, newLevel, xpTriggered = false) {
             </p>
           </div>
           <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">
-            <button class="terminal-btn" id="levelChangeManual">KEEP MANUAL</button>
-            <button class="terminal-btn terminal-btn-primary" id="levelChangeAuto">AUTO-CALCULATE</button>
+            <button class="terminal-btn" id="levelChangeManual">Keep manual</button>
+            <button class="terminal-btn terminal-btn-primary" id="levelChangeAuto">Auto-calculate</button>
           </div>
         `;
 
@@ -7391,8 +7999,8 @@ function showSessionExpiredModal() {
             <p class="terminal-text">Your local changes are safe, but you'll need to log in again to sync with the cloud.</p>
           </div>
           <div class="modal-footer modal-footer-end">
-            <button class="terminal-btn terminal-btn-secondary" id="sessionExpiredDismiss">CONTINUE OFFLINE</button>
-            <button class="terminal-btn terminal-btn-primary" id="sessionExpiredLogin">LOG IN</button>
+            <button class="terminal-btn terminal-btn-secondary" id="sessionExpiredDismiss">Continue offline</button>
+            <button class="terminal-btn terminal-btn-primary" id="sessionExpiredLogin">Log in</button>
           </div>
         </div>
       </div>
@@ -7944,7 +8552,7 @@ function setAuthLoading(isLoading, message) {
                 registerBtn.innerHTML = registerBtn.dataset.originalLabel;
                 delete registerBtn.dataset.originalLabel;
             } else {
-                registerBtn.textContent = 'REGISTER';
+                registerBtn.textContent = 'Register';
             }
         }
     }
@@ -8439,12 +9047,12 @@ function updateAuthUI() {
         const user = window.AuthService.getCurrentUser();
         userStatusIcon.textContent = '☁';
         userStatusText.textContent = user ? user.email : 'Logged In';
-        authBtn.textContent = 'LOG OUT';
+        authBtn.textContent = 'Log out';
         authBtn.onclick = handleLogout;
         
         // Update overflow menu
         if (overflowAuthIcon) overflowAuthIcon.textContent = '←';
-        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log Out';
+        if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log out';
 
         // Hide guest notice when logged in
         if (guestNotice) {
@@ -8662,6 +9270,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize mobile view handling (resize transitions)
     MobileView.init();
+    
+    // Initialize character nav bar for desktop expanded view
+    CharacterNavBar.init();
     
     // Initialize portrait lightbox for mobile (tap-to-zoom)
     PortraitLightbox.init();
@@ -10454,8 +11065,8 @@ function openSpellPickerForEdit(level) {
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="closeInlineSpellPicker()">← BACK</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="confirmInlineSpellSelection()">CONFIRM</button>
+                <button class="terminal-btn" onclick="closeInlineSpellPicker()">← Back</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="confirmInlineSpellSelection()">Confirm</button>
             </div>
         `;
         
