@@ -3269,28 +3269,13 @@
         display: flex;
     }
     
-    /* Centered navigation count (absolute for true center) */
+    /* Navigation count - right aligned */
     .mobile-nav-count {
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-        color: var(--sheet-accent);
-        font-family: var(--font-mono);
-        font-size: var(--font-size-small);
-        white-space: nowrap;
-    }
-    
-    /* Right-pinned view toggle link */
-    .mobile-view-toggle {
+        margin-left: auto;
         color: var(--sheet-accent-dim);
         font-family: var(--font-mono);
         font-size: var(--font-size-small);
-        text-decoration: none;
-        transition: color var(--transition-speed);
-    }
-    
-    .mobile-view-toggle:hover {
-        color: var(--sheet-accent);
+        white-space: nowrap;
     }
     
     /* Hide grid and controls when viewing sheet */
@@ -3368,6 +3353,13 @@
 /* Remove top border from character sheet in mobile container */
 .mobile-sheet-container.character-sheet {
     border-top: none;
+}
+
+/* Campaign section at bottom of mobile sheet */
+.mobile-campaign-section {
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--sheet-accent-dim);
 }
 
 /* Swipe loading overlay - positioned over the portrait area only */

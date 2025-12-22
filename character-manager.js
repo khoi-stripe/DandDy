@@ -2763,13 +2763,8 @@ const MobileView = {
     open(characterId) {
         const gridPanel = document.getElementById('characterGridPanel');
         const container = document.getElementById('mobileSheetContainer');
-        const mobileHeader = document.getElementById('mobileSheetTitleHeader');
         
         if (!gridPanel || !container) return;
-        
-        // Reset to sheet view (not campaign) when opening
-        this._currentView = 'sheet';
-        this._updateViewToggle();
         
         // Check if we're in a swipe transition (loader was shown)
         const isSwipeTransition = this._isSwipeLoading;
@@ -2777,14 +2772,19 @@ const MobileView = {
         // Clone the character sheet content into the container
         const sourceSheet = document.getElementById('characterSheet');
         const sourceTitleHeader = document.querySelector('.sheet-scroll-wrapper .sheet-title-header');
+        const campaignSlot = document.querySelector('.campaign-panel-slot');
         
-        // Build mobile content: title header + sheet content
+        // Build mobile content: title header + sheet content + campaign content
         let mobileContent = '';
         if (sourceTitleHeader) {
             mobileContent += '<div class="mobile-sheet-title-header" id="mobileSheetTitleHeader">' + sourceTitleHeader.innerHTML + '</div>';
         }
         if (sourceSheet) {
             mobileContent += sourceSheet.innerHTML;
+        }
+        // Add campaign content at the bottom (if available)
+        if (campaignSlot && campaignSlot.innerHTML.trim()) {
+            mobileContent += '<div class="mobile-campaign-section">' + campaignSlot.innerHTML + '</div>';
         }
         container.innerHTML = mobileContent;
         
