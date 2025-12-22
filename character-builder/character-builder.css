@@ -1607,6 +1607,25 @@
   --scrollbar-thumb-hover-color: rgba(0, 206, 209, 0.9);
 }
 
+/* Character sheet in builder - fit within parent container with teal theme */
+.right-panel .character-sheet {
+  border: 1px solid var(--sheet-accent-dim);
+  box-sizing: border-box;
+  max-height: 100%;
+  width: 100%;
+  /* Teal UI theme */
+  --ui-border-color: var(--sheet-accent);
+  --ui-fg-color: var(--sheet-accent);
+  --ui-dim-color: var(--sheet-accent-dim);
+  --ui-primary-color: var(--sheet-accent);
+  --ui-primary-color-dim: var(--sheet-accent-dim);
+  --ui-primary-bg-color: var(--sheet-accent);
+  --ui-on-primary-color: var(--terminal-bg);
+  --ui-hover-color: var(--sheet-accent);
+  --context-accent: var(--sheet-accent);
+  --context-accent-dim: var(--sheet-accent-dim);
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1024px) {
   /* Combat stats and abilities: 2-column grid on tablet */

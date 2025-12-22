@@ -1028,56 +1028,52 @@ const ExpandedView = (window.ExpandedView = {
     /** Render the full campaign panel with both sections */
     _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0, journalEntries = []) {
         return `
-            <div class="campaign-panel-layout">
-                ${this._renderCampaignArea(campaignData, pendingInvitationCount)}
-                ${this._renderJournalSection(characterId, journalEntries)}
-            </div>
+            ${this._renderCampaignArea(campaignData, pendingInvitationCount)}
+            ${this._renderJournalSection(characterId, journalEntries)}
         `;
     },
 
     /** Render skeleton loading state for campaign panel */
     _renderCampaignSkeleton() {
         return `
-            <div class="campaign-panel-layout campaign-skeleton">
-                <div class="campaign-area">
-                    <div class="campaign-area-header">
-                        <h3 class="campaign-area-title">[ Campaign ]</h3>
+            <div class="campaign-area campaign-skeleton">
+                <div class="campaign-area-header">
+                    <h3 class="campaign-area-title">[ Campaign ]</h3>
+                </div>
+                <div class="campaign-area-info">
+                    <div class="skeleton-line skeleton-line--title"></div>
+                    <div class="skeleton-line skeleton-line--text"></div>
+                </div>
+                <div class="campaign-area-party sheet-section">
+                    <div class="sheet-header">
+                        <div class="sheet-header-title">[ PARTY ]</div>
                     </div>
-                    <div class="campaign-area-info">
-                        <div class="skeleton-line skeleton-line--title"></div>
-                        <div class="skeleton-line skeleton-line--text"></div>
-                    </div>
-                    <div class="campaign-area-party sheet-section">
-                        <div class="sheet-header">
-                            <div class="sheet-header-title">[ PARTY ]</div>
+                    <div class="sheet-collapsible-content">
+                        <div class="skeleton-party-member">
+                            <div class="skeleton-line skeleton-party-name"></div>
+                            <div class="skeleton-line skeleton-party-info"></div>
                         </div>
-                        <div class="sheet-collapsible-content">
-                            <div class="skeleton-party-member">
-                                <div class="skeleton-line skeleton-party-name"></div>
-                                <div class="skeleton-line skeleton-party-info"></div>
-                            </div>
-                            <div class="skeleton-party-member">
-                                <div class="skeleton-line skeleton-party-name"></div>
-                                <div class="skeleton-line skeleton-party-info"></div>
-                            </div>
+                        <div class="skeleton-party-member">
+                            <div class="skeleton-line skeleton-party-name"></div>
+                            <div class="skeleton-line skeleton-party-info"></div>
                         </div>
                     </div>
                 </div>
-                <div class="journal-section">
-                    <div class="journal-header">
-                        <h3 class="journal-title">[ Journal ]</h3>
+            </div>
+            <div class="journal-section campaign-skeleton">
+                <div class="journal-header">
+                    <h3 class="journal-title">[ Journal ]</h3>
+                </div>
+                <div class="journal-list">
+                    <div class="skeleton-journal-entry">
+                        <div class="skeleton-line skeleton-journal-date"></div>
+                        <div class="skeleton-line skeleton-journal-title"></div>
+                        <div class="skeleton-line skeleton-journal-content"></div>
                     </div>
-                    <div class="journal-list">
-                        <div class="skeleton-journal-entry">
-                            <div class="skeleton-line skeleton-journal-date"></div>
-                            <div class="skeleton-line skeleton-journal-title"></div>
-                            <div class="skeleton-line skeleton-journal-content"></div>
-                        </div>
-                        <div class="skeleton-journal-entry">
-                            <div class="skeleton-line skeleton-journal-date"></div>
-                            <div class="skeleton-line skeleton-journal-title"></div>
-                            <div class="skeleton-line skeleton-journal-content"></div>
-                        </div>
+                    <div class="skeleton-journal-entry">
+                        <div class="skeleton-line skeleton-journal-date"></div>
+                        <div class="skeleton-line skeleton-journal-title"></div>
+                        <div class="skeleton-line skeleton-journal-content"></div>
                     </div>
                 </div>
             </div>
