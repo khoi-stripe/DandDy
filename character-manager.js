@@ -1295,17 +1295,15 @@ const ExpandedView = (window.ExpandedView = {
             partyHtml = '<div class="party-empty">No party members yet</div>';
         }
 
-        // Campaign name and description section
-        const descriptionHtml = `
-            <div class="campaign-area-info">
-                <div class="campaign-name">${campaign.name}</div>
-                ${campaign.description 
-                    ? `<div class="campaign-area-description" data-expanded="false">
-                           <div class="campaign-desc-text">${campaign.description}</div>
-                           <button class="campaign-desc-toggle" onclick="ExpandedView.toggleDescription(this)">More</button>
-                       </div>`
-                    : ''}
-            </div>`;
+        // Campaign description section (name moved to header)
+        const descriptionHtml = campaign.description 
+            ? `<div class="campaign-area-info">
+                   <div class="campaign-area-description" data-expanded="false">
+                       <div class="campaign-desc-text">${campaign.description}</div>
+                       <button class="campaign-desc-toggle" onclick="ExpandedView.toggleDescription(this)">More</button>
+                   </div>
+               </div>`
+            : '';
 
         // Overflow menu items
         const menuItems = [];
@@ -1364,6 +1362,7 @@ const ExpandedView = (window.ExpandedView = {
             <div class="campaign-area">
                 <div class="campaign-area-header">
                     <h3 class="campaign-area-title">[ Campaign ]</h3>
+                    <span class="campaign-name">${campaign.name}</span>
                     ${overflowMenuHtml}
                 </div>
                 ${descriptionHtml}

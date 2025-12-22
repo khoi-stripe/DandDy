@@ -433,10 +433,7 @@
     color: var(--sheet-accent);
     margin: 0;
     font-weight: var(--font-weight-medium);
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    flex-shrink: 0;
     white-space: nowrap;
 }
 
@@ -939,7 +936,11 @@
     font-size: var(--font-size-md);
     font-weight: var(--font-weight-medium);
     color: var(--sheet-label-color);
-    margin-bottom: var(--spacing-sm);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Campaign description */
