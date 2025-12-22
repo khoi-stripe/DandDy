@@ -714,7 +714,7 @@ const CharacterSheet = (window.CharacterSheet = {
       context === 'manager' && hasValidManagerId
         ? `
         <button
-          class="terminal-btn-small sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-characters hide-on-mobile"
+          class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-characters hide-on-mobile"
           type="button"
           onclick="ExpandedView.collapse()"
           title="Return to character grid"
@@ -726,7 +726,7 @@ const CharacterSheet = (window.CharacterSheet = {
       context === 'manager' && hasValidManagerId
         ? `
         <button
-          class="terminal-btn-small sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-campaign hide-on-mobile"
+          class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-campaign hide-on-mobile"
           type="button"
           onclick="ExpandedView.expand()"
           title="View campaign info"
@@ -781,13 +781,12 @@ const CharacterSheet = (window.CharacterSheet = {
       `
         : '';
 
-    const actionsBlock =
-      charactersButtonHtml || campaignButtonHtml || headerMenu
+    const navActionsBlock =
+      charactersButtonHtml || campaignButtonHtml
         ? `
         <div class="sheet-title-actions">
           ${charactersButtonHtml}
           ${campaignButtonHtml}
-          ${headerMenu}
         </div>
       `
         : '';
@@ -799,8 +798,9 @@ const CharacterSheet = (window.CharacterSheet = {
 
     return `
       <div class="sheet-title-header">
+        ${headerMenu}
         <div class="sheet-title">${safeTitle}</div>
-        ${actionsBlock}
+        ${navActionsBlock}
       </div>
     `;
   },
@@ -1913,12 +1913,12 @@ const CharacterSheet = (window.CharacterSheet = {
               const fitsLeft =
                 triggerRect.right - menuWidth >= hostLeft;
 
-              // Sheet actions menu should always open to the left (right-aligned with trigger)
+              // Sheet actions menu should always open to the right (left-aligned with trigger)
               if (isSheetActionsMenu) {
-                // Use right positioning instead of left - this anchors the menu's right edge
-                // to the trigger's right edge regardless of menu width (avoids measurement issues)
-                menu.style.left = 'auto';
-                menu.style.right = `${window.innerWidth - triggerRect.right}px`;
+                // Use left positioning - this anchors the menu's left edge
+                // to the trigger's left edge so it opens rightward
+                menu.style.left = `${triggerRect.left}px`;
+                menu.style.right = 'auto';
                 // Set targetLeft to a dummy value since we won't use it
                 targetLeft = 0;
               } else if (fitsRight && !fitsLeft) {

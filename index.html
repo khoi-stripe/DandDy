@@ -83,7 +83,7 @@
                     <span id="userStatusIcon" class="user-status-icon" aria-hidden="true"></span>
                     <span id="userStatusText" class="user-status-text"></span>
                 </span>
-                <button id="authBtn" class="terminal-btn terminal-btn-small ui-theme-teal header-action-btn">Log in</button>
+                <button id="authBtn" class="terminal-btn terminal-btn-secondary header-action-btn">Log in</button>
                 <span class="has-tooltip">
                     <button id="newCharacterBtn" class="terminal-btn terminal-btn-primary ui-theme-teal header-action-btn">+ New character</button>
                     <span id="newCharacterTooltip" class="custom-tooltip" data-position="bottom-end"></span>
@@ -237,7 +237,7 @@
         </div>
 
         <!-- Panel: Campaign -->
-        <div class="panel panel-campaign" id="campaignPanel">
+        <div class="panel panel-campaign ui-theme-teal" id="campaignPanel">
             <!-- Campaign panel content will be rendered here -->
             <div class="campaign-panel-placeholder">
                 <div class="campaign-panel-placeholder-text">
@@ -479,93 +479,110 @@
         </div>
     </div>
 
-    <!-- Journal Entry Modal (Add/Edit) -->
+    <!-- Journal Entry Modal (Add/Edit with Character Update) -->
     <div id="journalEntryModal" class="modal">
-        <div class="modal-content modal-content--narrow">
+        <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title" id="journalEntryModalTitle">Add Journal Entry</h2>
                 <button class="modal-close" onclick="CampaignUI.closeJournalEntryModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="settings-row settings-row--stacked mb-md">
-                    <label class="settings-label" for="journalEntryTitle">Title</label>
-                    <input type="text" id="journalEntryTitle" class="terminal-input" placeholder="e.g., The Amber Temple" maxlength="100">
-                </div>
-                <div class="settings-row settings-row--stacked mb-md">
-                    <label class="settings-label" for="journalEntryDate">Date</label>
-                    <input type="date" id="journalEntryDate" class="terminal-input">
-                </div>
-                <div class="settings-row settings-row--stacked">
-                    <label class="settings-label" for="journalEntryContent">What happened?</label>
-                    <textarea id="journalEntryContent" class="terminal-textarea" rows="6" placeholder="Record your adventure..."></textarea>
+                <!-- Journal Entry Section -->
+                <div class="settings-group mb-lg">
+                    <div class="settings-group-label">[ Journal ]</div>
+                    <section class="settings-section">
+                        <div class="settings-row settings-row--stacked mb-md">
+                            <label class="settings-label" for="journalEntryTitle">Title</label>
+                            <input type="text" id="journalEntryTitle" class="terminal-input" placeholder="e.g., The Amber Temple" maxlength="100">
+                        </div>
+                        <div class="settings-row settings-row--stacked mb-md">
+                            <label class="settings-label" for="journalEntryDate">Date</label>
+                            <input type="date" id="journalEntryDate" class="terminal-input">
+                        </div>
+                        <div class="settings-row settings-row--stacked">
+                            <label class="settings-label" for="journalEntryContent">What happened?</label>
+                            <textarea id="journalEntryContent" class="terminal-textarea" rows="4" placeholder="Record your adventure..."></textarea>
+                        </div>
+                    </section>
                 </div>
                 <input type="hidden" id="journalEntryId" value="">
+
+                <!-- Character Update Section -->
+                <div class="settings-group mb-lg">
+                    <div class="settings-group-label">[ Update <span id="characterUpdateName">Character</span> ]</div>
+                    <section class="settings-section">
+                        <div class="settings-row-inline">
+                            <div class="settings-inline-field">
+                                <div class="settings-label">XP Gained</div>
+                                <input type="number" id="charUpdateXp" class="terminal-input" min="0" value="0" inputmode="numeric">
+                            </div>
+                            <div class="settings-inline-field">
+                                <div class="settings-label">Current HP</div>
+                                <div class="hp-input-group">
+                                    <input type="number" id="charUpdateHp" class="terminal-input" min="0" inputmode="numeric">
+                                    <span class="hp-divider">/</span>
+                                    <span id="charUpdateHpMax" class="hp-max">--</span>
+                                </div>
+                            </div>
+                            <div class="settings-inline-field">
+                                <div class="settings-label">Gold</div>
+                                <div class="gold-input-group">
+                                    <div class="selector-shell gold-sign-selector">
+                                        <button class="terminal-btn selector-trigger" id="charUpdateGoldSign-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" onclick="CharacterSheet.toggleSelectorMenu(this)">
+                                            <span class="selector-trigger-label" id="charUpdateGoldSign-label">+</span>
+                                        </button>
+                                        <div class="selector-menu" role="listbox" aria-label="Gold change" aria-hidden="true">
+                                            <button class="selector-option is-selected" type="button" role="option" data-value="+" aria-selected="true" onclick="CampaignUI.selectGoldSign('+')"><span class="selector-option-label">+</span></button>
+                                            <button class="selector-option" type="button" role="option" data-value="-" aria-selected="false" onclick="CampaignUI.selectGoldSign('−')"><span class="selector-option-label">−</span></button>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" id="charUpdateGoldSign" value="+">
+                                    <input type="number" id="charUpdateGold" class="terminal-input" min="0" value="0" inputmode="numeric">
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Inventory Section -->
+                <div class="settings-group mb-lg">
+                    <div class="settings-group-label">[ Inventory ]</div>
+                    <section class="settings-section">
+                        <div class="settings-row settings-row--stacked">
+                            <div class="settings-label">Items Acquired</div>
+                            <input type="text" id="charUpdateItems" class="terminal-input" placeholder="Potion of Healing, Silver Sword...">
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Conditions Section -->
+                <div class="settings-group">
+                    <div class="settings-group-label">[ Conditions ]</div>
+                    <section class="settings-section">
+                        <div class="condition-checkboxes">
+                            <label class="settings-checkbox-label">
+                                <input type="checkbox" class="settings-checkbox" id="charUpdatePoisoned">
+                                <span class="settings-checkbox-text">Poisoned</span>
+                            </label>
+                            <label class="settings-checkbox-label">
+                                <input type="checkbox" class="settings-checkbox" id="charUpdateExhausted">
+                                <span class="settings-checkbox-text">Exhausted</span>
+                            </label>
+                            <label class="settings-checkbox-label">
+                                <input type="checkbox" class="settings-checkbox" id="charUpdateDiseased">
+                                <span class="settings-checkbox-text">Diseased</span>
+                            </label>
+                            <label class="settings-checkbox-label">
+                                <input type="checkbox" class="settings-checkbox" id="charUpdateCursed">
+                                <span class="settings-checkbox-text">Cursed</span>
+                            </label>
+                        </div>
+                    </section>
+                </div>
             </div>
             <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="CampaignUI.closeJournalEntryModal()">Cancel</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.saveJournalEntry()">Save entry</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Character Update Prompt Modal (after journal entry) -->
-    <div id="characterUpdateModal" class="modal">
-        <div class="modal-content modal-content--narrow">
-            <div class="modal-header">
-                <h2 class="modal-title">Update <span id="characterUpdateName">Character</span>?</h2>
-                <button class="modal-close" onclick="CampaignUI.closeCharacterUpdateModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p class="terminal-text-small terminal-text-dim mb-md">
-                    Did anything change for your character this session?
-                </p>
-                <div class="settings-row settings-row--inline mb-md">
-                    <label class="settings-label" for="charUpdateXp">XP Gained</label>
-                    <input type="number" id="charUpdateXp" class="terminal-input terminal-input--short" min="0" value="0">
-                </div>
-                <div class="settings-row settings-row--inline mb-md">
-                    <label class="settings-label" for="charUpdateHp">Current HP</label>
-                    <div class="hp-input-group">
-                        <input type="number" id="charUpdateHp" class="terminal-input terminal-input--short" min="0">
-                        <span class="hp-divider">/</span>
-                        <span id="charUpdateHpMax" class="hp-max">--</span>
-                    </div>
-                </div>
-                <div class="settings-row settings-row--inline mb-md">
-                    <label class="settings-label" for="charUpdateGold">Gold Change</label>
-                    <div class="gold-input-group">
-                        <select id="charUpdateGoldSign" class="terminal-select terminal-select--narrow">
-                            <option value="+">+</option>
-                            <option value="-">-</option>
-                        </select>
-                        <input type="number" id="charUpdateGold" class="terminal-input terminal-input--short" min="0" value="0">
-                    </div>
-                </div>
-                <div class="settings-row settings-row--stacked mb-md">
-                    <label class="settings-label" for="charUpdateItems">Items Acquired</label>
-                    <input type="text" id="charUpdateItems" class="terminal-input" placeholder="Potion of Healing, Silver Sword...">
-                </div>
-                <div class="settings-row settings-row--stacked">
-                    <label class="settings-label">Status Conditions</label>
-                    <div class="condition-checkboxes">
-                        <label class="condition-checkbox">
-                            <input type="checkbox" id="charUpdatePoisoned"> Poisoned
-                        </label>
-                        <label class="condition-checkbox">
-                            <input type="checkbox" id="charUpdateExhausted"> Exhausted
-                        </label>
-                        <label class="condition-checkbox">
-                            <input type="checkbox" id="charUpdateDiseased"> Diseased
-                        </label>
-                        <label class="condition-checkbox">
-                            <input type="checkbox" id="charUpdateCursed"> Cursed
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="CampaignUI.skipCharacterUpdate()">Skip</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.saveCharacterUpdate()">Update character</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.saveJournalEntry()">Save</button>
             </div>
         </div>
     </div>
@@ -894,10 +911,10 @@
             <div class="modal-body">
                 <div id="loginForm">
                     <p class="terminal-text-small">Email:</p>
-                    <input type="email" id="loginEmail" class="terminal-input" placeholder="you@example.com" data-1p-ignore>
+                    <input type="email" id="loginEmail" class="terminal-input" placeholder="you@example.com">
                     <p class="terminal-text-small modal-section-label">Password:</p>
                     <div class="password-input-wrapper">
-                        <input type="password" id="loginPassword" class="terminal-input" placeholder="Enter password" data-1p-ignore>                                          
+                        <input type="password" id="loginPassword" class="terminal-input" placeholder="Enter password">                                          
                         <button type="button" class="password-toggle-btn" data-target="loginPassword" aria-label="Show password">Show</button>                  
                     </div>
                     <p class="terminal-text-small modal-section-label terminal-text-dim">
@@ -910,15 +927,15 @@
                 <div id="registerForm" class="is-hidden">
                     <p class="terminal-text">Create an account to sync your characters across devices.</p>
                     <p class="terminal-text-small">Email:</p>
-                    <input type="email" id="registerEmail" class="terminal-input" placeholder="you@example.com" data-1p-ignore>
+                    <input type="email" id="registerEmail" class="terminal-input" placeholder="you@example.com">
                     <p class="terminal-text-small modal-section-label">Password:</p>
                     <div class="password-input-wrapper">
-                        <input type="password" id="registerPassword" class="terminal-input" placeholder="Choose password" data-1p-ignore>                                      
+                        <input type="password" id="registerPassword" class="terminal-input" placeholder="Choose password">                                      
                         <button type="button" class="password-toggle-btn" data-target="registerPassword" aria-label="Show password">Show</button>                
                     </div>
                     <p class="terminal-text-small modal-section-label">Confirm password:</p>
                     <div class="password-input-wrapper">
-                        <input type="password" id="registerPasswordConfirm" class="terminal-input" placeholder="Re-enter password" data-1p-ignore>                             
+                        <input type="password" id="registerPasswordConfirm" class="terminal-input" placeholder="Re-enter password">                             
                         <button type="button" class="password-toggle-btn" data-target="registerPasswordConfirm" aria-label="Show password">Show</button>         
                     </div>
                     <p class="terminal-text-small modal-section-label terminal-text-dim">

@@ -165,6 +165,10 @@
   --max-width: 1400px;
   --split-ratio: 50%;
   
+  /* Button Dimensions */
+  --btn-height: 32px;
+  --btn-height-sm: 28px;
+  
   /* Animation */
   --transition-speed: 0.3s;
   --typewriter-speed: 30ms;
@@ -2141,13 +2145,18 @@ body::before {
   border: 1px solid var(--ui-dim-color);
   /* Default text is also dimmed; hover/focus/selected promote to bright theme color. */
   color: var(--ui-dim-color);
-  padding: var(--spacing-xs) var(--spacing-sm);
+  height: var(--btn-height);
+  padding: 0 var(--spacing-sm);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-normal);
   cursor: pointer;
   transition: all var(--transition-speed);
   text-align: left;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
 }
 
 /* Hover/keyboard-focus (non-selected): bright outline + translucent themed background.
@@ -2177,13 +2186,18 @@ body::before {
   background: transparent;
   border: 1px solid var(--ui-dim-color);
   color: var(--ui-dim-color);
-  padding: var(--spacing-xs) var(--spacing-sm);
+  height: var(--btn-height-sm);
+  padding: 0 var(--spacing-sm);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-normal);
   cursor: pointer;
   transition: all var(--transition-speed);
   text-align: left;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
 }
 
 .terminal-btn-small:hover:not(:disabled),
@@ -2215,8 +2229,18 @@ body::before {
   background-color: var(--ui-primary-bg-color);
   color: var(--ui-on-primary-color);
   border: 1px solid var(--ui-primary-bg-color);
+  height: var(--btn-height);
+  padding: 0 var(--spacing-sm);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-normal);
   text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: all var(--transition-speed);
 }
 
 .terminal-btn-primary:hover:not(:disabled) {
@@ -2293,6 +2317,7 @@ body::before {
   font-weight: var(--font-weight-normal);
   cursor: pointer;
   transition: all var(--transition-speed);
+  text-transform: uppercase;
 }
 
 .terminal-btn-warning:hover:not(:disabled) {
@@ -2310,6 +2335,7 @@ body::before {
   font-weight: var(--font-weight-normal);
   cursor: pointer;
   transition: all var(--transition-speed);
+  text-transform: uppercase;
 }
 
 .terminal-btn-danger:hover:not(:disabled) {
@@ -2404,7 +2430,12 @@ body.selector-menu-open .splash-art {
 
 /* Sheet-level selector menus (header + portrait) should be perfectly
    centered on the trigger without the global vertical offset. */
-.sheet-actions-menu.selector-menu,
+.sheet-actions-menu.selector-menu {
+  transform: scaleY(0.15);
+  left: 0;  /* Align menu to left edge of trigger (opens rightward) */
+  right: auto;
+}
+
 .portrait-actions-menu.selector-menu {
   transform: scaleY(0.15);
   right: 0;  /* Align menu to right edge of trigger */

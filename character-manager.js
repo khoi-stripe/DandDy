@@ -450,8 +450,9 @@ async function loadPinnedCharacterIds() {
                 }
                 return _pinnedCharacterIdsCache;
             } else if (response.status === 401) {
-                // Session expired, fall through to localStorage
+                // Session expired - notify user and fall through to localStorage
                 console.warn('📌 Session expired, using localStorage for pinned characters');
+                window.AuthService?.handleUnexpectedLogout?.('pinned_load_401');
             }
         } catch (error) {
             console.warn('📌 Failed to load pinned from cloud, falling back to localStorage:', error);
@@ -501,7 +502,9 @@ async function savePinnedCharacterIds(ids) {
                 }
                 return;
             } else if (response.status === 401) {
+                // Session expired - notify user and fall through to localStorage
                 console.warn('📌 Session expired, saving pinned to localStorage instead');
+                window.AuthService?.handleUnexpectedLogout?.('pinned_save_401');
             }
         } catch (error) {
             console.warn('📌 Failed to save pinned to cloud, saving to localStorage:', error);
@@ -987,10 +990,10 @@ const ExpandedView = (window.ExpandedView = {
                             ${invitationText}
                         </div>
                         <div class="campaign-area-actions">
-                            <button class="terminal-btn terminal-btn-small ui-theme-teal ${hasInvitations ? 'terminal-btn-primary' : ''}" onclick="CampaignUI.openJoinModal()">
+                            <button class="terminal-btn terminal-btn-small ${hasInvitations ? 'terminal-btn-primary' : ''}" onclick="CampaignUI.openJoinModal()">
                                 Join${hasInvitations ? '' : ' Campaign'}
                             </button>
-                            <button class="terminal-btn terminal-btn-small ui-theme-teal" onclick="CampaignUI.openCreateModal()">
+                            <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openCreateModal()">
                                 Create${hasInvitations ? '' : ' Campaign'}
                             </button>
                         </div>
@@ -1075,7 +1078,7 @@ const ExpandedView = (window.ExpandedView = {
         const overflowMenuHtml = `
             <div class="campaign-overflow selector-shell selector-shell--actions">
                 <button
-                    class="terminal-btn-small ui-theme-teal selector-trigger overflow-trigger campaign-overflow-trigger"
+                    class="terminal-btn-small selector-trigger overflow-trigger campaign-overflow-trigger"
                     type="button"
                     aria-haspopup="menu"
                     aria-expanded="false"
@@ -1162,7 +1165,7 @@ const ExpandedView = (window.ExpandedView = {
             <div class="journal-section">
                 <div class="journal-header">
                     <h3 class="journal-title">[ Journal ]</h3>
-                    <button class="terminal-btn terminal-btn-small ui-theme-teal" onclick="CampaignUI.openJournalEntryModal()">
+                    <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJournalEntryModal()">
                         + Add Entry
                     </button>
                 </div>
@@ -1863,13 +1866,11 @@ const CampaignUI = (window.CampaignUI = {
     },
 
     // ========================================
-    // JOURNAL ENTRY MODAL
+    // JOURNAL ENTRY MODAL (Combined with Character Update)
     // ========================================
     
     // Track the entry being edited (null for new entry)
     _editingEntryId: null,
-    // Track the saved entry for character update prompt
-    _savedJournalEntry: null,
 
     async openJournalEntryModal(entryId = null) {
         const modal = document.getElementById('journalEntryModal');
@@ -1912,6 +1913,9 @@ const CampaignUI = (window.CampaignUI = {
             idInput.value = entryId || '';
         }
 
+        // Prepare character update fields
+        this._prepareCharacterUpdateFields();
+
         modal.classList.add('show');
 
         // Focus title input
@@ -1946,22 +1950,96 @@ const CampaignUI = (window.CampaignUI = {
             return;
         }
 
-        // Store the journal entry data for later API call
-        // (We wait until character update modal is handled to send to API)
-        this._pendingJournalEntry = {
-            character_id: characterId,
-            title: title || 'Untitled',
-            entry_date: entryDate,
-            content: content,
-            isEdit: !!this._editingEntryId,
-            editId: this._editingEntryId,
-        };
+        try {
+            // Gather character update data
+            const xpGained = parseInt(document.getElementById('charUpdateXp')?.value) || 0;
+            const goldSign = document.getElementById('charUpdateGoldSign')?.value || '+';
+            const goldAmount = parseInt(document.getElementById('charUpdateGold')?.value) || 0;
+            const goldChange = goldSign === '-' ? -goldAmount : goldAmount;
+            const itemsText = document.getElementById('charUpdateItems')?.value?.trim() || '';
+            const itemsAcquired = itemsText ? itemsText.split(',').map(s => s.trim()).filter(Boolean) : [];
 
-        // Close journal modal
-        this.closeJournalEntryModal();
+            // Calculate HP change
+            const character = AppState.characters?.find(c => 
+                c.id === characterId || c.cloudId === characterId
+            );
+            const currentHp = character?.hp_current || character?.hit_points_current || 
+                (typeof character?.hitPoints === 'number' ? character.hitPoints : character?.hitPoints?.current) || 0;
+            const newHp = parseInt(document.getElementById('charUpdateHp')?.value) || currentHp;
+            const hpChange = newHp - currentHp;
 
-        // Show character update prompt
-        this.openCharacterUpdateModal();
+            // Get conditions
+            const conditions = [];
+            if (document.getElementById('charUpdatePoisoned')?.checked) conditions.push('poisoned');
+            if (document.getElementById('charUpdateExhausted')?.checked) conditions.push('exhausted');
+            if (document.getElementById('charUpdateDiseased')?.checked) conditions.push('diseased');
+            if (document.getElementById('charUpdateCursed')?.checked) conditions.push('cursed');
+
+            // Check if any character updates were made
+            const hasCharacterUpdate = xpGained !== 0 || goldChange !== 0 || hpChange !== 0 || 
+                itemsAcquired.length > 0 || conditions.length > 0;
+
+            if (this._editingEntryId) {
+                // Update existing entry
+                await CampaignAPI.updateJournalEntry(this._editingEntryId, {
+                    title: title || 'Untitled',
+                    content: content,
+                    entry_date: entryDate,
+                });
+                // Add/update character update if any changes made
+                if (hasCharacterUpdate) {
+                    await CampaignAPI.createCharacterUpdate(this._editingEntryId, {
+                        xp_gained: xpGained,
+                        gold_change: goldChange,
+                        hp_change: hpChange,
+                        items_acquired: itemsAcquired,
+                        items_lost: [],
+                        conditions: conditions,
+                    });
+                }
+            } else {
+                // Create new entry with character update in one call
+                const entryData = {
+                    character_id: characterId,
+                    title: title || 'Untitled',
+                    content: content,
+                    entry_date: entryDate,
+                };
+                
+                if (hasCharacterUpdate) {
+                    entryData.character_update = {
+                        xp_gained: xpGained,
+                        gold_change: goldChange,
+                        hp_change: hpChange,
+                        items_acquired: itemsAcquired,
+                        items_lost: [],
+                        conditions: conditions,
+                    };
+                }
+                
+                await CampaignAPI.createJournalEntry(entryData);
+            }
+
+            this._editingEntryId = null;
+            this.closeJournalEntryModal();
+            
+            // Refresh character data if updates were made
+            if (hasCharacterUpdate) {
+                await AppState.loadCharacters();
+                if (characterId) {
+                    viewCharacter(characterId);
+                }
+            }
+            
+            // Refresh the campaign panel
+            ExpandedView._loadCampaignPanel();
+            
+            showNotification(hasCharacterUpdate ? '✓ Journal entry saved & character updated' : '✓ Journal entry saved');
+
+        } catch (error) {
+            console.error('Failed to save journal entry:', error);
+            showAlertDialog(error.message || 'Failed to save journal entry.');
+        }
     },
 
     async editJournalEntry(entryId) {
@@ -2005,42 +2083,54 @@ const CampaignUI = (window.CampaignUI = {
     },
 
     // ========================================
-    // CHARACTER UPDATE MODAL
+    // CHARACTER UPDATE FIELDS (in combined Journal Entry modal)
     // ========================================
 
-    openCharacterUpdateModal() {
-        const modal = document.getElementById('characterUpdateModal');
-        if (!modal) return;
-
+    /** Prepare character update fields within the journal entry modal */
+    _prepareCharacterUpdateFields() {
         // Get character info
         const characterId = AppState.selectedCharacterId;
         const character = AppState.characters?.find(c => 
             c.id === characterId || c.cloudId === characterId
         );
 
-        // Update character name in title
+        // Update character name in section header
         const nameEl = document.getElementById('characterUpdateName');
         if (nameEl && character) {
             nameEl.textContent = character.name || 'Character';
         }
 
-        // Pre-fill current HP
+        // Pre-fill current HP (handle both old number format and new object format)
         const hpInput = document.getElementById('charUpdateHp');
         const hpMaxEl = document.getElementById('charUpdateHpMax');
         if (character) {
-            if (hpInput) hpInput.value = character.hp_current || character.hp_max || '';
-            if (hpMaxEl) hpMaxEl.textContent = character.hp_max || '--';
+            const hp = character.hitPoints || { current: 0, max: 0 };
+            const hpMax = typeof hp === 'number' ? hp : (hp.max || 0);
+            const hpCurrent = typeof hp === 'number' ? hp : (hp.current || hpMax);
+            if (hpInput) hpInput.value = hpCurrent || '';
+            if (hpMaxEl) hpMaxEl.textContent = hpMax || '--';
         }
 
         // Reset other fields
         const xpInput = document.getElementById('charUpdateXp');
         const goldInput = document.getElementById('charUpdateGold');
         const goldSign = document.getElementById('charUpdateGoldSign');
+        const goldSignLabel = document.getElementById('charUpdateGoldSign-label');
         const itemsInput = document.getElementById('charUpdateItems');
 
         if (xpInput) xpInput.value = '0';
         if (goldInput) goldInput.value = '0';
         if (goldSign) goldSign.value = '+';
+        if (goldSignLabel) goldSignLabel.textContent = '+';
+        // Reset gold sign selector options
+        const goldSignSelector = document.querySelector('.gold-sign-selector');
+        if (goldSignSelector) {
+            goldSignSelector.querySelectorAll('.selector-option').forEach(opt => {
+                const isPlus = opt.dataset.value === '+';
+                opt.classList.toggle('is-selected', isPlus);
+                opt.setAttribute('aria-selected', isPlus ? 'true' : 'false');
+            });
+        }
         if (itemsInput) itemsInput.value = '';
 
         // Reset checkboxes
@@ -2048,150 +2138,31 @@ const CampaignUI = (window.CampaignUI = {
             const cb = document.getElementById(id);
             if (cb) cb.checked = false;
         });
-
-        modal.classList.add('show');
     },
 
-    closeCharacterUpdateModal() {
-        const modal = document.getElementById('characterUpdateModal');
-        if (modal) {
-            animateModalClose(modal, { removeOnClose: false });
+    /** Handle gold sign selector selection */
+    selectGoldSign(sign) {
+        const hiddenInput = document.getElementById('charUpdateGoldSign');
+        const label = document.getElementById('charUpdateGoldSign-label');
+        const trigger = document.getElementById('charUpdateGoldSign-trigger');
+        
+        // Update hidden input value (normalize minus sign)
+        if (hiddenInput) hiddenInput.value = sign === '−' ? '-' : '+';
+        if (label) label.textContent = sign;
+        
+        // Update selected state on options
+        const selector = document.querySelector('.gold-sign-selector');
+        if (selector) {
+            selector.querySelectorAll('.selector-option').forEach(opt => {
+                const isSelected = opt.querySelector('.selector-option-label')?.textContent === sign;
+                opt.classList.toggle('is-selected', isSelected);
+                opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
         }
-        this._savedJournalEntry = null;
-    },
-
-    async skipCharacterUpdate() {
-        // Save journal entry without character update
-        try {
-            const entryData = this._pendingJournalEntry;
-            if (!entryData) {
-                this.closeCharacterUpdateModal();
-                return;
-            }
-
-            if (entryData.isEdit) {
-                // Update existing entry
-                await CampaignAPI.updateJournalEntry(entryData.editId, {
-                    title: entryData.title,
-                    content: entryData.content,
-                    entry_date: entryData.entry_date,
-                });
-            } else {
-                // Create new entry (without character update)
-                await CampaignAPI.createJournalEntry({
-                    character_id: entryData.character_id,
-                    title: entryData.title,
-                    content: entryData.content,
-                    entry_date: entryData.entry_date,
-                });
-            }
-
-            this._pendingJournalEntry = null;
-            this.closeCharacterUpdateModal();
-            
-            // Refresh the campaign panel to show the new entry
-            ExpandedView._loadCampaignPanel();
-            
-            showNotification('✓ Journal entry saved');
-        } catch (error) {
-            console.error('Failed to save journal entry:', error);
-            showAlertDialog(error.message || 'Failed to save journal entry.');
-        }
-    },
-
-    async saveCharacterUpdate() {
-        const characterId = AppState.selectedCharacterId;
-        if (!characterId) {
-            this.closeCharacterUpdateModal();
-            return;
-        }
-
-        try {
-            // Gather character update data
-            const xpGained = parseInt(document.getElementById('charUpdateXp')?.value) || 0;
-            const goldSign = document.getElementById('charUpdateGoldSign')?.value || '+';
-            const goldAmount = parseInt(document.getElementById('charUpdateGold')?.value) || 0;
-            const goldChange = goldSign === '-' ? -goldAmount : goldAmount;
-            const itemsText = document.getElementById('charUpdateItems')?.value?.trim() || '';
-            const itemsAcquired = itemsText ? itemsText.split(',').map(s => s.trim()).filter(Boolean) : [];
-
-            // Calculate HP change
-            const character = AppState.characters?.find(c => 
-                c.id === characterId || c.cloudId === characterId
-            );
-            const currentHp = character?.hp_current || character?.hit_points_current || 0;
-            const newHp = parseInt(document.getElementById('charUpdateHp')?.value) || currentHp;
-            const hpChange = newHp - currentHp;
-
-            // Get conditions
-            const conditions = [];
-            if (document.getElementById('charUpdatePoisoned')?.checked) conditions.push('poisoned');
-            if (document.getElementById('charUpdateExhausted')?.checked) conditions.push('exhausted');
-            if (document.getElementById('charUpdateDiseased')?.checked) conditions.push('diseased');
-            if (document.getElementById('charUpdateCursed')?.checked) conditions.push('cursed');
-
-            const entryData = this._pendingJournalEntry;
-            if (!entryData) {
-                this.closeCharacterUpdateModal();
-                showAlertDialog('No journal entry to save.');
-                return;
-            }
-
-            if (entryData.isEdit) {
-                // Update existing entry
-                await CampaignAPI.updateJournalEntry(entryData.editId, {
-                    title: entryData.title,
-                    content: entryData.content,
-                    entry_date: entryData.entry_date,
-                });
-                // Add/update character update separately
-                await CampaignAPI.createCharacterUpdate(entryData.editId, {
-                    xp_gained: xpGained,
-                    gold_change: goldChange,
-                    hp_change: hpChange,
-                    items_acquired: itemsAcquired,
-                    items_lost: [],
-                    conditions: conditions,
-                });
-            } else {
-                // Create new entry with character update in one call
-                await CampaignAPI.createJournalEntry({
-                    character_id: entryData.character_id,
-                    title: entryData.title,
-                    content: entryData.content,
-                    entry_date: entryData.entry_date,
-                    character_update: {
-                        xp_gained: xpGained,
-                        gold_change: goldChange,
-                        hp_change: hpChange,
-                        items_acquired: itemsAcquired,
-                        items_lost: [],
-                        conditions: conditions,
-                    },
-                });
-            }
-
-            this._pendingJournalEntry = null;
-            this.closeCharacterUpdateModal();
-            
-            // Refresh character data from server
-            await AppState.loadCharacters();
-            
-            // Re-select the character to update the sheet view with new stats
-            // (characterId is already defined at the top of this function)
-            if (characterId) {
-                // viewCharacter reloads the sheet from AppState.characters
-                viewCharacter(characterId);
-            }
-            
-            // Refresh the campaign panel
-            ExpandedView._loadCampaignPanel();
-            
-            showNotification('✓ Journal entry saved & character updated');
-
-        } catch (error) {
-            console.error('Failed to save journal entry with update:', error);
-            showAlertDialog(error.message || 'Failed to save journal entry.');
+        
+        // Close the menu
+        if (trigger) {
+            CharacterSheet.closeSelectorMenu(trigger);
         }
     },
 
@@ -6601,7 +6572,6 @@ function closeAllEditorModals() {
         'joinCampaignModal',
         'campaignCreatedModal',
         'journalEntryModal',
-        'characterUpdateModal',
     ];
     
     modalIds.forEach(id => {

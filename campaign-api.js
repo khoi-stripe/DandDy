@@ -30,10 +30,7 @@ const CampaignAPI = (window.CampaignAPI = {
     });
 
     if (response.status === 401) {
-      window.AuthService?.clearToken();
-      if (typeof window.updateAuthUI === 'function') {
-        window.updateAuthUI();
-      }
+      window.AuthService?.handleUnexpectedLogout?.('campaign_api_401');
       throw new Error('Your session has expired. Please log in again.');
     }
 

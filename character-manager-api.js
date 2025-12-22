@@ -88,12 +88,8 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
     });
 
     if (response.status === 401) {
-      // Token expired or invalid – clear auth state and sync UI so the user
-      // doesn't appear "logged in" while we silently fall back to local data.
-      AuthService.clearToken();
-      if (typeof window.updateAuthUI === 'function') {
-        window.updateAuthUI();
-      }
+      // Token expired or invalid – handle unexpected logout and notify user
+      AuthService.handleUnexpectedLogout?.('character_api_401');
       throw new Error('Your session has expired. Please log in again.');
     }
 

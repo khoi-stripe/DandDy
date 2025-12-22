@@ -216,11 +216,11 @@
 
       if (!response.ok) {
         console.warn('PortraitPrompt: API fetch failed with status', response.status);
-        // If token is invalid/expired, clear it to prevent repeated auth failures
+        // If token is invalid/expired, handle unexpected logout to notify user
         if (response.status === 401) {
-          if (global.AuthService && typeof global.AuthService.clearToken === 'function') {
-            global.AuthService.clearToken();
-            console.warn('PortraitPrompt: Cleared expired auth token');
+          if (global.AuthService && typeof global.AuthService.handleUnexpectedLogout === 'function') {
+            global.AuthService.handleUnexpectedLogout('portrait_prompts_401');
+            console.warn('PortraitPrompt: Handled unexpected logout');
           }
         }
         return;

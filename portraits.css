@@ -752,11 +752,10 @@
   border-color: var(--modal-accent);
   color: var(--modal-accent);
   background: transparent;
-  /* Match the 24px height of .terminal-btn-small sheet header actions */
-  width: 24px;
-  min-width: 24px;
-  height: 24px;
-  padding: 0;
+  /* Compact sizing to match campaign/header overflow buttons */
+  padding: 4px 6px;
+  min-width: 28px;
+  height: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;

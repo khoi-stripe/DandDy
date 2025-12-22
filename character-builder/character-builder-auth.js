@@ -52,13 +52,13 @@ const AuthUI = (window.AuthUI = {
         <div class="auth-form">
           <div class="form-group">
             <label class="form-label">[ EMAIL ]</label>
-            <input type="email" id="login-email" class="terminal-input" placeholder="adventurer@tavern.com" autocomplete="email" data-1p-ignore />
+            <input type="email" id="login-email" class="terminal-input" placeholder="adventurer@tavern.com" autocomplete="email" />
           </div>
           
           <div class="form-group">
             <label class="form-label">[ PASSWORD ]</label>
             <div class="password-input-wrapper">
-              <input type="password" id="login-password" class="terminal-input" placeholder="••••••••" autocomplete="current-password" data-1p-ignore />
+              <input type="password" id="login-password" class="terminal-input" placeholder="••••••••" autocomplete="current-password" />
               <button type="button" class="password-toggle-btn" data-target="login-password" aria-label="Show password">Show</button>
             </div>
           </div>
@@ -234,13 +234,13 @@ const AuthUI = (window.AuthUI = {
         <div class="auth-form">
           <div class="form-group">
             <label class="form-label">[ EMAIL ]</label>
-            <input type="email" id="register-email" class="terminal-input" placeholder="adventurer@tavern.com" autocomplete="email" data-1p-ignore />
+            <input type="email" id="register-email" class="terminal-input" placeholder="adventurer@tavern.com" autocomplete="email" />
           </div>
           
           <div class="form-group">
             <label class="form-label">[ PASSWORD ]</label>
             <div class="password-input-wrapper">
-              <input type="password" id="register-password" class="terminal-input" placeholder="••••••••" autocomplete="new-password" data-1p-ignore />
+              <input type="password" id="register-password" class="terminal-input" placeholder="••••••••" autocomplete="new-password" />
               <button type="button" class="password-toggle-btn" data-target="register-password" aria-label="Show password">Show</button>
             </div>
           </div>
@@ -248,7 +248,7 @@ const AuthUI = (window.AuthUI = {
           <div class="form-group">
             <label class="form-label">[ CONFIRM PASSWORD ]</label>
             <div class="password-input-wrapper">
-              <input type="password" id="register-password-confirm" class="terminal-input" placeholder="••••••••" autocomplete="new-password" data-1p-ignore />
+              <input type="password" id="register-password-confirm" class="terminal-input" placeholder="••••••••" autocomplete="new-password" />
               <button type="button" class="password-toggle-btn" data-target="register-password-confirm" aria-label="Show password">Show</button>
             </div>
           </div>
@@ -435,7 +435,7 @@ const AuthUI = (window.AuthUI = {
         <span id="builderUserInfo" class="builder-user-info">
           <span class="user-status-text">${label}</span>
         </span>
-        <button id="builderAuthBtn" class="terminal-btn terminal-btn-small ui-theme-teal" type="button">Log out</button>
+        <button id="builderAuthBtn" class="terminal-btn terminal-btn-small terminal-btn-secondary" type="button">Log out</button>
       `;
 
       const authBtn = document.getElementById('builderAuthBtn');
@@ -461,7 +461,7 @@ const AuthUI = (window.AuthUI = {
         <span id="builderUserInfo" class="builder-user-info">
           <span class="user-status-text">Guest mode</span>
         </span>
-        <button id="builderAuthBtn" class="terminal-btn terminal-btn-small ui-theme-teal" type="button">Log in</button>
+        <button id="builderAuthBtn" class="terminal-btn terminal-btn-small terminal-btn-secondary" type="button">Log in</button>
       `;
 
       const authBtn = document.getElementById('builderAuthBtn');
