@@ -491,17 +491,19 @@
                 <div class="settings-group mb-lg">
                     <div class="settings-group-label">[ Journal ]</div>
                     <section class="settings-section">
-                        <div class="settings-row settings-row--stacked mb-md">
-                            <label class="settings-label" for="journalEntryTitle">Title</label>
-                            <input type="text" id="journalEntryTitle" class="terminal-input" placeholder="e.g., The Amber Temple" maxlength="100">
-                        </div>
-                        <div class="settings-row settings-row--stacked mb-md">
-                            <label class="settings-label" for="journalEntryDate">Date</label>
-                            <input type="date" id="journalEntryDate" class="terminal-input">
+                        <div class="settings-row-inline mb-md">
+                            <div class="settings-inline-field" style="flex: 2">
+                                <label class="settings-label" for="journalEntryTitle">Title</label>
+                                <input type="text" id="journalEntryTitle" class="terminal-input" placeholder="e.g., The Amber Temple" maxlength="100">
+                            </div>
+                            <div class="settings-inline-field" style="flex: 1">
+                                <label class="settings-label" for="journalEntryDate">Date</label>
+                                <input type="date" id="journalEntryDate" class="terminal-input">
+                            </div>
                         </div>
                         <div class="settings-row settings-row--stacked">
                             <label class="settings-label" for="journalEntryContent">What happened?</label>
-                            <textarea id="journalEntryContent" class="terminal-textarea" rows="4" placeholder="Record your adventure..."></textarea>
+                            <textarea id="journalEntryContent" class="terminal-textarea" rows="8" placeholder="Record your adventure..."></textarea>
                         </div>
                     </section>
                 </div>
