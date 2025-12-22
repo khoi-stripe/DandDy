@@ -1123,10 +1123,12 @@ body::before {
 
 /* ===== SHARED CHARACTER SHEET LAYOUT ===== */
 .character-sheet {
-  border: 1px solid var(--sheet-accent-dim);
-  padding: var(--spacing-md);
   max-width: 100%;
   overflow-wrap: break-word;
+  padding: 0 16px 16px 16px;
+  flex: 1 1 0;
+  overflow-y: auto;
+  min-height: 0;
 
   /* Use teal UI theme tokens inside the sheet */
   --ui-border-color: var(--sheet-accent);
@@ -1192,8 +1194,12 @@ body::before {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-bottom: var(--spacing-md);
-  padding-bottom: var(--spacing-sm);
+  padding: 16px;
+  /* Sticky header - pins to top as content scrolls */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: var(--terminal-bg);
 }
 
 /* Wrapper for inline header actions (e.g., Edit + overflow menu) */

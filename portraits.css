@@ -6,7 +6,7 @@
 /* ===== MAIN SHEET PORTRAIT AREA ===== */
 .portrait-container {
   position: relative;
-  margin: var(--spacing-md) 0;
+  margin: 0 0 var(--spacing-md) 0;
   display: flex;
   flex-direction: column;
   align-items: center;

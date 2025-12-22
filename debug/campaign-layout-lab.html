@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campaign Layout Lab</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../terminal-theme.css">
+    <link rel="stylesheet" href="../character-manager.css">
+    <style>
+        /* Force the sheet+campaign view */
+        .split-layout {
+            display: flex !important;
+        }
+        .panel-character-sheet {
+            display: flex !important;
+            flex: 1 !important;
+        }
+        .panel-campaign {
+            display: flex !important;
+            flex: 1 !important;
+        }
+        /* Hide character grid */
+        .panel-character-grid {
+            display: none !important;
+        }
+        
+        /* Lab controls */
+        .lab-controls {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 9999;
+            background: rgba(0,0,0,0.9);
+            border: 1px solid var(--terminal-fg);
+            padding: 12px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--terminal-fg);
+        }
+        .lab-controls h3 {
+            margin: 0 0 8px 0;
+            color: var(--terminal-fg);
+        }
+        .lab-controls label {
+            display: block;
+            margin: 4px 0;
+        }
+        .lab-controls input[type="text"] {
+            background: var(--terminal-bg);
+            border: 1px solid var(--terminal-dim);
+            color: var(--terminal-fg);
+            padding: 4px;
+            width: 100px;
+            font-family: inherit;
+        }
+        .lab-controls button {
+            margin-top: 8px;
+            padding: 4px 8px;
+            background: var(--terminal-bg);
+            border: 1px solid var(--terminal-fg);
+            color: var(--terminal-fg);
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .lab-controls button:hover {
+            background: var(--terminal-fg);
+            color: var(--terminal-bg);
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal-frame">
+        <!-- Header -->
+        <header class="terminal-header">
+            <div class="header-content">
+                <div class="terminal-title">
+                    <span class="title-bracket">[</span>
+                    <span class="terminal-title-text">Campaign Layout Lab</span>
+                    <span class="title-bracket">]</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content" id="main-content">
+            <div class="split-layout" data-view="sheet-campaign">
+                
+                <!-- Panel: Character Sheet -->
+                <div class="panel panel-character-sheet" id="characterSheetPanel">
+                    <!-- Navigation bar above character sheet -->
+                    <div id="sheetNavBar" class="sheet-nav-bar">
+                        <button
+                            class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-characters"
+                            type="button"
+                            title="Return to character grid"
+                        >← Characters</button>
+                        <button
+                            class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-campaign"
+                            type="button"
+                            title="View campaign info"
+                        >Campaign →</button>
+                    </div>
+                    <div id="characterSheet" class="character-sheet">
+                        <!-- Portrait + Info Row -->
+                        <div class="sheet-portrait-info-row">
+                            <div class="sheet-portrait-container">
+                                <div class="portrait-frame" style="background: var(--sheet-box-bg); display: flex; align-items: center; justify-content: center; height: 100%;">
+                                    <span style="color: var(--sheet-accent-dim); font-size: 48px;">🧙</span>
+                                </div>
+                            </div>
+                            <div class="sheet-section sheet-info-section">
+                                <div class="sheet-header">
+                                    <span class="sheet-header-text">[ Elara Shadowcaster ]</span>
+                                </div>
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Race:</span>
+                                        <span class="info-value">Human</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Class:</span>
+                                        <span class="info-value">Warlock</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Level:</span>
+                                        <span class="info-value">12</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Background:</span>
+                                        <span class="info-value">Sage</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Stats Section -->
+                        <div class="sheet-section">
+                            <div class="sheet-header">
+                                <span class="sheet-header-text">[ ABILITY SCORES ]</span>
+                            </div>
+                            <div class="ability-grid">
+                                <div class="ability-item">
+                                    <span class="ability-label">STR</span>
+                                    <span class="ability-score">10</span>
+                                    <span class="ability-mod">+0</span>
+                                </div>
+                                <div class="ability-item">
+                                    <span class="ability-label">DEX</span>
+                                    <span class="ability-score">14</span>
+                                    <span class="ability-mod">+2</span>
+                                </div>
+                                <div class="ability-item">
+                                    <span class="ability-label">CON</span>
+                                    <span class="ability-score">13</span>
+                                    <span class="ability-mod">+1</span>
+                                </div>
+                                <div class="ability-item">
+                                    <span class="ability-label">INT</span>
+                                    <span class="ability-score">12</span>
+                                    <span class="ability-mod">+1</span>
+                                </div>
+                                <div class="ability-item">
+                                    <span class="ability-label">WIS</span>
+                                    <span class="ability-score">10</span>
+                                    <span class="ability-mod">+0</span>
+                                </div>
+                                <div class="ability-item">
+                                    <span class="ability-label">CHA</span>
+                                    <span class="ability-score">18</span>
+                                    <span class="ability-mod">+4</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Combat Stats -->
+                        <div class="sheet-section">
+                            <div class="sheet-header">
+                                <span class="sheet-header-text">[ COMBAT ]</span>
+                            </div>
+                            <div class="stat-grid">
+                                <div class="stat-item">
+                                    <span class="stat-label">AC</span>
+                                    <span class="stat-value">14</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">HP</span>
+                                    <span class="stat-value">78</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Initiative</span>
+                                    <span class="stat-value">+2</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Speed</span>
+                                    <span class="stat-value">30 ft</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Panel: Campaign -->
+                <div class="panel panel-campaign ui-theme-teal" id="campaignPanel">
+                    <div class="campaign-panel-layout">
+                        <!-- Campaign Area (Top Section) -->
+                        <div class="campaign-area">
+                            <div class="campaign-area-header">
+                                <h3 class="campaign-area-title">[ Campaign ]</h3>
+                            </div>
+                            <div class="campaign-area-info">
+                                <div class="campaign-name">Dude Where's My Car</div>
+                            </div>
+                            <div class="campaign-area-description">
+                                <div class="campaign-desc-text">
+                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras scelerisque rhoncus enim vitae tempus. Praesent et nisl at erat sodales mollis.
+                                </div>
+                            </div>
+                            
+                            <!-- Party Section -->
+                            <div class="campaign-area-party">
+                                <div class="sheet-header sheet-header--collapsible" style="margin-top: 16px;">
+                                    <span class="sheet-header-text">[ PARTY (3) ]</span>
+                                    <span class="sheet-header-toggle">▾</span>
+                                </div>
+                                <div class="party-list">
+                                    <div class="party-member">
+                                        <span class="party-member-name">Elara Shadowcaster</span>
+                                        <span class="party-member-info">Lvl 12 Warlock</span>
+                                    </div>
+                                    <div class="party-member">
+                                        <span class="party-member-name">Thorin Ironforge</span>
+                                        <span class="party-member-info">Lvl 11 Fighter</span>
+                                    </div>
+                                    <div class="party-member">
+                                        <span class="party-member-name">Lyra Moonshadow</span>
+                                        <span class="party-member-info">Lvl 12 Ranger</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Journal Section (Bottom) -->
+                        <div class="journal-section">
+                            <div class="journal-header">
+                                <h3 class="journal-title">[ Journal ]</h3>
+                                <button class="terminal-btn terminal-btn-small">+ ADD ENTRY</button>
+                            </div>
+                            <div class="journal-entries">
+                                <div class="journal-entry">
+                                    <div class="journal-entry-header">
+                                        <span class="journal-entry-date">DEC 21</span>
+                                        <span class="journal-entry-title">The Beginning</span>
+                                    </div>
+                                    <div class="journal-entry-preview">
+                                        We set out from Waterdeep at dawn. The road ahead was long...
+                                    </div>
+                                </div>
+                                <div class="journal-entry">
+                                    <div class="journal-entry-header">
+                                        <span class="journal-entry-date">DEC 20</span>
+                                        <span class="journal-entry-title">Preparations</span>
+                                    </div>
+                                    <div class="journal-entry-preview">
+                                        Gathered supplies and met with the merchant guild...
+                                    </div>
+                                </div>
+                                <div class="journal-entry">
+                                    <div class="journal-entry-header">
+                                        <span class="journal-entry-date">DEC 19</span>
+                                        <span class="journal-entry-title">The Contract</span>
+                                    </div>
+                                    <div class="journal-entry-preview">
+                                        A mysterious figure approached us in the tavern...
+                                    </div>
+                                </div>
+                                <div class="journal-entry">
+                                    <div class="journal-entry-header">
+                                        <span class="journal-entry-date">DEC 18</span>
+                                        <span class="journal-entry-title">Arrival</span>
+                                    </div>
+                                    <div class="journal-entry-preview">
+                                        Finally arrived in Waterdeep after weeks on the road...
+                                    </div>
+                                </div>
+                                <div class="journal-entry">
+                                    <div class="journal-entry-header">
+                                        <span class="journal-entry-date">DEC 17</span>
+                                        <span class="journal-entry-title">The Storm</span>
+                                    </div>
+                                    <div class="journal-entry-preview">
+                                        A terrible storm forced us to take shelter in an abandoned mill...
+                                    </div>
+                                </div>
+                                <div class="journal-entry">
+                                    <div class="journal-entry-header">
+                                        <span class="journal-entry-date">DEC 16</span>
+                                        <span class="journal-entry-title">Old Friends</span>
+                                    </div>
+                                    <div class="journal-entry-preview">
+                                        Ran into an old acquaintance from my days in the guild...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Lab Controls -->
+    <div class="lab-controls">
+        <h3>⚙ Layout Lab</h3>
+        <label>
+            Campaign padding:
+            <input type="text" id="campaignPadding" value="32px">
+        </label>
+        <label>
+            Journal gap:
+            <input type="text" id="journalGap" value="4px">
+        </label>
+        <label>
+            Layout gap:
+            <input type="text" id="layoutGap" value="var(--spacing-lg)">
+        </label>
+        <button onclick="applyChanges()">Apply</button>
+        <button onclick="location.reload()">Reset</button>
+    </div>
+
+    <script>
+        function applyChanges() {
+            const campaignPanel = document.querySelector('.panel-campaign');
+            const journalEntries = document.querySelector('.journal-entries');
+            const layoutPanel = document.querySelector('.campaign-panel-layout');
+            
+            campaignPanel.style.padding = document.getElementById('campaignPadding').value;
+            journalEntries.style.gap = document.getElementById('journalGap').value;
+            layoutPanel.style.gap = document.getElementById('layoutGap').value;
+        }
+    </script>
+</body>
+</html>
+

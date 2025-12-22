@@ -227,21 +227,14 @@
         <!-- Panel: Character Sheet -->
         <div class="panel panel-character-sheet" id="characterSheetPanel">
             <div class="sheet-placeholder"></div>
-            <!-- Navigation bar above character sheet -->
-            <div id="sheetNavBar" class="sheet-nav-bar is-hidden">
-                <!-- Nav buttons will be rendered here by character-manager.js -->
-            </div>
-            <div id="characterSheet" class="character-sheet is-hidden">
-                <!-- Character sheet will be rendered here -->
-            </div>
-        </div>
-
-        <!-- Panel: Campaign -->
-        <div class="panel panel-campaign ui-theme-teal" id="campaignPanel">
-            <!-- Campaign panel content will be rendered here -->
-            <div class="campaign-panel-placeholder">
-                <div class="campaign-panel-placeholder-text">
-                    Campaign info will appear here when you expand the character sheet.
+            <div class="sheet-scroll-wrapper">
+                <div class="sheet-campaign-grid">
+                    <div id="characterSheet" class="character-sheet is-hidden">
+                        <!-- Character sheet will be rendered here -->
+                    </div>
+                    <div class="campaign-panel-slot is-hidden">
+                        <!-- Campaign panel layout will be inserted here -->
+                    </div>
                 </div>
             </div>
         </div>

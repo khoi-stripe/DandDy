@@ -797,6 +797,12 @@ const ExpandedView = (window.ExpandedView = {
     expand() {
         PanelManager.setView('sheet-campaign');
         
+        // Show campaign panel slot
+        const campaignSlot = document.querySelector('.campaign-panel-slot');
+        if (campaignSlot) {
+            campaignSlot.classList.remove('is-hidden');
+        }
+        
         // Load campaign panel content
         this._loadCampaignPanel();
         
@@ -811,6 +817,12 @@ const ExpandedView = (window.ExpandedView = {
     /** Collapse back to grid view (grid + sheet view) */
     collapse() {
         PanelManager.setView('grid-sheet');
+        
+        // Hide campaign panel slot when returning to grid view
+        const campaignSlot = document.querySelector('.campaign-panel-slot');
+        if (campaignSlot) {
+            campaignSlot.classList.add('is-hidden');
+        }
         
         // Update URL to remove expanded state
         this._updateUrl(false);
@@ -851,7 +863,8 @@ const ExpandedView = (window.ExpandedView = {
 
     /** Load campaign panel content for the current character */
     async _loadCampaignPanel() {
-        const panel = document.getElementById('campaignPanel');
+        // Target the campaign-panel-slot inside sheet-campaign-grid
+        const panel = document.querySelector('.campaign-panel-slot') || document.getElementById('campaignPanel');
         if (!panel) return;
         
         const characterId = AppState.selectedCharacterId;
@@ -3191,6 +3204,14 @@ const UI = {
             ownerEmail: character.owner_email || character.ownerEmail,
             lastUpdatedByEmail: character.last_updated_by_email || character.lastUpdatedByEmail,
         });
+        
+        // Move sheet-title-header out of characterSheet and into sheet-scroll-wrapper (above the grid)
+        const scrollWrapper = document.querySelector('.sheet-scroll-wrapper');
+        const sheetCampaignGrid = document.querySelector('.sheet-campaign-grid');
+        const titleHeader = sheetContainer.querySelector('.sheet-title-header');
+        if (scrollWrapper && sheetCampaignGrid && titleHeader) {
+            scrollWrapper.insertBefore(titleHeader, sheetCampaignGrid);
+        }
         
         // Populate ASCII portrait after rendering
         CharacterSheet.populatePortrait(character);
