@@ -68,6 +68,7 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    position: relative; /* For absolute positioning of nav bar */
     /* Teal scrollbar theme */
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
@@ -83,6 +84,8 @@
     max-height: 100%;
     overflow: hidden;
     border: 1px solid var(--sheet-accent-dim);
+    /* Smooth transitions for nav bar padding changes */
+    transition: padding-top 0.25s ease;
     /* Teal UI theme */
     --ui-border-color: var(--sheet-accent);
     --ui-fg-color: var(--sheet-accent);
@@ -135,14 +138,19 @@
 /* ===== CHARACTER NAV BAR (sequential navigation in expanded view) ===== */
 .character-nav-bar {
     display: none;
+    position: absolute;
+    top: 32px; /* Match panel padding */
+    left: 32px; /* Match panel padding */
+    right: 32px; /* Match panel padding */
+    z-index: 10;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px 12px 16px;
+    padding: 0 0 12px 0;
     background: var(--terminal-bg);
     /* Animation properties */
     opacity: 0;
     transform: translateY(-8px);
-    transition: 
+    transition:
         opacity 0.25s ease,
         transform 0.25s ease;
 }
@@ -157,6 +165,7 @@
     opacity: 1;
     transform: translateY(0);
 }
+
 
 /* Nav buttons - styled as text links */
 .character-nav-bar button {

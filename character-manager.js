@@ -782,24 +782,28 @@ const CharacterNavBar = (window.CharacterNavBar = {
     /** Show the nav bar with animation (called after expand transition completes) */
     show() {
         const navBar = document.getElementById('characterNavBar');
-        if (!navBar) return;
-        
+        const sheetWrapper = document.querySelector('.sheet-scroll-wrapper');
+        if (!navBar || !sheetWrapper) return;
+
         // Update content before showing
         this.update(AppState.selectedCharacterId);
-        
+
         // Trigger animation by adding is-visible class
-        // Small delay ensures CSS display:flex is applied first
+        // Also add padding to sheet to create space for nav
         requestAnimationFrame(() => {
             navBar.classList.add('is-visible');
+            sheetWrapper.style.paddingTop = '44px';
         });
     },
-    
+
     /** Hide the nav bar with animation (called before collapse starts) */
     hide() {
         const navBar = document.getElementById('characterNavBar');
-        if (!navBar) return;
-        
+        const sheetWrapper = document.querySelector('.sheet-scroll-wrapper');
+        if (!navBar || !sheetWrapper) return;
+
         navBar.classList.remove('is-visible');
+        sheetWrapper.style.paddingTop = '0';
     },
     
     /** Update the nav bar content for the current character */
