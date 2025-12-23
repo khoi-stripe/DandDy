@@ -1,4 +1,3 @@
-// ========================================
 // KEYBOARD NAVIGATION
 // ========================================
 // HTML escaping is provided by Utils.escapeHtml from character-builder-utils.js
@@ -2777,11 +2776,21 @@ const MobileView = {
         const sourceTitleHeader = document.querySelector('.sheet-scroll-wrapper .sheet-title-header');
         const campaignSlot = document.querySelector('.campaign-panel-slot');
         
-        // Build mobile content: title header + sheet content + campaign placeholder
-        let mobileContent = '';
+        // Insert title header as direct child of gridPanel (before container) for proper sticky behavior
+        // Remove any existing mobile title header first
+        const existingHeader = document.getElementById('mobileSheetTitleHeader');
+        if (existingHeader) existingHeader.remove();
+        
         if (sourceTitleHeader) {
-            mobileContent += '<div class="mobile-sheet-title-header" id="mobileSheetTitleHeader">' + sourceTitleHeader.innerHTML + '</div>';
+            const titleHeader = document.createElement('div');
+            titleHeader.className = 'mobile-sheet-title-header';
+            titleHeader.id = 'mobileSheetTitleHeader';
+            titleHeader.innerHTML = sourceTitleHeader.innerHTML;
+            container.parentNode.insertBefore(titleHeader, container);
         }
+        
+        // Build mobile content: sheet content + campaign placeholder
+        let mobileContent = '';
         if (sourceSheet) {
             mobileContent += sourceSheet.innerHTML;
         }
@@ -3120,6 +3129,10 @@ const MobileView = {
         if (!gridPanel) return;
         
         gridPanel.classList.remove('is-viewing-sheet');
+        
+        // Remove the mobile title header (it's a direct child of gridPanel)
+        const mobileHeader = document.getElementById('mobileSheetTitleHeader');
+        if (mobileHeader) mobileHeader.remove();
         
         // Reset header scroll state when returning to grid
         const header = document.querySelector('.terminal-header');

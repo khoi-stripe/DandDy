@@ -169,6 +169,10 @@
     transform: translateY(0);
 }
 
+.character-nav-bar.is-visible button,
+.character-nav-bar.is-visible .nav-count-link {
+    font-size: var(--font-size-base);
+}
 
 /* Nav buttons - styled as text links */
 .character-nav-bar button {
@@ -480,13 +484,25 @@
     border-color: var(--sheet-accent-dim);
 }
 
-/* Hover handled by overflow-trigger + ui-theme-teal classes */
+.campaign-overflow-trigger:hover {
+    border-color: var(--sheet-accent);
+    color: var(--sheet-accent);
+    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
+    box-shadow: 0 0 8px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.3);
+}
+
+.campaign-overflow-trigger.is-open {
+    border-color: var(--sheet-accent);
+    color: var(--sheet-accent);
+    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
+}
 
 .campaign-overflow-trigger .sheet-actions-dot {
     background-color: var(--sheet-accent-dim);
 }
 
-.campaign-overflow-trigger:hover .sheet-actions-dot {
+.campaign-overflow-trigger:hover .sheet-actions-dot,
+.campaign-overflow-trigger.is-open .sheet-actions-dot {
     background-color: var(--sheet-accent);
 }
 
@@ -3357,8 +3373,12 @@
         justify-content: space-between;
         align-items: center;
         gap: 12px;
-        padding: 0 0 16px 0;
+        padding: 12px 0;
         background: #000;
+        /* Sticky positioning: sticks below terminal-header (41px when scrolled) */
+        position: sticky;
+        top: 0;
+        z-index: 100;
     }
     
     /* Style the title within mobile header */
@@ -3387,7 +3407,7 @@
 /* Container for character sheet on mobile (inside left panel) */
 .mobile-sheet-container {
     display: none;
-    padding: var(--spacing-md) 0;
+    padding: 0 0 var(--spacing-md) 0;
     touch-action: pan-y pinch-zoom; /* Allow vertical scroll, capture horizontal swipes */
     overflow-x: hidden;
 }
