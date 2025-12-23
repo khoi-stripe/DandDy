@@ -2388,7 +2388,8 @@ const CampaignUI = (window.CampaignUI = {
         );
         const currentHp = character?.hp_current || character?.hit_points_current || 
             (typeof character?.hitPoints === 'number' ? character.hitPoints : character?.hitPoints?.current) || 0;
-        const newHp = parseInt(document.getElementById('charUpdateHp')?.value) || currentHp;
+        const parsedHp = parseInt(document.getElementById('charUpdateHp')?.value);
+        const newHp = Number.isNaN(parsedHp) ? currentHp : parsedHp;
         const hpChange = newHp - currentHp;
 
         // Get conditions
