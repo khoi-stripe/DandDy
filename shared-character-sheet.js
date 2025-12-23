@@ -855,10 +855,12 @@ const CharacterSheet = (window.CharacterSheet = {
       }
     }
 
+    const titleNameClass = context === 'builder' ? 'sheet-title-name sheet-title-name--flush' : 'sheet-title-name';
+
     return `
       <div class="sheet-title-header">
         ${headerMenu}
-        <div class="sheet-title"><span class="sheet-title-name">${safeTitle}</span>${sharedTagHtml}</div>
+        <div class="sheet-title"><span class="${titleNameClass}">${safeTitle}</span>${sharedTagHtml}</div>
         ${navActionsBlock}
       </div>
     `;
