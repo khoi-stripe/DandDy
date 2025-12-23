@@ -98,37 +98,67 @@
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
-/* 2-column grid for character sheet and campaign panel side by side */
+/* Grid for character sheet and campaign panel - stacks vertically in grid view, side-by-side in expanded view */
 .sheet-campaign-grid {
     flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* In grid view, character sheet should not scroll independently - scrolls with campaign panel */
+.sheet-campaign-grid .character-sheet {
+    overflow-y: visible;
+    flex: 0 0 auto;
+}
+
+/* In expanded view, use side-by-side 2-column grid */
+.split-layout.is-sheet-expanded .sheet-campaign-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    min-height: 0;
     overflow: hidden;
     transition: grid-template-columns 0.4s ease;
 }
 
-/* When campaign panel is hidden, character sheet expands to full width */
-.sheet-campaign-grid:has(.campaign-panel-slot.is-hidden) {
-    grid-template-columns: 1fr;
+/* In expanded view, character sheet gets its own scroll back */
+.split-layout.is-sheet-expanded .sheet-campaign-grid .character-sheet {
+    overflow-y: auto;
+    flex: 1 1 0;
 }
 
 /* Campaign panel slot in the grid */
 .campaign-panel-slot {
     min-height: 0;
-    padding: 0 16px 0 24px;
+    padding: var(--spacing-lg) 16px;
     display: flex;
     flex-direction: column;
     gap: var(--spacing-lg);
+    /* In grid view, campaign panel is below sheet in the same scroll area */
+    overflow: visible;
+    flex: 0 0 auto;
+    /* Separator line in grid view */
+    border-top: 1px solid var(--sheet-accent-dim);
+    margin-top: var(--spacing-lg);
+}
+
+/* In expanded view, campaign panel gets its own scrolling */
+.split-layout.is-sheet-expanded .campaign-panel-slot {
+    padding: 0 16px 0 24px;
     overflow-y: auto;
     overflow-x: hidden;
+    flex: 1 1 0;
+    /* Remove separator in side-by-side layout */
+    border-top: none;
+    margin-top: 0;
     /* Transition for smooth reveal */
     transition: opacity 0.3s ease 0.1s;
 }
 
-/* Hidden state with opacity for fade effect */
+/* Hidden state for transitions */
 .campaign-panel-slot.is-hidden {
-    opacity: 0;
+    display: none;
 }
 
 /* When sheet panel is first (left position), adjust borders */

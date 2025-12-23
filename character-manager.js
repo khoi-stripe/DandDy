@@ -976,13 +976,8 @@ const ExpandedView = (window.ExpandedView = {
         
         PanelManager.setView('sheet-campaign');
         
-        // Show campaign panel slot (CSS handles the fade-in)
-        const campaignSlot = document.querySelector('.campaign-panel-slot');
-        if (campaignSlot) {
-            campaignSlot.classList.remove('is-hidden');
-        }
-        
-        // Load campaign panel content
+        // Campaign panel is already visible at bottom of sheet - no need to toggle visibility
+        // Just refresh the content
         this._loadCampaignPanel();
         
         // Update URL to track expanded state
@@ -1013,12 +1008,9 @@ const ExpandedView = (window.ExpandedView = {
         PanelManager.setView('grid-sheet');
         
         // After animation completes, clean up classes and listeners
-        const campaignSlot = document.querySelector('.campaign-panel-slot');
         setTimeout(() => {
             splitLayout?.classList.remove('is-sheet-expanded', 'is-collapsing');
-            if (campaignSlot) {
-                campaignSlot.classList.add('is-hidden');
-            }
+            // Campaign panel stays visible at bottom of sheet - no need to hide
             // Clear the column width variables
             const campaignGrid = document.querySelector('.sheet-campaign-grid');
             if (campaignGrid) {
@@ -3340,9 +3332,12 @@ const UI = {
         const sheetEl = document.getElementById('characterSheet');
         const navBarEl = document.getElementById('sheetNavBar');
 
+        const campaignSlot = document.querySelector('.campaign-panel-slot');
+        
         if (!characters.length) {
             if (placeholder) placeholder.classList.remove('is-hidden');
             if (sheetEl) sheetEl.classList.add('is-hidden');
+            if (campaignSlot) campaignSlot.classList.add('is-hidden');
             // Don't hide navBar - keep it visible
             if (typeof AppState !== 'undefined' && AppState) {
                 AppState.selectedCharacterId = null;
@@ -3437,6 +3432,7 @@ const UI = {
             // Desktop with no selection and no characters - show placeholder
             if (placeholder) placeholder.classList.remove('is-hidden');
             if (sheetEl) sheetEl.classList.add('is-hidden');
+            if (campaignSlot) campaignSlot.classList.add('is-hidden');
             if (navBarEl) navBarEl.classList.add('is-hidden');
         }
     },
@@ -4022,20 +4018,14 @@ async function viewCharacter(id, options = {}) {
         }
         UI.showCharacterSheet(character);
         
-        // Handle campaign panel when switching characters
+        // Load campaign panel when switching characters (shown at bottom of sheet in grid view)
         const campaignSlot = document.querySelector('.campaign-panel-slot');
-        if (ExpandedView.isExpanded()) {
-            // Expanded view: show skeleton loader and fetch new data
-            if (campaignSlot) {
-                campaignSlot.innerHTML = ExpandedView._renderCampaignSkeleton();
-            }
-            ExpandedView._loadCampaignPanel();
-        } else {
-            // Grid+sheet view: clear campaign panel so skeleton shows on expand
-            if (campaignSlot) {
-                campaignSlot.innerHTML = '';
-            }
+        if (campaignSlot) {
+            // Show skeleton loader while fetching campaign data
+            campaignSlot.innerHTML = ExpandedView._renderCampaignSkeleton();
+            campaignSlot.classList.remove('is-hidden');
         }
+        ExpandedView._loadCampaignPanel();
         
         // Update URL with selected character (for sharing/bookmarking)
         if (updateUrl && id) {
