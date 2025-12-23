@@ -1078,6 +1078,11 @@ const CharacterSheet = (window.CharacterSheet = {
     const isBuilder = context === 'builder';
     const hasCombatStats = parsed.hpMax > 0;
 
+    // Show death saves when HP is 0 or when any saves have been recorded
+    const showDeathSaves = parsed.hpCurrent === 0 || 
+      parsed.deathSaveSuccesses > 0 || 
+      parsed.deathSaveFailures > 0;
+
     return `
       <div class="sheet-section" id="combat-stats-section">
         <div class="sheet-header ${context === 'builder' ? 'sheet-header--no-divider' : ''}">
@@ -1108,6 +1113,39 @@ const CharacterSheet = (window.CharacterSheet = {
           <div class="stat-box">
             <div class="stat-box-label">HIT DICE</div>
             <div class="stat-box-value">${isBuilder && !hasCombatStats ? '—' : `${parsed.hitDiceCurrent}/${parsed.hitDiceMax} d${parsed.hitDie}`}</div>
+          </div>
+        </div>
+        ${showDeathSaves ? this._renderDeathSaves(parsed) : ''}
+      </div>
+    `;
+  },
+
+  _renderDeathSaves(parsed) {
+    const successes = parsed.deathSaveSuccesses || 0;
+    const failures = parsed.deathSaveFailures || 0;
+
+    const renderCheckboxes = (count, max, type) => {
+      let html = '';
+      for (let i = 0; i < max; i++) {
+        const filled = i < count;
+        html += `<span class="death-save-box ${filled ? 'is-filled' : ''}" data-type="${type}" data-index="${i}"></span>`;
+      }
+      return html;
+    };
+
+    return `
+      <div class="death-saves">
+        <div class="death-saves-label">DEATH SAVES</div>
+        <div class="death-saves-row">
+          <span class="death-saves-type death-saves-type--success">Successes</span>
+          <div class="death-saves-boxes" data-save-type="successes">
+            ${renderCheckboxes(successes, 3, 'successes')}
+          </div>
+        </div>
+        <div class="death-saves-row">
+          <span class="death-saves-type death-saves-type--failure">Failures</span>
+          <div class="death-saves-boxes" data-save-type="failures">
+            ${renderCheckboxes(failures, 3, 'failures')}
           </div>
         </div>
       </div>
@@ -2701,8 +2739,8 @@ const CharacterSheet = (window.CharacterSheet = {
     
     // Handle HP (old and new formats)
     const hp = character.hitPoints || { current: 0, max: 0 };
-    const hpMax = typeof hp === 'number' ? hp : hp.max || 0;
-    const hpCurrent = typeof hp === 'number' ? hp : hp.current || hpMax;
+    const hpMax = typeof hp === 'number' ? hp : (hp.max ?? 0);
+    const hpCurrent = typeof hp === 'number' ? hp : (hp.current ?? hpMax);
 
     // Handle abilities (old 'abilityScores' and new 'abilities' format)
     const abilities = character.abilities || character.abilityScores || {};
@@ -2897,6 +2935,10 @@ const CharacterSheet = (window.CharacterSheet = {
 
       // Class Resources (Ki, Rage, etc.)
       classResources: character.classResources || {},
+
+      // Death Saves
+      deathSaveSuccesses: character.death_save_successes ?? character.deathSaveSuccesses ?? 0,
+      deathSaveFailures: character.death_save_failures ?? character.deathSaveFailures ?? 0,
 
       // Status Conditions (poisoned, exhausted, diseased, cursed)
       conditions: character.conditions || [],

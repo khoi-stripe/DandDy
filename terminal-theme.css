@@ -1522,6 +1522,81 @@ body::before {
   font-weight: var(--font-weight-normal);
 }
 
+/* Death Saves - shown when HP = 0 or saves recorded */
+.death-saves {
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: hsla(0, 50%, 20%, 0.3);
+  border: 1px solid hsla(0, 60%, 40%, 0.5);
+}
+
+.death-saves-label {
+  color: var(--sheet-label-color);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-sm);
+  text-align: center;
+  letter-spacing: var(--tracking-wider);
+}
+
+.death-saves-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
+}
+
+.death-saves-row:last-child {
+  margin-bottom: 0;
+}
+
+.death-saves-type {
+  font-size: var(--font-size-sm);
+  width: 70px;
+  text-align: right;
+}
+
+.death-saves-type--success {
+  color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+}
+
+.death-saves-type--failure {
+  color: hsl(0, 70%, 60%);
+}
+
+.death-saves-boxes {
+  display: flex;
+  gap: 6px;
+}
+
+.death-save-box {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--sheet-accent-dim);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.death-save-box:hover {
+  border-color: var(--sheet-accent);
+}
+
+.death-save-box.is-filled {
+  background: var(--sheet-accent);
+  border-color: var(--sheet-accent);
+}
+
+.death-saves-row:first-of-type .death-save-box.is-filled {
+  background: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+  border-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+}
+
+.death-saves-row:last-of-type .death-save-box.is-filled {
+  background: hsl(0, 70%, 50%);
+  border-color: hsl(0, 70%, 50%);
+}
+
 /* Spell slot boxes - compact grid layout */
 .spell-slots-grid {
   display: flex;

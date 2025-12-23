@@ -1241,16 +1241,15 @@ const ExpandedView = (window.ExpandedView = {
                         <h3 class="campaign-area-title">[ Campaign ]</h3>
                     </div>
                     <div class="campaign-area-empty">
-                        ${hasInvitations ? '<div class="campaign-area-empty-icon">📬</div>' : ''}
                         <div class="campaign-area-empty-text ${hasInvitations ? 'has-invitations' : ''}">
                             ${invitationText}
                         </div>
                         <div class="campaign-area-actions">
-                            <button class="terminal-btn terminal-btn-small ${hasInvitations ? 'terminal-btn-primary' : ''}" onclick="CampaignUI.openJoinModal()">
-                                Join${hasInvitations ? '' : ' Campaign'}
+                            <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJoinModal()">
+                                JOIN
                             </button>
                             <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openCreateModal()">
-                                Create${hasInvitations ? '' : ' Campaign'}
+                                CREATE
                             </button>
                         </div>
                     </div>
@@ -1814,8 +1813,8 @@ const CampaignUI = (window.CampaignUI = {
             // Close modal
             this.closeJoinModal();
             
-            // Show success message
-            showAlertDialog(`You've joined "${result.campaign.name}"!`);
+            // Show success toast
+            showNotification(`✓ Joined "${result.campaign.name}"`);
             
             // Refresh character data to get updated campaign_id
             await AppState.loadCharacters();
@@ -10172,6 +10171,79 @@ document.addEventListener('DOMContentLoaded', async () => {
         sizeSortTrigger();
         updateSortUI();
     }
+
+    // Death saves click handler (event delegation on document)
+    document.addEventListener('click', async (e) => {
+        const box = e.target.closest('.death-save-box');
+        if (!box) return;
+        
+        const characterId = AppState.selectedCharacterId;
+        if (!characterId) return;
+        
+        const type = box.dataset.type; // 'successes' or 'failures'
+        const index = parseInt(box.dataset.index, 10);
+        
+        // Get current character data
+        const character = AppState.characters?.find(c => 
+            c.id === characterId || c.cloudId === characterId
+        );
+        if (!character) return;
+        
+        // Get current values
+        const currentSuccesses = character.death_save_successes ?? character.deathSaveSuccesses ?? 0;
+        const currentFailures = character.death_save_failures ?? character.deathSaveFailures ?? 0;
+        
+        let newSuccesses = currentSuccesses;
+        let newFailures = currentFailures;
+        
+        if (type === 'successes') {
+            // Clicking on a box toggles: if it's filled, clear from there; if empty, fill up to there
+            if (index < currentSuccesses) {
+                // Clicking a filled box - clear this and all after it
+                newSuccesses = index;
+            } else {
+                // Clicking an empty box - fill up to and including this one
+                newSuccesses = index + 1;
+            }
+        } else if (type === 'failures') {
+            if (index < currentFailures) {
+                newFailures = index;
+            } else {
+                newFailures = index + 1;
+            }
+        }
+        
+        // Clamp to 0-3
+        newSuccesses = Math.max(0, Math.min(3, newSuccesses));
+        newFailures = Math.max(0, Math.min(3, newFailures));
+        
+        // Update immediately in UI for responsiveness
+        const allBoxes = document.querySelectorAll(`.death-save-box[data-type="${type}"]`);
+        const newValue = type === 'successes' ? newSuccesses : newFailures;
+        allBoxes.forEach((b, i) => {
+            b.classList.toggle('is-filled', i < newValue);
+        });
+        
+        // Save to backend
+        try {
+            await CharacterStorage.update(characterId, {
+                death_save_successes: newSuccesses,
+                death_save_failures: newFailures,
+            });
+            
+            // Reload character data to stay in sync
+            await AppState.loadCharacters();
+            
+            // Re-render sheet if character is still selected
+            if (AppState.selectedCharacterId === characterId) {
+                viewCharacter(characterId);
+            }
+        } catch (error) {
+            console.error('Failed to update death saves:', error);
+            // Revert UI on error
+            viewCharacter(characterId);
+        }
+    });
 
     // Wire header buttons (guard against missing elements so init doesn't crash)
     const newCharacterBtn = document.getElementById('newCharacterBtn');

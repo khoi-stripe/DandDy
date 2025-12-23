@@ -237,6 +237,10 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       if (updates.hitDiceCurrent !== undefined) apiUpdates.hit_dice_current = updates.hitDiceCurrent;
       if (updates.classResources !== undefined) apiUpdates.class_resources = updates.classResources;
       
+      // Death saves
+      if (updates.death_save_successes !== undefined) apiUpdates.death_save_successes = updates.death_save_successes;
+      if (updates.death_save_failures !== undefined) apiUpdates.death_save_failures = updates.death_save_failures;
+      
       // Text fields
       if (updates.backstory !== undefined) apiUpdates.backstory = updates.backstory;
       if (updates.sex !== undefined) apiUpdates.sex = updates.sex;

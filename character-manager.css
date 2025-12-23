@@ -1369,9 +1369,6 @@
 }
 
 .journal-update-stats {
-    display: block;
-    width: 100%;
-    flex-basis: 100%;
     color: var(--sheet-accent);
     font-size: var(--font-size-sm);
     text-transform: uppercase;

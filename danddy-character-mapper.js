@@ -218,10 +218,10 @@
         charisma: character.abilities?.cha || character.abilityScores?.cha || 10,
 
         // Combat Stats
-        hit_points_max: character.hitPoints?.max || character.hitPoints || 10,
+        hit_points_max: character.hitPoints?.max ?? character.hitPoints ?? 10,
         hit_points_current:
-          character.hitPoints?.current || character.hitPoints?.max || character.hitPoints || 10,
-        hit_points_temp: character.hitPoints?.temp || 0,
+          character.hitPoints?.current ?? character.hitPoints?.max ?? character.hitPoints ?? 10,
+        hit_points_temp: character.hitPoints?.temp ?? 0,
         armor_class: character.armorClass || 10,
         initiative: character.initiative || 0,
         speed: character.speed || 30,
@@ -372,6 +372,10 @@
 
         conditions: apiChar.conditions,
         attacks: apiChar.attacks,
+
+        // Death saves
+        death_save_successes: apiChar.death_save_successes ?? 0,
+        death_save_failures: apiChar.death_save_failures ?? 0,
 
         currency: {
           cp: apiChar.copper_pieces,
