@@ -710,8 +710,8 @@ const CharacterSheet = (window.CharacterSheet = {
     }
 
     // Manager-only: Navigation buttons in header
-    // - "Collapse" to go back to grid view
-    // - "Expand" to expand campaign panel (hidden in sheet-campaign view via CSS)
+    // - "Minimize" to go back to grid view
+    // - "Maximize" to expand campaign panel (hidden in sheet-campaign view via CSS)
     const charactersButtonHtml =
       context === 'manager' && hasValidManagerId
         ? `
@@ -720,7 +720,7 @@ const CharacterSheet = (window.CharacterSheet = {
           type="button"
           onclick="ExpandedView.collapse()"
           title="Return to character grid"
-        >Collapse</button>
+        >Minimize</button>
       `
         : '';
 
@@ -732,7 +732,7 @@ const CharacterSheet = (window.CharacterSheet = {
           type="button"
           onclick="ExpandedView.expand()"
           title="View campaign info"
-        >Expand</button>
+        >Maximize</button>
       `
         : '';
 

@@ -1272,21 +1272,25 @@ const ExpandedView = (window.ExpandedView = {
                 const char = m.character;
                 const creatorTag = m.is_creator ? '<span class="party-member-creator-tag">Creator</span>' : '';
                 const userEmail = m.user_email ? `<span class="party-member-email">${Utils.escapeHtml(m.user_email)}</span>` : '';
+                const rightSide = (creatorTag || userEmail) ? `<span class="party-member-right">${creatorTag}${userEmail}</span>` : '';
                 if (char) {
                     return `
                         <div class="party-member">
-                            <span class="party-member-name">${char.name}</span>
-                            <span class="party-member-info">Lvl ${char.level} ${char.character_class || ''}</span>
-                            ${creatorTag}
-                            ${userEmail}
+                            <span class="party-member-left">
+                                <span class="party-member-name">${char.name}</span>
+                                <span class="party-member-separator">•</span>
+                                <span class="party-member-info">Lvl ${char.level} ${char.character_class || ''}</span>
+                            </span>
+                            ${rightSide}
                         </div>
                     `;
                 } else {
                     return `
                         <div class="party-member party-member--no-char">
-                            <span class="party-member-name">No character assigned</span>
-                            ${creatorTag}
-                            ${userEmail}
+                            <span class="party-member-left">
+                                <span class="party-member-name">No character assigned</span>
+                            </span>
+                            ${rightSide}
                         </div>
                     `;
                 }
