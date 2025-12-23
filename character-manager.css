@@ -1349,6 +1349,7 @@
 /* Full content (hidden by default) */
 .journal-entry-full {
     display: none;
+    width: 100%;
     color: var(--sheet-label-color);
     font-size: var(--font-size-base);
     line-height: var(--line-height-normal);
