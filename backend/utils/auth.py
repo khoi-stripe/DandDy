@@ -118,20 +118,120 @@ async def get_current_user(
         user_id: int = payload.get("sub")
         if user_id is None:
             print("🔒 Auth: JWT missing 'sub' claim when validating token.")
+            # #region agent log - write to debug log file
+            import json
+            import os
+            log_path = "/Users/khoi/Desktop/TEMP/_Personal/_Cursor/_DandDy/.cursor/debug.log"
+            try:
+                with open(log_path, 'a') as f:
+                    f.write(json.dumps({
+                        "id": f"log_{int(__import__('time').time() * 1000)}_backend",
+                        "timestamp": int(__import__('time').time() * 1000),
+                        "location": "backend/utils/auth.py:get_current_user",
+                        "message": "JWT missing sub claim",
+                        "data": {"token_length": len(token)},
+                        "sessionId": "debug-session",
+                        "hypothesisId": "backend_token_validation",
+                        "runId": "backend_validation"
+                    }) + '\n')
+            except:
+                pass
+            # #endregion
             raise credentials_exception
+
+        # #region agent log - successful token decode
+        import json
+        import os
+        log_path = "/Users/khoi/Desktop/TEMP/_Personal/_Cursor/_DandDy/.cursor/debug.log"
+        try:
+            exp_time = payload.get("exp")
+            current_time = __import__('time').time()
+            time_to_expiry = exp_time - current_time if exp_time else None
+            with open(log_path, 'a') as f:
+                f.write(json.dumps({
+                    "id": f"log_{int(__import__('time').time() * 1000)}_backend",
+                    "timestamp": int(__import__('time').time() * 1000),
+                    "location": "backend/utils/auth.py:get_current_user",
+                    "message": "Token decoded successfully",
+                    "data": {"user_id": user_id, "exp": exp_time, "time_to_expiry_seconds": time_to_expiry},
+                    "sessionId": "debug-session",
+                    "hypothesisId": "backend_token_validation",
+                    "runId": "backend_validation"
+                }) + '\n')
+        except:
+            pass
+        # #endregion
+
         token_data = TokenData(user_id=user_id)
     except ExpiredSignatureError:
         # Access token is well‑formed but has expired.
         print("🔒 Auth: Access token has expired during get_current_user.")
+        # #region agent log - expired token
+        import json
+        import os
+        log_path = "/Users/khoi/Desktop/TEMP/_Personal/_Cursor/_DandDy/.cursor/debug.log"
+        try:
+            with open(log_path, 'a') as f:
+                f.write(json.dumps({
+                    "id": f"log_{int(__import__('time').time() * 1000)}_backend",
+                    "timestamp": int(__import__('time').time() * 1000),
+                    "location": "backend/utils/auth.py:get_current_user",
+                    "message": "Token expired",
+                    "data": {"token_length": len(token)},
+                    "sessionId": "debug-session",
+                    "hypothesisId": "backend_token_validation",
+                    "runId": "backend_validation"
+                }) + '\n')
+        except:
+            pass
+        # #endregion
         raise credentials_exception
     except JWTError as e:
         # Any other JWT parsing/validation error.
         print(f"🔒 Auth: Invalid access token during get_current_user: {e}")
+        # #region agent log - JWT error
+        import json
+        import os
+        log_path = "/Users/khoi/Desktop/TEMP/_Personal/_Cursor/_DandDy/.cursor/debug.log"
+        try:
+            with open(log_path, 'a') as f:
+                f.write(json.dumps({
+                    "id": f"log_{int(__import__('time').time() * 1000)}_backend",
+                    "timestamp": int(__import__('time').time() * 1000),
+                    "location": "backend/utils/auth.py:get_current_user",
+                    "message": "JWT validation error",
+                    "data": {"error": str(e), "token_length": len(token)},
+                    "sessionId": "debug-session",
+                    "hypothesisId": "backend_token_validation",
+                    "runId": "backend_validation"
+                }) + '\n')
+        except:
+            pass
+        # #endregion
         raise credentials_exception
 
     user = db.query(User).filter(User.id == token_data.user_id).first()
     if user is None:
         print(f"🔒 Auth: User not found for token subject id={token_data.user_id}.")
+        # #region agent log - user not found
+        import json
+        import os
+        log_path = "/Users/khoi/Desktop/TEMP/_Personal/_Cursor/_DandDy/.cursor/debug.log"
+        try:
+            with open(log_path, 'a') as f:
+                f.write(json.dumps({
+                    "id": f"log_{int(__import__('time').time() * 1000)}_backend",
+                    "timestamp": int(__import__('time').time() * 1000),
+                    "location": "backend/utils/auth.py:get_current_user",
+                    "message": "User not found for token",
+                    "data": {"user_id": token_data.user_id},
+                    "sessionId": "debug-session",
+                    "hypothesisId": "backend_token_validation",
+                    "runId": "backend_validation"
+                }) + '\n')
+        except:
+            pass
+        # #endregion
         raise credentials_exception
     return user
 

@@ -1080,9 +1080,10 @@ const CharacterSheet = (window.CharacterSheet = {
     const hasCombatStats = parsed.hpMax > 0;
 
     // Show death saves when HP is 0 or when any saves have been recorded
-    const showDeathSaves = parsed.hpCurrent === 0 || 
-      parsed.deathSaveSuccesses > 0 || 
-      parsed.deathSaveFailures > 0;
+    // const showDeathSaves = parsed.hpCurrent === 0 ||
+    //   parsed.deathSaveSuccesses > 0 ||
+    //   parsed.deathSaveFailures > 0;
+    const showDeathSaves = false; // Temporarily disabled
 
     return `
       <div class="sheet-section" id="combat-stats-section">
@@ -1121,37 +1122,37 @@ const CharacterSheet = (window.CharacterSheet = {
     `;
   },
 
-  _renderDeathSaves(parsed) {
-    const successes = parsed.deathSaveSuccesses || 0;
-    const failures = parsed.deathSaveFailures || 0;
+  // _renderDeathSaves(parsed) {
+  //   const successes = parsed.deathSaveSuccesses || 0;
+  //   const failures = parsed.deathSaveFailures || 0;
 
-    const renderCheckboxes = (count, max, type) => {
-      let html = '';
-      for (let i = 0; i < max; i++) {
-        const filled = i < count;
-        html += `<span class="death-save-box ${filled ? 'is-filled' : ''}" data-type="${type}" data-index="${i}"></span>`;
-      }
-      return html;
-    };
+  //   const renderCheckboxes = (count, max, type) => {
+  //     let html = '';
+  //     for (let i = 0; i < max; i++) {
+  //       const filled = i < count;
+  //       html += `<span class="death-save-box ${filled ? 'is-filled' : ''}" data-type="${type}" data-index="${i}"></span>`;
+  //     }
+  //     return html;
+  //   };
 
-    return `
-      <div class="death-saves">
-        <div class="death-saves-label">DEATH SAVES</div>
-        <div class="death-saves-row">
-          <span class="death-saves-type death-saves-type--success">Successes</span>
-          <div class="death-saves-boxes" data-save-type="successes">
-            ${renderCheckboxes(successes, 3, 'successes')}
-          </div>
-        </div>
-        <div class="death-saves-row">
-          <span class="death-saves-type death-saves-type--failure">Failures</span>
-          <div class="death-saves-boxes" data-save-type="failures">
-            ${renderCheckboxes(failures, 3, 'failures')}
-          </div>
-        </div>
-      </div>
-    `;
-  },
+  //   return `
+  //     <div class="death-saves">
+  //       <div class="death-saves-label">DEATH SAVES</div>
+  //       <div class="death-saves-row">
+  //         <span class="death-saves-type death-saves-type--success">Successes</span>
+  //         <div class="death-saves-boxes" data-save-type="successes">
+  //           ${renderCheckboxes(successes, 3, 'successes')}
+  //         </div>
+  //       </div>
+  //       <div class="death-saves-row">
+  //         <span class="death-saves-type death-saves-type--failure">Failures</span>
+  //         <div class="death-saves-boxes" data-save-type="failures">
+  //           ${renderCheckboxes(failures, 3, 'failures')}
+  //         </div>
+  //       </div>
+  //     </div>
+  //   `;
+  // },
 
   _renderConditionTags(parsed) {
     const conditions = parsed.conditions || [];
@@ -2938,8 +2939,10 @@ const CharacterSheet = (window.CharacterSheet = {
       classResources: character.classResources || {},
 
       // Death Saves
-      deathSaveSuccesses: character.death_save_successes ?? character.deathSaveSuccesses ?? 0,
-      deathSaveFailures: character.death_save_failures ?? character.deathSaveFailures ?? 0,
+      // deathSaveSuccesses: character.death_save_successes ?? character.deathSaveSuccesses ?? 0,
+      // deathSaveFailures: character.death_save_failures ?? character.deathSaveFailures ?? 0,
+      deathSaveSuccesses: 0, // Temporarily disabled
+      deathSaveFailures: 0, // Temporarily disabled
 
       // Status Conditions (poisoned, exhausted, diseased, cursed)
       conditions: character.conditions || [],

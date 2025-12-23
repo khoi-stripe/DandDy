@@ -2910,7 +2910,6 @@ const CampaignUI = (window.CampaignUI = {
                     modalContent.innerHTML = `
                         <div class="modal-header">
                             <h2 class="modal-title">${Utils.escapeHtml(character.name)}</h2>
-                            <span class="party-sheet-badge">View Only</span>
                             <button class="modal-close" onclick="CampaignUI.closePartyMemberSheetModal()">&times;</button>
                         </div>
                         <div class="modal-body party-member-sheet-body">
@@ -3312,7 +3311,10 @@ const MobileView = {
         
         // Update character count display
         this.updateCharacterCount(characterId);
-        
+
+        // Update the view toggle link text (should show "Campaign" since we start in sheet view)
+        this._updateViewToggle();
+
         // Scroll to top and reset header scroll state
         gridPanel.scrollTop = 0;
         const header = document.querySelector('.terminal-header');
@@ -3790,6 +3792,14 @@ const PortraitLightbox = {
 /** Global function to close mobile sheet (called from HTML onclick) */
 function closeMobileSheet() {
     MobileView.close();
+}
+
+/** Global function to switch to campaign view on mobile (called from HTML onclick) */
+function scrollToCampaign() {
+    // Use the existing MobileView.toggleCampaign() method to switch to campaign view
+    if (typeof MobileView !== 'undefined' && MobileView.toggleCampaign) {
+        MobileView.toggleCampaign();
+    }
 }
 
 // ========================================
@@ -10306,84 +10316,84 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateSortUI();
     }
 
-    // Death saves click handler (event delegation on document)
-    document.addEventListener('click', async (e) => {
-        const box = e.target.closest('.death-save-box');
-        if (!box) return;
-        
-        const characterId = AppState.selectedCharacterId;
-        if (!characterId) return;
-        
-        const type = box.dataset.type; // 'successes' or 'failures'
-        const index = parseInt(box.dataset.index, 10);
-        
-        // Get current character data
-        const character = AppState.characters?.find(c => 
-            c.id === characterId || c.cloudId === characterId
-        );
-        if (!character) return;
-        
-        // Get current values
-        const currentSuccesses = character.death_save_successes ?? character.deathSaveSuccesses ?? 0;
-        const currentFailures = character.death_save_failures ?? character.deathSaveFailures ?? 0;
-        
-        let newSuccesses = currentSuccesses;
-        let newFailures = currentFailures;
-        
-        if (type === 'successes') {
-            // Clicking on a box toggles: if it's filled, clear from there; if empty, fill up to there
-            if (index < currentSuccesses) {
-                // Clicking a filled box - clear this and all after it
-                newSuccesses = index;
-            } else {
-                // Clicking an empty box - fill up to and including this one
-                newSuccesses = index + 1;
-            }
-        } else if (type === 'failures') {
-            if (index < currentFailures) {
-                newFailures = index;
-            } else {
-                newFailures = index + 1;
-            }
-        }
-        
-        // Clamp to 0-3
-        newSuccesses = Math.max(0, Math.min(3, newSuccesses));
-        newFailures = Math.max(0, Math.min(3, newFailures));
-        
-        // If character succeeds (3 successes), they stabilize - reset death saves
-        if (newSuccesses >= 3) {
-            newSuccesses = 0;
-            newFailures = 0;
-        }
-        
-        // Update immediately in UI for responsiveness
-        const allBoxes = document.querySelectorAll(`.death-save-box[data-type="${type}"]`);
-        const newValue = type === 'successes' ? newSuccesses : newFailures;
-        allBoxes.forEach((b, i) => {
-            b.classList.toggle('is-filled', i < newValue);
-        });
-        
-        // Save to backend
-        try {
-            await CharacterStorage.update(characterId, {
-                death_save_successes: newSuccesses,
-                death_save_failures: newFailures,
-            });
-            
-            // Reload character data to stay in sync
-            await AppState.loadCharacters();
-            
-            // Re-render sheet if character is still selected
-            if (AppState.selectedCharacterId === characterId) {
-                viewCharacter(characterId);
-            }
-        } catch (error) {
-            console.error('Failed to update death saves:', error);
-            // Revert UI on error
-            viewCharacter(characterId);
-        }
-    });
+    // Death saves click handler (event delegation on document) - TEMPORARILY DISABLED
+    // document.addEventListener('click', async (e) => {
+    //     const box = e.target.closest('.death-save-box');
+    //     if (!box) return;
+    //
+    //     const characterId = AppState.selectedCharacterId;
+    //     if (!characterId) return;
+    //
+    //     const type = box.dataset.type; // 'successes' or 'failures'
+    //     const index = parseInt(box.dataset.index, 10);
+    //
+    //     // Get current character data
+    //     const character = AppState.characters?.find(c =>
+    //         c.id === characterId || c.cloudId === characterId
+    //     );
+    //     if (!character) return;
+    //
+    //     // Get current values
+    //     const currentSuccesses = character.death_save_successes ?? character.deathSaveSuccesses ?? 0;
+    //     const currentFailures = character.death_save_failures ?? character.deathSaveFailures ?? 0;
+    //
+    //     let newSuccesses = currentSuccesses;
+    //     let newFailures = currentFailures;
+    //
+    //     if (type === 'successes') {
+    //         // Clicking on a box toggles: if it's filled, clear from there; if empty, fill up to there
+    //         if (index < currentSuccesses) {
+    //             // Clicking a filled box - clear this and all after it
+    //             newSuccesses = index;
+    //         } else {
+    //             // Clicking an empty box - fill up to and including this one
+    //             newSuccesses = index + 1;
+    //         }
+    //     } else if (type === 'failures') {
+    //         if (index < currentFailures) {
+    //             newFailures = index;
+    //         } else {
+    //             newFailures = index + 1;
+    //         }
+    //     }
+    //
+    //     // Clamp to 0-3
+    //     newSuccesses = Math.max(0, Math.min(3, newSuccesses));
+    //     newFailures = Math.max(0, Math.min(3, newFailures));
+    //
+    //     // If character succeeds (3 successes), they stabilize - reset death saves
+    //     if (newSuccesses >= 3) {
+    //         newSuccesses = 0;
+    //         newFailures = 0;
+    //     }
+    //
+    //     // Update immediately in UI for responsiveness
+    //     const allBoxes = document.querySelectorAll(`.death-save-box[data-type="${type}"]`);
+    //     const newValue = type === 'successes' ? newSuccesses : newFailures;
+    //     allBoxes.forEach((b, i) => {
+    //         b.classList.toggle('is-filled', i < newValue);
+    //     });
+    //
+    //     // Save to backend
+    //     try {
+    //         await CharacterStorage.update(characterId, {
+    //             death_save_successes: newSuccesses,
+    //             death_save_failures: newFailures,
+    //         });
+    //
+    //         // Reload character data to stay in sync
+    //         await AppState.loadCharacters();
+    //
+    //         // Re-render sheet if character is still selected
+    //         if (AppState.selectedCharacterId === characterId) {
+    //             viewCharacter(characterId);
+    //         }
+    //     } catch (error) {
+    //         console.error('Failed to update death saves:', error);
+    //         // Revert UI on error
+    //         viewCharacter(characterId);
+    //     }
+    // });
 
     // Wire header buttons (guard against missing elements so init doesn't crash)
     const newCharacterBtn = document.getElementById('newCharacterBtn');
