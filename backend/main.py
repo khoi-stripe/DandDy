@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from database.database import (
     engine,
     Base,
+    get_settings,
     ensure_timestamp_columns,
     ensure_prompt_entry_columns,
     ensure_sex_column,
@@ -43,6 +44,11 @@ ensure_pinned_character_ids_column()
 ensure_campaign_tracking_columns()
 ensure_campaign_member_status_column()
 ensure_journal_visibility_column()
+
+# Debug: Log current settings on startup
+settings = get_settings()
+print(f"🔧 Settings loaded - ACCESS_TOKEN_EXPIRE_MINUTES: {settings.access_token_expire_minutes}")
+print(f"🔧 SECRET_KEY length: {len(settings.secret_key)} chars")
 
 app = FastAPI(
     title="DandDy API",
