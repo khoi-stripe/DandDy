@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session, joinedload
 from database.database import get_db
 from models.user import User
 from models.campaign import Campaign, CampaignStatus, generate_invite_code
-from models.campaign_member import CampaignMember, MemberStatus, JournalVisibility
+from models.campaign_member import CampaignMember, MemberStatus
 from models.character import Character
 from models.character_collaborator import CharacterCollaborator, CollaboratorPermission
 from schemas.campaign import (
@@ -383,14 +383,7 @@ def get_campaign_members(
     ).all()
     
     # Build response with user email and journal visibility
-    # Handle both enum and string values for journal_visibility (migration compat)
-    def get_visibility_value(vis):
-        if vis is None:
-            return "private"
-        if hasattr(vis, 'value'):
-            return vis.value
-        return str(vis).lower()
-    
+    # journal_visibility is now a String column
     return [
         CampaignMemberResponse(
             id=m.id,
@@ -400,7 +393,7 @@ def get_campaign_members(
             is_creator=m.is_creator,
             status=m.status.value if hasattr(m.status, 'value') else str(m.status),
             joined_at=m.joined_at,
-            journal_visibility=get_visibility_value(m.journal_visibility),
+            journal_visibility=str(m.journal_visibility or "private").lower(),
             character_id=m.character_id,
             character=m.character
         )
@@ -432,15 +425,11 @@ def update_journal_visibility(
             detail="You are not a member of this campaign"
         )
     
-    # Update visibility
-    membership.journal_visibility = JournalVisibility(visibility_data.visibility)
+    # Update visibility (now a simple string)
+    membership.journal_visibility = visibility_data.visibility
     
     db.commit()
     db.refresh(membership)
-    
-    # Handle both enum and string values for journal_visibility
-    vis = membership.journal_visibility
-    vis_value = vis.value if hasattr(vis, 'value') else (str(vis).lower() if vis else "private")
     
     return CampaignMemberResponse(
         id=membership.id,
@@ -450,7 +439,7 @@ def update_journal_visibility(
         is_creator=membership.is_creator,
         status=membership.status.value if hasattr(membership.status, 'value') else str(membership.status),
         joined_at=membership.joined_at,
-        journal_visibility=vis_value,
+        journal_visibility=str(membership.journal_visibility or "private").lower(),
         character_id=membership.character_id,
         character=membership.character
     )

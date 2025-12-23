@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Boolean, DateTime, Enum, Index
+from sqlalchemy import Column, Integer, ForeignKey, Boolean, DateTime, Enum, String, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -44,7 +44,8 @@ class CampaignMember(Base):
     joined_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
     # Journal visibility - controls whether party members can see this character's journal entries
-    journal_visibility = Column(Enum(JournalVisibility), default=JournalVisibility.PRIVATE, nullable=False)
+    # Using String instead of Enum to avoid migration complexity with existing data
+    journal_visibility = Column(String(20), default="private", nullable=False)
     
     # Relationships
     campaign = relationship("Campaign", back_populates="members")

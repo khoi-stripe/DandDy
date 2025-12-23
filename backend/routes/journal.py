@@ -6,7 +6,7 @@ from database.database import get_db
 from models.user import User
 from models.character import Character
 from models.campaign import Campaign
-from models.campaign_member import CampaignMember, MemberStatus, JournalVisibility
+from models.campaign_member import CampaignMember, MemberStatus
 from models.journal import JournalEntry, CharacterUpdate
 from schemas.journal import (
     JournalEntryCreate, JournalEntryUpdate, JournalEntryResponse,
@@ -181,16 +181,9 @@ def get_campaign_journal_entries(
     ).all()
     
     # Build visibility mapping: character_id -> (user_id, is_public)
-    # Handle both enum and string values for journal_visibility (migration compat)
-    def is_public_visibility(vis):
-        if vis is None:
-            return False
-        if hasattr(vis, 'value'):
-            return vis == JournalVisibility.PUBLIC
-        return str(vis).upper() == 'PUBLIC'
-    
+    # journal_visibility is now a String column with values "private" or "public"
     visibility_map = {
-        m.character_id: (m.user_id, is_public_visibility(m.journal_visibility))
+        m.character_id: (m.user_id, str(m.journal_visibility or "private").lower() == "public")
         for m in memberships
     }
     

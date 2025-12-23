@@ -497,47 +497,23 @@ def ensure_journal_visibility_column():
     """
     Lightweight migration helper for campaign_members table.
     Adds the journal_visibility column for controlling whether journal entries are shared with party.
+    Uses VARCHAR/String type for simplicity and compatibility.
     """
     inspector = inspect(engine)
     if not inspector.has_table("campaign_members"):
         return
 
     existing_cols = {col["name"] for col in inspector.get_columns("campaign_members")}
-    is_postgres = not settings.database_url.startswith("sqlite")
 
     with engine.connect() as conn:
         if "journal_visibility" not in existing_cols:
-            if is_postgres:
-                # For PostgreSQL, create the enum type first if it doesn't exist
-                try:
-                    conn.execute(text("CREATE TYPE journalvisibility AS ENUM ('PRIVATE', 'PUBLIC')"))
-                except Exception:
-                    pass  # Type might already exist
-                
-                # Add column with the enum type
-                try:
-                    conn.execute(text("ALTER TABLE campaign_members ADD COLUMN journal_visibility journalvisibility DEFAULT 'PRIVATE'"))
-                except Exception as e:
-                    # Fallback to VARCHAR if enum fails
-                    print(f"Note: Could not add enum column, using VARCHAR: {e}")
-                    conn.execute(text("ALTER TABLE campaign_members ADD COLUMN journal_visibility VARCHAR DEFAULT 'PRIVATE'"))
-            else:
-                # SQLite uses VARCHAR
-                conn.execute(text("ALTER TABLE campaign_members ADD COLUMN journal_visibility VARCHAR DEFAULT 'PRIVATE'"))
-            
+            # Add as VARCHAR with lowercase default for consistency
+            conn.execute(text("ALTER TABLE campaign_members ADD COLUMN journal_visibility VARCHAR(20) DEFAULT 'private'"))
             # Backfill existing members
-            conn.execute(text("UPDATE campaign_members SET journal_visibility = 'PRIVATE' WHERE journal_visibility IS NULL"))
-        
-        # For PostgreSQL, ensure the enum type has all values
-        if is_postgres:
-            try:
-                for enum_name in ['PRIVATE', 'PUBLIC']:
-                    try:
-                        conn.execute(text(f"ALTER TYPE journalvisibility ADD VALUE IF NOT EXISTS '{enum_name}'"))
-                    except Exception:
-                        pass  # Value already exists
-            except Exception as e:
-                print(f"Note: Could not verify/add journalvisibility enum values: {e}")
+            conn.execute(text("UPDATE campaign_members SET journal_visibility = 'private' WHERE journal_visibility IS NULL"))
+        else:
+            # Normalize any existing values to lowercase
+            conn.execute(text("UPDATE campaign_members SET journal_visibility = LOWER(journal_visibility) WHERE journal_visibility IS NOT NULL"))
 
         conn.commit()
 
