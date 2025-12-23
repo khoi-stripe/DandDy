@@ -160,7 +160,10 @@
         customPortraitCount: backendChar.custom_portrait_count,
         portraitMetadata: backendChar.portrait_metadata,
 
-        equipment: backendChar.inventory,
+        // Convert inventory objects to strings (equipment expects string array)
+        equipment: (backendChar.inventory || []).map((item) =>
+          typeof item === 'object' && item.name ? item.name : item,
+        ),
 
         spellcastingAbility: backendChar.spellcasting_ability,
         spellSaveDC: backendChar.spell_save_dc,

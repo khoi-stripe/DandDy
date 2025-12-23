@@ -2869,11 +2869,17 @@ const CampaignUI = (window.CampaignUI = {
         
         try {
             // Fetch the full character data via API
-            const character = await CampaignAPI._apiRequest(`/characters/${characterId}`);
+            const backendCharacter = await CampaignAPI._apiRequest(`/characters/${characterId}`);
             
-            if (!character) {
+            if (!backendCharacter) {
                 throw new Error('Character not found');
             }
+            
+            // Convert from backend snake_case to frontend camelCase format
+            // This ensures portrait fields (ascii_portrait -> asciiPortrait, etc.) are mapped correctly
+            const character = window.DanddyCharacterMapper 
+                ? window.DanddyCharacterMapper.fromBackendToBuilder(backendCharacter)
+                : backendCharacter;
             
             // Render the character sheet in view-only mode
             const sheetHtml = CharacterSheet.render(character, {

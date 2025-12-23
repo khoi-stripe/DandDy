@@ -1111,8 +1111,10 @@
 
 /* Party member sheet modal (view-only) */
 .party-member-sheet-modal {
-    max-width: min(95vw, 600px);
-    max-height: 90vh;
+    max-width: min(90%, 600px);
+    /* Follow same height constraint as other modals: calc(100% - 48px) is base,
+       but we use 85vh like spell edit modal for scrollable content */
+    max-height: min(calc(100% - 48px), 85vh);
     display: flex;
     flex-direction: column;
 }
@@ -1121,6 +1123,7 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
+    flex-shrink: 0;
 }
 
 .party-member-sheet-modal .modal-title {
@@ -1138,16 +1141,31 @@
     border: 1px solid var(--modal-accent-dim);
     border-radius: 3px;
     padding: 2px 6px;
+    flex-shrink: 0;
 }
 
 .party-member-sheet-body {
-    overflow-y: auto;
     flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     padding: var(--spacing-md);
 }
 
+/* Use teal theme for character sheet inside the modal (match manager sheet styling) */
 .party-member-sheet-body .character-sheet {
-    /* Override manager sheet styles for modal context */
+    --context-accent: var(--sheet-accent);
+    --context-accent-dim: var(--sheet-accent-dim);
+    color: var(--sheet-accent);
+}
+
+.party-member-sheet-body .sheet-label,
+.party-member-sheet-body .sheet-value {
+    color: var(--sheet-accent);
+}
+
+.party-member-sheet-body .sheet-section-title {
+    color: var(--sheet-accent);
+    border-color: var(--sheet-border-color);
 }
 
 /* Campaign info (name + description) */
