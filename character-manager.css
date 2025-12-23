@@ -480,9 +480,9 @@
 
 /* ===== CAMPAIGN AREA (TOP SECTION) ===== */
 .campaign-area {
-    border: 1px solid var(--sheet-border-color);
+    border: 1px solid var(--white-border);
     padding: var(--spacing-md);
-    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 5%, 0.5);
+    background: var(--terminal-bg);
     /* Allow overflow menu to escape bounds */
     overflow: visible;
 }
@@ -520,7 +520,7 @@
 
 .campaign-area-title {
     font-size: var(--font-size-md);
-    color: var(--sheet-accent);
+    color: var(--white-fg);
     margin: 0;
     font-weight: var(--font-weight-medium);
     flex-shrink: 0;
@@ -544,78 +544,78 @@
     padding: 4px 6px;
     min-width: 28px;
     height: auto;
-    border-color: var(--sheet-accent-dim);
+    border-color: var(--white-dim);
 }
 
 .campaign-overflow-trigger:hover {
-    border-color: var(--sheet-accent);
-    color: var(--sheet-accent);
-    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
-    box-shadow: 0 0 8px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.3);
+    border-color: var(--white-fg);
+    color: var(--white-fg);
+    background-color: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.1);
+    box-shadow: 0 0 8px hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.3);
 }
 
 .campaign-overflow-trigger.is-open {
-    border-color: var(--sheet-accent);
-    color: var(--sheet-accent);
-    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
+    border-color: var(--white-fg);
+    color: var(--white-fg);
+    background-color: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.15);
 }
 
 .campaign-overflow-trigger .sheet-actions-dot {
-    background-color: var(--sheet-accent-dim);
+    background-color: var(--white-dim);
 }
 
 .campaign-overflow-trigger:hover .sheet-actions-dot,
 .campaign-overflow-trigger.is-open .sheet-actions-dot {
-    background-color: var(--sheet-accent);
+    background-color: var(--white-fg);
 }
 
 .campaign-overflow-menu {
     /* Let JS handle positioning - just override the transform animation */
     min-width: 180px;
     transform: none;
-    background: var(--modal-bg);
+    background: var(--terminal-bg);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    border: 1px solid var(--sheet-accent-dim);
+    border: 1px solid var(--white-border);
 }
 
 .campaign-overflow-menu.is-open {
     transform: none;
 }
 
-/* Teal themed menu options - uses same color-mix approach as terminal-theme.css */
+/* White themed menu options - uses same color-mix approach as terminal-theme.css */
 .campaign-overflow-menu .selector-option {
-    color: var(--sheet-accent);
+    color: var(--white-fg);
 }
 
 .campaign-overflow-menu .selector-option:hover {
-    background-color: color-mix(in srgb, var(--sheet-accent) 20%, transparent);
-    color: var(--sheet-accent);
+    background-color: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.1);
+    color: var(--white-fg);
 }
 
 .campaign-overflow-menu .selector-option-icon {
-    color: var(--sheet-accent);
+    color: var(--white-fg);
 }
 
 .campaign-overflow-menu .selector-option:hover .selector-option-icon {
-    color: var(--sheet-accent);
+    color: var(--white-fg);
 }
 
-/* Override danger to use teal like other options */
+/* Override danger to use white theme like other options */
 .campaign-overflow-menu .selector-option.is-danger {
-    color: var(--sheet-accent);
+    color: var(--white-fg);
 }
 
 .campaign-overflow-menu .selector-option.is-danger:hover {
-    background-color: color-mix(in srgb, var(--sheet-accent) 20%, transparent);
-    color: var(--sheet-accent);
+    background-color: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.1);
+    color: var(--white-fg);
 }
 
 .campaign-overflow-menu .selector-option.is-danger .selector-option-icon {
-    color: var(--sheet-accent);
+    color: var(--white-fg);
 }
 
 .campaign-overflow-menu .selector-option.is-danger:hover .selector-option-icon {
-    color: var(--sheet-accent);
+    color: var(--white-fg);
 }
 
 /* No campaign state */
@@ -630,12 +630,12 @@
 }
 
 .campaign-area-empty-text {
-    color: var(--sheet-accent-dim);
+    color: var(--white-dim);
     font-size: var(--font-size-base);
 }
 
 .campaign-area-empty-text.has-invitations {
-    color: var(--sheet-accent);
+    color: var(--white-fg);
     font-weight: var(--font-weight-normal);
 }
 
@@ -658,7 +658,7 @@
 }
 
 .skeleton-line {
-    background: var(--sheet-accent-dim);
+    background: var(--white-dim);
     border-radius: 2px;
     height: 1em;
 }
@@ -727,19 +727,20 @@
     align-items: center;
     gap: var(--spacing-sm);
     padding: var(--spacing-sm);
-    background: var(--terminal-bg-dark);
+    background: var(--terminal-bg);
+    border: 1px solid var(--white-border);
     border-radius: 4px;
     margin-bottom: var(--spacing-md);
 }
 
 .invite-label {
-    color: var(--sheet-accent-dim);
+    color: var(--white-dim);
     font-size: var(--font-size-small);
 }
 
 .invite-code {
     font-family: var(--font-mono);
-    color: var(--sheet-accent);
+    color: var(--white-fg);
     letter-spacing: var(--tracking-widest);
 }
 
@@ -954,23 +955,23 @@
     margin-bottom: 0;
 }
 
-/* Party section uses sheet-header--collapsible - teal themed */
+/* Party section uses sheet-header--collapsible - white themed */
 .campaign-area-party .sheet-header--collapsible {
-    color: var(--sheet-accent-dim);
-    border-color: var(--sheet-border-color);
+    color: var(--white-dim);
+    border-color: var(--white-border);
 }
 
 .campaign-area-party .sheet-header--collapsible:hover {
-    color: var(--sheet-accent);
-    border-color: var(--sheet-accent-dim);
+    color: var(--white-fg);
+    border-color: var(--white-dim);
 }
 
 .campaign-area-party .sheet-header-toggle {
-    color: var(--sheet-accent-dim);
+    color: var(--white-dim);
 }
 
 .campaign-area-party .sheet-header--collapsible:hover .sheet-header-toggle {
-    color: var(--sheet-accent);
+    color: var(--white-fg);
 }
 
 .party-list {
@@ -1191,7 +1192,7 @@
 .campaign-name {
     font-size: var(--font-size-md);
     font-weight: var(--font-weight-medium);
-    color: var(--sheet-label-color);
+    color: var(--white-fg);
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -1207,11 +1208,11 @@
 
 /* Campaign description */
 .campaign-area-description {
-    color: var(--sheet-accent-dim);
+    color: var(--white-dim);
     font-size: var(--font-size-base);
     line-height: var(--line-height-normal);
     padding: var(--spacing-sm);
-    background: var(--sheet-box-bg);
+    background: var(--terminal-bg);
     border-radius: 4px;
 }
 
@@ -1233,7 +1234,7 @@
     display: none;
     background: none;
     border: none;
-    color: var(--sheet-accent);
+    color: var(--white-fg);
     font-size: var(--font-size-small);
     font-family: var(--font-mono);
     padding: 0;
@@ -1426,7 +1427,7 @@
 
 /* Style for entries from other party members */
 .journal-entry--other {
-    border-left: 2px solid var(--sheet-accent-dim);
+    /* Removed left border for other users' entries */
 }
 
 /* Title - main heading */
@@ -3759,6 +3760,28 @@
     /* Style the actions menu in mobile header */
     .mobile-sheet-title-header .sheet-title-buttons {
         flex-shrink: 0;
+    }
+
+    /* Ensure overflow button in mobile header uses teal theme */
+    .mobile-sheet-title-header .terminal-btn-small {
+        color: var(--sheet-accent);
+        border-color: var(--sheet-accent);
+    }
+
+    .mobile-sheet-title-header .terminal-btn-small:hover:not(:disabled) {
+        background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
+        border-color: var(--sheet-accent);
+        color: var(--sheet-accent);
+        box-shadow: 0 0 10px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.3);
+    }
+
+    .mobile-sheet-title-header .sheet-actions-dot {
+        background-color: var(--sheet-accent-dim);
+    }
+
+    .mobile-sheet-title-header .terminal-btn-small:hover .sheet-actions-dot,
+    .mobile-sheet-title-header .terminal-btn-small.is-open .sheet-actions-dot {
+        background-color: var(--sheet-accent);
     }
 }
 
