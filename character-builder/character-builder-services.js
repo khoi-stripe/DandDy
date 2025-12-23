@@ -185,9 +185,23 @@ const ImageToAsciiService = (window.ImageToAsciiService = {
       }
 
       // Use CORS proxy for Azure blob storage URLs or as fallback
-      const corsProxy = 'https://corsproxy.io/?';
-      const proxiedUrl = corsProxy + encodeURIComponent(url);
-      return await fetchAsBlob(proxiedUrl);
+      // Try multiple proxies in case one is down/blocking
+      const proxies = [
+        (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+        (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+      ];
+      
+      let lastError;
+      for (const makeProxyUrl of proxies) {
+        try {
+          const proxiedUrl = makeProxyUrl(url);
+          return await fetchAsBlob(proxiedUrl);
+        } catch (proxyError) {
+          console.warn('Proxy failed:', proxyError.message);
+          lastError = proxyError;
+        }
+      }
+      throw lastError || new Error('All CORS proxies failed');
     } catch (error) {
       console.error('Error loading image:', error);
       throw new Error(`Image loading failed: ${error.message}`);
