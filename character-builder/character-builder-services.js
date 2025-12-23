@@ -116,39 +116,78 @@ const ImageToAsciiService = (window.ImageToAsciiService = {
     return output;
   },
 
-  // Load image from URL (handles CORS via proxy)
+  // Load image from URL (handles CORS intelligently)
   async loadImage(url) {
-    try {
-      // Use CORS proxy for Azure blob storage URLs (DALL-E images)
-      // Azure doesn't allow CORS from most origins, so we need a proxy
-      const corsProxy = 'https://corsproxy.io/?';
-      const proxiedUrl = corsProxy + encodeURIComponent(url);
+    // Helper to check if URL needs CORS proxy
+    const needsProxy = (imageUrl) => {
+      // Data URLs don't need proxy
+      if (imageUrl.startsWith('data:')) return false;
+      // Same-origin URLs don't need proxy
+      try {
+        const urlObj = new URL(imageUrl, window.location.origin);
+        if (urlObj.origin === window.location.origin) return false;
+      } catch (e) {
+        // If URL parsing fails, assume it needs proxy
+      }
+      // R2 URLs (Cloudflare) have CORS enabled - don't proxy
+      if (imageUrl.includes('.r2.cloudflarestorage.com') || 
+          imageUrl.includes('danddy-portraits.') ||
+          imageUrl.includes('pub-')) return false;
+      // Azure blob storage URLs need proxy (DALL-E temporary URLs)
+      if (imageUrl.includes('blob.core.windows.net') ||
+          imageUrl.includes('oaidalleapiprodscus')) return true;
+      // Default: try without proxy first
+      return false;
+    };
 
-      // Fetch the image as a blob to bypass CORS restrictions
-      const response = await fetch(proxiedUrl);
+    // Helper to fetch and load image as blob
+    const fetchAsBlob = async (fetchUrl) => {
+      const response = await fetch(fetchUrl);
       if (!response.ok) {
         throw new Error(`Failed to fetch image: ${response.status}`);
       }
-
       const blob = await response.blob();
-
-      // Create object URL from blob
       const objectUrl = URL.createObjectURL(blob);
 
-      // Load image from object URL
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
-          // Clean up object URL
           URL.revokeObjectURL(objectUrl);
           resolve(img);
         };
-        img.onerror = (error) => {
+        img.onerror = () => {
           URL.revokeObjectURL(objectUrl);
           reject(new Error('Failed to load image from blob'));
         };
         img.src = objectUrl;
       });
+    };
+
+    try {
+      // For data URLs, load directly without fetch
+      if (url.startsWith('data:')) {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error('Failed to load data URL image'));
+          img.src = url;
+        });
+      }
+
+      // Try direct fetch first if proxy not needed
+      if (!needsProxy(url)) {
+        try {
+          return await fetchAsBlob(url);
+        } catch (directError) {
+          console.warn('Direct fetch failed, trying CORS proxy:', directError.message);
+          // Fall through to proxy attempt
+        }
+      }
+
+      // Use CORS proxy for Azure blob storage URLs or as fallback
+      const corsProxy = 'https://corsproxy.io/?';
+      const proxiedUrl = corsProxy + encodeURIComponent(url);
+      return await fetchAsBlob(proxiedUrl);
     } catch (error) {
       console.error('Error loading image:', error);
       throw new Error(`Image loading failed: ${error.message}`);
