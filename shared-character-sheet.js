@@ -438,6 +438,7 @@ const CharacterSheet = (window.CharacterSheet = {
       ownerEmail = null,  // Email of character owner (for shared characters)
       lastUpdatedByEmail = null,  // Email of user who last updated
       hideOverflowMenu = false,
+      hideHeader = false,  // Hide the entire sheet-title-header (for modals with their own header)
     } = options;
 
     // Parse character data (handle both old and new formats)
@@ -445,7 +446,7 @@ const CharacterSheet = (window.CharacterSheet = {
 
     // Build HTML
     return `
-      ${this._renderHeader(character, parsed, context, {
+      ${hideHeader ? '' : this._renderHeader(character, parsed, context, {
         onPrint,
         onRename,
         onDuplicate,

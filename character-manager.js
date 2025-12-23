@@ -1453,24 +1453,25 @@ const ExpandedView = (window.ExpandedView = {
             const { campaign, members } = campaignData;
             const selectedUserId = CampaignUI._journalFilterUserId;
             
-            // Build member options for filter selector
+            // Build member options for filter selector (sorted alphabetically by character name)
             const memberOptions = members
                 .filter(m => m.character)  // Only members with assigned characters
-                .map(m => {
-                    const isSelected = selectedUserId === m.user_id;
-                    const isSelf = m.user_id === currentUserId;
-                    const label = isSelf ? 'My Entries' : (m.character?.name || m.user_email || 'Unknown');
-                    return `
-                        <button class="selector-option ${isSelected ? 'is-selected' : ''}" 
-                                type="button" 
-                                role="option" 
-                                data-value="${m.user_id}" 
-                                aria-selected="${isSelected ? 'true' : 'false'}" 
-                                onclick="CampaignUI.selectJournalFilter('${m.user_id}', '${Utils.escapeHtml(label).replace(/'/g, "\\'")}')">
-                            <span class="selector-option-label">${Utils.escapeHtml(label)}</span>
-                        </button>
-                    `;
-                })
+                .map(m => ({
+                    userId: m.user_id,
+                    label: m.character?.name || m.user_email || 'Unknown',
+                    isSelected: selectedUserId === m.user_id,
+                }))
+                .sort((a, b) => a.label.localeCompare(b.label))  // Sort alphabetically
+                .map(({ userId, label, isSelected }) => `
+                    <button class="selector-option ${isSelected ? 'is-selected' : ''}" 
+                            type="button" 
+                            role="option" 
+                            data-value="${userId}" 
+                            aria-selected="${isSelected ? 'true' : 'false'}" 
+                            onclick="CampaignUI.selectJournalFilter('${userId}', '${Utils.escapeHtml(label).replace(/'/g, "\\'")}')">
+                        <span class="selector-option-label">${Utils.escapeHtml(label)}</span>
+                    </button>
+                `)
                 .join('');
             
             const allSelected = selectedUserId === null;
@@ -2846,15 +2847,17 @@ const CampaignUI = (window.CampaignUI = {
      * @param {number} characterId - The character ID to view
      */
     async viewPartyMemberSheet(characterId) {
-        // Show loading modal
+        // Remove any existing modal first to ensure fresh state
+        const existingModal = document.getElementById('partyMemberSheetModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Show loading modal with just a cube spinner (no text)
         const loadingModalHtml = `
             <div id="partyMemberSheetModal" class="modal">
-                <div class="modal-content party-member-sheet-modal">
-                    <div class="modal-header">
-                        <h2 class="modal-title">Loading...</h2>
-                        <button class="modal-close" onclick="CampaignUI.closePartyMemberSheetModal()">&times;</button>
-                    </div>
-                    <div class="modal-body">
+                <div class="modal-content party-member-sheet-modal party-member-sheet-modal--loading">
+                    <div class="modal-body party-member-sheet-loading">
                         <div class="panel-loading-cube-container">
                             <div class="panel-loading-cube">
                                 <i></i><i></i><i></i><i></i><i></i><i></i>
@@ -2890,12 +2893,13 @@ const CampaignUI = (window.CampaignUI = {
                 onEdit: false,
                 onDelete: false,
                 onGeneratePortrait: false,
-                onPrint: true,  // Allow printing
+                onPrint: false,
                 onShare: false,
                 onLeave: false,
                 isShared: false,
                 hasCollaborators: false,
-                hideOverflowMenu: true,  // Hide the overflow menu entirely
+                hideOverflowMenu: true,
+                hideHeader: true,  // Modal has its own header with character name
             });
             
             // Update modal with character sheet

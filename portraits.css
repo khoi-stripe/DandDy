@@ -35,12 +35,13 @@
 
 /* Hide image while loading to prevent teal background flash when switching characters.
    The image fades in first, then the background follows.
-   Position absolute to fill the fixed-size container without affecting layout. */
+   Position absolute to fill the fixed-size container without affecting layout.
+   Use negative inset to prevent subpixel gaps at edges from showing teal background. */
 .portrait-container--original-mode .original-portrait {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: -1px;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
   object-fit: cover;
   object-position: top center;
   mix-blend-mode: multiply;

@@ -189,14 +189,6 @@
     background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.08);
 }
 
-.expand-loading-overlay .panel-loading-text {
-    color: var(--sheet-accent-dim);
-    font-family: var(--font-mono);
-    font-size: var(--font-size-sm);
-    letter-spacing: var(--tracking-wider);
-    text-transform: uppercase;
-}
-
 /* Hidden state for transitions */
 .campaign-panel-slot.is-hidden {
     display: none;
@@ -1128,6 +1120,8 @@
 
 .party-member-sheet-modal .modal-title {
     flex: 1;
+    font-size: 18px;
+    font-weight: 500;
 }
 
 .party-sheet-badge {
@@ -1151,21 +1145,42 @@
     padding: var(--spacing-md);
 }
 
-/* Use teal theme for character sheet inside the modal (match manager sheet styling) */
+/* Use yellow/modal theme for character sheet inside the view modal */
 .party-member-sheet-body .character-sheet {
-    --context-accent: var(--sheet-accent);
-    --context-accent-dim: var(--sheet-accent-dim);
-    color: var(--sheet-accent);
+    --context-accent: var(--modal-accent);
+    --context-accent-dim: var(--modal-accent-dim);
+    --sheet-accent: var(--modal-accent);
+    --sheet-accent-dim: var(--modal-accent-dim);
+    --sheet-accent-bright: var(--modal-accent);
+    --sheet-label-color: var(--modal-accent);
+    --sheet-value-color: var(--modal-accent);
+    --sheet-border-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5);
+    --sheet-box-bg: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.15);
+    --sheet-ability-box-bg: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.15);
+    --sheet-box-border-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.4);
+    color: var(--modal-accent);
 }
 
-.party-member-sheet-body .sheet-label,
-.party-member-sheet-body .sheet-value {
-    color: var(--sheet-accent);
+/* Portrait area yellow theme - brighter background for multiply blend */
+.party-member-sheet-body .portrait-container--original-mode:has(.original-portrait.is-loaded) {
+    background: hsl(var(--theme-yellow-h), 50%, 45%);
 }
 
-.party-member-sheet-body .sheet-section-title {
-    color: var(--sheet-accent);
-    border-color: var(--sheet-border-color);
+.party-member-sheet-body .ascii-portrait {
+    color: var(--modal-accent);
+}
+
+/* Loading state for party member sheet modal */
+.party-member-sheet-modal--loading {
+    min-width: 200px;
+    min-height: 200px;
+}
+
+.party-member-sheet-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
 }
 
 /* Campaign info (name + description) */
@@ -3714,6 +3729,7 @@
         min-width: 0;
         font-family: var(--font-mono);
         font-size: var(--font-size-base);
+        font-weight: 500;
         color: var(--sheet-accent);
         white-space: nowrap;
         overflow: hidden;
