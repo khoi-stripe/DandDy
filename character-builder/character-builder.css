@@ -15,6 +15,14 @@
   display: none;
 }
 
+/* Builder variant: removes side padding from sheet title name */
+.sheet-title-name--flush {
+  padding-left: 0;
+  padding-right: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
 /* Remove right border from left panel in builder */
 .left-panel {
   border-right: none;
