@@ -2,7 +2,8 @@ from .user import UserCreate, UserLogin, UserResponse, Token, TokenData
 from .character import CharacterCreate, CharacterUpdate, CharacterResponse
 from .campaign import (
     CampaignCreate, CampaignUpdate, CampaignResponse, CampaignWithCharacters,
-    CampaignMemberCreate, CampaignMemberResponse, CampaignJoin, CampaignJoinResponse
+    CampaignMemberCreate, CampaignMemberResponse, CampaignMemberVisibilityUpdate,
+    CampaignJoin, CampaignJoinResponse
 )
 from .session import (
     SessionStart, SessionEnd, SessionResponse, 
@@ -21,7 +22,8 @@ __all__ = [
     "UserCreate", "UserLogin", "UserResponse", "Token", "TokenData",
     "CharacterCreate", "CharacterUpdate", "CharacterResponse",
     "CampaignCreate", "CampaignUpdate", "CampaignResponse", "CampaignWithCharacters",
-    "CampaignMemberCreate", "CampaignMemberResponse", "CampaignJoin", "CampaignJoinResponse",
+    "CampaignMemberCreate", "CampaignMemberResponse", "CampaignMemberVisibilityUpdate",
+    "CampaignJoin", "CampaignJoinResponse",
     "SessionStart", "SessionEnd", "SessionResponse",
     "SessionLogCreate", "SessionLogResponse", "SessionWithLog",
     "PromptEntryCreate", "PromptEntryUpdate", "PromptEntryResponse", "PromptEntryBulkCreate",

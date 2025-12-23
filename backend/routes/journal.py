@@ -1,10 +1,12 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import or_
 from database.database import get_db
 from models.user import User
 from models.character import Character
 from models.campaign import Campaign
+from models.campaign_member import CampaignMember, MemberStatus, JournalVisibility
 from models.journal import JournalEntry, CharacterUpdate
 from schemas.journal import (
     JournalEntryCreate, JournalEntryUpdate, JournalEntryResponse,
@@ -116,7 +118,6 @@ def get_character_journal_entries(
     is_campaign_member = False
     
     if character.campaign_id:
-        from models.campaign_member import CampaignMember, MemberStatus
         is_campaign_member = db.query(CampaignMember).filter(
             CampaignMember.campaign_id == character.campaign_id,
             CampaignMember.user_id == current_user.id,
@@ -134,6 +135,130 @@ def get_character_journal_entries(
     ).order_by(JournalEntry.entry_date.desc(), JournalEntry.created_at.desc()).limit(limit).all()
     
     return entries
+
+
+@router.get("/campaign/{campaign_id}", response_model=List[JournalEntryResponse])
+def get_campaign_journal_entries(
+    campaign_id: int,
+    user_id: Optional[int] = Query(default=None, description="Filter by user ID"),
+    limit: int = Query(default=50, le=200),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get journal entries for a campaign with visibility filtering.
+    
+    - If no user_id filter: returns all public entries from party + all your own entries
+    - If user_id filter: returns public entries from that user only (or all if filtering yourself)
+    """
+    # Verify campaign exists and user is a member
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    
+    if not campaign:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Campaign not found"
+        )
+    
+    # Check if user is a member
+    my_membership = db.query(CampaignMember).filter(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.user_id == current_user.id,
+        CampaignMember.status == MemberStatus.ACTIVE
+    ).first()
+    
+    if not my_membership and campaign.dm_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this campaign's journal entries"
+        )
+    
+    # Get all memberships with their visibility settings
+    memberships = db.query(CampaignMember).filter(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.status == MemberStatus.ACTIVE,
+        CampaignMember.character_id.isnot(None)  # Only members with assigned characters
+    ).all()
+    
+    # Build visibility mapping: character_id -> (user_id, is_public)
+    visibility_map = {
+        m.character_id: (m.user_id, m.journal_visibility == JournalVisibility.PUBLIC)
+        for m in memberships
+    }
+    
+    # Build query based on filters
+    if user_id is not None:
+        # Filtering by specific user
+        if user_id == current_user.id:
+            # Filtering by self - show all own entries
+            entries_query = db.query(JournalEntry).filter(
+                JournalEntry.campaign_id == campaign_id,
+                JournalEntry.user_id == current_user.id
+            )
+        else:
+            # Filtering by other user - show only their public entries
+            public_char_ids = [
+                char_id for char_id, (uid, is_public) in visibility_map.items()
+                if uid == user_id and is_public
+            ]
+            if not public_char_ids:
+                return []  # No public entries from this user
+            
+            entries_query = db.query(JournalEntry).filter(
+                JournalEntry.campaign_id == campaign_id,
+                JournalEntry.character_id.in_(public_char_ids)
+            )
+    else:
+        # No filter - show all public entries + own entries
+        public_char_ids = [
+            char_id for char_id, (uid, is_public) in visibility_map.items()
+            if is_public and uid != current_user.id
+        ]
+        
+        # Own character IDs (all entries visible)
+        own_char_ids = [
+            char_id for char_id, (uid, _) in visibility_map.items()
+            if uid == current_user.id
+        ]
+        
+        all_visible_char_ids = public_char_ids + own_char_ids
+        
+        if not all_visible_char_ids:
+            return []
+        
+        entries_query = db.query(JournalEntry).filter(
+            JournalEntry.campaign_id == campaign_id,
+            JournalEntry.character_id.in_(all_visible_char_ids)
+        )
+    
+    # Execute query with eager loading
+    entries = entries_query.options(
+        joinedload(JournalEntry.character),
+        joinedload(JournalEntry.user),
+        joinedload(JournalEntry.character_update)
+    ).order_by(
+        JournalEntry.entry_date.desc(),
+        JournalEntry.created_at.desc()
+    ).limit(limit).all()
+    
+    # Build response with character_name and user_email
+    return [
+        JournalEntryResponse(
+            id=e.id,
+            character_id=e.character_id,
+            campaign_id=e.campaign_id,
+            user_id=e.user_id,
+            title=e.title,
+            content=e.content,
+            entry_date=e.entry_date,
+            created_at=e.created_at,
+            updated_at=e.updated_at,
+            character_update=e.character_update,
+            character_name=e.character.name if e.character else None,
+            user_email=e.user.email if e.user else None
+        )
+        for e in entries
+    ]
 
 
 @router.get("/{entry_id}", response_model=JournalEntryResponse)
@@ -156,7 +281,6 @@ def get_journal_entry(
     is_campaign_member = False
     
     if entry.campaign_id:
-        from models.campaign_member import CampaignMember, MemberStatus
         is_campaign_member = db.query(CampaignMember).filter(
             CampaignMember.campaign_id == entry.campaign_id,
             CampaignMember.user_id == current_user.id,

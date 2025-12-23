@@ -12,6 +12,11 @@ class MemberStatus(enum.Enum):
     LEFT = "left"
 
 
+class JournalVisibility(enum.Enum):
+    PRIVATE = "private"  # Only owner can see their journal entries
+    PUBLIC = "public"    # All party members can see journal entries
+
+
 class CampaignMember(Base):
     """
     Links users to campaigns. Users can join campaigns without a character,
@@ -37,6 +42,9 @@ class CampaignMember(Base):
     
     status = Column(Enum(MemberStatus), default=MemberStatus.ACTIVE, nullable=False)
     joined_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Journal visibility - controls whether party members can see this character's journal entries
+    journal_visibility = Column(Enum(JournalVisibility), default=JournalVisibility.PRIVATE, nullable=False)
     
     # Relationships
     campaign = relationship("Campaign", back_populates="members")

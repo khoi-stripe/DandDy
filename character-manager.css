@@ -1165,6 +1165,19 @@
     padding: 16px 0 var(--spacing-md) 0;
     border-bottom: 1px solid var(--sheet-border-color);
     flex-shrink: 0;
+    gap: var(--spacing-sm);
+}
+
+.journal-header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.journal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
 }
 
 .journal-add-link {
@@ -1186,9 +1199,65 @@
     font-weight: var(--font-weight-medium);
 }
 
+/* Journal filter selector (uses custom selector component) */
+.journal-filter {
+    min-width: 80px;
+}
+
+.journal-filter-trigger {
+    font-size: var(--font-size-sm);
+    padding: 4px 8px;
+    min-height: 28px;
+}
+
+.journal-filter .selector-menu {
+    min-width: 140px;
+    max-width: 200px;
+}
+
+.journal-filter .selector-caret {
+    font-size: 8px;
+}
+
+/* Journal settings button */
+.journal-settings-btn {
+    color: var(--sheet-accent-dim);
+    font-size: var(--font-size-base);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color var(--transition-speed);
+}
+
+.journal-settings-btn:hover {
+    color: var(--sheet-accent);
+}
+
 @media (max-width: 768px) {
     .journal-title {
         font-size: var(--font-size-base);
+    }
+    
+    .journal-header-left {
+        gap: var(--spacing-xs);
+    }
+    
+    .journal-filter-trigger {
+        font-size: var(--font-size-xs);
+        padding: 3px 6px;
+        min-height: 24px;
+    }
+    
+    .journal-filter {
+        min-width: 60px;
+    }
+    
+    .journal-settings-btn {
+        width: 24px;
+        height: 24px;
+        font-size: var(--font-size-sm);
     }
 }
 
@@ -1235,6 +1304,23 @@
     font-weight: var(--font-weight-normal);
     text-transform: uppercase;
     letter-spacing: var(--tracking-wider);
+}
+
+/* Author name for entries from other party members */
+.journal-entry-author {
+    color: var(--sheet-accent-dim);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-normal);
+    margin-left: var(--spacing-xs);
+}
+
+.journal-entry-author::before {
+    content: "• ";
+}
+
+/* Style for entries from other party members */
+.journal-entry--other {
+    border-left: 2px solid var(--sheet-accent-dim);
 }
 
 /* Title - main heading */
@@ -2259,6 +2345,96 @@
 /* Narrow modal variant for simple forms */
 .modal-content--narrow {
     max-width: 480px;
+}
+
+/* Small modal variant for settings/simple dialogs */
+.modal-content-sm {
+    max-width: 400px;
+}
+
+/* Toggle switch for settings */
+.settings-toggle-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    cursor: pointer;
+}
+
+.settings-toggle-label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    flex: 1;
+}
+
+.settings-toggle-title {
+    color: var(--modal-text);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+}
+
+.settings-toggle-description {
+    color: var(--modal-text-dim);
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--modal-bg-dark);
+    border: 1px solid var(--modal-accent-dim);
+    border-radius: 24px;
+    transition: all var(--transition-speed);
+}
+
+.toggle-slider::before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: var(--modal-accent-dim);
+    border-radius: 50%;
+    transition: all var(--transition-speed);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-dim), 0.3);
+    border-color: var(--modal-accent);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+    background-color: var(--modal-accent);
+}
+
+.toggle-switch input:focus + .toggle-slider {
+    box-shadow: 0 0 0 2px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l), 0.2);
+}
+
+/* Journal visibility setting container */
+.journal-visibility-setting {
+    padding: var(--spacing-sm) 0;
 }
 
 /* Code input styling (for invite codes) */

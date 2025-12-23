@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime
 from .character import CharacterResponse
 
@@ -66,10 +66,16 @@ class CampaignMemberResponse(CampaignMemberBase):
     is_creator: bool
     status: str
     joined_at: datetime
+    journal_visibility: str = "private"  # "private" or "public"
     character: Optional[CampaignMemberCharacterInfo] = None
     
     class Config:
         from_attributes = True
+
+
+class CampaignMemberVisibilityUpdate(BaseModel):
+    """Update journal visibility setting for a campaign membership"""
+    visibility: Literal["private", "public"]
 
 
 # Join campaign via invite code

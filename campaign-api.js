@@ -615,6 +615,46 @@ const CampaignAPI = (window.CampaignAPI = {
       throw error;
     }
   },
+
+  /**
+   * Get campaign-wide journal entries with visibility filtering
+   * @param {number} campaignId
+   * @param {number|null} userId - Optional filter by user ID
+   * @param {number} limit - Max entries to return
+   * @returns {Promise<Array>} List of journal entries with character_name and user_email
+   */
+  async getCampaignJournalEntries(campaignId, userId = null, limit = 50) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('📖 JOURNAL: Fetching campaign entries for', campaignId, 'user filter:', userId);
+      let url = `/journal/campaign/${campaignId}?limit=${limit}`;
+      if (userId !== null) {
+        url += `&user_id=${userId}`;
+      }
+      return await this._apiRequest(url);
+    } catch (error) {
+      console.error('📖 JOURNAL ERROR: Failed to fetch campaign entries:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Update journal visibility setting for your campaign membership
+   * @param {number} campaignId
+   * @param {string} visibility - "private" or "public"
+   * @returns {Promise<Object>} Updated membership
+   */
+  async updateJournalVisibility(campaignId, visibility) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('📖 JOURNAL: Updating visibility for campaign', campaignId, 'to', visibility);
+      return await this._apiRequest(`/campaigns/${campaignId}/members/journal-visibility`, {
+        method: 'PUT',
+        body: JSON.stringify({ visibility }),
+      });
+    } catch (error) {
+      console.error('📖 JOURNAL ERROR: Failed to update visibility:', error);
+      throw error;
+    }
+  },
 });
 
 if (DEBUG_CAMPAIGN) {

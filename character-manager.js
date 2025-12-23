@@ -1139,7 +1139,11 @@ const ExpandedView = (window.ExpandedView = {
                     campaign: campaignDataFromMembership.campaign,
                     members: campaignDataFromMembership.members
                 };
-                journalEntries = await CampaignAPI.getJournalEntries(characterId).catch(e => {
+                // Use campaign-wide journal endpoint with filter
+                journalEntries = await CampaignAPI.getCampaignJournalEntries(
+                    campaignId, 
+                    CampaignUI._journalFilterUserId
+                ).catch(e => {
                     console.warn('Could not fetch journal entries:', e);
                     return [];
                 });
@@ -1148,7 +1152,7 @@ const ExpandedView = (window.ExpandedView = {
                 const [campaign, members, entries] = await Promise.all([
                     CampaignAPI.getCampaign(campaignId),
                     CampaignAPI.getCampaignMembers(campaignId),
-                    CampaignAPI.getJournalEntries(characterId).catch(e => {
+                    CampaignAPI.getCampaignJournalEntries(campaignId, CampaignUI._journalFilterUserId).catch(e => {
                         console.warn('Could not fetch journal entries:', e);
                         return [];
                     })
@@ -1171,7 +1175,7 @@ const ExpandedView = (window.ExpandedView = {
     _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0, journalEntries = []) {
         return `
             ${this._renderCampaignArea(campaignData, pendingInvitationCount)}
-            ${this._renderJournalSection(characterId, journalEntries)}
+            ${this._renderJournalSection(characterId, journalEntries, campaignData)}
         `;
     },
 
@@ -1390,12 +1394,22 @@ const ExpandedView = (window.ExpandedView = {
     },
 
     /** Render the Journal section (bottom) */
-    _renderJournalSection(characterId, entries = []) {
+    _renderJournalSection(characterId, entries = [], campaignData = null) {
+        const currentUserId = window.AuthService?.getCurrentUser()?.id;
+        
+        // Build entries HTML - show character name for entries from other users
         const entriesHtml = entries.length > 0
-            ? entries.map(entry => `
-                <div class="journal-entry" data-entry-id="${entry.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">
+            ? entries.map(entry => {
+                const isOwnEntry = entry.user_id === currentUserId;
+                const authorInfo = !isOwnEntry && entry.character_name 
+                    ? `<span class="journal-entry-author">${Utils.escapeHtml(entry.character_name)}</span>` 
+                    : '';
+                
+                return `
+                <div class="journal-entry ${!isOwnEntry ? 'journal-entry--other' : ''}" data-entry-id="${entry.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">
                     <div class="journal-entry-header">
                         <span class="journal-entry-date">${this._formatDate(entry.entry_date)}</span>
+                        ${authorInfo}
                         <span class="journal-entry-title">${entry.title || 'Untitled'}</span>
                     </div>
                     <div class="journal-entry-preview">
@@ -1404,6 +1418,7 @@ const ExpandedView = (window.ExpandedView = {
                     <div class="journal-entry-full">
                         ${Utils.escapeHtml(entry.content || '').replace(/\n/g, '<br>')}
                     </div>
+                    ${isOwnEntry ? `
                     <div class="journal-entry-actions">
                         <button class="journal-entry-edit terminal-btn-icon" onclick="CampaignUI.editJournalEntry(${entry.id})" title="Edit entry">
                             ✎
@@ -1412,8 +1427,9 @@ const ExpandedView = (window.ExpandedView = {
                             ×
                         </button>
                     </div>
+                    ` : ''}
                 </div>
-            `).join('')
+            `}).join('')
             : `
                 <div class="journal-empty">
                     <div class="journal-empty-text">No journal entries yet</div>
@@ -1421,10 +1437,77 @@ const ExpandedView = (window.ExpandedView = {
                 </div>
             `;
 
+        // Build filter selector and settings if in a campaign
+        let filterHtml = '';
+        let settingsHtml = '';
+        
+        if (campaignData && campaignData.campaign && campaignData.members) {
+            const { campaign, members } = campaignData;
+            const selectedUserId = CampaignUI._journalFilterUserId;
+            
+            // Build member options for filter selector
+            const memberOptions = members
+                .filter(m => m.character)  // Only members with assigned characters
+                .map(m => {
+                    const isSelected = selectedUserId === m.user_id;
+                    const isSelf = m.user_id === currentUserId;
+                    const label = isSelf ? 'My Entries' : (m.character?.name || m.user_email || 'Unknown');
+                    return `
+                        <button class="selector-option ${isSelected ? 'is-selected' : ''}" 
+                                type="button" 
+                                role="option" 
+                                data-value="${m.user_id}" 
+                                aria-selected="${isSelected ? 'true' : 'false'}" 
+                                onclick="CampaignUI.selectJournalFilter('${m.user_id}', '${Utils.escapeHtml(label).replace(/'/g, "\\'")}')">
+                            <span class="selector-option-label">${Utils.escapeHtml(label)}</span>
+                        </button>
+                    `;
+                })
+                .join('');
+            
+            const allSelected = selectedUserId === null;
+            const currentLabel = allSelected ? 'All' : members.find(m => m.user_id === selectedUserId)?.character?.name || 'All';
+            
+            filterHtml = `
+                <div class="journal-filter selector-shell selector-shell--listbox">
+                    <button class="terminal-btn-small selector-trigger journal-filter-trigger" 
+                            type="button" 
+                            id="journalFilter-trigger"
+                            aria-haspopup="listbox" 
+                            aria-expanded="false" 
+                            onclick="CharacterSheet.toggleSelectorMenu(this)">
+                        <span class="selector-trigger-label" id="journalFilter-label">${Utils.escapeHtml(currentLabel)}</span>
+                        <span class="selector-caret">▼</span>
+                    </button>
+                    <div class="selector-menu" role="listbox" aria-label="Filter journal entries">
+                        <button class="selector-option ${allSelected ? 'is-selected' : ''}" 
+                                type="button" 
+                                role="option" 
+                                data-value="all" 
+                                aria-selected="${allSelected ? 'true' : 'false'}" 
+                                onclick="CampaignUI.selectJournalFilter('all', 'All')">
+                            <span class="selector-option-label">All</span>
+                        </button>
+                        ${memberOptions}
+                    </div>
+                </div>
+            `;
+            
+            settingsHtml = `
+                <button class="journal-settings-btn terminal-btn-icon" onclick="CampaignUI.openJournalSettingsModal()" title="Journal settings">
+                    ⚙
+                </button>
+            `;
+        }
+
         return `
-            <div class="journal-section">
+            <div class="journal-section" data-campaign-id="${campaignData?.campaign?.id || ''}">
                 <div class="journal-header">
-                    <h3 class="journal-title">[ Journal ]</h3>
+                    <div class="journal-header-left">
+                        <h3 class="journal-title">[ Journal ]</h3>
+                        ${filterHtml}
+                        ${settingsHtml}
+                    </div>
                     <a href="#" class="journal-add-link" onclick="CampaignUI.openJournalEntryModal(); return false;">
                         + Add Entry
                     </a>
@@ -2461,6 +2544,199 @@ const CampaignUI = (window.CampaignUI = {
                 console.error('Failed to copy:', err);
             });
         }
+    },
+
+    // ========================================
+    // JOURNAL VISIBILITY & FILTER
+    // ========================================
+    
+    // Current journal filter: null = "All", or user_id for specific user
+    _journalFilterUserId: null,
+    
+    // Cached campaign ID for current character (used for journal settings)
+    _currentCampaignId: null,
+    
+    // Current user's journal visibility setting
+    _currentJournalVisibility: 'private',
+
+    /** Open journal settings modal */
+    async openJournalSettingsModal() {
+        const modal = document.getElementById('journalSettingsModal');
+        if (!modal) return;
+        
+        // Get current campaign ID from the journal section
+        const journalSection = document.querySelector('.journal-section');
+        const campaignId = journalSection?.dataset?.campaignId;
+        
+        if (!campaignId) {
+            console.warn('No campaign ID found for journal settings');
+            return;
+        }
+        
+        this._currentCampaignId = parseInt(campaignId, 10);
+        
+        // Fetch current visibility setting
+        try {
+            const members = await CampaignAPI.getCampaignMembers(this._currentCampaignId);
+            const currentUserId = window.AuthService?.getCurrentUser()?.id;
+            const myMembership = members.find(m => m.user_id === currentUserId);
+            
+            if (myMembership) {
+                this._currentJournalVisibility = myMembership.journal_visibility || 'private';
+                const toggle = document.getElementById('journalVisibilityToggle');
+                if (toggle) {
+                    toggle.checked = this._currentJournalVisibility === 'public';
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch journal visibility:', error);
+        }
+        
+        modal.classList.add('show');
+    },
+
+    /** Close journal settings modal */
+    closeJournalSettingsModal() {
+        const modal = document.getElementById('journalSettingsModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+    },
+
+    /** Toggle journal visibility (called from checkbox) */
+    async toggleJournalVisibility(isPublic) {
+        if (!this._currentCampaignId) {
+            console.warn('No campaign ID for visibility toggle');
+            return;
+        }
+        
+        const newVisibility = isPublic ? 'public' : 'private';
+        
+        try {
+            await CampaignAPI.updateJournalVisibility(this._currentCampaignId, newVisibility);
+            this._currentJournalVisibility = newVisibility;
+            
+            const message = isPublic 
+                ? '✓ Journal now shared with party' 
+                : '✓ Journal now private';
+            showNotification(message);
+        } catch (error) {
+            console.error('Failed to update journal visibility:', error);
+            showAlertDialog(error.message || 'Failed to update visibility setting.');
+            
+            // Revert toggle on error
+            const toggle = document.getElementById('journalVisibilityToggle');
+            if (toggle) {
+                toggle.checked = !isPublic;
+            }
+        }
+    },
+
+    /** Handle journal filter selection from custom selector */
+    selectJournalFilter(value, label) {
+        // Update the trigger label
+        const labelEl = document.getElementById('journalFilter-label');
+        if (labelEl) {
+            labelEl.textContent = label;
+        }
+        
+        // Update selected state in menu options
+        const trigger = document.getElementById('journalFilter-trigger');
+        if (trigger) {
+            const shell = trigger.closest('.selector-shell');
+            if (shell) {
+                const options = shell.querySelectorAll('.selector-option');
+                options.forEach(opt => {
+                    const isSelected = opt.getAttribute('data-value') === value;
+                    opt.classList.toggle('is-selected', isSelected);
+                    opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+                });
+            }
+            // Close the menu
+            CharacterSheet.closeSelectorMenu(trigger);
+        }
+        
+        // Apply the filter
+        this.setJournalFilter(value);
+    },
+
+    /** Set journal filter and refresh entries */
+    async setJournalFilter(value) {
+        // Parse filter value
+        this._journalFilterUserId = value === 'all' ? null : parseInt(value, 10);
+        
+        // Get campaign ID from the journal section
+        const journalSection = document.querySelector('.journal-section');
+        const campaignId = journalSection?.dataset?.campaignId;
+        
+        if (!campaignId) {
+            console.warn('No campaign ID for journal filter');
+            return;
+        }
+        
+        // Fetch filtered journal entries
+        try {
+            const entries = await CampaignAPI.getCampaignJournalEntries(
+                parseInt(campaignId, 10),
+                this._journalFilterUserId
+            );
+            
+            // Re-render the journal entries
+            this._updateJournalEntries(entries);
+        } catch (error) {
+            console.error('Failed to fetch filtered journal entries:', error);
+        }
+    },
+
+    /** Update journal entries without full panel reload */
+    _updateJournalEntries(entries) {
+        const entriesContainer = document.querySelector('.journal-entries');
+        if (!entriesContainer) return;
+        
+        const currentUserId = window.AuthService?.getCurrentUser()?.id;
+        
+        if (entries.length === 0) {
+            entriesContainer.innerHTML = `
+                <div class="journal-empty">
+                    <div class="journal-empty-text">No journal entries yet</div>
+                    <div class="journal-empty-hint">Record your adventures!</div>
+                </div>
+            `;
+            return;
+        }
+        
+        entriesContainer.innerHTML = entries.map(entry => {
+            const isOwnEntry = entry.user_id === currentUserId;
+            const authorInfo = !isOwnEntry && entry.character_name 
+                ? `<span class="journal-entry-author">${Utils.escapeHtml(entry.character_name)}</span>` 
+                : '';
+            
+            return `
+                <div class="journal-entry ${!isOwnEntry ? 'journal-entry--other' : ''}" data-entry-id="${entry.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">
+                    <div class="journal-entry-header">
+                        <span class="journal-entry-date">${ExpandedView._formatDate(entry.entry_date)}</span>
+                        ${authorInfo}
+                        <span class="journal-entry-title">${entry.title || 'Untitled'}</span>
+                    </div>
+                    <div class="journal-entry-preview">
+                        ${ExpandedView._truncateText(entry.content, 100)}
+                    </div>
+                    <div class="journal-entry-full">
+                        ${Utils.escapeHtml(entry.content || '').replace(/\n/g, '<br>')}
+                    </div>
+                    ${isOwnEntry ? `
+                    <div class="journal-entry-actions">
+                        <button class="journal-entry-edit terminal-btn-icon" onclick="CampaignUI.editJournalEntry(${entry.id})" title="Edit entry">
+                            ✎
+                        </button>
+                        <button class="journal-entry-delete terminal-btn-icon" onclick="CampaignUI.deleteJournalEntry(${entry.id})" title="Delete entry">
+                            ×
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
     }
 });
 
@@ -2868,9 +3144,14 @@ const MobileView = {
                 campaignData = await CampaignUI.getCharacterCampaign(characterId).catch(() => null);
             }
             
-            // Fetch journal entries
+            // Fetch journal entries (use campaign-wide endpoint when in a campaign)
             let journalEntries = [];
-            if (typeof CampaignAPI !== 'undefined') {
+            if (typeof CampaignAPI !== 'undefined' && campaignId) {
+                journalEntries = await CampaignAPI.getCampaignJournalEntries(
+                    campaignId, 
+                    CampaignUI._journalFilterUserId
+                ).catch(() => []);
+            } else if (typeof CampaignAPI !== 'undefined') {
                 journalEntries = await CampaignAPI.getJournalEntries(characterId).catch(() => []);
             }
             
@@ -3014,10 +3295,13 @@ const MobileView = {
                 return;
             }
             
-            // Fetch journal entries
-            if (typeof CampaignAPI !== 'undefined') {
+            // Fetch journal entries (use campaign-wide endpoint for party visibility)
+            if (typeof CampaignAPI !== 'undefined' && campaignId) {
                 try {
-                    journalEntries = await CampaignAPI.getJournalEntries(characterId);
+                    journalEntries = await CampaignAPI.getCampaignJournalEntries(
+                        campaignId, 
+                        CampaignUI._journalFilterUserId
+                    );
                 } catch (e) {
                     console.warn('Could not fetch journal entries:', e);
                 }

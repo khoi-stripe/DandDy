@@ -57,6 +57,9 @@ class JournalEntryResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     character_update: Optional[CharacterUpdateResponse] = None
+    # Optional fields for party view (populated when viewing campaign-wide entries)
+    character_name: Optional[str] = None
+    user_email: Optional[str] = None
     
     class Config:
         from_attributes = True

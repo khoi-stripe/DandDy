@@ -605,6 +605,38 @@
         </div>
     </div>
 
+    <!-- Journal Settings Modal -->
+    <div id="journalSettingsModal" class="modal">
+        <div class="modal-content modal-content-sm">
+            <div class="modal-header">
+                <h2 class="modal-title">Journal Settings</h2>
+                <button class="modal-close" onclick="CampaignUI.closeJournalSettingsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-group">
+                    <div class="settings-group-label">[ Visibility ]</div>
+                    <section class="settings-section">
+                        <div class="journal-visibility-setting">
+                            <label class="settings-toggle-row">
+                                <span class="settings-toggle-label">
+                                    <span class="settings-toggle-title">Share journal with party</span>
+                                    <span class="settings-toggle-description">When enabled, your journal entries will be visible to all party members in this campaign.</span>
+                                </span>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="journalVisibilityToggle" onchange="CampaignUI.toggleJournalVisibility(this.checked)">
+                                    <span class="toggle-slider"></span>
+                                </div>
+                            </label>
+                        </div>
+                    </section>
+                </div>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.closeJournalSettingsModal()">Done</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Edit Details Modal -->
     <div id="editDetailsModal" class="modal">
         <div class="modal-content">

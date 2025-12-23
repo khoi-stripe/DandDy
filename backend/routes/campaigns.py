@@ -4,12 +4,12 @@ from sqlalchemy.orm import Session, joinedload
 from database.database import get_db
 from models.user import User
 from models.campaign import Campaign, CampaignStatus, generate_invite_code
-from models.campaign_member import CampaignMember, MemberStatus
+from models.campaign_member import CampaignMember, MemberStatus, JournalVisibility
 from models.character import Character
 from models.character_collaborator import CharacterCollaborator, CollaboratorPermission
 from schemas.campaign import (
     CampaignCreate, CampaignUpdate, CampaignResponse, CampaignWithCharacters,
-    CampaignMemberResponse, CampaignJoin, CampaignJoinResponse,
+    CampaignMemberResponse, CampaignMemberVisibilityUpdate, CampaignJoin, CampaignJoinResponse,
     CampaignInviteByEmail, CampaignInvitationResponse, AcceptInvitation,
     CampaignPendingInviteResponse
 )
@@ -382,7 +382,7 @@ def get_campaign_members(
         CampaignMember.status == MemberStatus.ACTIVE
     ).all()
     
-    # Build response with user email
+    # Build response with user email and journal visibility
     return [
         CampaignMemberResponse(
             id=m.id,
@@ -392,11 +392,56 @@ def get_campaign_members(
             is_creator=m.is_creator,
             status=m.status.value,
             joined_at=m.joined_at,
+            journal_visibility=m.journal_visibility.value if m.journal_visibility else "private",
             character_id=m.character_id,
             character=m.character
         )
         for m in members
     ]
+
+
+@router.put("/{campaign_id}/members/journal-visibility", response_model=CampaignMemberResponse)
+def update_journal_visibility(
+    campaign_id: int,
+    visibility_data: CampaignMemberVisibilityUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Update journal visibility setting for your campaign membership."""
+    # Find membership
+    membership = db.query(CampaignMember).options(
+        joinedload(CampaignMember.character),
+        joinedload(CampaignMember.user)
+    ).filter(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.user_id == current_user.id,
+        CampaignMember.status == MemberStatus.ACTIVE
+    ).first()
+    
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="You are not a member of this campaign"
+        )
+    
+    # Update visibility
+    membership.journal_visibility = JournalVisibility(visibility_data.visibility)
+    
+    db.commit()
+    db.refresh(membership)
+    
+    return CampaignMemberResponse(
+        id=membership.id,
+        campaign_id=membership.campaign_id,
+        user_id=membership.user_id,
+        user_email=membership.user.email if membership.user else None,
+        is_creator=membership.is_creator,
+        status=membership.status.value,
+        joined_at=membership.joined_at,
+        journal_visibility=membership.journal_visibility.value,
+        character_id=membership.character_id,
+        character=membership.character
+    )
 
 
 @router.put("/{campaign_id}/members/assign-character", response_model=CampaignMemberResponse)
