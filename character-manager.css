@@ -1362,13 +1362,17 @@
     background: var(--sheet-box-bg);
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
+    width: 100%;
 }
 
 .journal-update-stats {
+    display: block;
+    width: 100%;
+    flex-basis: 100%;
     color: var(--sheet-accent);
-    font-size: var(--font-size-xs);
+    font-size: var(--font-size-sm);
     text-transform: uppercase;
     letter-spacing: var(--tracking-wider);
 }
