@@ -858,7 +858,7 @@ const CharacterSheet = (window.CharacterSheet = {
     return `
       <div class="sheet-title-header">
         ${headerMenu}
-        <div class="sheet-title">${safeTitle}${sharedTagHtml}</div>
+        <div class="sheet-title"><span class="sheet-title-name">${safeTitle}</span>${sharedTagHtml}</div>
         ${navActionsBlock}
       </div>
     `;

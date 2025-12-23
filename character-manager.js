@@ -3254,8 +3254,9 @@ const PortraitLightbox = {
                 e.stopPropagation();
                 
                 // Find character name from the sheet
+                // Use .sheet-title-name to avoid including SHARED tag text
                 const sheet = portrait.closest('.character-sheet');
-                const nameEl = sheet?.querySelector('.sheet-title');
+                const nameEl = sheet?.querySelector('.sheet-title-name') || sheet?.querySelector('.sheet-title');
                 const characterName = nameEl?.textContent?.trim() || '';
                 
                 this.open(imageUrl, characterName);

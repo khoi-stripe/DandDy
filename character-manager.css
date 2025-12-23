@@ -428,6 +428,29 @@
     margin-bottom: var(--spacing-md);
 }
 
+@media (max-width: 768px) {
+    .campaign-area-header {
+        flex-wrap: wrap;
+    }
+    
+    /* Title left, overflow right on first row */
+    .campaign-area-header .campaign-area-title {
+        order: 1;
+    }
+    
+    .campaign-area-header .campaign-overflow {
+        order: 2;
+        margin-left: auto;
+    }
+    
+    /* Campaign name on its own row beneath */
+    .campaign-area-header .campaign-name {
+        order: 3;
+        width: 100%;
+        flex: none;
+    }
+}
+
 .campaign-area-title {
     font-size: var(--font-size-md);
     color: var(--sheet-accent);
@@ -435,6 +458,12 @@
     font-weight: var(--font-weight-medium);
     flex-shrink: 0;
     white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .campaign-area-title {
+        font-size: var(--font-size-base);
+    }
 }
 
 /* Campaign overflow menu */
@@ -952,6 +981,12 @@
     white-space: nowrap;
 }
 
+@media (max-width: 768px) {
+    .campaign-name {
+        font-size: var(--font-size-base);
+    }
+}
+
 /* Campaign description */
 .campaign-area-description {
     color: var(--sheet-accent-dim);
@@ -1036,6 +1071,12 @@
     color: var(--sheet-accent);
     margin: 0;
     font-weight: var(--font-weight-medium);
+}
+
+@media (max-width: 768px) {
+    .journal-title {
+        font-size: var(--font-size-base);
+    }
 }
 
 /* Journal entries list - matches skill-prof-list pattern */
