@@ -1050,8 +1050,8 @@
     font-style: italic;
 }
 
-/* Creator tag - styled like shared/sample tags but with teal background */
-.party-member-creator-tag {
+/* Admin tag - styled like shared/sample tags but with teal background */
+.party-member-admin-tag {
     font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-medium);
     font-family: var(--font-mono);
@@ -1061,7 +1061,7 @@
     background-color: var(--sheet-accent);
     border-radius: 3px;
     padding: 0 4px;
-    margin-right: 4px;
+    margin-left: 4px;
 }
 
 /* See more link for party members when >3 */

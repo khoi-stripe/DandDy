@@ -1274,9 +1274,9 @@ const ExpandedView = (window.ExpandedView = {
             
             partyHtml = displayMembers.map(m => {
                 const char = m.character;
-                const creatorTag = m.is_creator ? '<span class="party-member-creator-tag">Creator</span>' : '';
+                const adminTag = m.is_creator ? '<span class="party-member-admin-tag">Admin</span>' : '';
                 const userEmail = m.user_email ? `<span class="party-member-email">${Utils.escapeHtml(m.user_email)}</span>` : '';
-                const rightSide = (creatorTag || userEmail) ? `<span class="party-member-right">${creatorTag}${userEmail}</span>` : '';
+                const rightSide = userEmail ? `<span class="party-member-right">${userEmail}</span>` : '';
                 if (char) {
                     return `
                         <div class="party-member">
@@ -1284,6 +1284,7 @@ const ExpandedView = (window.ExpandedView = {
                                 <span class="party-member-name">${char.name}</span>
                                 <span class="party-member-separator">•</span>
                                 <span class="party-member-info">Lvl ${char.level} ${char.character_class || ''}</span>
+                                ${adminTag}
                             </span>
                             ${rightSide}
                         </div>
@@ -1293,6 +1294,7 @@ const ExpandedView = (window.ExpandedView = {
                         <div class="party-member party-member--no-char">
                             <span class="party-member-left">
                                 <span class="party-member-name">No character assigned</span>
+                                ${adminTag}
                             </span>
                             ${rightSide}
                         </div>
