@@ -62,6 +62,7 @@ class CampaignMemberResponse(CampaignMemberBase):
     id: int
     campaign_id: int
     user_id: int
+    user_email: Optional[str] = None
     is_creator: bool
     status: str
     joined_at: datetime

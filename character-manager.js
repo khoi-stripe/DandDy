@@ -965,6 +965,9 @@ const ExpandedView = (window.ExpandedView = {
     expand() {
         const splitLayout = document.querySelector('.split-layout');
         
+        // Show loading overlay to prevent content flash during layout transition
+        splitLayout?.classList.add('is-expanding');
+        
         // Calculate column widths based on current container size
         this._updateColumnWidths();
         
@@ -983,8 +986,11 @@ const ExpandedView = (window.ExpandedView = {
         // Update URL to track expanded state
         this._updateUrl(true);
         
-        // Show character nav bar after expand transition completes
+        // Wait for layout to settle, then reveal content and show nav bar
         setTimeout(() => {
+            // Remove loading state to reveal content
+            splitLayout?.classList.remove('is-expanding');
+            // Show character nav bar
             CharacterNavBar.show();
         }, 400); // Match CSS transition duration
         
@@ -1009,7 +1015,7 @@ const ExpandedView = (window.ExpandedView = {
         
         // After animation completes, clean up classes and listeners
         setTimeout(() => {
-            splitLayout?.classList.remove('is-sheet-expanded', 'is-collapsing');
+            splitLayout?.classList.remove('is-sheet-expanded', 'is-collapsing', 'is-expanding');
             // Campaign panel stays visible at bottom of sheet - no need to hide
             // Clear the column width variables
             const campaignGrid = document.querySelector('.sheet-campaign-grid');
@@ -1263,17 +1269,20 @@ const ExpandedView = (window.ExpandedView = {
             partyHtml = displayMembers.map(m => {
                 const char = m.character;
                 const creatorTag = m.is_creator ? '<span class="party-member-creator-tag">Creator</span>' : '';
+                const userEmail = m.user_email ? `<span class="party-member-email">${Utils.escapeHtml(m.user_email)}</span>` : '';
                 if (char) {
                     return `
                         <div class="party-member">
                             <span class="party-member-name">${char.name}${creatorTag}</span>
                             <span class="party-member-info">Lvl ${char.level} ${char.character_class || ''}</span>
+                            ${userEmail}
                         </div>
                     `;
                 } else {
                     return `
                         <div class="party-member party-member--no-char">
                             <span class="party-member-name">No character assigned${creatorTag}</span>
+                            ${userEmail}
                         </div>
                     `;
                 }

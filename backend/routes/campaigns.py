@@ -375,13 +375,28 @@ def get_campaign_members(
         )
     
     members = db.query(CampaignMember).options(
-        joinedload(CampaignMember.character)
+        joinedload(CampaignMember.character),
+        joinedload(CampaignMember.user)
     ).filter(
         CampaignMember.campaign_id == campaign_id,
         CampaignMember.status == MemberStatus.ACTIVE
     ).all()
     
-    return members
+    # Build response with user email
+    return [
+        CampaignMemberResponse(
+            id=m.id,
+            campaign_id=m.campaign_id,
+            user_id=m.user_id,
+            user_email=m.user.email if m.user else None,
+            is_creator=m.is_creator,
+            status=m.status.value,
+            joined_at=m.joined_at,
+            character_id=m.character_id,
+            character=m.character
+        )
+        for m in members
+    ]
 
 
 @router.put("/{campaign_id}/members/assign-character", response_model=CampaignMemberResponse)
