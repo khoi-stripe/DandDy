@@ -1275,15 +1275,17 @@ const ExpandedView = (window.ExpandedView = {
                 if (char) {
                     return `
                         <div class="party-member">
-                            <span class="party-member-name">${char.name}${creatorTag}</span>
+                            <span class="party-member-name">${char.name}</span>
                             <span class="party-member-info">Lvl ${char.level} ${char.character_class || ''}</span>
+                            ${creatorTag}
                             ${userEmail}
                         </div>
                     `;
                 } else {
                     return `
                         <div class="party-member party-member--no-char">
-                            <span class="party-member-name">No character assigned${creatorTag}</span>
+                            <span class="party-member-name">No character assigned</span>
+                            ${creatorTag}
                             ${userEmail}
                         </div>
                     `;
