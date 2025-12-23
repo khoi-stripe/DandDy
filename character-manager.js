@@ -1399,19 +1399,18 @@ const ExpandedView = (window.ExpandedView = {
     _renderJournalSection(characterId, entries = [], campaignData = null) {
         const currentUserId = window.AuthService?.getCurrentUser()?.id;
         
-        // Build entries HTML - show character name for entries from other users
+        // Build entries HTML - show character name before date for all entries
         const entriesHtml = entries.length > 0
             ? entries.map(entry => {
                 const isOwnEntry = entry.user_id === currentUserId;
-                const authorInfo = !isOwnEntry && entry.character_name 
+                const authorInfo = entry.character_name 
                     ? `<span class="journal-entry-author">${Utils.escapeHtml(entry.character_name)}</span>` 
                     : '';
                 
                 return `
                 <div class="journal-entry ${!isOwnEntry ? 'journal-entry--other' : ''}" data-entry-id="${entry.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">
                     <div class="journal-entry-header">
-                        <span class="journal-entry-date">${this._formatDate(entry.entry_date)}</span>
-                        ${authorInfo}
+                        <span class="journal-entry-meta">${authorInfo}<span class="journal-entry-date">${this._formatDate(entry.entry_date)}</span></span>
                         <span class="journal-entry-title">${entry.title || 'Untitled'}</span>
                     </div>
                     <div class="journal-entry-preview">
@@ -1419,6 +1418,7 @@ const ExpandedView = (window.ExpandedView = {
                     </div>
                     <div class="journal-entry-full">
                         ${Utils.escapeHtml(entry.content || '').replace(/\n/g, '<br>')}
+                        ${this._formatCharacterUpdate(entry.character_update)}
                     </div>
                     ${isOwnEntry ? `
                     <div class="journal-entry-actions">
@@ -1533,6 +1533,61 @@ const ExpandedView = (window.ExpandedView = {
         if (!text) return '';
         if (text.length <= maxLength) return text;
         return text.substring(0, maxLength).trim() + '...';
+    },
+
+    /** Format character update for display (order matches modal: XP, HP, Gold, Items, Conditions) */
+    _formatCharacterUpdate(update) {
+        if (!update) return '';
+        
+        const changes = [];
+        
+        // XP first
+        if (update.xp_gained && update.xp_gained !== 0) {
+            const sign = update.xp_gained > 0 ? '+' : '';
+            changes.push(`${sign}${update.xp_gained} XP`);
+        }
+        // HP second
+        if (update.hp_change && update.hp_change !== 0) {
+            const sign = update.hp_change > 0 ? '+' : '';
+            changes.push(`${sign}${update.hp_change} HP`);
+        }
+        // Gold third
+        if (update.gold_change && update.gold_change !== 0) {
+            const sign = update.gold_change > 0 ? '+' : '';
+            changes.push(`${sign}${update.gold_change} GP`);
+        }
+        // Items acquired fourth
+        if (update.items_acquired && update.items_acquired.length > 0) {
+            changes.push(`+${update.items_acquired.join(', ')}`);
+        }
+        // Items lost fifth
+        if (update.items_lost && update.items_lost.length > 0) {
+            changes.push(`−${update.items_lost.join(', ')}`);
+        }
+        
+        if (changes.length === 0 && (!update.conditions || update.conditions.length === 0)) return '';
+        
+        // Build the main changes text
+        let html = changes.length > 0 ? `<span class="journal-update-stats">${changes.join(' • ')}</span>` : '';
+        
+        // Conditions last - render as tags like in character sheet
+        if (update.conditions && update.conditions.length > 0) {
+            const conditionDefinitions = {
+                poisoned: 'Disadvantage on attack rolls and ability checks.',
+                exhausted: 'Levels of exhaustion cause cumulative penalties.',
+                diseased: 'Various effects depending on the disease.',
+                cursed: 'Supernatural affliction with varying effects.',
+            };
+            
+            const conditionTags = update.conditions.map(c => {
+                const tooltip = conditionDefinitions[c.toLowerCase()] || 'Status condition';
+                return `<span class="condition-tag condition-${c.toLowerCase()} has-tooltip" data-tooltip="${Utils.escapeHtml(tooltip)}">${c.toUpperCase()}</span>`;
+            }).join('');
+            
+            html += `<span class="journal-update-conditions">${conditionTags}</span>`;
+        }
+        
+        return `<div class="journal-entry-updates">${html}</div>`;
     },
 
     /** Update URL to reflect expanded state */
@@ -2273,6 +2328,36 @@ const CampaignUI = (window.CampaignUI = {
             animateModalClose(modal, { removeOnClose: false });
         }
         this._editingEntryId = null;
+        // Reset notice state when closing
+        this.dismissJournalNotice();
+    },
+
+    /** Show inline notice within journal entry modal */
+    _showJournalNotice(message) {
+        const notice = document.getElementById('journalEntryNotice');
+        const noticeText = document.getElementById('journalEntryNoticeText');
+        const form = document.getElementById('journalEntryForm');
+        const footer = document.getElementById('journalEntryFooter');
+        
+        if (notice && noticeText && form && footer) {
+            noticeText.textContent = message;
+            form.style.display = 'none';
+            footer.style.display = 'none';
+            notice.style.display = 'flex';
+        }
+    },
+
+    /** Dismiss inline notice and restore form */
+    dismissJournalNotice() {
+        const notice = document.getElementById('journalEntryNotice');
+        const form = document.getElementById('journalEntryForm');
+        const footer = document.getElementById('journalEntryFooter');
+        
+        if (notice && form && footer) {
+            notice.style.display = 'none';
+            form.style.display = '';
+            footer.style.display = '';
+        }
     },
 
     async saveJournalEntry() {
@@ -2285,13 +2370,13 @@ const CampaignUI = (window.CampaignUI = {
         const content = contentInput?.value?.trim() || '';
 
         if (!title && !content) {
-            showAlertDialog('Please enter a title or content for your journal entry.');
+            this._showJournalNotice('Please enter a title or content for your journal entry.');
             return;
         }
 
         const characterId = AppState.selectedCharacterId;
         if (!characterId) {
-            showAlertDialog('No character selected.');
+            this._showJournalNotice('No character selected.');
             return;
         }
 
@@ -2711,15 +2796,14 @@ const CampaignUI = (window.CampaignUI = {
         
         entriesContainer.innerHTML = entries.map(entry => {
             const isOwnEntry = entry.user_id === currentUserId;
-            const authorInfo = !isOwnEntry && entry.character_name 
+            const authorInfo = entry.character_name 
                 ? `<span class="journal-entry-author">${Utils.escapeHtml(entry.character_name)}</span>` 
                 : '';
             
             return `
                 <div class="journal-entry ${!isOwnEntry ? 'journal-entry--other' : ''}" data-entry-id="${entry.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">
                     <div class="journal-entry-header">
-                        <span class="journal-entry-date">${ExpandedView._formatDate(entry.entry_date)}</span>
-                        ${authorInfo}
+                        <span class="journal-entry-meta">${authorInfo}<span class="journal-entry-date">${ExpandedView._formatDate(entry.entry_date)}</span></span>
                         <span class="journal-entry-title">${entry.title || 'Untitled'}</span>
                     </div>
                     <div class="journal-entry-preview">
@@ -2727,6 +2811,7 @@ const CampaignUI = (window.CampaignUI = {
                     </div>
                     <div class="journal-entry-full">
                         ${Utils.escapeHtml(entry.content || '').replace(/\n/g, '<br>')}
+                        ${ExpandedView._formatCharacterUpdate(entry.character_update)}
                     </div>
                     ${isOwnEntry ? `
                     <div class="journal-entry-actions">

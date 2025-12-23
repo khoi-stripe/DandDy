@@ -502,7 +502,16 @@
                 <h2 class="modal-title" id="journalEntryModalTitle">Add Journal Entry</h2>
                 <button class="modal-close" onclick="CampaignUI.closeJournalEntryModal()">&times;</button>
             </div>
-            <div class="modal-body">
+            <!-- Inline Notice (hidden by default) -->
+            <div id="journalEntryNotice" class="modal-inline-notice" style="display: none;">
+                <div class="modal-inline-notice-body">
+                    <p class="terminal-text" id="journalEntryNoticeText"></p>
+                </div>
+                <div class="modal-inline-notice-footer">
+                    <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.dismissJournalNotice()">OK</button>
+                </div>
+            </div>
+            <div class="modal-body" id="journalEntryForm">
                 <!-- Journal Entry Section -->
                 <div class="settings-group mb-lg">
                     <div class="settings-group-label">[ Journal ]</div>
@@ -598,7 +607,7 @@
                     </section>
                 </div>
             </div>
-            <div class="modal-footer modal-footer-end">
+            <div class="modal-footer modal-footer-end" id="journalEntryFooter">
                 <button class="terminal-btn" onclick="CampaignUI.closeJournalEntryModal()">Cancel</button>
                 <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.saveJournalEntry()">Save</button>
             </div>
@@ -607,7 +616,7 @@
 
     <!-- Journal Settings Modal -->
     <div id="journalSettingsModal" class="modal">
-        <div class="modal-content modal-content-sm">
+        <div class="modal-content">
             <div class="modal-header">
                 <h2 class="modal-title">Journal Settings</h2>
                 <button class="modal-close" onclick="CampaignUI.closeJournalSettingsModal()">&times;</button>
@@ -616,17 +625,14 @@
                 <div class="settings-group">
                     <div class="settings-group-label">[ Visibility ]</div>
                     <section class="settings-section">
-                        <div class="journal-visibility-setting">
-                            <label class="settings-toggle-row">
-                                <span class="settings-toggle-label">
-                                    <span class="settings-toggle-title">Share journal with party</span>
-                                    <span class="settings-toggle-description">When enabled, your journal entries will be visible to all party members in this campaign.</span>
-                                </span>
-                                <div class="toggle-switch">
-                                    <input type="checkbox" id="journalVisibilityToggle" onchange="CampaignUI.toggleJournalVisibility(this.checked)">
-                                    <span class="toggle-slider"></span>
-                                </div>
-                            </label>
+                        <div class="settings-row settings-row--stacked">
+                            <div class="settings-field">
+                                <label class="settings-checkbox-label">
+                                    <input type="checkbox" class="settings-checkbox" id="journalVisibilityToggle" onchange="CampaignUI.toggleJournalVisibility(this.checked)">
+                                    <span class="settings-checkbox-text">Share journal with party</span>
+                                </label>
+                                <div class="settings-hint--small">When enabled, your journal entries will be visible to all party members in this campaign.</div>
+                            </div>
                         </div>
                     </section>
                 </div>
