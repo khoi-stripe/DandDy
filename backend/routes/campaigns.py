@@ -383,6 +383,14 @@ def get_campaign_members(
     ).all()
     
     # Build response with user email and journal visibility
+    # Handle both enum and string values for journal_visibility (migration compat)
+    def get_visibility_value(vis):
+        if vis is None:
+            return "private"
+        if hasattr(vis, 'value'):
+            return vis.value
+        return str(vis).lower()
+    
     return [
         CampaignMemberResponse(
             id=m.id,
@@ -390,9 +398,9 @@ def get_campaign_members(
             user_id=m.user_id,
             user_email=m.user.email if m.user else None,
             is_creator=m.is_creator,
-            status=m.status.value,
+            status=m.status.value if hasattr(m.status, 'value') else str(m.status),
             joined_at=m.joined_at,
-            journal_visibility=m.journal_visibility.value if m.journal_visibility else "private",
+            journal_visibility=get_visibility_value(m.journal_visibility),
             character_id=m.character_id,
             character=m.character
         )
@@ -430,15 +438,19 @@ def update_journal_visibility(
     db.commit()
     db.refresh(membership)
     
+    # Handle both enum and string values for journal_visibility
+    vis = membership.journal_visibility
+    vis_value = vis.value if hasattr(vis, 'value') else (str(vis).lower() if vis else "private")
+    
     return CampaignMemberResponse(
         id=membership.id,
         campaign_id=membership.campaign_id,
         user_id=membership.user_id,
         user_email=membership.user.email if membership.user else None,
         is_creator=membership.is_creator,
-        status=membership.status.value,
+        status=membership.status.value if hasattr(membership.status, 'value') else str(membership.status),
         joined_at=membership.joined_at,
-        journal_visibility=membership.journal_visibility.value,
+        journal_visibility=vis_value,
         character_id=membership.character_id,
         character=membership.character
     )

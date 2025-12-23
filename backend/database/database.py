@@ -507,18 +507,35 @@ def ensure_journal_visibility_column():
 
     with engine.connect() as conn:
         if "journal_visibility" not in existing_cols:
-            conn.execute(text("ALTER TABLE campaign_members ADD COLUMN journal_visibility VARCHAR DEFAULT 'private'"))
-            # Backfill existing members to have journal_visibility = 'private'
-            conn.execute(text("UPDATE campaign_members SET journal_visibility = 'private' WHERE journal_visibility IS NULL"))
+            if is_postgres:
+                # For PostgreSQL, create the enum type first if it doesn't exist
+                try:
+                    conn.execute(text("CREATE TYPE journalvisibility AS ENUM ('PRIVATE', 'PUBLIC')"))
+                except Exception:
+                    pass  # Type might already exist
+                
+                # Add column with the enum type
+                try:
+                    conn.execute(text("ALTER TABLE campaign_members ADD COLUMN journal_visibility journalvisibility DEFAULT 'PRIVATE'"))
+                except Exception as e:
+                    # Fallback to VARCHAR if enum fails
+                    print(f"Note: Could not add enum column, using VARCHAR: {e}")
+                    conn.execute(text("ALTER TABLE campaign_members ADD COLUMN journal_visibility VARCHAR DEFAULT 'PRIVATE'"))
+            else:
+                # SQLite uses VARCHAR
+                conn.execute(text("ALTER TABLE campaign_members ADD COLUMN journal_visibility VARCHAR DEFAULT 'PRIVATE'"))
+            
+            # Backfill existing members
+            conn.execute(text("UPDATE campaign_members SET journal_visibility = 'PRIVATE' WHERE journal_visibility IS NULL"))
         
-        # For PostgreSQL, ensure the journalvisibility enum type has all values
+        # For PostgreSQL, ensure the enum type has all values
         if is_postgres:
             try:
                 for enum_name in ['PRIVATE', 'PUBLIC']:
                     try:
                         conn.execute(text(f"ALTER TYPE journalvisibility ADD VALUE IF NOT EXISTS '{enum_name}'"))
                     except Exception:
-                        pass  # Value already exists or other minor error
+                        pass  # Value already exists
             except Exception as e:
                 print(f"Note: Could not verify/add journalvisibility enum values: {e}")
 

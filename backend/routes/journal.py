@@ -181,8 +181,16 @@ def get_campaign_journal_entries(
     ).all()
     
     # Build visibility mapping: character_id -> (user_id, is_public)
+    # Handle both enum and string values for journal_visibility (migration compat)
+    def is_public_visibility(vis):
+        if vis is None:
+            return False
+        if hasattr(vis, 'value'):
+            return vis == JournalVisibility.PUBLIC
+        return str(vis).upper() == 'PUBLIC'
+    
     visibility_map = {
-        m.character_id: (m.user_id, m.journal_visibility == JournalVisibility.PUBLIC)
+        m.character_id: (m.user_id, is_public_visibility(m.journal_visibility))
         for m in memberships
     }
     
