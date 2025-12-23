@@ -2505,9 +2505,9 @@ const CampaignUI = (window.CampaignUI = {
             });
         }
         
-        // Close the menu
-        if (trigger) {
-            CharacterSheet.closeSelectorMenu(trigger);
+        // Close the menu (toggle will close it since it's open)
+        if (trigger && trigger.classList.contains('is-open')) {
+            CharacterSheet.toggleSelectorMenu(trigger);
         }
     },
 
@@ -2654,8 +2654,10 @@ const CampaignUI = (window.CampaignUI = {
                     opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
                 });
             }
-            // Close the menu
-            CharacterSheet.closeSelectorMenu(trigger);
+            // Close the menu (toggle will close it since it's open)
+            if (trigger.classList.contains('is-open')) {
+                CharacterSheet.toggleSelectorMenu(trigger);
+            }
         }
         
         // Apply the filter
