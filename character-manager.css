@@ -1078,6 +1078,78 @@
     color: var(--sheet-accent-bright, var(--sheet-accent));
 }
 
+/* Clickable party members (other users' characters) */
+.party-member--clickable {
+    cursor: pointer;
+    transition: background-color var(--transition-speed), 
+                transform var(--transition-speed);
+    border-radius: 4px;
+    margin: 0 calc(var(--spacing-xs) * -1);
+    padding: var(--spacing-xs);
+}
+
+.party-member--clickable:hover {
+    background-color: var(--sheet-box-bg);
+}
+
+.party-member--clickable:active {
+    transform: scale(0.98);
+}
+
+.party-member--clickable .party-member-name::after {
+    content: '→';
+    margin-left: var(--spacing-xs);
+    opacity: 0;
+    transition: opacity var(--transition-speed);
+    color: var(--sheet-accent-dim);
+    font-size: var(--font-size-xs);
+}
+
+.party-member--clickable:hover .party-member-name::after {
+    opacity: 0.7;
+}
+
+/* Party member sheet modal (view-only) */
+.party-member-sheet-modal {
+    max-width: min(95vw, 600px);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.party-member-sheet-modal .modal-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.party-member-sheet-modal .modal-title {
+    flex: 1;
+}
+
+.party-sheet-badge {
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-medium);
+    font-family: var(--font-mono);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    color: var(--modal-accent-dim);
+    background-color: transparent;
+    border: 1px solid var(--modal-accent-dim);
+    border-radius: 3px;
+    padding: 2px 6px;
+}
+
+.party-member-sheet-body {
+    overflow-y: auto;
+    flex: 1;
+    padding: var(--spacing-md);
+}
+
+.party-member-sheet-body .character-sheet {
+    /* Override manager sheet styles for modal context */
+}
+
 /* Campaign info (name + description) */
 .campaign-area-info {
     margin-bottom: var(--spacing-md);

@@ -7,6 +7,7 @@ from database.database import get_db
 from models.user import User, UserRole
 from models.character import Character
 from models.character_collaborator import CharacterCollaborator, CollaboratorPermission
+from models.campaign_member import CampaignMember, MemberStatus
 from schemas.character import CharacterCreate, CharacterUpdate, CharacterResponse
 from utils.auth import get_current_active_user, get_current_user_optional
 
@@ -171,6 +172,27 @@ def _check_character_access(character: Character, current_user: User, db: Sessio
     if current_user.role == UserRole.DM and character.campaign_id:
         if character.campaign and character.campaign.dm_id == current_user.id:
             return True, False, "dm"
+    
+    # Check if user is in the same campaign as this character (view-only access for party members)
+    # Find which campaign this character belongs to via campaign_members table
+    character_membership = db.query(CampaignMember).filter(
+        CampaignMember.character_id == character.id,
+        CampaignMember.status == MemberStatus.ACTIVE
+    ).first()
+    
+    if character_membership:
+        # Check if current user is also a member of the same campaign
+        user_membership = db.query(CampaignMember).filter(
+            CampaignMember.campaign_id == character_membership.campaign_id,
+            CampaignMember.user_id == current_user.id,
+            CampaignMember.status == MemberStatus.ACTIVE
+        ).first()
+        
+        if user_membership:
+            # Fellow campaign members get view-only access
+            if require_edit:
+                return False, False, "view"
+            return True, False, "party_member"
     
     return False, False, None
 

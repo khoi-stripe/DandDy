@@ -1276,9 +1276,16 @@ const ExpandedView = (window.ExpandedView = {
                 const adminTag = m.is_creator ? '<span class="party-member-admin-tag">Admin</span>' : '';
                 const userEmail = m.user_email ? `<span class="party-member-email">${Utils.escapeHtml(m.user_email)}</span>` : '';
                 const rightSide = userEmail ? `<span class="party-member-right">${userEmail}</span>` : '';
+                // Check if this is someone else's character (clickable to view their sheet)
+                const isOtherUser = m.user_id !== currentUserId;
                 if (char) {
+                    // Make clickable if it's another user's character
+                    const clickable = isOtherUser ? 'party-member--clickable' : '';
+                    const clickHandler = isOtherUser 
+                        ? `onclick="CampaignUI.viewPartyMemberSheet(${char.id})"` 
+                        : '';
                     return `
-                        <div class="party-member">
+                        <div class="party-member ${clickable}" ${clickHandler}>
                             <span class="party-member-left">
                                 <span class="party-member-name">${char.name}</span>
                                 <span class="party-member-separator">•</span>
@@ -2828,6 +2835,114 @@ const CampaignUI = (window.CampaignUI = {
                 </div>
             `;
         }).join('');
+    },
+
+    // ========================================
+    // VIEW PARTY MEMBER CHARACTER SHEET
+    // ========================================
+    
+    /**
+     * View a party member's character sheet in a modal (view-only)
+     * @param {number} characterId - The character ID to view
+     */
+    async viewPartyMemberSheet(characterId) {
+        // Show loading modal
+        const loadingModalHtml = `
+            <div id="partyMemberSheetModal" class="modal">
+                <div class="modal-content party-member-sheet-modal">
+                    <div class="modal-header">
+                        <h2 class="modal-title">Loading...</h2>
+                        <button class="modal-close" onclick="CampaignUI.closePartyMemberSheetModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="panel-loading-cube-container">
+                            <div class="panel-loading-cube">
+                                <i></i><i></i><i></i><i></i><i></i><i></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        animateModalOpen(loadingModalHtml, 'partyMemberSheetModal');
+        
+        try {
+            // Fetch the full character data via API
+            const character = await CampaignAPI._apiRequest(`/characters/${characterId}`);
+            
+            if (!character) {
+                throw new Error('Character not found');
+            }
+            
+            // Render the character sheet in view-only mode
+            const sheetHtml = CharacterSheet.render(character, {
+                context: 'manager',
+                showPortrait: true,
+                // All actions disabled for view-only mode
+                onRename: false,
+                onEdit: false,
+                onDelete: false,
+                onGeneratePortrait: false,
+                onPrint: true,  // Allow printing
+                onShare: false,
+                onLeave: false,
+                isShared: false,
+                hasCollaborators: false,
+                hideOverflowMenu: true,  // Hide the overflow menu entirely
+            });
+            
+            // Update modal with character sheet
+            const modal = document.getElementById('partyMemberSheetModal');
+            if (modal) {
+                const modalContent = modal.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.innerHTML = `
+                        <div class="modal-header">
+                            <h2 class="modal-title">${Utils.escapeHtml(character.name)}</h2>
+                            <span class="party-sheet-badge">View Only</span>
+                            <button class="modal-close" onclick="CampaignUI.closePartyMemberSheetModal()">&times;</button>
+                        </div>
+                        <div class="modal-body party-member-sheet-body">
+                            <div class="character-sheet">
+                                ${sheetHtml}
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Populate ASCII portrait after rendering
+                    CharacterSheet.populatePortrait(character);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load party member character:', error);
+            
+            // Show error state
+            const modal = document.getElementById('partyMemberSheetModal');
+            if (modal) {
+                const modalContent = modal.querySelector('.modal-content');
+                if (modalContent) {
+                    modalContent.innerHTML = `
+                        <div class="modal-header">
+                            <h2 class="modal-title">Error</h2>
+                            <button class="modal-close" onclick="CampaignUI.closePartyMemberSheetModal()">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="terminal-text-dim">Failed to load character sheet.</p>
+                            <p class="terminal-text-small terminal-text-dim">${Utils.escapeHtml(error.message || 'Unknown error')}</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+    },
+
+    /** Close the party member sheet modal */
+    closePartyMemberSheetModal() {
+        const modal = document.getElementById('partyMemberSheetModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: true });
+        }
     }
 });
 
@@ -7501,6 +7616,7 @@ function closeAllEditorModals() {
         'joinCampaignModal',
         'campaignCreatedModal',
         'journalEntryModal',
+        'partyMemberSheetModal',
     ];
     
     modalIds.forEach(id => {
@@ -10224,6 +10340,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Clamp to 0-3
         newSuccesses = Math.max(0, Math.min(3, newSuccesses));
         newFailures = Math.max(0, Math.min(3, newFailures));
+        
+        // If character succeeds (3 successes), they stabilize - reset death saves
+        if (newSuccesses >= 3) {
+            newSuccesses = 0;
+            newFailures = 0;
+        }
         
         // Update immediately in UI for responsiveness
         const allBoxes = document.querySelectorAll(`.death-save-box[data-type="${type}"]`);
