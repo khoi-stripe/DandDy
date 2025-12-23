@@ -493,6 +493,38 @@ def ensure_campaign_member_status_column():
         conn.commit()
 
 
+def ensure_journal_visibility_column():
+    """
+    Lightweight migration helper for campaign_members table.
+    Adds the journal_visibility column for controlling whether journal entries are shared with party.
+    """
+    inspector = inspect(engine)
+    if not inspector.has_table("campaign_members"):
+        return
+
+    existing_cols = {col["name"] for col in inspector.get_columns("campaign_members")}
+    is_postgres = not settings.database_url.startswith("sqlite")
+
+    with engine.connect() as conn:
+        if "journal_visibility" not in existing_cols:
+            conn.execute(text("ALTER TABLE campaign_members ADD COLUMN journal_visibility VARCHAR DEFAULT 'private'"))
+            # Backfill existing members to have journal_visibility = 'private'
+            conn.execute(text("UPDATE campaign_members SET journal_visibility = 'private' WHERE journal_visibility IS NULL"))
+        
+        # For PostgreSQL, ensure the journalvisibility enum type has all values
+        if is_postgres:
+            try:
+                for enum_name in ['PRIVATE', 'PUBLIC']:
+                    try:
+                        conn.execute(text(f"ALTER TYPE journalvisibility ADD VALUE IF NOT EXISTS '{enum_name}'"))
+                    except Exception:
+                        pass  # Value already exists or other minor error
+            except Exception as e:
+                print(f"Note: Could not verify/add journalvisibility enum values: {e}")
+
+        conn.commit()
+
+
 def get_db():
     db = SessionLocal()
     try:
