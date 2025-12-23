@@ -1511,7 +1511,7 @@ const ExpandedView = (window.ExpandedView = {
                         ${settingsHtml}
                     </div>
                     <a href="#" class="journal-add-link" onclick="CampaignUI.openJournalEntryModal(); return false;">
-                        + Add Entry
+                        + Update
                     </a>
                 </div>
                 <div class="journal-entries">
@@ -2369,45 +2369,47 @@ const CampaignUI = (window.CampaignUI = {
         const entryDate = dateInput?.value || new Date().toISOString().split('T')[0];
         const content = contentInput?.value?.trim() || '';
 
-        if (!title && !content) {
-            this._showJournalNotice('Please enter a title or content for your journal entry.');
-            return;
-        }
-
         const characterId = AppState.selectedCharacterId;
         if (!characterId) {
             this._showJournalNotice('No character selected.');
             return;
         }
 
+        // Gather character update data first so we can validate
+        const xpGained = parseInt(document.getElementById('charUpdateXp')?.value) || 0;
+        const goldSign = document.getElementById('charUpdateGoldSign')?.value || '+';
+        const goldAmount = parseInt(document.getElementById('charUpdateGold')?.value) || 0;
+        const goldChange = goldSign === '-' ? -goldAmount : goldAmount;
+        const itemsText = document.getElementById('charUpdateItems')?.value?.trim() || '';
+        const itemsAcquired = itemsText ? itemsText.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+        // Calculate HP change
+        const character = AppState.characters?.find(c => 
+            c.id === characterId || c.cloudId === characterId
+        );
+        const currentHp = character?.hp_current || character?.hit_points_current || 
+            (typeof character?.hitPoints === 'number' ? character.hitPoints : character?.hitPoints?.current) || 0;
+        const newHp = parseInt(document.getElementById('charUpdateHp')?.value) || currentHp;
+        const hpChange = newHp - currentHp;
+
+        // Get conditions
+        const conditions = [];
+        if (document.getElementById('charUpdatePoisoned')?.checked) conditions.push('poisoned');
+        if (document.getElementById('charUpdateExhausted')?.checked) conditions.push('exhausted');
+        if (document.getElementById('charUpdateDiseased')?.checked) conditions.push('diseased');
+        if (document.getElementById('charUpdateCursed')?.checked) conditions.push('cursed');
+
+        // Check if any character updates were made
+        const hasCharacterUpdate = xpGained !== 0 || goldChange !== 0 || hpChange !== 0 || 
+            itemsAcquired.length > 0 || conditions.length > 0;
+
+        // Require at least content OR character updates (title alone is not enough)
+        if (!content && !hasCharacterUpdate) {
+            this._showJournalNotice('Please add journal content or character updates.');
+            return;
+        }
+
         try {
-            // Gather character update data
-            const xpGained = parseInt(document.getElementById('charUpdateXp')?.value) || 0;
-            const goldSign = document.getElementById('charUpdateGoldSign')?.value || '+';
-            const goldAmount = parseInt(document.getElementById('charUpdateGold')?.value) || 0;
-            const goldChange = goldSign === '-' ? -goldAmount : goldAmount;
-            const itemsText = document.getElementById('charUpdateItems')?.value?.trim() || '';
-            const itemsAcquired = itemsText ? itemsText.split(',').map(s => s.trim()).filter(Boolean) : [];
-
-            // Calculate HP change
-            const character = AppState.characters?.find(c => 
-                c.id === characterId || c.cloudId === characterId
-            );
-            const currentHp = character?.hp_current || character?.hit_points_current || 
-                (typeof character?.hitPoints === 'number' ? character.hitPoints : character?.hitPoints?.current) || 0;
-            const newHp = parseInt(document.getElementById('charUpdateHp')?.value) || currentHp;
-            const hpChange = newHp - currentHp;
-
-            // Get conditions
-            const conditions = [];
-            if (document.getElementById('charUpdatePoisoned')?.checked) conditions.push('poisoned');
-            if (document.getElementById('charUpdateExhausted')?.checked) conditions.push('exhausted');
-            if (document.getElementById('charUpdateDiseased')?.checked) conditions.push('diseased');
-            if (document.getElementById('charUpdateCursed')?.checked) conditions.push('cursed');
-
-            // Check if any character updates were made
-            const hasCharacterUpdate = xpGained !== 0 || goldChange !== 0 || hpChange !== 0 || 
-                itemsAcquired.length > 0 || conditions.length > 0;
 
             if (this._editingEntryId) {
                 // Update existing entry
