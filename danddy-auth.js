@@ -338,16 +338,7 @@
      */
     async fetchProfile() {
       const token = this.getToken();
-      if (!token) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'danddy-auth.js:fetchProfile',message:'No token available for profile fetch',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'missing_token_storage'})}).catch(()=>{});
-        // #endregion
-        return null;
-      }
-
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'danddy-auth.js:fetchProfile',message:'Attempting to fetch profile with token',data:{tokenLength: token.length, tokenPrefix: token.substring(0, 20)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'token_validation_attempts'})}).catch(()=>{});
-      // #endregion
+      if (!token) return null;
 
       try {
         const response = await fetch(`${API_BASE_URL}/auth/me`, {
@@ -374,11 +365,6 @@
                 detail: backendDetail,
               }
             );
-
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'danddy-auth.js:fetchProfile',message:'Token rejected by backend',data:{status: response.status, backendDetail},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'backend_token_rejection'})}).catch(()=>{});
-            // #endregion
-
             this.handleUnexpectedLogout('auth_me_401');
             return null;
           }
@@ -394,19 +380,9 @@
         if (DEBUG) {
           console.log('[AuthService] /auth/me profile loaded', profile);
         }
-
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'danddy-auth.js:fetchProfile',message:'Profile fetch successful',data:{userEmail: profile?.email},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'token_validation_attempts'})}).catch(()=>{});
-        // #endregion
-
         return profile;
       } catch (error) {
         console.error('[AuthService] Fetch profile error:', error);
-
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'danddy-auth.js:fetchProfile',message:'Profile fetch error',data:{error: error.message, isNetworkError: error.name === 'TypeError'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'network_fetch_failures'})}).catch(()=>{});
-        // #endregion
-
         return null;
       }
     },
@@ -529,24 +505,13 @@
 
       this._lastSessionCheck = Date.now();
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'danddy-auth.js:_performSessionCheck',message:'Starting session check',data:{trigger, hasToken: !!this.getToken(), lastCheckAgo: Date.now() - this._lastSessionCheck},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'session_check_timing'})}).catch(()=>{});
-      // #endregion
-
       try {
         const isValid = await this.verifyToken();
-
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'danddy-auth.js:_performSessionCheck',message:'Session check result',data:{trigger, isValid, tokenExists: !!this.getToken()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'session_check_timing'})}).catch(()=>{});
-        // #endregion
 
         if (!isValid) {
           if (DEBUG) {
             console.log('[AuthService] Session expired detected');
           }
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'danddy-auth.js:_performSessionCheck',message:'Session expired, triggering logout',data:{trigger},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'session_check_false_positive'})}).catch(()=>{});
-          // #endregion
           this._handleSessionExpired();
         } else if (DEBUG) {
           console.log('[AuthService] Session still valid');
@@ -554,9 +519,6 @@
       } catch (error) {
         // Network error - don't treat as session expired (user might be offline)
         console.warn('[AuthService] Session check failed (network?):', error);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'danddy-auth.js:_performSessionCheck',message:'Session check network error',data:{trigger, error: error.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'network_session_check_failures'})}).catch(()=>{});
-        // #endregion
       }
     },
 
@@ -591,19 +553,12 @@
     handleUnexpectedLogout(reason = 'api_401') {
       // Prevent duplicate handling if already logged out
       if (!this.getToken()) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'danddy-auth.js:handleUnexpectedLogout',message:'Unexpected logout called but no token present',data:{reason},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'duplicate_logout_calls'})}).catch(()=>{});
-        // #endregion
         return;
       }
 
       if (DEBUG) {
         console.log('[AuthService] Handling unexpected logout:', reason);
       }
-
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'danddy-auth.js:handleUnexpectedLogout',message:'Handling unexpected logout',data:{reason, hadToken: true, userInfo: this.getCurrentUser()?.email},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'unexpected_logout_triggers'})}).catch(()=>{});
-      // #endregion
 
       // Stop session monitoring
       this.stopSessionMonitor();

@@ -1072,6 +1072,9 @@ const ExpandedView = (window.ExpandedView = {
         const panel = document.querySelector('.campaign-panel-slot') || document.getElementById('campaignPanel');
         if (!panel) return;
         
+        // Apply white theme to parent container - cascades to all children
+        panel.classList.add('ui-theme-white', 'theme-white');
+        
         const characterId = AppState.selectedCharacterId;
         if (!characterId) {
             panel.innerHTML = this._renderNoCampaign();
@@ -1182,7 +1185,7 @@ const ExpandedView = (window.ExpandedView = {
     /** Render skeleton loading state for campaign panel */
     _renderCampaignSkeleton() {
         return `
-            <div class="campaign-area campaign-skeleton ui-theme-white theme-white">
+            <div class="campaign-area campaign-skeleton">
                 <div class="campaign-area-header">
                     <h3 class="campaign-area-title">[ Campaign ]</h3>
                 </div>
@@ -1236,7 +1239,7 @@ const ExpandedView = (window.ExpandedView = {
                 : 'Not in a campaign yet';
             
             return `
-                <div class="campaign-area ui-theme-white theme-white">
+                <div class="campaign-area">
                     <div class="campaign-area-header">
                         <h3 class="campaign-area-title">[ Campaign ]</h3>
                     </div>

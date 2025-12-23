@@ -229,6 +229,8 @@
   --ui-dim-color: var(--white-dim);
   --ui-primary-bg-color: var(--white-accent);
   --ui-on-primary-color: var(--white-bg);
+  --ui-bg-color: var(--white-bg);
+  --ui-bg-translucent: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.1);
 }
 
 /* ===== CONTEXT THEME CLASSES =====

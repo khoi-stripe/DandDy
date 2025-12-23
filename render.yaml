@@ -11,13 +11,13 @@ services:
       - key: ALGORITHM
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
-        value: 30
+        value: 480  # 8 hours - more reasonable for long gaming sessions
       - key: PRODUCTION
         value: true
       - key: ALLOWED_ORIGINS
         value: https://danddy.app,https://khoi-stripe.github.io
       - key: SECRET_KEY
-        generateValue: true
+        sync: false  # Set manually in Render dashboard to persist across deployments
       - key: OPENAI_API_KEY
         sync: false  # Set manually in Render dashboard (keep it secret!)
       - key: POSTMARK_SERVER_TOKEN
