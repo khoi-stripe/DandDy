@@ -2155,7 +2155,7 @@ body::before {
   padding: 0 var(--spacing-sm);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
-  font-weight: var(--font-weight-normal);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all var(--transition-speed);
   text-align: left;
@@ -2196,7 +2196,7 @@ body::before {
   padding: 0 var(--spacing-sm);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
-  font-weight: var(--font-weight-normal);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all var(--transition-speed);
   text-align: left;
@@ -2243,7 +2243,7 @@ body::before {
   padding: 0 var(--spacing-sm);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
-  font-weight: var(--font-weight-normal);
+  font-weight: var(--font-weight-medium);
   text-transform: uppercase;
   display: inline-flex;
   align-items: center;
@@ -2324,7 +2324,7 @@ body::before {
   padding: var(--spacing-sm) var(--spacing-md);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
-  font-weight: var(--font-weight-normal);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all var(--transition-speed);
   text-transform: uppercase;
@@ -2342,7 +2342,7 @@ body::before {
   padding: var(--spacing-sm) var(--spacing-md);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
-  font-weight: var(--font-weight-normal);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all var(--transition-speed);
   text-transform: uppercase;

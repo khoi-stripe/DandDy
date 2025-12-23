@@ -3351,9 +3351,15 @@
     overflow-x: hidden;
 }
 
-/* Remove top border from character sheet in mobile container */
+/* Override .character-sheet's overflow-y: auto to prevent nested scroll context.
+   gridPanel should be the only scrolling container on mobile.
+   Using high-specificity selector to ensure this wins. */
 .mobile-sheet-container.character-sheet {
     border-top: none;
+    overflow-y: visible !important;
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
 }
 
 /* Campaign section at bottom of mobile sheet */

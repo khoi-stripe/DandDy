@@ -2512,7 +2512,8 @@ const MobileView = {
         // Handle resize: clear scrolled state when switching to desktop
         window.addEventListener('resize', () => {
             if (!this.isMobile()) {
-                header.classList.remove('is-scrolled');
+                const h = document.querySelector('.terminal-header');
+                if (h) h.classList.remove('is-scrolled');
             }
         });
         
@@ -2520,13 +2521,15 @@ const MobileView = {
             if (!this.isMobile()) return;
             
             const scrollTop = gridPanel.scrollTop;
+            const h = document.querySelector('.terminal-header');
+            if (!h) return;
             
             // Add/remove scrolled class based on scroll position
             // CSS handles the max-height transition
             if (scrollTop > this._scrollThreshold) {
-                header.classList.add('is-scrolled');
+                h.classList.add('is-scrolled');
             } else {
-                header.classList.remove('is-scrolled');
+                h.classList.remove('is-scrolled');
             }
             
             this._lastScrollTop = scrollTop;
@@ -2800,8 +2803,10 @@ const MobileView = {
         // Update character count display
         this.updateCharacterCount(characterId);
         
-        // Scroll to top
+        // Scroll to top and reset header scroll state
         gridPanel.scrollTop = 0;
+        const header = document.querySelector('.terminal-header');
+        if (header) header.classList.remove('is-scrolled');
         
         // Wait for portrait image to load before hiding the loader
         if (isSwipeTransition) {
@@ -3115,6 +3120,10 @@ const MobileView = {
         if (!gridPanel) return;
         
         gridPanel.classList.remove('is-viewing-sheet');
+        
+        // Reset header scroll state when returning to grid
+        const header = document.querySelector('.terminal-header');
+        if (header) header.classList.remove('is-scrolled');
         
         // Clear selection state on mobile when going back
         if (typeof AppState !== 'undefined' && AppState) {
