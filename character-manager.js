@@ -3819,6 +3819,13 @@ const UI = {
                 // Desktop: render sheet in right panel as usual
                 viewCharacter(targetId, { skipKeyboardSync: true, updateUrl: !urlCharacterId, openMobileModal: false });
             }
+        } else if (targetId && !isMobile) {
+            // Same character still selected after data reload (e.g., after joining campaign)
+            // Restore sheet visibility that may have been hidden by setLoadingState(true)
+            if (placeholder) placeholder.classList.add('is-hidden');
+            if (sheetEl) sheetEl.classList.remove('is-hidden');
+            if (campaignSlot) campaignSlot.classList.remove('is-hidden');
+            if (navBarEl) navBarEl.classList.remove('is-hidden');
         } else if (!targetId && !isMobile) {
             // Desktop with no selection and no characters - show placeholder
             if (placeholder) placeholder.classList.remove('is-hidden');
