@@ -45,7 +45,13 @@
   --theme-pink-s: 85%;
   --theme-pink-l-bright: 65%;
   --theme-pink-l-dim: 55%;
-  
+
+  /* White Theme */
+  --theme-white-h: 0;
+  --theme-white-s: 0%;
+  --theme-white-l-bright: 75%;
+  --theme-white-l-dim: 60%;
+
   /* ===== DERIVED COLOR TOKENS ===== */
   /* Background & Neutrals */
   --terminal-bg: #000000;
@@ -87,7 +93,15 @@
   /* Campaign Pink Tokens */
   --campaign-accent: hsl(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright));
   --campaign-accent-dim: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-dim), 0.75);
-  
+
+  /* White Theme Tokens */
+  --white-bg: var(--terminal-bg);
+  --white-fg: hsl(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright));
+  --white-dim: hsl(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-dim));
+  --white-border: hsl(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright));
+  --white-accent: hsl(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright));
+  --white-accent-dim: hsl(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-dim));
+
   /* Scrollbar Tokens (derived from terminal green) */
   --scrollbar-thumb-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-dim), 0.45);
   --scrollbar-thumb-hover-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.85);
@@ -209,6 +223,14 @@
   --ui-on-primary-color: var(--terminal-bg);
 }
 
+.ui-theme-white {
+  --ui-border-color: var(--white-border);
+  --ui-fg-color: var(--white-fg);
+  --ui-dim-color: var(--white-dim);
+  --ui-primary-bg-color: var(--white-accent);
+  --ui-on-primary-color: var(--white-bg);
+}
+
 /* ===== CONTEXT THEME CLASSES =====
    Apply these to any container to set the color theme for all nested elements.
    Components should use var(--context-accent) etc. to inherit the theme.
@@ -252,6 +274,14 @@
   --context-accent-dim: var(--campaign-accent-dim);
   --context-border: var(--campaign-accent);
   --context-hover: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright), 0.1);
+}
+
+/* White theme */
+.theme-white {
+  --context-accent: var(--white-accent);
+  --context-accent-dim: var(--white-accent-dim);
+  --context-border: var(--white-border);
+  --context-hover: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.1);
 }
 
 /* ===== BASE STYLES ===== */

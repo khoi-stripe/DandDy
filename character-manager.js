@@ -1182,7 +1182,7 @@ const ExpandedView = (window.ExpandedView = {
     /** Render skeleton loading state for campaign panel */
     _renderCampaignSkeleton() {
         return `
-            <div class="campaign-area campaign-skeleton">
+            <div class="campaign-area campaign-skeleton ui-theme-white theme-white">
                 <div class="campaign-area-header">
                     <h3 class="campaign-area-title">[ Campaign ]</h3>
                 </div>
@@ -1236,7 +1236,7 @@ const ExpandedView = (window.ExpandedView = {
                 : 'Not in a campaign yet';
             
             return `
-                <div class="campaign-area">
+                <div class="campaign-area ui-theme-white theme-white">
                     <div class="campaign-area-header">
                         <h3 class="campaign-area-title">[ Campaign ]</h3>
                     </div>
@@ -2573,10 +2573,20 @@ const CampaignUI = (window.CampaignUI = {
         }
         if (itemsInput) itemsInput.value = '';
 
-        // Reset checkboxes
-        ['charUpdatePoisoned', 'charUpdateExhausted', 'charUpdateDiseased', 'charUpdateCursed'].forEach(id => {
-            const cb = document.getElementById(id);
-            if (cb) cb.checked = false;
+        // Set checkboxes based on character's current conditions
+        const currentConditions = character?.conditions || [];
+        const conditionCheckboxes = {
+            'charUpdatePoisoned': 'poisoned',
+            'charUpdateExhausted': 'exhausted',
+            'charUpdateDiseased': 'diseased',
+            'charUpdateCursed': 'cursed'
+        };
+
+        Object.entries(conditionCheckboxes).forEach(([checkboxId, condition]) => {
+            const cb = document.getElementById(checkboxId);
+            if (cb) {
+                cb.checked = currentConditions.includes(condition);
+            }
         });
     },
 
