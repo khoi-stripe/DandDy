@@ -205,6 +205,37 @@
   --ui-dim-color: var(--terminal-dim);
   --ui-primary-bg-color: var(--terminal-border);
   --ui-on-primary-color: var(--terminal-bg);
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.1);
+  --card-glow-h: var(--theme-terminal-h);
+  --card-glow-s: var(--theme-terminal-s);
+  --card-glow-l-bright: var(--theme-terminal-l-bright);
+}
+
+/* More specific selector to override .character-sheet defaults */
+.character-sheet.ui-theme-green {
+  --ui-border-color: var(--terminal-border) !important;
+  --ui-fg-color: var(--terminal-fg) !important;
+  --ui-dim-color: var(--terminal-dim) !important;
+  --ui-primary-bg-color: var(--terminal-border) !important;
+  --ui-on-primary-color: var(--terminal-bg) !important;
+  --ui-bg-color: var(--terminal-bg) !important;
+  --ui-bg-translucent: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.1) !important;
+  /* Override --sheet-accent tokens for components that still use them directly */
+  --sheet-accent: var(--terminal-border) !important;
+  --sheet-accent-dim: var(--terminal-dim) !important;
+  --sheet-border-color: var(--terminal-border) !important;
+  --sheet-label-color: var(--terminal-dim) !important;
+  --sheet-value-color: var(--terminal-fg) !important;
+  --sheet-box-border-color: var(--terminal-dim) !important;
+  /* Override context tokens from .theme-teal class */
+  --context-accent: var(--terminal-border) !important;
+  --context-accent-dim: var(--terminal-dim) !important;
+  --context-border: var(--terminal-border) !important;
+  /* Override scrollbar colors to match green theme */
+  --scrollbar-track-color: hsl(var(--theme-terminal-h), 70%, 7%) !important;
+  --scrollbar-thumb-color: hsla(var(--theme-terminal-h), calc(var(--theme-terminal-s) * 0.67), var(--theme-terminal-l-dim), 0.5) !important;
+  --scrollbar-thumb-hover-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.9) !important;
 }
 
 .ui-theme-teal {
@@ -213,6 +244,11 @@
   --ui-dim-color: var(--sheet-accent-dim);
   --ui-primary-bg-color: var(--sheet-accent);
   --ui-on-primary-color: var(--terminal-bg);
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
+  --card-glow-h: var(--theme-teal-h);
+  --card-glow-s: var(--theme-teal-s);
+  --card-glow-l-bright: var(--theme-teal-l-bright);
 }
 
 .ui-theme-pink {
@@ -221,6 +257,50 @@
   --ui-dim-color: var(--campaign-accent-dim);
   --ui-primary-bg-color: var(--campaign-accent);
   --ui-on-primary-color: var(--terminal-bg);
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright), 0.1);
+  --card-glow-h: var(--theme-pink-h);
+  --card-glow-s: var(--theme-pink-s);
+  --card-glow-l-bright: var(--theme-pink-l-bright);
+}
+
+/* More specific selector to override .character-sheet defaults */
+.character-sheet.ui-theme-pink {
+  --ui-border-color: var(--campaign-accent) !important;
+  --ui-fg-color: var(--campaign-accent) !important;
+  --ui-dim-color: var(--campaign-accent-dim) !important;
+  --ui-primary-bg-color: var(--campaign-accent) !important;
+  --ui-on-primary-color: var(--terminal-bg) !important;
+  --ui-bg-color: var(--terminal-bg) !important;
+  --ui-bg-translucent: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright), 0.1) !important;
+  /* Override --sheet-accent tokens for components that still use them directly */
+  --sheet-accent: var(--campaign-accent) !important;
+  --sheet-accent-dim: var(--campaign-accent-dim) !important;
+  --sheet-border-color: var(--campaign-accent) !important;
+  --sheet-label-color: var(--campaign-accent-dim) !important;
+  --sheet-value-color: var(--campaign-accent) !important;
+  --sheet-box-border-color: var(--campaign-accent-dim) !important;
+  /* Override context tokens from .theme-teal class */
+  --context-accent: var(--campaign-accent) !important;
+  --context-accent-dim: var(--campaign-accent-dim) !important;
+  --context-border: var(--campaign-accent) !important;
+  /* Override scrollbar colors to match pink theme */
+  --scrollbar-track-color: hsl(var(--theme-pink-h), 70%, 7%) !important;
+  --scrollbar-thumb-color: hsla(var(--theme-pink-h), calc(var(--theme-pink-s) * 0.67), var(--theme-pink-l-dim), 0.5) !important;
+  --scrollbar-thumb-hover-color: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright), 0.9) !important;
+}
+
+/* Explicit scrollbar pseudo-element overrides for themed character sheets */
+.character-sheet.ui-theme-pink::-webkit-scrollbar-track {
+  background: hsl(var(--theme-pink-h), 70%, 7%) !important;
+}
+
+.character-sheet.ui-theme-pink::-webkit-scrollbar-thumb {
+  background-color: hsla(var(--theme-pink-h), calc(var(--theme-pink-s) * 0.67), var(--theme-pink-l-dim), 0.5) !important;
+}
+
+.character-sheet.ui-theme-pink::-webkit-scrollbar-thumb:hover {
+  background-color: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright), 0.9) !important;
 }
 
 .ui-theme-white {
@@ -231,6 +311,90 @@
   --ui-on-primary-color: var(--white-bg);
   --ui-bg-color: var(--white-bg);
   --ui-bg-translucent: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.1);
+  --card-glow-h: var(--theme-white-h);
+  --card-glow-s: var(--theme-white-s);
+  --card-glow-l-bright: var(--theme-white-l-bright);
+}
+
+.ui-theme-yellow {
+  --ui-border-color: var(--modal-accent);
+  --ui-fg-color: var(--modal-accent);
+  --ui-dim-color: var(--modal-accent-dim);
+  --ui-primary-bg-color: var(--modal-accent);
+  --ui-on-primary-color: var(--terminal-bg);
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1);
+  --card-glow-h: var(--theme-yellow-h);
+  --card-glow-s: var(--theme-yellow-s);
+  --card-glow-l-bright: var(--theme-yellow-l-bright);
+}
+
+/* More specific selector to override .character-sheet defaults */
+.character-sheet.ui-theme-white {
+  --ui-border-color: var(--white-border) !important;
+  --ui-fg-color: var(--white-fg) !important;
+  --ui-dim-color: var(--white-dim) !important;
+  --ui-primary-bg-color: var(--white-accent) !important;
+  --ui-on-primary-color: var(--white-bg) !important;
+  --ui-bg-color: var(--white-bg) !important;
+  --ui-bg-translucent: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.1) !important;
+  /* Override --sheet-accent tokens for components that still use them directly */
+  --sheet-accent: var(--white-border) !important;
+  --sheet-accent-dim: var(--white-dim) !important;
+  --sheet-border-color: var(--white-border) !important;
+  --sheet-label-color: var(--white-dim) !important;
+  --sheet-value-color: var(--white-fg) !important;
+  --sheet-box-border-color: var(--white-dim) !important;
+  /* Override context tokens from .theme-teal class */
+  --context-accent: var(--white-border) !important;
+  --context-accent-dim: var(--white-dim) !important;
+  --context-border: var(--white-border) !important;
+  /* Override scrollbar colors to match white theme */
+  --scrollbar-track-color: hsl(var(--theme-white-h), 70%, 7%) !important;
+  --scrollbar-thumb-color: hsla(var(--theme-white-h), calc(var(--theme-white-s) * 0.67), var(--theme-white-l-dim), 0.5) !important;
+  --scrollbar-thumb-hover-color: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.9) !important;
+}
+
+/* More specific selector to override .character-sheet defaults */
+.character-sheet.ui-theme-yellow,
+.right-panel.ui-theme-yellow .character-sheet {
+  --ui-border-color: var(--modal-accent) !important;
+  --ui-fg-color: var(--modal-accent) !important;
+  --ui-dim-color: var(--modal-accent-dim) !important;
+  --ui-primary-bg-color: var(--modal-accent) !important;
+  --ui-on-primary-color: var(--terminal-bg) !important;
+  --ui-bg-color: var(--terminal-bg) !important;
+  --ui-bg-translucent: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1) !important;
+  /* Override --sheet-accent tokens for components that still use them directly */
+  --sheet-accent: var(--modal-accent) !important;
+  --sheet-accent-dim: var(--modal-accent-dim) !important;
+  --sheet-border-color: var(--modal-accent) !important;
+  --sheet-label-color: var(--modal-accent-dim) !important;
+  --sheet-value-color: var(--modal-accent) !important;
+  --sheet-box-border-color: var(--modal-accent-dim) !important;
+  /* Override context tokens from .theme-teal class */
+  --context-accent: var(--modal-accent) !important;
+  --context-accent-dim: var(--modal-accent-dim) !important;
+  --context-border: var(--modal-accent) !important;
+  /* Override scrollbar colors to match yellow theme */
+  --scrollbar-track-color: hsl(var(--theme-yellow-h), 70%, 7%) !important;
+  --scrollbar-thumb-color: hsla(var(--theme-yellow-h), calc(var(--theme-yellow-s) * 0.67), var(--theme-yellow-l-dim), 0.5) !important;
+  --scrollbar-thumb-hover-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.9) !important;
+}
+
+.character-sheet.ui-theme-yellow::-webkit-scrollbar-track,
+.right-panel.ui-theme-yellow .character-sheet::-webkit-scrollbar-track {
+  background: hsl(var(--theme-yellow-h), 70%, 7%) !important;
+}
+
+.character-sheet.ui-theme-yellow::-webkit-scrollbar-thumb,
+.right-panel.ui-theme-yellow .character-sheet::-webkit-scrollbar-thumb {
+  background-color: hsla(var(--theme-yellow-h), calc(var(--theme-yellow-s) * 0.67), var(--theme-yellow-l-dim), 0.5) !important;
+}
+
+.character-sheet.ui-theme-yellow::-webkit-scrollbar-thumb:hover,
+.right-panel.ui-theme-yellow .character-sheet::-webkit-scrollbar-thumb:hover {
+  background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.9) !important;
 }
 
 /* ===== CONTEXT THEME CLASSES =====
@@ -378,7 +542,8 @@ body::before {
 .terminal-frame,
 .terminal-container {
   background-color: var(--terminal-bg);
-  border: 1px solid var(--terminal-border);
+  /* Use theme border color, fallback to terminal-border for backward compatibility */
+  border: 1px solid var(--ui-border-color, var(--terminal-border));
   border-radius: 8px;
   /* Soft, diffuse shadow to ground the terminal on top of the animated glow */
   box-shadow:
@@ -407,14 +572,16 @@ body::before {
 /* ===== TERMINAL HEADER ===== */
 .terminal-header {
   padding: var(--spacing-md);
-  border-bottom: 1px solid var(--terminal-border);
+  /* Use theme border color, fallback to terminal-border for backward compatibility */
+  border-bottom: 1px solid var(--ui-border-color, var(--terminal-border));
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .terminal-title {
-  color: var(--terminal-accent);
+  /* Use theme foreground color, fallback to terminal-accent for backward compatibility */
+  color: var(--ui-fg-color, var(--terminal-accent));
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-tight);
@@ -425,7 +592,8 @@ body::before {
 }
 
 .title-bracket {
-  color: var(--terminal-accent);
+  /* Use theme foreground color, fallback to terminal-accent for backward compatibility */
+  color: var(--ui-fg-color, var(--terminal-accent));
   font-weight: var(--font-weight-medium);
 }
 
@@ -456,13 +624,14 @@ body::before {
   position: absolute;
   width: var(--title-cube-size);
   height: var(--title-cube-size);
-  /* Static teal color (no color cycling) */
-  border: 0.5px solid hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+  /* Use theme border color, fallback to teal for backward compatibility */
+  border: 0.5px solid var(--ui-border-color, hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright)));
   box-sizing: border-box;
-  background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.05);
+  /* Use theme translucent background, fallback to teal for backward compatibility */
+  background: var(--ui-bg-translucent, hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.05));
   box-shadow:
-    inset 0 0 12px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.35),
-    0 0 8px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.3);
+    inset 0 0 12px var(--ui-bg-translucent, hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.35)),
+    0 0 8px var(--ui-bg-translucent, hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.3));
 }
 
 .title-cube-face:nth-child(1) { transform: translateZ(var(--title-cube-depth)); }
@@ -854,37 +1023,37 @@ body::before {
 }
 
 /* Shared card glow animation (slower, slightly irregular breathing).
-   Uses terminal theme tokens so it feels organic but not distracting. */
+   Uses theme-aware variables that can be overridden by parent theme classes. */
 @keyframes card-glow {
   0% {
     box-shadow:
-      0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.4),
-      0 0 12px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.3),
-      0 0 28px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.15);
+      0 0 0 1px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.4),
+      0 0 12px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.3),
+      0 0 28px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.15);
   }
   27% {
     box-shadow:
-      0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.5),
-      0 0 15px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.35),
-      0 0 32px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.18);
+      0 0 0 1px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.5),
+      0 0 15px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.35),
+      0 0 32px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.18);
   }
   54% {
     box-shadow:
-      0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.6),
-      0 0 18px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.4),
-      0 0 38px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.2);
+      0 0 0 1px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.6),
+      0 0 18px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.4),
+      0 0 38px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.2);
   }
   81% {
     box-shadow:
-      0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.45),
-      0 0 14px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.32),
-      0 0 30px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.16);
+      0 0 0 1px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.45),
+      0 0 14px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.32),
+      0 0 30px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.16);
   }
   100% {
     box-shadow:
-      0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.4),
-      0 0 12px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.3),
-      0 0 28px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.15);
+      0 0 0 1px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.4),
+      0 0 12px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.3),
+      0 0 28px hsla(var(--card-glow-h, var(--theme-terminal-h)), var(--card-glow-s, var(--theme-terminal-s)), var(--card-glow-l-bright, var(--theme-terminal-l-bright)), 0.15);
   }
 }
 
@@ -917,13 +1086,13 @@ body::before {
   
   /* Dark translucent overlay background */
   background-color: rgba(0, 0, 0, 0.85);
-  /* Dim teal text */
-  color: var(--sheet-accent-dim);
+  /* Inherit theme dim color */
+  color: var(--ui-dim-color, var(--sheet-accent-dim));
   border-radius: 2px;
   /* Thin outline */
-  border: 1px solid var(--sheet-accent-dim);
-  /* Subtle glow */
-  box-shadow: 0 0 8px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-dim), 0.3);
+  border: 1px solid var(--ui-dim-color, var(--sheet-accent-dim));
+  /* Subtle glow - use theme translucent background */
+  box-shadow: 0 0 8px var(--ui-bg-translucent, hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-dim), 0.3));
   
   /* Typography */
   font-family: var(--font-mono);
@@ -1162,12 +1331,15 @@ body::before {
   overflow-y: auto;
   min-height: 0;
 
-  /* Use teal UI theme tokens inside the sheet */
+  /* Default teal UI theme tokens - prevents green fallback from root */
+  /* Theme classes (ui-theme-white, ui-theme-pink, etc.) will override these */
   --ui-border-color: var(--sheet-accent);
   --ui-fg-color: var(--sheet-accent);
   --ui-dim-color: var(--sheet-accent-dim);
   --ui-primary-bg-color: var(--sheet-accent);
   --ui-on-primary-color: var(--terminal-bg);
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
 
   /* Teal scrollbars inside character sheets */
   --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
@@ -1202,7 +1374,7 @@ body::before {
 }
 
 .sheet-bullet-list li::marker {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color);
 }
 
 /* Character sheet lists - proper hanging indent for tool profs, equipment, etc. */
@@ -1218,7 +1390,7 @@ body::before {
 }
 
 .sheet-list li::marker {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color);
 }
 
 .sheet-title-header {
@@ -1246,7 +1418,7 @@ body::before {
 }
 
 .sheet-title {
-  color: var(--sheet-accent);
+  color: var(--ui-fg-color);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-tight);
@@ -1406,10 +1578,10 @@ body::before {
 }
 
 .sheet-header {
-  color: var(--sheet-accent);
+  color: var(--ui-fg-color);
   font-size: var(--font-size-base);
   margin-bottom: var(--spacing-sm);
-  border-bottom: 1px solid var(--sheet-accent-dim);
+  border-bottom: 1px solid var(--ui-border-color);
   padding-bottom: var(--spacing-xs);
   display: flex;
   justify-content: space-between;
@@ -1420,7 +1592,7 @@ body::before {
 /* Edit link in section headers */
 .sheet-section-edit-link {
   font-size: var(--font-size-sm);
-  color: var(--terminal-accent);
+  color: var(--ui-fg-color, var(--terminal-accent));
   text-decoration: none;
   opacity: 0.7;
   transition: opacity 0.15s ease;
@@ -1436,7 +1608,7 @@ body::before {
   margin-left: auto;
   margin-right: 12px;
   font-size: var(--font-size-base);
-  color: var(--sheet-accent);
+  color: var(--ui-fg-color);
   opacity: 0.8;
 }
 
@@ -1465,42 +1637,43 @@ body::before {
   flex-shrink: 0;
 }
 
-/* Teal buttons inside character sheet */
+/* Theme-aware buttons inside character sheet */
 .character-sheet .button-secondary,
 .character-sheet .terminal-btn,
 .character-sheet .terminal-btn-small,
 .character-sheet .prompt-modal-btn {
-  /* Use a semi-transparent teal so sheet header actions read clearly
-     dimmer than bright accents and values. */
-  border-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.6);
-  color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.8);
+  /* Use theme tokens so buttons respect theme overrides */
+  border-color: var(--ui-dim-color);
+  color: var(--ui-dim-color);
+  opacity: 0.8;
 }
 
 .character-sheet .button-secondary:hover:not(:disabled),
 .character-sheet .terminal-btn:hover:not(:disabled),
 .character-sheet .terminal-btn-small:hover:not(:disabled),
 .character-sheet .prompt-modal-btn:hover:not(:disabled) {
-  background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
-  border-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.9);
-  color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 1);
-  box-shadow: 0 0 10px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.3);
+  background: var(--ui-bg-translucent);
+  border-color: var(--ui-fg-color);
+  color: var(--ui-fg-color);
+  opacity: 1;
+  box-shadow: 0 0 10px var(--ui-bg-translucent);
 }
 
 .character-sheet .prompt-modal-btn.primary,
 .character-sheet .terminal-btn-primary {
-  background-color: var(--sheet-accent);
-  border-color: var(--sheet-accent);
-  color: var(--terminal-bg);
+  background-color: var(--ui-primary-bg-color);
+  border-color: var(--ui-primary-bg-color);
+  color: var(--ui-on-primary-color);
 }
 
 .character-sheet .prompt-modal-btn.primary:hover:not(:disabled),
 .character-sheet .terminal-btn-primary:hover:not(:disabled) {
-  background-color: var(--sheet-accent);
-  box-shadow: 0 0 15px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.5);
+  background-color: var(--ui-primary-bg-color);
+  box-shadow: 0 0 15px var(--ui-bg-translucent);
 }
 
 .sheet-content {
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color);
 }
 
 .sheet-content--two-columns {
@@ -1516,13 +1689,13 @@ body::before {
 }
 
 .stat-label {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-normal);
 }
 
 .stat-value {
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color);
 }
 
 /* Combat stats grid */
@@ -1538,11 +1711,11 @@ body::before {
   /* Remove visible outline for combat stats boxes; rely on spacing + background only */
   border: none;
   padding: var(--spacing-sm);
-  background: var(--sheet-box-bg);
+  background: var(--ui-bg-translucent);
 }
 
 .stat-box-label {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color);
   font-size: var(--font-size-sm);
   margin-bottom: var(--spacing-xs);
 }
@@ -1550,7 +1723,7 @@ body::before {
 /* Combined value styles for stats and abilities */
 .stat-box-value,
 .ability-score {
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color);
   font-weight: var(--font-weight-normal);
 }
 
@@ -1563,7 +1736,7 @@ body::before {
 }
 
 .death-saves-label {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color);
   font-size: var(--font-size-sm);
   margin-bottom: var(--spacing-sm);
   text-align: center;
@@ -1604,24 +1777,24 @@ body::before {
 .death-save-box {
   width: 16px;
   height: 16px;
-  border: 2px solid var(--sheet-accent-dim);
+  border: 2px solid var(--ui-dim-color);
   background: transparent;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .death-save-box:hover {
-  border-color: var(--sheet-accent);
+  border-color: var(--ui-fg-color);
 }
 
 .death-save-box.is-filled {
-  background: var(--sheet-accent);
-  border-color: var(--sheet-accent);
+  background: var(--ui-fg-color);
+  border-color: var(--ui-fg-color);
 }
 
 .death-saves-row:first-of-type .death-save-box.is-filled {
-  background: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
-  border-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+  background: var(--ui-fg-color);
+  border-color: var(--ui-fg-color);
 }
 
 .death-saves-row:last-of-type .death-save-box.is-filled {
@@ -1645,18 +1818,18 @@ body::before {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  background: var(--sheet-box-bg);
+  background: var(--ui-bg-translucent);
   padding: 4px 8px;
   box-sizing: border-box;
 }
 
 .spell-slot-label {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color);
   font-size: var(--font-size-sm);
 }
 
 .spell-slot-value {
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color);
   font-weight: var(--font-weight-normal);
 }
 
@@ -1673,10 +1846,10 @@ body::before {
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
-  background: var(--sheet-box-bg);
+  background: var(--ui-bg-translucent);
   border: none;
   font-size: var(--font-size-xs);
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color, var(--sheet-value-color));
   font-weight: var(--font-weight-normal);
 }
 
@@ -1730,12 +1903,12 @@ body::before {
   /* Remove visible outline for ability score boxes; rely on spacing + background only */
   border: none;
   padding: var(--spacing-xs);
-  background: var(--sheet-ability-box-bg);
+  background: var(--ui-bg-translucent);
   text-align: center;
 }
 
 .ability-name {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color, var(--sheet-label-color));
   font-size: var(--font-size-sm);
   margin-bottom: var(--spacing-xs);
 }
@@ -1748,7 +1921,7 @@ body::before {
 }
 
 .ability-modifier {
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color, var(--sheet-value-color));
   font-size: var(--font-size-small);
   display: inline;
   margin-left: 0.25em;
@@ -1756,16 +1929,16 @@ body::before {
 
 /* Character sheet-specific text utilities */
 .character-sheet .terminal-text {
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color, var(--sheet-value-color));
 }
 
 .character-sheet .terminal-text-dim,
 .character-sheet .text-dim {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color, var(--sheet-label-color));
 }
 
 .character-sheet .terminal-text-accent {
-  color: var(--sheet-accent);
+  color: var(--ui-fg-color);
 }
 
 /* Class resource items - ensure all text is teal */
@@ -1774,22 +1947,22 @@ body::before {
 }
 
 .character-sheet .resource-item {
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color, var(--sheet-value-color));
 }
 
 .character-sheet .resource-name {
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color, var(--sheet-value-color));
 }
 
 .character-sheet .resource-value {
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color, var(--sheet-value-color));
   margin-left: 0.5em;
 }
 
 .character-sheet .resource-legend-box {
   padding: 2px 8px;
   margin-bottom: var(--spacing-sm);
-  color: var(--sheet-accent-dim);
+  color: var(--ui-dim-color);
   font-size: var(--font-size-sm);
   text-align: left;
 }
@@ -1825,12 +1998,12 @@ body::before {
 }
 
 .sheet-header--collapsible:focus-visible {
-  outline: 1px solid var(--sheet-accent);
+  outline: 1px solid var(--ui-border-color);
   outline-offset: 2px;
 }
 
 .sheet-header-toggle {
-  color: var(--sheet-accent);
+  color: var(--ui-fg-color);
   font-size: 0.9em;
   font-weight: var(--font-weight-bold);
   opacity: 0.7;
@@ -1894,13 +2067,13 @@ body::before {
 .class-features-legend {
   padding: 4px 8px;
   margin-bottom: var(--spacing-sm);
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color, var(--sheet-value-color));
   font-size: var(--font-size-xs);
   text-align: left;
 }
 
 .class-features-level--current-indicator {
-  background: color-mix(in srgb, var(--sheet-value-color) 20%, transparent);
+  background: color-mix(in srgb, var(--ui-fg-color, var(--sheet-value-color)) 20%, transparent);
   padding: 1px 4px;
   border-radius: 2px;
 }
@@ -1924,10 +2097,10 @@ body::before {
 
 .class-features-group {
   padding: 10px 16px;
-  border-left: 2px solid var(--sheet-accent-dim);
+  border-left: 2px solid var(--ui-border-color);
   text-align: left;
-  color: var(--sheet-value-color);
-  background: var(--sheet-box-bg);
+  color: var(--ui-fg-color);
+  background: var(--ui-bg-translucent);
 }
 
 .class-features-group-label {
@@ -1955,7 +2128,7 @@ body::before {
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color, var(--sheet-value-color));
   text-align: left;
 }
 
@@ -1964,7 +2137,7 @@ body::before {
 }
 
 .class-features-name {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color, var(--sheet-label-color));
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-normal);
   margin-top: 2px;
@@ -1972,13 +2145,13 @@ body::before {
 }
 
 .class-features-choice {
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color, var(--sheet-value-color));
   margin-right: 4px;
   font-size: var(--font-size-2xs);
 }
 
 .class-features-desc {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color, var(--sheet-label-color));
   font-size: var(--font-size-base);
   text-align: left;
 }
@@ -1992,7 +2165,7 @@ body::before {
 
 .class-features-see-more,
 .class-features-see-less {
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color, var(--sheet-value-color));
   font-family: inherit;
   font-size: var(--font-size-xs);
   text-decoration: underline;
@@ -2022,12 +2195,12 @@ body::before {
 
 .skill-prof-item {
   padding: 12px 16px;
-  border-left: 2px solid var(--sheet-accent-dim);
+  border-left: 2px solid var(--ui-border-color);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  background: var(--sheet-box-bg);
+  background: var(--ui-bg-translucent);
   text-align: left;
 }
 
@@ -2041,26 +2214,26 @@ body::before {
 }
 
 .skill-prof-name {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color, var(--sheet-label-color));
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-normal);
 }
 
 .skill-prof-ability {
-  color: var(--sheet-value-color);
+  color: var(--ui-fg-color, var(--sheet-value-color));
   font-size: var(--font-size-xs);
   opacity: 0.7;
 }
 
 .skill-prof-modifier {
-  color: var(--sheet-accent);
+  color: var(--ui-fg-color);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   margin-left: auto;
 }
 
 .skill-prof-desc {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color, var(--sheet-label-color));
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
 }
@@ -2078,12 +2251,12 @@ body::before {
 
 .tool-prof-item {
   padding: 12px 16px;
-  border-left: 2px solid var(--sheet-accent-dim);
+  border-left: 2px solid var(--ui-border-color);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  background: var(--sheet-box-bg);
+  background: var(--ui-bg-translucent);
   text-align: left;
 }
 
@@ -2097,13 +2270,13 @@ body::before {
 }
 
 .tool-prof-name {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color, var(--sheet-label-color));
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-normal);
 }
 
 .tool-prof-desc {
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color, var(--sheet-label-color));
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
 }
@@ -2126,9 +2299,9 @@ body::before {
   max-width: 300px;
   padding: 8px 12px;
   background: var(--terminal-bg);
-  border: 1px solid var(--sheet-accent);
+  border: 1px solid var(--ui-border-color);
   border-radius: 4px;
-  color: var(--sheet-label-color);
+  color: var(--ui-dim-color, var(--sheet-label-color));
   font-size: var(--font-size-sm);
   line-height: var(--line-height-normal);
   white-space: normal;
@@ -2165,7 +2338,7 @@ body::before {
 .tool-prof-item.has-tooltip .tool-prof-name::after,
 .class-features-item.has-tooltip .class-features-name::after {
   content: 'ⓘ';
-  color: var(--sheet-accent-dim);
+  color: var(--ui-dim-color);
   font-size: var(--font-size-2xs);
   margin-left: 6px;
   opacity: 0.6;
@@ -2192,19 +2365,19 @@ body::before {
   text-align: left;
 }
 
-/* Character sheet inputs/selects use teal borders and focus states */
+/* Character sheet inputs/selects use theme borders and focus states */
 .character-sheet .terminal-input,
 .character-sheet .terminal-select,
 .character-sheet .terminal-textarea {
-  border-color: var(--sheet-accent-dim);
-  color: var(--sheet-value-color);
+  border-color: var(--ui-dim-color);
+  color: var(--ui-fg-color, var(--sheet-value-color));
 }
 
 .character-sheet .terminal-input:focus,
 .character-sheet .terminal-select:focus,
 .character-sheet .terminal-textarea:focus {
-  border-color: var(--sheet-accent);
-  box-shadow: 0 0 5px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.5);
+  border-color: var(--ui-border-color);
+  box-shadow: 0 0 5px var(--ui-bg-translucent);
 }
 
 /* ===== INPUT ELEMENTS ===== */
@@ -2258,8 +2431,8 @@ body::before {
   border: 1px solid var(--ui-dim-color);
   /* Default text is also dimmed; hover/focus/selected promote to bright theme color. */
   color: var(--ui-dim-color);
-  height: var(--btn-height);
-  padding: 0 var(--spacing-sm);
+  min-height: var(--btn-height);
+  padding: var(--spacing-xs) var(--spacing-sm);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
@@ -2299,8 +2472,8 @@ body::before {
   background: transparent;
   border: 1px solid var(--ui-dim-color);
   color: var(--ui-dim-color);
-  height: var(--btn-height-sm);
-  padding: 0 var(--spacing-sm);
+  min-height: var(--btn-height-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
@@ -2332,12 +2505,12 @@ body::before {
   opacity: 1;
 }
 
-/* Teal-themed small buttons (e.g., builder EXIT) should also get a subtle
-   teal background glow on hover instead of the default green tint. */
-.ui-theme-teal.terminal-btn-small:hover:not(:disabled) {
+/* Theme-aware small buttons should use theme tokens */
+.ui-theme-teal.terminal-btn-small:hover:not(:disabled),
+.character-sheet .terminal-btn-small:hover:not(:disabled) {
   background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
-  border-color: var(--sheet-accent);
-  color: var(--sheet-accent);
+  border-color: var(--ui-fg-color);
+  color: var(--ui-fg-color);
   opacity: 1;
 }
 
@@ -2986,7 +3159,7 @@ body.selector-menu-open .splash-art {
      so they read clearly on paper, while keeping them borderless on screen. */
   .character-sheet .stat-box,
   .character-sheet .ability-box {
-    border: 1px solid var(--sheet-box-border-color);
+    border: 1px solid var(--ui-border-color);
   }
 
   /* Keep whole sections together on a page and tighten spacing */
@@ -3026,13 +3199,16 @@ body.selector-menu-open .splash-art {
   z-index: 10000;
   /* Keep background dimmed but sharp — no blur */
   backdrop-filter: none;
-  /* Modal-specific UI tokens (yellow theme) */
+  /* Modal inherits theme from parent container - default to yellow for backward compatibility */
+  /* If parent has theme classes, these will be overridden; otherwise yellow is used */
   --ui-border-color: var(--modal-accent);
   --ui-fg-color: var(--modal-accent);
   --ui-dim-color: var(--modal-accent-dim);
   --ui-primary-bg-color: var(--modal-accent);
   --ui-on-primary-color: var(--terminal-bg);
-  /* Yellow-themed scrollbars inside modals */
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1);
+  /* Scrollbars inherit from parent theme - default to yellow for backward compatibility */
   --scrollbar-track-color: hsl(var(--theme-yellow-h), 100%, 5%);
   --scrollbar-thumb-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.6);
   --scrollbar-thumb-hover-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.9);
@@ -3093,14 +3269,14 @@ body.selector-menu-open .splash-art {
 }
 
 .modal-content {
-  /* Apply yellow theme context for all nested elements */
-  --context-accent: var(--modal-accent);
-  --context-accent-dim: var(--modal-accent-dim);
-  --context-border: var(--modal-accent);
-  --context-hover: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1);
+  /* Apply theme context for all nested elements - inherit from modal's ui-* tokens */
+  --context-accent: var(--ui-fg-color);
+  --context-accent-dim: var(--ui-dim-color);
+  --context-border: var(--ui-border-color);
+  --context-hover: var(--ui-bg-translucent);
   
-  background-color: var(--terminal-bg);
-  border: 2px solid var(--modal-accent);
+  background-color: var(--ui-bg-color, var(--terminal-bg));
+  border: 2px solid var(--ui-border-color);
   border-radius: 4px;
   max-width: 720px;
   width: 90%;
@@ -3108,7 +3284,8 @@ body.selector-menu-open .splash-art {
      Height is constrained relative to the terminal container (via .modal),
      with internal scrolling handled by .modal-body. */
   max-height: calc(100% - 48px);
-  box-shadow: 0 20px 60px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.35);
+  /* Use theme-aware box shadow - extract hue from ui-fg-color or fallback to yellow */
+  box-shadow: 0 20px 60px var(--ui-bg-translucent, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.35));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -3141,14 +3318,14 @@ body.selector-menu-open .splash-art {
 
 .modal-title {
   font-size: var(--font-size-large);
-  color: var(--modal-accent);
+  color: var(--ui-fg-color, var(--modal-accent));
   font-weight: var(--font-weight-normal);
 }
 
 .modal-close {
   background: none;
   border: none;
-  color: var(--modal-accent);
+  color: var(--ui-fg-color, var(--modal-accent));
   font-size: var(--font-size-xl);
   cursor: pointer;
   padding: 0;
@@ -3161,7 +3338,7 @@ body.selector-menu-open .splash-art {
 }
 
 .modal-close:hover {
-  color: var(--modal-accent);
+  color: var(--ui-fg-color, var(--modal-accent));
   transform: rotate(90deg);
 }
 
@@ -3193,17 +3370,17 @@ body.selector-menu-open .splash-art {
   justify-content: flex-end;
 }
 
-/* Modal-specific text theming (yellow) */
+/* Modal-specific text theming - inherits from parent theme */
 .modal .terminal-text,
 .modal .terminal-text-accent {
-  color: var(--modal-accent);
+  color: var(--ui-fg-color, var(--modal-accent));
   /* Match global body-copy spacing inside modals as well */
   margin-bottom: var(--spacing-md);
 }
 
 .modal .terminal-text-small,
 .modal .terminal-text-dim {
-  color: var(--modal-accent-dim);
+  color: var(--ui-dim-color, var(--modal-accent-dim));
 }
 
 /* Extra breathing room for portrait prompt subhead above textarea */
@@ -3211,40 +3388,40 @@ body.selector-menu-open .splash-art {
   margin-bottom: var(--spacing-md);
 }
 
-/* Modal-specific input theming (yellow) */
+/* Modal-specific input theming - inherits from parent theme */
 .modal .terminal-input,
 .modal .terminal-textarea,
 .modal .terminal-select {
-  border-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.6);
-  color: var(--modal-accent);
+  border-color: var(--ui-dim-color, var(--modal-accent-dim));
+  color: var(--ui-fg-color, var(--modal-accent));
   /* iOS Safari fix: -webkit-text-fill-color is needed for number inputs on iOS */
-  -webkit-text-fill-color: var(--modal-accent);
+  -webkit-text-fill-color: var(--ui-fg-color, var(--modal-accent));
   opacity: 1; /* Prevent iOS from applying reduced opacity */
 }
 
 .modal .terminal-input::placeholder,
 .modal .terminal-textarea::placeholder {
-  color: var(--modal-accent-dim);
+  color: var(--ui-dim-color, var(--modal-accent-dim));
   opacity: 0.5;
 }
 
 .modal .terminal-input:focus,
 .modal .terminal-textarea:focus,
 .modal .terminal-select:focus {
-  border-color: var(--modal-accent);
-  box-shadow: 0 0 5px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5);
+  border-color: var(--ui-border-color, var(--modal-accent));
+  box-shadow: 0 0 5px var(--ui-bg-translucent, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5));
 }
 
 /* Modal primary buttons: use the same invert-on-hover behavior as other
-   primary CTAs (e.g., "+ NEW CHARACTER"), but add a subtle yellow glow. */
+   primary CTAs (e.g., "+ NEW CHARACTER"), but add a subtle theme glow. */
 .modal .terminal-btn-primary:hover:not(:disabled) {
-  box-shadow: 0 0 15px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5);
+  box-shadow: 0 0 15px var(--ui-bg-translucent, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5));
 }
 
-/* Modal secondary/cancel buttons: use modal-yellow hover treatment instead of
+/* Modal secondary/cancel buttons: use theme hover treatment instead of
    the default terminal green background so they respect the modal color theme. */
 .modal .terminal-btn:hover:not(:disabled):not(.terminal-btn-primary):not(.terminal-btn-warning):not(.terminal-btn-danger) {
-  background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.10);
+  background-color: var(--ui-bg-translucent, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.10));
   border-color: var(--ui-fg-color);
   color: var(--ui-fg-color);
 }
@@ -3793,11 +3970,51 @@ body.selector-menu-open .splash-art {
   width: 100%;
   height: 100%;
   display: block;
-  border: 1.5px solid var(--sheet-accent);
-  background: rgba(0, 206, 209, 0.05);
+  /* Use theme colors - fallback to sheet-accent for backward compatibility */
+  border: 1.5px solid var(--ui-border-color, var(--sheet-accent));
+  background: var(--ui-bg-translucent, rgba(0, 206, 209, 0.05));
   box-shadow:
-    inset 0 0 20px rgba(0, 206, 209, 0.1),
-    0 0 15px rgba(0, 206, 209, 0.2);
+    inset 0 0 20px var(--ui-bg-translucent, rgba(0, 206, 209, 0.1)),
+    0 0 15px var(--ui-bg-translucent, rgba(0, 206, 209, 0.2));
+}
+
+/* Ensure panel loading cube in character sheet uses theme colors */
+.character-sheet .panel-loading-cube i,
+.right-panel.ui-theme-yellow .panel-loading-cube i,
+.right-panel.ui-theme-pink .panel-loading-cube i,
+.right-panel.ui-theme-green .panel-loading-cube i,
+.right-panel.ui-theme-white .panel-loading-cube i {
+  border-color: var(--ui-border-color) !important;
+  background: var(--ui-bg-translucent) !important;
+  box-shadow: inset 0 0 20px var(--ui-bg-translucent), 0 0 15px var(--ui-bg-translucent) !important;
+}
+
+/* Ensure portrait placeholder cube in character sheet uses theme colors */
+.character-sheet .portrait-placeholder-cube i,
+.right-panel.ui-theme-yellow .portrait-placeholder-cube i,
+.right-panel.ui-theme-pink .portrait-placeholder-cube i,
+.right-panel.ui-theme-green .portrait-placeholder-cube i,
+.right-panel.ui-theme-white .portrait-placeholder-cube i {
+  border-color: var(--ui-border-color) !important;
+  background: var(--ui-bg-translucent) !important;
+  box-shadow: inset 0 0 30px var(--ui-bg-translucent), 0 0 20px var(--ui-bg-translucent) !important;
+}
+
+.character-sheet .portrait-placeholder-cube--generating i,
+.right-panel.ui-theme-yellow .portrait-placeholder-cube--generating i,
+.right-panel.ui-theme-pink .portrait-placeholder-cube--generating i,
+.right-panel.ui-theme-green .portrait-placeholder-cube--generating i,
+.right-panel.ui-theme-white .portrait-placeholder-cube--generating i {
+  box-shadow: inset 0 0 30px var(--ui-bg-translucent), 0 0 20px var(--ui-bg-translucent) !important;
+}
+
+/* Ensure portrait placeholder text in character sheet uses theme colors */
+.character-sheet .portrait-placeholder-text,
+.right-panel.ui-theme-yellow .portrait-placeholder-text,
+.right-panel.ui-theme-pink .portrait-placeholder-text,
+.right-panel.ui-theme-green .portrait-placeholder-text,
+.right-panel.ui-theme-white .portrait-placeholder-text {
+  color: var(--ui-fg-color) !important;
 }
 
 /* Cube faces (60px cube => 30px depth) */

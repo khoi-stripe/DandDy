@@ -62,17 +62,23 @@
 /* ===== PANEL: CHARACTER SHEET ===== */
 .panel-character-sheet {
     padding: 32px;
-    border-right: 1px solid var(--sheet-accent-dim);
+    /* Border only shown when grid is visible (grid-sheet view) - inherits theme from parent */
+    border-right: 1px solid var(--ui-dim-color, var(--terminal-dim));
     /* Fill parent container */
     flex: 1 1 0;
     display: flex;
     flex-direction: column;
     min-height: 0;
     position: relative; /* For absolute positioning of nav bar */
-    /* Teal scrollbar theme */
-    --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
-    --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
-    --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
+    /* Scrollbar colors inherit from character sheet theme */
+}
+
+/* When panel has a theme class, use theme colors for border */
+.panel-character-sheet.ui-theme-pink,
+.panel-character-sheet.ui-theme-green,
+.panel-character-sheet.ui-theme-white,
+.panel-character-sheet.ui-theme-yellow {
+    border-right-color: var(--ui-dim-color);
 }
 
 /* Wrapper for character sheet - fills parent container */
@@ -84,25 +90,66 @@
     min-height: 0;
     max-height: 100%;
     overflow: hidden;
-    border: 1px solid var(--sheet-accent-dim);
+    /* Border inherits theme from character sheet - use character sheet's dim color */
+    border: 1px solid var(--ui-dim-color, var(--terminal-dim));
     /* Smooth transitions for nav bar padding changes */
     transition: padding-top 0.25s ease;
     /* Don't set theme tokens here - let child components set their own themes */
-    /* Teal scrollbar theme (for character sheet) */
-    --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
-    --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
-    --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
+    /* Scrollbar colors inherit from parent theme - character sheet sets these */
 }
 
-/* Apply teal theme only to character sheet, not campaign panel */
-.sheet-campaign-grid .character-sheet {
-    /* Teal UI theme for character sheet only */
-    --ui-border-color: var(--sheet-accent);
-    --ui-fg-color: var(--sheet-accent);
-    --ui-dim-color: var(--sheet-accent-dim);
-    --ui-primary-bg-color: var(--sheet-accent);
-    --ui-on-primary-color: var(--terminal-bg);
+/* Inherit border color from character sheet theme */
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-pink) {
+    border-color: var(--ui-dim-color);
 }
+
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-green) {
+    border-color: var(--ui-dim-color);
+}
+
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-white) {
+    border-color: var(--ui-dim-color);
+}
+
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-yellow) {
+    border-color: var(--ui-dim-color);
+}
+
+/* Inherit scrollbar colors from character sheet theme */
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-pink) {
+    --scrollbar-track-color: hsl(var(--theme-pink-h), 70%, 7%) !important;
+    --scrollbar-thumb-color: hsla(var(--theme-pink-h), calc(var(--theme-pink-s) * 0.67), var(--theme-pink-l-dim), 0.5) !important;
+    --scrollbar-thumb-hover-color: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright), 0.9) !important;
+    /* Also set border color so campaign-panel-slot border-top inherits it */
+    --ui-border-color: var(--campaign-accent);
+}
+
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-green) {
+    --scrollbar-track-color: hsl(var(--theme-terminal-h), 70%, 7%) !important;
+    --scrollbar-thumb-color: hsla(var(--theme-terminal-h), calc(var(--theme-terminal-s) * 0.67), var(--theme-terminal-l-dim), 0.5) !important;
+    --scrollbar-thumb-hover-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.9) !important;
+    /* Also set border color so campaign-panel-slot border-top inherits it */
+    --ui-border-color: var(--terminal-border);
+}
+
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-white) {
+    --scrollbar-track-color: hsl(var(--theme-white-h), 70%, 7%) !important;
+    --scrollbar-thumb-color: hsla(var(--theme-white-h), calc(var(--theme-white-s) * 0.67), var(--theme-white-l-dim), 0.5) !important;
+    --scrollbar-thumb-hover-color: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.9) !important;
+    /* Also set border color so campaign-panel-slot border-top inherits it */
+    --ui-border-color: var(--white-border);
+}
+
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-yellow) {
+    --scrollbar-track-color: hsl(var(--theme-yellow-h), 70%, 7%) !important;
+    --scrollbar-thumb-color: hsla(var(--theme-yellow-h), calc(var(--theme-yellow-s) * 0.67), var(--theme-yellow-l-dim), 0.5) !important;
+    --scrollbar-thumb-hover-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.9) !important;
+    /* Also set border color so campaign-panel-slot border-top inherits it */
+    --ui-border-color: var(--modal-accent);
+}
+
+/* Character sheet theme is set in .character-sheet base rule in terminal-theme.css */
+/* Theme classes can override if needed */
 
 /* Grid for character sheet and campaign panel - stacks vertically in grid view, side-by-side in expanded view */
 .sheet-campaign-grid {
@@ -144,10 +191,10 @@
     /* In grid view, campaign panel is below sheet in the same scroll area */
     overflow: visible;
     flex: 0 0 auto;
-    /* Separator line in grid view - inherits theme border color */
-    border-top: 1px solid var(--ui-border-color);
+    /* Removed border-top - spacing provides enough visual separation */
     margin-top: var(--spacing-lg);
-    /* Default to white theme for campaign panel - overrides parent teal theme */
+    /* Default white theme - prevents green fallback from root */
+    /* Theme classes (ui-theme-pink, ui-theme-teal, etc.) will override these */
     --ui-border-color: var(--white-border);
     --ui-fg-color: var(--white-fg);
     --ui-dim-color: var(--white-dim);
@@ -155,9 +202,14 @@
     --ui-on-primary-color: var(--white-bg);
     --ui-bg-color: var(--white-bg);
     --ui-bg-translucent: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.1);
+    --context-hover: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.1);
 }
 
-/* Ensure white theme class also works (redundant but explicit) */
+/* Campaign panel slot border-top will inherit --ui-border-color from .sheet-scroll-wrapper */
+
+/* Theme classes override parent theme - ensure they work for campaign panel */
+/* Use more specific selectors to ensure theme classes override root defaults */
+.sheet-campaign-grid .campaign-panel-slot.ui-theme-white,
 .campaign-panel-slot.ui-theme-white {
     --ui-border-color: var(--white-border) !important;
     --ui-fg-color: var(--white-fg) !important;
@@ -166,7 +218,37 @@
     --ui-on-primary-color: var(--white-bg) !important;
     --ui-bg-color: var(--white-bg) !important;
     --ui-bg-translucent: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.1) !important;
+    --context-hover: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.1) !important;
 }
+
+.sheet-campaign-grid .campaign-panel-slot.ui-theme-teal,
+.campaign-panel-slot.ui-theme-teal {
+    --ui-border-color: var(--sheet-accent) !important;
+    --ui-fg-color: var(--sheet-accent) !important;
+    --ui-dim-color: var(--sheet-accent-dim) !important;
+    --ui-primary-bg-color: var(--sheet-accent) !important;
+    --ui-on-primary-color: var(--terminal-bg) !important;
+    --ui-bg-color: var(--terminal-bg) !important;
+    --ui-bg-translucent: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1) !important;
+    --context-hover: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1) !important;
+}
+
+/* Pink theme - use most specific selector to override root defaults */
+/* Ensure these override both root defaults AND the .ui-theme-pink class from terminal-theme.css */
+.sheet-scroll-wrapper .sheet-campaign-grid .campaign-panel-slot.ui-theme-pink,
+.sheet-campaign-grid .campaign-panel-slot.ui-theme-pink,
+.campaign-panel-slot.ui-theme-pink,
+div.campaign-panel-slot.ui-theme-pink {
+    --ui-border-color: var(--campaign-accent) !important;
+    --ui-fg-color: var(--campaign-accent) !important;
+    --ui-dim-color: var(--campaign-accent-dim) !important;
+    --ui-primary-bg-color: var(--campaign-accent) !important;
+    --ui-on-primary-color: var(--terminal-bg) !important;
+    --ui-bg-color: var(--terminal-bg) !important;
+    --ui-bg-translucent: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright), 0.1) !important;
+    --context-hover: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright), 0.1) !important;
+}
+
 
 /* In expanded view, campaign panel gets its own scrolling */
 .split-layout.is-sheet-expanded .campaign-panel-slot {
@@ -174,8 +256,6 @@
     overflow-y: auto;
     overflow-x: hidden;
     flex: 1 1 0;
-    /* Remove separator in side-by-side layout */
-    border-top: none;
     margin-top: 0;
     /* Transition for smooth reveal */
     transition: opacity 0.3s ease 0.1s;
@@ -207,10 +287,10 @@
     display: flex;
 }
 
-/* Teal themed cube for sheet panel */
+/* Theme-aware cube for expand overlay */
 .expand-loading-overlay .panel-loading-cube i {
-    border-color: var(--sheet-accent-dim);
-    background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.08);
+    border-color: var(--ui-dim-color);
+    background: var(--ui-bg-translucent);
 }
 
 /* Hidden state for transitions */
@@ -236,7 +316,7 @@
     padding: 0 0 12px 0;
     background: var(--terminal-bg);
     /* Bottom border acts as top border for sheet-scroll-wrapper when nav is visible */
-    border-bottom: 1px solid var(--sheet-accent-dim);
+    border-bottom: 1px solid var(--ui-dim-color);
     /* Animation properties */
     opacity: 0;
     transform: translateY(-8px);
@@ -269,7 +349,7 @@
     padding: 4px 0;
     background: transparent;
     border: none;
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
     font-family: var(--font-terminal);
     font-size: var(--font-size-sm);
     cursor: pointer;
@@ -283,14 +363,14 @@
 
 /* Arrow glyphs */
 .character-nav-bar .nav-arrow {
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
     font-size: var(--font-size-base);
     flex-shrink: 0;
 }
 
 /* Character name in nav - truncate if too long */
 .character-nav-bar .nav-name {
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -301,7 +381,7 @@
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
     font-family: var(--font-terminal);
     font-size: var(--font-size-sm);
     white-space: nowrap;
@@ -335,12 +415,12 @@
     backface-visibility: hidden;
     transform: rotateX(-180deg);
     transition: transform 0.3s ease;
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
 }
 
 /* Hover state - flip the card */
 .character-nav-bar .nav-count-link:hover {
-    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
+    background-color: var(--ui-bg-translucent);
 }
 
 .character-nav-bar .nav-count-link:hover .nav-count-value {
@@ -354,7 +434,7 @@
 /* ===== SHEET NAV BAR (above character sheet) ===== */
 .sheet-nav-bar {
     padding: 32px 0 0 0;
-    border-bottom: 1px solid var(--sheet-accent);
+    border-bottom: 1px solid var(--ui-border-color);
     display: flex;
     justify-content: flex-end;
     gap: 8px;
@@ -368,15 +448,15 @@
     display: none;
 }
 
-/* Teal theme for nav bar buttons */
+/* Theme-aware nav bar buttons */
 .sheet-nav-bar .terminal-btn-small {
-    color: var(--sheet-accent);
-    border-color: var(--sheet-accent);
+    color: var(--ui-fg-color);
+    border-color: var(--ui-border-color);
 }
 
 .sheet-nav-bar .terminal-btn-small:hover {
-    background: var(--sheet-accent);
-    color: var(--terminal-bg);
+    background: var(--ui-primary-bg-color);
+    color: var(--ui-on-primary-color);
 }
 
 /* View navigation buttons - show/hide based on current view */
@@ -419,7 +499,7 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
     text-align: center;
     padding: var(--spacing-xl);
 }
@@ -634,7 +714,7 @@
     justify-content: space-between;
     align-items: center;
     padding: var(--spacing-sm) 0;
-    border-bottom: 1px solid var(--sheet-border-color);
+    border-bottom: 1px solid var(--ui-border-color);
 }
 
 .skeleton-party-member:last-child {
@@ -651,7 +731,7 @@
 
 .skeleton-journal-entry {
     padding: var(--spacing-md);
-    border: 1px solid var(--sheet-border-color);
+    border: 1px solid var(--ui-border-color);
     margin-bottom: var(--spacing-sm);
 }
 
@@ -706,7 +786,7 @@
     font-weight: var(--font-weight-semibold);
     text-transform: uppercase;
     letter-spacing: var(--tracking-wider);
-    color: var(--modal-accent-dim);
+    color: var(--ui-dim-color, var(--modal-accent-dim));
     margin-bottom: 0.5rem;
     display: block;
 }
@@ -724,7 +804,7 @@
 
 /* Pending invites list - matches share modal collaborators styling */
 .pending-invites-list {
-    border: 1px solid var(--modal-accent-dim);
+    border: 1px solid var(--ui-dim-color, var(--modal-accent-dim));
     border-radius: 4px;
     background: var(--terminal-bg-dim);
     max-height: 150px;
@@ -732,7 +812,7 @@
 }
 
 .pending-invites-empty {
-    color: var(--modal-accent-dim);
+    color: var(--ui-dim-color, var(--modal-accent-dim));
     font-size: var(--font-size-sm);
     text-align: center;
     padding: 0.75rem;
@@ -743,7 +823,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--modal-accent-dim);
+    border-bottom: 1px solid var(--ui-dim-color, var(--modal-accent-dim));
     transition: background-color 0.15s ease;
 }
 
@@ -752,12 +832,12 @@
 }
 
 .pending-invite-item:hover {
-    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.08);
+    background-color: var(--ui-bg-translucent, hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.08));
 }
 
 .pending-invite-email {
     font-size: var(--font-size-sm);
-    color: var(--modal-accent);
+    color: var(--ui-fg-color, var(--modal-accent));
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -771,7 +851,7 @@
     height: 24px;
     border: none;
     background: transparent;
-    color: var(--modal-accent-dim);
+    color: var(--ui-dim-color, var(--modal-accent-dim));
     font-size: var(--font-size-lg);
     line-height: 1;
     cursor: pointer;
@@ -1098,29 +1178,30 @@
     padding: var(--spacing-md);
 }
 
-/* Use yellow/modal theme for character sheet inside the view modal */
+/* Use theme for character sheet inside the view modal - inherits from modal's parent theme */
 .party-member-sheet-body .character-sheet {
-    --context-accent: var(--modal-accent);
-    --context-accent-dim: var(--modal-accent-dim);
-    --sheet-accent: var(--modal-accent);
-    --sheet-accent-dim: var(--modal-accent-dim);
-    --sheet-accent-bright: var(--modal-accent);
-    --sheet-label-color: var(--modal-accent);
-    --sheet-value-color: var(--modal-accent);
-    --sheet-border-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5);
-    --sheet-box-bg: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.15);
-    --sheet-ability-box-bg: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.15);
-    --sheet-box-border-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.4);
-    color: var(--modal-accent);
+    --context-accent: var(--ui-fg-color, var(--modal-accent));
+    --context-accent-dim: var(--ui-dim-color, var(--modal-accent-dim));
+    --sheet-accent: var(--ui-fg-color, var(--modal-accent));
+    --sheet-accent-dim: var(--ui-dim-color, var(--modal-accent-dim));
+    --sheet-accent-bright: var(--ui-fg-color, var(--modal-accent));
+    --sheet-label-color: var(--ui-fg-color, var(--modal-accent));
+    --sheet-value-color: var(--ui-fg-color, var(--modal-accent));
+    --sheet-border-color: var(--ui-dim-color, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5));
+    --sheet-box-bg: var(--ui-bg-translucent, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.15));
+    --sheet-ability-box-bg: var(--ui-bg-translucent, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.15));
+    --sheet-box-border-color: var(--ui-dim-color, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.4));
+    color: var(--ui-fg-color, var(--modal-accent));
 }
 
-/* Portrait area yellow theme - brighter background for multiply blend */
+/* Portrait area theme - brighter background for multiply blend - uses theme colors */
 .party-member-sheet-body .portrait-container--original-mode:has(.original-portrait.is-loaded) {
+    /* Extract hue from ui-fg-color or fallback to yellow */
     background: hsl(var(--theme-yellow-h), 50%, 45%);
 }
 
 .party-member-sheet-body .ascii-portrait {
-    color: var(--modal-accent);
+    color: var(--ui-fg-color, var(--modal-accent));
 }
 
 /* Loading state for party member sheet modal */
@@ -1222,7 +1303,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 16px 0 var(--spacing-md) 0;
-    border-bottom: 1px solid var(--sheet-border-color);
+    border-bottom: 1px solid var(--ui-border-color);
     flex-shrink: 0;
     gap: var(--spacing-sm);
 }
@@ -1240,20 +1321,20 @@
 }
 
 .journal-add-link {
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
     text-decoration: none;
     font-size: var(--font-size-base);
     transition: color 0.2s ease;
 }
 
 .journal-add-link:hover {
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
     text-decoration: none;
 }
 
 .journal-title {
     font-size: var(--font-size-md);
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
     margin: 0;
     font-weight: var(--font-weight-medium);
 }
@@ -1280,7 +1361,7 @@
 
 /* Journal settings button - matches .manager-settings-link */
 .journal-settings-btn {
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
     font-size: var(--font-size-xl);
     line-height: 1;
     display: inline-flex;
@@ -1290,7 +1371,7 @@
 }
 
 .journal-settings-btn:hover {
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
 }
 
 @media (max-width: 768px) {
@@ -1332,12 +1413,12 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
-    background: var(--sheet-box-bg);
+    background: var(--ui-bg-translucent, var(--sheet-box-bg));
     transition: border-color var(--transition-speed), background var(--transition-speed);
 }
 
 .journal-entry:hover {
-    background: hsla(var(--theme-teal-h), var(--theme-teal-s), 10%, 0.3);
+    background: var(--context-hover);
 }
 
 /* Header - stacked with date above title */
@@ -1357,7 +1438,7 @@
 
 /* Date */
 .journal-entry-date {
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-normal);
     text-transform: uppercase;
@@ -1366,7 +1447,7 @@
 
 /* Character name - displayed before date */
 .journal-entry-author {
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-normal);
     text-transform: uppercase;
@@ -1375,7 +1456,7 @@
 
 .journal-entry-author::after {
     content: " • ";
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
 }
 
 /* Style for entries from other party members */
@@ -1385,7 +1466,7 @@
 
 /* Title - main heading */
 .journal-entry-title {
-    color: var(--sheet-label-color);
+    color: var(--ui-fg-color);
     font-size: var(--font-size-base);
     font-weight: var(--font-weight-medium);
     white-space: nowrap;
@@ -1396,7 +1477,7 @@
 
 /* Preview text - matches skill-prof-desc pattern */
 .journal-entry-preview {
-    color: var(--sheet-label-color);
+    color: var(--ui-dim-color);
     font-size: var(--font-size-base);
     line-height: var(--line-height-normal);
     display: -webkit-box;
@@ -1409,7 +1490,7 @@
 .journal-entry-full {
     display: none;
     width: 100%;
-    color: var(--sheet-label-color);
+    color: var(--ui-dim-color);
     font-size: var(--font-size-base);
     line-height: var(--line-height-normal);
     word-break: break-word;
@@ -1419,7 +1500,7 @@
 .journal-entry-updates {
     margin: 8px 0;
     padding: 8px;
-    background: var(--sheet-box-bg);
+    background: var(--ui-bg-translucent, var(--sheet-box-bg));
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
@@ -1427,8 +1508,24 @@
     width: 100%;
 }
 
+/* Stat boxes within journal entries should use white theme */
+.campaign-panel-slot .journal-entry-updates .stat-box,
+.campaign-panel-slot.ui-theme-white .journal-entry-updates .stat-box {
+    background: var(--ui-bg-translucent, hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.1));
+}
+
+.campaign-panel-slot .journal-entry-updates .stat-box-label,
+.campaign-panel-slot.ui-theme-white .journal-entry-updates .stat-box-label {
+    color: var(--ui-dim-color);
+}
+
+.campaign-panel-slot .journal-entry-updates .stat-box-value,
+.campaign-panel-slot.ui-theme-white .journal-entry-updates .stat-box-value {
+    color: var(--ui-fg-color);
+}
+
 .journal-update-stats {
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
     font-size: var(--font-size-sm);
     text-transform: uppercase;
     letter-spacing: var(--tracking-wider);
@@ -1450,7 +1547,7 @@
 }
 
 .journal-entry.is-expanded {
-    background: transparent;
+    background: var(--ui-bg-translucent, transparent);
 }
 
 /* Clickable cursor */
@@ -1476,7 +1573,7 @@
 /* Edit & Delete buttons - dim by default, brighten on direct hover */
 .journal-entry-edit.terminal-btn-icon,
 .journal-entry-delete.terminal-btn-icon {
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
     opacity: 0.4;
     transition: opacity var(--transition-speed);
 }
@@ -1501,16 +1598,16 @@
     padding: var(--spacing-xl);
     text-align: center;
     height: 100%;
-    background: var(--sheet-box-bg);
+    background: var(--ui-bg-translucent, var(--sheet-box-bg));
 }
 
 .journal-empty-text {
-    color: var(--sheet-label-color);
+    color: var(--ui-dim-color);
     margin-bottom: var(--spacing-xs);
 }
 
 .journal-empty-hint {
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
     font-size: var(--font-size-small);
     opacity: 0.7;
 }
@@ -1537,7 +1634,7 @@
     position: sticky;
     top: 0;
     z-index: 10;
-    background-color: var(--terminal-bg);
+    background-color: var(--ui-bg-color);
     /* Extend background padding to cover scrolling content behind */
     padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-md) var(--spacing-xl);
     /* Negative margins to counteract panel padding so we go edge-to-edge */
@@ -1548,27 +1645,27 @@
 .session-notice {
     margin: 0 0 var(--spacing-md) 0;
     padding: var(--spacing-sm) var(--spacing-md);
-    border: 1px solid var(--sheet-accent);
-    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l), 0.1);
+    border: 1px solid var(--ui-border-color);
+    background-color: var(--ui-bg-translucent);
     font-size: var(--font-size-small);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--spacing-sm);
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
 }
 
 .session-notice-icon {
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
 }
 
 .session-notice-text {
     flex: 1;
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
 }
 
 .session-notice-time {
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
 }
 
 .session-notice-actions {
@@ -1579,7 +1676,7 @@
 .session-notice-action {
     background: none;
     border: none;
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
     font-family: var(--font-mono);
     font-size: var(--font-size-small);
     text-decoration: underline;
@@ -1589,37 +1686,37 @@
 }
 
 .session-notice-action:hover {
-    text-shadow: 0 0 5px var(--sheet-accent);
+    text-shadow: 0 0 5px var(--ui-fg-color);
 }
 
 .guest-notice {
     margin: 0 0 var(--spacing-lg) 0;
     padding: var(--spacing-sm) var(--spacing-md);
-    border: 1px solid var(--sheet-accent);
-    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.10);
+    border: 1px solid var(--ui-border-color);
+    background-color: var(--ui-bg-translucent);
     font-size: var(--font-size-small);
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
 }
 
 .guest-notice .highlight {
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
 }
 
 .guest-notice-icon {
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
 }
 
 .guest-notice-close {
     margin-left: auto;
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
 }
 
 .guest-notice-close:hover {
-    color: var(--sheet-accent);
-    text-shadow: 0 0 8px var(--sheet-accent);
+    color: var(--ui-fg-color);
+    text-shadow: 0 0 8px var(--ui-fg-color);
 }
 
 .guest-notice-link {
@@ -1646,35 +1743,39 @@
     flex: 1;
 }
 
-.search-input-wrapper .terminal-input {
+/* Override base terminal-input styles for search input in character grid panel */
+.panel-character-grid .search-input-wrapper .terminal-input {
     padding-right: 28px; /* make room for clear button */
     padding-left: 32px;  /* make room for leading search icon */
-    /* Search field text should use dim terminal green so it feels subtle
+    /* Search field text should use dim theme color so it feels subtle
        even when focused, while still using shared focus borders/shadows. */
-    color: var(--terminal-dim);
+    color: var(--ui-dim-color) !important;
+    /* iOS Safari fix: override -webkit-text-fill-color to match theme */
+    -webkit-text-fill-color: var(--ui-dim-color) !important;
     /* Match search input text size to small button text */
     font-size: var(--font-size-base);
 }
 
 /* Placeholder copy (e.g., "Search all 15 characters") should also use
-   the dim terminal green token so it matches the input text color. */
-.search-input-wrapper .terminal-input::placeholder {
-    color: var(--terminal-dim);
+   the dim theme token so it matches the input text color. */
+.panel-character-grid .search-input-wrapper .terminal-input::placeholder {
+    color: var(--ui-dim-color) !important;
     /* Keep placeholder the same size as the input/button text */
     font-size: var(--font-size-base);
 }
 
 /* Dim the search box when not focused so it feels secondary until active */
-.search-input-wrapper .terminal-input:not(:focus) {
-    border-color: var(--terminal-dim);
+.panel-character-grid .search-input-wrapper .terminal-input:not(:focus) {
+    border-color: var(--ui-dim-color) !important;
 }
 
-/* When focused, make the search field feel like a primary green input */
-.search-input-wrapper .terminal-input:focus {
-    /* Use bright terminal green (not teal accent) */
-    border-color: var(--terminal-border);
-    box-shadow: 0 0 8px var(--terminal-border);
-    color: var(--terminal-fg);
+/* When focused, make the search field feel like a primary theme input */
+.panel-character-grid .search-input-wrapper .terminal-input:focus {
+    /* Use bright theme color */
+    border-color: var(--ui-border-color) !important;
+    box-shadow: 0 0 8px var(--ui-border-color) !important;
+    color: var(--ui-fg-color) !important;
+    -webkit-text-fill-color: var(--ui-fg-color) !important;
 }
 
 .password-input-wrapper {
@@ -1712,34 +1813,39 @@
     outline-offset: 2px;
 }
 
-.search-clear-btn {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: transparent;
-    border: none;
-    color: var(--terminal-dim);
-    cursor: pointer;
-  font-size: var(--font-size-lg);
-    line-height: 1;
-    padding: 0;
-    transition: color var(--transition-speed), transform var(--transition-speed);
-}
-
-.search-icon {
+/* Search icon and clear button use theme colors */
+.panel-character-grid .search-icon {
     position: absolute;
     left: 10px;
     top: 50%;
     transform: translateY(-50%);
     font-size: var(--font-size-lg);
     line-height: 1;
-    color: var(--terminal-dim);
+    color: var(--ui-dim-color);
     pointer-events: none;
 }
 
-.search-clear-btn:hover {
-    color: var(--terminal-accent);
+.panel-character-grid .search-input-wrapper:focus-within .search-icon {
+    color: var(--ui-fg-color);
+}
+
+.panel-character-grid .search-clear-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--ui-dim-color);
+    cursor: pointer;
+    font-size: var(--font-size-lg);
+    line-height: 1;
+    padding: 0;
+    transition: color var(--transition-speed), transform var(--transition-speed);
+}
+
+.panel-character-grid .search-clear-btn:hover {
+    color: var(--ui-fg-color);
     /* Match modal close spin: quarter turn on hover */
     transform: translateY(-50%) rotate(90deg);
 }
@@ -1777,15 +1883,15 @@
     height: auto;
 }
 
-.search-sort-btn:hover {
-    border-color: var(--terminal-accent);
-    color: var(--terminal-accent);
+.panel-character-grid .search-sort-btn:hover {
+    border-color: var(--ui-fg-color);
+    color: var(--ui-fg-color);
 }
 
-.search-sort-btn.is-active {
+.panel-character-grid .search-sort-btn.is-active {
     /* Dimmed look while listbox is open */
-    border-color: var(--terminal-dim);
-    color: var(--terminal-dim);
+    border-color: var(--ui-dim-color);
+    color: var(--ui-dim-color);
     background-color: rgba(0, 0, 0, 0.6);
 }
 
@@ -1793,10 +1899,10 @@
    from terminal-theme.css; no additional manager-specific overrides. */
 
 /* ===== CHARACTER COUNT ===== */
-.character-count {
+.panel-character-grid .character-count {
     margin-bottom: var(--spacing-md);
     font-size: var(--font-size-base);
-    color: var(--terminal-dim);
+    color: var(--ui-dim-color);
 }
 
 /* ===== CHARACTER GRID ===== */
@@ -1809,9 +1915,9 @@
 
 /* ===== CHARACTER CARD ===== */
 .character-card {
-    background-color: var(--terminal-bg);
-    /* Default/unselected: dim green outline */
-    border: 1px solid var(--terminal-dim);
+    background-color: var(--ui-bg-color);
+    /* Default/unselected: dim theme outline */
+    border: 1px solid var(--ui-dim-color);
     padding: 0;
     transition: all var(--transition-speed);
     cursor: pointer;
@@ -1839,8 +1945,8 @@
     font-family: var(--font-mono);
     letter-spacing: var(--tracking-wider);
     text-transform: uppercase;
-    color: var(--terminal-fg);
-    background-color: rgba(0, 0, 0, 0.85);
+    color: var(--ui-on-primary-color);
+    background-color: var(--ui-primary-bg-color);
     border-radius: 3px;
 }
 
@@ -1856,8 +1962,8 @@
     font-family: var(--font-mono);
     letter-spacing: var(--tracking-wider);
     text-transform: uppercase;
-    color: var(--terminal-fg);
-    background-color: rgba(0, 0, 0, 0.85);
+    color: var(--ui-on-primary-color);
+    background-color: var(--ui-primary-bg-color);
     border-radius: 3px;
 }
 
@@ -1868,22 +1974,23 @@
     right: 6px;
     z-index: 5;
     font-size: var(--font-size-sm);
-    color: var(--terminal-fg);
+    color: var(--ui-fg-color);
     opacity: 0.7;
     line-height: 1;
 }
 
 /* Subtle highlight for pinned cards */
 .character-card.is-pinned {
-    border-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-dim), 0.5);
+    border-color: var(--ui-dim-color);
+    opacity: 0.7;
 }
 
-/* Hover and keyboard focus (unselected) - bright green outline, text, and ASCII */
+/* Hover and keyboard focus (unselected) - bright theme outline, text, and ASCII */
 .character-card:hover:not(.is-selected),
 .character-card.is-keyboard-focused:not(.is-selected) {
-    border-color: var(--terminal-border);
-    background-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.08);
-    box-shadow: 0 0 15px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.25);
+    border-color: var(--ui-border-color);
+    background-color: var(--ui-bg-translucent);
+    box-shadow: 0 0 15px var(--ui-bg-translucent);
 }
 
 .character-card:hover:not(.is-selected) .card-thumbnail,
@@ -1892,7 +1999,7 @@
 .character-card.is-keyboard-focused:not(.is-selected) .card-name,
 .character-card:hover:not(.is-selected) .card-info,
 .character-card.is-keyboard-focused:not(.is-selected) .card-info {
-    color: var(--terminal-fg);
+    color: var(--ui-fg-color);
 }
     
 .card-thumbnail {
@@ -1900,8 +2007,8 @@
     aspect-ratio: 3 / 4;
     font-size: 2.2px;
     line-height: var(--line-height-snug);
-    /* Default/unselected: dim green ASCII */
-    color: var(--terminal-dim);
+    /* Default/unselected: dim theme ASCII */
+    color: var(--ui-dim-color);
     /* ASCII art needs a consistent monospace font across all browsers.
        Menlo/Monaco (macOS), Consolas (Windows) have identical metrics in Safari & Chrome. */
     font-family: 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
@@ -1961,9 +2068,9 @@
     transition: background-color 0.12s ease-in 0.08s;
 }
 
-/* Only show teal background once image has loaded */
+/* Only show theme background once image has loaded */
 .card-thumbnail--image:has(img.is-loaded) {
-    background-color: var(--terminal-fg);
+    background-color: var(--ui-fg-color);
 }
 
 .card-thumbnail--image img {
@@ -1995,8 +2102,8 @@
 }
 
 .card-name {
-    /* Default/unselected: dim green text */
-    color: var(--terminal-dim);
+    /* Default/unselected: dim theme text */
+    color: var(--ui-dim-color);
     font-size: var(--font-size-small);
     line-height: var(--line-height-snug);
     margin-bottom: 0;
@@ -2006,7 +2113,7 @@
 }
 
 .card-info {
-    color: var(--terminal-dim);
+    color: var(--ui-dim-color);
     /* Slightly smaller than other card text for hierarchy */
     font-size: var(--font-size-sm);
     line-height: var(--line-height-snug);
@@ -2034,12 +2141,12 @@
 
 .empty-title {
     font-size: var(--font-size-base);
-    color: var(--terminal-accent);
+    color: var(--ui-fg-color);
     margin-bottom: var(--spacing-sm);
 }
 
 .empty-message {
-    color: var(--terminal-dim);
+    color: var(--ui-dim-color);
     font-size: var(--font-size-base);
     margin-bottom: var(--spacing-lg);
 }
@@ -2114,7 +2221,7 @@
 .sheet-subsection-title {
     margin-top: 4px;
     padding-top: 8px;
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color, var(--sheet-accent));
 }
 
 /* Character sheet bullet lists - proper hanging indent */
@@ -2144,16 +2251,16 @@
 .sheet-currency {
     margin-top: 12px;
     padding-top: 8px;
-    border-top: 1px dashed var(--border-dim);
+    border-top: 1px dashed var(--ui-dim-color, var(--terminal-dim));
     font-size: 0.95em;
 }
 
 .sheet-currency .currency-label {
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color, var(--sheet-accent));
 }
 
 .sheet-currency .currency-value {
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color, var(--sheet-accent));
     font-weight: var(--font-weight-normal);
 }
 
@@ -2597,12 +2704,10 @@
 }
 
 /* ===== AUTH UI / HEADER THEMING ===== */
-/* Make the manager header content use the teal sheet theme:
-   - Title: bright teal
-   - User/local-storage label: dim teal
-   - Buttons: use ui-theme-teal via HTML classes */
+/* Header uses theme colors - can be themed by applying theme classes to header or parent */
 .terminal-header .terminal-title {
-    color: var(--sheet-accent);
+    /* Use theme foreground color - inherits from parent theme class */
+    color: var(--ui-fg-color);
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
@@ -2614,7 +2719,7 @@
     border: none;
     padding: 0;
     cursor: pointer;
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
     font-size: var(--font-size-xl);
     line-height: 1;
     transition: color 0.2s ease, text-shadow 0.2s ease;
@@ -2626,8 +2731,8 @@
 }
 
 .manager-settings-link:hover {
-    color: var(--sheet-accent);
-    text-shadow: 0 0 5px var(--sheet-accent);
+    color: var(--ui-fg-color);
+    text-shadow: 0 0 5px var(--ui-fg-color);
     text-decoration: none;
 }
 
@@ -2695,10 +2800,10 @@
     text-transform: uppercase;
 }
 
-/* Yellow for modal contexts (uses base modal theme) */
+/* Inherit theme from modal parent (uses base modal theme as fallback) */
 .modal .settings-group-label,
 .modal-content .settings-group-label {
-    color: var(--modal-accent) !important;
+    color: var(--ui-fg-color, var(--modal-accent)) !important;
     text-transform: uppercase !important;
 }
 
@@ -2790,15 +2895,15 @@
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
-    border: 1px solid var(--modal-accent);
+    border: 1px solid var(--ui-border-color, var(--modal-accent));
     border-radius: 2px;
     background-color: transparent;
     position: relative;
 }
 
 .settings-checkbox:checked {
-    border-color: var(--modal-accent);
-    background-color: var(--modal-accent);
+    border-color: var(--ui-primary-bg-color, var(--modal-accent));
+    background-color: var(--ui-primary-bg-color, var(--modal-accent));
 }
 
 .settings-checkbox:checked::after {
@@ -2807,7 +2912,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: var(--terminal-bg);
+    color: var(--ui-on-primary-color, var(--terminal-bg));
     font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-medium);
 }
@@ -2818,7 +2923,7 @@
 }
 
 .settings-checkbox-text {
-    color: var(--modal-accent);
+    color: var(--ui-fg-color, var(--modal-accent));
     font-size: var(--font-size-xs);
     text-transform: uppercase;
     letter-spacing: var(--tracking-wider);
@@ -2831,10 +2936,11 @@
     margin-left: 22px; /* align with checkbox label (14px checkbox + 8px gap) */
 }
 
-#userInfoDisplay {
+/* Header user info display - uses theme colors */
+.terminal-header #userInfoDisplay {
     font-size: var(--font-size-small);
     white-space: nowrap;
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
     display: inline-flex;
     align-items: center;
     gap: 0;
@@ -2847,7 +2953,7 @@
 }
 
 /* Reveal email on logout button hover */
-.header-actions:has(#authBtn:hover) #userInfoDisplay {
+.terminal-header .header-actions:has(#authBtn:hover) #userInfoDisplay {
     max-width: 300px;
     opacity: 0.7;
     padding-right: var(--spacing-sm);
@@ -2862,27 +2968,61 @@
 }
 
 /* Dim the header auth button (LOGIN / LOGOUT) so it reads as secondary */
-.header-actions #authBtn {
-    /* Use the dim teal tokens rather than the bright accent */
-    border-color: var(--sheet-accent-dim);
-    color: var(--sheet-accent-dim);
+.terminal-header .header-actions #authBtn {
+    /* Use theme dim color */
+    border-color: var(--ui-dim-color);
+    color: var(--ui-dim-color);
     opacity: 0.7;
 }
 
-.header-actions #authBtn:hover:not(:disabled) {
+.terminal-header .header-actions #authBtn:hover:not(:disabled) {
     /* On hover, brighten slightly but keep it softer than primary CTAs */
-    border-color: var(--sheet-accent);
-    color: var(--sheet-accent);
+    border-color: var(--ui-fg-color);
+    color: var(--ui-fg-color);
     opacity: 1;
 }
 
-/* Username + auth/log links in header should all be dim teal by default */
-#userInfoDisplay .terminal-link {
-    color: var(--sheet-accent-dim);
+/* Username + auth/log links in header should all use theme colors */
+.terminal-header #userInfoDisplay .terminal-link {
+    color: var(--ui-dim-color);
 }
 
-#userInfoDisplay .terminal-link:hover {
-    color: var(--sheet-accent);
+.terminal-header #userInfoDisplay .terminal-link:hover {
+    color: var(--ui-fg-color);
+}
+
+/* Header buttons should inherit theme from header, not their own theme classes
+   Use higher specificity to override button's own theme classes.
+   When header has a theme class, buttons inside should use header's theme variables. */
+.terminal-header.ui-theme-yellow .terminal-btn-primary,
+.terminal-header.ui-theme-yellow .terminal-btn-primary.ui-theme-teal,
+.terminal-header.ui-theme-pink .terminal-btn-primary,
+.terminal-header.ui-theme-pink .terminal-btn-primary.ui-theme-teal,
+.terminal-header.ui-theme-green .terminal-btn-primary,
+.terminal-header.ui-theme-green .terminal-btn-primary.ui-theme-teal,
+.terminal-header.ui-theme-white .terminal-btn-primary,
+.terminal-header.ui-theme-white .terminal-btn-primary.ui-theme-teal {
+    /* Override button's own theme class - use header's theme variables */
+    --ui-primary-bg-color: var(--ui-primary-bg-color);
+    --ui-on-primary-color: var(--ui-on-primary-color);
+    --ui-border-color: var(--ui-border-color);
+    --ui-fg-color: var(--ui-fg-color);
+    --ui-dim-color: var(--ui-dim-color);
+    --ui-bg-translucent: var(--ui-bg-translucent);
+}
+
+/* Ensure primary button background uses header theme (explicit override) */
+.terminal-header.ui-theme-yellow .terminal-btn-primary,
+.terminal-header.ui-theme-yellow .terminal-btn-primary.ui-theme-teal,
+.terminal-header.ui-theme-pink .terminal-btn-primary,
+.terminal-header.ui-theme-pink .terminal-btn-primary.ui-theme-teal,
+.terminal-header.ui-theme-green .terminal-btn-primary,
+.terminal-header.ui-theme-green .terminal-btn-primary.ui-theme-teal,
+.terminal-header.ui-theme-white .terminal-btn-primary,
+.terminal-header.ui-theme-white .terminal-btn-primary.ui-theme-teal {
+    background-color: var(--ui-primary-bg-color);
+    color: var(--ui-on-primary-color);
+    border-color: var(--ui-primary-bg-color);
 }
 
 .terminal-text-error {
@@ -2980,26 +3120,26 @@
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
 }
 
-/* LEFT PANEL - Selected card uses bright terminal green (no teal) */
+/* Selected card uses theme colors */
 .character-card.is-selected {
-    border-color: var(--terminal-border) !important;
-    background-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.08);
+    border-color: var(--ui-border-color) !important;
+    background-color: var(--ui-bg-translucent);
     /* Breathing glow - soft diffuse glow, plus drop shadow to ground the card. */
     box-shadow:
-        0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.4),
-        0 0 12px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.3),
-        0 0 28px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.15),
+        0 0 0 1px var(--ui-bg-translucent),
+        0 0 12px var(--ui-bg-translucent),
+        0 0 28px var(--ui-bg-translucent),
         0 10px 22px rgba(0, 0, 0, 0.6);
     animation: card-glow 4.6s ease-in-out 0.3s infinite;
 }
 
 .character-card.is-selected .card-thumbnail {
-    /* Selected: bright green ASCII art */
-    color: var(--terminal-border) !important;
+    /* Selected: bright theme ASCII art */
+    color: var(--ui-border-color) !important;
 }
 
 .character-card.is-selected .card-name {
-    /* Selected: reversed text area → bright green background, black text */
+    /* Selected: reversed text area → bright theme background, black text */
     color: #000000 !important;
 }
 
@@ -3008,20 +3148,20 @@
 }
 
 .character-card.is-selected .card-details {
-    background-color: var(--terminal-border);
-    color: #000000;
+    background-color: var(--ui-primary-bg-color);
+    color: var(--ui-on-primary-color);
 }
 
-/* Hover and keyboard focus for selected cards - keep bright green treatment */
+/* Hover and keyboard focus for selected cards - keep bright theme treatment */
 .character-card.is-selected:hover,
 .character-card.is-selected.is-keyboard-focused {
-    border-color: var(--terminal-border) !important;
-    background-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.14);
+    border-color: var(--ui-border-color) !important;
+    background-color: var(--ui-bg-translucent);
     /* Slightly intensified glow on hover/focus, keep the grounding drop shadow. */
     box-shadow:
-        0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.5),
-        0 0 16px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.4),
-        0 0 35px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.2),
+        0 0 0 1px var(--ui-bg-translucent),
+        0 0 16px var(--ui-bg-translucent),
+        0 0 35px var(--ui-bg-translucent),
         0 10px 24px rgba(0, 0, 0, 0.7) !important;
 }
 
@@ -3054,7 +3194,7 @@
     text-align: center;
     padding: var(--spacing-xl);
     /* Solid background to cover content underneath while loading */
-    background: var(--terminal-bg);
+    background: var(--ui-bg-color);
     /* Ensure full coverage of grid cell */
     width: 100%;
     height: 100%;
@@ -3154,10 +3294,10 @@
 }
 
 .loading-text {
-    color: var(--terminal-accent);
+    color: var(--ui-fg-color);
     font-family: var(--font-mono);
     font-size: calc(var(--font-size-base) * 1.1);
-    text-shadow: 0 0 10px var(--terminal-accent);
+    text-shadow: 0 0 10px var(--ui-fg-color);
 }
 
 /* Panel loading cube - larger, portrait-style cube */
@@ -3176,17 +3316,8 @@
   animation: panel-loading-cube-spin 8s infinite linear;
 }
 
-.panel-loading-cube i {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  display: block;
-  border: 1.5px solid var(--sheet-accent);
-  background: rgba(0, 206, 209, 0.05);
-  box-shadow: 
-    inset 0 0 20px rgba(0, 206, 209, 0.1),
-    0 0 15px rgba(0, 206, 209, 0.2);
-}
+/* Base panel loading cube - now uses theme colors from terminal-theme.css */
+/* Override only if needed for specific contexts */
 
 /* Cube faces */
 .panel-loading-cube i:nth-child(1) { transform: translateZ(30px); }
@@ -3206,24 +3337,24 @@
 }
 
 .panel-loading-text {
-  color: var(--sheet-accent);
+  color: var(--ui-fg-color);
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
-  text-shadow: 0 0 10px var(--sheet-accent);
+  text-shadow: 0 0 10px var(--ui-fg-color);
 }
 
-/* Left panel loading cube - green terminal theme */
+/* Left panel loading cube - inherits theme from parent */
 #leftPanelLoading .panel-loading-cube i {
-  border-color: hsl(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright));
-  background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.05);
+  border-color: var(--ui-border-color);
+  background: var(--ui-bg-translucent);
   box-shadow: 
-    inset 0 0 20px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.1),
-    0 0 15px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.2);
+    inset 0 0 20px var(--ui-bg-translucent),
+    0 0 15px var(--ui-bg-translucent);
 }
 
 #leftPanelLoading .panel-loading-text {
-  color: hsl(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright));
-  text-shadow: 0 0 10px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.8);
+  color: var(--ui-fg-color);
+  text-shadow: 0 0 10px var(--ui-fg-color);
 }
 
 /* Modal loading overlay - shown while saving */
@@ -3661,7 +3792,7 @@
 }
 
 .mobile-back-link {
-    color: var(--sheet-accent-dim);
+    color: var(--ui-dim-color);
     font-family: var(--font-mono);
     font-size: var(--font-size-small);
     text-decoration: none;
@@ -3669,7 +3800,7 @@
 }
 
 .mobile-back-link:hover {
-    color: var(--sheet-accent);
+    color: var(--ui-fg-color);
 }
 
 /* Mobile sheet title header (cloned from desktop sheet-title-header) */
@@ -3786,28 +3917,11 @@
     transform: scale(0.5);
 }
 
-/* When viewing sheet on mobile, apply teal UI theme to the grid panel */
+/* When viewing sheet on mobile, inherit theme from character sheet */
 .panel-character-grid.is-viewing-sheet {
     touch-action: pan-y pinch-zoom; /* Allow vertical scroll, capture horizontal swipes */
-    --ui-primary-color: var(--sheet-accent);
-    --ui-primary-color-dim: var(--sheet-accent-dim);
-    --ui-primary-bg-color: var(--sheet-accent);
-    --ui-border-color: var(--sheet-accent-dim);
-    --ui-hover-color: var(--sheet-accent);
-    --context-accent: var(--sheet-accent);
-    --context-accent-dim: var(--sheet-accent-dim);
-    --context-hover: var(--sheet-accent);
-    /* Terminal button colors */
-    --terminal-border: var(--sheet-accent);
-    --terminal-accent: var(--sheet-accent);
-}
-
-
-/* Use teal scrollbar theme when viewing sheet */
-.panel-character-grid.is-viewing-sheet {
-    --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
-    --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
-    --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
+    /* Theme tokens inherit from character sheet - no hardcoded overrides */
+    /* Scrollbar colors inherit from character sheet theme */
 }
 
 /* During active horizontal swipe, prevent all scrolling */
@@ -4374,8 +4488,8 @@
     font-weight: var(--font-weight-medium);
     letter-spacing: var(--tracking-wider);
     text-transform: uppercase;
-    color: var(--terminal-bg);
-    background-color: var(--sheet-accent);
+    color: var(--ui-on-primary-color);
+    background-color: var(--ui-primary-bg-color) !important;
     border-radius: 3px;
 }
 
@@ -4387,8 +4501,8 @@
     font-weight: var(--font-weight-medium);
     letter-spacing: var(--tracking-wider);
     text-transform: uppercase;
-    color: var(--terminal-bg);
-    background-color: var(--sheet-accent);
+    color: var(--ui-on-primary-color);
+    background-color: var(--ui-primary-bg-color) !important;
     border-radius: 3px;
     cursor: help;
     vertical-align: middle;

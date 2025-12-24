@@ -1070,10 +1070,14 @@ const ExpandedView = (window.ExpandedView = {
     async _loadCampaignPanel() {
         // Target the campaign-panel-slot inside sheet-campaign-grid
         const panel = document.querySelector('.campaign-panel-slot') || document.getElementById('campaignPanel');
-        if (!panel) return;
+        if (!panel) {
+            console.warn('Campaign panel element not found');
+            return;
+        }
         
-        // Apply white theme to parent container - cascades to all children
-        panel.classList.add('ui-theme-white', 'theme-white');
+        // Apply teal theme to campaign panel
+        panel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-pink', 'theme-pink', 'ui-theme-green', 'theme-green', 'ui-theme-yellow', 'theme-yellow');
+        panel.classList.add('ui-theme-teal', 'theme-teal');
         
         const characterId = AppState.selectedCharacterId;
         if (!characterId) {
@@ -3989,6 +3993,45 @@ const UI = {
             console.log('🎨 RENDER: Starting grid render with', AppState.filteredCharacters.length, 'characters');
             console.log('🎨 RENDER: Character names:', AppState.filteredCharacters.map(c => c.name).join(', '));
         }
+        
+        // Apply yellow theme to character grid panel
+        const gridPanel = document.getElementById('characterGridPanel');
+        if (gridPanel) {
+            gridPanel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-green', 'theme-green', 'ui-theme-teal', 'theme-teal', 'ui-theme-pink', 'theme-pink');
+            gridPanel.classList.add('ui-theme-yellow', 'theme-yellow');
+            
+            // #region agent log
+            // Debug: Check search input computed styles after theme application
+            setTimeout(() => {
+                const searchInput = document.querySelector('.search-input-wrapper .terminal-input');
+                if (searchInput) {
+                    const computedStyle = window.getComputedStyle(searchInput);
+                    const computedColor = computedStyle.color;
+                    const computedBorderColor = computedStyle.borderColor;
+                    const panelClasses = gridPanel.className;
+                    fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            location: 'character-manager.js:4009',
+                            message: 'Search input computed styles',
+                            data: {
+                                computedColor,
+                                computedBorderColor,
+                                panelClasses,
+                                hasUiThemeYellow: gridPanel.classList.contains('ui-theme-yellow'),
+                                hasThemeYellow: gridPanel.classList.contains('theme-yellow')
+                            },
+                            timestamp: Date.now(),
+                            sessionId: 'debug-session',
+                            runId: 'check-search-color',
+                            hypothesisId: 'A'
+                    })}).catch(() => {});
+                }
+            }, 100);
+            // #endregion
+        }
+        
         const grid = document.getElementById('characterGrid');
         const emptyState = document.getElementById('emptyState');
         const characters = AppState.filteredCharacters;
@@ -4203,10 +4246,20 @@ const UI = {
         const placeholder = document.querySelector('.sheet-placeholder');
         const sheetContainer = document.getElementById('characterSheet');
         const navBar = document.getElementById('sheetNavBar');
+        const sheetPanel = document.getElementById('characterSheetPanel');
 
         placeholder.classList.add('is-hidden');
         sheetContainer.classList.remove('is-hidden');
         if (navBar) navBar.classList.remove('is-hidden');
+        
+        // Apply pink theme to panel (so nav bar and sheet both inherit)
+        // Testing theme inheritance
+        if (sheetPanel) {
+            sheetPanel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-green', 'theme-green', 'ui-theme-teal', 'theme-teal');
+            sheetPanel.classList.add('ui-theme-pink', 'theme-pink');
+        }
+        sheetContainer.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-green', 'theme-green', 'ui-theme-teal', 'theme-teal');
+        sheetContainer.classList.add('ui-theme-pink', 'theme-pink');
         
         // Nav bar is kept visible but empty - the "← Characters" button is now inside the sheet header
         

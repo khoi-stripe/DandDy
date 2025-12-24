@@ -28,9 +28,9 @@
   overflow: hidden;
 }
 
-/* Only apply teal background when the image is loaded (prevents flash on character switch) */
+/* Only apply theme background when the image is loaded (prevents flash on character switch) */
 .portrait-container--original-mode:has(.original-portrait.is-loaded) {
-  background: var(--panel-teal);
+  background: var(--ui-primary-bg-color);
 }
 
 /* Hide image while loading to prevent teal background flash when switching characters.
@@ -203,7 +203,8 @@
 .portrait-placeholder-text {
   font-size: var(--font-size-base);
   line-height: var(--line-height-normal);
-  color: var(--panel-teal);
+  /* Use theme tokens - fallback to teal for backward compatibility */
+  color: var(--ui-fg-color, var(--sheet-accent));
   text-align: center;
   padding: 0 var(--spacing-md);
   font-family: var(--font-mono);
@@ -281,8 +282,9 @@
   width: 100%;
   height: 100%;
   display: block;
-  border: 1.8px solid var(--panel-teal);
-  background: rgba(0, 255, 255, 0.05);
+  /* Use theme tokens - fallback to teal for backward compatibility */
+  border: 1.8px solid var(--ui-border-color, var(--sheet-accent));
+  background: var(--ui-bg-translucent, rgba(0, 206, 209, 0.05));
   opacity: 0.5;
 }
 
@@ -293,9 +295,10 @@
 
 .portrait-placeholder-cube--generating i {
   opacity: 1;
+  /* Use theme tokens for generating state */
   box-shadow: 
-    inset 0 0 30px rgba(0, 255, 255, 0.2),
-    0 0 20px rgba(0, 255, 255, 0.3);
+    inset 0 0 30px var(--ui-bg-translucent, rgba(0, 255, 255, 0.2)),
+    0 0 20px var(--ui-bg-translucent, rgba(0, 255, 255, 0.3));
 }
 
 /* Cube faces */

@@ -16,7 +16,7 @@
   <!-- Print-only logo (positioned via CSS for print layout) -->
   <img src="./danddy-logo-print.svg" alt="DandDy logo" class="print-logo">
 
-    <div class="terminal-container">
+    <div class="terminal-container ui-theme-teal theme-teal">
       <div class="terminal-header">
         <div class="terminal-title">
           <span class="title-bracket">[</span>
@@ -43,7 +43,7 @@
         <div class="terminal-status">
           <span id="status-text"></span>
           <span id="auth-slot"></span>
-          <button id="exitBuilderBtn" class="terminal-btn terminal-btn-primary ui-theme-teal terminal-status-settings-btn" type="button" onclick="exitToManager()">Exit</button>
+          <button id="exitBuilderBtn" class="terminal-btn terminal-btn-primary terminal-status-settings-btn" type="button" onclick="exitToManager()">Exit</button>
         </div>
       </div>
     
@@ -61,11 +61,11 @@
     
     <!-- Main content (hidden until splash dismissed) -->
     <div class="split-layout is-hidden" id="main-content">
-      <div class="left-panel" id="narrator-panel">
+      <div class="left-panel ui-theme-green theme-green" id="narrator-panel">
         <!-- Narrator content will be injected here -->
       </div>
       
-      <div class="right-panel" id="character-panel">
+      <div class="right-panel ui-theme-yellow theme-yellow" id="character-panel">
         <!-- Character sheet will be injected here -->
       </div>
     </div>

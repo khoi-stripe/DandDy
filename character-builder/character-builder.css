@@ -31,7 +31,7 @@
   align-items: center;
   gap: 8px;
   font-size: var(--font-size-small);
-  color: var(--terminal-dim);
+  color: var(--ui-dim-color, var(--terminal-dim));
 }
 
 .terminal-status #status-text {
@@ -42,7 +42,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--terminal-dim);
+  color: var(--ui-dim-color, var(--terminal-dim));
   white-space: nowrap;
 }
 
@@ -50,7 +50,7 @@
 #auth-slot #builderUserInfo {
   font-size: var(--font-size-small);
   white-space: nowrap;
-  color: var(--sheet-accent-dim);
+  color: var(--ui-dim-color, var(--terminal-dim));
   display: inline-flex;
   align-items: center;
   gap: 0;
@@ -68,16 +68,16 @@
   padding-right: var(--spacing-sm);
 }
 
-/* Builder header auth: match manager header's dim teal auth button */
+/* Builder header auth: inherit theme from header */
 #auth-slot #builderAuthBtn {
-  border-color: var(--sheet-accent-dim);
-  color: var(--sheet-accent-dim);
+  border-color: var(--ui-dim-color, var(--terminal-dim));
+  color: var(--ui-dim-color, var(--terminal-dim));
   opacity: 0.7;
 }
 
 #auth-slot #builderAuthBtn:hover:not(:disabled) {
-  border-color: var(--sheet-accent);
-  color: var(--sheet-accent);
+  border-color: var(--ui-fg-color, var(--terminal-accent));
+  color: var(--ui-fg-color, var(--terminal-accent));
   opacity: 1;
 }
 
@@ -90,12 +90,12 @@
 
 .builder-settings-link {
   margin-left: auto;
-  /* Icon-only settings button: teal theme, no underline */
+  /* Icon-only settings button: inherit theme from header, no underline */
   background: transparent;
   border: none;
   padding: 0;
   cursor: pointer;
-  color: var(--sheet-accent-dim);
+  color: var(--ui-dim-color, var(--terminal-dim));
   font-size: var(--font-size-xl);
   line-height: 1;
   transition: color 0.2s ease, text-shadow 0.2s ease;
@@ -107,8 +107,8 @@
 }
 
 .builder-settings-link:hover {
-  color: var(--sheet-accent);
-  text-shadow: 0 0 5px var(--sheet-accent);
+  color: var(--ui-fg-color, var(--terminal-accent));
+  text-shadow: 0 0 5px var(--ui-fg-color, var(--terminal-accent));
   text-decoration: none;
 }
 
@@ -125,7 +125,7 @@
 }
 
 .narrator-text {
-  color: var(--terminal-fg);
+  color: var(--ui-fg-color, var(--terminal-fg));
   white-space: pre-wrap;
   word-wrap: break-word;
 }
@@ -136,7 +136,7 @@
   margin-bottom: var(--spacing-sm);
   padding: var(--spacing-xs) 0;
   font-size: var(--font-size-small);
-  color: var(--terminal-fg);
+  color: var(--ui-fg-color, var(--terminal-fg));
   text-align: center;
 }
 
@@ -195,8 +195,26 @@
   align-items: center;
 }
 
+/* Spinner text in character sheet should use theme colors */
+.character-sheet .narrator-spinner-shell,
+.right-panel.ui-theme-yellow .narrator-spinner-shell,
+.right-panel.ui-theme-pink .narrator-spinner-shell,
+.right-panel.ui-theme-green .narrator-spinner-shell,
+.right-panel.ui-theme-white .narrator-spinner-shell {
+  color: var(--ui-fg-color) !important;
+}
+
+/* Narrator text in character sheet should use theme colors */
+.character-sheet .narrator-text,
+.right-panel.ui-theme-yellow .narrator-text,
+.right-panel.ui-theme-pink .narrator-text,
+.right-panel.ui-theme-green .narrator-text,
+.right-panel.ui-theme-white .narrator-text {
+  color: var(--ui-fg-color) !important;
+}
+
 .narrator-prompt {
-  color: var(--terminal-accent);
+  color: var(--ui-fg-color, var(--terminal-accent));
   margin-top: var(--spacing-sm);
 }
 
@@ -205,7 +223,7 @@
   margin-top: var(--spacing-lg);
   margin-bottom: var(--spacing-xl);
   padding: var(--spacing-md);
-  border: 1px solid var(--terminal-dim);
+  border: 1px solid var(--ui-dim-color, var(--terminal-dim));
   position: relative;
   display: flex;
   flex-direction: column;
@@ -213,7 +231,7 @@
 }
 
 .question-text {
-  color: var(--terminal-accent);
+  color: var(--ui-fg-color, var(--terminal-accent));
   margin-bottom: var(--spacing-md);
   font-size: var(--font-size-base);
 }
@@ -227,7 +245,7 @@
 
 /* Recommendations */
 .recommendations-header {
-  color: var(--terminal-accent);
+  color: var(--ui-fg-color, var(--terminal-accent));
   font-weight: var(--font-weight-medium);
   font-size: var(--font-size-base);
   margin-bottom: var(--spacing-sm);
@@ -238,7 +256,7 @@
   width: 100%;
   border: none;
   /* Subtle, dim divider between recommended and other options */
-  border-top: 1px solid var(--terminal-accent-dim);
+  border-top: 1px solid var(--ui-dim-color, var(--terminal-accent-dim));
   margin: var(--spacing-sm) 0 var(--spacing-md);
   opacity: 0.5;
 }
@@ -265,8 +283,8 @@
 /* Input */
 .input-field {
   background: transparent;
-  border: 2px solid var(--terminal-border);
-  color: var(--terminal-fg);
+  border: 2px solid var(--ui-border-color, var(--terminal-border));
+  color: var(--ui-fg-color, var(--terminal-fg));
   padding: var(--spacing-sm);
   font-family: var(--font-mono);
   /* Prevent iOS Safari focus-zoom (requires computed font-size >= 16px) */
@@ -278,11 +296,11 @@
 
 .input-field:focus {
   outline: none;
-  border-color: var(--terminal-fg);
+  border-color: var(--ui-fg-color, var(--terminal-fg));
 }
 
 .input-field::placeholder {
-  color: var(--terminal-dim);
+  color: var(--ui-dim-color, var(--terminal-dim));
   opacity: 0.5;
 }
 
@@ -340,8 +358,8 @@
 }
 
 .ability-method-trigger.is-open {
-  border-color: var(--terminal-dim);
-  color: var(--terminal-dim);
+  border-color: var(--ui-dim-color, var(--terminal-dim));
+  color: var(--ui-dim-color, var(--terminal-dim));
   background-color: rgba(0, 0, 0, 0.6);
 }
 
@@ -354,8 +372,8 @@
 
 .generate-ai-btn {
   /* Visual accent tweaks on top of shared terminal button styles */
-  border-color: var(--terminal-accent);
-  color: var(--terminal-accent);
+  border-color: var(--ui-fg-color, var(--terminal-accent));
+  color: var(--ui-fg-color, var(--terminal-accent));
   height: var(--btn-height-sm);
   padding: 0 12px;
   border-radius: 2px;
@@ -365,8 +383,8 @@
 }
 
 .generate-ai-btn:hover {
-  background: rgba(0, 255, 255, 0.1);
-  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+  background: var(--ui-bg-translucent, rgba(0, 255, 255, 0.1));
+  box-shadow: 0 0 8px var(--ui-bg-translucent, rgba(0, 255, 255, 0.3));
 }
 
 .generate-ai-btn:disabled {
@@ -380,8 +398,8 @@
 
 .generate-ai-btn-secondary {
   background: transparent;
-  border: 1px solid var(--terminal-accent-dim);
-  color: var(--terminal-accent-dim);
+  border: 1px solid var(--ui-dim-color, var(--terminal-accent-dim));
+  color: var(--ui-dim-color, var(--terminal-accent-dim));
   height: var(--btn-height-sm);
   padding: 0 12px;
   font-family: var(--font-mono);
@@ -395,9 +413,9 @@
 }
 
 .generate-ai-btn-secondary:hover:not(:disabled) {
-  border-color: var(--terminal-accent);
-  color: var(--terminal-accent);
-  background: rgba(0, 255, 255, 0.1);
+  border-color: var(--ui-fg-color, var(--terminal-accent));
+  color: var(--ui-fg-color, var(--terminal-accent));
+  background: var(--ui-bg-translucent, rgba(0, 255, 255, 0.1));
 }
 
 .generate-ai-btn-secondary:disabled {
@@ -428,7 +446,7 @@
 
 /* Loading */
 .loading-indicator {
-  color: var(--terminal-dim);
+  color: var(--ui-dim-color, var(--terminal-dim));
   animation: blink 1s infinite;
 }
 
@@ -622,10 +640,10 @@
   text-transform: uppercase;
 }
 
-/* Yellow for modal contexts - use !important to ensure override */
+/* Inherit theme from modal parent - use !important to ensure override */
 .modal .settings-group-label,
 .modal-content .settings-group-label {
-  color: var(--modal-accent) !important;
+  color: var(--ui-fg-color, var(--modal-accent)) !important;
   text-transform: uppercase !important;
 }
 
@@ -808,15 +826,15 @@
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
-  border: 1px solid var(--modal-accent);
+  border: 1px solid var(--ui-border-color, var(--modal-accent));
   border-radius: 2px;
   background-color: transparent;
   position: relative;
 }
 
 .settings-checkbox:checked {
-  border-color: var(--modal-accent);
-  background-color: var(--modal-accent);
+  border-color: var(--ui-primary-bg-color, var(--modal-accent));
+  background-color: var(--ui-primary-bg-color, var(--modal-accent));
 }
 
 .settings-checkbox:checked::after {
@@ -836,7 +854,7 @@
 }
 
 .settings-checkbox-text {
-  color: var(--modal-accent);
+  color: var(--ui-fg-color, var(--modal-accent));
   font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: var(--tracking-wider);
@@ -844,7 +862,7 @@
 
 .settings-hint--small {
   font-size: var(--font-size-base);
-  color: var(--modal-accent);
+  color: var(--ui-fg-color, var(--modal-accent));
   margin-top: 4px;
   margin-left: 22px; /* align with checkbox label (14px checkbox + 8px gap) */
 }
@@ -1003,11 +1021,11 @@
 }
 
 .text-dim {
-  color: var(--terminal-dim);
+  color: var(--ui-dim-color, var(--terminal-dim));
 }
 
 .text-accent {
-  color: var(--terminal-accent);
+  color: var(--ui-fg-color, var(--terminal-accent));
 }
 
 .text-warning {
@@ -1031,7 +1049,7 @@
 
 /* Accent + weight emphasis */
 .text-strong {
-  color: var(--terminal-accent);
+  color: var(--ui-fg-color, var(--terminal-accent));
   font-weight: var(--font-weight-medium);
 }
 
@@ -1193,7 +1211,7 @@
   transform: translateY(-50%);
   background: transparent;
   border: none;
-  color: var(--modal-accent);
+  color: var(--ui-fg-color, var(--modal-accent));
   cursor: pointer;
   font-family: var(--font-family);
   font-size: var(--font-size-small);
@@ -1228,15 +1246,15 @@
 
 /* Demo mode info notice - shown when user clicks "Continue as Guest" */
 .demo-mode-notice {
-  color: var(--sheet-accent);
+  color: var(--ui-fg-color, var(--terminal-accent));
   font-family: var(--font-mono);
   font-size: var(--font-size-small);
   padding: var(--spacing-md);
-  background: rgba(0, 128, 128, 0.15);
-  border: 1px solid var(--sheet-accent-dim);
+  background: var(--ui-bg-translucent, rgba(0, 128, 128, 0.15));
+  border: 1px solid var(--ui-dim-color, var(--terminal-dim));
   margin-top: var(--spacing-md);
   margin-bottom: var(--spacing-md);
-  text-shadow: 0 0 3px var(--sheet-accent-dim);
+  text-shadow: 0 0 3px var(--ui-dim-color, var(--terminal-dim));
   animation: fadeIn 0.3s ease-in;
 }
 
@@ -1568,68 +1586,31 @@
   border-top: 2px solid var(--terminal-border);
 }
 
-/* ===== BUILDER LEFT PANEL GREEN THEME ===== */
-/* Ensure the builder narrator/questions area (left panel) uses the classic green
-   terminal theming for key text accents, not teal/cyan overrides. Buttons keep
-   using their shared theming from terminal-theme.css. */
-.left-panel .narrator-text {
-  color: var(--terminal-fg);
-}
-
-.left-panel .narrator-prompt,
-.left-panel .question-text,
-.left-panel .recommendations-header,
-.left-panel .text-accent,
-.left-panel .text-strong {
-  color: var(--terminal-fg);
-}
-
-.left-panel .recommendations-divider {
-  border-top-color: var(--terminal-fg);
-}
+/* ===== BUILDER LEFT PANEL THEME ===== */
+/* Left panel uses green theme by default (applied in HTML) */
+/* All components inherit theme via --ui-* tokens */
 
 /* ===== RIGHT PANEL TEAL THEME ===== */
-/* Teal color variables */
-:root {
-  --panel-teal: #00CED1;  /* Bright Dark Turquoise - for highlighted elements */
-  --panel-teal-dim: #20B2AA;  /* Muted Light Sea Green - for secondary text */
-  --panel-teal-bg: #0d4d4a;
-}
+/* Right panel uses teal theme - theme classes applied in HTML */
+/* Theme tokens and scrollbar colors inherit from .ui-theme-teal class */
 
-/* Link buttons */
+/* Link buttons inherit theme from right panel */
 .right-panel .link-button {
-  color: var(--panel-teal) !important;
+  color: var(--ui-fg-color) !important;
 }
 
 .right-panel .link-button:hover {
-  color: var(--panel-teal) !important;
-  text-shadow: 0 0 5px var(--panel-teal) !important;
+  color: var(--ui-fg-color) !important;
+  text-shadow: 0 0 5px var(--ui-fg-color) !important;
 }
 
-/* Teal scrollbars in builder right panel */
-.right-panel {
-  --scrollbar-track-color: #041f20;
-  --scrollbar-thumb-color: rgba(32, 178, 170, 0.5);
-  --scrollbar-thumb-hover-color: rgba(0, 206, 209, 0.9);
-}
-
-/* Character sheet in builder - fit within parent container with teal theme */
+/* Character sheet in builder - fit within parent container, inherits theme from right-panel */
 .right-panel .character-sheet {
-  border: 1px solid var(--sheet-accent-dim);
+  border: 1px solid var(--ui-dim-color);
   box-sizing: border-box;
   max-height: 100%;
   width: 100%;
-  /* Teal UI theme */
-  --ui-border-color: var(--sheet-accent);
-  --ui-fg-color: var(--sheet-accent);
-  --ui-dim-color: var(--sheet-accent-dim);
-  --ui-primary-color: var(--sheet-accent);
-  --ui-primary-color-dim: var(--sheet-accent-dim);
-  --ui-primary-bg-color: var(--sheet-accent);
-  --ui-on-primary-color: var(--terminal-bg);
-  --ui-hover-color: var(--sheet-accent);
-  --context-accent: var(--sheet-accent);
-  --context-accent-dim: var(--sheet-accent-dim);
+  /* Theme tokens inherit from .right-panel parent */
 }
 
 /* ===== RESPONSIVE ===== */
@@ -1692,7 +1673,7 @@
   
   .left-panel {
     border-right: none;
-    border-bottom: 1px solid var(--terminal-border);
+    border-bottom: 1px solid var(--ui-border-color, var(--terminal-border));
     max-height: none;
     /* Enable smooth momentum scrolling on iOS, vertical only */
     overflow-y: auto;
@@ -1784,7 +1765,7 @@
 
 .session-resume-modal .modal-header .session-time {
   font-size: var(--font-size-sm);
-  color: var(--modal-accent-dim);
+  color: var(--ui-dim-color, var(--modal-accent-dim));
   margin-left: auto;
 }
 
