@@ -92,7 +92,8 @@
   /* Slightly increased vertical spacing so the ASCII block is easier
      to read without feeling too loose. */
   line-height: 1.2;
-  color: var(--terminal-accent);
+  /* Use sheet-accent to follow global theme, fallback to teal for standalone contexts */
+  color: var(--sheet-accent, var(--terminal-accent));
   /* ASCII art needs a consistent monospace font across all browsers.
      Menlo/Monaco (macOS), Consolas (Windows) have identical metrics in Safari & Chrome. */
   font-family: 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
