@@ -46,6 +46,30 @@
   --theme-white-l-bright: 90%;
   --theme-white-l-dim: 80%;
 
+  /* Red Theme */
+  --theme-red-h: 0;
+  --theme-red-s: 100%;
+  --theme-red-l-bright: 55%;
+  --theme-red-l-dim: 45%;
+
+  /* Orange Theme */
+  --theme-orange-h: 25;
+  --theme-orange-s: 100%;
+  --theme-orange-l-bright: 55%;
+  --theme-orange-l-dim: 45%;
+
+  /* Royal Blue Theme */
+  --theme-blue-h: 225;
+  --theme-blue-s: 100%;
+  --theme-blue-l-bright: 60%;
+  --theme-blue-l-dim: 50%;
+
+  /* Violet Theme */
+  --theme-violet-h: 270;
+  --theme-violet-s: 80%;
+  --theme-violet-l-bright: 65%;
+  --theme-violet-l-dim: 55%;
+
   /* ===== DERIVED COLOR TOKENS ===== */
   /* Background & Neutrals */
   --terminal-bg: #000000;
@@ -95,6 +119,34 @@
   --white-border: hsl(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright));
   --white-accent: hsl(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright));
   --white-accent-dim: hsl(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-dim));
+
+  /* Red Theme Tokens */
+  --red-fg: hsl(var(--theme-red-h), var(--theme-red-s), var(--theme-red-l-bright));
+  --red-dim: hsl(var(--theme-red-h), var(--theme-red-s), var(--theme-red-l-dim));
+  --red-border: hsl(var(--theme-red-h), var(--theme-red-s), var(--theme-red-l-bright));
+  --red-accent: hsl(var(--theme-red-h), var(--theme-red-s), var(--theme-red-l-bright));
+  --red-accent-dim: hsl(var(--theme-red-h), var(--theme-red-s), var(--theme-red-l-dim));
+
+  /* Orange Theme Tokens */
+  --orange-fg: hsl(var(--theme-orange-h), var(--theme-orange-s), var(--theme-orange-l-bright));
+  --orange-dim: hsl(var(--theme-orange-h), var(--theme-orange-s), var(--theme-orange-l-dim));
+  --orange-border: hsl(var(--theme-orange-h), var(--theme-orange-s), var(--theme-orange-l-bright));
+  --orange-accent: hsl(var(--theme-orange-h), var(--theme-orange-s), var(--theme-orange-l-bright));
+  --orange-accent-dim: hsl(var(--theme-orange-h), var(--theme-orange-s), var(--theme-orange-l-dim));
+
+  /* Royal Blue Theme Tokens */
+  --blue-fg: hsl(var(--theme-blue-h), var(--theme-blue-s), var(--theme-blue-l-bright));
+  --blue-dim: hsl(var(--theme-blue-h), var(--theme-blue-s), var(--theme-blue-l-dim));
+  --blue-border: hsl(var(--theme-blue-h), var(--theme-blue-s), var(--theme-blue-l-bright));
+  --blue-accent: hsl(var(--theme-blue-h), var(--theme-blue-s), var(--theme-blue-l-bright));
+  --blue-accent-dim: hsl(var(--theme-blue-h), var(--theme-blue-s), var(--theme-blue-l-dim));
+
+  /* Violet Theme Tokens */
+  --violet-fg: hsl(var(--theme-violet-h), var(--theme-violet-s), var(--theme-violet-l-bright));
+  --violet-dim: hsl(var(--theme-violet-h), var(--theme-violet-s), var(--theme-violet-l-dim));
+  --violet-border: hsl(var(--theme-violet-h), var(--theme-violet-s), var(--theme-violet-l-bright));
+  --violet-accent: hsl(var(--theme-violet-h), var(--theme-violet-s), var(--theme-violet-l-bright));
+  --violet-accent-dim: hsl(var(--theme-violet-h), var(--theme-violet-s), var(--theme-violet-l-dim));
 
   /* Scrollbar Tokens (derived from terminal green) */
   --scrollbar-thumb-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-dim), 0.45);
@@ -458,6 +510,178 @@
   --card-glow-h: var(--theme-white-h);
   --card-glow-s: var(--theme-white-s);
   --card-glow-l-bright: var(--theme-white-l-bright);
+}
+
+/* Red theme */
+.theme-red {
+  /* UI tokens */
+  --ui-border-color: var(--red-border);
+  --ui-fg-color: var(--red-fg);
+  --ui-dim-color: var(--red-dim);
+  --ui-primary-bg-color: var(--red-accent);
+  --ui-on-primary-color: var(--terminal-bg);
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-red-h), var(--theme-red-s), var(--theme-red-l-bright), 0.1);
+  --card-glow-h: var(--theme-red-h);
+  --card-glow-s: var(--theme-red-s);
+  --card-glow-l-bright: var(--theme-red-l-bright);
+  /* Context tokens */
+  --context-accent: var(--red-accent);
+  --context-accent-dim: var(--red-accent-dim);
+  --context-border: var(--red-border);
+  --context-hover: hsla(var(--theme-red-h), var(--theme-red-s), var(--theme-red-l-bright), 0.1);
+  /* Scrollbar colors */
+  --scrollbar-track-color: hsl(var(--theme-red-h), 70%, 7%);
+  --scrollbar-thumb-color: hsla(var(--theme-red-h), calc(var(--theme-red-s) * 0.67), var(--theme-red-l-dim), 0.5);
+  --scrollbar-thumb-hover-color: hsla(var(--theme-red-h), var(--theme-red-s), var(--theme-red-l-bright), 0.9);
+  /* Background glow */
+  --terminal-glow-color: hsla(var(--theme-red-h), var(--theme-red-s), var(--theme-red-l-bright), 0.28);
+  --bg-glow-h: var(--theme-red-h);
+  --bg-glow-s: var(--theme-red-s);
+  --bg-glow-l: var(--theme-red-l-bright);
+}
+
+/* Backward compatibility alias */
+.ui-theme-red {
+  --ui-border-color: var(--red-border);
+  --ui-fg-color: var(--red-fg);
+  --ui-dim-color: var(--red-dim);
+  --ui-primary-bg-color: var(--red-accent);
+  --ui-on-primary-color: var(--terminal-bg);
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-red-h), var(--theme-red-s), var(--theme-red-l-bright), 0.1);
+  --card-glow-h: var(--theme-red-h);
+  --card-glow-s: var(--theme-red-s);
+  --card-glow-l-bright: var(--theme-red-l-bright);
+}
+
+/* Orange theme */
+.theme-orange {
+  /* UI tokens */
+  --ui-border-color: var(--orange-border);
+  --ui-fg-color: var(--orange-fg);
+  --ui-dim-color: var(--orange-dim);
+  --ui-primary-bg-color: var(--orange-accent);
+  --ui-on-primary-color: var(--terminal-bg);
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-orange-h), var(--theme-orange-s), var(--theme-orange-l-bright), 0.1);
+  --card-glow-h: var(--theme-orange-h);
+  --card-glow-s: var(--theme-orange-s);
+  --card-glow-l-bright: var(--theme-orange-l-bright);
+  /* Context tokens */
+  --context-accent: var(--orange-accent);
+  --context-accent-dim: var(--orange-accent-dim);
+  --context-border: var(--orange-border);
+  --context-hover: hsla(var(--theme-orange-h), var(--theme-orange-s), var(--theme-orange-l-bright), 0.1);
+  /* Scrollbar colors */
+  --scrollbar-track-color: hsl(var(--theme-orange-h), 70%, 7%);
+  --scrollbar-thumb-color: hsla(var(--theme-orange-h), calc(var(--theme-orange-s) * 0.67), var(--theme-orange-l-dim), 0.5);
+  --scrollbar-thumb-hover-color: hsla(var(--theme-orange-h), var(--theme-orange-s), var(--theme-orange-l-bright), 0.9);
+  /* Background glow */
+  --terminal-glow-color: hsla(var(--theme-orange-h), var(--theme-orange-s), var(--theme-orange-l-bright), 0.28);
+  --bg-glow-h: var(--theme-orange-h);
+  --bg-glow-s: var(--theme-orange-s);
+  --bg-glow-l: var(--theme-orange-l-bright);
+}
+
+/* Backward compatibility alias */
+.ui-theme-orange {
+  --ui-border-color: var(--orange-border);
+  --ui-fg-color: var(--orange-fg);
+  --ui-dim-color: var(--orange-dim);
+  --ui-primary-bg-color: var(--orange-accent);
+  --ui-on-primary-color: var(--terminal-bg);
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-orange-h), var(--theme-orange-s), var(--theme-orange-l-bright), 0.1);
+  --card-glow-h: var(--theme-orange-h);
+  --card-glow-s: var(--theme-orange-s);
+  --card-glow-l-bright: var(--theme-orange-l-bright);
+}
+
+/* Royal Blue theme */
+.theme-blue {
+  /* UI tokens */
+  --ui-border-color: var(--blue-border);
+  --ui-fg-color: var(--blue-fg);
+  --ui-dim-color: var(--blue-dim);
+  --ui-primary-bg-color: var(--blue-accent);
+  --ui-on-primary-color: var(--terminal-bg);
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-blue-h), var(--theme-blue-s), var(--theme-blue-l-bright), 0.1);
+  --card-glow-h: var(--theme-blue-h);
+  --card-glow-s: var(--theme-blue-s);
+  --card-glow-l-bright: var(--theme-blue-l-bright);
+  /* Context tokens */
+  --context-accent: var(--blue-accent);
+  --context-accent-dim: var(--blue-accent-dim);
+  --context-border: var(--blue-border);
+  --context-hover: hsla(var(--theme-blue-h), var(--theme-blue-s), var(--theme-blue-l-bright), 0.1);
+  /* Scrollbar colors */
+  --scrollbar-track-color: hsl(var(--theme-blue-h), 70%, 7%);
+  --scrollbar-thumb-color: hsla(var(--theme-blue-h), calc(var(--theme-blue-s) * 0.67), var(--theme-blue-l-dim), 0.5);
+  --scrollbar-thumb-hover-color: hsla(var(--theme-blue-h), var(--theme-blue-s), var(--theme-blue-l-bright), 0.9);
+  /* Background glow */
+  --terminal-glow-color: hsla(var(--theme-blue-h), var(--theme-blue-s), var(--theme-blue-l-bright), 0.28);
+  --bg-glow-h: var(--theme-blue-h);
+  --bg-glow-s: var(--theme-blue-s);
+  --bg-glow-l: var(--theme-blue-l-bright);
+}
+
+/* Backward compatibility alias */
+.ui-theme-blue {
+  --ui-border-color: var(--blue-border);
+  --ui-fg-color: var(--blue-fg);
+  --ui-dim-color: var(--blue-dim);
+  --ui-primary-bg-color: var(--blue-accent);
+  --ui-on-primary-color: var(--terminal-bg);
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-blue-h), var(--theme-blue-s), var(--theme-blue-l-bright), 0.1);
+  --card-glow-h: var(--theme-blue-h);
+  --card-glow-s: var(--theme-blue-s);
+  --card-glow-l-bright: var(--theme-blue-l-bright);
+}
+
+/* Violet theme */
+.theme-violet {
+  /* UI tokens */
+  --ui-border-color: var(--violet-border);
+  --ui-fg-color: var(--violet-fg);
+  --ui-dim-color: var(--violet-dim);
+  --ui-primary-bg-color: var(--violet-accent);
+  --ui-on-primary-color: var(--terminal-bg);
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-violet-h), var(--theme-violet-s), var(--theme-violet-l-bright), 0.1);
+  --card-glow-h: var(--theme-violet-h);
+  --card-glow-s: var(--theme-violet-s);
+  --card-glow-l-bright: var(--theme-violet-l-bright);
+  /* Context tokens */
+  --context-accent: var(--violet-accent);
+  --context-accent-dim: var(--violet-accent-dim);
+  --context-border: var(--violet-border);
+  --context-hover: hsla(var(--theme-violet-h), var(--theme-violet-s), var(--theme-violet-l-bright), 0.1);
+  /* Scrollbar colors */
+  --scrollbar-track-color: hsl(var(--theme-violet-h), 70%, 7%);
+  --scrollbar-thumb-color: hsla(var(--theme-violet-h), calc(var(--theme-violet-s) * 0.67), var(--theme-violet-l-dim), 0.5);
+  --scrollbar-thumb-hover-color: hsla(var(--theme-violet-h), var(--theme-violet-s), var(--theme-violet-l-bright), 0.9);
+  /* Background glow */
+  --terminal-glow-color: hsla(var(--theme-violet-h), var(--theme-violet-s), var(--theme-violet-l-bright), 0.28);
+  --bg-glow-h: var(--theme-violet-h);
+  --bg-glow-s: var(--theme-violet-s);
+  --bg-glow-l: var(--theme-violet-l-bright);
+}
+
+/* Backward compatibility alias */
+.ui-theme-violet {
+  --ui-border-color: var(--violet-border);
+  --ui-fg-color: var(--violet-fg);
+  --ui-dim-color: var(--violet-dim);
+  --ui-primary-bg-color: var(--violet-accent);
+  --ui-on-primary-color: var(--terminal-bg);
+  --ui-bg-color: var(--terminal-bg);
+  --ui-bg-translucent: hsla(var(--theme-violet-h), var(--theme-violet-s), var(--theme-violet-l-bright), 0.1);
+  --card-glow-h: var(--theme-violet-h);
+  --card-glow-s: var(--theme-violet-s);
+  --card-glow-l-bright: var(--theme-violet-l-bright);
 }
 
 /* Yellow theme (used by modals) */

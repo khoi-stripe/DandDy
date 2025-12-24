@@ -963,9 +963,20 @@ const ExpandedView = (window.ExpandedView = {
         }
     },
 
+    /** Saved scroll positions for restore after expand/collapse */
+    _savedSheetScroll: 0,
+    _savedCampaignScroll: 0,
+
     /** Expand to show campaign panel (sheet + campaign view) */
     expand() {
         const splitLayout = document.querySelector('.split-layout');
+        const sheetContent = document.querySelector('.sheet__content');
+        const characterSheet = document.querySelector('.character-sheet');
+        
+        // Save scroll position from the combined scroll container
+        if (sheetContent) {
+            this._savedSheetScroll = sheetContent.scrollTop;
+        }
         
         // Calculate column widths BEFORE adding transition class
         // so the character sheet has the correct fixed width from the start
@@ -993,6 +1004,10 @@ const ExpandedView = (window.ExpandedView = {
         setTimeout(() => {
             // Remove loading state to reveal content
             splitLayout?.classList.remove('is-expanding');
+            // Restore scroll position to the character sheet (now has its own scroll)
+            if (characterSheet) {
+                characterSheet.scrollTop = this._savedSheetScroll;
+            }
             // Show character nav bar
             CharacterNavBar.show();
         }, 400); // Match CSS transition duration
@@ -1005,6 +1020,13 @@ const ExpandedView = (window.ExpandedView = {
     /** Collapse back to grid view (grid + sheet view) */
     async collapse() {
         const splitLayout = document.querySelector('.split-layout');
+        const sheetContent = document.querySelector('.sheet__content');
+        const characterSheet = document.querySelector('.character-sheet');
+
+        // Save scroll position from the character sheet (has its own scroll in expanded view)
+        if (characterSheet) {
+            this._savedSheetScroll = characterSheet.scrollTop;
+        }
 
         // First: hide character nav bar and expand sheet to fill space
         await CharacterNavBar.hide();
@@ -1025,6 +1047,10 @@ const ExpandedView = (window.ExpandedView = {
             if (campaignGrid) {
                 campaignGrid.style.removeProperty('--sheet-column-width');
                 campaignGrid.style.removeProperty('--campaign-column-width');
+            }
+            // Restore scroll position to the combined scroll container
+            if (sheetContent) {
+                sheetContent.scrollTop = this._savedSheetScroll;
             }
             // Remove resize listener
             this._removeResizeListener();

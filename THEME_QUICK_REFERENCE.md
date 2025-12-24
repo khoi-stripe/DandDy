@@ -4,7 +4,11 @@
 - `ui-theme-green theme-green` - Terminal Green
 - `ui-theme-teal theme-teal` - Cyan/Teal  
 - `ui-theme-yellow theme-yellow` - Gold/Yellow
+- `ui-theme-orange theme-orange` - Warm Orange
+- `ui-theme-red theme-red` - Bold Red
 - `ui-theme-pink theme-pink` - Pink
+- `ui-theme-violet theme-violet` - Purple/Violet
+- `ui-theme-blue theme-blue` - Royal Blue
 - `ui-theme-white theme-white` - White/Gray
 
 ## Character Manager Theme Change

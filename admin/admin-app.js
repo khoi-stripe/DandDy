@@ -1674,20 +1674,25 @@
     global: 'yellow',
     syncAll: true,
     sections: {
-      narrator: null,  // null = use global
-      sheet: null,
-      grid: null,
-      campaign: null,
-      glow: null,
+      terminal: null,  // null = use global - base UI (header, buttons, inputs)
+      narrator: null,  // character builder left panel
+      sheet: null,     // character sheet
+      grid: null,      // character grid cards
+      campaign: null,  // campaign sidebar
+      glow: null,      // background radial gradient only
     },
   };
   
   // Available themes with their HSL values for preview
   const AVAILABLE_THEMES = {
     green: { h: 120, s: '100%', l: '50%', name: 'Green', desc: 'Terminal' },
-    teal: { h: 181, s: '100%', l: '41%', name: 'Teal', desc: 'Character Sheet' },
+    teal: { h: 181, s: '100%', l: '41%', name: 'Teal', desc: 'Cyan' },
     yellow: { h: 48, s: '100%', l: '64%', name: 'Yellow', desc: 'Gold' },
+    orange: { h: 25, s: '100%', l: '55%', name: 'Orange', desc: 'Warm' },
+    red: { h: 0, s: '100%', l: '55%', name: 'Red', desc: 'Bold' },
     pink: { h: 330, s: '85%', l: '65%', name: 'Pink', desc: 'Campaign' },
+    violet: { h: 270, s: '80%', l: '65%', name: 'Violet', desc: 'Purple' },
+    blue: { h: 225, s: '100%', l: '60%', name: 'Blue', desc: 'Royal' },
     white: { h: 0, s: '0%', l: '90%', name: 'White', desc: 'Neutral' },
   };
   
@@ -1709,7 +1714,7 @@
     }
     
     // Set section selects
-    const sections = ['narrator', 'sheet', 'grid', 'campaign', 'glow'];
+    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'glow'];
     sections.forEach(section => {
       const select = $(`theme-${section}`);
       if (select) {
@@ -1836,7 +1841,7 @@
     saveThemeConfig(config);
     
     // Enable/disable section selects
-    const sections = ['narrator', 'sheet', 'grid', 'campaign', 'glow'];
+    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'glow'];
     sections.forEach(section => {
       const select = $(`theme-${section}`);
       if (select) {
