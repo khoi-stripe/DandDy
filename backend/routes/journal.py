@@ -180,10 +180,10 @@ def get_campaign_journal_entries(
         CampaignMember.character_id.isnot(None)  # Only members with assigned characters
     ).all()
     
-    # Build visibility mapping: character_id -> (user_id, is_public)
+    # Build visibility mapping: character_id -> (user_id, is_public, symbol)
     # journal_visibility is now a String column with values "private" or "public"
     visibility_map = {
-        m.character_id: (m.user_id, str(m.journal_visibility or "private").lower() == "public")
+        m.character_id: (m.user_id, str(m.journal_visibility or "private").lower() == "public", m.symbol)
         for m in memberships
     }
     
@@ -199,7 +199,7 @@ def get_campaign_journal_entries(
         else:
             # Filtering by other user - show only their public entries
             public_char_ids = [
-                char_id for char_id, (uid, is_public) in visibility_map.items()
+                char_id for char_id, (uid, is_public, _) in visibility_map.items()
                 if uid == user_id and is_public
             ]
             if not public_char_ids:
@@ -212,13 +212,13 @@ def get_campaign_journal_entries(
     else:
         # No filter - show all public entries + own entries
         public_char_ids = [
-            char_id for char_id, (uid, is_public) in visibility_map.items()
+            char_id for char_id, (uid, is_public, _) in visibility_map.items()
             if is_public and uid != current_user.id
         ]
         
         # Own character IDs (all entries visible)
         own_char_ids = [
-            char_id for char_id, (uid, _) in visibility_map.items()
+            char_id for char_id, (uid, _, __) in visibility_map.items()
             if uid == current_user.id
         ]
         
@@ -242,7 +242,7 @@ def get_campaign_journal_entries(
         JournalEntry.created_at.desc()
     ).limit(limit).all()
     
-    # Build response with character_name and user_email
+    # Build response with character_name, character_symbol, and user_email
     return [
         JournalEntryResponse(
             id=e.id,
@@ -256,6 +256,7 @@ def get_campaign_journal_entries(
             updated_at=e.updated_at,
             character_update=e.character_update,
             character_name=e.character.name if e.character else None,
+            character_symbol=visibility_map.get(e.character_id, (None, None, None))[2] if e.character_id else None,
             user_email=e.user.email if e.user else None
         )
         for e in entries

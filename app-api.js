@@ -985,23 +985,12 @@ const CampaignAPI = (window.CampaignAPI = {
    * @returns {Promise<Array>} List of pending invitations with email
    */
   async getCampaignPendingInvitations(campaignId) {
-    // #region agent log - debug wrapper
-    const { API_BASE_URL } = window.DanddyConfig || {};
-    const fullUrl = `${API_BASE_URL}/campaigns/${campaignId}/pending-invitations`;
-    fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaign-api.js:getCampaignPendingInvitations',message:'API call starting',data:{campaignId,fullUrl,API_BASE_URL},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H5'})}).catch(()=>{});
-    // #endregion
     try {
       if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Fetching pending invitations for campaign', campaignId);
       const invitations = await this._apiRequest(`/campaigns/${campaignId}/pending-invitations`);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaign-api.js:getCampaignPendingInvitations',message:'API success',data:{invitationsCount:invitations?.length,invitations},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
       if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Found', invitations.length, 'pending invitations');
       return invitations;
     } catch (error) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'campaign-api.js:getCampaignPendingInvitations',message:'API error caught',data:{errorMessage:error.message,errorStack:error.stack},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3,H4'})}).catch(()=>{});
-      // #endregion
       console.error('🏰 CAMPAIGN ERROR: Failed to fetch campaign pending invitations:', error);
       throw error;
     }

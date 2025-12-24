@@ -1679,6 +1679,7 @@
       sheet: null,     // character sheet
       grid: null,      // character grid cards
       campaign: null,  // campaign sidebar
+      modal: null,     // modal dialogs
       glow: null,      // background radial gradient only
     },
   };
@@ -1723,7 +1724,7 @@
     }
     
     // Set section selects
-    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'glow'];
+    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal', 'glow'];
     sections.forEach(section => {
       const select = $(`theme-${section}`);
       if (select) {
@@ -1760,6 +1761,7 @@
             sheet: serverConfig.sections?.sheet === 'global' ? null : serverConfig.sections?.sheet,
             grid: serverConfig.sections?.grid === 'global' ? null : serverConfig.sections?.grid,
             campaign: serverConfig.sections?.campaign === 'global' ? null : serverConfig.sections?.campaign,
+            modal: serverConfig.sections?.modal === 'global' ? null : serverConfig.sections?.modal,
             glow: serverConfig.sections?.glow === 'global' ? null : serverConfig.sections?.glow,
           },
         };
@@ -1813,6 +1815,7 @@
           sheet: config.sections?.sheet || 'global',
           grid: config.sections?.grid || 'global',
           campaign: config.sections?.campaign || 'global',
+          modal: config.sections?.modal || 'global',
           glow: config.sections?.glow || 'global',
         },
       };
@@ -1951,7 +1954,7 @@
     cachedServerConfig = config;
     
     // Enable/disable section selects
-    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'glow'];
+    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal', 'glow'];
     sections.forEach(section => {
       const select = $(`theme-${section}`);
       if (select) {
@@ -2002,7 +2005,7 @@
       sections: {},
     };
     
-    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'glow'];
+    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal', 'glow'];
     sections.forEach(section => {
       const select = $(`theme-${section}`);
       config.sections[section] = select?.value || null;
@@ -2100,7 +2103,7 @@
         };
         
         if (imported.sections && typeof imported.sections === 'object') {
-          const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'glow'];
+          const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal', 'glow'];
           sections.forEach(section => {
             const val = imported.sections[section];
             if (val && AVAILABLE_THEMES[val]) {
@@ -2507,7 +2510,7 @@
     $('global-theme-sync')?.addEventListener('sl-change', handleSyncToggle);
     
     // Section theme selects
-    const sectionSelects = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'glow'];
+    const sectionSelects = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal', 'glow'];
     sectionSelects.forEach(section => {
       const select = $(`theme-${section}`);
       if (select) {

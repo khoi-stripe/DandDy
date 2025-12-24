@@ -59,6 +59,7 @@ class JournalEntryResponse(BaseModel):
     character_update: Optional[CharacterUpdateResponse] = None
     # Optional fields for party view (populated when viewing campaign-wide entries)
     character_name: Optional[str] = None
+    character_symbol: Optional[str] = None  # Party member symbol (e.g., ▣, ◆, ▲)
     user_email: Optional[str] = None
     
     class Config:

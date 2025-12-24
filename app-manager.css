@@ -1189,6 +1189,12 @@ div.sheet__sidebar.ui-theme-pink {
     color: var(--ui-fg-color);
 }
 
+/* Party member symbol - unique identifier prefix */
+.party-member-symbol {
+    color: var(--ui-accent-color, var(--ui-fg-color));
+    opacity: 0.8;
+}
+
 .party-member-separator {
     color: var(--ui-dim-color);
     opacity: 0.5;

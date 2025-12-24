@@ -5,6 +5,13 @@ import enum
 from database.database import Base
 
 
+# Available symbols for party members - assigned randomly when joining a campaign
+PARTY_SYMBOLS = [
+    '▣', '▱', '▲', '△', '▶', '▷', '▼', '▽', '◈', '◉', '◎', '◐', '◑', '◒', '◓',
+    '◧', '◨', '◩', '◪', '◫', '◯', '◆', '◇'
+]
+
+
 class MemberStatus(enum.Enum):
     INVITED = "invited"  # User has been invited but hasn't accepted yet
     ACTIVE = "active"
@@ -46,6 +53,10 @@ class CampaignMember(Base):
     # Journal visibility - controls whether party members can see this character's journal entries
     # Using String instead of Enum to avoid migration complexity with existing data
     journal_visibility = Column(String(20), default="private", nullable=False)
+    
+    # Unique symbol for this member within the campaign (e.g., ▣, ◆, ▲)
+    # Randomly assigned from PARTY_SYMBOLS when joining, unique per campaign
+    symbol = Column(String(4), nullable=True)
     
     # Relationships
     campaign = relationship("Campaign", back_populates="members")

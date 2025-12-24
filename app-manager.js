@@ -1081,9 +1081,31 @@ const ExpandedView = (window.ExpandedView = {
         if (!textEl) return;
         
         // Check if text is actually truncated (content overflows 3 lines)
-        // Compare scrollHeight vs clientHeight
+        // With -webkit-line-clamp, scrollHeight === clientHeight when clamped,
+        // so we need to temporarily remove the clamp to measure true height
         requestAnimationFrame(() => {
-            if (textEl.scrollHeight > textEl.clientHeight) {
+            // Store original styles
+            const originalDisplay = textEl.style.display;
+            const originalClamp = textEl.style.webkitLineClamp;
+            const originalOverflow = textEl.style.overflow;
+            
+            // Remove line-clamp to measure true height
+            textEl.style.display = 'block';
+            textEl.style.webkitLineClamp = 'unset';
+            textEl.style.overflow = 'visible';
+            
+            const fullHeight = textEl.scrollHeight;
+            
+            // Restore original styles
+            textEl.style.display = originalDisplay;
+            textEl.style.webkitLineClamp = originalClamp;
+            textEl.style.overflow = originalOverflow;
+            
+            // Get the clamped height (3 lines)
+            const clampedHeight = textEl.clientHeight;
+            
+            // If full height exceeds clamped height, it's truncatable
+            if (fullHeight > clampedHeight + 2) { // +2 for rounding tolerance
                 descEl.classList.add('is-truncatable');
             } else {
                 descEl.classList.remove('is-truncatable');
@@ -1313,6 +1335,7 @@ const ExpandedView = (window.ExpandedView = {
             partyHtml = displayMembers.map(m => {
                 const char = m.character;
                 const adminTag = m.is_creator ? '<span class="party-member-admin-tag">Admin</span>' : '';
+                const symbolPrefix = m.symbol ? `<span class="party-member-symbol">${m.symbol}</span> ` : '';
                 // Check if this is someone else's character (clickable to view their sheet)
                 const isOtherUser = m.user_id !== currentUserId;
                 if (char) {
@@ -1324,7 +1347,7 @@ const ExpandedView = (window.ExpandedView = {
                     return `
                         <div class="party-member ${clickable}" ${clickHandler}>
                             <span class="party-member-left">
-                                <span class="party-member-name">${char.name}</span>
+                                <span class="party-member-name">${symbolPrefix}${char.name}</span>
                                 ${adminTag}
                             </span>
                             <span class="party-member-right">
@@ -1336,7 +1359,7 @@ const ExpandedView = (window.ExpandedView = {
                     return `
                         <div class="party-member party-member--no-char">
                             <span class="party-member-left">
-                                <span class="party-member-name">No character assigned</span>
+                                <span class="party-member-name">${symbolPrefix}No character assigned</span>
                                 ${adminTag}
                             </span>
                             <span class="party-member-right">
@@ -1449,8 +1472,9 @@ const ExpandedView = (window.ExpandedView = {
         const entriesHtml = entries.length > 0
             ? entries.map(entry => {
                 const isOwnEntry = entry.user_id === currentUserId;
+                const symbolPrefix = entry.character_symbol ? `${entry.character_symbol} ` : '';
                 const authorInfo = entry.character_name 
-                    ? `<span class="journal-entry-author">${Utils.escapeHtml(entry.character_name)}</span>` 
+                    ? `<span class="journal-entry-author">${symbolPrefix}${Utils.escapeHtml(entry.character_name)}</span>` 
                     : '';
                 
                 return `
@@ -1994,18 +2018,9 @@ const CampaignUI = (window.CampaignUI = {
     },
     
     async _loadExistingInvitations(campaignId) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'character-manager.js:_loadExistingInvitations',message:'Loading invitations',data:{campaignId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-        // #endregion
         try {
             this._existingInvitations = await CampaignAPI.getCampaignPendingInvitations(campaignId);
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'character-manager.js:_loadExistingInvitations',message:'Loaded invitations success',data:{count:this._existingInvitations?.length,invitations:this._existingInvitations},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2,H3'})}).catch(()=>{});
-            // #endregion
         } catch (error) {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'character-manager.js:_loadExistingInvitations',message:'Error caught - setting empty',data:{errorMessage:error.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H3,H4'})}).catch(()=>{});
-            // #endregion
             console.warn('Failed to load existing invitations:', error);
             this._existingInvitations = [];
         }
@@ -2856,8 +2871,9 @@ const CampaignUI = (window.CampaignUI = {
         
         entriesContainer.innerHTML = entries.map(entry => {
             const isOwnEntry = entry.user_id === currentUserId;
+            const symbolPrefix = entry.character_symbol ? `${entry.character_symbol} ` : '';
             const authorInfo = entry.character_name 
-                ? `<span class="journal-entry-author">${Utils.escapeHtml(entry.character_name)}</span>` 
+                ? `<span class="journal-entry-author">${symbolPrefix}${Utils.escapeHtml(entry.character_name)}</span>` 
                 : '';
             
             return `
@@ -4036,40 +4052,6 @@ const UI = {
         }
         
         // Theme inherits from parent - no need to set explicitly
-        const gridPanel = document.getElementById('characterGridPanel');
-        if (gridPanel) {
-            // (Theme classes removed - grid panel now inherits from parent)
-            
-            // #region agent log
-            // Debug: Check search input computed styles after theme application
-            setTimeout(() => {
-                const searchInput = document.querySelector('.search-input-wrapper .terminal-input');
-                if (searchInput) {
-                    const computedStyle = window.getComputedStyle(searchInput);
-                    const computedColor = computedStyle.color;
-                    const computedBorderColor = computedStyle.borderColor;
-                    const panelClasses = gridPanel.className;
-                    fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            location: 'character-manager.js:4009',
-                            message: 'Search input computed styles',
-                            data: {
-                                computedColor,
-                                computedBorderColor,
-                                panelClasses,
-                                hasThemeWhite: gridPanel.classList.contains('theme-white')
-                            },
-                            timestamp: Date.now(),
-                            sessionId: 'debug-session',
-                            runId: 'check-search-color',
-                            hypothesisId: 'A'
-                    })}).catch(() => {});
-                }
-            }, 100);
-            // #endregion
-        }
         
         const grid = document.getElementById('characterGrid');
         const emptyState = document.getElementById('emptyState');

@@ -28,6 +28,7 @@
       sheet: null,
       grid: null,
       campaign: null,
+      modal: null,     // modal dialogs
       glow: null,      // background glow only
     },
   };
@@ -82,6 +83,7 @@
               sheet: serverConfig.sections?.sheet === 'global' ? null : serverConfig.sections?.sheet,
               grid: serverConfig.sections?.grid === 'global' ? null : serverConfig.sections?.grid,
               campaign: serverConfig.sections?.campaign === 'global' ? null : serverConfig.sections?.campaign,
+              modal: serverConfig.sections?.modal === 'global' ? null : serverConfig.sections?.modal,
               glow: serverConfig.sections?.glow === 'global' ? null : serverConfig.sections?.glow,
             },
           };
@@ -224,6 +226,7 @@
     const sheetTheme = getEffectiveTheme(config, 'sheet');
     const gridTheme = getEffectiveTheme(config, 'grid');
     const campaignTheme = getEffectiveTheme(config, 'campaign');
+    const modalTheme = getEffectiveTheme(config, 'modal');
 
     // Apply terminal theme to <html> element (affects base UI: header, buttons, inputs)
     const htmlEl = document.documentElement;
@@ -298,6 +301,12 @@
       applyTheme(builderPanel, sheetTheme);
     }
 
+    // Apply modal theme to all modals
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+      applyTheme(modal, modalTheme);
+    });
+
     // Dispatch event so app components can react
     window.dispatchEvent(new CustomEvent('danddy:themesApplied', {
       detail: {
@@ -308,6 +317,7 @@
         sheet: sheetTheme,
         grid: gridTheme,
         campaign: campaignTheme,
+        modal: modalTheme,
       }
     }));
 
@@ -319,6 +329,7 @@
       sheet: sheetTheme,
       grid: gridTheme,
       campaign: campaignTheme,
+      modal: modalTheme,
     });
   }
 

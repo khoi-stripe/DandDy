@@ -1,10 +1,11 @@
 from typing import List, Tuple, Optional
+import random
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from database.database import get_db
 from models.user import User
 from models.campaign import Campaign, CampaignStatus, generate_invite_code
-from models.campaign_member import CampaignMember, MemberStatus
+from models.campaign_member import CampaignMember, MemberStatus, PARTY_SYMBOLS
 from models.character import Character
 from models.character_collaborator import CharacterCollaborator, CollaboratorPermission
 from schemas.campaign import (
@@ -16,6 +17,17 @@ from schemas.campaign import (
 from utils.auth import get_current_active_user
 
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
+
+
+def _get_available_symbol(campaign_id: int, db: Session) -> Optional[str]:
+    """Get a random unused symbol for a campaign."""
+    used_symbols = db.query(CampaignMember.symbol).filter(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.symbol.isnot(None)
+    ).all()
+    used = {s[0] for s in used_symbols}
+    available = [s for s in PARTY_SYMBOLS if s not in used]
+    return random.choice(available) if available else None
 
 
 def _can_use_character_for_campaign(
@@ -95,12 +107,13 @@ def create_campaign(
     db.add(new_campaign)
     db.flush()  # Get the campaign ID
     
-    # Add creator as a member
+    # Add creator as a member with assigned symbol
     creator_member = CampaignMember(
         campaign_id=new_campaign.id,
         user_id=current_user.id,
         is_creator=True,
-        status=MemberStatus.ACTIVE
+        status=MemberStatus.ACTIVE,
+        symbol=_get_available_symbol(new_campaign.id, db)
     )
     db.add(creator_member)
     
@@ -295,13 +308,14 @@ def join_campaign(
                 detail=error
             )
     
-    # Create membership
+    # Create membership with assigned symbol
     new_member = CampaignMember(
         campaign_id=campaign.id,
         user_id=current_user.id,
         character_id=join_data.character_id,
         is_creator=False,
-        status=MemberStatus.ACTIVE
+        status=MemberStatus.ACTIVE,
+        symbol=_get_available_symbol(campaign.id, db)
     )
     db.add(new_member)
     
@@ -382,7 +396,7 @@ def get_campaign_members(
         CampaignMember.status == MemberStatus.ACTIVE
     ).all()
     
-    # Build response with user email and journal visibility
+    # Build response with user email, journal visibility, and symbol
     # journal_visibility is now a String column
     return [
         CampaignMemberResponse(
@@ -394,6 +408,7 @@ def get_campaign_members(
             status=m.status.value if hasattr(m.status, 'value') else str(m.status),
             joined_at=m.joined_at,
             journal_visibility=str(m.journal_visibility or "private").lower(),
+            symbol=m.symbol,
             character_id=m.character_id,
             character=m.character
         )
@@ -440,6 +455,7 @@ def update_journal_visibility(
         status=membership.status.value if hasattr(membership.status, 'value') else str(membership.status),
         joined_at=membership.joined_at,
         journal_visibility=str(membership.journal_visibility or "private").lower(),
+        symbol=membership.symbol,
         character_id=membership.character_id,
         character=membership.character
     )
@@ -760,8 +776,9 @@ def accept_invitation(
         invitation.character_id = accept_data.character_id
         character.campaign_id = campaign_id
     
-    # Update invitation to active membership
+    # Update invitation to active membership and assign symbol
     invitation.status = MemberStatus.ACTIVE
+    invitation.symbol = _get_available_symbol(campaign_id, db)
     
     db.commit()
     db.refresh(invitation)

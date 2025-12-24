@@ -644,7 +644,7 @@
 /* Inherit theme from modal parent - use !important to ensure override */
 .modal .settings-group-label,
 .modal-content .settings-group-label {
-  color: var(--ui-fg-color, var(--modal-accent)) !important;
+  color: var(--ui-fg-color) !important;
   text-transform: uppercase !important;
 }
 
@@ -827,15 +827,15 @@
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
-  border: 1px solid var(--ui-border-color, var(--modal-accent));
+  border: 1px solid var(--ui-border-color);
   border-radius: 2px;
   background-color: transparent;
   position: relative;
 }
 
 .settings-checkbox:checked {
-  border-color: var(--ui-primary-bg-color, var(--modal-accent));
-  background-color: var(--ui-primary-bg-color, var(--modal-accent));
+  border-color: var(--ui-primary-bg-color);
+  background-color: var(--ui-primary-bg-color);
 }
 
 .settings-checkbox:checked::after {
@@ -855,7 +855,7 @@
 }
 
 .settings-checkbox-text {
-  color: var(--ui-fg-color, var(--modal-accent));
+  color: var(--ui-fg-color);
   font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: var(--tracking-wider);
@@ -863,7 +863,7 @@
 
 .settings-hint--small {
   font-size: var(--font-size-base);
-  color: var(--ui-fg-color, var(--modal-accent));
+  color: var(--ui-fg-color);
   margin-top: 4px;
   margin-left: 22px; /* align with checkbox label (14px checkbox + 8px gap) */
 }
@@ -1213,7 +1213,7 @@
   transform: translateY(-50%);
   background: transparent;
   border: none;
-  color: var(--ui-fg-color, var(--modal-accent));
+  color: var(--ui-fg-color);
   cursor: pointer;
   font-family: var(--font-family);
   font-size: var(--font-size-small);
@@ -1770,7 +1770,7 @@
 
 .session-resume-modal .modal-header .session-time {
   font-size: var(--font-size-sm);
-  color: var(--ui-dim-color, var(--modal-accent-dim));
+  color: var(--ui-dim-color);
   margin-left: auto;
 }
 
