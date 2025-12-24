@@ -1606,13 +1606,14 @@
   text-shadow: 0 0 5px var(--ui-fg-color) !important;
 }
 
-/* Character sheet in builder - fit within parent container, inherits theme from right-panel */
-.right-panel .character-sheet {
+/* Character sheet in builder - fit within parent container, inherits theme from panel */
+.right-panel .character-sheet,
+.app-panel--builder .character-sheet {
   border: 1px solid var(--ui-dim-color);
   box-sizing: border-box;
   max-height: 100%;
   width: 100%;
-  /* Theme tokens inherit from .right-panel parent */
+  /* Theme tokens inherit from parent */
 }
 
 /* ===== RESPONSIVE ===== */

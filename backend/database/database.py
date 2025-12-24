@@ -518,6 +518,44 @@ def ensure_journal_visibility_column():
         conn.commit()
 
 
+def ensure_app_config_table():
+    """
+    Lightweight migration helper for the app_config table.
+    
+    This table stores application-wide configuration like theme settings.
+    Uses a key-value pattern with JSON values.
+    """
+    inspector = inspect(engine)
+    if inspector.has_table("app_config"):
+        return
+
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS app_config (
+                    id INTEGER PRIMARY KEY,
+                    key VARCHAR(100) NOT NULL UNIQUE,
+                    value TEXT,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+                )
+                """
+            )
+        )
+        # Create index for efficient key lookups
+        try:
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_app_config_key ON app_config (key)"
+                )
+            )
+        except Exception:
+            pass
+
+        conn.commit()
+
+
 def get_db():
     db = SessionLocal()
     try:

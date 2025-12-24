@@ -1696,11 +1696,20 @@
     white: { h: 0, s: '0%', l: '90%', name: 'White', desc: 'Neutral' },
   };
   
-  function loadThemeSettings() {
+  // Cache for server-loaded config
+  let cachedServerConfig = null;
+  
+  async function loadThemeSettings() {
     log('Loading theme settings');
     
-    const config = getThemeConfig();
+    // Try to load from server first
+    const config = await getThemeConfigFromServer();
     
+    // Apply to UI
+    applyThemeConfigToUI(config);
+  }
+  
+  function applyThemeConfigToUI(config) {
     // Set global theme select
     const globalSelect = $('global-theme-select');
     if (globalSelect) {
@@ -1733,25 +1742,105 @@
     updateSwatchSelection(config.global);
   }
   
-  function getThemeConfig() {
+  async function getThemeConfigFromServer() {
+    try {
+      // Fetch from server (public endpoint, no auth required)
+      const response = await fetch(`${API_BASE}/config/themes`);
+      
+      if (response.ok) {
+        const serverConfig = await response.json();
+        
+        // Convert server format to local format
+        const config = {
+          global: serverConfig.globalTheme || 'yellow',
+          syncAll: serverConfig.syncAllSections !== false,
+          sections: {
+            terminal: serverConfig.sections?.terminal === 'global' ? null : serverConfig.sections?.terminal,
+            narrator: serverConfig.sections?.narrator === 'global' ? null : serverConfig.sections?.narrator,
+            sheet: serverConfig.sections?.sheet === 'global' ? null : serverConfig.sections?.sheet,
+            grid: serverConfig.sections?.grid === 'global' ? null : serverConfig.sections?.grid,
+            campaign: serverConfig.sections?.campaign === 'global' ? null : serverConfig.sections?.campaign,
+            glow: serverConfig.sections?.glow === 'global' ? null : serverConfig.sections?.glow,
+          },
+        };
+        
+        // Cache it
+        cachedServerConfig = config;
+        
+        // Also save to localStorage for cross-tab sync and offline use
+        localStorage.setItem(THEME_CONFIG_KEY, JSON.stringify(config));
+        
+        log('Theme config loaded from server:', config);
+        return config;
+      }
+    } catch (err) {
+      log('Error fetching theme config from server, falling back to localStorage:', err);
+    }
+    
+    // Fallback to localStorage
+    return getThemeConfigFromStorage();
+  }
+  
+  function getThemeConfigFromStorage() {
     try {
       const stored = localStorage.getItem(THEME_CONFIG_KEY);
       if (stored) {
         return { ...DEFAULT_THEME_CONFIG, ...JSON.parse(stored) };
       }
     } catch (err) {
-      log('Error loading theme config:', err);
+      log('Error loading theme config from storage:', err);
     }
     return { ...DEFAULT_THEME_CONFIG };
   }
   
-  function saveThemeConfig(config) {
+  function getThemeConfig() {
+    // Use cached server config if available, otherwise localStorage
+    if (cachedServerConfig) {
+      return cachedServerConfig;
+    }
+    return getThemeConfigFromStorage();
+  }
+  
+  async function saveThemeConfigToServer(config) {
     try {
-      localStorage.setItem(THEME_CONFIG_KEY, JSON.stringify(config));
-      log('Theme config saved:', config);
+      // Convert local format to server format
+      const serverPayload = {
+        globalTheme: config.global,
+        syncAllSections: config.syncAll,
+        sections: {
+          terminal: config.sections?.terminal || 'global',
+          narrator: config.sections?.narrator || 'global',
+          sheet: config.sections?.sheet || 'global',
+          grid: config.sections?.grid || 'global',
+          campaign: config.sections?.campaign || 'global',
+          glow: config.sections?.glow || 'global',
+        },
+      };
+      
+      const response = await apiRequest('/config/themes', {
+        method: 'PUT',
+        body: serverPayload,
+      });
+      
+      log('Theme config saved to server:', response);
+      
+      // Update cache
+      cachedServerConfig = config;
+      
       return true;
     } catch (err) {
-      log('Error saving theme config:', err);
+      log('Error saving theme config to server:', err);
+      return false;
+    }
+  }
+  
+  function saveThemeConfigToStorage(config) {
+    try {
+      localStorage.setItem(THEME_CONFIG_KEY, JSON.stringify(config));
+      log('Theme config saved to localStorage:', config);
+      return true;
+    } catch (err) {
+      log('Error saving theme config to localStorage:', err);
       return false;
     }
   }
@@ -1786,16 +1875,28 @@
     
     // Get effective themes for each section
     const globalTheme = config.global || 'yellow';
+    const terminalTheme = config.syncAll ? globalTheme : (config.sections?.terminal || globalTheme);
     const gridTheme = config.syncAll ? globalTheme : (config.sections?.grid || globalTheme);
     const sheetTheme = config.syncAll ? globalTheme : (config.sections?.sheet || globalTheme);
     const campaignTheme = config.syncAll ? globalTheme : (config.sections?.campaign || globalTheme);
     const glowTheme = config.syncAll ? globalTheme : (config.sections?.glow || globalTheme);
     
     // Update preview colors
+    const previewHeader = previewBox.querySelector('.preview-header');
     const gridArea = previewBox.querySelector('.preview-grid-area');
     const sheetArea = previewBox.querySelector('.preview-sheet-area');
     const campaignArea = previewBox.querySelector('.preview-campaign-area');
     const glowArea = previewBox.querySelector('.preview-glow');
+    
+    // Update header with terminal theme
+    if (previewHeader) {
+      const t = AVAILABLE_THEMES[terminalTheme];
+      previewHeader.style.setProperty('--preview-h', t.h);
+      previewHeader.style.setProperty('--preview-s', t.s);
+      previewHeader.style.setProperty('--preview-l', t.l);
+      previewHeader.style.color = `hsl(${t.h}, ${t.s}, ${t.l})`;
+      previewHeader.style.borderBottomColor = `hsl(${t.h}, ${t.s}, ${t.l})`;
+    }
     
     if (gridArea) {
       const t = AVAILABLE_THEMES[gridTheme];
@@ -1829,16 +1930,25 @@
   function handleGlobalThemeChange(e) {
     const config = getThemeConfig();
     config.global = e.target.value;
-    saveThemeConfig(config);
+    
+    // Save to localStorage immediately for live preview (but not to server)
+    saveThemeConfigToStorage(config);
+    cachedServerConfig = config;
     
     updateSwatchSelection(config.global);
     updateThemePreview();
+    
+    // Broadcast for cross-tab live preview
+    window.dispatchEvent(new CustomEvent('danddy:themeConfigChanged', { detail: config }));
   }
   
   function handleSyncToggle(e) {
     const config = getThemeConfig();
     config.syncAll = e.target.checked;
-    saveThemeConfig(config);
+    
+    // Save to localStorage immediately for live preview
+    saveThemeConfigToStorage(config);
+    cachedServerConfig = config;
     
     // Enable/disable section selects
     const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'glow'];
@@ -1851,16 +1961,25 @@
     
     updateOverrideCount();
     updateThemePreview();
+    
+    // Broadcast for cross-tab live preview
+    window.dispatchEvent(new CustomEvent('danddy:themeConfigChanged', { detail: config }));
   }
   
   function handleSectionThemeChange(section, value) {
     const config = getThemeConfig();
     if (!config.sections) config.sections = {};
     config.sections[section] = value || null;
-    saveThemeConfig(config);
+    
+    // Save to localStorage immediately for live preview
+    saveThemeConfigToStorage(config);
+    cachedServerConfig = config;
     
     updateOverrideCount();
     updateThemePreview();
+    
+    // Broadcast for cross-tab live preview
+    window.dispatchEvent(new CustomEvent('danddy:themeConfigChanged', { detail: config }));
   }
   
   function handleSwatchClick(theme) {
@@ -1872,9 +1991,10 @@
     }
   }
   
-  function saveThemeSettings() {
+  async function saveThemeSettings() {
     const globalSelect = $('global-theme-select');
     const syncCheckbox = $('global-theme-sync');
+    const saveBtn = $('theme-save-btn');
     
     const config = {
       global: globalSelect?.value || 'yellow',
@@ -1882,28 +2002,57 @@
       sections: {},
     };
     
-    const sections = ['narrator', 'sheet', 'grid', 'campaign', 'glow'];
+    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'glow'];
     sections.forEach(section => {
       const select = $(`theme-${section}`);
       config.sections[section] = select?.value || null;
     });
     
-    if (saveThemeConfig(config)) {
-      showToast('Theme settings saved', 'success');
-      
-      // Dispatch event for other parts of the app to pick up
-      window.dispatchEvent(new CustomEvent('danddy:themeConfigChanged', { detail: config }));
+    if (saveBtn) saveBtn.loading = true;
+    
+    // Save to server first (requires admin auth)
+    const serverSaved = await saveThemeConfigToServer(config);
+    
+    // Always save to localStorage for cross-tab sync
+    saveThemeConfigToStorage(config);
+    
+    if (saveBtn) saveBtn.loading = false;
+    
+    if (serverSaved) {
+      showToast('Theme settings saved to server', 'success');
     } else {
-      showToast('Failed to save theme settings', 'danger');
+      showToast('Theme settings saved locally (server save failed - check admin permissions)', 'warning');
     }
+    
+    // Dispatch event for other parts of the app to pick up
+    window.dispatchEvent(new CustomEvent('danddy:themeConfigChanged', { detail: config }));
   }
   
-  function resetThemeSettings() {
+  async function resetThemeSettings() {
     if (!confirm('Reset all theme settings to defaults?')) return;
     
-    saveThemeConfig(DEFAULT_THEME_CONFIG);
-    loadThemeSettings();
-    showToast('Theme settings reset to defaults', 'success');
+    const resetBtn = $('theme-reset-btn');
+    if (resetBtn) resetBtn.loading = true;
+    
+    // Save defaults to server
+    const serverSaved = await saveThemeConfigToServer(DEFAULT_THEME_CONFIG);
+    
+    // Always save to localStorage
+    saveThemeConfigToStorage(DEFAULT_THEME_CONFIG);
+    
+    // Update cache
+    cachedServerConfig = { ...DEFAULT_THEME_CONFIG };
+    
+    // Reload UI
+    applyThemeConfigToUI(DEFAULT_THEME_CONFIG);
+    
+    if (resetBtn) resetBtn.loading = false;
+    
+    if (serverSaved) {
+      showToast('Theme settings reset to defaults (saved to server)', 'success');
+    } else {
+      showToast('Theme settings reset to defaults (local only)', 'warning');
+    }
     
     // Dispatch event
     window.dispatchEvent(new CustomEvent('danddy:themeConfigChanged', { detail: DEFAULT_THEME_CONFIG }));
@@ -1951,7 +2100,7 @@
         };
         
         if (imported.sections && typeof imported.sections === 'object') {
-          const sections = ['narrator', 'sheet', 'grid', 'campaign', 'glow'];
+          const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'glow'];
           sections.forEach(section => {
             const val = imported.sections[section];
             if (val && AVAILABLE_THEMES[val]) {
@@ -2358,7 +2507,7 @@
     $('global-theme-sync')?.addEventListener('sl-change', handleSyncToggle);
     
     // Section theme selects
-    const sectionSelects = ['narrator', 'sheet', 'grid', 'campaign', 'glow'];
+    const sectionSelects = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'glow'];
     sectionSelects.forEach(section => {
       const select = $(`theme-${section}`);
       if (select) {

@@ -1594,11 +1594,13 @@ sl-divider {
 
 .preview-header {
   font-size: var(--font-size-xs);
-  color: var(--admin-text-dim);
+  color: hsl(var(--preview-h, 48), var(--preview-s, 100%), var(--preview-l, 64%));
   text-transform: uppercase;
   letter-spacing: var(--tracking-widest);
   margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
   text-align: center;
+  border-bottom: 1px solid hsl(var(--preview-h, 48), var(--preview-s, 100%), calc(var(--preview-l, 64%) * 0.6));
 }
 
 .preview-content {

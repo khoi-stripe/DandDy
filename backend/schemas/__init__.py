@@ -17,6 +17,7 @@ from .character_collaborator import (
     CollaboratorCreate, CollaboratorResponse, CollaboratorUpdate, 
     SharedCharacterInfo, CollaboratorPermission
 )
+from .app_config import ThemeConfig, ThemeConfigResponse, ThemeSectionConfig, AppConfigResponse
 
 __all__ = [
     "UserCreate", "UserLogin", "UserResponse", "Token", "TokenData",
@@ -29,7 +30,8 @@ __all__ = [
     "PromptEntryCreate", "PromptEntryUpdate", "PromptEntryResponse", "PromptEntryBulkCreate",
     "CharacterShareCreate", "CharacterShareResponse", "CharacterPreview", "PendingShareResponse",
     "CollaboratorCreate", "CollaboratorResponse", "CollaboratorUpdate", 
-    "SharedCharacterInfo", "CollaboratorPermission"
+    "SharedCharacterInfo", "CollaboratorPermission",
+    "ThemeConfig", "ThemeConfigResponse", "ThemeSectionConfig", "AppConfigResponse"
 ]
 
 
