@@ -1351,13 +1351,15 @@ const ExpandedView = (window.ExpandedView = {
                 label: 'Invite',
                 onclick: `CampaignUI.openInviteModal(${campaign.id})`,
             });
+        } else {
+            // Only non-creators can leave the campaign
+            menuItems.push({
+                icon: '↩',
+                label: 'Leave Campaign',
+                onclick: `CampaignUI.leaveCampaign(${campaign.id})`,
+                danger: true,
+            });
         }
-        menuItems.push({
-            icon: '↩',
-            label: 'Leave Campaign',
-            onclick: `CampaignUI.leaveCampaign(${campaign.id})`,
-            danger: true,
-        });
 
         const overflowMenuHtml = `
             <div class="campaign-overflow selector-shell selector-shell--actions">
