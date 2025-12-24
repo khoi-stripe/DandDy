@@ -967,11 +967,12 @@ const ExpandedView = (window.ExpandedView = {
     expand() {
         const splitLayout = document.querySelector('.split-layout');
         
+        // Calculate column widths BEFORE adding transition class
+        // so the character sheet has the correct fixed width from the start
+        this._updateColumnWidths();
+        
         // Show loading overlay to prevent content flash during layout transition
         splitLayout?.classList.add('is-expanding');
-        
-        // Calculate column widths based on current container size
-        this._updateColumnWidths();
         
         // Set up resize listener to keep columns responsive
         this._setupResizeListener();

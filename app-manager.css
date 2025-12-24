@@ -210,7 +210,7 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     overflow: hidden;
-    transition: grid-template-columns 0.4s ease;
+    /* No transition on grid-template-columns - sheet maintains fixed width during transitions */
 }
 
 /* In expanded view, character sheet gets its own scroll back */
@@ -3330,6 +3330,14 @@ div.sheet__sidebar.ui-theme-pink {
     .split-layout.is-sheet-expanded .sheet-campaign-grid,
     .split-layout.is-collapsing .sheet-campaign-grid {
         grid-template-columns: var(--sheet-column-width) var(--campaign-column-width) !important;
+    }
+    
+    /* Keep character sheet at fixed width during expand/collapse transitions.
+       This prevents the sheet from scaling while the panel container animates. */
+    .split-layout.is-expanding .character-sheet,
+    .split-layout.is-collapsing .character-sheet {
+        width: var(--sheet-column-width) !important;
+        flex: 0 0 auto !important;
     }
     
     /* During collapse: grid slides back in, sheet shrinks back to 50% */
