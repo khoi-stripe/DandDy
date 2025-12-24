@@ -67,8 +67,8 @@
 /* ===== PANEL: CHARACTER SHEET ===== */
 .panel-character-sheet {
     padding: 32px;
-    /* Border only shown when grid is visible (grid-sheet view) - inherits theme from parent */
-    border-right: 1px solid var(--ui-dim-color, var(--terminal-dim));
+    /* Border removed for cleaner look */
+    border-right: none;
     /* Fill parent container */
     flex: 1 1 0;
     display: flex;
@@ -80,14 +80,6 @@
     --scrollbar-thumb-color: hsla(0, 0%, 50%, 0.5);
     --scrollbar-thumb-hover-color: hsla(0, 0%, 70%, 0.9);
     scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
-}
-
-/* When panel has a theme class, use theme colors for border */
-.panel-character-sheet.ui-theme-pink,
-.panel-character-sheet.ui-theme-green,
-.panel-character-sheet.ui-theme-white,
-.panel-character-sheet.ui-theme-yellow {
-    border-right-color: var(--ui-dim-color);
 }
 
 /* Wrapper for character sheet - fills parent container */
