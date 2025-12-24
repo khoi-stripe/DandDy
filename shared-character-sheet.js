@@ -43,6 +43,7 @@ function logPortraitDebug(action, characterId, characterName, details) {
   }
 })();
 
+
 // Built-in spell lookup table for displaying spell descriptions
 // when character data only has spell names (strings) instead of full objects.
 // This allows the manager to show descriptions for older characters or demo characters.

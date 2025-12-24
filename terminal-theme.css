@@ -370,7 +370,9 @@
 /* More specific selector to override .character-sheet defaults */
 .character-sheet.ui-theme-yellow,
 .right-panel.ui-theme-yellow .character-sheet,
-.sheet-scroll-wrapper.ui-theme-yellow .character-sheet {
+.sheet-scroll-wrapper.ui-theme-yellow .character-sheet,
+.terminal-container .right-panel.ui-theme-yellow .character-sheet,
+html .right-panel.ui-theme-yellow .character-sheet {
   --ui-border-color: var(--modal-accent) !important;
   --ui-fg-color: var(--modal-accent) !important;
   --ui-dim-color: var(--modal-accent-dim) !important;
@@ -1351,6 +1353,21 @@ body::before {
   
   /* No default theme tokens - inherits from parent container */
   /* Set theme on parent: html, .sheet-scroll-wrapper, .right-panel, etc. */
+}
+
+/* Currency display - inherit theme colors */
+.sheet-currency .currency-label {
+  color: var(--ui-fg-color);
+}
+
+.sheet-currency .currency-value {
+  color: var(--ui-fg-color);
+  font-weight: var(--font-weight-normal);
+}
+
+/* Spell subsection titles - inherit theme colors */
+.sheet-subsection-title {
+  color: var(--ui-fg-color);
 }
 
 /* Spell list spacing helpers used by shared-character-sheet.js */
