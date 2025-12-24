@@ -1075,9 +1075,9 @@ const ExpandedView = (window.ExpandedView = {
             return;
         }
         
-        // Apply teal theme to campaign panel
-        panel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-pink', 'theme-pink', 'ui-theme-green', 'theme-green', 'ui-theme-yellow', 'theme-yellow');
-        panel.classList.add('ui-theme-teal', 'theme-teal');
+        // Apply white theme to campaign panel
+        panel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-pink', 'theme-pink', 'ui-theme-green', 'theme-green', 'ui-theme-yellow', 'theme-yellow', 'ui-theme-teal', 'theme-teal');
+        panel.classList.add('ui-theme-white', 'theme-white');
         
         const characterId = AppState.selectedCharacterId;
         if (!characterId) {
@@ -3994,11 +3994,11 @@ const UI = {
             console.log('🎨 RENDER: Character names:', AppState.filteredCharacters.map(c => c.name).join(', '));
         }
         
-        // Apply yellow theme to character grid panel
+        // Apply white theme to character grid panel
         const gridPanel = document.getElementById('characterGridPanel');
         if (gridPanel) {
-            gridPanel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-green', 'theme-green', 'ui-theme-teal', 'theme-teal', 'ui-theme-pink', 'theme-pink');
-            gridPanel.classList.add('ui-theme-yellow', 'theme-yellow');
+            gridPanel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-green', 'theme-green', 'ui-theme-teal', 'theme-teal', 'ui-theme-pink', 'theme-pink', 'ui-theme-yellow', 'theme-yellow');
+            gridPanel.classList.add('ui-theme-white', 'theme-white');
             
             // #region agent log
             // Debug: Check search input computed styles after theme application
@@ -4253,13 +4253,13 @@ const UI = {
         if (navBar) navBar.classList.remove('is-hidden');
         
         // Apply pink theme to panel (so nav bar and sheet both inherit)
-        // Testing theme inheritance
+        // Apply white theme to character sheet
         if (sheetPanel) {
-            sheetPanel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-green', 'theme-green', 'ui-theme-teal', 'theme-teal');
-            sheetPanel.classList.add('ui-theme-pink', 'theme-pink');
+            sheetPanel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-green', 'theme-green', 'ui-theme-teal', 'theme-teal', 'ui-theme-pink', 'theme-pink', 'ui-theme-yellow', 'theme-yellow');
+            sheetPanel.classList.add('ui-theme-white', 'theme-white');
         }
-        sheetContainer.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-green', 'theme-green', 'ui-theme-teal', 'theme-teal');
-        sheetContainer.classList.add('ui-theme-pink', 'theme-pink');
+        sheetContainer.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-green', 'theme-green', 'ui-theme-teal', 'theme-teal', 'ui-theme-pink', 'theme-pink', 'ui-theme-yellow', 'theme-yellow');
+        sheetContainer.classList.add('ui-theme-white', 'theme-white');
         
         // Nav bar is kept visible but empty - the "← Characters" button is now inside the sheet header
         

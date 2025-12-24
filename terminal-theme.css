@@ -502,7 +502,8 @@ body {
   background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px);
   background-size: 20px 20px;
   background-position: 0 0;
-  color: var(--terminal-fg);
+  /* Use ui-fg-color to inherit from terminal-frame theme, fallback to terminal-fg */
+  color: var(--ui-fg-color, var(--terminal-fg));
   overflow-x: hidden;
   /* Use safe-area-insets to avoid iPhone Dynamic Island/notch and home indicator */
   padding: max(64px, env(safe-area-inset-top, 64px))
@@ -692,7 +693,8 @@ body::before {
 .left-panel {
   flex: 1;
   padding: var(--spacing-xl);
-  border-right: 1px solid var(--terminal-border);
+  /* Use theme border color, fallback to terminal-border for backward compatibility */
+  border-right: 1px solid var(--ui-border-color, var(--terminal-border));
   overflow-y: auto;
   overflow-x: hidden;
   min-height: 0;

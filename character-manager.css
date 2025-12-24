@@ -7,9 +7,9 @@
    Each panel handles its own padding. View state controlled via data-view attribute.
    
    SCROLLBAR STRUCTURE:
-   - Character grid panel: amber theme scrollbars
-   - Character sheet panel: teal theme scrollbars
-   - Campaign panel: teal theme scrollbars (matches sheet)
+   - Character grid panel: white/gray scrollbars
+   - Character sheet panel: white/gray scrollbars
+   - Campaign panel: white/gray scrollbars (matches sheet)
    - Modal content: scrolls if form content is too large
    All scrollbars inherit from terminal-theme.css custom scrollbar styles
    
@@ -57,6 +57,11 @@
 .panel-character-grid {
     padding: var(--spacing-xl);
     padding-top: 0;
+    /* White/gray scrollbar via CSS variables - inherited by *::-webkit-scrollbar-* rules */
+    --scrollbar-track-color: hsl(0, 0%, 7%);
+    --scrollbar-thumb-color: hsla(0, 0%, 50%, 0.5);
+    --scrollbar-thumb-hover-color: hsla(0, 0%, 70%, 0.9);
+    scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
 }
 
 /* ===== PANEL: CHARACTER SHEET ===== */
@@ -70,7 +75,11 @@
     flex-direction: column;
     min-height: 0;
     position: relative; /* For absolute positioning of nav bar */
-    /* Scrollbar colors inherit from character sheet theme */
+    /* White/gray scrollbar via CSS variables - inherited by *::-webkit-scrollbar-* rules */
+    --scrollbar-track-color: hsl(0, 0%, 7%);
+    --scrollbar-thumb-color: hsla(0, 0%, 50%, 0.5);
+    --scrollbar-thumb-hover-color: hsla(0, 0%, 70%, 0.9);
+    scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
 }
 
 /* When panel has a theme class, use theme colors for border */
@@ -117,33 +126,37 @@
 
 /* Inherit scrollbar colors from character sheet theme */
 .sheet-scroll-wrapper:has(.character-sheet.ui-theme-pink) {
-    --scrollbar-track-color: hsl(var(--theme-pink-h), 70%, 7%) !important;
-    --scrollbar-thumb-color: hsla(var(--theme-pink-h), calc(var(--theme-pink-s) * 0.67), var(--theme-pink-l-dim), 0.5) !important;
-    --scrollbar-thumb-hover-color: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright), 0.9) !important;
+    /* Scrollbar stays teal for consistency - only border changes to match theme */
+    --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%) !important;
+    --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5) !important;
+    --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9) !important;
     /* Also set border color so campaign-panel-slot border-top inherits it */
     --ui-border-color: var(--campaign-accent);
 }
 
 .sheet-scroll-wrapper:has(.character-sheet.ui-theme-green) {
-    --scrollbar-track-color: hsl(var(--theme-terminal-h), 70%, 7%) !important;
-    --scrollbar-thumb-color: hsla(var(--theme-terminal-h), calc(var(--theme-terminal-s) * 0.67), var(--theme-terminal-l-dim), 0.5) !important;
-    --scrollbar-thumb-hover-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.9) !important;
+    /* Scrollbar stays teal for consistency - only border changes to match theme */
+    --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%) !important;
+    --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5) !important;
+    --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9) !important;
     /* Also set border color so campaign-panel-slot border-top inherits it */
     --ui-border-color: var(--terminal-border);
 }
 
 .sheet-scroll-wrapper:has(.character-sheet.ui-theme-white) {
-    --scrollbar-track-color: hsl(var(--theme-white-h), 70%, 7%) !important;
-    --scrollbar-thumb-color: hsla(var(--theme-white-h), calc(var(--theme-white-s) * 0.67), var(--theme-white-l-dim), 0.5) !important;
-    --scrollbar-thumb-hover-color: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.9) !important;
+    /* Scrollbar stays teal for consistency - only border changes to match theme */
+    --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%) !important;
+    --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5) !important;
+    --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9) !important;
     /* Also set border color so campaign-panel-slot border-top inherits it */
     --ui-border-color: var(--white-border);
 }
 
 .sheet-scroll-wrapper:has(.character-sheet.ui-theme-yellow) {
-    --scrollbar-track-color: hsl(var(--theme-yellow-h), 70%, 7%) !important;
-    --scrollbar-thumb-color: hsla(var(--theme-yellow-h), calc(var(--theme-yellow-s) * 0.67), var(--theme-yellow-l-dim), 0.5) !important;
-    --scrollbar-thumb-hover-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.9) !important;
+    /* Scrollbar stays teal for consistency - only border changes to match theme */
+    --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%) !important;
+    --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5) !important;
+    --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9) !important;
     /* Also set border color so campaign-panel-slot border-top inherits it */
     --ui-border-color: var(--modal-accent);
 }
@@ -159,6 +172,21 @@
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    /* White/gray scrollbar for character sheet panel */
+    --scrollbar-track-color: hsl(0, 0%, 7%);
+    --scrollbar-thumb-color: hsla(0, 0%, 50%, 0.5);
+    --scrollbar-thumb-hover-color: hsla(0, 0%, 70%, 0.9);
+}
+
+/* Teal scrollbar pseudo-elements for sheet-campaign-grid - using direct values to ensure teal */
+.sheet-campaign-grid::-webkit-scrollbar-track {
+    background: hsl(181, 70%, 7%) !important;
+}
+.sheet-campaign-grid::-webkit-scrollbar-thumb {
+    background-color: hsla(181, 67%, 45%, 0.5) !important;
+}
+.sheet-campaign-grid::-webkit-scrollbar-thumb:hover {
+    background-color: hsla(181, 100%, 41%, 0.9) !important;
 }
 
 /* In grid view, character sheet should not scroll independently - scrolls with campaign panel */
