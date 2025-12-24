@@ -24,3 +24,4 @@ class AppConfig(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     updated_by_id = Column(Integer, nullable=True)  # User ID who last updated
 
+

@@ -93,20 +93,19 @@
   /* Error Token */
   --terminal-error: hsl(var(--theme-error-h), var(--theme-error-s), var(--theme-error-l));
   
-  /* Teal Sheet Tokens */
-  --sheet-accent: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
-  --sheet-accent-dim: hsl(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim));
-  --sheet-border-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
-  --sheet-label-color: hsl(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim));
-  --sheet-value-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
-  --sheet-box-border-color: hsl(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim));
-  --sheet-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.10);
-  --sheet-ability-box-bg: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.10);
+  /* Sheet Tokens - inherit from UI theme (set by theme loader) */
+  --sheet-accent: var(--ui-border-color);
+  --sheet-accent-dim: var(--ui-dim-color);
+  --sheet-border-color: var(--ui-border-color);
+  --sheet-label-color: var(--ui-dim-color);
+  --sheet-value-color: var(--ui-fg-color);
+  --sheet-box-border-color: var(--ui-dim-color);
+  --sheet-box-bg: var(--ui-bg-translucent);
+  --sheet-ability-box-bg: var(--ui-bg-translucent);
   
-  /* Legacy panel-teal tokens (for backward compatibility with character-builder
-     and portrait history components that reference these directly) */
-  --panel-teal: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
-  --panel-teal-dim: hsl(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim));
+  /* Legacy panel tokens (for backward compatibility - now inherit from UI theme) */
+  --panel-teal: var(--ui-border-color);
+  --panel-teal-dim: var(--ui-dim-color);
   
   /* Campaign Pink Tokens */
   --campaign-accent: hsl(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright));
@@ -2920,8 +2919,10 @@ body::before {
   opacity: 1;
 }
 
-/* Filled primary button (character manager style) */
-.terminal-btn-primary {
+/* Filled primary button (character manager style)
+   Use compound selector to ensure primary styling overrides .terminal-btn base */
+.terminal-btn-primary,
+.terminal-btn.terminal-btn-primary {
   background-color: var(--ui-primary-bg-color);
   color: var(--ui-on-primary-color);
   border: 1px solid var(--ui-primary-bg-color);
@@ -2939,7 +2940,8 @@ body::before {
   transition: all var(--transition-speed);
 }
 
-.terminal-btn-primary:hover:not(:disabled) {
+.terminal-btn-primary:hover:not(:disabled),
+.terminal-btn.terminal-btn-primary:hover:not(:disabled) {
   /* Invert style on hover:
      - Solid fill becomes transparent
      - Text + border use the primary color */
@@ -2948,7 +2950,8 @@ body::before {
   border-color: var(--ui-primary-bg-color);
 }
 
-.terminal-btn-primary:disabled {
+.terminal-btn-primary:disabled,
+.terminal-btn.terminal-btn-primary:disabled {
   /* Theme-agnostic disabled state: neutral, slightly dimmed */
   background-color: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.18);
@@ -2958,7 +2961,8 @@ body::before {
 }
 
 /* Quota exhausted state (matches selector-option disabled styling) */
-.terminal-btn-primary.is-quota-exhausted:disabled {
+.terminal-btn-primary.is-quota-exhausted:disabled,
+.terminal-btn.terminal-btn-primary.is-quota-exhausted:disabled {
   /* Keep the teal coloring but dim it significantly */
   background-color: transparent;
   border-color: var(--ui-border-color);

@@ -183,18 +183,18 @@
     --scrollbar-thumb-hover-color: hsla(0, 0%, 70%, 0.9);
 }
 
-/* Teal scrollbar pseudo-elements for sheet-campaign-grid - using direct values to ensure teal */
+/* Scrollbar pseudo-elements for sheet-campaign-grid - uses theme variables */
 .sheet-campaign-grid::-webkit-scrollbar-track,
 .sheet__layout::-webkit-scrollbar-track {
-    background: hsl(181, 70%, 7%) !important;
+    background: var(--scrollbar-track-color) !important;
 }
 .sheet-campaign-grid::-webkit-scrollbar-thumb,
 .sheet__layout::-webkit-scrollbar-thumb {
-    background-color: hsla(181, 67%, 45%, 0.5) !important;
+    background-color: var(--scrollbar-thumb-color) !important;
 }
 .sheet-campaign-grid::-webkit-scrollbar-thumb:hover,
 .sheet__layout::-webkit-scrollbar-thumb:hover {
-    background-color: hsla(181, 100%, 41%, 0.9) !important;
+    background-color: var(--scrollbar-thumb-hover-color) !important;
 }
 
 /* In grid view, character sheet should not scroll independently - scrolls with campaign panel */
@@ -3105,6 +3105,19 @@ div.sheet__sidebar.ui-theme-pink {
     color: var(--ui-fg-color);
 }
 
+/* Mobile: disable hover states for login/logout buttons and hide user info */
+@media (hover: none), (pointer: coarse) {
+    .terminal-header #userInfoDisplay {
+        display: none;
+    }
+    
+    .terminal-header .header-actions #authBtn:hover:not(:disabled) {
+        border-color: var(--ui-dim-color);
+        color: var(--ui-dim-color);
+        opacity: 0.7;
+    }
+}
+
 /* Header primary buttons: always show filled style using header's theme.
    Works with ANY theme class (yellow, teal, green, pink, white, orange, red, violet, blue).
    The header's theme class sets --ui-primary-bg-color, and the button inherits it.
@@ -3412,6 +3425,20 @@ div.sheet__sidebar.ui-theme-pink {
     font-family: var(--font-mono);
     font-size: calc(var(--font-size-base) * 1.1);
     text-shadow: 0 0 10px var(--ui-fg-color);
+}
+
+/* Grid panel loading cube - use white/gray to match grid panel scrollbar theme */
+#gridPanelLoading .panel-loading-cube i {
+    border-color: var(--white-dim);
+    background: hsla(0, 0%, 100%, 0.05);
+    box-shadow: 
+        inset 0 0 20px hsla(0, 0%, 100%, 0.1),
+        0 0 15px hsla(0, 0%, 100%, 0.2);
+}
+
+#gridPanelLoading .panel-loading-text {
+    color: var(--white-dim);
+    text-shadow: 0 0 10px var(--white-dim);
 }
 
 /* Panel loading cube - larger, portrait-style cube */
@@ -3754,14 +3781,14 @@ div.sheet__sidebar.ui-theme-pink {
     /* On mobile, no cards should appear selected (no glow/highlight)
        EXCEPT portrait history cards which need selection styling in the modal */
     .character-card.is-selected:not(.portrait-history-card) {
-        border-color: var(--terminal-dim) !important;
+        border-color: var(--white-dim) !important;
         background-color: var(--terminal-bg) !important;
         box-shadow: none !important;
         animation: none !important;
     }
     
     .character-card.is-selected:not(.portrait-history-card) .card-thumbnail {
-        color: var(--terminal-dim) !important;
+        color: var(--white-dim) !important;
     }
     
     /* Reset image thumbnail opacity on mobile (no special hover/selection effects) */
@@ -3771,12 +3798,12 @@ div.sheet__sidebar.ui-theme-pink {
     
     .character-card.is-selected:not(.portrait-history-card) .card-name,
     .character-card.is-selected:not(.portrait-history-card) .card-info {
-        color: var(--terminal-dim) !important;
+        color: var(--white-dim) !important;
     }
     
     .character-card.is-selected:not(.portrait-history-card) .card-details {
         background-color: transparent !important;
-        color: var(--terminal-dim) !important;
+        color: var(--white-dim) !important;
     }
     
     /* Reset new-character-card to default layout */
@@ -4045,11 +4072,9 @@ div.sheet__sidebar.ui-theme-pink {
     transform: scale(0.5);
 }
 
-/* When viewing sheet on mobile, inherit theme from character sheet */
+/* When viewing sheet on mobile, allow swipe gestures */
 .panel-character-grid.is-viewing-sheet {
     touch-action: pan-y pinch-zoom; /* Allow vertical scroll, capture horizontal swipes */
-    /* Theme tokens inherit from character sheet - no hardcoded overrides */
-    /* Scrollbar colors inherit from character sheet theme */
 }
 
 /* During active horizontal swipe, prevent all scrolling */
