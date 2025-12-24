@@ -191,17 +191,23 @@
   /**
    * Apply glow theme (background radial gradient only) via CSS variables
    * This is separate from the UI theme to allow different colors
+   * 
+   * NOTE: We set these on BODY (not html) because:
+   * 1. body::before uses these variables for the radial gradient
+   * 2. The terminal theme class is also applied to body
+   * 3. Inline styles on body override the theme class on body
+   * 4. body::before inherits from body, getting the correct glow color
    */
   function applyGlowTheme(themeName) {
-    const htmlEl = document.documentElement;
+    const bodyEl = document.body;
     const hsl = THEME_HSL[themeName];
-    if (!hsl) return;
+    if (!hsl || !bodyEl) return;
 
-    // Set glow-specific CSS variables
-    htmlEl.style.setProperty('--bg-glow-h', hsl.h);
-    htmlEl.style.setProperty('--bg-glow-s', hsl.s);
-    htmlEl.style.setProperty('--bg-glow-l', hsl.l);
-    htmlEl.style.setProperty('--terminal-glow-color', `hsla(${hsl.h}, ${hsl.s}, ${hsl.l}, 0.28)`);
+    // Set glow-specific CSS variables on body (so body::before inherits them correctly)
+    bodyEl.style.setProperty('--bg-glow-h', hsl.h);
+    bodyEl.style.setProperty('--bg-glow-s', hsl.s);
+    bodyEl.style.setProperty('--bg-glow-l', hsl.l);
+    bodyEl.style.setProperty('--terminal-glow-color', `hsla(${hsl.h}, ${hsl.s}, ${hsl.l}, 0.28)`);
   }
 
   /**

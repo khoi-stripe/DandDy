@@ -21,14 +21,14 @@ This document tracks known security issues identified during a review of the Dan
 - **Status**: **Resolved**
 - **Description**:
   - The `POST /api/auth/password/forgot` endpoint always returns a `debug_reset_token` in the JSON response when a user with that email exists.
-  - An attacker who knows a victim’s email can request a token and then call `POST /api/auth/password/reset` to take over the account, without access to the victim’s inbox.
+  - An attacker who knows a victim's email can request a token and then call `POST /api/auth/password/reset` to take over the account, without access to the victim's inbox.
   - The presence/absence of `debug_reset_token` also leaks whether an email exists, even though the human-readable message is generic.
 - **Recommended Fix**:
   - In production, **never** include any reset token in the HTTP response.
   - Guard all debug behavior with the `PRODUCTION` env var (or similar):
     - In non-production: returning `debug_reset_token` is acceptable for local testing only.
     - In production: generate the token and send it via email or another out-of-band channel.
-  - Ensure the JSON response shape is identical regardless of whether the email exists and whether you’re in prod or dev (e.g. omit `debug_reset_token` entirely in prod).
+  - Ensure the JSON response shape is identical regardless of whether the email exists and whether you're in prod or dev (e.g. omit `debug_reset_token` entirely in prod).
 - **Implementation Notes**:
   - `backend/routes/auth.py` was updated so that:
     - When `PRODUCTION` is set, `/auth/password/forgot` always returns only a generic `"message"` field and never includes a reset token.
@@ -55,7 +55,7 @@ This document tracks known security issues identified during a review of the Dan
   - Added `escapeHtml` helper to `shared-character-sheet.js` and applied it to character-derived text fields: name, race, class, background, alignment, traits, equipment, skills, languages, background feature, backstory, and export metadata.
   - Added `escapeHtml` helper to `character-manager.js` and applied it to:
     - Character card titles and info text (name, race, class).
-    - The rename modal input’s initial value.
+    - The rename modal input's initial value.
     - Alert/confirm modal messages (including those that interpolate `character.name`), with newlines rendered as `<br>`.
   - Remaining uses of `innerHTML` are now limited to static or internally generated markup (e.g. loading messages), which do not include user-controlled content; further audits can tighten this if needed.
 
@@ -87,7 +87,7 @@ This document tracks known security issues identified during a review of the Dan
 - **Description**:
   - AI routes use an in-memory `_rate_limit_store` keyed by `request.client.host` to enforce per-minute and per-day limits.
   - Behind a reverse proxy (Render), many end users may share the same apparent IP, so limits are effectively per-proxy-IP, not per account.
-  - This is adequate as a coarse DoS protection but not a precise “per-user” quota.
+  - This is adequate as a coarse DoS protection but not a precise "per-user" quota.
 - **Recommended Fix**:
   - When an authenticated user context is available, key limits on the authenticated user ID instead of (or in addition to) IP.
   - If AI usage or abuse risk increases, move rate limiting state to a durable store (e.g. Redis) rather than in-memory.
@@ -108,5 +108,4 @@ This document tracks known security issues identified during a review of the Dan
 - **Implementation Notes**:
   - `Settings.access_token_expire_minutes` in `backend/database/database.py` now defaults to `60` minutes instead of 30 days.
   - Production `render.yaml` already overrides this via `ACCESS_TOKEN_EXPIRE_MINUTES=30`, so prod behavior remains a 30-minute lifetime, and any new environment that forgets to set the env var will still get a short-lived token by default.
-
 
