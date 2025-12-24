@@ -3112,7 +3112,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* Header user info display - uses theme colors */
 .terminal-header #userInfoDisplay {
-    font-size: var(--font-size-small);
+    font-size: var(--font-size-base);
     white-space: nowrap;
     color: var(--ui-dim-color);
     display: inline-flex;
