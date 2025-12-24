@@ -1276,14 +1276,18 @@ const ExpandedView = (window.ExpandedView = {
         const MAX_PARTY_DISPLAY = 3;
         let partyHtml = '';
         if (members && members.length > 0) {
-            const displayMembers = members.slice(0, MAX_PARTY_DISPLAY);
-            const remainingCount = members.length - MAX_PARTY_DISPLAY;
+            // Sort members to ensure admin (creator) is always at the top
+            const sortedMembers = [...members].sort((a, b) => {
+                if (a.is_creator && !b.is_creator) return -1;
+                if (!a.is_creator && b.is_creator) return 1;
+                return 0;
+            });
+            const displayMembers = sortedMembers.slice(0, MAX_PARTY_DISPLAY);
+            const remainingCount = sortedMembers.length - MAX_PARTY_DISPLAY;
             
             partyHtml = displayMembers.map(m => {
                 const char = m.character;
                 const adminTag = m.is_creator ? '<span class="party-member-admin-tag">Admin</span>' : '';
-                const userEmail = m.user_email ? `<span class="party-member-email">${Utils.escapeHtml(m.user_email)}</span>` : '';
-                const rightSide = userEmail ? `<span class="party-member-right">${userEmail}</span>` : '';
                 // Check if this is someone else's character (clickable to view their sheet)
                 const isOtherUser = m.user_id !== currentUserId;
                 if (char) {
@@ -1296,11 +1300,11 @@ const ExpandedView = (window.ExpandedView = {
                         <div class="party-member ${clickable}" ${clickHandler}>
                             <span class="party-member-left">
                                 <span class="party-member-name">${char.name}</span>
-                                <span class="party-member-separator">•</span>
-                                <span class="party-member-info">Lvl ${char.level} ${char.character_class || ''}</span>
                                 ${adminTag}
                             </span>
-                            ${rightSide}
+                            <span class="party-member-right">
+                                <span class="party-member-info">Lvl ${char.level} ${char.character_class || ''}</span>
+                            </span>
                         </div>
                     `;
                 } else {
@@ -1310,7 +1314,8 @@ const ExpandedView = (window.ExpandedView = {
                                 <span class="party-member-name">No character assigned</span>
                                 ${adminTag}
                             </span>
-                            ${rightSide}
+                            <span class="party-member-right">
+                            </span>
                         </div>
                     `;
                 }
@@ -2925,9 +2930,17 @@ const CampaignUI = (window.CampaignUI = {
             if (modal) {
                 const modalContent = modal.querySelector('.modal-content');
                 if (modalContent) {
+                    // Get owner email from backend response (available for party member characters)
+                    const ownerEmail = backendCharacter.owner_email 
+                        ? `<div class="party-member-modal-email">${Utils.escapeHtml(backendCharacter.owner_email)}</div>` 
+                        : '';
+                    
                     modalContent.innerHTML = `
                         <div class="modal-header">
-                            <h2 class="modal-title">${Utils.escapeHtml(character.name)}</h2>
+                            <div class="party-member-modal-title-group">
+                                <h2 class="modal-title">${Utils.escapeHtml(character.name)}</h2>
+                                ${ownerEmail}
+                            </div>
                             <button class="modal-close" onclick="CampaignUI.closePartyMemberSheetModal()">&times;</button>
                         </div>
                         <div class="modal-body party-member-sheet-body">
