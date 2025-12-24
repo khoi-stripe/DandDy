@@ -1226,15 +1226,15 @@ div.sheet__sidebar.ui-theme-pink {
     font-style: italic;
 }
 
-/* Admin tag - styled like shared/sample tags but with theme background */
+/* Admin tag - uses dim bg + bright text style (like condition tags) */
 .party-member-admin-tag {
     font-size: var(--font-size-2xs);
     font-weight: var(--font-weight-medium);
     font-family: var(--font-mono);
     letter-spacing: var(--tracking-wider);
     text-transform: uppercase;
-    color: var(--ui-on-primary-color);
-    background-color: var(--ui-primary-bg-color);
+    color: var(--ui-tag-bg, var(--ui-primary-bg-color));
+    background-color: color-mix(in srgb, var(--ui-tag-bg, var(--ui-primary-bg-color)) 20%, transparent);
     border-radius: 3px;
     padding: 0 4px;
     margin-left: 4px;
@@ -2103,6 +2103,7 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 /* Sample character tag - top left corner */
+/* Uses dim bg + bright text style (like condition tags) */
 .card-demo-tag {
     position: absolute;
     top: 6px;
@@ -2114,12 +2115,13 @@ div.sheet__sidebar.ui-theme-pink {
     font-family: var(--font-mono);
     letter-spacing: var(--tracking-wider);
     text-transform: uppercase;
-    color: var(--ui-on-primary-color);
-    background-color: var(--ui-primary-bg-color);
+    color: var(--ui-tag-bg, var(--ui-primary-bg-color));
+    background-color: color-mix(in srgb, var(--ui-tag-bg, var(--ui-primary-bg-color)) 20%, transparent);
     border-radius: 3px;
 }
 
 /* Shared character tag - top left corner (matches demo tag position) */
+/* Uses dim bg + bright text style (like condition tags) */
 .card-shared-tag {
     position: absolute;
     top: 6px;
@@ -2131,8 +2133,8 @@ div.sheet__sidebar.ui-theme-pink {
     font-family: var(--font-mono);
     letter-spacing: var(--tracking-wider);
     text-transform: uppercase;
-    color: var(--ui-on-primary-color);
-    background-color: var(--ui-primary-bg-color);
+    color: var(--ui-tag-bg, var(--ui-primary-bg-color));
+    background-color: color-mix(in srgb, var(--ui-tag-bg, var(--ui-primary-bg-color)) 20%, transparent);
     border-radius: 3px;
 }
 
@@ -4694,6 +4696,7 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 /* Demo character tag - overlays portrait in sheet view */
+/* Uses dim bg + bright text style (like condition tags) */
 .sheet-demo-tag {
     position: absolute;
     top: 12px;
@@ -4704,12 +4707,13 @@ div.sheet__sidebar.ui-theme-pink {
     font-weight: var(--font-weight-medium);
     letter-spacing: var(--tracking-wider);
     text-transform: uppercase;
-    color: var(--ui-on-primary-color);
-    background-color: var(--ui-primary-bg-color) !important;
+    color: var(--ui-tag-bg, var(--ui-primary-bg-color));
+    background-color: color-mix(in srgb, var(--ui-tag-bg, var(--ui-primary-bg-color)) 20%, transparent) !important;
     border-radius: 3px;
 }
 
 /* Shared character tag - inline with sheet title */
+/* Uses dim bg + bright text style (like condition tags) */
 .sheet-shared-tag {
     display: inline-block;
     padding: 2px 6px;
@@ -4717,8 +4721,8 @@ div.sheet__sidebar.ui-theme-pink {
     font-weight: var(--font-weight-medium);
     letter-spacing: var(--tracking-wider);
     text-transform: uppercase;
-    color: var(--ui-on-primary-color);
-    background-color: var(--ui-primary-bg-color) !important;
+    color: var(--ui-tag-bg, var(--ui-primary-bg-color));
+    background-color: color-mix(in srgb, var(--ui-tag-bg, var(--ui-primary-bg-color)) 20%, transparent) !important;
     border-radius: 3px;
     cursor: help;
     vertical-align: middle;

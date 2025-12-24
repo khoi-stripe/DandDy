@@ -70,6 +70,18 @@
   --theme-violet-l-bright: 65%;
   --theme-violet-l-dim: 55%;
 
+  /* ===== ACCENT COLORS (secondary/contrast color per theme) ===== */
+  /* Used sparingly for tags, badges, and small highlights */
+  --theme-green-accent-h: 181;   /* Teal - main teal color */
+  --theme-teal-accent-h: 25;     /* Orange - warm contrast to teal */
+  --theme-yellow-accent-h: 225;  /* Blue - cool contrast to yellow */
+  --theme-pink-accent-h: 165;    /* Teal/mint - cool contrast to pink */
+  --theme-white-accent-h: 49;    /* Gold/amber - warm accent for neutral */
+  --theme-red-accent-h: 180;     /* Cyan - complementary to red */
+  --theme-orange-accent-h: 210;  /* Blue - complementary to orange */
+  --theme-blue-accent-h: 35;     /* Amber - complementary to blue */
+  --theme-violet-accent-h: 50;   /* Gold - complementary to violet */
+
   /* ===== DERIVED COLOR TOKENS ===== */
   /* Background & Neutrals */
   --terminal-bg: #000000;
@@ -146,6 +158,18 @@
   --violet-border: hsl(var(--theme-violet-h), var(--theme-violet-s), var(--theme-violet-l-bright));
   --violet-accent: hsl(var(--theme-violet-h), var(--theme-violet-s), var(--theme-violet-l-bright));
   --violet-accent-dim: hsl(var(--theme-violet-h), var(--theme-violet-s), var(--theme-violet-l-dim));
+
+  /* ===== TAG ACCENT TOKENS (derived from accent hues) ===== */
+  /* These provide contrast colors for tags/badges in each theme */
+  --tag-accent-green: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+  --tag-accent-teal: hsl(var(--theme-teal-accent-h), 100%, 55%);
+  --tag-accent-yellow: hsl(var(--theme-yellow-accent-h), 100%, 60%);
+  --tag-accent-pink: hsl(var(--theme-pink-accent-h), 75%, 50%);
+  --tag-accent-white: rgb(200, 176, 64);
+  --tag-accent-red: hsl(var(--theme-red-accent-h), 100%, 45%);
+  --tag-accent-orange: hsl(var(--theme-orange-accent-h), 100%, 60%);
+  --tag-accent-blue: hsl(var(--theme-blue-accent-h), 100%, 55%);
+  --tag-accent-violet: hsl(var(--theme-violet-accent-h), 100%, 60%);
 
   /* Scrollbar Tokens (derived from terminal green) */
   --scrollbar-thumb-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-dim), 0.45);
@@ -268,6 +292,9 @@
   --card-glow-h: var(--theme-terminal-h);
   --card-glow-s: var(--theme-terminal-s);
   --card-glow-l-bright: var(--theme-terminal-l-bright);
+  /* Tag accent tokens (secondary color for badges/tags) */
+  --ui-tag-bg: var(--tag-accent-green);
+  --ui-tag-color: var(--terminal-bg);
   /* Context tokens (for hover states, accents) */
   --context-accent: var(--terminal-fg);
   --context-accent-dim: var(--terminal-dim);
@@ -296,6 +323,8 @@
   --card-glow-h: var(--theme-terminal-h);
   --card-glow-s: var(--theme-terminal-s);
   --card-glow-l-bright: var(--theme-terminal-l-bright);
+  --ui-tag-bg: var(--tag-accent-green);
+  --ui-tag-color: var(--terminal-bg);
 }
 
 /* More specific selector to override .character-sheet defaults */
@@ -331,21 +360,24 @@
 
 /* Teal theme (used by character sheets) */
 .theme-teal {
-  /* UI tokens */
-  --ui-border-color: var(--sheet-accent);
-  --ui-fg-color: var(--sheet-accent);
-  --ui-dim-color: var(--sheet-accent-dim);
-  --ui-primary-bg-color: var(--sheet-accent);
+  /* UI tokens - use direct HSL to avoid circular references */
+  --ui-border-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+  --ui-fg-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+  --ui-dim-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-dim));
+  --ui-primary-bg-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
   --ui-on-primary-color: var(--terminal-bg);
   --ui-bg-color: var(--terminal-bg);
   --ui-bg-translucent: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
   --card-glow-h: var(--theme-teal-h);
   --card-glow-s: var(--theme-teal-s);
   --card-glow-l-bright: var(--theme-teal-l-bright);
+  /* Tag accent tokens */
+  --ui-tag-bg: var(--tag-accent-teal);
+  --ui-tag-color: var(--terminal-bg);
   /* Context tokens */
-  --context-accent: var(--sheet-accent);
-  --context-accent-dim: var(--sheet-accent-dim);
-  --context-border: var(--sheet-border-color);
+  --context-accent: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+  --context-accent-dim: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-dim));
+  --context-border: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
   --context-hover: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
   /* Scrollbar colors */
   --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
@@ -360,16 +392,18 @@
 
 /* Backward compatibility alias */
 .ui-theme-teal {
-  --ui-border-color: var(--sheet-accent);
-  --ui-fg-color: var(--sheet-accent);
-  --ui-dim-color: var(--sheet-accent-dim);
-  --ui-primary-bg-color: var(--sheet-accent);
+  --ui-border-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+  --ui-fg-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
+  --ui-dim-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-dim));
+  --ui-primary-bg-color: hsl(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright));
   --ui-on-primary-color: var(--terminal-bg);
   --ui-bg-color: var(--terminal-bg);
   --ui-bg-translucent: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
   --card-glow-h: var(--theme-teal-h);
   --card-glow-s: var(--theme-teal-s);
   --card-glow-l-bright: var(--theme-teal-l-bright);
+  --ui-tag-bg: var(--tag-accent-teal);
+  --ui-tag-color: var(--terminal-bg);
 }
 
 /* Pink theme (used by campaigns) */
@@ -385,6 +419,9 @@
   --card-glow-h: var(--theme-pink-h);
   --card-glow-s: var(--theme-pink-s);
   --card-glow-l-bright: var(--theme-pink-l-bright);
+  /* Tag accent tokens */
+  --ui-tag-bg: var(--tag-accent-pink);
+  --ui-tag-color: var(--terminal-bg);
   /* Context tokens */
   --context-accent: var(--campaign-accent);
   --context-accent-dim: var(--campaign-accent-dim);
@@ -413,6 +450,8 @@
   --card-glow-h: var(--theme-pink-h);
   --card-glow-s: var(--theme-pink-s);
   --card-glow-l-bright: var(--theme-pink-l-bright);
+  --ui-tag-bg: var(--tag-accent-pink);
+  --ui-tag-color: var(--terminal-bg);
 }
 
 /* More specific selector to override .character-sheet defaults */
@@ -481,6 +520,9 @@
   --card-glow-h: var(--theme-white-h);
   --card-glow-s: var(--theme-white-s);
   --card-glow-l-bright: var(--theme-white-l-bright);
+  /* Tag accent tokens */
+  --ui-tag-bg: var(--tag-accent-white);
+  --ui-tag-color: var(--terminal-bg);
   /* Context tokens */
   --context-accent: var(--white-accent);
   --context-accent-dim: var(--white-accent-dim);
@@ -509,6 +551,8 @@
   --card-glow-h: var(--theme-white-h);
   --card-glow-s: var(--theme-white-s);
   --card-glow-l-bright: var(--theme-white-l-bright);
+  --ui-tag-bg: var(--tag-accent-white);
+  --ui-tag-color: var(--terminal-bg);
 }
 
 /* Red theme */
@@ -524,6 +568,9 @@
   --card-glow-h: var(--theme-red-h);
   --card-glow-s: var(--theme-red-s);
   --card-glow-l-bright: var(--theme-red-l-bright);
+  /* Tag accent tokens */
+  --ui-tag-bg: var(--tag-accent-red);
+  --ui-tag-color: var(--terminal-bg);
   /* Context tokens */
   --context-accent: var(--red-accent);
   --context-accent-dim: var(--red-accent-dim);
@@ -552,6 +599,8 @@
   --card-glow-h: var(--theme-red-h);
   --card-glow-s: var(--theme-red-s);
   --card-glow-l-bright: var(--theme-red-l-bright);
+  --ui-tag-bg: var(--tag-accent-red);
+  --ui-tag-color: var(--terminal-bg);
 }
 
 /* Orange theme */
@@ -567,6 +616,9 @@
   --card-glow-h: var(--theme-orange-h);
   --card-glow-s: var(--theme-orange-s);
   --card-glow-l-bright: var(--theme-orange-l-bright);
+  /* Tag accent tokens */
+  --ui-tag-bg: var(--tag-accent-orange);
+  --ui-tag-color: var(--terminal-bg);
   /* Context tokens */
   --context-accent: var(--orange-accent);
   --context-accent-dim: var(--orange-accent-dim);
@@ -595,6 +647,8 @@
   --card-glow-h: var(--theme-orange-h);
   --card-glow-s: var(--theme-orange-s);
   --card-glow-l-bright: var(--theme-orange-l-bright);
+  --ui-tag-bg: var(--tag-accent-orange);
+  --ui-tag-color: var(--terminal-bg);
 }
 
 /* Royal Blue theme */
@@ -610,6 +664,9 @@
   --card-glow-h: var(--theme-blue-h);
   --card-glow-s: var(--theme-blue-s);
   --card-glow-l-bright: var(--theme-blue-l-bright);
+  /* Tag accent tokens */
+  --ui-tag-bg: var(--tag-accent-blue);
+  --ui-tag-color: var(--terminal-bg);
   /* Context tokens */
   --context-accent: var(--blue-accent);
   --context-accent-dim: var(--blue-accent-dim);
@@ -638,6 +695,8 @@
   --card-glow-h: var(--theme-blue-h);
   --card-glow-s: var(--theme-blue-s);
   --card-glow-l-bright: var(--theme-blue-l-bright);
+  --ui-tag-bg: var(--tag-accent-blue);
+  --ui-tag-color: var(--terminal-bg);
 }
 
 /* Violet theme */
@@ -653,6 +712,9 @@
   --card-glow-h: var(--theme-violet-h);
   --card-glow-s: var(--theme-violet-s);
   --card-glow-l-bright: var(--theme-violet-l-bright);
+  /* Tag accent tokens */
+  --ui-tag-bg: var(--tag-accent-violet);
+  --ui-tag-color: var(--terminal-bg);
   /* Context tokens */
   --context-accent: var(--violet-accent);
   --context-accent-dim: var(--violet-accent-dim);
@@ -681,6 +743,8 @@
   --card-glow-h: var(--theme-violet-h);
   --card-glow-s: var(--theme-violet-s);
   --card-glow-l-bright: var(--theme-violet-l-bright);
+  --ui-tag-bg: var(--tag-accent-violet);
+  --ui-tag-color: var(--terminal-bg);
 }
 
 /* Yellow theme (used by modals) */
@@ -696,6 +760,9 @@
   --card-glow-h: var(--theme-yellow-h);
   --card-glow-s: var(--theme-yellow-s);
   --card-glow-l-bright: var(--theme-yellow-l-bright);
+  /* Tag accent tokens */
+  --ui-tag-bg: var(--tag-accent-yellow);
+  --ui-tag-color: var(--terminal-bg);
   /* Context tokens */
   --context-accent: var(--modal-accent);
   --context-accent-dim: var(--modal-accent-dim);
@@ -724,6 +791,8 @@
   --card-glow-h: var(--theme-yellow-h);
   --card-glow-s: var(--theme-yellow-s);
   --card-glow-l-bright: var(--theme-yellow-l-bright);
+  --ui-tag-bg: var(--tag-accent-yellow);
+  --ui-tag-color: var(--terminal-bg);
 }
 
 /* More specific selector to override .character-sheet defaults */
@@ -3321,16 +3390,16 @@ body.selector-menu-open .splash-art {
   text-shadow: 0 0 5px var(--ui-fg-color);
 }
 
-/* Links inside modals follow the modal's yellow text theme */
+/* Links inside modals follow the modal's theme */
 .modal .terminal-link,
 .modal .link-button {
-  color: var(--modal-accent);
+  color: var(--ui-fg-color);
 }
 
 .modal .terminal-link:hover,
 .modal .link-button:hover {
-  color: var(--modal-accent);
-  text-shadow: 0 0 5px var(--modal-accent);
+  color: var(--ui-fg-color);
+  text-shadow: 0 0 5px var(--ui-fg-color);
 }
 
 /* Button group layout utilities */
@@ -3601,6 +3670,10 @@ body.selector-menu-open .splash-art {
 }
 
 /* ===== MODAL BASE ===== */
+/* Modals use the theme-* class system for theming.
+   By default, no theme tokens are set here - they're inherited from body/html or
+   applied directly via theme-* class. This allows modals to follow the global theme
+   or be individually themed via the admin panel. */
 .modal {
   display: none;
   /* Confine modal overlay to the bounds of the terminal container instead of the full viewport.
@@ -3612,19 +3685,6 @@ body.selector-menu-open .splash-art {
   z-index: 10000;
   /* Keep background dimmed but sharp — no blur */
   backdrop-filter: none;
-  /* Modal inherits theme from parent container - default to yellow for backward compatibility */
-  /* If parent has theme classes, these will be overridden; otherwise yellow is used */
-  --ui-border-color: var(--modal-accent);
-  --ui-fg-color: var(--modal-accent);
-  --ui-dim-color: var(--modal-accent-dim);
-  --ui-primary-bg-color: var(--modal-accent);
-  --ui-on-primary-color: var(--terminal-bg);
-  --ui-bg-color: var(--terminal-bg);
-  --ui-bg-translucent: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1);
-  /* Scrollbars inherit from parent theme - default to yellow for backward compatibility */
-  --scrollbar-track-color: hsl(var(--theme-yellow-h), 100%, 5%);
-  --scrollbar-thumb-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.6);
-  --scrollbar-thumb-hover-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.9);
 }
 
 .modal.show {
@@ -3700,8 +3760,8 @@ body.selector-menu-open .splash-art {
      Height is constrained relative to the terminal container (via .modal),
      with internal scrolling handled by .modal-body. */
   max-height: calc(100% - 48px);
-  /* Use theme-aware box shadow - extract hue from ui-fg-color or fallback to yellow */
-  box-shadow: 0 20px 60px var(--ui-bg-translucent, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.35));
+  /* Use theme-aware box shadow */
+  box-shadow: 0 20px 60px var(--ui-bg-translucent);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -3734,14 +3794,14 @@ body.selector-menu-open .splash-art {
 
 .modal-title {
   font-size: var(--font-size-large);
-  color: var(--ui-fg-color, var(--modal-accent));
+  color: var(--ui-fg-color);
   font-weight: var(--font-weight-normal);
 }
 
 .modal-close {
   background: none;
   border: none;
-  color: var(--ui-fg-color, var(--modal-accent));
+  color: var(--ui-fg-color);
   font-size: var(--font-size-xl);
   cursor: pointer;
   padding: 0;
@@ -3754,7 +3814,7 @@ body.selector-menu-open .splash-art {
 }
 
 .modal-close:hover {
-  color: var(--ui-fg-color, var(--modal-accent));
+  color: var(--ui-fg-color);
   transform: rotate(90deg);
 }
 
@@ -3786,17 +3846,17 @@ body.selector-menu-open .splash-art {
   justify-content: flex-end;
 }
 
-/* Modal-specific text theming - inherits from parent theme */
+/* Modal-specific text theming - uses ui-* tokens from theme class */
 .modal .terminal-text,
 .modal .terminal-text-accent {
-  color: var(--ui-fg-color, var(--modal-accent));
+  color: var(--ui-fg-color);
   /* Match global body-copy spacing inside modals as well */
   margin-bottom: var(--spacing-md);
 }
 
 .modal .terminal-text-small,
 .modal .terminal-text-dim {
-  color: var(--ui-dim-color, var(--modal-accent-dim));
+  color: var(--ui-dim-color);
 }
 
 /* Extra breathing room for portrait prompt subhead above textarea */
@@ -3804,40 +3864,40 @@ body.selector-menu-open .splash-art {
   margin-bottom: var(--spacing-md);
 }
 
-/* Modal-specific input theming - inherits from parent theme */
+/* Modal-specific input theming - uses ui-* tokens from theme class */
 .modal .terminal-input,
 .modal .terminal-textarea,
 .modal .terminal-select {
-  border-color: var(--ui-dim-color, var(--modal-accent-dim));
-  color: var(--ui-fg-color, var(--modal-accent));
+  border-color: var(--ui-dim-color);
+  color: var(--ui-fg-color);
   /* iOS Safari fix: -webkit-text-fill-color is needed for number inputs on iOS */
-  -webkit-text-fill-color: var(--ui-fg-color, var(--modal-accent));
+  -webkit-text-fill-color: var(--ui-fg-color);
   opacity: 1; /* Prevent iOS from applying reduced opacity */
 }
 
 .modal .terminal-input::placeholder,
 .modal .terminal-textarea::placeholder {
-  color: var(--ui-dim-color, var(--modal-accent-dim));
+  color: var(--ui-dim-color);
   opacity: 0.5;
 }
 
 .modal .terminal-input:focus,
 .modal .terminal-textarea:focus,
 .modal .terminal-select:focus {
-  border-color: var(--ui-border-color, var(--modal-accent));
-  box-shadow: 0 0 5px var(--ui-bg-translucent, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5));
+  border-color: var(--ui-border-color);
+  box-shadow: 0 0 5px var(--ui-bg-translucent);
 }
 
 /* Modal primary buttons: use the same invert-on-hover behavior as other
    primary CTAs (e.g., "+ NEW CHARACTER"), but add a subtle theme glow. */
 .modal .terminal-btn-primary:hover:not(:disabled) {
-  box-shadow: 0 0 15px var(--ui-bg-translucent, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5));
+  box-shadow: 0 0 15px var(--ui-bg-translucent);
 }
 
 /* Modal secondary/cancel buttons: use theme hover treatment instead of
    the default terminal green background so they respect the modal color theme. */
 .modal .terminal-btn:hover:not(:disabled):not(.terminal-btn-primary):not(.terminal-btn-warning):not(.terminal-btn-danger) {
-  background-color: var(--ui-bg-translucent, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.10));
+  background-color: var(--ui-bg-translucent);
   border-color: var(--ui-fg-color);
   color: var(--ui-fg-color);
 }
@@ -4447,14 +4507,14 @@ body.selector-menu-open .splash-art {
   to { transform: rotateY(-360deg); }
 }
 
-/* Modal loading cube - uses yellow modal theme */
+/* Modal loading cube - uses ui-* theme tokens */
 .modal-loading-overlay .panel-loading-cube i,
 .modal-body .panel-loading-cube i {
-  border-color: var(--modal-accent);
-  background: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.05);
+  border-color: var(--ui-fg-color);
+  background: var(--ui-bg-translucent);
   box-shadow:
-    inset 0 0 20px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.1),
-    0 0 15px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l), 0.2);
+    inset 0 0 20px var(--ui-bg-translucent),
+    0 0 15px color-mix(in srgb, var(--ui-primary-bg-color) 20%, transparent);
 }
 
 /* Cube spinner maintains consistent 8px right margin in all contexts */
