@@ -781,7 +781,7 @@ const CharacterNavBar = (window.CharacterNavBar = {
     /** Show the nav bar with animation (called after expand transition completes) */
     show() {
         const navBar = document.getElementById('characterNavBar');
-        const sheetWrapper = document.querySelector('.sheet-scroll-wrapper');
+        const sheetWrapper = document.querySelector('.sheet__content');
         if (!navBar || !sheetWrapper) return;
 
         // Update content before showing
@@ -802,7 +802,7 @@ const CharacterNavBar = (window.CharacterNavBar = {
     hide() {
         return new Promise((resolve) => {
             const navBar = document.getElementById('characterNavBar');
-            const sheetWrapper = document.querySelector('.sheet-scroll-wrapper');
+            const sheetWrapper = document.querySelector('.sheet__content');
             if (!navBar || !sheetWrapper) {
                 resolve();
                 return;
@@ -931,7 +931,7 @@ const ExpandedView = (window.ExpandedView = {
     /** Calculate and set column widths based on current container size */
     _updateColumnWidths() {
         const splitLayout = document.querySelector('.split-layout');
-        const campaignGrid = document.querySelector('.sheet-campaign-grid');
+        const campaignGrid = document.querySelector('.sheet__layout');
         
         if (splitLayout && campaignGrid) {
             const expandedWidth = splitLayout.offsetWidth - 66; // 64px padding + 2px border
@@ -1020,7 +1020,7 @@ const ExpandedView = (window.ExpandedView = {
             splitLayout?.classList.remove('is-sheet-expanded', 'is-collapsing', 'is-expanding');
             // Campaign panel stays visible at bottom of sheet - no need to hide
             // Clear the column width variables
-            const campaignGrid = document.querySelector('.sheet-campaign-grid');
+            const campaignGrid = document.querySelector('.sheet__layout');
             if (campaignGrid) {
                 campaignGrid.style.removeProperty('--sheet-column-width');
                 campaignGrid.style.removeProperty('--campaign-column-width');
@@ -1068,17 +1068,17 @@ const ExpandedView = (window.ExpandedView = {
 
     /** Load campaign panel content for the current character */
     async _loadCampaignPanel() {
-        // Target the campaign-panel-slot inside sheet-campaign-grid
-        const panel = document.querySelector('.campaign-panel-slot') || document.getElementById('campaignPanel');
+        // Target the sheet__sidebar inside sheet__layout
+        const panel = document.querySelector('.sheet__sidebar') || document.getElementById('campaignPanel');
         if (!panel) {
             console.warn('Campaign panel element not found');
             return;
         }
         
         // Theme inherits from parent - no need to set explicitly
-        // To override campaign panel theme, set theme classes on .campaign-panel-slot in HTML
-        // panel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-pink', 'theme-pink', 'ui-theme-green', 'theme-green', 'ui-theme-yellow', 'theme-yellow', 'ui-theme-teal', 'theme-teal');
-        // panel.classList.add('ui-theme-white', 'theme-white');
+        // To override campaign panel theme, set .theme-* class on .sheet__sidebar in HTML
+        // panel.classList.remove('theme-white', 'theme-pink', 'theme-green', 'theme-yellow', 'theme-teal');
+        // panel.classList.add('theme-white');
         
         const characterId = AppState.selectedCharacterId;
         if (!characterId) {
@@ -3306,8 +3306,8 @@ const MobileView = {
         
         // Clone the character sheet content into the container
         const sourceSheet = document.getElementById('characterSheet');
-        const sourceTitleHeader = document.querySelector('.sheet-scroll-wrapper .sheet-title-header');
-        const campaignSlot = document.querySelector('.campaign-panel-slot');
+        const sourceTitleHeader = document.querySelector('.sheet__content .sheet-title-header');
+        const campaignSlot = document.querySelector('.sheet__sidebar');
         
         // Insert title header as direct child of gridPanel (before container) for proper sticky behavior
         // Remove any existing mobile title header first
@@ -3468,7 +3468,7 @@ const MobileView = {
     /** Render campaign content into the mobile container */
     _renderCampaignContent(container) {
         // Get the campaign panel slot content from desktop (if available)
-        const campaignSlot = document.querySelector('.campaign-panel-slot');
+        const campaignSlot = document.querySelector('.sheet__sidebar');
         
         if (campaignSlot && campaignSlot.innerHTML.trim()) {
             // Clone the campaign content from desktop
@@ -3892,7 +3892,7 @@ const UI = {
         const sheetEl = document.getElementById('characterSheet');
         const navBarEl = document.getElementById('sheetNavBar');
 
-        const campaignSlot = document.querySelector('.campaign-panel-slot');
+        const campaignSlot = document.querySelector('.sheet__sidebar');
         
         if (!characters.length) {
             if (placeholder) placeholder.classList.remove('is-hidden');
@@ -4034,7 +4034,6 @@ const UI = {
                                 computedColor,
                                 computedBorderColor,
                                 panelClasses,
-                                hasUiThemeWhite: gridPanel.classList.contains('ui-theme-white'),
                                 hasThemeWhite: gridPanel.classList.contains('theme-white')
                             },
                             timestamp: Date.now(),
@@ -4304,9 +4303,9 @@ const UI = {
             lastUpdatedByEmail: character.last_updated_by_email || character.lastUpdatedByEmail,
         });
         
-        // Move sheet-title-header out of characterSheet and into sheet-scroll-wrapper (above the grid)
-        const scrollWrapper = document.querySelector('.sheet-scroll-wrapper');
-        const sheetCampaignGrid = document.querySelector('.sheet-campaign-grid');
+        // Move sheet-title-header out of characterSheet and into sheet__content (above the layout)
+        const scrollWrapper = document.querySelector('.sheet__content');
+        const sheetCampaignGrid = document.querySelector('.sheet__layout');
         const titleHeader = sheetContainer.querySelector('.sheet-title-header');
         if (scrollWrapper && sheetCampaignGrid && titleHeader) {
             // Remove any existing title header from scroll wrapper first
@@ -4628,7 +4627,7 @@ async function viewCharacter(id, options = {}) {
         UI.showCharacterSheet(character);
         
         // Load campaign panel when switching characters (shown at bottom of sheet in grid view)
-        const campaignSlot = document.querySelector('.campaign-panel-slot');
+        const campaignSlot = document.querySelector('.sheet__sidebar');
         if (campaignSlot) {
             // Show skeleton loader while fetching campaign data
             campaignSlot.innerHTML = ExpandedView._renderCampaignSkeleton();
@@ -5269,6 +5268,7 @@ async function saveEditDetails() {
 // visually scoped to the terminal frame instead of the full viewport.
 function getManagerModalHost() {
     return (
+        document.querySelector('.app-root') ||
         document.querySelector('.terminal-frame') ||
         document.querySelector('.terminal-container') ||
         document.body
@@ -7511,7 +7511,7 @@ function showNotification(rawMessage, duration = 4000) {
             </div>
         `;
 
-        const container = document.querySelector('.terminal-frame') || document.body;
+        const container = document.querySelector('.app-root') || document.querySelector('.terminal-frame') || document.body;
         container.appendChild(toast);
 
         const dismissBtn = toast.querySelector('.toast-dismiss');
@@ -8901,7 +8901,7 @@ const MODAL_ANIMATION_DURATION = 350;
 const AUTH_FLOW_MODAL_IDS = ['welcomeModal', 'authModal', 'passwordResetModal'];
 
 function getModalOverlayHost() {
-    return document.querySelector('.terminal-frame');
+    return document.querySelector('.app-root') || document.querySelector('.terminal-frame');
 }
 
 function syncAuthFlowDim() {
@@ -8944,7 +8944,7 @@ function animateModalClose(modal) {
 /**
  * Transition from one modal to another with smooth collapse/expand animation.
  * The outgoing modal collapses, then the incoming modal expands.
- * For auth-flow modals, the dim overlay is owned by `.terminal-frame::before`
+ * For auth-flow modals, the dim overlay is owned by `.app-root::before`
  * so we can keep it stable through the swap.
  * @param {HTMLElement|string} outgoingModal - The modal to close
  * @param {HTMLElement|string} incomingModal - The modal to open

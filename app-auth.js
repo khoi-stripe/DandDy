@@ -1,17 +1,21 @@
 // Unified AuthService for the DandDy app (manager + builder).
-// Relies on `window.DanddyConfig` for API URLs & storage keys and exposes
-// a single `window.AuthService` used across all views.
+// Relies on `window.AppConfig` for API URLs & storage keys and exposes
+// `window.AppAuth` used across all views.
 
 (function (global) {
-  const cfg = global.DanddyConfig || {};
+  const cfg = global.AppConfig || global.DanddyConfig || {};
   const API_BASE_URL = cfg.API_BASE_URL || 'https://danddy-api.onrender.com/api';
   const TOKEN_KEY = cfg.TOKEN_STORAGE_KEY || 'dnd_auth_token';
   const USER_KEY = cfg.USER_STORAGE_KEY || 'dnd_user_info';
   const DEBUG = !!cfg.DEBUG;
 
-  const AuthService = (global.AuthService = global.AuthService || {});
+  // Primary export
+  const AppAuth = (global.AppAuth = global.AppAuth || {});
 
-  Object.assign(AuthService, {
+  // Backward compatibility alias
+  global.AuthService = AppAuth;
+
+  Object.assign(AppAuth, {
     TOKEN_KEY,
     USER_KEY,
 

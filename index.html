@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="ui-theme-white theme-white">
+<html lang="en" class="theme-white">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -21,12 +21,12 @@
     
     <title>D&Dy</title>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="terminal-theme.css?v=20251221d">
+    <link rel="stylesheet" href="terminal-theme.css?v=20251224b">
     <link rel="stylesheet" href="portraits.css?v=20251221d">
-    <link rel="stylesheet" href="character-manager.css?v=20251223e">
+    <link rel="stylesheet" href="app-manager.css?v=20251224a">
 </head>
 <body>
-    <div class="terminal-frame ui-theme-white theme-white">
+    <div class="app-root theme-white">
     
     <!-- Welcome Modal (uses the builder's splash art/layout) -->
     <div id="welcomeModal" class="modal">
@@ -50,7 +50,7 @@
     </div>
     
     <!-- Main Content -->
-    <div class="main-content ui-theme-white theme-white" id="main-content">
+    <div class="main-content theme-white" id="main-content">
 
     <!-- Header -->
     <header class="terminal-header">
@@ -92,7 +92,7 @@
                 <div class="header-overflow selector-shell selector-shell--actions">
                     <button
                         id="headerOverflowBtn"
-                        class="terminal-btn-small ui-theme-white theme-white selector-trigger overflow-trigger header-overflow-trigger"
+                        class="terminal-btn-small theme-white selector-trigger overflow-trigger header-overflow-trigger"
                         type="button"
                         aria-haspopup="menu"
                         aria-expanded="false"
@@ -145,16 +145,16 @@
     <!-- Split Layout - shows 2 of 3 panels at a time -->
     <div class="split-layout" data-view="grid-sheet">
         <!-- Panel: Character Grid -->
-        <div class="panel panel-character-grid ui-theme-white theme-white" id="characterGridPanel">
+        <div class="panel panel-character-grid app-panel app-panel--grid theme-white" id="characterGridPanel">
             <!-- Mobile Back Bar (shown when viewing character sheet on mobile) -->
-            <div class="mobile-back-bar" id="mobileBackBar">
+            <div class="grid__mobile-nav" id="mobileBackBar">
                 <a href="#" class="mobile-back-link" onclick="closeMobileSheet(); return false;">← All</a>
                 <span class="mobile-nav-count" id="mobileNavCount">1/1</span>
                 <a href="#" id="mobileViewToggle" class="mobile-campaign-link" onclick="scrollToCampaign(); return false;">Campaign</a>
             </div>
             
             <!-- Mobile Sheet Container (character sheet shown here on mobile) -->
-            <div class="mobile-sheet-container character-sheet" id="mobileSheetContainer">
+            <div class="grid__mobile-sheet character-sheet" id="mobileSheetContainer">
                 <!-- Mobile Sheet Title Header (cloned from desktop sheet-title-header) -->
                 <div class="mobile-sheet-title-header" id="mobileSheetTitleHeader">
                     <!-- Title header content cloned here on mobile -->
@@ -163,7 +163,7 @@
             </div>
             
             <!-- Controls Section -->
-            <div class="controls-section">
+            <div class="grid__controls">
                 <!-- Session in progress notice -->
                 <div id="sessionNotice" class="session-notice is-hidden">
                     <span class="session-notice-text"><span class="session-notice-icon">✎</span> You have a character in progress <span class="session-notice-time" id="sessionNoticeTime"></span></span>
@@ -213,12 +213,12 @@
             </div>
 
             <!-- Character Grid -->
-            <div id="characterGrid" class="character-grid">
+            <div id="characterGrid" class="grid__list">
                 <!-- Character cards will be inserted here -->
             </div>
 
             <!-- Empty State -->
-            <div id="emptyState" class="empty-state">
+            <div id="emptyState" class="grid__empty">
                 <div class="character-card new-character-card" onclick="createNewCharacter()">
                     <div class="card-details">
                         <div class="card-name">+ New Character</div>
@@ -228,9 +228,9 @@
         </div>
 
         <!-- Panel: Character Sheet -->
-        <div class="panel panel-character-sheet ui-theme-yellow theme-yellow" id="characterSheetPanel">
+        <div class="panel panel-character-sheet app-panel app-panel--sheet theme-white" id="characterSheetPanel">
             <!-- Character Nav Bar (visible only in expanded view) -->
-            <div class="character-nav-bar" id="characterNavBar">
+            <div class="sheet__nav" id="characterNavBar">
                 <button class="nav-prev" id="navPrev" type="button">
                     <span class="nav-arrow">←</span>
                     <span class="nav-name" id="navPrevName"></span>
@@ -245,17 +245,17 @@
                 </button>
             </div>
             <div class="sheet-placeholder"></div>
-            <div class="sheet-scroll-wrapper ui-theme-yellow theme-yellow">
-                <div class="sheet-campaign-grid">
+            <div class="sheet__content theme-white">
+                <div class="sheet__layout">
                     <div id="characterSheet" class="character-sheet is-hidden">
                         <!-- Character sheet will be rendered here -->
                     </div>
-                    <div class="campaign-panel-slot ui-theme-white theme-white">
+                    <div class="sheet__sidebar theme-white">
                         <!-- Campaign panel layout will be inserted here -->
                     </div>
                 </div>
                 <!-- Expand loading overlay (shown during expand transition) -->
-                <div class="expand-loading-overlay">
+                <div class="sheet__loading">
                     <div class="panel-loading-cube-container">
                         <div class="panel-loading-cube">
                             <i></i><i></i><i></i><i></i><i></i><i></i>
@@ -1130,9 +1130,9 @@
     
     </div><!-- /main-content -->
     
-    </div><!-- /terminal-frame -->
+    </div><!-- /app-root -->
     
     <!-- Concatenated manager bundle (see scripts/simple_bundle.py) -->
-    <script src="manager.bundle.js?v=20251221o"></script>
+    <script src="manager.bundle.js?v=20251224a"></script>
 </body>
 </html>

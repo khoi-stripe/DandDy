@@ -1823,7 +1823,7 @@ const CharacterSheet = (window.CharacterSheet = {
             // In expanded view, character sheet menus should stay within their panel
             // (the left-panel), not overflow into the campaign panel on the right.
             host =
-              triggerEl.closest('.app-panel--left, .left-panel') ||
+              triggerEl.closest('.app-panel--narrator, .left-panel') ||
               triggerEl.closest('.app-root, .terminal-frame, .terminal-container') ||
               document.documentElement;
             const hostRect = host.getBoundingClientRect();

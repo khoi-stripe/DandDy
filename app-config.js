@@ -1,5 +1,5 @@
 // Global configuration and shared utilities for the DandDy app (builder + manager).
-// Exposes `window.DanddyConfig` (env + URLs) for all frontends to consume.
+// Exposes `window.AppConfig` (env + URLs) for all frontends to consume.
 
 (function (global) {
   const location = global.location || {};
@@ -27,7 +27,8 @@
   // Only treat local/file:// environments as "debug" to avoid noisy logs in production.
   const DEBUG = isLocalEnvironment;
 
-  global.DanddyConfig = {
+  // Primary export
+  global.AppConfig = {
     isLocalEnvironment,
     BACKEND_ORIGIN,
     API_BASE_URL,
@@ -36,6 +37,9 @@
     CHARACTER_STORAGE_KEY,
     DEBUG,
   };
+
+  // Backward compatibility alias
+  global.DanddyConfig = global.AppConfig;
 
   // In non‑debug (production) environments, silence noisy console methods while
   // preserving errors and warnings. This lets us keep existing console.log calls
@@ -52,5 +56,4 @@
     }
   }
 })(window);
-
 

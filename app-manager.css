@@ -29,6 +29,7 @@
 }
 
 /* Ensure splash content can scroll if needed */
+.app-root .splash-content,
 .terminal-frame .splash-content {
     min-height: 0;
     height: 100%;
@@ -83,7 +84,9 @@
 }
 
 /* Wrapper for character sheet - fills parent container */
-.sheet-scroll-wrapper {
+/* BEM alias: .sheet__content */
+.sheet-scroll-wrapper,
+.sheet__content {
     position: relative; /* For expand loading overlay positioning */
     flex: 1 1 0;
     display: flex;
@@ -100,24 +103,29 @@
 }
 
 /* Inherit border color from character sheet theme */
-.sheet-scroll-wrapper:has(.character-sheet.ui-theme-pink) {
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-pink),
+.sheet__content:has(.character-sheet.ui-theme-pink) {
     border-color: var(--ui-dim-color);
 }
 
-.sheet-scroll-wrapper:has(.character-sheet.ui-theme-green) {
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-green),
+.sheet__content:has(.character-sheet.ui-theme-green) {
     border-color: var(--ui-dim-color);
 }
 
-.sheet-scroll-wrapper:has(.character-sheet.ui-theme-white) {
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-white),
+.sheet__content:has(.character-sheet.ui-theme-white) {
     border-color: var(--ui-dim-color);
 }
 
-.sheet-scroll-wrapper:has(.character-sheet.ui-theme-yellow) {
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-yellow),
+.sheet__content:has(.character-sheet.ui-theme-yellow) {
     border-color: var(--ui-dim-color);
 }
 
 /* Inherit scrollbar colors from character sheet theme */
-.sheet-scroll-wrapper:has(.character-sheet.ui-theme-pink) {
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-pink),
+.sheet__content:has(.character-sheet.ui-theme-pink) {
     /* Scrollbar stays teal for consistency - only border changes to match theme */
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%) !important;
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5) !important;
@@ -126,7 +134,8 @@
     --ui-border-color: var(--campaign-accent);
 }
 
-.sheet-scroll-wrapper:has(.character-sheet.ui-theme-green) {
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-green),
+.sheet__content:has(.character-sheet.ui-theme-green) {
     /* Scrollbar stays teal for consistency - only border changes to match theme */
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%) !important;
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5) !important;
@@ -135,7 +144,8 @@
     --ui-border-color: var(--terminal-border);
 }
 
-.sheet-scroll-wrapper:has(.character-sheet.ui-theme-white) {
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-white),
+.sheet__content:has(.character-sheet.ui-theme-white) {
     /* Scrollbar stays teal for consistency - only border changes to match theme */
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%) !important;
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5) !important;
@@ -144,7 +154,8 @@
     --ui-border-color: var(--white-border);
 }
 
-.sheet-scroll-wrapper:has(.character-sheet.ui-theme-yellow) {
+.sheet-scroll-wrapper:has(.character-sheet.ui-theme-yellow),
+.sheet__content:has(.character-sheet.ui-theme-yellow) {
     /* Scrollbar stays teal for consistency - only border changes to match theme */
     --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%) !important;
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5) !important;
@@ -157,7 +168,9 @@
 /* Theme classes can override if needed */
 
 /* Grid for character sheet and campaign panel - stacks vertically in grid view, side-by-side in expanded view */
-.sheet-campaign-grid {
+/* BEM alias: .sheet__layout */
+.sheet-campaign-grid,
+.sheet__layout {
     flex: 1 1 0;
     display: flex;
     flex-direction: column;
@@ -171,24 +184,29 @@
 }
 
 /* Teal scrollbar pseudo-elements for sheet-campaign-grid - using direct values to ensure teal */
-.sheet-campaign-grid::-webkit-scrollbar-track {
+.sheet-campaign-grid::-webkit-scrollbar-track,
+.sheet__layout::-webkit-scrollbar-track {
     background: hsl(181, 70%, 7%) !important;
 }
-.sheet-campaign-grid::-webkit-scrollbar-thumb {
+.sheet-campaign-grid::-webkit-scrollbar-thumb,
+.sheet__layout::-webkit-scrollbar-thumb {
     background-color: hsla(181, 67%, 45%, 0.5) !important;
 }
-.sheet-campaign-grid::-webkit-scrollbar-thumb:hover {
+.sheet-campaign-grid::-webkit-scrollbar-thumb:hover,
+.sheet__layout::-webkit-scrollbar-thumb:hover {
     background-color: hsla(181, 100%, 41%, 0.9) !important;
 }
 
 /* In grid view, character sheet should not scroll independently - scrolls with campaign panel */
-.sheet-campaign-grid .character-sheet {
+.sheet-campaign-grid .character-sheet,
+.sheet__layout .character-sheet {
     overflow-y: visible;
     flex: 0 0 auto;
 }
 
 /* In expanded view, use side-by-side 2-column grid */
-.split-layout.is-sheet-expanded .sheet-campaign-grid {
+.split-layout.is-sheet-expanded .sheet-campaign-grid,
+.split-layout.is-sheet-expanded .sheet__layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
     overflow: hidden;
@@ -196,13 +214,16 @@
 }
 
 /* In expanded view, character sheet gets its own scroll back */
-.split-layout.is-sheet-expanded .sheet-campaign-grid .character-sheet {
+.split-layout.is-sheet-expanded .sheet-campaign-grid .character-sheet,
+.split-layout.is-sheet-expanded .sheet__layout .character-sheet {
     overflow-y: auto;
     flex: 1 1 0;
 }
 
 /* Campaign panel slot in the grid */
-.campaign-panel-slot {
+/* BEM alias: .sheet__sidebar */
+.campaign-panel-slot,
+.sheet__sidebar {
     min-height: 0;
     padding: var(--spacing-lg) 16px;
     display: flex;
@@ -223,7 +244,9 @@
 /* Theme classes override parent theme - ensure they work for campaign panel */
 /* Use more specific selectors to ensure theme classes override root defaults */
 .sheet-campaign-grid .campaign-panel-slot.ui-theme-white,
-.campaign-panel-slot.ui-theme-white {
+.sheet__layout .sheet__sidebar.ui-theme-white,
+.campaign-panel-slot.ui-theme-white,
+.sheet__sidebar.ui-theme-white {
     --ui-border-color: var(--white-border) !important;
     --ui-fg-color: var(--white-fg) !important;
     --ui-dim-color: var(--white-dim) !important;
@@ -235,7 +258,9 @@
 }
 
 .sheet-campaign-grid .campaign-panel-slot.ui-theme-teal,
-.campaign-panel-slot.ui-theme-teal {
+.sheet__layout .sheet__sidebar.ui-theme-teal,
+.campaign-panel-slot.ui-theme-teal,
+.sheet__sidebar.ui-theme-teal {
     --ui-border-color: var(--sheet-accent) !important;
     --ui-fg-color: var(--sheet-accent) !important;
     --ui-dim-color: var(--sheet-accent-dim) !important;
@@ -249,9 +274,13 @@
 /* Pink theme - use most specific selector to override root defaults */
 /* Ensure these override both root defaults AND the .ui-theme-pink class from terminal-theme.css */
 .sheet-scroll-wrapper .sheet-campaign-grid .campaign-panel-slot.ui-theme-pink,
+.sheet__content .sheet__layout .sheet__sidebar.ui-theme-pink,
 .sheet-campaign-grid .campaign-panel-slot.ui-theme-pink,
+.sheet__layout .sheet__sidebar.ui-theme-pink,
 .campaign-panel-slot.ui-theme-pink,
-div.campaign-panel-slot.ui-theme-pink {
+.sheet__sidebar.ui-theme-pink,
+div.campaign-panel-slot.ui-theme-pink,
+div.sheet__sidebar.ui-theme-pink {
     --ui-border-color: var(--campaign-accent) !important;
     --ui-fg-color: var(--campaign-accent) !important;
     --ui-dim-color: var(--campaign-accent-dim) !important;
@@ -264,7 +293,8 @@ div.campaign-panel-slot.ui-theme-pink {
 
 
 /* In expanded view, campaign panel gets its own scrolling */
-.split-layout.is-sheet-expanded .campaign-panel-slot {
+.split-layout.is-sheet-expanded .campaign-panel-slot,
+.split-layout.is-sheet-expanded .sheet__sidebar {
     padding: 0 16px 0 24px;
     overflow-y: auto;
     overflow-x: hidden;
@@ -276,12 +306,15 @@ div.campaign-panel-slot.ui-theme-pink {
 
 /* ===== EXPANDING STATE (loading overlay during expand transition) ===== */
 /* Hide grid content while expanding to prevent position flash */
-.split-layout.is-expanding .sheet-campaign-grid {
+.split-layout.is-expanding .sheet-campaign-grid,
+.split-layout.is-expanding .sheet__layout {
     opacity: 0;
 }
 
 /* Expanding loading overlay */
-.expand-loading-overlay {
+/* BEM alias: .sheet__loading */
+.expand-loading-overlay,
+.sheet__loading {
     display: none;
     position: absolute;
     top: 0;
@@ -296,18 +329,21 @@ div.campaign-panel-slot.ui-theme-pink {
     gap: var(--spacing-md);
 }
 
-.split-layout.is-expanding .expand-loading-overlay {
+.split-layout.is-expanding .expand-loading-overlay,
+.split-layout.is-expanding .sheet__loading {
     display: flex;
 }
 
 /* Theme-aware cube for expand overlay */
-.expand-loading-overlay .panel-loading-cube i {
+.expand-loading-overlay .panel-loading-cube i,
+.sheet__loading .panel-loading-cube i {
     border-color: var(--ui-dim-color);
     background: var(--ui-bg-translucent);
 }
 
 /* Hidden state for transitions */
-.campaign-panel-slot.is-hidden {
+.campaign-panel-slot.is-hidden,
+.sheet__sidebar.is-hidden {
     display: none;
 }
 
@@ -317,7 +353,9 @@ div.campaign-panel-slot.ui-theme-pink {
 }
 
 /* ===== CHARACTER NAV BAR (sequential navigation in expanded view) ===== */
-.character-nav-bar {
+/* BEM alias: .sheet__nav */
+.character-nav-bar,
+.sheet__nav {
     display: none;
     position: absolute;
     top: 32px; /* Match panel padding */
@@ -339,23 +377,28 @@ div.campaign-panel-slot.ui-theme-pink {
 }
 
 /* Show nav bar only when expanded view is active */
-.split-layout.is-sheet-expanded .character-nav-bar {
+.split-layout.is-sheet-expanded .character-nav-bar,
+.split-layout.is-sheet-expanded .sheet__nav {
     display: flex;
 }
 
 /* Animate in after expanded transition completes (handled by JS adding .is-visible) */
-.character-nav-bar.is-visible {
+.character-nav-bar.is-visible,
+.sheet__nav.is-visible {
     opacity: 1;
     transform: translateY(0);
 }
 
 .character-nav-bar.is-visible button,
-.character-nav-bar.is-visible .nav-count-link {
+.sheet__nav.is-visible button,
+.character-nav-bar.is-visible .nav-count-link,
+.sheet__nav.is-visible .nav-count-link {
     font-size: var(--font-size-base);
 }
 
 /* Nav buttons - styled as text links */
-.character-nav-bar button {
+.character-nav-bar button,
+.sheet__nav button {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -370,19 +413,22 @@ div.campaign-panel-slot.ui-theme-pink {
     max-width: 200px;
 }
 
-.character-nav-bar button:hover .nav-name {
+.character-nav-bar button:hover .nav-name,
+.sheet__nav button:hover .nav-name {
     text-decoration: underline;
 }
 
 /* Arrow glyphs */
-.character-nav-bar .nav-arrow {
+.character-nav-bar .nav-arrow,
+.sheet__nav .nav-arrow {
     color: var(--ui-dim-color);
     font-size: var(--font-size-base);
     flex-shrink: 0;
 }
 
 /* Character name in nav - truncate if too long */
-.character-nav-bar .nav-name {
+.character-nav-bar .nav-name,
+.sheet__nav .nav-name {
     color: var(--ui-dim-color);
     white-space: nowrap;
     overflow: hidden;
@@ -390,7 +436,8 @@ div.campaign-panel-slot.ui-theme-pink {
 }
 
 /* Center count link - absolutely positioned for true center */
-.character-nav-bar .nav-count-link {
+.character-nav-bar .nav-count-link,
+.sheet__nav .nav-count-link {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
@@ -407,7 +454,8 @@ div.campaign-panel-slot.ui-theme-pink {
 }
 
 /* Container for the two text states - 3D flip card */
-.character-nav-bar .nav-count-link {
+.character-nav-bar .nav-count-link,
+.sheet__nav .nav-count-link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -415,7 +463,8 @@ div.campaign-panel-slot.ui-theme-pink {
 }
 
 /* Count value (e.g., "3/15") - front face */
-.character-nav-bar .nav-count-value {
+.character-nav-bar .nav-count-value,
+.sheet__nav .nav-count-value {
     display: inline-block;
     backface-visibility: hidden;
     transform: rotateX(0deg);
@@ -423,7 +472,8 @@ div.campaign-panel-slot.ui-theme-pink {
 }
 
 /* Hover text - back face (pre-rotated) */
-.character-nav-bar .nav-count-hover {
+.character-nav-bar .nav-count-hover,
+.sheet__nav .nav-count-hover {
     position: absolute;
     backface-visibility: hidden;
     transform: rotateX(-180deg);
@@ -432,15 +482,18 @@ div.campaign-panel-slot.ui-theme-pink {
 }
 
 /* Hover state - flip the card */
-.character-nav-bar .nav-count-link:hover {
+.character-nav-bar .nav-count-link:hover,
+.sheet__nav .nav-count-link:hover {
     background-color: var(--ui-bg-translucent);
 }
 
-.character-nav-bar .nav-count-link:hover .nav-count-value {
+.character-nav-bar .nav-count-link:hover .nav-count-value,
+.sheet__nav .nav-count-link:hover .nav-count-value {
     transform: rotateX(180deg);
 }
 
-.character-nav-bar .nav-count-link:hover .nav-count-hover {
+.character-nav-bar .nav-count-link:hover .nav-count-hover,
+.sheet__nav .nav-count-link:hover .nav-count-hover {
     transform: rotateX(0deg);
 }
 
@@ -1656,7 +1709,9 @@ div.campaign-panel-slot.ui-theme-pink {
 }
 
 /* ===== CONTROLS SECTION ===== */
-.controls-section {
+/* BEM alias: .grid__controls */
+.controls-section,
+.grid__controls {
     position: sticky;
     top: 0;
     z-index: 10;
@@ -1932,7 +1987,9 @@ div.campaign-panel-slot.ui-theme-pink {
 }
 
 /* ===== CHARACTER GRID ===== */
-.character-grid {
+/* BEM alias: .grid__list */
+.character-grid,
+.grid__list {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: var(--spacing-md);
@@ -2149,13 +2206,16 @@ div.campaign-panel-slot.ui-theme-pink {
 }
 
 /* ===== EMPTY STATE ===== */
-.empty-state {
+/* BEM alias: .grid__empty */
+.empty-state,
+.grid__empty {
     text-align: center;
     padding: var(--spacing-xl) var(--spacing-lg);
     display: none;
 }
 
-.empty-state.show {
+.empty-state.show,
+.grid__empty.show {
     display: block;
 }
 
@@ -3497,7 +3557,8 @@ div.campaign-panel-slot.ui-theme-pink {
 /* Tablet breakpoint: 2-column grid with card details */
 @media (max-width: 1024px) {
     /* Switch to 2 columns with card details visible */
-    .character-grid {
+    .character-grid,
+    .grid__list {
         grid-template-columns: repeat(2, 1fr);
         gap: var(--spacing-md);
     }
@@ -3562,7 +3623,8 @@ div.campaign-panel-slot.ui-theme-pink {
 
 /* Mid-mobile breakpoint: 3-column grid between 768px and 520px */
 @media (max-width: 768px) and (min-width: 521px) {
-    .character-grid {
+    .character-grid,
+    .grid__list {
         grid-template-columns: repeat(3, 1fr);
         gap: var(--spacing-sm);
     }
@@ -3615,7 +3677,8 @@ div.campaign-panel-slot.ui-theme-pink {
     }
     
     /* Adjust controls section for mobile */
-    .controls-section {
+    .controls-section,
+    .grid__controls {
         padding: 16px;
         margin: 0 calc(-1 * var(--spacing-md)) 0 calc(-1 * var(--spacing-md));
     }
@@ -3755,12 +3818,15 @@ div.campaign-panel-slot.ui-theme-pink {
    ======================================== */
 
 /* Mobile back button - shown at top of left panel when viewing a character */
-.mobile-back-bar {
+/* BEM alias: .grid__mobile-nav */
+.mobile-back-bar,
+.grid__mobile-nav {
     display: none;
 }
 
 @media (max-width: 768px) {
-    .mobile-back-bar {
+    .mobile-back-bar,
+    .grid__mobile-nav {
         display: none;
         align-items: center;
         padding: 16px 0;
@@ -3774,7 +3840,8 @@ div.campaign-panel-slot.ui-theme-pink {
     }
     
     /* Show back bar when viewing character sheet on mobile */
-    .panel-character-grid.is-viewing-sheet .mobile-back-bar {
+    .panel-character-grid.is-viewing-sheet .mobile-back-bar,
+    .panel-character-grid.is-viewing-sheet .grid__mobile-nav {
         display: flex;
     }
     
@@ -3805,14 +3872,18 @@ div.campaign-panel-slot.ui-theme-pink {
     
     /* Hide grid and controls when viewing sheet */
     .panel-character-grid.is-viewing-sheet .controls-section,
+    .panel-character-grid.is-viewing-sheet .grid__controls,
     .panel-character-grid.is-viewing-sheet .character-grid,
+    .panel-character-grid.is-viewing-sheet .grid__list,
     .panel-character-grid.is-viewing-sheet .empty-state,
+    .panel-character-grid.is-viewing-sheet .grid__empty,
     .panel-character-grid.is-viewing-sheet .character-count {
         display: none !important;
     }
     
     /* Show the inline character sheet on mobile */
-    .panel-character-grid.is-viewing-sheet .mobile-sheet-container {
+    .panel-character-grid.is-viewing-sheet .mobile-sheet-container,
+    .panel-character-grid.is-viewing-sheet .grid__mobile-sheet {
         display: block;
     }
 }
@@ -3896,7 +3967,9 @@ div.campaign-panel-slot.ui-theme-pink {
 }
 
 /* Container for character sheet on mobile (inside left panel) */
-.mobile-sheet-container {
+/* BEM alias: .grid__mobile-sheet */
+.mobile-sheet-container,
+.grid__mobile-sheet {
     display: none;
     padding: 0 0 var(--spacing-md) 0;
     touch-action: pan-y pinch-zoom; /* Allow vertical scroll, capture horizontal swipes */
@@ -3906,7 +3979,8 @@ div.campaign-panel-slot.ui-theme-pink {
 /* Override .character-sheet's overflow-y: auto to prevent nested scroll context.
    gridPanel should be the only scrolling container on mobile.
    Using high-specificity selector to ensure this wins. */
-.mobile-sheet-container.character-sheet {
+.mobile-sheet-container.character-sheet,
+.grid__mobile-sheet.character-sheet {
     border-top: none;
     overflow-y: visible !important;
     overflow: visible !important;
@@ -4207,10 +4281,12 @@ div.campaign-panel-slot.ui-theme-pink {
     /* Reset all backgrounds to white for print */
     body,
     html,
+    .app-root,
     .terminal-frame,
     .main-content,
     .split-layout,
     .panel,
+    .app-panel,
     .panel-character-grid,
     .panel-character-sheet,
     .panel-campaign {
@@ -4222,6 +4298,7 @@ div.campaign-panel-slot.ui-theme-pink {
     /* CRITICAL: Remove ALL height constraints and overflow clipping */
     html,
     body,
+    .app-root,
     .terminal-frame,
     .main-content,
     .split-layout,
@@ -4392,23 +4469,28 @@ div.campaign-panel-slot.ui-theme-pink {
 
     /* Hide mobile sheet container (desktop print only) */
     .mobile-sheet-container,
-    .mobile-back-bar {
+    .grid__mobile-sheet,
+    .mobile-back-bar,
+    .grid__mobile-nav {
         display: none !important;
     }
 
     /* Hide controls section */
-    .controls-section {
+    .controls-section,
+    .grid__controls {
         display: none !important;
     }
 
     /* Hide character grid */
     .character-grid,
+    .grid__list,
     #characterGrid {
         display: none !important;
     }
 
     /* Hide empty state */
     .empty-state,
+    .grid__empty,
     #emptyState {
         display: none !important;
     }

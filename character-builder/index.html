@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" class="ui-theme-white theme-white">
+<html lang="en" class="theme-white">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="format-detection" content="telephone=no">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <title>D&D Character Builder - Terminal Edition</title>
+  <title>D&Dy - Character Builder</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../terminal-theme.css?v=20251215e">
+  <link rel="stylesheet" href="../terminal-theme.css?v=20251224b">
   <link rel="stylesheet" href="../portraits.css?v=20251215f">
   <link rel="stylesheet" href="./character-builder.css?v=20251215c">
 </head>
@@ -16,7 +16,7 @@
   <!-- Print-only logo (positioned via CSS for print layout) -->
   <img src="./danddy-logo-print.svg" alt="DandDy logo" class="print-logo">
 
-    <div class="terminal-container ui-theme-white theme-white">
+    <div class="app-root theme-white">
       <div class="terminal-header">
         <div class="terminal-title">
           <span class="title-bracket">[</span>
@@ -61,11 +61,11 @@
     
     <!-- Main content (hidden until splash dismissed) -->
     <div class="split-layout is-hidden" id="main-content">
-      <div class="left-panel ui-theme-white theme-white" id="narrator-panel">
+      <div class="app-panel app-panel--narrator theme-white" id="narrator-panel">
         <!-- Narrator content will be injected here -->
       </div>
       
-      <div class="right-panel ui-theme-yellow theme-yellow" id="character-panel">
+      <div class="app-panel app-panel--builder theme-white" id="character-panel">
         <!-- Character sheet will be injected here -->
       </div>
     </div>
@@ -152,7 +152,7 @@
   </div>
   
   <!-- Concatenated builder bundle (see scripts/simple_bundle.py) -->
-  <script src="builder.bundle.js?v=20251215b"></script>
+  <script src="builder.bundle.js?v=20251224a"></script>
 </body>
 </html>
 

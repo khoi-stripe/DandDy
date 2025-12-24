@@ -48,7 +48,7 @@
 
 /* Match manager hover-reveal behavior: hide label until auth button hover */
 #auth-slot #builderUserInfo {
-  font-size: var(--font-size-small);
+  font-size: var(--font-size-base);
   white-space: nowrap;
   color: var(--ui-dim-color, var(--terminal-dim));
   display: inline-flex;
@@ -470,6 +470,7 @@
     display: none !important;
   }
 
+  .app-root,
   .terminal-container {
     display: block;
     border: none;
@@ -1007,7 +1008,8 @@
 }
 
 /* ===== BUILDER SPLASH LAYOUT TWEAKS ===== */
-/* Keep splash content fully inside the terminal viewport */
+/* Keep splash content fully inside the app root viewport */
+.app-root .splash-content,
 .terminal-container .splash-content {
   min-height: 0;
   height: 100%;
@@ -1614,6 +1616,7 @@
 }
 
 /* ===== RESPONSIVE ===== */
+
 @media (max-width: 1024px) {
   /* Combat stats and abilities: 2-column grid on tablet */
   .stat-grid {
@@ -1647,6 +1650,7 @@
     width: 100%;
   }
   
+  .app-root,
   .terminal-container {
     /* Use dvh units for proper mobile browser chrome handling.
        Falls back to vh for older browsers. */
