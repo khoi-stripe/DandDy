@@ -26,7 +26,7 @@
     <link rel="stylesheet" href="app-manager.css?v=20251224a">
 </head>
 <body>
-    <div class="app-root theme-white">
+    <div class="app-root">
     
     <!-- Welcome Modal (uses the builder's splash art/layout) -->
     <div id="welcomeModal" class="modal">
@@ -50,7 +50,7 @@
     </div>
     
     <!-- Main Content -->
-    <div class="main-content theme-white" id="main-content">
+    <div class="main-content" id="main-content">
 
     <!-- Header -->
     <header class="terminal-header">
@@ -92,7 +92,7 @@
                 <div class="header-overflow selector-shell selector-shell--actions">
                     <button
                         id="headerOverflowBtn"
-                        class="terminal-btn-small theme-white selector-trigger overflow-trigger header-overflow-trigger"
+                        class="terminal-btn-small selector-trigger overflow-trigger header-overflow-trigger"
                         type="button"
                         aria-haspopup="menu"
                         aria-expanded="false"
@@ -145,7 +145,7 @@
     <!-- Split Layout - shows 2 of 3 panels at a time -->
     <div class="split-layout" data-view="grid-sheet">
         <!-- Panel: Character Grid -->
-        <div class="panel panel-character-grid app-panel app-panel--grid theme-white" id="characterGridPanel">
+        <div class="panel panel-character-grid app-panel app-panel--grid" id="characterGridPanel">
             <!-- Mobile Back Bar (shown when viewing character sheet on mobile) -->
             <div class="grid__mobile-nav" id="mobileBackBar">
                 <a href="#" class="mobile-back-link" onclick="closeMobileSheet(); return false;">← All</a>
@@ -228,7 +228,7 @@
         </div>
 
         <!-- Panel: Character Sheet -->
-        <div class="panel panel-character-sheet app-panel app-panel--sheet theme-white" id="characterSheetPanel">
+        <div class="panel panel-character-sheet app-panel app-panel--sheet" id="characterSheetPanel">
             <!-- Character Nav Bar (visible only in expanded view) -->
             <div class="sheet__nav" id="characterNavBar">
                 <button class="nav-prev" id="navPrev" type="button">
@@ -245,12 +245,12 @@
                 </button>
             </div>
             <div class="sheet-placeholder"></div>
-            <div class="sheet__content theme-white">
+            <div class="sheet__content">
                 <div class="sheet__layout">
                     <div id="characterSheet" class="character-sheet is-hidden">
                         <!-- Character sheet will be rendered here -->
                     </div>
-                    <div class="sheet__sidebar theme-white">
+                    <div class="sheet__sidebar">
                         <!-- Campaign panel layout will be inserted here -->
                     </div>
                 </div>

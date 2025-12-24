@@ -103,6 +103,12 @@
   /* Radial background glow color (animated on <body>) */
   --terminal-glow-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.28);
   
+  /* Background glow HSL components (for body::before radial gradient) */
+  /* Default = green terminal theme; override with .theme-* classes */
+  --bg-glow-h: var(--theme-terminal-h);
+  --bg-glow-s: var(--theme-terminal-s);
+  --bg-glow-l: var(--theme-terminal-l-bright);
+  
   /* Generic UI theme tokens (used by buttons, inputs, etc.) */
   /* Default = green terminal theme */
   --ui-border-color: var(--terminal-border);
@@ -222,6 +228,9 @@
   --scrollbar-thumb-hover-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.9);
   /* Background glow */
   --terminal-glow-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.28);
+  --bg-glow-h: var(--theme-terminal-h);
+  --bg-glow-s: var(--theme-terminal-s);
+  --bg-glow-l: var(--theme-terminal-l-bright);
 }
 
 /* Backward compatibility alias */
@@ -293,6 +302,9 @@
   --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
   /* Background glow */
   --terminal-glow-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.28);
+  --bg-glow-h: var(--theme-teal-h);
+  --bg-glow-s: var(--theme-teal-s);
+  --bg-glow-l: var(--theme-teal-l-bright);
 }
 
 /* Backward compatibility alias */
@@ -333,6 +345,9 @@
   --scrollbar-thumb-hover-color: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright), 0.9);
   /* Background glow */
   --terminal-glow-color: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright), 0.28);
+  --bg-glow-h: var(--theme-pink-h);
+  --bg-glow-s: var(--theme-pink-s);
+  --bg-glow-l: var(--theme-pink-l-bright);
 }
 
 /* Backward compatibility alias */
@@ -426,6 +441,9 @@
   --scrollbar-thumb-hover-color: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.9);
   /* Background glow */
   --terminal-glow-color: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.28);
+  --bg-glow-h: var(--theme-white-h);
+  --bg-glow-s: var(--theme-white-s);
+  --bg-glow-l: var(--theme-white-l-bright);
 }
 
 /* Backward compatibility alias */
@@ -466,6 +484,9 @@
   --scrollbar-thumb-hover-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.9);
   /* Background glow */
   --terminal-glow-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.28);
+  --bg-glow-h: var(--theme-yellow-h);
+  --bg-glow-s: var(--theme-yellow-s);
+  --bg-glow-l: var(--theme-yellow-l-bright);
 }
 
 /* Backward compatibility alias */
@@ -660,7 +681,8 @@ body {
 
 /* Large radial light source behind the terminal.
    - Rendered as a pseudo-element so we can smoothly animate hue.
-   - Sits above the black + dot background but below all terminal content. */
+   - Sits above the black + dot background but below all terminal content.
+   - Uses --bg-glow-* variables that are overridden by theme classes on <html>. */
 body::before {
   content: '';
   position: fixed;
@@ -670,7 +692,7 @@ body::before {
   z-index: 0;
   background-image: radial-gradient(
     ellipse at center,
-    hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.4) 0,
+    hsla(var(--bg-glow-h), var(--bg-glow-s), var(--bg-glow-l), 0.4) 0,
     transparent 78%
   );
   /* Slightly larger than the viewport so it always extends beyond the terminal */
