@@ -928,17 +928,16 @@ const ExpandedView = (window.ExpandedView = {
         }
     },
 
-    /** Calculate and set column widths based on current container size */
+    /** Calculate column width to match minimized view width */
     _updateColumnWidths() {
         const splitLayout = document.querySelector('.split-layout');
         const campaignGrid = document.querySelector('.sheet__layout');
         
         if (splitLayout && campaignGrid) {
-            const expandedWidth = splitLayout.offsetWidth - 66; // 64px padding + 2px border
-            const baseColumnWidth = expandedWidth / 2;
-            // Character sheet is 34px narrower, campaign panel is 34px wider
-            campaignGrid.style.setProperty('--sheet-column-width', `${baseColumnWidth - 34}px`);
-            campaignGrid.style.setProperty('--campaign-column-width', `${baseColumnWidth + 34}px`);
+            // Match minimized view: (50% of split-layout) - 66px
+            // 66px = 64px panel padding + 2px sheet-scroll-wrapper border
+            const sheetWidth = (splitLayout.offsetWidth / 2) - 66;
+            campaignGrid.style.setProperty('--sheet-column-width', `${sheetWidth}px`);
         }
     },
     
@@ -1042,11 +1041,10 @@ const ExpandedView = (window.ExpandedView = {
         setTimeout(() => {
             splitLayout?.classList.remove('is-sheet-expanded', 'is-collapsing', 'is-expanding');
             // Campaign panel stays visible at bottom of sheet - no need to hide
-            // Clear the column width variables
+            // Clear the column width variable
             const campaignGrid = document.querySelector('.sheet__layout');
             if (campaignGrid) {
                 campaignGrid.style.removeProperty('--sheet-column-width');
-                campaignGrid.style.removeProperty('--campaign-column-width');
             }
             // Restore scroll position to the combined scroll container
             if (sheetContent) {

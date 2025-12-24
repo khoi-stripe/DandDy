@@ -3105,38 +3105,23 @@ div.sheet__sidebar.ui-theme-pink {
     color: var(--ui-fg-color);
 }
 
-/* Header buttons should inherit theme from header, not their own theme classes
-   Use higher specificity to override button's own theme classes.
-   When header has a theme class, buttons inside should use header's theme variables. */
-.terminal-header.ui-theme-yellow .terminal-btn-primary,
-.terminal-header.ui-theme-yellow .terminal-btn-primary.ui-theme-teal,
-.terminal-header.ui-theme-pink .terminal-btn-primary,
-.terminal-header.ui-theme-pink .terminal-btn-primary.ui-theme-teal,
-.terminal-header.ui-theme-green .terminal-btn-primary,
-.terminal-header.ui-theme-green .terminal-btn-primary.ui-theme-teal,
-.terminal-header.ui-theme-white .terminal-btn-primary,
-.terminal-header.ui-theme-white .terminal-btn-primary.ui-theme-teal {
-    /* Override button's own theme class - use header's theme variables */
-    --ui-primary-bg-color: var(--ui-primary-bg-color);
-    --ui-on-primary-color: var(--ui-on-primary-color);
-    --ui-border-color: var(--ui-border-color);
-    --ui-fg-color: var(--ui-fg-color);
-    --ui-dim-color: var(--ui-dim-color);
-    --ui-bg-translucent: var(--ui-bg-translucent);
+/* Header primary buttons: always show filled style using header's theme.
+   Works with ANY theme class (yellow, teal, green, pink, white, orange, red, violet, blue).
+   The header's theme class sets --ui-primary-bg-color, and the button inherits it.
+   Using !important to ensure these override any other rules. */
+.terminal-header .terminal-btn-primary,
+#newCharacterBtn {
+    /* Use modal-accent directly as fallback if ui-primary-bg-color doesn't resolve */
+    background-color: var(--ui-primary-bg-color, var(--modal-accent)) !important;
+    color: var(--ui-on-primary-color, var(--terminal-bg)) !important;
+    border-color: var(--ui-primary-bg-color, var(--modal-accent)) !important;
 }
 
-/* Ensure primary button background uses header theme (explicit override) */
-.terminal-header.ui-theme-yellow .terminal-btn-primary,
-.terminal-header.ui-theme-yellow .terminal-btn-primary.ui-theme-teal,
-.terminal-header.ui-theme-pink .terminal-btn-primary,
-.terminal-header.ui-theme-pink .terminal-btn-primary.ui-theme-teal,
-.terminal-header.ui-theme-green .terminal-btn-primary,
-.terminal-header.ui-theme-green .terminal-btn-primary.ui-theme-teal,
-.terminal-header.ui-theme-white .terminal-btn-primary,
-.terminal-header.ui-theme-white .terminal-btn-primary.ui-theme-teal {
-    background-color: var(--ui-primary-bg-color);
-    color: var(--ui-on-primary-color);
-    border-color: var(--ui-primary-bg-color);
+.terminal-header .terminal-btn-primary:hover:not(:disabled),
+#newCharacterBtn:hover:not(:disabled) {
+    background-color: transparent !important;
+    color: var(--ui-primary-bg-color, var(--modal-accent)) !important;
+    border-color: var(--ui-primary-bg-color, var(--modal-accent)) !important;
 }
 
 .terminal-text-error {
@@ -3352,12 +3337,18 @@ div.sheet__sidebar.ui-theme-pink {
         flex: 1 1 100%;
     }
     
-    /* Column widths are calculated by JS based on actual expanded container size.
-       --sheet-column-width and --campaign-column-width are set as inline styles.
-       Keep fixed columns during both expand and collapse animations. */
+    /* Sheet column width is calculated by JS to match minimized view: (50% of split-layout) - 66px.
+       Campaign panel takes remaining space with 1fr. */
     .split-layout.is-sheet-expanded .sheet-campaign-grid,
     .split-layout.is-collapsing .sheet-campaign-grid {
-        grid-template-columns: var(--sheet-column-width) var(--campaign-column-width) !important;
+        grid-template-columns: var(--sheet-column-width) 1fr !important;
+    }
+    
+    /* Lock character sheet to calculated width in expanded view */
+    .split-layout.is-sheet-expanded .character-sheet {
+        width: var(--sheet-column-width) !important;
+        max-width: var(--sheet-column-width) !important;
+        flex: 0 0 var(--sheet-column-width) !important;
     }
     
     /* Keep character sheet at fixed width during expand/collapse transitions.
@@ -3365,7 +3356,8 @@ div.sheet__sidebar.ui-theme-pink {
     .split-layout.is-expanding .character-sheet,
     .split-layout.is-collapsing .character-sheet {
         width: var(--sheet-column-width) !important;
-        flex: 0 0 auto !important;
+        max-width: var(--sheet-column-width) !important;
+        flex: 0 0 var(--sheet-column-width) !important;
     }
     
     /* During collapse: grid slides back in, sheet shrinks back to 50% */
