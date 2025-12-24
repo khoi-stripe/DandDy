@@ -161,7 +161,7 @@
     --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5) !important;
     --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9) !important;
     /* Also set border color so campaign-panel-slot border-top inherits it */
-    --ui-border-color: var(--modal-accent);
+    --ui-border-color: var(--ui-fg-color);
 }
 
 /* Character sheet theme is set in .character-sheet base rule in terminal-theme.css */
@@ -564,6 +564,64 @@ div.sheet__sidebar.ui-theme-pink {
     display: none !important;
 }
 
+/* ===== Expandable Navigation Buttons =====
+   Desktop: Show icon only, expand to show icon + label on hover
+   Mobile: Show icon only (no expand) */
+
+.sheet-nav-btn--expandable {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    overflow: hidden;
+    /* Fixed width for icon-only state */
+    width: 36px;
+    /* Use standard small button height */
+    min-height: var(--btn-height-sm);
+    padding: 0 8px;
+    transition: width 0.2s ease, gap 0.2s ease;
+}
+
+.sheet-nav-btn__icon {
+    flex-shrink: 0;
+    font-size: var(--font-size-xl);
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    /* Adjust for arrow glyph baseline */
+    transform: translateY(-3px);
+}
+
+.sheet-nav-btn__label {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: opacity 0.15s ease, width 0.2s ease;
+    line-height: 1;
+}
+
+/* Desktop: Expand on hover to show icon + label */
+@media (min-width: 769px) {
+    .sheet-nav-btn--expandable:hover {
+        width: auto;
+        gap: 6px;
+        padding-right: 12px;
+    }
+
+    .sheet-nav-btn--expandable:hover .sheet-nav-btn__label {
+        opacity: 1;
+        width: auto;
+    }
+}
+
+/* Mobile: Hide expand/collapse buttons entirely */
+@media (max-width: 768px) {
+    .sheet-nav-btn--expandable {
+        display: none;
+    }
+}
+
 /* ===== PANEL: CAMPAIGN ===== */
 .panel-campaign,
 #campaignPanel.panel-campaign {
@@ -880,7 +938,7 @@ div.sheet__sidebar.ui-theme-pink {
     font-weight: var(--font-weight-semibold);
     text-transform: uppercase;
     letter-spacing: var(--tracking-wider);
-    color: var(--ui-dim-color, var(--modal-accent-dim));
+    color: var(--ui-dim-color);
     margin-bottom: 0.5rem;
     display: block;
 }
@@ -898,7 +956,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* Pending invites list - matches share modal collaborators styling */
 .pending-invites-list {
-    border: 1px solid var(--ui-dim-color, var(--modal-accent-dim));
+    border: 1px solid var(--ui-dim-color);
     border-radius: 4px;
     background: var(--terminal-bg-dim);
     max-height: 150px;
@@ -906,7 +964,7 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .pending-invites-empty {
-    color: var(--ui-dim-color, var(--modal-accent-dim));
+    color: var(--ui-dim-color);
     font-size: var(--font-size-sm);
     text-align: center;
     padding: 0.75rem;
@@ -917,7 +975,7 @@ div.sheet__sidebar.ui-theme-pink {
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--ui-dim-color, var(--modal-accent-dim));
+    border-bottom: 1px solid var(--ui-dim-color);
     transition: background-color 0.15s ease;
 }
 
@@ -931,7 +989,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 .pending-invite-email {
     font-size: var(--font-size-sm);
-    color: var(--ui-fg-color, var(--modal-accent));
+    color: var(--ui-fg-color);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -945,7 +1003,7 @@ div.sheet__sidebar.ui-theme-pink {
     height: 24px;
     border: none;
     background: transparent;
-    color: var(--ui-dim-color, var(--modal-accent-dim));
+    color: var(--ui-dim-color);
     font-size: var(--font-size-lg);
     line-height: 1;
     cursor: pointer;
@@ -972,7 +1030,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* ===== JOIN CAMPAIGN - INVITATIONS LIST ===== */
 .invitations-list {
-    border: 1px solid var(--modal-accent-dim);
+    border: 1px solid var(--ui-dim-color);
     border-radius: 4px;
     background: var(--terminal-bg-dim);
     max-height: 250px;
@@ -981,7 +1039,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 .invitations-loading,
 .invitations-empty {
-    color: var(--modal-accent-dim);
+    color: var(--ui-dim-color);
     font-size: var(--font-size-sm);
     text-align: center;
     padding: 1.5rem;
@@ -991,7 +1049,7 @@ div.sheet__sidebar.ui-theme-pink {
     display: flex;
     align-items: center;
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--modal-accent-dim);
+    border-bottom: 1px solid var(--ui-dim-color);
     cursor: pointer;
     transition: background-color 0.15s ease;
 }
@@ -1001,17 +1059,17 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .invitation-item:hover {
-    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.08);
+    background-color: var(--ui-bg-translucent);
 }
 
 .invitation-item.is-selected {
-    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.15);
+    background-color: color-mix(in srgb, var(--ui-primary-bg-color) 15%, transparent);
 }
 
 .invitation-radio {
     width: 16px;
     height: 16px;
-    border: 2px solid var(--modal-accent-dim);
+    border: 2px solid var(--ui-dim-color);
     border-radius: 50%;
     margin-right: 0.75rem;
     flex-shrink: 0;
@@ -1022,18 +1080,18 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .invitation-item:hover .invitation-radio {
-    border-color: var(--modal-accent);
+    border-color: var(--ui-fg-color);
 }
 
 .invitation-item.is-selected .invitation-radio {
-    border-color: var(--modal-accent);
+    border-color: var(--ui-fg-color);
 }
 
 .invitation-item.is-selected .invitation-radio::after {
     content: '';
     width: 8px;
     height: 8px;
-    background-color: var(--modal-accent);
+    background-color: var(--ui-fg-color);
     border-radius: 50%;
 }
 
@@ -1044,7 +1102,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 .invitation-name {
     font-size: var(--font-size-base);
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     font-weight: var(--font-weight-normal);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1053,7 +1111,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 .invitation-desc {
     font-size: var(--font-size-sm);
-    color: var(--modal-accent-dim);
+    color: var(--ui-dim-color);
     margin-top: 0.25rem;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1260,7 +1318,7 @@ div.sheet__sidebar.ui-theme-pink {
 .party-member-modal-email {
     font-size: var(--font-size-xs);
     font-family: var(--font-mono);
-    color: var(--ui-fg-color, var(--modal-accent));
+    color: var(--ui-fg-color);
     opacity: 0.7;
 }
 
@@ -1270,9 +1328,9 @@ div.sheet__sidebar.ui-theme-pink {
     font-family: var(--font-mono);
     letter-spacing: var(--tracking-wider);
     text-transform: uppercase;
-    color: var(--modal-accent-dim);
+    color: var(--ui-dim-color);
     background-color: transparent;
-    border: 1px solid var(--modal-accent-dim);
+    border: 1px solid var(--ui-dim-color);
     border-radius: 3px;
     padding: 2px 6px;
     flex-shrink: 0;
@@ -1298,7 +1356,7 @@ div.sheet__sidebar.ui-theme-pink {
     --sheet-box-bg: var(--ui-bg-translucent, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.15));
     --sheet-ability-box-bg: var(--ui-bg-translucent, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.15));
     --sheet-box-border-color: var(--ui-dim-color, hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.4));
-    color: var(--ui-fg-color, var(--modal-accent));
+    color: var(--ui-fg-color);
 }
 
 /* Portrait area theme - brighter background for multiply blend - uses theme colors */
@@ -1308,7 +1366,7 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .party-member-sheet-body .ascii-portrait {
-    color: var(--ui-fg-color, var(--modal-accent));
+    color: var(--ui-fg-color);
 }
 
 /* Loading state for party member sheet modal */
@@ -1904,7 +1962,7 @@ div.sheet__sidebar.ui-theme-pink {
     transform: translateY(-50%);
     background: transparent;
     border: none;
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     cursor: pointer;
     font-family: var(--font-family);
     font-size: var(--font-size-small);
@@ -2495,8 +2553,8 @@ div.sheet__sidebar.ui-theme-pink {
     display: flex;
     width: 100%;
     justify-content: center;
-    border-color: var(--modal-accent);
-    color: var(--modal-accent);
+    border-color: var(--ui-fg-color);
+    color: var(--ui-fg-color);
 }
 
 .welcome-actions .terminal-btn:hover {
@@ -2506,14 +2564,14 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .welcome-actions .terminal-btn-primary {
-    background-color: var(--modal-accent);
-    border-color: var(--modal-accent);
+    background-color: var(--ui-fg-color);
+    border-color: var(--ui-fg-color);
     color: var(--terminal-bg);
 }
 
 .welcome-actions .terminal-btn-primary:hover {
     background-color: transparent;
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     border-color: var(--ui-fg-color);
     box-shadow: 0 0 15px var(--context-hover);
 }
@@ -2521,7 +2579,7 @@ div.sheet__sidebar.ui-theme-pink {
 .welcome-version {
     margin-top: var(--spacing-md);
     font-size: var(--font-size-small);
-    color: var(--modal-accent-dim);
+    color: var(--ui-dim-color);
     text-align: center;
 }
 
@@ -2635,7 +2693,7 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .modal-inline-notice-body .terminal-text {
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     font-size: var(--font-size-base);
     line-height: 1.5;
 }
@@ -2698,7 +2756,7 @@ div.sheet__sidebar.ui-theme-pink {
     gap: var(--spacing-md);
     padding: var(--spacing-lg);
     background: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l), 0.1);
-    border: 1px solid var(--modal-accent-dim);
+    border: 1px solid var(--ui-dim-color);
     border-radius: 4px;
 }
 
@@ -2707,7 +2765,7 @@ div.sheet__sidebar.ui-theme-pink {
     font-size: 1.8em;
     font-weight: var(--font-weight-bold);
     letter-spacing: var(--tracking-widest);
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
 }
 
 .campaign-created-body {
@@ -2765,12 +2823,12 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .hp-divider {
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     opacity: 0.6;
 }
 
 .hp-max {
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     opacity: 0.6;
     min-width: 24px;
 }
@@ -2917,7 +2975,7 @@ div.sheet__sidebar.ui-theme-pink {
 /* Inherit theme from modal parent (uses base modal theme as fallback) */
 .modal .settings-group-label,
 .modal-content .settings-group-label {
-    color: var(--ui-fg-color, var(--modal-accent)) !important;
+    color: var(--ui-fg-color) !important;
     text-transform: uppercase !important;
 }
 
@@ -3009,15 +3067,15 @@ div.sheet__sidebar.ui-theme-pink {
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
-    border: 1px solid var(--ui-border-color, var(--modal-accent));
+    border: 1px solid var(--ui-border-color);
     border-radius: 2px;
     background-color: transparent;
     position: relative;
 }
 
 .settings-checkbox:checked {
-    border-color: var(--ui-primary-bg-color, var(--modal-accent));
-    background-color: var(--ui-primary-bg-color, var(--modal-accent));
+    border-color: var(--ui-primary-bg-color);
+    background-color: var(--ui-primary-bg-color);
 }
 
 .settings-checkbox:checked::after {
@@ -3037,7 +3095,7 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .settings-checkbox-text {
-    color: var(--ui-fg-color, var(--modal-accent));
+    color: var(--ui-fg-color);
     font-size: var(--font-size-xs);
     text-transform: uppercase;
     letter-spacing: var(--tracking-wider);
@@ -3045,7 +3103,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 .settings-hint--small {
     font-size: var(--font-size-base);
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     margin-top: 4px;
     margin-left: 22px; /* align with checkbox label (14px checkbox + 8px gap) */
 }
@@ -3125,16 +3183,16 @@ div.sheet__sidebar.ui-theme-pink {
 .terminal-header .terminal-btn-primary,
 #newCharacterBtn {
     /* Use modal-accent directly as fallback if ui-primary-bg-color doesn't resolve */
-    background-color: var(--ui-primary-bg-color, var(--modal-accent)) !important;
+    background-color: var(--ui-primary-bg-color) !important;
     color: var(--ui-on-primary-color, var(--terminal-bg)) !important;
-    border-color: var(--ui-primary-bg-color, var(--modal-accent)) !important;
+    border-color: var(--ui-primary-bg-color) !important;
 }
 
 .terminal-header .terminal-btn-primary:hover:not(:disabled),
 #newCharacterBtn:hover:not(:disabled) {
     background-color: transparent !important;
-    color: var(--ui-primary-bg-color, var(--modal-accent)) !important;
-    border-color: var(--ui-primary-bg-color, var(--modal-accent)) !important;
+    color: var(--ui-primary-bg-color) !important;
+    border-color: var(--ui-primary-bg-color) !important;
 }
 
 .terminal-text-error {
@@ -3190,7 +3248,7 @@ div.sheet__sidebar.ui-theme-pink {
 .modal-grid-combat-hp input[type="number"],
 .modal-grid-combat-def input[type="number"] {
     /* Force text visibility on iOS Safari */
-    -webkit-text-fill-color: var(--modal-accent);
+    -webkit-text-fill-color: var(--ui-fg-color);
     opacity: 1;
     /* Prevent iOS zoom on focus (requires >= 16px) */
     font-size: var(--font-size-md);
@@ -3519,20 +3577,20 @@ div.sheet__sidebar.ui-theme-pink {
   display: flex;
 }
 
-/* Modal loading cube - uses yellow modal theme */
+/* Modal loading cube - uses ui-* theme tokens */
 .modal-loading-overlay .panel-loading-cube i,
 .modal-body .panel-loading-cube i {
-  border-color: var(--modal-accent);
-  background: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.05);
+  border-color: var(--ui-fg-color);
+  background: var(--ui-bg-translucent);
   box-shadow: 
-    inset 0 0 20px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1),
-    0 0 15px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.2);
+    inset 0 0 20px var(--ui-bg-translucent),
+    0 0 15px color-mix(in srgb, var(--ui-primary-bg-color) 20%, transparent);
 }
 
 .modal-loading-overlay .panel-loading-text,
 .modal-body .panel-loading-text {
-  color: var(--modal-accent);
-  text-shadow: 0 0 10px var(--modal-accent);
+  color: var(--ui-fg-color);
+  text-shadow: 0 0 10px var(--ui-fg-color);
 }
 
 .modal-content {
@@ -4107,7 +4165,7 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .modal-discard-content .terminal-text {
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     margin-bottom: var(--spacing-sm);
 }
 
@@ -4720,7 +4778,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* Collaborators list */
 .share-collaborators-list {
-    border: 1px solid var(--modal-accent-dim);
+    border: 1px solid var(--ui-dim-color);
     border-radius: 4px;
     background: var(--terminal-bg-dim);
     max-height: 180px;
@@ -4732,7 +4790,7 @@ div.sheet__sidebar.ui-theme-pink {
     align-items: center;
     justify-content: space-between;
     padding: 0.5rem 0.75rem;
-    border-bottom: 1px solid var(--modal-accent-dim);
+    border-bottom: 1px solid var(--ui-dim-color);
     transition: opacity 0.2s ease, background-color 0.15s ease;
 }
 
@@ -4741,7 +4799,7 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .share-collaborator-item:hover {
-    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.08);
+    background-color: var(--ui-bg-translucent);
 }
 
 .share-collaborator-item.removing {
@@ -4751,7 +4809,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 .share-collaborator-email {
     font-size: var(--font-size-sm);
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -4764,7 +4822,7 @@ div.sheet__sidebar.ui-theme-pink {
     font-family: var(--font-mono);
     text-transform: uppercase;
     letter-spacing: var(--tracking-wider);
-    color: var(--modal-accent-dim);
+    color: var(--ui-dim-color);
     margin-right: 0.5rem;
     flex-shrink: 0;
 }
@@ -4779,7 +4837,7 @@ div.sheet__sidebar.ui-theme-pink {
     height: 24px;
     border: none;
     background: transparent;
-    color: var(--modal-accent-dim);
+    color: var(--ui-dim-color);
     font-size: var(--font-size-lg);
     line-height: 1;
     cursor: pointer;
@@ -4816,7 +4874,7 @@ div.sheet__sidebar.ui-theme-pink {
     background: var(--terminal-bg);
     transition: opacity 0.3s ease;
     overflow: hidden;
-    box-shadow: 0 0 12px hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
+    box-shadow: 0 0 12px var(--ui-bg-translucent);
 }
 
 /* Two-column layout for share card */
@@ -4831,12 +4889,12 @@ div.sheet__sidebar.ui-theme-pink {
     flex: 0 0 140px;
     width: 140px;
     height: 187px; /* 140 * 4/3 for 3:4 aspect ratio */
-    background: var(--modal-accent);
+    background: var(--ui-primary-bg-color);
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-right: 1px solid var(--modal-accent-dim);
+    border-right: 1px solid var(--ui-dim-color);
 }
 
 /* ASCII portrait styling */
@@ -4845,7 +4903,7 @@ div.sheet__sidebar.ui-theme-pink {
     font-family: 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', monospace;
     font-size: 4.5px;
     line-height: 1;
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     margin: 0;
     white-space: pre;
     overflow: hidden;
@@ -4872,7 +4930,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 .share-card-portrait-placeholder {
     font-size: var(--font-size-2xs);
-    color: var(--modal-accent-dim);
+    color: var(--ui-dim-color);
     opacity: 0.5;
     text-transform: uppercase;
     letter-spacing: var(--tracking-wider);
@@ -4893,7 +4951,7 @@ div.sheet__sidebar.ui-theme-pink {
     margin: 0 0 0.5rem 0;
     font-size: var(--font-size-base);
     font-weight: var(--font-weight-normal);
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -4915,13 +4973,13 @@ div.sheet__sidebar.ui-theme-pink {
     font-size: var(--font-size-2xs);
     text-transform: uppercase;
     letter-spacing: var(--tracking-wider);
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     opacity: 0.6;
 }
 
 .share-card-value {
     font-size: var(--font-size-sm);
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -4930,7 +4988,7 @@ div.sheet__sidebar.ui-theme-pink {
 .share-card-from {
     margin-top: 0.75rem;
     font-size: var(--font-size-2xs);
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     opacity: 0.5;
 }
 
@@ -4943,13 +5001,13 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .share-card-actions .terminal-btn {
-    border-color: var(--modal-accent-dim);
-    color: var(--modal-accent);
+    border-color: var(--ui-dim-color);
+    color: var(--ui-fg-color);
 }
 
 .share-card-actions .terminal-btn:hover {
-    border-color: var(--modal-accent);
-    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
+    border-color: var(--ui-fg-color);
+    background-color: var(--ui-bg-translucent);
 }
 
 /* Responsive adjustments for pending shares */
@@ -4968,7 +5026,7 @@ div.sheet__sidebar.ui-theme-pink {
         height: auto;
         aspect-ratio: 4 / 3;
         border-right: none;
-        border-bottom: 1px solid var(--modal-accent-dim);
+        border-bottom: 1px solid var(--ui-dim-color);
     }
     
     .share-card-portrait {
@@ -4992,8 +5050,8 @@ div.sheet__sidebar.ui-theme-pink {
     align-items: center;
     gap: 0.25rem;
     background: none;
-    border: 1px solid var(--modal-accent-dim);
-    color: var(--modal-accent-dim);
+    border: 1px solid var(--ui-dim-color);
+    color: var(--ui-dim-color);
     padding: 0.25rem 0.75rem;
     font-family: var(--font-family);
     font-size: var(--font-size-sm);
@@ -5004,9 +5062,9 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .modal-back-btn:hover {
-    border-color: var(--modal-accent);
-    color: var(--modal-accent);
-    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
+    border-color: var(--ui-fg-color);
+    color: var(--ui-fg-color);
+    background-color: var(--ui-bg-translucent);
 }
 
 .modal-back-btn .back-arrow {
@@ -5075,11 +5133,11 @@ div.sheet__sidebar.ui-theme-pink {
     flex-wrap: wrap;
     gap: var(--spacing-xs);
     padding: var(--spacing-sm) 0 8px 0;
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     font-family: var(--font-family);
     font-size: var(--font-size-sm);
     margin-bottom: var(--spacing-md);
-    border-bottom: 1px solid var(--modal-accent-dim);
+    border-bottom: 1px solid var(--ui-dim-color);
 }
 
 .spell-picker-info-text {
@@ -5088,7 +5146,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* Inline count display x/y */
 .spell-picker-count {
-    color: var(--modal-accent-dim);
+    color: var(--ui-dim-color);
     font-size: var(--font-size-sm);
     margin-left: var(--spacing-sm);
 }
@@ -5129,8 +5187,8 @@ div.sheet__sidebar.ui-theme-pink {
 .spell-picker-filters .selector-trigger {
     height: 100%;
     min-width: 140px;
-    border-color: var(--modal-accent-dim);
-    color: var(--modal-accent);
+    border-color: var(--ui-dim-color);
+    color: var(--ui-fg-color);
 }
 
 /* Hide caret for spell school selector */
@@ -5139,37 +5197,37 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .spell-picker-filters .selector-trigger:hover {
-    border-color: var(--modal-accent);
-    color: var(--modal-accent);
-    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
+    border-color: var(--ui-fg-color);
+    color: var(--ui-fg-color);
+    background-color: var(--ui-bg-translucent);
 }
 
 .spell-picker-filters .selector-trigger.is-open {
-    border-color: var(--modal-accent-dim);
-    color: var(--modal-accent-dim);
+    border-color: var(--ui-dim-color);
+    color: var(--ui-dim-color);
 }
 
 .spell-picker-filters .selector-menu {
-    border-color: var(--modal-accent);
+    border-color: var(--ui-fg-color);
     background: var(--terminal-bg);
 }
 
 .spell-picker-filters .selector-option {
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
 }
 
 .spell-picker-filters .selector-option:hover,
 .spell-picker-filters .selector-option:focus {
-    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.15);
-    color: var(--modal-accent);
+    background-color: color-mix(in srgb, var(--ui-primary-bg-color) 15%, transparent);
+    color: var(--ui-fg-color);
 }
 
 .spell-picker-filters .selector-option.is-selected {
-    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1);
+    background-color: var(--ui-bg-translucent);
 }
 
 .spell-picker-filters .selector-option.is-selected::before {
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
 }
 
 .spell-picker-list {
@@ -5186,7 +5244,7 @@ div.sheet__sidebar.ui-theme-pink {
     align-items: flex-start;
     gap: 16px;
     padding: 16px;
-    border-bottom: 1px solid hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.3);
+    border-bottom: 1px solid color-mix(in srgb, var(--ui-dim-color) 30%, transparent);
     cursor: pointer;
     transition: background-color 0.15s ease;
 }
@@ -5196,16 +5254,16 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .spell-picker-item:hover {
-    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.1);
+    background-color: var(--ui-bg-translucent);
 }
 
 .spell-picker-item.is-selected {
-    background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.15);
+    background-color: color-mix(in srgb, var(--ui-primary-bg-color) 15%, transparent);
 }
 
 .spell-picker-item.is-existing {
     /* Visual indicator that spell is currently on character - but still selectable */
-    border-left: 2px solid var(--modal-accent);
+    border-left: 2px solid var(--ui-fg-color);
 }
 
 /* Badge showing spell is currently on character */
@@ -5215,7 +5273,7 @@ div.sheet__sidebar.ui-theme-pink {
     text-transform: uppercase;
     padding: 1px 4px;
     margin-left: 6px;
-    background: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.3);
+    background: color-mix(in srgb, var(--ui-dim-color) 30%, transparent);
     border-radius: 2px;
     vertical-align: middle;
 }
@@ -5228,15 +5286,15 @@ div.sheet__sidebar.ui-theme-pink {
     margin-top: 4px;
     -webkit-appearance: none;
     appearance: none;
-    border: 1px solid var(--modal-accent-dim);
+    border: 1px solid var(--ui-dim-color);
     background: transparent;
     cursor: pointer;
     position: relative;
 }
 
 .spell-picker-checkbox:checked {
-    border-color: var(--modal-accent);
-    background-color: var(--modal-accent);
+    border-color: var(--ui-fg-color);
+    background-color: var(--ui-fg-color);
 }
 
 .spell-picker-checkbox:checked::after {
@@ -5269,27 +5327,27 @@ div.sheet__sidebar.ui-theme-pink {
 
 .spell-picker-item-name {
     font-weight: var(--font-weight-normal);
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     font-size: var(--font-size-sm);
 }
 
 .spell-picker-item-school {
     font-size: var(--font-size-xs);
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     font-style: italic;
     opacity: 0.7;
 }
 
 .spell-picker-item-meta {
     font-size: var(--font-size-2xs);
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     opacity: 0.6;
     margin-top: 2px;
 }
 
 .spell-picker-item-desc {
     font-size: var(--font-size-xs);
-    color: var(--modal-accent-dim);
+    color: var(--ui-dim-color);
     margin-top: var(--spacing-xs);
     line-height: var(--line-height-normal);
     /* Truncate long descriptions */
@@ -5308,23 +5366,23 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .spell-picker-selected-count {
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     font-size: var(--font-size-sm);
     transition: color 0.2s ease;
 }
 
 .spell-picker-selected-count.at-limit {
-    color: var(--modal-accent, #ffd700);
+    color: var(--terminal-warning);
     font-weight: var(--font-weight-normal);
 }
 
 .spell-picker-info.at-limit {
-    color: var(--modal-accent, #ffd700);
+    color: var(--terminal-warning);
 }
 
 .spell-picker-selected-count.over-limit,
 .spell-picker-info.over-limit {
-    color: var(--modal-accent, #ffd700);
+    color: var(--terminal-warning);
     font-weight: var(--font-weight-normal);
 }
 
@@ -5370,7 +5428,7 @@ div.sheet__sidebar.ui-theme-pink {
 .spell-picker-empty {
     padding: var(--spacing-lg);
     text-align: center;
-    color: var(--modal-accent-dim);
+    color: var(--ui-dim-color);
 }
 
 /* Spell limits summary in edit modal */
@@ -5378,14 +5436,14 @@ div.sheet__sidebar.ui-theme-pink {
     padding: var(--spacing-sm) var(--spacing-md);
     margin-bottom: var(--spacing-sm);
     font-size: var(--font-size-sm);
-    color: var(--modal-accent);
-    background: rgba(var(--modal-accent-rgb, 255, 215, 0), 0.08);
+    color: var(--ui-fg-color);
+    background: var(--ui-bg-translucent);
     border-radius: 4px;
-    border-left: 3px solid var(--modal-accent);
+    border-left: 3px solid var(--ui-fg-color);
 }
 
 .spell-limits-summary.at-limit {
-    color: var(--modal-accent, #ffd700);
+    color: var(--terminal-warning);
     padding: 0;
     background: none;
     border: none;
@@ -5393,8 +5451,8 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .spell-limits-summary.over-limit {
-    color: var(--modal-accent, #ffd700);
-    border-left-color: var(--modal-accent, #ffd700);
+    color: var(--terminal-warning);
+    border-left-color: var(--terminal-warning);
     font-weight: var(--font-weight-normal);
 }
 
@@ -5419,8 +5477,8 @@ div.sheet__sidebar.ui-theme-pink {
     align-items: center;
     gap: 4px;
     padding: 2px 8px;
-    background: var(--modal-accent-dim);
-    border: 1px solid var(--modal-accent);
+    background: var(--ui-dim-color);
+    border: 1px solid var(--ui-fg-color);
     border-radius: var(--border-radius);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-normal);
@@ -5430,7 +5488,7 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .spell-tag:hover {
-    background: var(--modal-accent);
+    background: var(--ui-primary-bg-color);
     opacity: 1;
 }
 
@@ -5450,7 +5508,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* Spell edit tags - use sheet-spell-tag style with yellow modal theme */
 .spell-edit-tag {
-    background: var(--modal-accent-dim) !important;
+    background: var(--ui-dim-color) !important;
     color: #1a1a1a !important;
     border: none;
     opacity: 0.85;
@@ -5468,8 +5526,8 @@ div.sheet__sidebar.ui-theme-pink {
 /* Yellow-themed tooltips for spell edit modal */
 .spell-edit-tag .custom-tooltip {
     background-color: rgba(0, 0, 0, 0.9);
-    color: var(--modal-accent);
-    border: 1px solid var(--modal-accent-dim);
+    color: var(--ui-fg-color);
+    border: 1px solid var(--ui-dim-color);
     box-shadow: 0 0 8px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.4);
 }
 
@@ -5502,9 +5560,9 @@ div.sheet__sidebar.ui-theme-pink {
     align-items: center;
     padding: 2px 10px;
     background: transparent;
-    border: 1px solid var(--modal-accent-dim);
+    border: 1px solid var(--ui-dim-color);
     border-radius: var(--border-radius);
-    color: var(--modal-accent);
+    color: var(--ui-fg-color);
     font-family: var(--font-family);
     font-size: var(--font-size-xs);
     cursor: pointer;
@@ -5512,7 +5570,7 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .spell-add-btn-inline:hover {
-    background-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-dim), 0.10);
+    background-color: var(--ui-bg-translucent);
     border-color: var(--ui-fg-color);
     color: var(--ui-fg-color);
 }

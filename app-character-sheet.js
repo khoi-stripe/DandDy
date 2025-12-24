@@ -712,17 +712,19 @@ const CharacterSheet = (window.CharacterSheet = {
     }
 
     // Manager-only: Navigation buttons in header
-    // - "Minimize" to go back to grid view
-    // - "Maximize" to expand campaign panel (hidden in sheet-campaign view via CSS)
+    // - "Collapse" to go back to grid view
+    // - "Expand" to expand campaign panel (hidden in sheet-campaign view via CSS)
+    // Desktop: icon-only, expands to show label on hover
+    // Mobile: icon-only always
     const charactersButtonHtml =
       context === 'manager' && hasValidManagerId
         ? `
         <button
-          class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-characters hide-on-mobile"
+          class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-characters sheet-nav-btn--expandable"
           type="button"
           onclick="ExpandedView.collapse()"
           title="Return to character grid"
-        >Minimize</button>
+        ><span class="sheet-nav-btn__icon">↙</span><span class="sheet-nav-btn__label">Collapse</span></button>
       `
         : '';
 
@@ -730,11 +732,11 @@ const CharacterSheet = (window.CharacterSheet = {
       context === 'manager' && hasValidManagerId
         ? `
         <button
-          class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-campaign hide-on-mobile"
+          class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-campaign sheet-nav-btn--expandable"
           type="button"
           onclick="ExpandedView.expand()"
           title="View campaign info"
-        >Maximize</button>
+        ><span class="sheet-nav-btn__icon">↗</span><span class="sheet-nav-btn__label">Expand</span></button>
       `
         : '';
 
