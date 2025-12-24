@@ -1069,8 +1069,8 @@ const ExpandedView = (window.ExpandedView = {
 
     /** Load campaign panel content for the current character */
     async _loadCampaignPanel() {
-        // Target the sheet__sidebar inside sheet__layout
-        const panel = document.querySelector('.sheet__sidebar') || document.getElementById('campaignPanel');
+        // Target the sidebar__content inside sheet__sidebar
+        const panel = document.querySelector('.sidebar__content') || document.querySelector('.sheet__sidebar') || document.getElementById('campaignPanel');
         if (!panel) {
             console.warn('Campaign panel element not found');
             return;
@@ -3469,7 +3469,7 @@ const MobileView = {
     /** Render campaign content into the mobile container */
     _renderCampaignContent(container) {
         // Get the campaign panel slot content from desktop (if available)
-        const campaignSlot = document.querySelector('.sheet__sidebar');
+        const campaignSlot = document.querySelector('.sidebar__content') || document.querySelector('.sheet__sidebar');
         
         if (campaignSlot && campaignSlot.innerHTML.trim()) {
             // Clone the campaign content from desktop
@@ -4628,7 +4628,7 @@ async function viewCharacter(id, options = {}) {
         UI.showCharacterSheet(character);
         
         // Load campaign panel when switching characters (shown at bottom of sheet in grid view)
-        const campaignSlot = document.querySelector('.sheet__sidebar');
+        const campaignSlot = document.querySelector('.sidebar__content') || document.querySelector('.sheet__sidebar');
         if (campaignSlot) {
             // Show skeleton loader while fetching campaign data
             campaignSlot.innerHTML = ExpandedView._renderCampaignSkeleton();

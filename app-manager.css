@@ -305,13 +305,10 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 /* ===== EXPANDING STATE (loading overlay during expand transition) ===== */
-/* Hide grid content while expanding to prevent position flash */
-.split-layout.is-expanding .sheet-campaign-grid,
-.split-layout.is-expanding .sheet__layout {
-    opacity: 0;
-}
+/* Sheet stays visible during expansion - only sidebar shows loading */
+/* The sheet content is already loaded, so we keep it visible while campaign loads */
 
-/* Expanding loading overlay */
+/* Hide the full-page loading overlay (no longer used during expansion) */
 /* BEM alias: .sheet__loading */
 .expand-loading-overlay,
 .sheet__loading {
@@ -329,9 +326,40 @@ div.sheet__sidebar.ui-theme-pink {
     gap: var(--spacing-md);
 }
 
-.split-layout.is-expanding .expand-loading-overlay,
-.split-layout.is-expanding .sheet__loading {
+/* Sidebar loading overlay - shows only over campaign panel during expansion */
+.sidebar__loading {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    background: var(--terminal-bg);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+}
+
+/* Show sidebar loading during expansion */
+.split-layout.is-expanding .sidebar__loading {
     display: flex;
+}
+
+/* Make sidebar position relative so loading overlay positions correctly */
+.sheet__sidebar {
+    position: relative;
+}
+
+/* Sidebar content wrapper - contains the actual campaign panel content */
+.sidebar__content {
+    display: contents;
+}
+
+/* Hide sidebar content during expansion to show loading overlay */
+.split-layout.is-expanding .sidebar__content {
+    display: none;
 }
 
 /* Theme-aware cube for expand overlay */

@@ -88,6 +88,10 @@
           <sl-icon name="person-badge"></sl-icon>
           <span>Users</span>
         </button>
+        <button class="nav-item" data-section="themes">
+          <sl-icon name="palette2"></sl-icon>
+          <span>Themes</span>
+        </button>
         <button class="nav-item" data-section="settings">
           <sl-icon name="gear"></sl-icon>
           <span>Settings</span>
@@ -450,6 +454,248 @@
           </div>
         </section>
         
+        <!-- Themes Section -->
+        <section id="section-themes" class="content-section">
+          <div class="themes-layout">
+            <!-- Theme Palette Preview -->
+            <div class="themes-preview-section">
+              <sl-card class="themes-card">
+                <div slot="header">
+                  <sl-icon name="palette"></sl-icon>
+                  Available Color Themes
+                </div>
+                <div class="theme-palette-grid">
+                  <div class="theme-swatch" data-theme="green">
+                    <div class="swatch-color" style="--swatch-h: 120; --swatch-s: 100%; --swatch-l: 50%;"></div>
+                    <div class="swatch-label">Green</div>
+                    <div class="swatch-desc">Terminal</div>
+                  </div>
+                  <div class="theme-swatch" data-theme="teal">
+                    <div class="swatch-color" style="--swatch-h: 181; --swatch-s: 100%; --swatch-l: 41%;"></div>
+                    <div class="swatch-label">Teal</div>
+                    <div class="swatch-desc">Character Sheet</div>
+                  </div>
+                  <div class="theme-swatch" data-theme="yellow">
+                    <div class="swatch-color" style="--swatch-h: 48; --swatch-s: 100%; --swatch-l: 64%;"></div>
+                    <div class="swatch-label">Yellow</div>
+                    <div class="swatch-desc">Modal / Gold</div>
+                  </div>
+                  <div class="theme-swatch" data-theme="pink">
+                    <div class="swatch-color" style="--swatch-h: 330; --swatch-s: 85%; --swatch-l: 65%;"></div>
+                    <div class="swatch-label">Pink</div>
+                    <div class="swatch-desc">Campaign</div>
+                  </div>
+                  <div class="theme-swatch" data-theme="white">
+                    <div class="swatch-color" style="--swatch-h: 0; --swatch-s: 0%; --swatch-l: 90%;"></div>
+                    <div class="swatch-label">White</div>
+                    <div class="swatch-desc">Neutral</div>
+                  </div>
+                </div>
+              </sl-card>
+            </div>
+
+            <!-- Global Theme Settings -->
+            <div class="themes-global-section">
+              <sl-card class="themes-card">
+                <div slot="header">
+                  <sl-icon name="globe2"></sl-icon>
+                  Global Theme
+                </div>
+                <div class="theme-control-form">
+                  <p class="theme-hint">Set the overall default theme for the entire application.</p>
+                  <sl-select id="global-theme-select" label="App-Wide Theme" value="yellow" hoist>
+                    <sl-option value="green">
+                      <span class="option-swatch" style="--opt-h: 120; --opt-s: 100%; --opt-l: 50%;"></span>
+                      Green (Terminal)
+                    </sl-option>
+                    <sl-option value="teal">
+                      <span class="option-swatch" style="--opt-h: 181; --opt-s: 100%; --opt-l: 41%;"></span>
+                      Teal (Cyan)
+                    </sl-option>
+                    <sl-option value="yellow">
+                      <span class="option-swatch" style="--opt-h: 48; --opt-s: 100%; --opt-l: 64%;"></span>
+                      Yellow (Gold)
+                    </sl-option>
+                    <sl-option value="pink">
+                      <span class="option-swatch" style="--opt-h: 330; --opt-s: 85%; --opt-l: 65%;"></span>
+                      Pink
+                    </sl-option>
+                    <sl-option value="white">
+                      <span class="option-swatch" style="--opt-h: 0; --opt-s: 0%; --opt-l: 90%;"></span>
+                      White (Neutral)
+                    </sl-option>
+                  </sl-select>
+                  <sl-checkbox id="global-theme-sync" checked>
+                    Apply global theme to all sections
+                  </sl-checkbox>
+                </div>
+              </sl-card>
+            </div>
+
+            <!-- Section-Specific Themes -->
+            <div class="themes-sections-area">
+              <sl-card class="themes-card themes-sections-card">
+                <div slot="header">
+                  <sl-icon name="grid-3x3"></sl-icon>
+                  Section Themes
+                  <sl-badge id="section-override-count" variant="neutral" pill>0 overrides</sl-badge>
+                </div>
+                <p class="theme-hint">Customize themes for specific areas of the app. Uncheck "Apply global" above to enable individual overrides.</p>
+                
+                <div class="section-themes-grid">
+                  <!-- Narrator Panel -->
+                  <div class="section-theme-row">
+                    <div class="section-theme-info">
+                      <sl-icon name="chat-square-text"></sl-icon>
+                      <div>
+                        <span class="section-name">Narrator</span>
+                        <span class="section-desc">Character builder left panel</span>
+                      </div>
+                    </div>
+                    <sl-select id="theme-narrator" placeholder="Use Global" size="small" clearable hoist disabled>
+                      <sl-option value="green">Green</sl-option>
+                      <sl-option value="teal">Teal</sl-option>
+                      <sl-option value="yellow">Yellow</sl-option>
+                      <sl-option value="pink">Pink</sl-option>
+                      <sl-option value="white">White</sl-option>
+                    </sl-select>
+                  </div>
+
+                  <!-- Character Sheet -->
+                  <div class="section-theme-row">
+                    <div class="section-theme-info">
+                      <sl-icon name="file-earmark-person"></sl-icon>
+                      <div>
+                        <span class="section-name">Character Sheet</span>
+                        <span class="section-desc">Stat blocks, abilities, skills</span>
+                      </div>
+                    </div>
+                    <sl-select id="theme-sheet" placeholder="Use Global" size="small" clearable hoist disabled>
+                      <sl-option value="green">Green</sl-option>
+                      <sl-option value="teal">Teal</sl-option>
+                      <sl-option value="yellow">Yellow</sl-option>
+                      <sl-option value="pink">Pink</sl-option>
+                      <sl-option value="white">White</sl-option>
+                    </sl-select>
+                  </div>
+
+                  <!-- Character Grid -->
+                  <div class="section-theme-row">
+                    <div class="section-theme-info">
+                      <sl-icon name="grid"></sl-icon>
+                      <div>
+                        <span class="section-name">Character Grid</span>
+                        <span class="section-desc">Character cards in manager</span>
+                      </div>
+                    </div>
+                    <sl-select id="theme-grid" placeholder="Use Global" size="small" clearable hoist disabled>
+                      <sl-option value="green">Green</sl-option>
+                      <sl-option value="teal">Teal</sl-option>
+                      <sl-option value="yellow">Yellow</sl-option>
+                      <sl-option value="pink">Pink</sl-option>
+                      <sl-option value="white">White</sl-option>
+                    </sl-select>
+                  </div>
+
+                  <!-- Campaign Area -->
+                  <div class="section-theme-row">
+                    <div class="section-theme-info">
+                      <sl-icon name="map"></sl-icon>
+                      <div>
+                        <span class="section-name">Campaign</span>
+                        <span class="section-desc">Campaign notes sidebar</span>
+                      </div>
+                    </div>
+                    <sl-select id="theme-campaign" placeholder="Use Global" size="small" clearable hoist disabled>
+                      <sl-option value="green">Green</sl-option>
+                      <sl-option value="teal">Teal</sl-option>
+                      <sl-option value="yellow">Yellow</sl-option>
+                      <sl-option value="pink">Pink</sl-option>
+                      <sl-option value="white">White</sl-option>
+                    </sl-select>
+                  </div>
+
+                  <!-- Background Glow -->
+                  <div class="section-theme-row">
+                    <div class="section-theme-info">
+                      <sl-icon name="lightbulb"></sl-icon>
+                      <div>
+                        <span class="section-name">Background Glow</span>
+                        <span class="section-desc">Ambient radial gradient</span>
+                      </div>
+                    </div>
+                    <sl-select id="theme-glow" placeholder="Use Global" size="small" clearable hoist disabled>
+                      <sl-option value="green">Green</sl-option>
+                      <sl-option value="teal">Teal</sl-option>
+                      <sl-option value="yellow">Yellow</sl-option>
+                      <sl-option value="pink">Pink</sl-option>
+                      <sl-option value="white">White</sl-option>
+                    </sl-select>
+                  </div>
+                </div>
+              </sl-card>
+            </div>
+
+            <!-- Theme Preview & Actions -->
+            <div class="themes-actions-section">
+              <sl-card class="themes-card">
+                <div slot="header">
+                  <sl-icon name="eye"></sl-icon>
+                  Live Preview
+                </div>
+                <div class="theme-preview-box" id="theme-preview-box">
+                  <div class="preview-header">Character Manager</div>
+                  <div class="preview-content">
+                    <div class="preview-grid-area">
+                      <div class="preview-card"></div>
+                      <div class="preview-card"></div>
+                      <div class="preview-card active"></div>
+                    </div>
+                    <div class="preview-sheet-area">
+                      <div class="preview-stat-box"></div>
+                      <div class="preview-stat-box"></div>
+                    </div>
+                    <div class="preview-campaign-area">
+                      <div class="preview-line"></div>
+                      <div class="preview-line short"></div>
+                    </div>
+                  </div>
+                  <div class="preview-glow"></div>
+                </div>
+              </sl-card>
+
+              <sl-card class="themes-card">
+                <div slot="header">
+                  <sl-icon name="download"></sl-icon>
+                  Import / Export
+                </div>
+                <div class="theme-actions-form">
+                  <sl-button id="theme-export-btn" variant="default" size="small">
+                    <sl-icon slot="prefix" name="box-arrow-up"></sl-icon>
+                    Export Theme Config
+                  </sl-button>
+                  <sl-button id="theme-import-btn" variant="default" size="small">
+                    <sl-icon slot="prefix" name="box-arrow-in-down"></sl-icon>
+                    Import Theme Config
+                  </sl-button>
+                  <input type="file" id="theme-import-file" accept=".json" hidden>
+                </div>
+              </sl-card>
+
+              <div class="theme-save-actions">
+                <sl-button id="theme-reset-btn" variant="default">
+                  <sl-icon slot="prefix" name="arrow-counterclockwise"></sl-icon>
+                  Reset to Defaults
+                </sl-button>
+                <sl-button id="theme-save-btn" variant="primary" size="large">
+                  <sl-icon slot="prefix" name="check-lg"></sl-icon>
+                  Save Theme Settings
+                </sl-button>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- Settings Section -->
         <section id="section-settings" class="content-section">
           <div class="settings-grid">

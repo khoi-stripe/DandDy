@@ -391,6 +391,7 @@
       characters: 'Character Management',
       prompts: 'Prompt Configuration',
       users: 'User Management',
+      themes: 'Theme Management',
       settings: 'System Settings',
     };
     $('section-title').textContent = titles[sectionId] || 'Admin';
@@ -408,6 +409,9 @@
         break;
       case 'users':
         loadUsers();
+        break;
+      case 'themes':
+        loadThemeSettings();
         break;
       case 'settings':
         loadSettings();
@@ -1660,6 +1664,315 @@
   }
 
   // ========================================
+  // THEME MANAGEMENT
+  // ========================================
+  
+  const THEME_CONFIG_KEY = 'danddy_theme_config';
+  
+  // Default theme configuration
+  const DEFAULT_THEME_CONFIG = {
+    global: 'yellow',
+    syncAll: true,
+    sections: {
+      narrator: null,  // null = use global
+      sheet: null,
+      grid: null,
+      campaign: null,
+      glow: null,
+    },
+  };
+  
+  // Available themes with their HSL values for preview
+  const AVAILABLE_THEMES = {
+    green: { h: 120, s: '100%', l: '50%', name: 'Green', desc: 'Terminal' },
+    teal: { h: 181, s: '100%', l: '41%', name: 'Teal', desc: 'Character Sheet' },
+    yellow: { h: 48, s: '100%', l: '64%', name: 'Yellow', desc: 'Gold' },
+    pink: { h: 330, s: '85%', l: '65%', name: 'Pink', desc: 'Campaign' },
+    white: { h: 0, s: '0%', l: '90%', name: 'White', desc: 'Neutral' },
+  };
+  
+  function loadThemeSettings() {
+    log('Loading theme settings');
+    
+    const config = getThemeConfig();
+    
+    // Set global theme select
+    const globalSelect = $('global-theme-select');
+    if (globalSelect) {
+      globalSelect.value = config.global || 'yellow';
+    }
+    
+    // Set sync checkbox
+    const syncCheckbox = $('global-theme-sync');
+    if (syncCheckbox) {
+      syncCheckbox.checked = config.syncAll !== false;
+    }
+    
+    // Set section selects
+    const sections = ['narrator', 'sheet', 'grid', 'campaign', 'glow'];
+    sections.forEach(section => {
+      const select = $(`theme-${section}`);
+      if (select) {
+        select.value = config.sections?.[section] || '';
+        select.disabled = config.syncAll !== false;
+      }
+    });
+    
+    // Update override count badge
+    updateOverrideCount();
+    
+    // Update preview
+    updateThemePreview();
+    
+    // Update swatch selection
+    updateSwatchSelection(config.global);
+  }
+  
+  function getThemeConfig() {
+    try {
+      const stored = localStorage.getItem(THEME_CONFIG_KEY);
+      if (stored) {
+        return { ...DEFAULT_THEME_CONFIG, ...JSON.parse(stored) };
+      }
+    } catch (err) {
+      log('Error loading theme config:', err);
+    }
+    return { ...DEFAULT_THEME_CONFIG };
+  }
+  
+  function saveThemeConfig(config) {
+    try {
+      localStorage.setItem(THEME_CONFIG_KEY, JSON.stringify(config));
+      log('Theme config saved:', config);
+      return true;
+    } catch (err) {
+      log('Error saving theme config:', err);
+      return false;
+    }
+  }
+  
+  function updateOverrideCount() {
+    const config = getThemeConfig();
+    let count = 0;
+    
+    if (!config.syncAll && config.sections) {
+      Object.values(config.sections).forEach(val => {
+        if (val) count++;
+      });
+    }
+    
+    const badge = $('section-override-count');
+    if (badge) {
+      badge.textContent = `${count} override${count !== 1 ? 's' : ''}`;
+      badge.variant = count > 0 ? 'primary' : 'neutral';
+    }
+  }
+  
+  function updateSwatchSelection(selectedTheme) {
+    $$('.theme-swatch').forEach(swatch => {
+      swatch.classList.toggle('selected', swatch.dataset.theme === selectedTheme);
+    });
+  }
+  
+  function updateThemePreview() {
+    const config = getThemeConfig();
+    const previewBox = $('theme-preview-box');
+    if (!previewBox) return;
+    
+    // Get effective themes for each section
+    const globalTheme = config.global || 'yellow';
+    const gridTheme = config.syncAll ? globalTheme : (config.sections?.grid || globalTheme);
+    const sheetTheme = config.syncAll ? globalTheme : (config.sections?.sheet || globalTheme);
+    const campaignTheme = config.syncAll ? globalTheme : (config.sections?.campaign || globalTheme);
+    const glowTheme = config.syncAll ? globalTheme : (config.sections?.glow || globalTheme);
+    
+    // Update preview colors
+    const gridArea = previewBox.querySelector('.preview-grid-area');
+    const sheetArea = previewBox.querySelector('.preview-sheet-area');
+    const campaignArea = previewBox.querySelector('.preview-campaign-area');
+    const glowArea = previewBox.querySelector('.preview-glow');
+    
+    if (gridArea) {
+      const t = AVAILABLE_THEMES[gridTheme];
+      gridArea.style.setProperty('--preview-h', t.h);
+      gridArea.style.setProperty('--preview-s', t.s);
+      gridArea.style.setProperty('--preview-l', t.l);
+    }
+    
+    if (sheetArea) {
+      const t = AVAILABLE_THEMES[sheetTheme];
+      sheetArea.style.setProperty('--preview-h', t.h);
+      sheetArea.style.setProperty('--preview-s', t.s);
+      sheetArea.style.setProperty('--preview-l', t.l);
+    }
+    
+    if (campaignArea) {
+      const t = AVAILABLE_THEMES[campaignTheme];
+      campaignArea.style.setProperty('--preview-h', t.h);
+      campaignArea.style.setProperty('--preview-s', t.s);
+      campaignArea.style.setProperty('--preview-l', t.l);
+    }
+    
+    if (glowArea) {
+      const t = AVAILABLE_THEMES[glowTheme];
+      glowArea.style.setProperty('--glow-h', t.h);
+      glowArea.style.setProperty('--glow-s', t.s);
+      glowArea.style.setProperty('--glow-l', t.l);
+    }
+  }
+  
+  function handleGlobalThemeChange(e) {
+    const config = getThemeConfig();
+    config.global = e.target.value;
+    saveThemeConfig(config);
+    
+    updateSwatchSelection(config.global);
+    updateThemePreview();
+  }
+  
+  function handleSyncToggle(e) {
+    const config = getThemeConfig();
+    config.syncAll = e.target.checked;
+    saveThemeConfig(config);
+    
+    // Enable/disable section selects
+    const sections = ['narrator', 'sheet', 'grid', 'campaign', 'glow'];
+    sections.forEach(section => {
+      const select = $(`theme-${section}`);
+      if (select) {
+        select.disabled = config.syncAll;
+      }
+    });
+    
+    updateOverrideCount();
+    updateThemePreview();
+  }
+  
+  function handleSectionThemeChange(section, value) {
+    const config = getThemeConfig();
+    if (!config.sections) config.sections = {};
+    config.sections[section] = value || null;
+    saveThemeConfig(config);
+    
+    updateOverrideCount();
+    updateThemePreview();
+  }
+  
+  function handleSwatchClick(theme) {
+    const globalSelect = $('global-theme-select');
+    if (globalSelect) {
+      globalSelect.value = theme;
+      // Trigger change event
+      globalSelect.dispatchEvent(new Event('sl-change'));
+    }
+  }
+  
+  function saveThemeSettings() {
+    const globalSelect = $('global-theme-select');
+    const syncCheckbox = $('global-theme-sync');
+    
+    const config = {
+      global: globalSelect?.value || 'yellow',
+      syncAll: syncCheckbox?.checked !== false,
+      sections: {},
+    };
+    
+    const sections = ['narrator', 'sheet', 'grid', 'campaign', 'glow'];
+    sections.forEach(section => {
+      const select = $(`theme-${section}`);
+      config.sections[section] = select?.value || null;
+    });
+    
+    if (saveThemeConfig(config)) {
+      showToast('Theme settings saved', 'success');
+      
+      // Dispatch event for other parts of the app to pick up
+      window.dispatchEvent(new CustomEvent('danddy:themeConfigChanged', { detail: config }));
+    } else {
+      showToast('Failed to save theme settings', 'danger');
+    }
+  }
+  
+  function resetThemeSettings() {
+    if (!confirm('Reset all theme settings to defaults?')) return;
+    
+    saveThemeConfig(DEFAULT_THEME_CONFIG);
+    loadThemeSettings();
+    showToast('Theme settings reset to defaults', 'success');
+    
+    // Dispatch event
+    window.dispatchEvent(new CustomEvent('danddy:themeConfigChanged', { detail: DEFAULT_THEME_CONFIG }));
+  }
+  
+  function exportThemeConfig() {
+    const config = getThemeConfig();
+    const json = JSON.stringify(config, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `danddy-theme-config-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast('Theme configuration exported', 'success');
+  }
+  
+  function importThemeConfig() {
+    $('theme-import-file').click();
+  }
+  
+  function handleThemeImport(e) {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        
+        // Validate structure
+        if (typeof imported.global !== 'string' || !AVAILABLE_THEMES[imported.global]) {
+          throw new Error('Invalid global theme');
+        }
+        
+        const config = {
+          global: imported.global,
+          syncAll: imported.syncAll !== false,
+          sections: {},
+        };
+        
+        if (imported.sections && typeof imported.sections === 'object') {
+          const sections = ['narrator', 'sheet', 'grid', 'campaign', 'glow'];
+          sections.forEach(section => {
+            const val = imported.sections[section];
+            if (val && AVAILABLE_THEMES[val]) {
+              config.sections[section] = val;
+            }
+          });
+        }
+        
+        saveThemeConfig(config);
+        loadThemeSettings();
+        showToast('Theme configuration imported', 'success');
+        
+        // Dispatch event
+        window.dispatchEvent(new CustomEvent('danddy:themeConfigChanged', { detail: config }));
+        
+      } catch (err) {
+        log('Theme import error:', err);
+        showToast(`Import failed: ${err.message}`, 'danger');
+      }
+    };
+    
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  // ========================================
   // SETTINGS
   // ========================================
   
@@ -2034,6 +2347,31 @@
     $('batch-reset-limits').addEventListener('click', batchResetLimits);
     $('batch-make-admin').addEventListener('click', () => batchUpdateRole('admin'));
     $('batch-demote').addEventListener('click', () => batchUpdateRole('player'));
+    
+    // Themes
+    $('global-theme-select')?.addEventListener('sl-change', handleGlobalThemeChange);
+    $('global-theme-sync')?.addEventListener('sl-change', handleSyncToggle);
+    
+    // Section theme selects
+    const sectionSelects = ['narrator', 'sheet', 'grid', 'campaign', 'glow'];
+    sectionSelects.forEach(section => {
+      const select = $(`theme-${section}`);
+      if (select) {
+        select.addEventListener('sl-change', (e) => handleSectionThemeChange(section, e.target.value));
+      }
+    });
+    
+    // Theme swatches
+    $$('.theme-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => handleSwatchClick(swatch.dataset.theme));
+    });
+    
+    // Theme actions
+    $('theme-save-btn')?.addEventListener('click', saveThemeSettings);
+    $('theme-reset-btn')?.addEventListener('click', resetThemeSettings);
+    $('theme-export-btn')?.addEventListener('click', exportThemeConfig);
+    $('theme-import-btn')?.addEventListener('click', importThemeConfig);
+    $('theme-import-file')?.addEventListener('change', handleThemeImport);
     
     // Settings
     $('settings-save-btn').addEventListener('click', saveSettings);

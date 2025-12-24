@@ -251,7 +251,19 @@
                         <!-- Character sheet will be rendered here -->
                     </div>
                     <div class="sheet__sidebar">
-                        <!-- Campaign panel layout will be inserted here -->
+                        <!-- Sidebar loading overlay (shown during expand transition) -->
+                        <div class="sidebar__loading">
+                            <div class="panel-loading-cube-container">
+                                <div class="panel-loading-cube">
+                                    <i></i><i></i><i></i><i></i><i></i><i></i>
+                                </div>
+                            </div>
+                            <div class="panel-loading-text">Loading campaign...</div>
+                        </div>
+                        <!-- Campaign panel content container -->
+                        <div class="sidebar__content">
+                            <!-- Campaign panel layout will be inserted here -->
+                        </div>
                     </div>
                 </div>
                 <!-- Expand loading overlay (shown during expand transition) -->
