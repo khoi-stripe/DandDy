@@ -1075,9 +1075,10 @@ const ExpandedView = (window.ExpandedView = {
             return;
         }
         
-        // Apply white theme to campaign panel
-        panel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-pink', 'theme-pink', 'ui-theme-green', 'theme-green', 'ui-theme-yellow', 'theme-yellow', 'ui-theme-teal', 'theme-teal');
-        panel.classList.add('ui-theme-white', 'theme-white');
+        // Theme inherits from parent - no need to set explicitly
+        // To override campaign panel theme, set theme classes on .campaign-panel-slot in HTML
+        // panel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-pink', 'theme-pink', 'ui-theme-green', 'theme-green', 'ui-theme-yellow', 'theme-yellow', 'ui-theme-teal', 'theme-teal');
+        // panel.classList.add('ui-theme-white', 'theme-white');
         
         const characterId = AppState.selectedCharacterId;
         if (!characterId) {
@@ -3994,11 +3995,10 @@ const UI = {
             console.log('🎨 RENDER: Character names:', AppState.filteredCharacters.map(c => c.name).join(', '));
         }
         
-        // Apply white theme to character grid panel
+        // Theme inherits from parent - no need to set explicitly
         const gridPanel = document.getElementById('characterGridPanel');
         if (gridPanel) {
-            gridPanel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-green', 'theme-green', 'ui-theme-teal', 'theme-teal', 'ui-theme-pink', 'theme-pink', 'ui-theme-yellow', 'theme-yellow');
-            gridPanel.classList.add('ui-theme-white', 'theme-white');
+            // (Theme classes removed - grid panel now inherits from parent)
             
             // #region agent log
             // Debug: Check search input computed styles after theme application
@@ -4019,8 +4019,8 @@ const UI = {
                                 computedColor,
                                 computedBorderColor,
                                 panelClasses,
-                                hasUiThemeYellow: gridPanel.classList.contains('ui-theme-yellow'),
-                                hasThemeYellow: gridPanel.classList.contains('theme-yellow')
+                                hasUiThemeWhite: gridPanel.classList.contains('ui-theme-white'),
+                                hasThemeWhite: gridPanel.classList.contains('theme-white')
                             },
                             timestamp: Date.now(),
                             sessionId: 'debug-session',
@@ -4252,14 +4252,8 @@ const UI = {
         sheetContainer.classList.remove('is-hidden');
         if (navBar) navBar.classList.remove('is-hidden');
         
-        // Apply pink theme to panel (so nav bar and sheet both inherit)
-        // Apply white theme to character sheet
-        if (sheetPanel) {
-            sheetPanel.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-green', 'theme-green', 'ui-theme-teal', 'theme-teal', 'ui-theme-pink', 'theme-pink', 'ui-theme-yellow', 'theme-yellow');
-            sheetPanel.classList.add('ui-theme-white', 'theme-white');
-        }
-        sheetContainer.classList.remove('ui-theme-white', 'theme-white', 'ui-theme-green', 'theme-green', 'ui-theme-teal', 'theme-teal', 'ui-theme-pink', 'theme-pink', 'ui-theme-yellow', 'theme-yellow');
-        sheetContainer.classList.add('ui-theme-white', 'theme-white');
+        // Theme inherits from parent - no need to set explicitly on sheet panel and container
+        // (Theme classes removed - sheet panel and container now inherit from parent)
         
         // Nav bar is kept visible but empty - the "← Characters" button is now inside the sheet header
         

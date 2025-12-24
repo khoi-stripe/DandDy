@@ -145,7 +145,7 @@
     <!-- Split Layout - shows 2 of 3 panels at a time -->
     <div class="split-layout" data-view="grid-sheet">
         <!-- Panel: Character Grid -->
-        <div class="panel panel-character-grid" id="characterGridPanel">
+        <div class="panel panel-character-grid ui-theme-white theme-white" id="characterGridPanel">
             <!-- Mobile Back Bar (shown when viewing character sheet on mobile) -->
             <div class="mobile-back-bar" id="mobileBackBar">
                 <a href="#" class="mobile-back-link" onclick="closeMobileSheet(); return false;">← All</a>
@@ -228,7 +228,7 @@
         </div>
 
         <!-- Panel: Character Sheet -->
-        <div class="panel panel-character-sheet" id="characterSheetPanel">
+        <div class="panel panel-character-sheet ui-theme-yellow theme-yellow" id="characterSheetPanel">
             <!-- Character Nav Bar (visible only in expanded view) -->
             <div class="character-nav-bar" id="characterNavBar">
                 <button class="nav-prev" id="navPrev" type="button">
@@ -245,12 +245,12 @@
                 </button>
             </div>
             <div class="sheet-placeholder"></div>
-            <div class="sheet-scroll-wrapper">
+            <div class="sheet-scroll-wrapper ui-theme-yellow theme-yellow">
                 <div class="sheet-campaign-grid">
                     <div id="characterSheet" class="character-sheet is-hidden">
                         <!-- Character sheet will be rendered here -->
                     </div>
-                    <div class="campaign-panel-slot">
+                    <div class="campaign-panel-slot ui-theme-white theme-white">
                         <!-- Campaign panel layout will be inserted here -->
                     </div>
                 </div>

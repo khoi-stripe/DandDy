@@ -213,7 +213,9 @@
 }
 
 /* More specific selector to override .character-sheet defaults */
-.character-sheet.ui-theme-green {
+.character-sheet.ui-theme-green,
+.right-panel.ui-theme-green .character-sheet,
+.sheet-scroll-wrapper.ui-theme-green .character-sheet {
   --ui-border-color: var(--terminal-border) !important;
   --ui-fg-color: var(--terminal-fg) !important;
   --ui-dim-color: var(--terminal-dim) !important;
@@ -265,7 +267,9 @@
 }
 
 /* More specific selector to override .character-sheet defaults */
-.character-sheet.ui-theme-pink {
+.character-sheet.ui-theme-pink,
+.right-panel.ui-theme-pink .character-sheet,
+.sheet-scroll-wrapper.ui-theme-pink .character-sheet {
   --ui-border-color: var(--campaign-accent) !important;
   --ui-fg-color: var(--campaign-accent) !important;
   --ui-dim-color: var(--campaign-accent-dim) !important;
@@ -291,15 +295,21 @@
 }
 
 /* Explicit scrollbar pseudo-element overrides for themed character sheets */
-.character-sheet.ui-theme-pink::-webkit-scrollbar-track {
+.character-sheet.ui-theme-pink::-webkit-scrollbar-track,
+.right-panel.ui-theme-pink .character-sheet::-webkit-scrollbar-track,
+.sheet-scroll-wrapper.ui-theme-pink .character-sheet::-webkit-scrollbar-track {
   background: hsl(var(--theme-pink-h), 70%, 7%) !important;
 }
 
-.character-sheet.ui-theme-pink::-webkit-scrollbar-thumb {
+.character-sheet.ui-theme-pink::-webkit-scrollbar-thumb,
+.right-panel.ui-theme-pink .character-sheet::-webkit-scrollbar-thumb,
+.sheet-scroll-wrapper.ui-theme-pink .character-sheet::-webkit-scrollbar-thumb {
   background-color: hsla(var(--theme-pink-h), calc(var(--theme-pink-s) * 0.67), var(--theme-pink-l-dim), 0.5) !important;
 }
 
-.character-sheet.ui-theme-pink::-webkit-scrollbar-thumb:hover {
+.character-sheet.ui-theme-pink::-webkit-scrollbar-thumb:hover,
+.right-panel.ui-theme-pink .character-sheet::-webkit-scrollbar-thumb:hover,
+.sheet-scroll-wrapper.ui-theme-pink .character-sheet::-webkit-scrollbar-thumb:hover {
   background-color: hsla(var(--theme-pink-h), var(--theme-pink-s), var(--theme-pink-l-bright), 0.9) !important;
 }
 
@@ -330,7 +340,9 @@
 }
 
 /* More specific selector to override .character-sheet defaults */
-.character-sheet.ui-theme-white {
+.character-sheet.ui-theme-white,
+.right-panel.ui-theme-white .character-sheet,
+.sheet-scroll-wrapper.ui-theme-white .character-sheet {
   --ui-border-color: var(--white-border) !important;
   --ui-fg-color: var(--white-fg) !important;
   --ui-dim-color: var(--white-dim) !important;
@@ -357,7 +369,8 @@
 
 /* More specific selector to override .character-sheet defaults */
 .character-sheet.ui-theme-yellow,
-.right-panel.ui-theme-yellow .character-sheet {
+.right-panel.ui-theme-yellow .character-sheet,
+.sheet-scroll-wrapper.ui-theme-yellow .character-sheet {
   --ui-border-color: var(--modal-accent) !important;
   --ui-fg-color: var(--modal-accent) !important;
   --ui-dim-color: var(--modal-accent-dim) !important;
@@ -383,17 +396,20 @@
 }
 
 .character-sheet.ui-theme-yellow::-webkit-scrollbar-track,
-.right-panel.ui-theme-yellow .character-sheet::-webkit-scrollbar-track {
+.right-panel.ui-theme-yellow .character-sheet::-webkit-scrollbar-track,
+.sheet-scroll-wrapper.ui-theme-yellow .character-sheet::-webkit-scrollbar-track {
   background: hsl(var(--theme-yellow-h), 70%, 7%) !important;
 }
 
 .character-sheet.ui-theme-yellow::-webkit-scrollbar-thumb,
-.right-panel.ui-theme-yellow .character-sheet::-webkit-scrollbar-thumb {
+.right-panel.ui-theme-yellow .character-sheet::-webkit-scrollbar-thumb,
+.sheet-scroll-wrapper.ui-theme-yellow .character-sheet::-webkit-scrollbar-thumb {
   background-color: hsla(var(--theme-yellow-h), calc(var(--theme-yellow-s) * 0.67), var(--theme-yellow-l-dim), 0.5) !important;
 }
 
 .character-sheet.ui-theme-yellow::-webkit-scrollbar-thumb:hover,
-.right-panel.ui-theme-yellow .character-sheet::-webkit-scrollbar-thumb:hover {
+.right-panel.ui-theme-yellow .character-sheet::-webkit-scrollbar-thumb:hover,
+.sheet-scroll-wrapper.ui-theme-yellow .character-sheet::-webkit-scrollbar-thumb:hover {
   background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.9) !important;
 }
 
@@ -556,10 +572,10 @@ body::before {
   transition: border-color 350ms ease;
 }
 
-/* Dim terminal outline when modal is open */
+/* Dim terminal outline when modal is open - uses current theme color */
 .terminal-frame:has(.modal.show:not(.closing)),
 .terminal-container:has(.modal.show:not(.closing)) {
-  border-color: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-dim), 0.5);
+  border-color: color-mix(in srgb, var(--ui-border-color) 50%, transparent);
 }
 
 .terminal-frame,
@@ -1332,21 +1348,9 @@ body::before {
   flex: 1 1 0;
   overflow-y: auto;
   min-height: 0;
-
-  /* Default teal UI theme tokens - prevents green fallback from root */
-  /* Theme classes (ui-theme-white, ui-theme-pink, etc.) will override these */
-  --ui-border-color: var(--sheet-accent);
-  --ui-fg-color: var(--sheet-accent);
-  --ui-dim-color: var(--sheet-accent-dim);
-  --ui-primary-bg-color: var(--sheet-accent);
-  --ui-on-primary-color: var(--terminal-bg);
-  --ui-bg-color: var(--terminal-bg);
-  --ui-bg-translucent: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1);
-
-  /* Teal scrollbars inside character sheets */
-  --scrollbar-track-color: hsl(var(--theme-teal-h), 70%, 7%);
-  --scrollbar-thumb-color: hsla(var(--theme-teal-h), calc(var(--theme-teal-s) * 0.67), var(--theme-teal-l-dim), 0.5);
-  --scrollbar-thumb-hover-color: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.9);
+  
+  /* No default theme tokens - inherits from parent container */
+  /* Set theme on parent: html, .sheet-scroll-wrapper, .right-panel, etc. */
 }
 
 /* Spell list spacing helpers used by shared-character-sheet.js */
