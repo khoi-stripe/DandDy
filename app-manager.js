@@ -1342,7 +1342,7 @@ const ExpandedView = (window.ExpandedView = {
                     // Make clickable if it's another user's character
                     const clickable = isOtherUser ? 'party-member--clickable' : '';
                     const clickHandler = isOtherUser 
-                        ? `onclick="CampaignUI.viewPartyMemberSheet(${char.id})"` 
+                        ? `onclick="CampaignUI.viewPartyMemberSheet(${char.id}, '${m.symbol || ''}')"` 
                         : '';
                     return `
                         <div class="party-member ${clickable}" ${clickHandler}>
@@ -2911,8 +2911,9 @@ const CampaignUI = (window.CampaignUI = {
     /**
      * View a party member's character sheet in a modal (view-only)
      * @param {number} characterId - The character ID to view
+     * @param {string} symbol - The party member's symbol (e.g., ▣, ◆)
      */
-    async viewPartyMemberSheet(characterId) {
+    async viewPartyMemberSheet(characterId, symbol = '') {
         // Remove any existing modal first to ensure fresh state
         const existingModal = document.getElementById('partyMemberSheetModal');
         if (existingModal) {
@@ -2978,10 +2979,11 @@ const CampaignUI = (window.CampaignUI = {
                         ? `<div class="party-member-modal-email">${Utils.escapeHtml(backendCharacter.owner_email)}</div>` 
                         : '';
                     
+                    const symbolPrefix = symbol ? `<span class="party-member-symbol">${symbol}</span> ` : '';
                     modalContent.innerHTML = `
                         <div class="modal-header">
                             <div class="party-member-modal-title-group">
-                                <h2 class="modal-title">${Utils.escapeHtml(character.name)}</h2>
+                                <h2 class="modal-title">${symbolPrefix}${Utils.escapeHtml(character.name)}</h2>
                                 ${ownerEmail}
                             </div>
                             <button class="modal-close" onclick="CampaignUI.closePartyMemberSheetModal()">&times;</button>

@@ -1367,8 +1367,8 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* Portrait area theme - brighter background for multiply blend - uses theme colors */
 .party-member-sheet-body .portrait-container--original-mode:has(.original-portrait.is-loaded) {
-    /* Extract hue from ui-fg-color or fallback to yellow */
-    background: hsl(var(--theme-yellow-h), 50%, 45%);
+    /* Use theme accent color for portrait background blend */
+    background: var(--ui-accent-bg, var(--ui-fg-color));
 }
 
 .party-member-sheet-body .ascii-portrait {
