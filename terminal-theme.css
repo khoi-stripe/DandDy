@@ -947,13 +947,13 @@ body::before {
   padding: 12px 20px;
   /* Use a solid black background so the toast reads clearly against the UI. */
   background: #000000;
-  /* Green-themed toast using core terminal tokens so it matches primary UI chrome. */
-  color: var(--terminal-fg);
-  border: 1px solid var(--terminal-border);
+  /* Theme-aware toast using cascading UI tokens to match current theme */
+  color: var(--ui-fg-color);
+  border: 1px solid var(--ui-border-color);
   box-shadow:
-    0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.35),
-    0 0 12px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.25),
-    0 0 24px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.15);
+    0 0 0 1px color-mix(in srgb, var(--ui-border-color) 35%, transparent),
+    0 0 12px color-mix(in srgb, var(--ui-border-color) 25%, transparent),
+    0 0 24px color-mix(in srgb, var(--ui-border-color) 15%, transparent);
   border-radius: 2px;
   font-family: var(--font-mono);
   font-size: var(--font-size-small);
@@ -1022,21 +1022,21 @@ body::before {
 @keyframes toast-glow {
   0% {
     box-shadow:
-      0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.15),
-      0 0 8px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.12),
-      0 0 16px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.06);
+      0 0 0 1px color-mix(in srgb, var(--ui-border-color) 15%, transparent),
+      0 0 8px color-mix(in srgb, var(--ui-border-color) 12%, transparent),
+      0 0 16px color-mix(in srgb, var(--ui-border-color) 6%, transparent);
   }
   50% {
     box-shadow:
-      0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.25),
-      0 0 10px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.18),
-      0 0 18px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.1);
+      0 0 0 1px color-mix(in srgb, var(--ui-border-color) 25%, transparent),
+      0 0 10px color-mix(in srgb, var(--ui-border-color) 18%, transparent),
+      0 0 18px color-mix(in srgb, var(--ui-border-color) 10%, transparent);
   }
   100% {
     box-shadow:
-      0 0 0 1px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.15),
-      0 0 8px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.12),
-      0 0 16px hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.06);
+      0 0 0 1px color-mix(in srgb, var(--ui-border-color) 15%, transparent),
+      0 0 8px color-mix(in srgb, var(--ui-border-color) 12%, transparent),
+      0 0 16px color-mix(in srgb, var(--ui-border-color) 6%, transparent);
   }
 }
 

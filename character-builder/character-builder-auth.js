@@ -82,7 +82,7 @@ const AuthUI = (window.AuthUI = {
           
           <div id="demo-mode-info" class="demo-mode-notice is-hidden">
             <div class="demo-notice-content">
-              <span class="demo-notice-icon">ℹ️</span>
+              <span class="demo-notice-icon">ℹ</span>
               <span>Guest mode: Create up to 3 characters and generate up to 10 custom portraits per day. Create an account to save characters in the cloud and get higher limits!</span>
             </div>
           </div>
