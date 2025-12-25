@@ -3105,14 +3105,24 @@ body::before {
   flex-shrink: 0;
 }
 
-/* Auth modal buttons loading state: use dim yellow instead of neutral grey
-   to maintain the modal's yellow theme during authentication. */
+/* Auth modal buttons loading state: use dimmed ui-* tokens instead of neutral grey
+   to maintain the modal's theme during authentication. */
 #loginBtn:disabled,
 #registerBtn:disabled {
-  background-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.15);
-  border-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5);
-  color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.7);
+  background-color: color-mix(in srgb, var(--ui-primary-bg-color) 15%, transparent);
+  border-color: color-mix(in srgb, var(--ui-dim-color) 50%, transparent);
+  color: color-mix(in srgb, var(--ui-dim-color) 70%, transparent);
   opacity: 1;
+}
+
+/* Spinner cube inside disabled auth buttons should use dimmed theme color */
+#loginBtn:disabled .spinner-cube-face,
+#registerBtn:disabled .spinner-cube-face {
+  border-color: var(--ui-dim-color);
+  background: color-mix(in srgb, var(--ui-dim-color) 10%, transparent);
+  box-shadow:
+    inset 0 0 8px color-mix(in srgb, var(--ui-dim-color) 25%, transparent),
+    0 0 6px color-mix(in srgb, var(--ui-dim-color) 20%, transparent);
 }
 
 /* Warning button */
