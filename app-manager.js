@@ -1530,23 +1530,31 @@ const ExpandedView = (window.ExpandedView = {
                 .map(m => ({
                     userId: m.user_id,
                     label: m.character?.name || m.user_email || 'Unknown',
+                    symbol: m.symbol || '',
                     isSelected: selectedUserId === m.user_id,
                 }))
                 .sort((a, b) => a.label.localeCompare(b.label))  // Sort alphabetically
-                .map(({ userId, label, isSelected }) => `
+                .map(({ userId, label, symbol, isSelected }) => {
+                    const symbolHtml = symbol ? `<span class="party-member-symbol">${symbol}</span> ` : '';
+                    return `
                     <button class="selector-option ${isSelected ? 'is-selected' : ''}" 
                             type="button" 
                             role="option" 
                             data-value="${userId}" 
+                            data-symbol="${symbol}"
                             aria-selected="${isSelected ? 'true' : 'false'}" 
-                            onclick="CampaignUI.selectJournalFilter('${userId}', '${Utils.escapeHtml(label).replace(/'/g, "\\'")}')">
-                        <span class="selector-option-label">${Utils.escapeHtml(label)}</span>
+                            onclick="CampaignUI.selectJournalFilter('${userId}', '${Utils.escapeHtml(label).replace(/'/g, "\\'")}', '${symbol}')">
+                        <span class="selector-option-label">${symbolHtml}${Utils.escapeHtml(label)}</span>
                     </button>
-                `)
+                `;
+                })
                 .join('');
             
             const allSelected = selectedUserId === null;
-            const currentLabel = allSelected ? 'All' : members.find(m => m.user_id === selectedUserId)?.character?.name || 'All';
+            const selectedMember = members.find(m => m.user_id === selectedUserId);
+            const currentSymbol = selectedMember?.symbol ? `<span class="party-member-symbol">${selectedMember.symbol}</span> ` : '';
+            const currentLabelName = selectedMember?.character?.name || 'All';
+            const currentLabelHtml = allSelected ? 'All' : (currentSymbol + Utils.escapeHtml(currentLabelName));
             
             filterHtml = `
                 <div class="journal-filter selector-shell selector-shell--listbox">
@@ -1556,7 +1564,7 @@ const ExpandedView = (window.ExpandedView = {
                             aria-haspopup="listbox" 
                             aria-expanded="false" 
                             onclick="CharacterSheet.toggleSelectorMenu(this)">
-                        <span class="selector-trigger-label" id="journalFilter-label">${Utils.escapeHtml(currentLabel)}</span>
+                        <span class="selector-trigger-label" id="journalFilter-label">${currentLabelHtml}</span>
                         <span class="selector-caret">▼</span>
                     </button>
                     <div class="selector-menu" role="listbox" aria-label="Filter journal entries">
@@ -2960,11 +2968,12 @@ const CampaignUI = (window.CampaignUI = {
     },
 
     /** Handle journal filter selection from custom selector */
-    selectJournalFilter(value, label) {
-        // Update the trigger label
+    selectJournalFilter(value, label, symbol = '') {
+        // Update the trigger label (with symbol if provided)
         const labelEl = document.getElementById('journalFilter-label');
         if (labelEl) {
-            labelEl.textContent = label;
+            const symbolHtml = symbol ? `<span class="party-member-symbol">${symbol}</span> ` : '';
+            labelEl.innerHTML = symbolHtml + Utils.escapeHtml(label);
         }
         
         // Update selected state in menu options
@@ -3541,12 +3550,15 @@ const MobileView = {
         // Clone the character sheet content into the container
         const sourceSheet = document.getElementById('characterSheet');
         const sourceTitleHeader = document.querySelector('.sheet__content .sheet-title-header');
+        const sourceStatusRow = document.querySelector('.sheet__content .sheet-status-row');
         const campaignSlot = document.querySelector('.sheet__sidebar');
         
-        // Insert title header as direct child of gridPanel (before container) for proper sticky behavior
+        // Insert title header (and status row if present) as direct child of gridPanel for proper sticky behavior
         // Remove any existing mobile title header first
         const existingHeader = document.getElementById('mobileSheetTitleHeader');
+        const existingMobileStatusRow = document.getElementById('mobileSheetStatusRow');
         if (existingHeader) existingHeader.remove();
+        if (existingMobileStatusRow) existingMobileStatusRow.remove();
         
         if (sourceTitleHeader) {
             const titleHeader = document.createElement('div');
@@ -3554,6 +3566,15 @@ const MobileView = {
             titleHeader.id = 'mobileSheetTitleHeader';
             titleHeader.innerHTML = sourceTitleHeader.innerHTML;
             container.parentNode.insertBefore(titleHeader, container);
+            
+            // Also copy status row if present
+            if (sourceStatusRow) {
+                const statusRow = document.createElement('div');
+                statusRow.className = 'mobile-sheet-status-row sheet-status-row';
+                statusRow.id = 'mobileSheetStatusRow';
+                statusRow.innerHTML = sourceStatusRow.innerHTML;
+                container.parentNode.insertBefore(statusRow, container);
+            }
         }
         
         // Build mobile content: sheet content + campaign placeholder
@@ -3908,9 +3929,11 @@ const MobileView = {
         
         gridPanel.classList.remove('is-viewing-sheet');
         
-        // Remove the mobile title header (it's a direct child of gridPanel)
+        // Remove the mobile title header and status row (they're direct children of gridPanel)
         const mobileHeader = document.getElementById('mobileSheetTitleHeader');
+        const mobileStatusRow = document.getElementById('mobileSheetStatusRow');
         if (mobileHeader) mobileHeader.remove();
+        if (mobileStatusRow) mobileStatusRow.remove();
         
         // Reset header scroll state when returning to grid
         const header = document.querySelector('.terminal-header');
@@ -4028,8 +4051,8 @@ const PortraitLightbox = {
             // Only handle on mobile/touch
             if (!MobileView.isMobile() && !this._isTouch) return;
             
-            // Don't open lightbox if tapping on overlay tags (shared/demo/spell tags)
-            if (e.target.closest('.sheet-shared-tag, .sheet-demo-tag, .sheet-spell-tag, .custom-tooltip')) return;
+            // Don't open lightbox if tapping on overlay tags (shared/demo/spell tags, status badges)
+            if (e.target.closest('.sheet-shared-tag, .sheet-status-badge, .sheet-demo-tag, .sheet-spell-tag, .custom-tooltip')) return;
             
             // Check if clicked element is a portrait image
             const portrait = e.target.closest('.portrait-container--original-mode .original-portrait.is-loaded');
@@ -4406,25 +4429,33 @@ const UI = {
         const hasCollaborators = collaboratorCount > 0;
         const showSharedTag = isSharedWithMe || hasCollaborators;
         
-        let sharedTagHtml = '';
-        if (isSharedWithMe) {
-            sharedTagHtml = '<span class="card-shared-tag" title="Shared with you">SHARED</span>';
-        } else if (hasCollaborators) {
-            const tooltip = collaboratorCount === 1 ? 'Shared with 1 person' : `Shared with ${collaboratorCount} people`;
-            sharedTagHtml = `<span class="card-shared-tag" title="${tooltip}">SHARED</span>`;
-        }
-        
         // Check if character is pinned
         const isPinned = isCharacterPinned(character.id);
-        const pinnedTagHtml = isPinned 
-            ? '<span class="card-pinned-tag" title="Pinned">◆</span>' 
+        
+        // Check if character is in a campaign
+        const characterCampaignId = character.campaignId || character.campaign_id;
+        const isInCampaign = !!characterCampaignId;
+        
+        // Build status icons (icon-only, no text)
+        const statusIcons = [];
+        if (showSharedTag) {
+            statusIcons.push('<span class="card-status-icon card-status-icon--shared">↔</span>');
+        }
+        if (isPinned) {
+            statusIcons.push('<span class="card-status-icon card-status-icon--pinned">◆</span>');
+        }
+        if (isInCampaign) {
+            statusIcons.push('<span class="card-status-icon card-status-icon--campaign">⚔</span>');
+        }
+        
+        const statusIconsHtml = statusIcons.length > 0 
+            ? `<div class="card-status-icons">${statusIcons.join('')}</div>`
             : '';
 
         return `
             <div class="character-card${showSharedTag ? ' is-shared' : ''}${isPinned ? ' is-pinned' : ''}" data-id="${character.id}" onclick="viewCharacter('${character.id}')">
-                ${pinnedTagHtml}
                 ${demoTagHtml}
-                ${sharedTagHtml}
+                ${statusIconsHtml}
                 ${thumbnailHtml}
                 <div class="card-details">
                     <div class="card-name">${name}</div>
@@ -4483,6 +4514,22 @@ const UI = {
         // Check permission level for shared characters
         const canEdit = !isDemo && (!isSharedWithMe || character.permission === 'edit');
         
+        // Check if character is pinned
+        const isPinned = typeof window.isCharacterPinned === 'function' 
+            && window.isCharacterPinned(character.id);
+        
+        // Get campaign name if character is in a campaign
+        // Try to get from DOM (campaign panel) or will be shown as generic tooltip
+        const characterCampaignId = character.campaignId || character.campaign_id;
+        let campaignName = null;
+        if (characterCampaignId) {
+            // Try to get campaign name from campaign area in DOM (if already loaded)
+            const campaignNameEl = document.querySelector('.campaign-area .campaign-name');
+            if (campaignNameEl) {
+                campaignName = campaignNameEl.textContent?.trim() || null;
+            }
+        }
+        
         // Use the shared CharacterSheet component
         // Demo characters cannot be edited, renamed, deleted, or have portraits generated
         // Shared characters with edit permission can edit but not delete/rename
@@ -4501,19 +4548,30 @@ const UI = {
             collaboratorCount: collaboratorCount,
             ownerEmail: character.owner_email || character.ownerEmail,
             lastUpdatedByEmail: character.last_updated_by_email || character.lastUpdatedByEmail,
+            isPinned: isPinned,
+            campaignName: campaignName,
         });
         
-        // Move sheet-title-header out of characterSheet and into sheet__content (above the layout)
+        // Move sheet-title-header and status row out of characterSheet and into sheet__content (above the layout)
         const scrollWrapper = document.querySelector('.sheet__content');
         const sheetCampaignGrid = document.querySelector('.sheet__layout');
         const titleHeader = sheetContainer.querySelector('.sheet-title-header');
+        const statusRow = sheetContainer.querySelector('.sheet-status-row');
         if (scrollWrapper && sheetCampaignGrid && titleHeader) {
-            // Remove any existing title header from scroll wrapper first
+            // Remove any existing title header and status row from scroll wrapper first
             const existingHeader = scrollWrapper.querySelector('.sheet-title-header');
+            const existingStatusRow = scrollWrapper.querySelector('.sheet-status-row');
             if (existingHeader) {
                 existingHeader.remove();
             }
+            if (existingStatusRow) {
+                existingStatusRow.remove();
+            }
             scrollWrapper.insertBefore(titleHeader, sheetCampaignGrid);
+            // Insert status row after header (before layout)
+            if (statusRow) {
+                scrollWrapper.insertBefore(statusRow, sheetCampaignGrid);
+            }
         }
         
         // Populate ASCII portrait after rendering

@@ -2172,7 +2172,7 @@ input.search-input:focus {
     border-radius: 3px;
 }
 
-/* Pinned character indicator - top right corner */
+/* Pinned character indicator - top right corner (legacy, kept for compatibility) */
 .card-pinned-tag {
     position: absolute;
     top: 6px;
@@ -2189,6 +2189,31 @@ input.search-input:focus {
     border-color: var(--ui-dim-color);
     opacity: 0.7;
 }
+
+/* Card status icons - icon-only indicators in top-right corner */
+.card-status-icons {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 5;
+    display: flex;
+    gap: 4px;
+}
+
+.card-status-icon {
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-base);
+    color: var(--ui-tag-bg, var(--ui-primary-bg-color));
+    line-height: 1;
+    background-color: color-mix(in srgb, var(--terminal-bg) 70%, transparent);
+    border-radius: 3px;
+    padding-bottom: 1px;
+}
+
 
 /* Hover and keyboard focus (unselected) - bright theme outline, text, and ASCII */
 .character-card:hover:not(.is-selected),
@@ -3465,6 +3490,19 @@ input.search-input:focus {
         width: var(--sheet-column-width) !important;
         max-width: var(--sheet-column-width) !important;
         flex: 0 0 var(--sheet-column-width) !important;
+    }
+    
+    /* Keep sidebar at fixed width during collapse - don't scale, just clip off to the right.
+       Uses the same width as in expanded view so it slides out smoothly. */
+    .split-layout.is-collapsing .sheet-campaign-grid,
+    .split-layout.is-collapsing .sheet__layout {
+        overflow: hidden;
+    }
+    
+    .split-layout.is-collapsing .campaign-panel-slot,
+    .split-layout.is-collapsing .sheet__sidebar {
+        min-width: var(--sheet-column-width);
+        flex-shrink: 0;
     }
     
     /* During collapse: grid slides back in, sheet shrinks back to 50% */
@@ -4781,6 +4819,80 @@ input.search-input:focus {
         cursor: default;
         /* Allow taps to pass through to portrait for lightbox */
         pointer-events: none;
+    }
+}
+
+/* ========================================
+   STATUS ROW - Row below header for status badges
+   Shows: SHARED, PINNED, IN CAMPAIGN
+   ======================================== */
+
+.sheet-status-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 16px 12px 16px;
+    background-color: var(--terminal-bg);
+}
+
+/* Status badge base styles */
+.sheet-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-medium);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    color: var(--ui-tag-bg, var(--ui-primary-bg-color));
+    background-color: color-mix(in srgb, var(--ui-tag-bg, var(--ui-primary-bg-color)) 20%, transparent);
+    border-radius: 3px;
+    cursor: help;
+    white-space: nowrap;
+}
+
+.sheet-status-badge__icon {
+    font-size: var(--font-size-md);
+    line-height: 1;
+    position: relative;
+    top: -1px;
+}
+
+/* Status badge tooltip - show on hover (CSS-only, desktop) */
+.sheet-status-badge.has-tooltip:hover .custom-tooltip {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* Status badge tooltip - content styling */
+.sheet-status-badge .custom-tooltip {
+    white-space: nowrap;
+    text-align: left;
+}
+
+/* Mobile: status badges are display-only (no tap interaction to avoid conflicts) */
+@media (hover: none), (pointer: coarse) {
+    .sheet-status-badge.has-tooltip {
+        cursor: default;
+        pointer-events: none;
+    }
+}
+
+/* Mobile status row styling */
+.mobile-sheet-status-row {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    /* Show mobile status row when viewing sheet */
+    .panel-character-grid.is-viewing-sheet .mobile-sheet-status-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px 12px;
+        background-color: var(--terminal-bg);
     }
 }
 

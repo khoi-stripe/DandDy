@@ -6425,8 +6425,8 @@ const PortraitLightbox = {
       // Only handle on mobile/touch
       if (!this._isMobile() && !this._isTouch) return;
       
-      // Don't open lightbox if tapping on overlay tags (shared/demo/spell tags)
-      if (e.target.closest('.sheet-shared-tag, .sheet-demo-tag, .sheet-spell-tag, .custom-tooltip')) return;
+      // Don't open lightbox if tapping on overlay tags (shared/demo/spell tags, status badges)
+      if (e.target.closest('.sheet-shared-tag, .sheet-status-badge, .sheet-demo-tag, .sheet-spell-tag, .custom-tooltip')) return;
       
       // Check if clicked element is a portrait image
       const portrait = e.target.closest('.portrait-container--original-mode .original-portrait.is-loaded');

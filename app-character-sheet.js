@@ -542,6 +542,8 @@ const CharacterSheet = (window.CharacterSheet = {
       ownerEmail,
       lastUpdatedByEmail,
       hideOverflowMenu,
+      isPinned,
+      campaignName,
     } = callbacks;
     // Function names differ by context
     const renameFn = context === 'builder' ? 'App.openNameModal()' : `renameCharacter('${character.id}')`;
@@ -802,8 +804,10 @@ const CharacterSheet = (window.CharacterSheet = {
         ? this.escapeHtml(character.name)
         : '[ CHARACTER SHEET ]';
 
-    // Generate shared tag for inline display with title
-    let sharedTagHtml = '';
+    // Build status badges array for the status row
+    const statusBadges = [];
+    
+    // SHARED status badge
     if (isShared || hasCollaborators) {
       // Format the last updated time
       const updatedAt = character.updatedAt || character.updated_at;
@@ -826,6 +830,7 @@ const CharacterSheet = (window.CharacterSheet = {
       // Format who last updated
       const lastUpdatedBy = lastUpdatedByEmail ? this.escapeHtml(lastUpdatedByEmail) : null;
       
+      let tooltipContent = '';
       if (isShared) {
         // Collaborator's view
         const sharedByLine = `Shared by ${this.escapeHtml(ownerEmail || 'unknown')}`;
@@ -835,12 +840,7 @@ const CharacterSheet = (window.CharacterSheet = {
             ? `Last updated: ${lastUpdatedText}<br>by ${lastUpdatedBy}`
             : `Last updated: ${lastUpdatedText}`;
         }
-        const tooltipContent = updatedLine ? `${sharedByLine}<br>${updatedLine}` : sharedByLine;
-        sharedTagHtml = `
-          <span class="sheet-shared-tag has-tooltip">
-            SHARED
-            <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
-          </span>`;
+        tooltipContent = updatedLine ? `${sharedByLine}<br>${updatedLine}` : sharedByLine;
       } else if (hasCollaborators) {
         // Owner's view
         const sharedWithLine = collaboratorCount === 1 ? 'Shared with 1 user' : `Shared with ${collaboratorCount} users`;
@@ -850,23 +850,52 @@ const CharacterSheet = (window.CharacterSheet = {
             ? `Last updated: ${lastUpdatedText}<br>by ${lastUpdatedBy}`
             : `Last updated: ${lastUpdatedText}`;
         }
-        const tooltipContent = updatedLine ? `${sharedWithLine}<br>${updatedLine}` : sharedWithLine;
-        sharedTagHtml = `
-          <span class="sheet-shared-tag has-tooltip">
-            SHARED
-            <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
-          </span>`;
+        tooltipContent = updatedLine ? `${sharedWithLine}<br>${updatedLine}` : sharedWithLine;
       }
+      
+      statusBadges.push(`
+        <span class="sheet-status-badge sheet-status-badge--shared has-tooltip">
+          <span class="sheet-status-badge__icon">↔</span> SHARED
+          <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
+        </span>`);
     }
+    
+    // PINNED status badge (manager context only)
+    if (context === 'manager' && isPinned) {
+      statusBadges.push(`
+        <span class="sheet-status-badge sheet-status-badge--pinned has-tooltip">
+          <span class="sheet-status-badge__icon">◆</span> PINNED
+          <span class="custom-tooltip" data-position="bottom">Pinned character</span>
+        </span>`);
+    }
+    
+    // IN CAMPAIGN status badge
+    const characterCampaignId = character.campaignId || character.campaign_id;
+    if (characterCampaignId) {
+      const campaignTooltip = campaignName 
+        ? this.escapeHtml(campaignName)
+        : 'In a campaign';
+      statusBadges.push(`
+        <span class="sheet-status-badge sheet-status-badge--campaign has-tooltip">
+          <span class="sheet-status-badge__icon">⚔</span> IN CAMPAIGN
+          <span class="custom-tooltip" data-position="bottom">${campaignTooltip}</span>
+        </span>`);
+    }
+    
+    // Only render status row if there are badges
+    const statusRowHtml = statusBadges.length > 0
+      ? `<div class="sheet-status-row">${statusBadges.join('')}</div>`
+      : '';
 
     const headerClass = context === 'builder' ? 'sheet-title-header sheet-title-header--flush' : 'sheet-title-header';
 
     return `
       <div class="${headerClass}">
         ${headerMenu}
-        <div class="sheet-title"><span class="sheet-title-name">${safeTitle}</span>${sharedTagHtml}</div>
+        <div class="sheet-title"><span class="sheet-title-name">${safeTitle}</span></div>
         ${navActionsBlock}
       </div>
+      ${statusRowHtml}
     `;
   },
 

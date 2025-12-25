@@ -1985,6 +1985,14 @@ body::before {
   overflow-wrap: break-word;
 }
 
+/* Status row - displays status badges below the header */
+.sheet-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  padding: 0 var(--spacing-md) var(--spacing-sm) var(--spacing-md);
+  background-color: var(--terminal-bg);
+}
 
 .sheet-title-buttons {
   display: flex;
