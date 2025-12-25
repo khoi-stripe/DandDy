@@ -2411,9 +2411,11 @@ const CampaignUI = (window.CampaignUI = {
         }
     },
     
-    // Just close the modal - invitations are sent immediately on ADD
-    sendInvitations() {
+    // Close the modal and refresh campaign panel to show new invitees
+    async sendInvitations() {
         this.closeInviteModal();
+        // Refresh campaign panel to show pending invitations
+        await ExpandedView._loadCampaignPanel();
     },
 
     // ========================================
