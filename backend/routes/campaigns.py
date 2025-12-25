@@ -76,11 +76,14 @@ def _can_use_character_for_campaign(
     if character.campaign_id and character.campaign_id != target_campaign_id:
         return None, "This character is already in another campaign"
     
-    # Check if character is already assigned to a different membership in ANY campaign
+    # Check if character is already assigned to a different membership in an ACTIVE campaign
     # This prevents a shared character from being used by multiple people simultaneously
-    existing_membership = db.query(CampaignMember).filter(
+    # Note: We join with Campaign to verify the campaign is still active - completed campaigns
+    # should not block character reuse
+    existing_membership = db.query(CampaignMember).join(Campaign).filter(
         CampaignMember.character_id == character_id,
-        CampaignMember.status == MemberStatus.ACTIVE
+        CampaignMember.status == MemberStatus.ACTIVE,
+        Campaign.status == CampaignStatus.ACTIVE  # Only check active campaigns
     ).first()
     
     if existing_membership:

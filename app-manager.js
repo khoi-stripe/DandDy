@@ -1307,23 +1307,45 @@ const ExpandedView = (window.ExpandedView = {
         if (!campaignData) {
             // No campaign - show join/create buttons inline with header
             const hasInvitations = pendingInvitationCount > 0;
-            const invitationText = hasInvitations 
-                ? `${pendingInvitationCount} campaign${pendingInvitationCount === 1 ? '' : 's'} available`
-                : '';
+            const statusText = hasInvitations 
+                ? `[${pendingInvitationCount}] campaign${pendingInvitationCount === 1 ? '' : 's'} available`
+                : 'No active campaign.';
             
-            // Only show Past Adventures link if user has past campaigns
-            const pastAdventuresHtml = pastCampaignsCount > 0 ? `
-                    <div class="campaign-area-past-link">
-                        <a href="#" onclick="CampaignUI.openPastAdventuresModal(); return false;" class="past-adventures-link">
-                            <span class="past-adventures-link-icon">↺</span> Past Adventures
-                        </a>
+            // Only show overflow menu with Past Adventures if user has past campaigns
+            const overflowMenuHtml = pastCampaignsCount > 0 ? `
+                <div class="campaign-overflow selector-shell selector-shell--actions">
+                    <button
+                        class="terminal-btn-small selector-trigger overflow-trigger campaign-overflow-trigger"
+                        type="button"
+                        aria-haspopup="menu"
+                        aria-expanded="false"
+                        aria-label="Campaign actions"
+                        onclick="CharacterSheet.toggleSelectorMenu(this)"
+                    >
+                        <span class="sheet-actions-icon" aria-hidden="true">
+                            <span class="sheet-actions-dot dot-1"></span>
+                            <span class="sheet-actions-dot dot-2"></span>
+                            <span class="sheet-actions-dot dot-3"></span>
+                        </span>
+                    </button>
+                    <div class="selector-menu campaign-overflow-menu" role="menu" aria-hidden="true">
+                        <button
+                            class="selector-option"
+                            type="button"
+                            role="menuitem"
+                            onclick="CampaignUI.openPastAdventuresModal()"
+                        >
+                            <span class="selector-option-icon">↺</span>
+                            <span class="selector-option-label">Past Adventures</span>
+                        </button>
                     </div>
+                </div>
             ` : '';
             
             return `
                 <div class="campaign-area">
                     <div class="campaign-area-header campaign-area-header--no-campaign">
-                        <h3 class="campaign-area-title">[ Campaign ]</h3>
+                        <h3 class="campaign-area-title">[ Campaign ] <span class="campaign-status-inline">${statusText}</span></h3>
                         <div class="campaign-area-actions">
                             <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJoinModal()">
                                 JOIN
@@ -1331,16 +1353,9 @@ const ExpandedView = (window.ExpandedView = {
                             <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openCreateModal()">
                                 CREATE
                             </button>
+                            ${overflowMenuHtml}
                         </div>
                     </div>
-                    ${hasInvitations ? `
-                    <div class="campaign-area-empty">
-                        <div class="campaign-area-empty-text has-invitations">
-                            ${invitationText}
-                        </div>
-                    </div>
-                    ` : ''}
-                    ${pastAdventuresHtml}
                 </div>
             `;
         }

@@ -710,9 +710,20 @@ div.sheet__sidebar.ui-theme-pink {
     white-space: nowrap;
 }
 
+.campaign-status-inline {
+    font-weight: var(--font-weight-normal);
+    color: var(--ui-fg-muted);
+    font-size: var(--font-size-sm);
+    margin-left: var(--spacing-xs);
+}
+
 @media (max-width: 768px) {
     .campaign-area-title {
         font-size: var(--font-size-base);
+    }
+    
+    .campaign-status-inline {
+        font-size: var(--font-size-xs);
     }
 }
 
