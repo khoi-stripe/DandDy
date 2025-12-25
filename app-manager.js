@@ -1769,6 +1769,9 @@ const CampaignUI = (window.CampaignUI = {
     // CREATE CAMPAIGN MODAL
     // ========================================
     
+    // Pending invites to send after campaign creation
+    _createCampaignPendingInvites: [],
+    
     openCreateModal() {
         const modal = document.getElementById('createCampaignModal');
         if (!modal) return;
@@ -1776,6 +1779,20 @@ const CampaignUI = (window.CampaignUI = {
         // Clear form
         document.getElementById('createCampaignName').value = '';
         document.getElementById('createCampaignDesc').value = '';
+        
+        // Clear invite fields
+        const emailInput = document.getElementById('createCampaignInviteEmail');
+        if (emailInput) emailInput.value = '';
+        
+        const errorEl = document.getElementById('createCampaignInviteError');
+        if (errorEl) {
+            errorEl.textContent = '';
+            errorEl.style.display = 'none';
+        }
+        
+        // Clear pending invites
+        this._createCampaignPendingInvites = [];
+        this._renderCreateCampaignInvites();
         
         modal.classList.add('show');
         
@@ -1790,11 +1807,78 @@ const CampaignUI = (window.CampaignUI = {
         if (modal) {
             animateModalClose(modal, { removeOnClose: false });
         }
+        // Clear pending invites
+        this._createCampaignPendingInvites = [];
+    },
+    
+    addPendingInviteFromCreate() {
+        const input = document.getElementById('createCampaignInviteEmail');
+        const email = input?.value?.trim().toLowerCase();
+        const errorEl = document.getElementById('createCampaignInviteError');
+        
+        if (!email) return;
+        
+        // Basic email validation
+        if (!email.includes('@') || !email.includes('.')) {
+            if (errorEl) {
+                errorEl.textContent = 'Please enter a valid email address';
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
+        
+        // Check for duplicates
+        if (this._createCampaignPendingInvites.includes(email)) {
+            if (errorEl) {
+                errorEl.textContent = 'This email is already in the list';
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
+        
+        // Clear error
+        if (errorEl) {
+            errorEl.style.display = 'none';
+        }
+        
+        // Add to pending list
+        this._createCampaignPendingInvites.push(email);
+        this._renderCreateCampaignInvites();
+        
+        // Clear input and refocus
+        input.value = '';
+        input.focus();
+    },
+    
+    removePendingInviteFromCreate(email) {
+        this._createCampaignPendingInvites = this._createCampaignPendingInvites.filter(e => e !== email);
+        this._renderCreateCampaignInvites();
+    },
+    
+    _renderCreateCampaignInvites() {
+        const container = document.getElementById('createCampaignInvitesList');
+        if (!container) return;
+        
+        if (this._createCampaignPendingInvites.length === 0) {
+            container.style.display = 'none';
+            container.innerHTML = '';
+            return;
+        }
+        
+        container.style.display = 'block';
+        container.innerHTML = this._createCampaignPendingInvites.map(email => `
+            <div class="share-collaborator-item share-collaborator-pending">
+                <span class="share-collaborator-email">${Utils.escapeHtml(email)}</span>
+                <span class="share-collaborator-status">PENDING</span>
+                <button type="button" class="share-collaborator-remove" onclick="CampaignUI.removePendingInviteFromCreate('${Utils.escapeHtml(email)}')" title="Remove">×</button>
+            </div>
+        `).join('');
     },
 
     async submitCreateCampaign() {
         const nameInput = document.getElementById('createCampaignName');
         const descInput = document.getElementById('createCampaignDesc');
+        const submitBtn = document.getElementById('createCampaignSubmitBtn');
         
         const name = nameInput?.value?.trim();
         const description = descInput?.value?.trim() || null;
@@ -1802,6 +1886,13 @@ const CampaignUI = (window.CampaignUI = {
         if (!name) {
             nameInput?.focus();
             return;
+        }
+        
+        // Show loading state
+        const originalBtnText = submitBtn?.textContent;
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating...';
         }
         
         try {
@@ -1828,11 +1919,32 @@ const CampaignUI = (window.CampaignUI = {
                 console.log('🏰 Skipping auto-assign: no character or demo character');
             }
             
+            // Send pending invites
+            const inviteFailures = [];
+            if (this._createCampaignPendingInvites.length > 0) {
+                console.log('🏰 Sending', this._createCampaignPendingInvites.length, 'invites...');
+                for (const email of this._createCampaignPendingInvites) {
+                    try {
+                        await CampaignAPI.inviteByEmail(campaign.id, email);
+                        console.log('🏰 Invited:', email);
+                    } catch (inviteError) {
+                        console.warn('🏰 Failed to invite', email, ':', inviteError);
+                        inviteFailures.push({ email, error: inviteError.message || 'Unknown error' });
+                    }
+                }
+            }
+            
             // Close create modal
             this.closeCreateModal();
             
             // Show success modal with invite code (and warning if applicable)
-            this.showCampaignCreatedModal(campaign.invite_code, assignmentWarning);
+            let warning = assignmentWarning;
+            if (inviteFailures.length > 0) {
+                const failedEmails = inviteFailures.map(f => f.email).join(', ');
+                const inviteWarning = `Could not invite: ${failedEmails}`;
+                warning = warning ? `${warning}\n\n${inviteWarning}` : inviteWarning;
+            }
+            this.showCampaignCreatedModal(campaign.invite_code, warning);
             
             // Refresh character data to get updated campaignId
             await AppState.loadCharacters();
@@ -1843,6 +1955,12 @@ const CampaignUI = (window.CampaignUI = {
         } catch (error) {
             console.error('Failed to create campaign:', error);
             showAlertDialog(error.message || 'Failed to create campaign. Please try again.');
+        } finally {
+            // Restore button state
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalBtnText || 'Create';
+            }
         }
     },
 
@@ -2385,17 +2503,19 @@ const CampaignUI = (window.CampaignUI = {
             // Update campaign status to completed
             await CampaignAPI.updateCampaign(this._managingCampaign.id, { status: 'completed' });
             
+            // Clear all campaign-related caches before refreshing
+            this._currentCampaign = null;
+            this._managingCampaign = null;
+            this._pastCampaignsCount = 0;
+            
             // Close the modal
             this.closeManageModal();
             
-            // Refresh character data
+            // Refresh character data first (this clears the campaignId from characters)
             await AppState.loadCharacters();
             
             // Refresh campaign panel (will show empty state since campaign is no longer active)
-            ExpandedView._loadCampaignPanel();
-            
-            // Reset past campaigns cache so it gets refreshed
-            this._pastCampaignsCount = 0;
+            await ExpandedView._loadCampaignPanel();
             
             showAlertDialog('Campaign ended successfully. It can now be found in Past Adventures.');
         } catch (error) {

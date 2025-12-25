@@ -431,14 +431,28 @@
                     <label class="settings-label" for="createCampaignName">Campaign Name</label>
                     <input type="text" id="createCampaignName" class="terminal-input" placeholder="e.g. Curse of Strahd" maxlength="100" required>
                 </div>
-                <div class="settings-row settings-row--stacked">
+                <div class="settings-row settings-row--stacked mb-lg">
                     <label class="settings-label" for="createCampaignDesc">Description <span class="terminal-text-dim">(optional)</span></label>
                     <textarea id="createCampaignDesc" class="terminal-textarea" rows="3" placeholder="A brief description of your campaign..." maxlength="500"></textarea>
+                </div>
+                
+                <!-- Invite Players Section -->
+                <div class="share-section">
+                    <label class="terminal-text-small modal-section-label" for="createCampaignInviteEmail">Invite Players <span class="terminal-text-dim">(optional)</span></label>
+                    <div class="share-add-row">
+                        <input type="email" id="createCampaignInviteEmail" class="terminal-input" placeholder="email@example.com" autocomplete="off" data-1p-ignore onkeydown="if(event.key==='Enter'){event.preventDefault();CampaignUI.addPendingInviteFromCreate();}">
+                        <button type="button" class="terminal-btn" id="createCampaignAddBtn" onclick="CampaignUI.addPendingInviteFromCreate()">Add</button>
+                    </div>
+                    <p id="createCampaignInviteError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
+                    
+                    <div id="createCampaignInvitesList" class="share-collaborators-list" style="margin-top: 0.75rem; display: none;"></div>
+                    
+                    <p class="terminal-text-small terminal-text-dim" style="margin-top: 0.75rem;">You can always invite people later.</p>
                 </div>
             </div>
             <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="CampaignUI.closeCreateModal()">Cancel</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.submitCreateCampaign()">Create</button>
+                <button class="terminal-btn terminal-btn-primary" id="createCampaignSubmitBtn" onclick="CampaignUI.submitCreateCampaign()">Create</button>
             </div>
         </div>
     </div>
