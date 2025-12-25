@@ -130,16 +130,20 @@ def get_campaigns(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get all campaigns the user is a member of."""
+    """Get all active campaigns the user is a member of (excludes completed/archived)."""
     # Get campaigns where user is a member (via CampaignMember)
+    # Only include campaigns that are active or paused (not completed/archived)
     campaigns = db.query(Campaign).join(CampaignMember).filter(
         CampaignMember.user_id == current_user.id,
-        CampaignMember.status == MemberStatus.ACTIVE
+        CampaignMember.status == MemberStatus.ACTIVE,
+        Campaign.status.in_([CampaignStatus.ACTIVE, CampaignStatus.PAUSED])
     ).all()
     
     # Also include campaigns user created (backward compat - they should also be members)
+    # But still filter out completed/archived
     created_campaigns = db.query(Campaign).filter(
-        Campaign.dm_id == current_user.id
+        Campaign.dm_id == current_user.id,
+        Campaign.status.in_([CampaignStatus.ACTIVE, CampaignStatus.PAUSED])
     ).all()
     
     # Merge and deduplicate
@@ -320,6 +324,13 @@ def update_campaign(
             if new_status in [CampaignStatus.COMPLETED, CampaignStatus.ARCHIVED]:
                 if campaign.ended_at is None:
                     campaign.ended_at = datetime.utcnow()
+                
+                # Clear campaign_id from all characters that were in this campaign
+                # This allows them to join new campaigns
+                db.query(Character).filter(
+                    Character.campaign_id == campaign_id
+                ).update({Character.campaign_id: None})
+                
             elif new_status == CampaignStatus.ACTIVE:
                 # Clear ended_at if campaign is reactivated
                 campaign.ended_at = None
