@@ -374,6 +374,12 @@ def delete_campaign(
             detail="Not authorized to delete this campaign"
         )
     
+    # Clear campaign_id from all characters that were in this campaign
+    # This removes the "IN CAMPAIGN" tag from character sheets
+    db.query(Character).filter(
+        Character.campaign_id == campaign_id
+    ).update({Character.campaign_id: None})
+    
     db.delete(campaign)
     db.commit()
     

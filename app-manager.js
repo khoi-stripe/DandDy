@@ -1643,6 +1643,12 @@ const ExpandedView = (window.ExpandedView = {
             `;
         }
 
+        // Only show the "+ Update" link if character is in a campaign
+        const isInCampaign = !!(campaignData?.campaign?.id);
+        const addLinkHtml = isInCampaign 
+            ? `<a href="#" class="journal-add-link" onclick="CampaignUI.openJournalEntryModal(); return false;">+ Update</a>`
+            : '';
+
         return `
             <div class="journal-section" data-campaign-id="${campaignData?.campaign?.id || ''}">
                 <div class="journal-header">
@@ -1651,9 +1657,7 @@ const ExpandedView = (window.ExpandedView = {
                         ${filterHtml}
                         ${settingsHtml}
                     </div>
-                    <a href="#" class="journal-add-link" onclick="CampaignUI.openJournalEntryModal(); return false;">
-                        + Update
-                    </a>
+                    ${addLinkHtml}
                 </div>
                 <div class="journal-entries">
                     ${entriesHtml}
@@ -1964,8 +1968,8 @@ const CampaignUI = (window.CampaignUI = {
             // Refresh character data to get updated campaignId
             await AppState.loadCharacters();
             
-            // Refresh campaign panel
-            ExpandedView._loadCampaignPanel();
+            // Refresh campaign panel (must await to ensure it completes)
+            await ExpandedView._loadCampaignPanel();
             
         } catch (error) {
             console.error('Failed to create campaign:', error);
@@ -2098,8 +2102,8 @@ const CampaignUI = (window.CampaignUI = {
             // Refresh character data to get updated campaign_id
             await AppState.loadCharacters();
             
-            // Refresh campaign panel
-            ExpandedView._loadCampaignPanel();
+            // Refresh campaign panel (must await to ensure it completes)
+            await ExpandedView._loadCampaignPanel();
             
         } catch (error) {
             console.error('Failed to join campaign:', error);
@@ -2444,8 +2448,8 @@ const CampaignUI = (window.CampaignUI = {
             // Close modal
             this.closeManageModal();
             
-            // Refresh campaign panel
-            ExpandedView._loadCampaignPanel();
+            // Refresh campaign panel (must await to ensure it completes)
+            await ExpandedView._loadCampaignPanel();
             
         } catch (error) {
             console.error('Failed to update campaign:', error);
@@ -2472,7 +2476,7 @@ const CampaignUI = (window.CampaignUI = {
             await AppState.loadCharacters();
             
             // Refresh campaign panel (will show empty state)
-            ExpandedView._loadCampaignPanel();
+            await ExpandedView._loadCampaignPanel();
             
             showAlertDialog('You have left the campaign.');
         } catch (error) {
@@ -2481,62 +2485,66 @@ const CampaignUI = (window.CampaignUI = {
         }
     },
     
-    async confirmDeleteCampaignFromModal() {
+    confirmDeleteCampaignFromModal() {
         if (!this._managingCampaign) return;
         
-        if (!confirm('Are you sure you want to DELETE this campaign? This action cannot be undone and will remove all members.')) {
-            return;
-        }
-        
-        try {
-            await CampaignAPI.deleteCampaign(this._managingCampaign.id);
-            
-            // Close the modal
-            this.closeManageModal();
-            
-            // Refresh character data
-            await AppState.loadCharacters();
-            
-            // Refresh campaign panel (will show empty state)
-            ExpandedView._loadCampaignPanel();
-            
-            showAlertDialog('Campaign deleted successfully.');
-        } catch (error) {
-            console.error('Failed to delete campaign:', error);
-            showAlertDialog(error.message || 'Failed to delete campaign. Please try again.');
-        }
+        const campaignId = this._managingCampaign.id;
+        showConfirmDialog(
+            'Are you sure you want to DELETE this campaign?\n\nThis action cannot be undone and will remove all members.',
+            async () => {
+                try {
+                    await CampaignAPI.deleteCampaign(campaignId);
+                    
+                    // Close the modal
+                    CampaignUI.closeManageModal();
+                    
+                    // Refresh character data
+                    await AppState.loadCharacters();
+                    
+                    // Refresh campaign panel (will show empty state)
+                    await ExpandedView._loadCampaignPanel();
+                    
+                    showAlertDialog('Campaign deleted successfully.');
+                } catch (error) {
+                    console.error('Failed to delete campaign:', error);
+                    showAlertDialog(error.message || 'Failed to delete campaign. Please try again.');
+                }
+            }
+        );
     },
     
-    async confirmEndCampaign() {
+    confirmEndCampaign() {
         if (!this._managingCampaign) return;
         
-        if (!confirm('End this campaign? The campaign will be marked as completed and moved to Past Adventures for all members. This cannot be undone.')) {
-            return;
-        }
-        
-        try {
-            // Update campaign status to completed
-            await CampaignAPI.updateCampaign(this._managingCampaign.id, { status: 'completed' });
-            
-            // Clear all campaign-related caches before refreshing
-            this._currentCampaign = null;
-            this._managingCampaign = null;
-            this._pastCampaignsCount = 0;
-            
-            // Close the modal
-            this.closeManageModal();
-            
-            // Refresh character data first (this clears the campaignId from characters)
-            await AppState.loadCharacters();
-            
-            // Refresh campaign panel (will show empty state since campaign is no longer active)
-            await ExpandedView._loadCampaignPanel();
-            
-            showAlertDialog('Campaign ended successfully. It can now be found in Past Adventures.');
-        } catch (error) {
-            console.error('Failed to end campaign:', error);
-            showAlertDialog(error.message || 'Failed to end campaign. Please try again.');
-        }
+        const campaignId = this._managingCampaign.id;
+        showConfirmDialog(
+            'End this campaign?\n\nThe campaign will be marked as completed and moved to Past Adventures for all members. This cannot be undone.',
+            async () => {
+                try {
+                    // Update campaign status to completed
+                    await CampaignAPI.updateCampaign(campaignId, { status: 'completed' });
+                    
+                    // Clear all campaign-related caches before refreshing
+                    CampaignUI._currentCampaign = null;
+                    CampaignUI._managingCampaign = null;
+                    CampaignUI._pastCampaignsCount = 0;
+                    
+                    // Close the modal
+                    CampaignUI.closeManageModal();
+                    
+                    // Refresh character data first (this clears the campaignId from characters)
+                    await AppState.loadCharacters();
+                    
+                    // Refresh campaign panel (will show empty state since campaign is no longer active)
+                    await ExpandedView._loadCampaignPanel();
+                    
+                    showAlertDialog('Campaign ended successfully. It can now be found in Past Adventures.');
+                } catch (error) {
+                    console.error('Failed to end campaign:', error);
+                    showAlertDialog(error.message || 'Failed to end campaign. Please try again.');
+                }
+            }
+        );
     },
 
     // ========================================
@@ -2858,8 +2866,8 @@ const CampaignUI = (window.CampaignUI = {
                 }
             }
             
-            // Refresh the campaign panel
-            ExpandedView._loadCampaignPanel();
+            // Refresh the campaign panel (must await to ensure it completes)
+            await ExpandedView._loadCampaignPanel();
             
             const notification = levelUpHandled 
                 ? '✓ Journal entry saved & LEVEL UP!' 
@@ -2903,7 +2911,7 @@ const CampaignUI = (window.CampaignUI = {
                     await CampaignAPI.deleteJournalEntry(entryId);
                     showNotification('Journal entry deleted');
                     // Refresh the campaign panel to update the journal list
-                    ExpandedView._loadCampaignPanel();
+                    await ExpandedView._loadCampaignPanel();
                 } catch (error) {
                     console.error('Failed to delete journal entry:', error);
                     showAlertDialog(error.message || 'Failed to delete journal entry.');
@@ -3087,7 +3095,7 @@ const CampaignUI = (window.CampaignUI = {
         try {
             await CampaignAPI.leaveCampaign(campaignId);
             showNotification('✓ Left campaign');
-            ExpandedView._loadCampaignPanel();
+            await ExpandedView._loadCampaignPanel();
         } catch (error) {
             console.error('Failed to leave campaign:', error);
             showAlertDialog(error.message || 'Failed to leave campaign.');
