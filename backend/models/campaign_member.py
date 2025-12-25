@@ -62,8 +62,12 @@ class CampaignMember(Base):
     # Used for Past Adventures feature to filter journals
     left_at = Column(DateTime, nullable=True)
     
+    # Who invited this user (null for campaign creators or invite-code joins)
+    invited_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    
     # Relationships
     campaign = relationship("Campaign", back_populates="members")
     user = relationship("User", back_populates="campaign_memberships")
     character = relationship("Character", back_populates="campaign_membership")
+    invited_by = relationship("User", foreign_keys=[invited_by_id])
 

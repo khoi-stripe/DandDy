@@ -1142,6 +1142,12 @@ div.sheet__sidebar.ui-theme-pink {
     white-space: nowrap;
 }
 
+.invitation-inviter {
+    font-size: var(--font-size-sm);
+    color: var(--ui-primary-color);
+    margin-top: 0.125rem;
+}
+
 .invitation-desc {
     font-size: var(--font-size-sm);
     color: var(--ui-dim-color);

@@ -104,6 +104,7 @@ class CampaignInvitationResponse(BaseModel):
     campaign_name: str
     campaign_description: Optional[str] = None
     invited_at: datetime
+    invited_by_email: Optional[str] = None  # Email of user who sent the invitation
     
     class Config:
         from_attributes = True

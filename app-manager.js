@@ -2089,6 +2089,7 @@ const CampaignUI = (window.CampaignUI = {
                 <div class="invitation-radio"></div>
                 <div class="invitation-info">
                     <div class="invitation-name">${Utils.escapeHtml(inv.campaign_name)}</div>
+                    ${inv.invited_by_email ? `<div class="invitation-inviter">Invited by ${Utils.escapeHtml(inv.invited_by_email)}</div>` : ''}
                     ${inv.campaign_description ? `<div class="invitation-desc">${Utils.escapeHtml(inv.campaign_description)}</div>` : ''}
                 </div>
             </div>

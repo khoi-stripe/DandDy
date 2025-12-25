@@ -701,7 +701,8 @@ def get_pending_invitations(
 ):
     """Get all pending campaign invitations for the current user."""
     invitations = db.query(CampaignMember).options(
-        joinedload(CampaignMember.campaign)
+        joinedload(CampaignMember.campaign),
+        joinedload(CampaignMember.invited_by)  # Load the inviter
     ).filter(
         CampaignMember.user_id == current_user.id,
         CampaignMember.status == MemberStatus.INVITED
@@ -713,7 +714,8 @@ def get_pending_invitations(
             campaign_id=inv.campaign_id,
             campaign_name=inv.campaign.name,
             campaign_description=inv.campaign.description,
-            invited_at=inv.joined_at
+            invited_at=inv.joined_at,
+            invited_by_email=inv.invited_by.email if inv.invited_by else None
         )
         for inv in invitations
     ]
@@ -799,7 +801,8 @@ def invite_user_by_email(
             campaign_id=campaign_id,
             user_id=invited_user.id,
             is_creator=False,
-            status=MemberStatus.INVITED
+            status=MemberStatus.INVITED,
+            invited_by_id=current_user.id  # Track who sent the invitation
         )
         # #region agent log
         debug_step = "db_add"
