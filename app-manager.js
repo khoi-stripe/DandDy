@@ -587,7 +587,7 @@ const AppState = {
     characters: [],
     filteredCharacters: [],
     searchTerm: '',
-    sortMode: 'dateModified', // 'alphabetical' | 'dateModified'
+    sortMode: 'dateModified', // 'alphabetical' | 'dateModified' | 'inCampaign'
     // The character id that should be considered "selected" across the UI.
     // This is the single source of truth used to keep the left-hand card
     // highlight, keyboard focus, and right-hand sheet in sync.
@@ -716,6 +716,17 @@ const AppState = {
                     return (a.name || '').localeCompare(b.name || '');
                 }
                 return bTime - aTime; // newest first
+            });
+        } else if (this.sortMode === 'inCampaign') {
+            // Sort characters in a campaign to the top, then by name
+            unpinned.sort((a, b) => {
+                const aInCampaign = a.campaignId ? 1 : 0;
+                const bInCampaign = b.campaignId ? 1 : 0;
+                if (aInCampaign !== bInCampaign) {
+                    return bInCampaign - aInCampaign; // In campaign first
+                }
+                // Secondary sort by name
+                return (a.name || '').localeCompare(b.name || '');
             });
         }
 
@@ -1449,7 +1460,7 @@ const ExpandedView = (window.ExpandedView = {
         `;
 
         return `
-            <div class="campaign-area">
+            <div class="campaign-area" data-campaign-id="${campaign.id}">
                 <div class="campaign-area-header">
                     <h3 class="campaign-area-title">[ Campaign ]</h3>
                     <span class="campaign-name">${campaign.name}</span>
@@ -4519,15 +4530,33 @@ const UI = {
             && window.isCharacterPinned(character.id);
         
         // Get campaign name if character is in a campaign
-        // Try to get from DOM (campaign panel) or will be shown as generic tooltip
+        // Prefer campaign_name from character data (loaded with character list)
         const characterCampaignId = character.campaignId || character.campaign_id;
-        let campaignName = null;
-        if (characterCampaignId) {
-            // Try to get campaign name from campaign area in DOM (if already loaded)
-            const campaignNameEl = document.querySelector('.campaign-area .campaign-name');
-            if (campaignNameEl) {
-                campaignName = campaignNameEl.textContent?.trim() || null;
+        let campaignName = character.campaignName || character.campaign_name || null;
+        
+        // Fallback: try to get campaign name from DOM (campaign panel) if already loaded
+        // IMPORTANT: Only use DOM value if the campaign IDs match (avoid showing wrong campaign)
+        if (characterCampaignId && !campaignName) {
+            const campaignAreaEl = document.querySelector('.campaign-area[data-campaign-id]');
+            const domCampaignId = campaignAreaEl?.dataset?.campaignId;
+            if (domCampaignId && String(domCampaignId) === String(characterCampaignId)) {
+                const campaignNameEl = campaignAreaEl.querySelector('.campaign-name');
+                if (campaignNameEl) {
+                    campaignName = campaignNameEl.textContent?.trim() || null;
+                }
             }
+        }
+        
+        // Last resort: async fetch if campaign name still not available
+        if (characterCampaignId && !campaignName && typeof CampaignUI !== 'undefined') {
+            CampaignUI.getCharacterCampaign(character.id).then(campaignData => {
+                if (campaignData?.campaign?.name) {
+                    const tooltipEl = document.querySelector('.sheet-status-badge--campaign .custom-tooltip');
+                    if (tooltipEl) {
+                        tooltipEl.textContent = campaignData.campaign.name;
+                    }
+                }
+            }).catch(() => {});
         }
         
         // Use the shared CharacterSheet component
@@ -10678,6 +10707,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const sortLabels = {
                 alphabetical: 'Alphabetical',
                 dateModified: 'Date modified',
+                inCampaign: 'In campaign',
             };
             const currentLabel = sortLabels[AppState.sortMode] || 'Date modified';
             sortToggleBtn.textContent = `Sort: ${currentLabel}`;
@@ -10703,7 +10733,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             opt.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const value = opt.getAttribute('data-sort-value');
-                if (value === 'alphabetical' || value === 'dateModified') {
+                if (value === 'alphabetical' || value === 'dateModified' || value === 'inCampaign') {
                     AppState.sortMode = value;
                     AppState.applyFilters();
                     UI.render();

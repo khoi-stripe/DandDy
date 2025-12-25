@@ -440,6 +440,8 @@ const CharacterSheet = (window.CharacterSheet = {
       lastUpdatedByEmail = null,  // Email of user who last updated
       hideOverflowMenu = false,
       hideHeader = false,  // Hide the entire sheet-title-header (for modals with their own header)
+      isPinned = false,  // Whether character is pinned
+      campaignName = null,  // Name of campaign (for IN CAMPAIGN badge tooltip)
     } = options;
 
     // Parse character data (handle both old and new formats)
@@ -465,6 +467,8 @@ const CharacterSheet = (window.CharacterSheet = {
         ownerEmail,
         lastUpdatedByEmail,
         hideOverflowMenu,
+        isPinned,
+        campaignName,
       })}
       
       <div class="sheet-portrait-info-row">
@@ -863,9 +867,8 @@ const CharacterSheet = (window.CharacterSheet = {
     // PINNED status badge (manager context only)
     if (context === 'manager' && isPinned) {
       statusBadges.push(`
-        <span class="sheet-status-badge sheet-status-badge--pinned has-tooltip">
+        <span class="sheet-status-badge sheet-status-badge--pinned">
           <span class="sheet-status-badge__icon">◆</span> PINNED
-          <span class="custom-tooltip" data-position="bottom">Pinned character</span>
         </span>`);
     }
     
@@ -878,7 +881,7 @@ const CharacterSheet = (window.CharacterSheet = {
       statusBadges.push(`
         <span class="sheet-status-badge sheet-status-badge--campaign has-tooltip">
           <span class="sheet-status-badge__icon">⚔</span> IN CAMPAIGN
-          <span class="custom-tooltip" data-position="bottom">${campaignTooltip}</span>
+          <span class="custom-tooltip" data-position="bottom-start">${campaignTooltip}</span>
         </span>`);
     }
     

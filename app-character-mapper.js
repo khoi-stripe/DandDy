@@ -182,6 +182,7 @@
         platinum: backendChar.platinum_pieces,
 
         campaignId: backendChar.campaign_id,
+        campaignName: backendChar.campaign_name || null,
         ownerId: backendChar.owner_id,
 
         _backendData: backendChar,
@@ -389,6 +390,7 @@
         },
 
         campaignId: apiChar.campaign_id,
+        campaignName: apiChar.campaign_name || null,
         ownerId: apiChar.owner_id,
         createdAt: apiChar.created_at,
         updatedAt: apiChar.updated_at,

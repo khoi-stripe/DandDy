@@ -66,6 +66,8 @@ def get_characters(
         char_dict['collaborator_count'] = collab_count
         # Include who last updated (if tracked)
         char_dict['last_updated_by_email'] = char.last_updated_by.email if char.last_updated_by else None
+        # Include campaign name if character is in a campaign
+        char_dict['campaign_name'] = char.campaign.name if char.campaign else None
         result.append(char_dict)
     
     # Add shared characters with metadata
@@ -78,6 +80,8 @@ def get_characters(
             char_dict['collaborator_count'] = 0  # Not relevant for collaborators
             # Include who last updated (if tracked)
             char_dict['last_updated_by_email'] = collab.character.last_updated_by.email if collab.character.last_updated_by else None
+            # Include campaign name if character is in a campaign
+            char_dict['campaign_name'] = collab.character.campaign.name if collab.character.campaign else None
             result.append(char_dict)
     
     return result

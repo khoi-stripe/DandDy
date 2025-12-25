@@ -154,6 +154,7 @@ class CharacterResponse(CharacterBase):
     id: int
     owner_id: int
     campaign_id: Optional[int] = None
+    campaign_name: Optional[str] = None  # Name of campaign (if in one)
     created_at: datetime
     updated_at: datetime
     
