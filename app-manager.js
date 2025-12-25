@@ -1246,9 +1246,11 @@ const ExpandedView = (window.ExpandedView = {
     },
 
     /** Render the full campaign panel with both sections */
-    _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0, journalEntries = [], pastCampaignsCount = 0) {
+    _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0, journalEntries = [], pastCampaignsCount = null) {
+        // Use cached past campaigns count if not explicitly provided
+        const pastCount = pastCampaignsCount !== null ? pastCampaignsCount : CampaignUI._pastCampaignsCount;
         return `
-            ${this._renderCampaignArea(campaignData, pendingInvitationCount, pastCampaignsCount)}
+            ${this._renderCampaignArea(campaignData, pendingInvitationCount, pastCount)}
             ${this._renderJournalSection(characterId, journalEntries, campaignData)}
         `;
     },
