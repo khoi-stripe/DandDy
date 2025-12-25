@@ -18,6 +18,70 @@ from datetime import date
 router = APIRouter(prefix="/journal", tags=["journal"])
 
 
+def validate_character_update_against_character(
+    update_data: CharacterUpdateCreate,
+    character: Character,
+    is_edit: bool = False,
+    old_update: Optional[CharacterUpdate] = None
+) -> List[str]:
+    """
+    Validate character update against actual character stats.
+    Returns list of validation error messages (empty if valid).
+    
+    Args:
+        update_data: The proposed changes
+        character: The character to validate against
+        is_edit: True if editing an existing update (need to consider reverting old values)
+        old_update: The existing update being edited (if is_edit=True)
+    """
+    errors = []
+    
+    # Calculate effective current values (accounting for edit reversion)
+    current_gold = character.gold_pieces
+    current_hp = character.hit_points_current
+    max_hp = character.hit_points_max
+    
+    if is_edit and old_update:
+        # When editing, first revert the old changes to get the "base" state
+        current_gold -= old_update.gold_change
+        current_hp -= old_update.hp_change
+    
+    # === Gold Validation ===
+    # Check if gold change would result in negative gold
+    new_gold = current_gold + update_data.gold_change
+    if new_gold < 0:
+        errors.append(
+            f"Gold change of {update_data.gold_change:+d} GP would result in negative gold "
+            f"(current: {current_gold} GP, would become: {new_gold} GP)"
+        )
+    
+    # === HP Validation ===
+    # Calculate what the new HP would be
+    new_hp = current_hp + update_data.hp_change
+    
+    # HP gain that would exceed max HP
+    if update_data.hp_change > 0:
+        hp_over_max = new_hp - max_hp
+        if hp_over_max > 0:
+            errors.append(
+                f"HP change of +{update_data.hp_change} would exceed max HP "
+                f"(current: {current_hp}/{max_hp}, would heal to: {new_hp}). "
+                f"Maximum healing possible: +{max_hp - current_hp}"
+            )
+    
+    # HP loss that would go below 0 - this is actually allowed in D&D (unconscious/death)
+    # but we should warn if it's excessive (more than current HP + max HP for massive damage)
+    if update_data.hp_change < 0:
+        if abs(update_data.hp_change) > current_hp + max_hp:
+            errors.append(
+                f"HP change of {update_data.hp_change} is excessive "
+                f"(current HP: {current_hp}, max HP: {max_hp}). "
+                f"This exceeds instant death threshold."
+            )
+    
+    return errors
+
+
 @router.post("/", response_model=JournalEntryResponse, status_code=status.HTTP_201_CREATED)
 def create_journal_entry(
     entry_data: JournalEntryWithUpdate,
@@ -72,6 +136,17 @@ def create_journal_entry(
             detail="You must be an active member of the campaign to create journal entries"
         )
     
+    # Validate character update if provided
+    if entry_data.character_update:
+        validation_errors = validate_character_update_against_character(
+            entry_data.character_update, character
+        )
+        if validation_errors:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"message": "Invalid character update", "errors": validation_errors}
+            )
+    
     # Create journal entry
     new_entry = JournalEntry(
         character_id=entry_data.character_id,
@@ -104,7 +179,7 @@ def create_journal_entry(
         character.experience_points += update_data.xp_gained
         character.gold_pieces += update_data.gold_change
         
-        # Apply HP change (clamped to 0-max)
+        # Apply HP change (clamped to 0-max for safety, though validation should prevent issues)
         new_hp = character.hit_points_current + update_data.hp_change
         character.hit_points_current = max(0, min(new_hp, character.hit_points_max))
         
@@ -583,6 +658,19 @@ def add_character_update(
         Character.id == entry.character_id
     ).first()
     
+    # Validate the update against character stats
+    validation_errors = validate_character_update_against_character(
+        update_data, 
+        character, 
+        is_edit=existing_update is not None,
+        old_update=existing_update
+    )
+    if validation_errors:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": "Invalid character update", "errors": validation_errors}
+        )
+    
     if existing_update:
         # Revert old changes first
         character.experience_points -= existing_update.xp_gained
@@ -616,7 +704,7 @@ def add_character_update(
     character.experience_points += update_data.xp_gained
     character.gold_pieces += update_data.gold_change
     
-    # Apply HP change (clamped to 0-max)
+    # Apply HP change (clamped to 0-max for safety, though validation should prevent issues)
     new_hp = character.hit_points_current + update_data.hp_change
     character.hit_points_current = max(0, min(new_hp, character.hit_points_max))
     
