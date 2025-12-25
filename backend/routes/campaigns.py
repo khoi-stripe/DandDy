@@ -160,27 +160,50 @@ def get_campaigns(
 
 @router.get("/past", response_model=List[PastCampaignResponse])
 def get_past_campaigns(
+    character_id: Optional[int] = None,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """
-    Get all past campaigns for the current user.
+    Get past campaigns for the current user.
+    
+    If character_id is provided, returns only past campaigns where that character
+    was a member. Otherwise returns all past campaigns for the user.
     
     Returns campaigns where:
     - User left the campaign (membership status = LEFT), OR
     - Campaign is completed/archived and user was a member
     """
-    # Find all memberships where user left
-    left_memberships = db.query(CampaignMember).filter(
+    # Base filters for membership queries
+    base_left_filter = [
         CampaignMember.user_id == current_user.id,
         CampaignMember.status == MemberStatus.LEFT
-    ).all()
-    
-    # Find campaigns that are completed/archived where user was active member
-    completed_memberships = db.query(CampaignMember).join(Campaign).filter(
+    ]
+    base_completed_filter = [
         CampaignMember.user_id == current_user.id,
         CampaignMember.status == MemberStatus.ACTIVE,
         Campaign.status.in_([CampaignStatus.COMPLETED, CampaignStatus.ARCHIVED])
+    ]
+    
+    # If character_id is provided, add it to the filters
+    if character_id is not None:
+        # Verify the character belongs to the user
+        character = db.query(Character).filter(
+            Character.id == character_id,
+            Character.user_id == current_user.id
+        ).first()
+        if not character:
+            raise HTTPException(status_code=404, detail="Character not found")
+        
+        base_left_filter.append(CampaignMember.character_id == character_id)
+        base_completed_filter.append(CampaignMember.character_id == character_id)
+    
+    # Find all memberships where user left
+    left_memberships = db.query(CampaignMember).filter(*base_left_filter).all()
+    
+    # Find campaigns that are completed/archived where user was active member
+    completed_memberships = db.query(CampaignMember).join(Campaign).filter(
+        *base_completed_filter
     ).all()
     
     # Combine membership IDs, avoiding duplicates

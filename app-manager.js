@@ -1265,7 +1265,7 @@ const ExpandedView = (window.ExpandedView = {
         // Use cached past campaigns count if not explicitly provided
         const pastCount = pastCampaignsCount !== null ? pastCampaignsCount : CampaignUI._pastCampaignsCount;
         return `
-            ${this._renderCampaignArea(campaignData, pendingInvitationCount, pastCount)}
+            ${this._renderCampaignArea(characterId, campaignData, pendingInvitationCount, pastCount)}
             ${this._renderJournalSection(characterId, journalEntries, campaignData)}
         `;
     },
@@ -1318,7 +1318,7 @@ const ExpandedView = (window.ExpandedView = {
     },
 
     /** Render the Campaign Area section (top) */
-    _renderCampaignArea(campaignData, pendingInvitationCount = 0, pastCampaignsCount = 0) {
+    _renderCampaignArea(characterId, campaignData, pendingInvitationCount = 0, pastCampaignsCount = 0) {
         if (!campaignData) {
             // No campaign - show join/create buttons inline with header
             const hasInvitations = pendingInvitationCount > 0;
@@ -1348,7 +1348,7 @@ const ExpandedView = (window.ExpandedView = {
                             class="selector-option"
                             type="button"
                             role="menuitem"
-                            onclick="CampaignUI.openPastAdventuresModal()"
+                            onclick="CampaignUI.openPastAdventuresModal(${characterId})"
                         >
                             <span class="selector-option-icon">↺</span>
                             <span class="selector-option-label">Past Adventures</span>
@@ -1508,7 +1508,7 @@ const ExpandedView = (window.ExpandedView = {
             menuItems.push({
                 icon: '↺',
                 label: 'Past Adventures',
-                onclick: 'CampaignUI.openPastAdventuresModal()',
+                onclick: `CampaignUI.openPastAdventuresModal(${characterId})`,
             });
         }
 
@@ -1810,12 +1810,15 @@ const CampaignUI = (window.CampaignUI = {
     _pastCampaignsCount: 0,
     
     /**
-     * Fetch and cache the count of past campaigns
-     * @returns {Promise<number>} Number of past campaigns
+     * Fetch and cache the count of past campaigns for a specific character
+     * @param {number|null} [characterId] - Character ID to filter by (defaults to current selected character)
+     * @returns {Promise<number>} Number of past campaigns for this character
      */
-    async fetchPastCampaignsCount() {
+    async fetchPastCampaignsCount(characterId = null) {
         try {
-            const pastCampaigns = await CampaignAPI.getPastCampaigns();
+            // Use provided characterId or fall back to selected character
+            const charId = characterId || AppState.selectedCharacterId;
+            const pastCampaigns = await CampaignAPI.getPastCampaigns(charId);
             this._pastCampaignsCount = pastCampaigns?.length || 0;
             return this._pastCampaignsCount;
         } catch (error) {
@@ -3644,11 +3647,15 @@ const CampaignUI = (window.CampaignUI = {
     _viewingPastCampaign: null,
 
     /**
-     * Open the Past Adventures modal and load past campaigns
+     * Open the Past Adventures modal and load past campaigns for a specific character
+     * @param {number|null} [characterId] - Character ID to filter by (defaults to current selected character)
      */
-    async openPastAdventuresModal() {
+    async openPastAdventuresModal(characterId = null) {
         const modal = document.getElementById('pastAdventuresModal');
         if (!modal) return;
+        
+        // Use provided characterId or fall back to selected character
+        const charId = characterId || AppState.selectedCharacterId;
         
         // Reset to list view
         this._viewingPastCampaign = null;
@@ -3662,9 +3669,9 @@ const CampaignUI = (window.CampaignUI = {
         
         modal.classList.add('show');
         
-        // Fetch past campaigns
+        // Fetch past campaigns for this character
         try {
-            this._pastCampaigns = await CampaignAPI.getPastCampaigns();
+            this._pastCampaigns = await CampaignAPI.getPastCampaigns(charId);
             this._renderPastCampaignsList();
         } catch (error) {
             console.error('Failed to load past campaigns:', error);

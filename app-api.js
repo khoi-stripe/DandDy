@@ -793,14 +793,16 @@ const CampaignAPI = (window.CampaignAPI = {
   },
 
   /**
-   * Get all past campaigns the user was a member of
+   * Get past campaigns the user was a member of
    * (campaigns they left or that have been completed/archived)
+   * @param {number|null} [characterId] - Optional character ID to filter by specific character
    * @returns {Promise<Array>} List of past campaigns with member info
    */
-  async getPastCampaigns() {
+  async getPastCampaigns(characterId = null) {
     try {
-      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Fetching past campaigns...');
-      const campaigns = await this._apiRequest('/campaigns/past');
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Fetching past campaigns...', characterId ? `for character ${characterId}` : '');
+      const url = characterId ? `/campaigns/past?character_id=${characterId}` : '/campaigns/past';
+      const campaigns = await this._apiRequest(url);
       if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Found', campaigns.length, 'past campaigns');
       return campaigns;
     } catch (error) {
