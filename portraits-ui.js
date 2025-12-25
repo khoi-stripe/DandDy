@@ -1169,25 +1169,8 @@
               }
             </div>`;
 
-          // Overflow menu for per-version actions (View, Prompt, Delete)
+          // Overflow menu for per-version actions (Info, Delete)
           const actionItems = [];
-
-          // Toggle button label depends on current default view
-          if (hasImage) {
-            const toggleLabel = shouldShowOriginal ? 'View ASCII' : 'View original';
-            actionItems.push(`
-              <button
-                class="selector-option"
-                type="button"
-                role="menuitem"
-                onclick="event.stopPropagation(); PortraitUI.toggleView('${v.id}')"
-                data-toggle-version-id="${v.id}"
-              >
-                <span class="selector-option-icon">◉</span>
-                <span class="selector-option-label">${toggleLabel}</span>
-              </button>
-            `);
-          }
 
           // Always show Image Info - displays date, style, model, and prompt (if available)
           actionItems.push(`

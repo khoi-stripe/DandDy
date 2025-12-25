@@ -50,6 +50,28 @@ def create_journal_entry(
         # Use character's campaign if any
         campaign_id = character.campaign_id
     
+    # Require character to be in a campaign
+    if not campaign_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Journal entries can only be created for characters in a campaign"
+        )
+    
+    # Verify user is an active member of the campaign
+    is_campaign_member = db.query(CampaignMember).filter(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.user_id == current_user.id,
+        CampaignMember.status == MemberStatus.ACTIVE
+    ).first()
+    
+    # Also allow DM to create entries
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not is_campaign_member and (not campaign or campaign.dm_id != current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must be an active member of the campaign to create journal entries"
+        )
+    
     # Create journal entry
     new_entry = JournalEntry(
         character_id=entry_data.character_id,
@@ -305,7 +327,7 @@ def update_journal_entry(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Update a journal entry (owner only)."""
+    """Update a journal entry (owner only, must be in campaign)."""
     entry = db.query(JournalEntry).filter(
         JournalEntry.id == entry_id,
         JournalEntry.user_id == current_user.id
@@ -315,6 +337,28 @@ def update_journal_entry(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Journal entry not found or not owned by you"
+        )
+    
+    # Require the journal entry to be associated with a campaign
+    if not entry.campaign_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Journal entries can only be updated for characters in a campaign"
+        )
+    
+    # Verify user is still an active member of the campaign
+    is_campaign_member = db.query(CampaignMember).filter(
+        CampaignMember.campaign_id == entry.campaign_id,
+        CampaignMember.user_id == current_user.id,
+        CampaignMember.status == MemberStatus.ACTIVE
+    ).first()
+    
+    # Also allow DM to update entries
+    campaign = db.query(Campaign).filter(Campaign.id == entry.campaign_id).first()
+    if not is_campaign_member and (not campaign or campaign.dm_id != current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must be an active member of the campaign to update journal entries"
         )
     
     # Update fields if provided
@@ -375,6 +419,28 @@ def add_character_update(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Journal entry not found or not owned by you"
+        )
+    
+    # Require the journal entry to be associated with a campaign
+    if not entry.campaign_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Character updates can only be added for journal entries in a campaign"
+        )
+    
+    # Verify user is still an active member of the campaign
+    is_campaign_member = db.query(CampaignMember).filter(
+        CampaignMember.campaign_id == entry.campaign_id,
+        CampaignMember.user_id == current_user.id,
+        CampaignMember.status == MemberStatus.ACTIVE
+    ).first()
+    
+    # Also allow DM to add character updates
+    campaign = db.query(Campaign).filter(Campaign.id == entry.campaign_id).first()
+    if not is_campaign_member and (not campaign or campaign.dm_id != current_user.id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You must be an active member of the campaign to add character updates"
         )
     
     # Check if update already exists

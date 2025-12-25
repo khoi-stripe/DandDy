@@ -76,6 +76,13 @@
   --card-glow-s: var(--theme-yellow-s);
   --card-glow-l-bright: var(--theme-yellow-l-bright);
 
+  /* ===== MODAL GLOW DEFAULTS (for portrait history cards, etc.) ===== */
+  /* Default = yellow theme; can be overridden by theme classes if needed */
+  --modal-glow-h: var(--theme-yellow-h);
+  --modal-glow-s: var(--theme-yellow-s);
+  --modal-glow-l-bright: var(--theme-yellow-l-bright);
+  --modal-hover: hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.1);
+
   /* ===== UI ACCENT HSL (contrasting secondary color per theme) ===== */
   /* Default = gold/amber (for white/neutral default); overridden by .theme-* classes */
   --ui-accent-h: var(--theme-white-accent-h);
@@ -127,8 +134,9 @@
   
   /* Yellow Modal/Warning Tokens */
   --terminal-warning: hsl(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright));
-  --modal-accent: hsl(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright));
-  --modal-accent-dim: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.75);
+  /* Modal accent tokens now derive from modal-glow HSL for theme inheritance */
+  --modal-accent: hsl(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright));
+  --modal-accent-dim: hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.55);
   
   /* Error Token */
   --terminal-error: hsl(var(--theme-error-h), var(--theme-error-s), var(--theme-error-l));
@@ -320,6 +328,10 @@
   --card-glow-h: var(--theme-terminal-h);
   --card-glow-s: var(--theme-terminal-s);
   --card-glow-l-bright: var(--theme-terminal-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-terminal-h);
+  --modal-glow-s: var(--theme-terminal-s);
+  --modal-glow-l-bright: var(--theme-terminal-l-bright);
   /* Accent HSL (teal - for splash logo, etc.) */
   --ui-accent-h: var(--theme-teal-h);
   --ui-accent-s: var(--theme-teal-s);
@@ -355,6 +367,10 @@
   --card-glow-h: var(--theme-terminal-h);
   --card-glow-s: var(--theme-terminal-s);
   --card-glow-l-bright: var(--theme-terminal-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-terminal-h);
+  --modal-glow-s: var(--theme-terminal-s);
+  --modal-glow-l-bright: var(--theme-terminal-l-bright);
   --ui-tag-bg: var(--tag-accent-green);
   --ui-tag-color: var(--terminal-bg);
 }
@@ -403,6 +419,10 @@
   --card-glow-h: var(--theme-teal-h);
   --card-glow-s: var(--theme-teal-s);
   --card-glow-l-bright: var(--theme-teal-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-teal-h);
+  --modal-glow-s: var(--theme-teal-s);
+  --modal-glow-l-bright: var(--theme-teal-l-bright);
   /* Accent HSL (orange - for splash logo, etc.) */
   --ui-accent-h: var(--theme-orange-h);
   --ui-accent-s: var(--theme-orange-s);
@@ -438,6 +458,10 @@
   --card-glow-h: var(--theme-teal-h);
   --card-glow-s: var(--theme-teal-s);
   --card-glow-l-bright: var(--theme-teal-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-teal-h);
+  --modal-glow-s: var(--theme-teal-s);
+  --modal-glow-l-bright: var(--theme-teal-l-bright);
   --ui-tag-bg: var(--tag-accent-teal);
   --ui-tag-color: var(--terminal-bg);
 }
@@ -455,6 +479,10 @@
   --card-glow-h: var(--theme-pink-h);
   --card-glow-s: var(--theme-pink-s);
   --card-glow-l-bright: var(--theme-pink-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-pink-h);
+  --modal-glow-s: var(--theme-pink-s);
+  --modal-glow-l-bright: var(--theme-pink-l-bright);
   /* Accent HSL (teal/mint - for splash logo, etc.) */
   --ui-accent-h: var(--theme-pink-accent-h);
   --ui-accent-s: 75%;
@@ -490,6 +518,10 @@
   --card-glow-h: var(--theme-pink-h);
   --card-glow-s: var(--theme-pink-s);
   --card-glow-l-bright: var(--theme-pink-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-pink-h);
+  --modal-glow-s: var(--theme-pink-s);
+  --modal-glow-l-bright: var(--theme-pink-l-bright);
   --ui-tag-bg: var(--tag-accent-pink);
   --ui-tag-color: var(--terminal-bg);
 }
@@ -560,6 +592,10 @@
   --card-glow-h: var(--theme-white-h);
   --card-glow-s: var(--theme-white-s);
   --card-glow-l-bright: var(--theme-white-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-white-h);
+  --modal-glow-s: var(--theme-white-s);
+  --modal-glow-l-bright: var(--theme-white-l-bright);
   /* Accent HSL (gold/amber - for splash logo, etc.) */
   --ui-accent-h: var(--theme-white-accent-h);
   --ui-accent-s: 100%;
@@ -595,6 +631,10 @@
   --card-glow-h: var(--theme-white-h);
   --card-glow-s: var(--theme-white-s);
   --card-glow-l-bright: var(--theme-white-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-white-h);
+  --modal-glow-s: var(--theme-white-s);
+  --modal-glow-l-bright: var(--theme-white-l-bright);
   --ui-tag-bg: var(--tag-accent-white);
   --ui-tag-color: var(--terminal-bg);
 }
@@ -612,6 +652,10 @@
   --card-glow-h: var(--theme-red-h);
   --card-glow-s: var(--theme-red-s);
   --card-glow-l-bright: var(--theme-red-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-red-h);
+  --modal-glow-s: var(--theme-red-s);
+  --modal-glow-l-bright: var(--theme-red-l-bright);
   /* Accent HSL (cyan - for splash logo, etc.) */
   --ui-accent-h: var(--theme-red-accent-h);
   --ui-accent-s: 100%;
@@ -647,6 +691,10 @@
   --card-glow-h: var(--theme-red-h);
   --card-glow-s: var(--theme-red-s);
   --card-glow-l-bright: var(--theme-red-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-red-h);
+  --modal-glow-s: var(--theme-red-s);
+  --modal-glow-l-bright: var(--theme-red-l-bright);
   --ui-tag-bg: var(--tag-accent-red);
   --ui-tag-color: var(--terminal-bg);
 }
@@ -664,6 +712,10 @@
   --card-glow-h: var(--theme-orange-h);
   --card-glow-s: var(--theme-orange-s);
   --card-glow-l-bright: var(--theme-orange-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-orange-h);
+  --modal-glow-s: var(--theme-orange-s);
+  --modal-glow-l-bright: var(--theme-orange-l-bright);
   /* Accent HSL (blue - for splash logo, etc.) */
   --ui-accent-h: var(--theme-orange-accent-h);
   --ui-accent-s: 100%;
@@ -699,6 +751,10 @@
   --card-glow-h: var(--theme-orange-h);
   --card-glow-s: var(--theme-orange-s);
   --card-glow-l-bright: var(--theme-orange-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-orange-h);
+  --modal-glow-s: var(--theme-orange-s);
+  --modal-glow-l-bright: var(--theme-orange-l-bright);
   --ui-tag-bg: var(--tag-accent-orange);
   --ui-tag-color: var(--terminal-bg);
 }
@@ -716,6 +772,10 @@
   --card-glow-h: var(--theme-blue-h);
   --card-glow-s: var(--theme-blue-s);
   --card-glow-l-bright: var(--theme-blue-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-blue-h);
+  --modal-glow-s: var(--theme-blue-s);
+  --modal-glow-l-bright: var(--theme-blue-l-bright);
   /* Accent HSL (amber - for splash logo, etc.) */
   --ui-accent-h: var(--theme-blue-accent-h);
   --ui-accent-s: 100%;
@@ -751,6 +811,10 @@
   --card-glow-h: var(--theme-blue-h);
   --card-glow-s: var(--theme-blue-s);
   --card-glow-l-bright: var(--theme-blue-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-blue-h);
+  --modal-glow-s: var(--theme-blue-s);
+  --modal-glow-l-bright: var(--theme-blue-l-bright);
   --ui-tag-bg: var(--tag-accent-blue);
   --ui-tag-color: var(--terminal-bg);
 }
@@ -768,6 +832,10 @@
   --card-glow-h: var(--theme-violet-h);
   --card-glow-s: var(--theme-violet-s);
   --card-glow-l-bright: var(--theme-violet-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-violet-h);
+  --modal-glow-s: var(--theme-violet-s);
+  --modal-glow-l-bright: var(--theme-violet-l-bright);
   /* Accent HSL (gold - for splash logo, etc.) */
   --ui-accent-h: var(--theme-violet-accent-h);
   --ui-accent-s: 100%;
@@ -803,6 +871,10 @@
   --card-glow-h: var(--theme-violet-h);
   --card-glow-s: var(--theme-violet-s);
   --card-glow-l-bright: var(--theme-violet-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-violet-h);
+  --modal-glow-s: var(--theme-violet-s);
+  --modal-glow-l-bright: var(--theme-violet-l-bright);
   --ui-tag-bg: var(--tag-accent-violet);
   --ui-tag-color: var(--terminal-bg);
 }
@@ -820,6 +892,10 @@
   --card-glow-h: var(--theme-yellow-h);
   --card-glow-s: var(--theme-yellow-s);
   --card-glow-l-bright: var(--theme-yellow-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-yellow-h);
+  --modal-glow-s: var(--theme-yellow-s);
+  --modal-glow-l-bright: var(--theme-yellow-l-bright);
   /* Accent HSL (blue - for splash logo, etc.) */
   --ui-accent-h: var(--theme-yellow-accent-h);
   --ui-accent-s: 100%;
@@ -855,6 +931,10 @@
   --card-glow-h: var(--theme-yellow-h);
   --card-glow-s: var(--theme-yellow-s);
   --card-glow-l-bright: var(--theme-yellow-l-bright);
+  /* Modal glow HSL (inherits theme color) */
+  --modal-glow-h: var(--theme-yellow-h);
+  --modal-glow-s: var(--theme-yellow-s);
+  --modal-glow-l-bright: var(--theme-yellow-l-bright);
   --ui-tag-bg: var(--tag-accent-yellow);
   --ui-tag-color: var(--terminal-bg);
 }
@@ -3944,6 +4024,21 @@ body.selector-menu-open .splash-art {
   display: flex;
   gap: var(--spacing-sm);
   justify-content: flex-end;
+}
+
+/* Mobile: reduce modal padding */
+@media (max-width: 768px) {
+  .modal-header {
+    padding: 12px 12px var(--spacing-xs) 12px;
+  }
+  
+  .modal-body {
+    padding: 12px;
+  }
+  
+  .modal-footer {
+    padding: 12px;
+  }
 }
 
 /* Modal-specific text theming - uses ui-* tokens from theme class */

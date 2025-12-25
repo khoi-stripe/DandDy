@@ -433,21 +433,21 @@
   aspect-ratio: 3 / 4;
 }
 
-/* Hover and keyboard focus (unselected) - bright yellow outline, text, and ASCII */
+/* Hover and keyboard focus (unselected) - bright modal accent outline, text, and ASCII */
 .portrait-history-modal .character-card:hover:not(.is-selected),
 .portrait-history-modal .character-card.is-keyboard-focused:not(.is-selected) {
   border-color: var(--modal-accent);
   background-color: hsla(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright),
+    var(--modal-glow-h),
+    var(--modal-glow-s),
+    var(--modal-glow-l-bright),
     0.08
   );
   box-shadow: 0 0 15px
     hsla(
-      var(--theme-yellow-h),
-      var(--theme-yellow-s),
-      var(--theme-yellow-l-bright),
+      var(--modal-glow-h),
+      var(--modal-glow-s),
+      var(--modal-glow-l-bright),
       0.25
     );
 }
@@ -570,20 +570,20 @@
   color: var(--modal-accent-dim);
 }
 
-/* Selected card uses bright yellow (matching character grid pattern) */
+/* Selected card uses bright modal accent (matching character grid pattern) */
 .portrait-history-modal .character-card.is-selected {
   border-color: var(--modal-accent) !important;
   background-color: hsla(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright),
+    var(--modal-glow-h),
+    var(--modal-glow-s),
+    var(--modal-glow-l-bright),
     0.08
   ) !important;
-  /* Yellow breathing glow (matching card-glow pattern) */
+  /* Modal accent breathing glow (matching card-glow pattern) */
   box-shadow:
-    0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.5),
-    0 0 14px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45),
-    0 0 28px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.3),
+    0 0 0 1px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.5),
+    0 0 14px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.45),
+    0 0 28px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.3),
     0 10px 22px rgba(0, 0, 0, 0.6) !important;
   animation: portrait-history-card-glow 4.6s ease-in-out 0.3s infinite !important;
 }
@@ -608,21 +608,21 @@
   color: #000000;
 }
 
-/* Hover and keyboard focus for selected cards - keep bright yellow treatment */
+/* Hover and keyboard focus for selected cards - keep bright modal accent treatment */
 .portrait-history-modal .character-card.is-selected:hover,
 .portrait-history-modal .character-card.is-selected.is-keyboard-focused {
   border-color: var(--modal-accent) !important;
   background-color: hsla(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright),
+    var(--modal-glow-h),
+    var(--modal-glow-s),
+    var(--modal-glow-l-bright),
     0.14
   ) !important;
   /* Maintain the same glow intensity while hovered/focused so it feels stable */
   box-shadow:
-    0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.5),
-    0 0 14px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45),
-    0 0 28px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.3),
+    0 0 0 1px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.5),
+    0 0 14px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.45),
+    0 0 28px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.3),
     0 10px 22px rgba(0, 0, 0, 0.6) !important;
 }
 
@@ -717,16 +717,16 @@
 
 .portrait-history-nav:hover {
   background-color: hsla(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright),
+    var(--modal-glow-h),
+    var(--modal-glow-s),
+    var(--modal-glow-l-bright),
     0.18
   );
   box-shadow: 0 0 10px
     hsla(
-      var(--theme-yellow-h),
-      var(--theme-yellow-s),
-      var(--theme-yellow-l-bright),
+      var(--modal-glow-h),
+      var(--modal-glow-s),
+      var(--modal-glow-l-bright),
       0.6
     );
 }
@@ -739,15 +739,15 @@
 }
 
 /* Portrait history listbox hover/focus background:
-   All cards use yellow modal theme (both selected and unselected) */
+   All cards use modal accent theme (both selected and unselected) */
 .portrait-history-menu-detached .selector-option:hover,
 .portrait-history-menu-detached .selector-option:focus,
 .portrait-history-menu-detached--teal .selector-option:hover,
 .portrait-history-menu-detached--teal .selector-option:focus {
   background-color: hsla(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright),
+    var(--modal-glow-h),
+    var(--modal-glow-s),
+    var(--modal-glow-l-bright),
     0.16
   );
 }
@@ -768,16 +768,16 @@
 
 .portrait-history-overflow-btn:hover {
   background-color: hsla(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright),
+    var(--modal-glow-h),
+    var(--modal-glow-s),
+    var(--modal-glow-l-bright),
     0.15
   );
   box-shadow: 0 0 10px
     hsla(
-      var(--theme-yellow-h),
-      var(--theme-yellow-s),
-      var(--theme-yellow-l-bright),
+      var(--modal-glow-h),
+      var(--modal-glow-s),
+      var(--modal-glow-l-bright),
       0.6
     );
 }
@@ -789,22 +789,22 @@
   /* Must be above the modal overlay (z-index: 10000) so the menu is visible */
   z-index: 10001;
   
-  /* Default to the modal's yellow theme when detached so they match the
-     non-teal portrait history UI. */
+  /* Default to the modal's accent theme when detached so they match the
+     portrait history UI. Uses modal glow tokens for theme inheritance. */
   --ui-border-color: hsl(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright)
+    var(--modal-glow-h),
+    var(--modal-glow-s),
+    var(--modal-glow-l-bright)
   );
   --ui-fg-color: hsl(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright)
+    var(--modal-glow-h),
+    var(--modal-glow-s),
+    var(--modal-glow-l-bright)
   );
   --ui-dim-color: hsla(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright),
+    var(--modal-glow-h),
+    var(--modal-glow-s),
+    var(--modal-glow-l-bright),
     0.7
   );
   
@@ -823,42 +823,42 @@
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.95);
 }
 
-/* Yellow breathing glow animation for selected portrait history cards
-   (matches the card-glow pattern but uses yellow theme instead of green) */
+/* Modal accent breathing glow animation for selected portrait history cards
+   (matches the card-glow pattern but uses modal theme) */
 @keyframes portrait-history-card-glow {
   0% {
     box-shadow:
-      0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.5),
-      0 0 14px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45),
-      0 0 28px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.3),
+      0 0 0 1px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.5),
+      0 0 14px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.45),
+      0 0 28px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.3),
       0 10px 22px rgba(0, 0, 0, 0.6);
   }
   27% {
     box-shadow:
-      0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.65),
-      0 0 18px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.55),
-      0 0 32px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.34),
+      0 0 0 1px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.65),
+      0 0 18px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.55),
+      0 0 32px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.34),
       0 10px 22px rgba(0, 0, 0, 0.6);
   }
   54% {
     box-shadow:
-      0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.8),
-      0 0 20px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.7),
-      0 0 40px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45),
+      0 0 0 1px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.8),
+      0 0 20px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.7),
+      0 0 40px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.45),
       0 10px 22px rgba(0, 0, 0, 0.6);
   }
   81% {
     box-shadow:
-      0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.6),
-      0 0 16px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.5),
-      0 0 30px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.33),
+      0 0 0 1px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.6),
+      0 0 16px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.5),
+      0 0 30px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.33),
       0 10px 22px rgba(0, 0, 0, 0.6);
   }
   100% {
     box-shadow:
-      0 0 0 1px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.5),
-      0 0 14px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.45),
-      0 0 28px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-bright), 0.3),
+      0 0 0 1px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.5),
+      0 0 14px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.45),
+      0 0 28px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.3),
       0 10px 22px rgba(0, 0, 0, 0.6);
   }
 }
@@ -1095,7 +1095,7 @@
 
 .portrait-prompt-textarea:focus {
   border-color: var(--modal-accent);
-  box-shadow: 0 0 5px hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.5);
+  box-shadow: 0 0 5px hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.35);
   outline: none;
 }
 
