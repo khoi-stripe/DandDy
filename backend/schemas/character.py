@@ -169,3 +169,46 @@ class CharacterResponse(CharacterBase):
         from_attributes = True
 
 
+class CharacterLiteResponse(BaseModel):
+    """
+    Lightweight character response for list views.
+    
+    Excludes heavy fields like ascii_portrait and custom_portrait_ascii
+    to reduce database egress. Use this for character grids/lists where
+    you only need basic info + portrait URL.
+    
+    Saves ~24KB per character in API responses.
+    """
+    id: int
+    owner_id: int
+    campaign_id: Optional[int] = None
+    campaign_name: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    # Basic Info (for card display)
+    name: str
+    race: str
+    character_class: str
+    level: int
+    background: Optional[str] = None
+    
+    # Portrait (URL only, no ASCII text)
+    original_portrait_url: Optional[str] = None
+    custom_portrait_count: int = 0
+    portrait_metadata: Dict = {}
+    
+    # Demo Mode
+    is_demo: bool = False
+    
+    # Sharing info
+    is_shared: Optional[bool] = None
+    owner_email: Optional[str] = None
+    permission: Optional[str] = None
+    collaborator_count: Optional[int] = None
+    last_updated_by_email: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+

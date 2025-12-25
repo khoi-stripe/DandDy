@@ -776,6 +776,41 @@ const CampaignAPI = (window.CampaignAPI = {
   },
 
   /**
+   * Get all past campaigns the user was a member of
+   * (campaigns they left or that have been completed/archived)
+   * @returns {Promise<Array>} List of past campaigns with member info
+   */
+  async getPastCampaigns() {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Fetching past campaigns...');
+      const campaigns = await this._apiRequest('/campaigns/past');
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Found', campaigns.length, 'past campaigns');
+      return campaigns;
+    } catch (error) {
+      console.error('🏰 CAMPAIGN ERROR: Failed to fetch past campaigns:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get historical journal entries for a past campaign
+   * @param {number} campaignId
+   * @param {number} [limit=100] - Maximum entries to return
+   * @returns {Promise<Array>} Journal entries (respecting visibility settings)
+   */
+  async getPastCampaignJournals(campaignId, limit = 100) {
+    try {
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Fetching past campaign journals for', campaignId);
+      const journals = await this._apiRequest(`/journal/campaign/${campaignId}/history?limit=${limit}`);
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Found', journals.length, 'journal entries');
+      return journals;
+    } catch (error) {
+      console.error('🏰 CAMPAIGN ERROR: Failed to fetch past campaign journals:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get a single campaign with characters
    * @param {number} campaignId
    * @returns {Promise<Object>} Campaign with characters

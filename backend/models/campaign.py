@@ -45,6 +45,10 @@ class Campaign(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
+    # Timestamp when campaign ended (status changed to COMPLETED or ARCHIVED)
+    # Used for Past Adventures feature
+    ended_at = Column(DateTime, nullable=True)
+    
     # Alias for clearer semantics (created_by = dm_id)
     @property
     def created_by(self):

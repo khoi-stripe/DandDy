@@ -1321,6 +1321,11 @@ const ExpandedView = (window.ExpandedView = {
                         </div>
                     </div>
                     ` : ''}
+                    <div class="campaign-area-past-link">
+                        <a href="#" onclick="CampaignUI.openPastAdventuresModal(); return false;" class="past-adventures-link">
+                            <span class="past-adventures-link-icon">📜</span> Past Adventures
+                        </a>
+                    </div>
                 </div>
             `;
         }
@@ -1426,6 +1431,13 @@ const ExpandedView = (window.ExpandedView = {
                 danger: true,
             });
         }
+        
+        // Past Adventures - available to everyone
+        menuItems.push({
+            icon: '📜',
+            label: 'Past Adventures',
+            onclick: 'CampaignUI.openPastAdventuresModal()',
+        });
 
         const overflowMenuHtml = `
             <div class="campaign-overflow selector-shell selector-shell--actions">
@@ -3239,6 +3251,290 @@ const CampaignUI = (window.CampaignUI = {
         if (modal) {
             animateModalClose(modal, { removeOnClose: true });
         }
+    },
+
+    // ========================================
+    // PAST ADVENTURES MODAL
+    // ========================================
+    
+    // Cache for past campaigns data
+    _pastCampaigns: [],
+    // Currently viewing past campaign (for detail view)
+    _viewingPastCampaign: null,
+
+    /**
+     * Open the Past Adventures modal and load past campaigns
+     */
+    async openPastAdventuresModal() {
+        const modal = document.getElementById('pastAdventuresModal');
+        if (!modal) return;
+        
+        // Reset to list view
+        this._viewingPastCampaign = null;
+        this._showPastAdventuresListView();
+        
+        // Show loading state
+        const listEl = document.getElementById('pastAdventuresList');
+        if (listEl) {
+            listEl.innerHTML = '<div class="past-adventures-loading">Loading past adventures...</div>';
+        }
+        
+        modal.classList.add('show');
+        
+        // Fetch past campaigns
+        try {
+            this._pastCampaigns = await CampaignAPI.getPastCampaigns();
+            this._renderPastCampaignsList();
+        } catch (error) {
+            console.error('Failed to load past campaigns:', error);
+            if (listEl) {
+                listEl.innerHTML = '<div class="past-adventures-empty">Failed to load past adventures.</div>';
+            }
+        }
+    },
+
+    /** Close the Past Adventures modal */
+    closePastAdventuresModal() {
+        const modal = document.getElementById('pastAdventuresModal');
+        if (modal) {
+            animateModalClose(modal, { removeOnClose: false });
+        }
+        this._pastCampaigns = [];
+        this._viewingPastCampaign = null;
+    },
+
+    /** Show the list view (hide detail view) */
+    _showPastAdventuresListView() {
+        const listView = document.getElementById('pastAdventuresListView');
+        const detailView = document.getElementById('pastAdventuresDetailView');
+        const breadcrumb = document.getElementById('pastAdventuresBreadcrumb');
+        const title = document.getElementById('pastAdventuresTitle');
+        
+        if (listView) listView.style.display = '';
+        if (detailView) detailView.style.display = 'none';
+        if (breadcrumb) breadcrumb.style.display = 'none';
+        if (title) title.style.display = '';
+    },
+
+    /** Show the detail view (hide list view) */
+    _showPastAdventuresDetailView(campaignName) {
+        const listView = document.getElementById('pastAdventuresListView');
+        const detailView = document.getElementById('pastAdventuresDetailView');
+        const breadcrumb = document.getElementById('pastAdventuresBreadcrumb');
+        const breadcrumbCurrent = document.getElementById('pastAdventuresBreadcrumbCurrent');
+        const title = document.getElementById('pastAdventuresTitle');
+        
+        if (listView) listView.style.display = 'none';
+        if (detailView) detailView.style.display = '';
+        if (breadcrumb) breadcrumb.style.display = '';
+        if (breadcrumbCurrent) breadcrumbCurrent.textContent = campaignName;
+        if (title) title.style.display = 'none';
+    },
+
+    /** Render the list of past campaigns */
+    _renderPastCampaignsList() {
+        const listEl = document.getElementById('pastAdventuresList');
+        if (!listEl) return;
+        
+        if (!this._pastCampaigns || this._pastCampaigns.length === 0) {
+            listEl.innerHTML = '<div class="past-adventures-empty">No past adventures yet. Campaigns you leave or that conclude will appear here.</div>';
+            return;
+        }
+        
+        listEl.innerHTML = this._pastCampaigns.map(campaign => {
+            const startDate = campaign.created_at 
+                ? new Date(campaign.created_at).toLocaleDateString() 
+                : 'Unknown';
+            const endDate = campaign.ended_at 
+                ? new Date(campaign.ended_at).toLocaleDateString()
+                : (campaign.user_left_at 
+                    ? new Date(campaign.user_left_at).toLocaleDateString() 
+                    : 'Unknown');
+            
+            // Determine status label
+            let statusLabel = '';
+            let statusClass = '';
+            if (campaign.user_status === 'left') {
+                statusLabel = 'Left';
+                statusClass = 'past-campaign-status--left';
+            } else if (campaign.status === 'completed') {
+                statusLabel = 'Completed';
+                statusClass = 'past-campaign-status--completed';
+            } else if (campaign.status === 'archived') {
+                statusLabel = 'Archived';
+                statusClass = 'past-campaign-status--archived';
+            }
+            
+            // Build party preview (show first 3 symbols)
+            const partyPreview = campaign.members
+                .slice(0, 3)
+                .map(m => m.symbol || '○')
+                .join(' ');
+            const moreCount = campaign.party_count > 3 ? ` +${campaign.party_count - 3}` : '';
+            
+            return `
+                <div class="past-campaign-card" onclick="CampaignUI.viewPastCampaign(${campaign.id})">
+                    <div class="past-campaign-header">
+                        <div class="past-campaign-name">${Utils.escapeHtml(campaign.name)}</div>
+                        <div class="past-campaign-status ${statusClass}">${statusLabel}</div>
+                    </div>
+                    ${campaign.description ? `<div class="past-campaign-desc">${Utils.escapeHtml(campaign.description)}</div>` : ''}
+                    <div class="past-campaign-meta">
+                        <span class="past-campaign-dates">${startDate} — ${endDate}</span>
+                        <span class="past-campaign-party">${partyPreview}${moreCount}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    /**
+     * View a past campaign's details (campaign panel + journal)
+     * @param {number} campaignId
+     */
+    async viewPastCampaign(campaignId) {
+        const campaign = this._pastCampaigns.find(c => c.id === campaignId);
+        if (!campaign) return;
+        
+        this._viewingPastCampaign = campaign;
+        this._showPastAdventuresDetailView(campaign.name);
+        
+        const contentEl = document.getElementById('pastAdventuresDetailContent');
+        if (!contentEl) return;
+        
+        // Show loading state
+        contentEl.innerHTML = `
+            <div class="past-adventures-loading">
+                <div class="panel-loading-cube-container">
+                    <div class="panel-loading-cube">
+                        <i></i><i></i><i></i><i></i><i></i><i></i>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        try {
+            // Fetch historical journals
+            const journals = await CampaignAPI.getPastCampaignJournals(campaignId);
+            
+            // Render the detail view
+            this._renderPastCampaignDetail(campaign, journals);
+        } catch (error) {
+            console.error('Failed to load past campaign details:', error);
+            contentEl.innerHTML = `
+                <div class="past-adventures-error">
+                    <p class="terminal-text-dim">Failed to load campaign details.</p>
+                    <p class="terminal-text-small terminal-text-dim">${Utils.escapeHtml(error.message || 'Unknown error')}</p>
+                </div>
+            `;
+        }
+    },
+
+    /** Go back to the past campaigns list from detail view */
+    backToPastCampaignsList() {
+        this._viewingPastCampaign = null;
+        this._showPastAdventuresListView();
+    },
+
+    /**
+     * Render the detail view with campaign info and journals
+     * @param {Object} campaign - Past campaign data
+     * @param {Array} journals - Journal entries
+     */
+    _renderPastCampaignDetail(campaign, journals) {
+        const contentEl = document.getElementById('pastAdventuresDetailContent');
+        if (!contentEl) return;
+        
+        // Format dates
+        const startDate = campaign.created_at 
+            ? new Date(campaign.created_at).toLocaleDateString() 
+            : 'Unknown';
+        const endDate = campaign.ended_at 
+            ? new Date(campaign.ended_at).toLocaleDateString()
+            : (campaign.user_left_at 
+                ? new Date(campaign.user_left_at).toLocaleDateString() 
+                : 'Ongoing');
+        
+        // Build party list
+        const partyHtml = campaign.members && campaign.members.length > 0
+            ? campaign.members.map(m => {
+                const symbolPrefix = m.symbol ? `<span class="party-member-symbol">${m.symbol}</span> ` : '';
+                const charInfo = m.character_name 
+                    ? `<span class="party-member-info">Lvl ${m.character_level || '?'} ${m.character_class || ''}</span>`
+                    : '<span class="party-member-info terminal-text-dim">No character</span>';
+                const statusBadge = m.status === 'left' 
+                    ? '<span class="party-member-left-badge">Left</span>' 
+                    : '';
+                return `
+                    <div class="party-member party-member--readonly">
+                        <span class="party-member-left">
+                            <span class="party-member-name">${symbolPrefix}${Utils.escapeHtml(m.character_name || 'Unknown')}</span>
+                            ${statusBadge}
+                        </span>
+                        <span class="party-member-right">
+                            ${charInfo}
+                        </span>
+                    </div>
+                `;
+            }).join('')
+            : '<div class="party-empty">No party members</div>';
+        
+        // Build journal entries (read-only)
+        const journalHtml = journals && journals.length > 0
+            ? journals.map(entry => {
+                const symbolPrefix = entry.character_symbol ? `${entry.character_symbol} ` : '';
+                const authorInfo = entry.character_name 
+                    ? `<span class="journal-entry-author">${symbolPrefix}${Utils.escapeHtml(entry.character_name)}</span>` 
+                    : '';
+                const dateStr = entry.entry_date 
+                    ? new Date(entry.entry_date).toLocaleDateString() 
+                    : '';
+                return `
+                    <div class="journal-entry journal-entry--readonly">
+                        <div class="journal-entry-header">
+                            ${authorInfo}
+                            <span class="journal-entry-date">${dateStr}</span>
+                        </div>
+                        <div class="journal-entry-title">${Utils.escapeHtml(entry.title)}</div>
+                        ${entry.content ? `<div class="journal-entry-content">${Utils.escapeHtml(entry.content)}</div>` : ''}
+                    </div>
+                `;
+            }).join('')
+            : '<div class="journal-empty">No journal entries for this campaign.</div>';
+        
+        contentEl.innerHTML = `
+            <div class="past-campaign-detail">
+                <!-- Campaign Info Section -->
+                <div class="past-campaign-info-section">
+                    <div class="past-campaign-info-header">
+                        <div class="past-campaign-info-dates">
+                            <span class="terminal-text-dim">Campaign Period:</span> ${startDate} — ${endDate}
+                        </div>
+                    </div>
+                    ${campaign.description ? `<div class="past-campaign-description">${Utils.escapeHtml(campaign.description)}</div>` : ''}
+                </div>
+                
+                <!-- Party Section -->
+                <div class="past-campaign-section">
+                    <div class="sheet-header">
+                        <div class="sheet-header-title">[ PARTY (${campaign.party_count || 0}) ]</div>
+                    </div>
+                    <div class="party-list past-campaign-party-list">
+                        ${partyHtml}
+                    </div>
+                </div>
+                
+                <!-- Journal Section -->
+                <div class="past-campaign-section">
+                    <div class="sheet-header">
+                        <div class="sheet-header-title">[ JOURNAL (${journals.length}) ]</div>
+                    </div>
+                    <div class="journal-entries past-campaign-journal-list">
+                        ${journalHtml}
+                    </div>
+                </div>
+            </div>
+        `;
     }
 });
 
@@ -8000,6 +8296,7 @@ function closeAllEditorModals() {
         'campaignCreatedModal',
         'journalEntryModal',
         'partyMemberSheetModal',
+        'pastAdventuresModal',
     ];
     
     modalIds.forEach(id => {

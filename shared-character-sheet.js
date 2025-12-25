@@ -3033,7 +3033,69 @@ const CharacterSheet = (window.CharacterSheet = {
   },
 
   /**
+   * Check if a value looks like a URL (R2-hosted ASCII portrait).
+   * Used to detect migrated ASCII portraits stored in Cloudflare R2.
+   */
+  isAsciiUrl(value) {
+    if (!value || typeof value !== 'string') return false;
+    return value.startsWith('http://') || value.startsWith('https://');
+  },
+
+  /**
+   * Fetch ASCII portrait text from a URL (R2).
+   * Results are cached in memory to avoid repeated network requests.
+   * @param {string} url - The URL to fetch ASCII from
+   * @returns {Promise<string|null>} The ASCII text or null on error
+   */
+  _asciiCache: {},
+  async fetchAsciiFromUrl(url) {
+    if (!url || typeof url !== 'string') return null;
+    
+    // Check cache first
+    if (this._asciiCache[url]) {
+      return this._asciiCache[url];
+    }
+    
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.warn('Failed to fetch ASCII from URL:', url, response.status);
+        return null;
+      }
+      const text = await response.text();
+      // Cache the result
+      this._asciiCache[url] = text;
+      return text;
+    } catch (error) {
+      console.warn('Error fetching ASCII from URL:', url, error);
+      return null;
+    }
+  },
+
+  /**
+   * Async version of getAsciiPortrait that resolves URLs to actual ASCII text.
+   * Use this when you need the actual ASCII content and the value might be a URL.
+   * @param {object} character - The character object
+   * @returns {Promise<string|null>} The ASCII portrait text
+   */
+  async resolveAsciiPortrait(character) {
+    const value = this.getAsciiPortrait(character);
+    if (!value) return null;
+    
+    // If it's a URL, fetch the actual ASCII text
+    if (this.isAsciiUrl(value)) {
+      return await this.fetchAsciiFromUrl(value);
+    }
+    
+    // Otherwise return as-is
+    return value;
+  },
+
+  /**
    * Determine the best ASCII portrait to use for a character.
+   * NOTE: May return a URL if the ASCII is stored in R2. Use resolveAsciiPortrait()
+   * if you need the actual ASCII text content.
+   * 
    * Prefers:
    * 1) Custom AI portraits
    * 2) Stored asciiPortrait that matches the current race|class key
@@ -3315,10 +3377,42 @@ const CharacterSheet = (window.CharacterSheet = {
    * proper centering via CSS flexbox. The parent .ascii-portrait uses
    * display:flex + justify-content:center, and the inner <pre> holds the
    * preformatted text.
+   * 
+   * If asciiArt is a URL (R2-hosted), it will be fetched asynchronously.
+   * 
    * @param {HTMLElement} portraitEl
-   * @param {string} asciiArt
+   * @param {string} asciiArt - ASCII text or URL to fetch
    */
   setPortraitContent(portraitEl, asciiArt) {
+    if (!portraitEl) return;
+    
+    // Check if this is a URL that needs to be fetched
+    if (this.isAsciiUrl(asciiArt)) {
+      // Show loading state while fetching
+      portraitEl.classList.add('ascii-portrait--loading');
+      
+      // Fetch the ASCII from the URL
+      this.fetchAsciiFromUrl(asciiArt).then(fetchedAscii => {
+        if (fetchedAscii) {
+          this._applyAsciiContent(portraitEl, fetchedAscii);
+        } else {
+          // Fallback if fetch fails
+          portraitEl.classList.remove('ascii-portrait--loading');
+          portraitEl.innerHTML = '<pre>[ PORTRAIT UNAVAILABLE ]</pre>';
+        }
+      });
+      return;
+    }
+    
+    // Direct ASCII text - apply immediately
+    this._applyAsciiContent(portraitEl, asciiArt);
+  },
+  
+  /**
+   * Internal helper to apply ASCII content to a portrait element.
+   * @private
+   */
+  _applyAsciiContent(portraitEl, asciiArt) {
     if (!portraitEl) return;
     // Remove placeholder/loading classes since we now have real content
     portraitEl.classList.remove('ascii-portrait--placeholder', 'ascii-portrait--loading');

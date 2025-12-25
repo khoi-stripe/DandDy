@@ -292,6 +292,47 @@ def _get_r2_client():
     )
 
 
+def upload_ascii_to_r2(ascii_text: str, prefix: str = "ascii") -> str | None:
+    """
+    Upload ASCII portrait text to Cloudflare R2 and return the public URL.
+    
+    This offloads ~12KB per portrait from database egress to R2 egress,
+    which has a more generous free tier (10GB vs Supabase's 5GB).
+    
+    Args:
+        ascii_text: The ASCII art text to upload
+        prefix: Key prefix in R2 bucket (default: "ascii")
+    
+    Returns:
+        Public URL to the uploaded file, or None if R2 is not configured
+    """
+    r2_client = _get_r2_client()
+    if not r2_client:
+        return None
+    
+    try:
+        timestamp = int(time.time())
+        key = f"{prefix}/{timestamp}_{uuid.uuid4().hex}.txt"
+        
+        r2_client.put_object(
+            Bucket=R2_BUCKET_NAME,
+            Key=key,
+            Body=ascii_text.encode('utf-8'),
+            ContentType="text/plain; charset=utf-8",
+        )
+        
+        # Build public URL
+        if R2_PUBLIC_BASE_URL:
+            base = R2_PUBLIC_BASE_URL.rstrip("/")
+            return f"{base}/{key}"
+        else:
+            return f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com/{R2_BUCKET_NAME}/{key}"
+    
+    except Exception as e:
+        print(f"⚠️  Failed to upload ASCII to R2: {e}")
+        return None
+
+
 # Request/Response models
 class ChatCompletionRequest(BaseModel):
     """Request for chat completion (narrator, names, backstory)"""
@@ -900,6 +941,51 @@ async def get_quota_debug(
         "reset_at": reset_iso,
         "reset_epoch": reset_epoch,
     }
+
+
+# ==========================================
+# ASCII PORTRAIT R2 UPLOAD
+# ==========================================
+
+class AsciiUploadRequest(BaseModel):
+    """Request to upload ASCII portrait to R2"""
+    ascii_text: str = Field(..., min_length=100, max_length=50000)
+
+
+@router.post("/ascii/upload")
+async def upload_ascii_portrait(
+    request: AsciiUploadRequest,
+    http_request: Request,
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """
+    Upload ASCII portrait text to Cloudflare R2 and return the public URL.
+    
+    This offloads ~12KB per portrait from database egress to R2's more
+    generous free tier (10GB egress vs Supabase's 5GB).
+    
+    The frontend should:
+    1. Call this endpoint with the ASCII text
+    2. Store the returned URL in the character's ascii_portrait field
+    3. When displaying, detect if ascii_portrait is a URL and fetch it
+    
+    Returns:
+        {"success": true, "url": "https://..."} on success
+        {"success": false, "error": "..."} on failure
+    """
+    # Basic rate limiting check
+    client_id = get_client_id(http_request, current_user)
+    check_rate_limit(client_id, current_user)
+    
+    url = upload_ascii_to_r2(request.ascii_text)
+    
+    if url:
+        return {"success": True, "url": url}
+    else:
+        return {
+            "success": False,
+            "error": "R2 storage not configured or upload failed. ASCII stored in database as fallback.",
+        }
 
 
 @router.get("/images/quota")

@@ -540,6 +540,39 @@
         </div>
     </div>
 
+    <!-- Past Adventures Modal -->
+    <div id="pastAdventuresModal" class="modal">
+        <div class="modal-content modal-content--wide">
+            <div class="modal-header">
+                <div class="modal-breadcrumb" id="pastAdventuresBreadcrumb">
+                    <button class="breadcrumb-link" onclick="CampaignUI.backToPastCampaignsList()">Past Adventures</button>
+                    <span class="breadcrumb-separator">›</span>
+                    <span class="breadcrumb-current" id="pastAdventuresBreadcrumbCurrent"></span>
+                </div>
+                <h2 class="modal-title" id="pastAdventuresTitle">Past Adventures</h2>
+                <button class="modal-close" onclick="CampaignUI.closePastAdventuresModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- List View (default) -->
+                <div id="pastAdventuresListView">
+                    <p class="terminal-text-dim mb-md">
+                        Your previous campaigns and adventures.
+                    </p>
+                    <div id="pastAdventuresList" class="past-adventures-list">
+                        <div class="past-adventures-loading">Loading past adventures...</div>
+                    </div>
+                </div>
+                
+                <!-- Detail View (campaign + journal) -->
+                <div id="pastAdventuresDetailView" style="display: none;">
+                    <div id="pastAdventuresDetailContent">
+                        <!-- Campaign panel and journal will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Journal Entry Modal (Add/Edit with Character Update) -->
     <div id="journalEntryModal" class="modal">
         <div class="modal-content">

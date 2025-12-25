@@ -1398,6 +1398,264 @@ div.sheet__sidebar.ui-theme-pink {
     min-height: 150px;
 }
 
+/* ===== PAST ADVENTURES ===== */
+
+/* Past Adventures link in no-campaign state */
+.campaign-area-past-link {
+    margin-top: var(--spacing-md);
+    text-align: left;
+}
+
+.past-adventures-link {
+    font-size: var(--font-size-sm);
+    color: var(--ui-dim-color);
+    text-decoration: none;
+    transition: color var(--transition-speed);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.past-adventures-link:hover {
+    color: var(--ui-fg-color);
+}
+
+.past-adventures-link-icon {
+    font-size: var(--font-size-base);
+}
+
+/* Past Adventures modal content */
+#pastAdventuresModal .modal-content {
+    max-width: 700px;
+}
+
+/* Breadcrumb navigation */
+.modal-breadcrumb {
+    display: none;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-xs);
+}
+
+.breadcrumb-link {
+    background: none;
+    border: none;
+    color: var(--ui-fg-color);
+    font-family: var(--font-mono);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.breadcrumb-link:hover {
+    opacity: 0.8;
+}
+
+.breadcrumb-separator {
+    color: var(--ui-dim-color);
+}
+
+.breadcrumb-current {
+    color: var(--ui-dim-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+}
+
+/* Past campaigns list */
+.past-adventures-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.past-adventures-loading,
+.past-adventures-empty,
+.past-adventures-error {
+    text-align: center;
+    color: var(--ui-dim-color);
+    padding: var(--spacing-xl);
+}
+
+/* Past campaign card */
+.past-campaign-card {
+    padding: var(--spacing-md);
+    border: 1px solid var(--ui-border-color);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color var(--transition-speed), 
+                border-color var(--transition-speed);
+}
+
+.past-campaign-card:hover {
+    background-color: var(--context-hover);
+    border-color: var(--ui-fg-color);
+}
+
+.past-campaign-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
+}
+
+.past-campaign-name {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-medium);
+    color: var(--ui-fg-color);
+    flex: 1;
+    min-width: 0;
+}
+
+.past-campaign-status {
+    font-size: var(--font-size-2xs);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    padding: 2px 6px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.past-campaign-status--left {
+    color: var(--ui-dim-color);
+    background-color: color-mix(in srgb, var(--ui-dim-color) 20%, transparent);
+}
+
+.past-campaign-status--completed {
+    color: var(--ui-fg-color);
+    background-color: color-mix(in srgb, var(--ui-fg-color) 20%, transparent);
+}
+
+.past-campaign-status--archived {
+    color: var(--ui-dim-color);
+    background-color: color-mix(in srgb, var(--ui-dim-color) 15%, transparent);
+}
+
+.past-campaign-desc {
+    font-size: var(--font-size-sm);
+    color: var(--ui-dim-color);
+    margin-bottom: var(--spacing-sm);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.past-campaign-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--font-size-xs);
+    color: var(--ui-dim-color);
+}
+
+.past-campaign-dates {
+    font-family: var(--font-mono);
+}
+
+.past-campaign-party {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2xs);
+}
+
+/* Past campaign detail view */
+.past-campaign-detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.past-campaign-info-section {
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--ui-border-color);
+}
+
+.past-campaign-info-header {
+    margin-bottom: var(--spacing-sm);
+}
+
+.past-campaign-info-dates {
+    font-size: var(--font-size-sm);
+    font-family: var(--font-mono);
+    color: var(--ui-fg-color);
+}
+
+.past-campaign-description {
+    font-size: var(--font-size-base);
+    color: var(--ui-dim-color);
+    line-height: var(--line-height-normal);
+}
+
+.past-campaign-section {
+    /* Uses existing sheet-header styles */
+}
+
+.past-campaign-party-list,
+.past-campaign-journal-list {
+    margin-top: var(--spacing-sm);
+}
+
+/* Read-only party members in past campaigns */
+.party-member--readonly {
+    cursor: default;
+}
+
+.party-member-left-badge {
+    font-size: var(--font-size-2xs);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--ui-dim-color);
+    background-color: color-mix(in srgb, var(--ui-dim-color) 15%, transparent);
+    border-radius: 3px;
+    padding: 0 4px;
+    margin-left: var(--spacing-xs);
+}
+
+/* Read-only journal entries in past campaigns */
+.journal-entry--readonly {
+    border: 1px solid var(--ui-border-color);
+    border-radius: 4px;
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+}
+
+.journal-entry--readonly .journal-entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-xs);
+    color: var(--ui-dim-color);
+}
+
+.journal-entry--readonly .journal-entry-title {
+    font-weight: var(--font-weight-medium);
+    color: var(--ui-fg-color);
+    margin-bottom: var(--spacing-xs);
+}
+
+.journal-entry--readonly .journal-entry-content {
+    font-size: var(--font-size-sm);
+    color: var(--ui-dim-color);
+    line-height: var(--line-height-normal);
+    white-space: pre-wrap;
+}
+
+.journal-empty {
+    text-align: center;
+    color: var(--ui-dim-color);
+    padding: var(--spacing-lg);
+    font-style: italic;
+}
+
 /* Campaign info (name + description) */
 .campaign-area-info {
     margin-bottom: var(--spacing-md);

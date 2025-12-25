@@ -1,4 +1,5 @@
 from typing import List, Tuple, Optional
+from datetime import datetime
 import random
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
@@ -8,11 +9,12 @@ from models.campaign import Campaign, CampaignStatus, generate_invite_code
 from models.campaign_member import CampaignMember, MemberStatus, PARTY_SYMBOLS
 from models.character import Character
 from models.character_collaborator import CharacterCollaborator, CollaboratorPermission
+from sqlalchemy import or_
 from schemas.campaign import (
     CampaignCreate, CampaignUpdate, CampaignResponse, CampaignWithCharacters,
     CampaignMemberResponse, CampaignMemberVisibilityUpdate, CampaignJoin, CampaignJoinResponse,
     CampaignInviteByEmail, CampaignInvitationResponse, AcceptInvitation,
-    CampaignPendingInviteResponse
+    CampaignPendingInviteResponse, PastCampaignResponse, PastCampaignMemberInfo
 )
 from utils.auth import get_current_active_user
 
@@ -149,6 +151,109 @@ def get_campaigns(
     return campaigns
 
 
+@router.get("/past", response_model=List[PastCampaignResponse])
+def get_past_campaigns(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all past campaigns for the current user.
+    
+    Returns campaigns where:
+    - User left the campaign (membership status = LEFT), OR
+    - Campaign is completed/archived and user was a member
+    """
+    # Find all memberships where user left
+    left_memberships = db.query(CampaignMember).filter(
+        CampaignMember.user_id == current_user.id,
+        CampaignMember.status == MemberStatus.LEFT
+    ).all()
+    
+    # Find campaigns that are completed/archived where user was active member
+    completed_memberships = db.query(CampaignMember).join(Campaign).filter(
+        CampaignMember.user_id == current_user.id,
+        CampaignMember.status == MemberStatus.ACTIVE,
+        Campaign.status.in_([CampaignStatus.COMPLETED, CampaignStatus.ARCHIVED])
+    ).all()
+    
+    # Combine membership IDs, avoiding duplicates
+    membership_campaign_ids = set()
+    all_memberships = []
+    
+    for m in left_memberships + completed_memberships:
+        if m.campaign_id not in membership_campaign_ids:
+            membership_campaign_ids.add(m.campaign_id)
+            all_memberships.append(m)
+    
+    if not all_memberships:
+        return []
+    
+    # Get full campaign data with all members
+    campaign_ids = list(membership_campaign_ids)
+    campaigns = db.query(Campaign).filter(
+        Campaign.id.in_(campaign_ids)
+    ).all()
+    
+    # Get all members for these campaigns (including those who left)
+    all_members = db.query(CampaignMember).options(
+        joinedload(CampaignMember.character)
+    ).filter(
+        CampaignMember.campaign_id.in_(campaign_ids),
+        CampaignMember.status.in_([MemberStatus.ACTIVE, MemberStatus.LEFT])
+    ).all()
+    
+    # Build campaign_id -> members mapping
+    members_by_campaign = {}
+    for m in all_members:
+        if m.campaign_id not in members_by_campaign:
+            members_by_campaign[m.campaign_id] = []
+        members_by_campaign[m.campaign_id].append(m)
+    
+    # Build user's membership mapping for quick lookup
+    user_memberships = {m.campaign_id: m for m in all_memberships}
+    
+    # Build response
+    result = []
+    for campaign in campaigns:
+        user_membership = user_memberships.get(campaign.id)
+        campaign_members = members_by_campaign.get(campaign.id, [])
+        
+        # Build member info list
+        member_infos = []
+        for m in campaign_members:
+            char = m.character
+            member_infos.append(PastCampaignMemberInfo(
+                user_id=m.user_id,
+                character_id=m.character_id,
+                character_name=char.name if char else None,
+                character_class=char.character_class if char else None,
+                character_level=char.level if char else None,
+                symbol=m.symbol,
+                is_creator=m.is_creator,
+                status=m.status.value if hasattr(m.status, 'value') else str(m.status),
+                joined_at=m.joined_at,
+                left_at=m.left_at
+            ))
+        
+        result.append(PastCampaignResponse(
+            id=campaign.id,
+            name=campaign.name,
+            description=campaign.description,
+            status=campaign.status.value if hasattr(campaign.status, 'value') else str(campaign.status),
+            created_at=campaign.created_at,
+            ended_at=campaign.ended_at,
+            user_left_at=user_membership.left_at if user_membership else None,
+            user_status=user_membership.status.value if user_membership and hasattr(user_membership.status, 'value') else str(user_membership.status) if user_membership else "unknown",
+            party_count=len(campaign_members),
+            members=member_infos
+        ))
+    
+    # Sort by most recent first (by ended_at or left_at)
+    result.sort(key=lambda c: c.ended_at or c.user_left_at or c.created_at, reverse=True)
+    
+    return result
+
+
 @router.get("/{campaign_id}", response_model=CampaignWithCharacters)
 def get_campaign(
     campaign_id: int,
@@ -208,7 +313,16 @@ def update_campaign(
     # Handle status enum conversion
     if "status" in update_data and update_data["status"]:
         try:
-            update_data["status"] = CampaignStatus(update_data["status"])
+            new_status = CampaignStatus(update_data["status"])
+            update_data["status"] = new_status
+            
+            # Set ended_at timestamp when campaign is completed or archived
+            if new_status in [CampaignStatus.COMPLETED, CampaignStatus.ARCHIVED]:
+                if campaign.ended_at is None:
+                    campaign.ended_at = datetime.utcnow()
+            elif new_status == CampaignStatus.ACTIVE:
+                # Clear ended_at if campaign is reactivated
+                campaign.ended_at = None
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -541,8 +655,9 @@ def leave_campaign(
             detail="You are not a member of this campaign"
         )
     
-    # Mark as left (preserve history)
+    # Mark as left (preserve history) and set left_at timestamp
     membership.status = MemberStatus.LEFT
+    membership.left_at = datetime.utcnow()
     
     # Remove character from campaign (but keep session history)
     if membership.character_id:

@@ -26,6 +26,7 @@ class CampaignResponse(CampaignBase):
     status: str = "active"
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    ended_at: Optional[datetime] = None  # When campaign was completed/archived
     
     class Config:
         from_attributes = True
@@ -66,6 +67,7 @@ class CampaignMemberResponse(CampaignMemberBase):
     is_creator: bool
     status: str
     joined_at: datetime
+    left_at: Optional[datetime] = None  # When user left the campaign
     journal_visibility: str = "public"  # "private" or "public"
     symbol: Optional[str] = None  # Unique symbol for this member (e.g., ▣, ◆, ▲)
     character: Optional[CampaignMemberCharacterInfo] = None
@@ -118,6 +120,43 @@ class CampaignPendingInviteResponse(BaseModel):
     email: str
     status: str  # "invited" or "active"
     invited_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+# Past Adventures schemas
+class PastCampaignMemberInfo(BaseModel):
+    """Member info for past campaign display"""
+    user_id: int
+    character_id: Optional[int] = None
+    character_name: Optional[str] = None
+    character_class: Optional[str] = None
+    character_level: Optional[int] = None
+    symbol: Optional[str] = None
+    is_creator: bool = False
+    status: str  # "active", "left", etc.
+    joined_at: datetime
+    left_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class PastCampaignResponse(BaseModel):
+    """Response for past campaigns list"""
+    id: int
+    name: str
+    description: Optional[str] = None
+    status: str  # "completed", "archived", or "active" (if user left)
+    created_at: datetime
+    ended_at: Optional[datetime] = None
+    # User's relationship to this campaign
+    user_left_at: Optional[datetime] = None  # When user left (if they left)
+    user_status: str  # User's membership status: "left" or "active" (for completed campaigns)
+    # Party info
+    party_count: int = 0
+    members: List[PastCampaignMemberInfo] = []
     
     class Config:
         from_attributes = True

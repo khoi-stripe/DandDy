@@ -285,6 +285,137 @@ def get_campaign_journal_entries(
     ]
 
 
+@router.get("/campaign/{campaign_id}/history", response_model=List[JournalEntryResponse])
+def get_campaign_journal_history(
+    campaign_id: int,
+    limit: int = Query(default=100, le=500),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get historical journal entries for a past campaign.
+    
+    For Past Adventures feature - allows viewing journals from campaigns the user
+    has left or that have been completed/archived.
+    
+    Visibility rules:
+    - User can always see their own entries (up to when they left or campaign ended)
+    - User can see other members' entries if their journal_visibility was "public"
+    - Entries are filtered by the appropriate end date (user's left_at or campaign's ended_at)
+    """
+    # Verify campaign exists
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    
+    if not campaign:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Campaign not found"
+        )
+    
+    # Check if user was a member (including LEFT status)
+    my_membership = db.query(CampaignMember).filter(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.user_id == current_user.id,
+        CampaignMember.status.in_([MemberStatus.ACTIVE, MemberStatus.LEFT])
+    ).first()
+    
+    if not my_membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this campaign's journal history"
+        )
+    
+    # Determine the cutoff date for entries
+    # If user left: use their left_at date
+    # If campaign ended: use campaign's ended_at date
+    # If both: use the earlier one (when user left or campaign ended, whichever came first)
+    cutoff_date = None
+    if my_membership.status == MemberStatus.LEFT and my_membership.left_at:
+        cutoff_date = my_membership.left_at
+    if campaign.ended_at:
+        if cutoff_date is None or campaign.ended_at < cutoff_date:
+            cutoff_date = campaign.ended_at
+    
+    # Get all memberships for this campaign (including LEFT status) for visibility checking
+    # This includes the preserved journal_visibility setting
+    all_memberships = db.query(CampaignMember).filter(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.status.in_([MemberStatus.ACTIVE, MemberStatus.LEFT]),
+        CampaignMember.character_id.isnot(None)
+    ).all()
+    
+    # Build visibility mapping: character_id -> (user_id, is_public, symbol, member_left_at)
+    visibility_map = {
+        m.character_id: (
+            m.user_id, 
+            str(m.journal_visibility or "private").lower() == "public", 
+            m.symbol,
+            m.left_at
+        )
+        for m in all_memberships
+    }
+    
+    # Determine which character entries to show
+    # Own entries: all (up to cutoff)
+    # Other entries: only if public visibility
+    own_char_ids = [
+        char_id for char_id, (uid, _, __, ___) in visibility_map.items()
+        if uid == current_user.id
+    ]
+    
+    public_char_ids = [
+        char_id for char_id, (uid, is_public, _, __) in visibility_map.items()
+        if is_public and uid != current_user.id
+    ]
+    
+    all_visible_char_ids = own_char_ids + public_char_ids
+    
+    if not all_visible_char_ids:
+        return []
+    
+    # Build base query
+    entries_query = db.query(JournalEntry).filter(
+        JournalEntry.campaign_id == campaign_id,
+        JournalEntry.character_id.in_(all_visible_char_ids)
+    )
+    
+    # Apply cutoff date filter if applicable
+    if cutoff_date:
+        entries_query = entries_query.filter(
+            JournalEntry.created_at <= cutoff_date
+        )
+    
+    # Execute query with eager loading
+    entries = entries_query.options(
+        joinedload(JournalEntry.character),
+        joinedload(JournalEntry.user),
+        joinedload(JournalEntry.character_update)
+    ).order_by(
+        JournalEntry.entry_date.desc(),
+        JournalEntry.created_at.desc()
+    ).limit(limit).all()
+    
+    # Build response
+    return [
+        JournalEntryResponse(
+            id=e.id,
+            character_id=e.character_id,
+            campaign_id=e.campaign_id,
+            user_id=e.user_id,
+            title=e.title,
+            content=e.content,
+            entry_date=e.entry_date,
+            created_at=e.created_at,
+            updated_at=e.updated_at,
+            character_update=e.character_update,
+            character_name=e.character.name if e.character else None,
+            character_symbol=visibility_map.get(e.character_id, (None, None, None, None))[2] if e.character_id else None,
+            user_email=e.user.email if e.user else None
+        )
+        for e in entries
+    ]
+
+
 @router.get("/{entry_id}", response_model=JournalEntryResponse)
 def get_journal_entry(
     entry_id: int,

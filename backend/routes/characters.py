@@ -8,7 +8,7 @@ from models.user import User, UserRole
 from models.character import Character
 from models.character_collaborator import CharacterCollaborator, CollaboratorPermission
 from models.campaign_member import CampaignMember, MemberStatus
-from schemas.character import CharacterCreate, CharacterUpdate, CharacterResponse
+from schemas.character import CharacterCreate, CharacterUpdate, CharacterResponse, CharacterLiteResponse
 from utils.auth import get_current_active_user, get_current_user_optional
 
 router = APIRouter(prefix="/characters", tags=["characters"])
@@ -34,16 +34,39 @@ def create_character(
     
     return new_character
 
+def _strip_ascii_fields(char_dict: dict) -> dict:
+    """
+    Remove heavy ASCII portrait fields from a character dict.
+    Used when portrait_mode=original to reduce response size.
+    """
+    char_dict.pop('ascii_portrait', None)
+    char_dict.pop('custom_portrait_ascii', None)
+    # Also strip ASCII from portrait_metadata versions if present
+    if 'portrait_metadata' in char_dict and char_dict['portrait_metadata']:
+        metadata = char_dict['portrait_metadata']
+        if 'versions' in metadata and isinstance(metadata['versions'], list):
+            for version in metadata['versions']:
+                if isinstance(version, dict):
+                    version.pop('ascii', None)
+    return char_dict
+
+
 @router.get("/", response_model=List[CharacterResponse])
 def get_characters(
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    portrait_mode: Optional[str] = None
 ):
     """
     Get all characters the user has access to:
     - Characters they own
     - Characters shared with them (as collaborator)
+    
+    Query params:
+    - portrait_mode: "original" to skip ASCII fields (saves ~24KB per character)
     """
+    skip_ascii = portrait_mode == "original"
+    
     # Get owned characters
     owned = db.query(Character).filter(Character.owner_id == current_user.id).all()
     
@@ -68,6 +91,9 @@ def get_characters(
         char_dict['last_updated_by_email'] = char.last_updated_by.email if char.last_updated_by else None
         # Include campaign name if character is in a campaign
         char_dict['campaign_name'] = char.campaign.name if char.campaign else None
+        
+        if skip_ascii:
+            char_dict = _strip_ascii_fields(char_dict)
         result.append(char_dict)
     
     # Add shared characters with metadata
@@ -81,6 +107,65 @@ def get_characters(
             # Include who last updated (if tracked)
             char_dict['last_updated_by_email'] = collab.character.last_updated_by.email if collab.character.last_updated_by else None
             # Include campaign name if character is in a campaign
+            char_dict['campaign_name'] = collab.character.campaign.name if collab.character.campaign else None
+            
+            if skip_ascii:
+                char_dict = _strip_ascii_fields(char_dict)
+            result.append(char_dict)
+    
+    return result
+
+
+@router.get("/lite", response_model=List[CharacterLiteResponse])
+def get_characters_lite(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Lightweight character list for grid/card views.
+    
+    Returns only essential fields (name, race, class, level, portrait URL).
+    Excludes heavy ASCII portrait text fields to reduce database egress.
+    
+    Use this for:
+    - Character list/grid views
+    - Quick character selection dropdowns
+    - Any view that doesn't need full character data
+    
+    Saves ~24KB per character compared to the full response.
+    """
+    # Get owned characters
+    owned = db.query(Character).filter(Character.owner_id == current_user.id).all()
+    
+    # Get shared characters (where user is a collaborator)
+    shared_collabs = db.query(CharacterCollaborator).filter(
+        CharacterCollaborator.user_id == current_user.id
+    ).all()
+    
+    # Build response with sharing metadata
+    result = []
+    
+    # Add owned characters
+    for char in owned:
+        char_dict = CharacterLiteResponse.model_validate(char).model_dump()
+        char_dict['is_shared'] = False
+        collab_count = db.query(CharacterCollaborator).filter(
+            CharacterCollaborator.character_id == char.id
+        ).count()
+        char_dict['collaborator_count'] = collab_count
+        char_dict['last_updated_by_email'] = char.last_updated_by.email if char.last_updated_by else None
+        char_dict['campaign_name'] = char.campaign.name if char.campaign else None
+        result.append(char_dict)
+    
+    # Add shared characters with metadata
+    for collab in shared_collabs:
+        if collab.character:
+            char_dict = CharacterLiteResponse.model_validate(collab.character).model_dump()
+            char_dict['is_shared'] = True
+            char_dict['owner_email'] = collab.character.owner.email if collab.character.owner else None
+            char_dict['permission'] = collab.permission.value
+            char_dict['collaborator_count'] = 0
+            char_dict['last_updated_by_email'] = collab.character.last_updated_by.email if collab.character.last_updated_by else None
             char_dict['campaign_name'] = collab.character.campaign.name if collab.character.campaign else None
             result.append(char_dict)
     
@@ -111,14 +196,41 @@ def get_all_characters(
 
 @router.get("/demo/list", response_model=List[CharacterResponse])
 def get_demo_characters(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    portrait_mode: Optional[str] = None
 ):
     """
     Public endpoint to fetch all characters marked as demo.
     No authentication required - used for the demo/guest experience.
+    
+    Query params:
+    - portrait_mode: "original" to skip ASCII fields (saves ~24KB per character)
     """
     demo_characters = db.query(Character).filter(Character.is_demo == True).all()
+    
+    if portrait_mode == "original":
+        result = []
+        for char in demo_characters:
+            char_dict = CharacterResponse.model_validate(char).model_dump()
+            char_dict = _strip_ascii_fields(char_dict)
+            result.append(char_dict)
+        return result
+    
     return demo_characters
+
+
+@router.get("/demo/lite", response_model=List[CharacterLiteResponse])
+def get_demo_characters_lite(
+    db: Session = Depends(get_db)
+):
+    """
+    Lightweight demo character list for grid views.
+    
+    Returns only essential fields, excluding heavy ASCII portrait text.
+    No authentication required - used for the demo/guest experience.
+    """
+    demo_characters = db.query(Character).filter(Character.is_demo == True).all()
+    return [CharacterLiteResponse.model_validate(char) for char in demo_characters]
 
 
 @router.patch("/{character_id}/demo", response_model=CharacterResponse)
@@ -205,8 +317,15 @@ def _check_character_access(character: Character, current_user: User, db: Sessio
 def get_character(
     character_id: int,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    portrait_mode: Optional[str] = None
 ):
+    """
+    Get a single character by ID.
+    
+    Query params:
+    - portrait_mode: "original" to skip ASCII fields (saves ~24KB)
+    """
     character = db.query(Character).filter(Character.id == character_id).first()
     
     if not character:
@@ -230,6 +349,9 @@ def get_character(
     if not is_owner:
         char_dict['owner_email'] = character.owner.email if character.owner else None
         char_dict['permission'] = permission
+    
+    if portrait_mode == "original":
+        char_dict = _strip_ascii_fields(char_dict)
     
     return char_dict
 

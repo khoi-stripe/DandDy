@@ -58,6 +58,10 @@ class CampaignMember(Base):
     # Randomly assigned from PARTY_SYMBOLS when joining, unique per campaign
     symbol = Column(String(4), nullable=True)
     
+    # Timestamp when user left the campaign (status changed to LEFT)
+    # Used for Past Adventures feature to filter journals
+    left_at = Column(DateTime, nullable=True)
+    
     # Relationships
     campaign = relationship("Campaign", back_populates="members")
     user = relationship("User", back_populates="campaign_memberships")
