@@ -1376,9 +1376,6 @@ const ExpandedView = (window.ExpandedView = {
             
             // Render hidden members in a collapsible container
             if (remainingCount > 0) {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:_renderCampaignArea:seeMore',message:'Rendering See more link with toggle (FIX)',data:{remainingCount,isCreator,campaignId:campaign.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C',runId:'post-fix'})}).catch(()=>{});
-                // #endregion
                 partyHtml += `<div class="party-hidden" style="display: none;">${hiddenMembers.map(renderMember).join('')}</div>`;
                 partyHtml += `<a class="party-see-more" href="#" onclick="CampaignUI.togglePartyList(this); return false;">See more</a>`;
             }
@@ -2173,25 +2170,15 @@ const CampaignUI = (window.CampaignUI = {
     _managingCampaign: null,
     
     async openManageModal(campaignId) {
-        // #region agent log
         const currentUserId = window.AuthService?.getCurrentUser()?.id;
-        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:openManageModal',message:'openManageModal called',data:{campaignId,currentUserId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
         try {
             // Fetch campaign details
             const campaign = await CampaignAPI.getCampaign(campaignId);
             this._managingCampaign = campaign;
             
-            // #region agent log
-            const isCreator = campaign.dm_id === currentUserId;
-            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:openManageModal:afterFetch',message:'Campaign fetched, checking isCreator (FIX)',data:{dmId:campaign.dm_id,currentUserId,isCreator,campaignName:campaign.name},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B',runId:'post-fix'})}).catch(()=>{});
-            // #endregion
-            
             // Permission check: only the campaign creator can manage the campaign
+            const isCreator = campaign.dm_id === currentUserId;
             if (!isCreator) {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:openManageModal:blocked',message:'Non-creator blocked from opening modal',data:{campaignId,isCreator},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B',runId:'post-fix'})}).catch(()=>{});
-                // #endregion
                 console.warn('Only the campaign creator can manage this campaign.');
                 return;
             }
@@ -2210,9 +2197,6 @@ const CampaignUI = (window.CampaignUI = {
                 errorEl.classList.add('is-hidden');
             }
             
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:openManageModal:showingModal',message:'About to show manage campaign modal (NO permission check!)',data:{campaignId,isCreator},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
             modal.classList.add('show');
             
             // Focus name input
@@ -2944,9 +2928,6 @@ const CampaignUI = (window.CampaignUI = {
      * @param {HTMLElement} linkEl - The "See more/less" link element
      */
     togglePartyList(linkEl) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:togglePartyList',message:'togglePartyList called (FIX working)',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A',runId:'post-fix'})}).catch(()=>{});
-        // #endregion
         if (!linkEl) return;
         const partyList = linkEl.closest('.party-list');
         if (!partyList) return;
