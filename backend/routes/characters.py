@@ -355,6 +355,29 @@ def get_character(
     
     return char_dict
 
+def _validate_character_update(character: Character, update_data: dict) -> list[str]:
+    """
+    Validate character update against existing character state.
+    Returns list of validation errors (empty if valid).
+    
+    This handles cross-field validations that can't be done at schema level
+    because the schema doesn't have access to the existing character values.
+    """
+    errors = []
+    
+    # Determine effective HP values after update
+    new_hp_max = update_data.get('hit_points_max', character.hit_points_max)
+    new_hp_current = update_data.get('hit_points_current', character.hit_points_current)
+    
+    # Validate HP relationship: current cannot exceed max
+    if new_hp_current > new_hp_max:
+        errors.append(
+            f"Current HP ({new_hp_current}) cannot exceed max HP ({new_hp_max})"
+        )
+    
+    return errors
+
+
 @router.put("/{character_id}", response_model=CharacterResponse)
 def update_character(
     character_id: int,
@@ -386,6 +409,14 @@ def update_character(
     
     # Update only provided fields
     update_data = character_update.model_dump(exclude_unset=True)
+    
+    # Validate update against existing character state
+    validation_errors = _validate_character_update(character, update_data)
+    if validation_errors:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": "Invalid character update", "errors": validation_errors}
+        )
     
     # Owner-only fields - collaborators cannot change these
     owner_only_fields = {'name'}
