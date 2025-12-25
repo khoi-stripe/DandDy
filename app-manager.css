@@ -2190,11 +2190,11 @@ input.search-input:focus {
     opacity: 0.7;
 }
 
-/* Card status icons - icon-only indicators in top-right corner */
+/* Card status icons - icon-only indicators in top-left corner */
 .card-status-icons {
     position: absolute;
     top: 6px;
-    right: 6px;
+    left: 6px;
     z-index: 5;
     display: flex;
     gap: 4px;

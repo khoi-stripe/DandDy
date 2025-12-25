@@ -809,7 +809,21 @@ const CharacterSheet = (window.CharacterSheet = {
         : '[ CHARACTER SHEET ]';
 
     // Build status badges array for the status row
+    // Order: IN CAMPAIGN, SHARED, PINNED
     const statusBadges = [];
+    
+    // IN CAMPAIGN status badge
+    const characterCampaignId = character.campaignId || character.campaign_id;
+    if (characterCampaignId) {
+      const campaignTooltip = campaignName 
+        ? this.escapeHtml(campaignName)
+        : 'In a campaign';
+      statusBadges.push(`
+        <span class="sheet-status-badge sheet-status-badge--campaign has-tooltip">
+          <span class="sheet-status-badge__icon">⚔</span> IN CAMPAIGN
+          <span class="custom-tooltip" data-position="bottom-start">${campaignTooltip}</span>
+        </span>`);
+    }
     
     // SHARED status badge
     if (isShared || hasCollaborators) {
@@ -872,19 +886,6 @@ const CharacterSheet = (window.CharacterSheet = {
         </span>`);
     }
     
-    // IN CAMPAIGN status badge
-    const characterCampaignId = character.campaignId || character.campaign_id;
-    if (characterCampaignId) {
-      const campaignTooltip = campaignName 
-        ? this.escapeHtml(campaignName)
-        : 'In a campaign';
-      statusBadges.push(`
-        <span class="sheet-status-badge sheet-status-badge--campaign has-tooltip">
-          <span class="sheet-status-badge__icon">⚔</span> IN CAMPAIGN
-          <span class="custom-tooltip" data-position="bottom-start">${campaignTooltip}</span>
-        </span>`);
-    }
-    
     // Only render status row if there are badges
     const statusRowHtml = statusBadges.length > 0
       ? `<div class="sheet-status-row">${statusBadges.join('')}</div>`
@@ -894,9 +895,9 @@ const CharacterSheet = (window.CharacterSheet = {
 
     return `
       <div class="${headerClass}">
-        ${headerMenu}
         <div class="sheet-title"><span class="sheet-title-name">${safeTitle}</span></div>
         ${navActionsBlock}
+        ${headerMenu}
       </div>
       ${statusRowHtml}
     `;
@@ -1990,12 +1991,12 @@ const CharacterSheet = (window.CharacterSheet = {
               const fitsLeft =
                 triggerRect.right - menuWidth >= hostLeft;
 
-              // Sheet actions menu should always open to the right (left-aligned with trigger)
+              // Sheet actions menu should open to the left (right-aligned with trigger)
               if (isSheetActionsMenu) {
-                // Use left positioning - this anchors the menu's left edge
-                // to the trigger's left edge so it opens rightward
-                menu.style.left = `${triggerRect.left}px`;
-                menu.style.right = 'auto';
+                // Use right positioning - this anchors the menu's right edge
+                // to the trigger's right edge so it opens leftward
+                menu.style.right = `${viewportWidth - triggerRect.right}px`;
+                menu.style.left = 'auto';
                 // Set targetLeft to a dummy value since we won't use it
                 targetLeft = 0;
               } else if (fitsRight && !fitsLeft) {

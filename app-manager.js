@@ -4448,15 +4448,16 @@ const UI = {
         const isInCampaign = !!characterCampaignId;
         
         // Build status icons (icon-only, no text)
+        // Order: IN CAMPAIGN, SHARED, PINNED
         const statusIcons = [];
+        if (isInCampaign) {
+            statusIcons.push('<span class="card-status-icon card-status-icon--campaign">⚔</span>');
+        }
         if (showSharedTag) {
             statusIcons.push('<span class="card-status-icon card-status-icon--shared">↔</span>');
         }
         if (isPinned) {
             statusIcons.push('<span class="card-status-icon card-status-icon--pinned">◆</span>');
-        }
-        if (isInCampaign) {
-            statusIcons.push('<span class="card-status-icon card-status-icon--campaign">⚔</span>');
         }
         
         const statusIconsHtml = statusIcons.length > 0 
