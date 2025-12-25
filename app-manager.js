@@ -642,7 +642,7 @@ const AppState = {
         } catch (error) {
             console.error('Failed to load characters:', error);
             this.loading = false;
-            showNotification('❌ Failed to load characters');
+            showNotification('Failed to load characters');
             if (typeof UI !== 'undefined' && UI && typeof UI.setLoadingState === 'function') {
                 UI.setLoadingState(false);
             }
@@ -1284,21 +1284,16 @@ const ExpandedView = (window.ExpandedView = {
     /** Render the Campaign Area section (top) */
     _renderCampaignArea(campaignData, pendingInvitationCount = 0) {
         if (!campaignData) {
-            // No campaign - show join/create buttons with invitation count
+            // No campaign - show join/create buttons inline with header
             const hasInvitations = pendingInvitationCount > 0;
             const invitationText = hasInvitations 
                 ? `${pendingInvitationCount} campaign${pendingInvitationCount === 1 ? '' : 's'} available`
-                : 'Not in a campaign yet';
+                : '';
             
             return `
                 <div class="campaign-area">
-                    <div class="campaign-area-header">
+                    <div class="campaign-area-header campaign-area-header--no-campaign">
                         <h3 class="campaign-area-title">[ Campaign ]</h3>
-                    </div>
-                    <div class="campaign-area-empty">
-                        <div class="campaign-area-empty-text ${hasInvitations ? 'has-invitations' : ''}">
-                            ${invitationText}
-                        </div>
                         <div class="campaign-area-actions">
                             <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJoinModal()">
                                 JOIN
@@ -1308,6 +1303,13 @@ const ExpandedView = (window.ExpandedView = {
                             </button>
                         </div>
                     </div>
+                    ${hasInvitations ? `
+                    <div class="campaign-area-empty">
+                        <div class="campaign-area-empty-text has-invitations">
+                            ${invitationText}
+                        </div>
+                    </div>
+                    ` : ''}
                 </div>
             `;
         }
@@ -1370,6 +1372,9 @@ const ExpandedView = (window.ExpandedView = {
             }).join('');
             
             if (remainingCount > 0) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:_renderCampaignArea:seeMore',message:'Rendering See more link',data:{remainingCount,isCreator,campaignId:campaign.id,dmId:campaign.dm_id,currentUserId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C'})}).catch(()=>{});
+                // #endregion
                 partyHtml += `<a class="party-see-more" href="#" onclick="CampaignUI.openManageModal(${campaign.id}); return false;">See more</a>`;
             }
         } else {
@@ -1390,12 +1395,12 @@ const ExpandedView = (window.ExpandedView = {
         const menuItems = [];
         if (isCreator) {
             menuItems.push({
-                icon: '⚙',
+                icon: '✱',
                 label: 'Manage Campaign',
                 onclick: `CampaignUI.openManageModal(${campaign.id})`,
             });
             menuItems.push({
-                icon: '✉',
+                icon: '>',
                 label: 'Invite',
                 onclick: `CampaignUI.openInviteModal(${campaign.id})`,
             });
@@ -1568,7 +1573,7 @@ const ExpandedView = (window.ExpandedView = {
             
             settingsHtml = `
                 <button class="journal-settings-btn terminal-btn-icon" onclick="CampaignUI.openJournalSettingsModal()" title="Journal settings">
-                    ⚙
+                    ✱
                 </button>
             `;
         }
@@ -2163,10 +2168,19 @@ const CampaignUI = (window.CampaignUI = {
     _managingCampaign: null,
     
     async openManageModal(campaignId) {
+        // #region agent log
+        const currentUserId = window.AuthService?.getCurrentUser()?.id;
+        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:openManageModal',message:'openManageModal called',data:{campaignId,currentUserId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         try {
             // Fetch campaign details
             const campaign = await CampaignAPI.getCampaign(campaignId);
             this._managingCampaign = campaign;
+            
+            // #region agent log
+            const isCreator = campaign.dm_id === currentUserId;
+            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:openManageModal:afterFetch',message:'Campaign fetched, checking isCreator',data:{dmId:campaign.dm_id,currentUserId,isCreator,campaignName:campaign.name},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
             
             const modal = document.getElementById('manageCampaignModal');
             if (!modal) return;
@@ -2182,6 +2196,9 @@ const CampaignUI = (window.CampaignUI = {
                 errorEl.classList.add('is-hidden');
             }
             
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:openManageModal:showingModal',message:'About to show manage campaign modal (NO permission check!)',data:{campaignId,isCreator},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
             modal.classList.add('show');
             
             // Focus name input
@@ -6932,7 +6949,7 @@ async function confirmGeneratePortrait() {
         } else {
             console.log('%c🎨 PORTRAIT (Failed)', 'color: #f00; font-weight: 500');
             console.log('  Error:', error.message);
-            showNotification('❌ Portrait generation failed. Check console for details and try again.');
+            showNotification('Portrait generation failed. Check console for details and try again.');
         }
     }
 }
@@ -9837,12 +9854,12 @@ async function startMigration() {
                 }, 3000);
             }
         } else {
-            statusEl.textContent = '❌ Migration failed. Your local data is safe.';
+            statusEl.textContent = 'Migration failed. Your local data is safe.';
             setTimeout(() => closeMigrationModal(), 2000);
         }
     } catch (error) {
         console.error('Migration error:', error);
-        statusEl.textContent = '❌ Migration failed: ' + error.message;
+        statusEl.textContent = 'Migration failed: ' + error.message;
         setTimeout(() => closeMigrationModal(), 3000);
     }
 }

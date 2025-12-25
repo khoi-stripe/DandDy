@@ -830,6 +830,16 @@ div.sheet__sidebar.ui-theme-pink {
     margin-top: var(--spacing-md);
 }
 
+/* Actions in header (no campaign state) - no margin needed */
+.campaign-area-header .campaign-area-actions {
+    margin-top: 0;
+}
+
+/* Remove bottom margin from header when no campaign (no content below) */
+.campaign-area-header--no-campaign {
+    margin-bottom: 0;
+}
+
 /* ===== CAMPAIGN SKELETON LOADERS ===== */
 .campaign-skeleton {
     animation: skeleton-pulse 1.5s ease-in-out infinite;
