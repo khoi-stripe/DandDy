@@ -121,6 +121,24 @@
     },
 
     /**
+     * Helper to get portrait mode query param based on user preference.
+     * @returns {string} Query string like '?portrait_mode=original' or ''
+     */
+    _getPortraitModeParam() {
+      try {
+        if (global.StorageService && typeof StorageService.getPortraitViewMode === 'function') {
+          const mode = StorageService.getPortraitViewMode();
+          if (mode === 'original') {
+            return '?portrait_mode=original';
+          }
+        }
+      } catch (e) {
+        // Non-fatal - default to including ASCII
+      }
+      return '';
+    },
+
+    /**
      * Fetch demo characters from the API.
      * @returns {Promise<Array|null>} Array of demo characters or null if fetch failed
      */
@@ -132,7 +150,8 @@
           const apiBase = global.DanddyConfig?.BACKEND_ORIGIN || 'https://danddy-api.onrender.com';
           console.log('DemoCharacters: Fetching demo characters from API...');
           
-          const response = await fetch(`${apiBase}/api/characters/demo/list`);
+          const portraitParam = this._getPortraitModeParam();
+          const response = await fetch(`${apiBase}/api/characters/demo/list${portraitParam}`);
           if (!response.ok) {
             console.warn('DemoCharacters: API returned', response.status);
             return null;

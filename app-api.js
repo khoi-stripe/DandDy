@@ -111,13 +111,29 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
     return await response.json();
   },
 
+  // Helper to get portrait mode query param based on user preference
+  _getPortraitModeParam() {
+    try {
+      if (window.StorageService && typeof StorageService.getPortraitViewMode === 'function') {
+        const mode = StorageService.getPortraitViewMode();
+        if (mode === 'original') {
+          return '?portrait_mode=original';
+        }
+      }
+    } catch (e) {
+      // Non-fatal - default to including ASCII
+    }
+    return '';
+  },
+
   // Get all characters for current user
   async getAll() {
     try {
       if (DEBUG_CLOUD) {
         console.log('☁️ CLOUD: Fetching all characters from API...');
       }
-      const apiChars = await this._apiRequest('/characters/');
+      const portraitParam = this._getPortraitModeParam();
+      const apiChars = await this._apiRequest(`/characters/${portraitParam}`);
       const characters = apiChars.map(c => this._fromAPIFormat(c));
       if (DEBUG_CLOUD) {
         console.log('☁️ CLOUD: Retrieved', characters.length, 'characters');
@@ -135,7 +151,8 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       if (DEBUG_CLOUD) {
         console.log('☁️ CLOUD: Fetching character', id);
       }
-      const apiChar = await this._apiRequest(`/characters/${id}`);
+      const portraitParam = this._getPortraitModeParam();
+      const apiChar = await this._apiRequest(`/characters/${id}${portraitParam}`);
       return this._fromAPIFormat(apiChar);
     } catch (error) {
       console.error('☁️ CLOUD ERROR: Failed to fetch character:', error);

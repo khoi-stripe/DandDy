@@ -1173,20 +1173,23 @@ const ExpandedView = (window.ExpandedView = {
         }
         
         if (!campaignId) {
-            // No campaign - fetch pending invitations and journal entries
+            // No campaign - fetch pending invitations, journal entries, and past campaigns count
             let pendingCount = 0;
             let journalEntries = [];
+            let pastCampaignsCount = 0;
             try {
-                const [invitations, entries] = await Promise.all([
+                const [invitations, entries, pastCount] = await Promise.all([
                     CampaignAPI.getPendingInvitations().catch(() => []),
-                    CampaignAPI.getJournalEntries(characterId).catch(() => [])
+                    CampaignAPI.getJournalEntries(characterId).catch(() => []),
+                    CampaignUI.fetchPastCampaignsCount().catch(() => 0)
                 ]);
                 pendingCount = invitations?.length || 0;
                 journalEntries = entries || [];
+                pastCampaignsCount = pastCount || 0;
             } catch (e) {
                 console.warn('Could not fetch data:', e);
             }
-            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, pendingCount, journalEntries);
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, pendingCount, journalEntries, pastCampaignsCount);
             return;
         }
         
@@ -1205,29 +1208,34 @@ const ExpandedView = (window.ExpandedView = {
                     campaign: campaignDataFromMembership.campaign,
                     members: campaignDataFromMembership.members
                 };
-                // Use campaign-wide journal endpoint with filter
-                journalEntries = await CampaignAPI.getCampaignJournalEntries(
-                    campaignId, 
-                    CampaignUI._journalFilterUserId
-                ).catch(e => {
-                    console.warn('Could not fetch journal entries:', e);
-                    return [];
-                });
+                // Use campaign-wide journal endpoint with filter + fetch past campaigns count
+                const [entries, pastCount] = await Promise.all([
+                    CampaignAPI.getCampaignJournalEntries(
+                        campaignId, 
+                        CampaignUI._journalFilterUserId
+                    ).catch(e => {
+                        console.warn('Could not fetch journal entries:', e);
+                        return [];
+                    }),
+                    CampaignUI.fetchPastCampaignsCount().catch(() => 0)
+                ]);
+                journalEntries = entries;
             } else {
-                // Fetch campaign details, members, and journal entries in parallel
-                const [campaign, members, entries] = await Promise.all([
+                // Fetch campaign details, members, journal entries, and past campaigns count in parallel
+                const [campaign, members, entries, pastCount] = await Promise.all([
                     CampaignAPI.getCampaign(campaignId),
                     CampaignAPI.getCampaignMembers(campaignId),
                     CampaignAPI.getCampaignJournalEntries(campaignId, CampaignUI._journalFilterUserId).catch(e => {
                         console.warn('Could not fetch journal entries:', e);
                         return [];
-                    })
+                    }),
+                    CampaignUI.fetchPastCampaignsCount().catch(() => 0)
                 ]);
                 campaignData = { campaign, members };
                 journalEntries = entries;
             }
             
-            panel.innerHTML = this._renderCampaignPanelContent(characterId, campaignData, 0, journalEntries);
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, campaignData, 0, journalEntries, CampaignUI._pastCampaignsCount);
             this._initDescriptionTruncation();
             
         } catch (error) {
@@ -1238,9 +1246,9 @@ const ExpandedView = (window.ExpandedView = {
     },
 
     /** Render the full campaign panel with both sections */
-    _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0, journalEntries = []) {
+    _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0, journalEntries = [], pastCampaignsCount = 0) {
         return `
-            ${this._renderCampaignArea(campaignData, pendingInvitationCount)}
+            ${this._renderCampaignArea(campaignData, pendingInvitationCount, pastCampaignsCount)}
             ${this._renderJournalSection(characterId, journalEntries, campaignData)}
         `;
     },
@@ -1293,13 +1301,22 @@ const ExpandedView = (window.ExpandedView = {
     },
 
     /** Render the Campaign Area section (top) */
-    _renderCampaignArea(campaignData, pendingInvitationCount = 0) {
+    _renderCampaignArea(campaignData, pendingInvitationCount = 0, pastCampaignsCount = 0) {
         if (!campaignData) {
             // No campaign - show join/create buttons inline with header
             const hasInvitations = pendingInvitationCount > 0;
             const invitationText = hasInvitations 
                 ? `${pendingInvitationCount} campaign${pendingInvitationCount === 1 ? '' : 's'} available`
                 : '';
+            
+            // Only show Past Adventures link if user has past campaigns
+            const pastAdventuresHtml = pastCampaignsCount > 0 ? `
+                    <div class="campaign-area-past-link">
+                        <a href="#" onclick="CampaignUI.openPastAdventuresModal(); return false;" class="past-adventures-link">
+                            <span class="past-adventures-link-icon">↺</span> Past Adventures
+                        </a>
+                    </div>
+            ` : '';
             
             return `
                 <div class="campaign-area">
@@ -1321,11 +1338,7 @@ const ExpandedView = (window.ExpandedView = {
                         </div>
                     </div>
                     ` : ''}
-                    <div class="campaign-area-past-link">
-                        <a href="#" onclick="CampaignUI.openPastAdventuresModal(); return false;" class="past-adventures-link">
-                            <span class="past-adventures-link-icon">📜</span> Past Adventures
-                        </a>
-                    </div>
+                    ${pastAdventuresHtml}
                 </div>
             `;
         }
@@ -1432,12 +1445,14 @@ const ExpandedView = (window.ExpandedView = {
             });
         }
         
-        // Past Adventures - available to everyone
-        menuItems.push({
-            icon: '📜',
-            label: 'Past Adventures',
-            onclick: 'CampaignUI.openPastAdventuresModal()',
-        });
+        // Past Adventures - only show if user has past campaigns (uses cached count)
+        if (CampaignUI._pastCampaignsCount > 0) {
+            menuItems.push({
+                icon: '↺',
+                label: 'Past Adventures',
+                onclick: 'CampaignUI.openPastAdventuresModal()',
+            });
+        }
 
         const overflowMenuHtml = `
             <div class="campaign-overflow selector-shell selector-shell--actions">
@@ -1728,6 +1743,25 @@ const ExpandedView = (window.ExpandedView = {
 const CampaignUI = (window.CampaignUI = {
     // Currently selected character's campaign data (cached)
     _currentCampaign: null,
+    
+    // Cached count of past campaigns (for conditional display of Past Adventures)
+    _pastCampaignsCount: 0,
+    
+    /**
+     * Fetch and cache the count of past campaigns
+     * @returns {Promise<number>} Number of past campaigns
+     */
+    async fetchPastCampaignsCount() {
+        try {
+            const pastCampaigns = await CampaignAPI.getPastCampaigns();
+            this._pastCampaignsCount = pastCampaigns?.length || 0;
+            return this._pastCampaignsCount;
+        } catch (error) {
+            console.warn('Could not fetch past campaigns count:', error);
+            this._pastCampaignsCount = 0;
+            return 0;
+        }
+    },
 
     // ========================================
     // CREATE CAMPAIGN MODAL
