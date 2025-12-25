@@ -1912,11 +1912,21 @@ div.sheet__sidebar.ui-theme-pink {
     text-shadow: 0 0 8px currentColor;
 }
 
-/* All search inputs should have dim borders by default */
-input[type="text"][id*="search" i],
+/* All search inputs should have dim borders - both default and focused states */
+#searchInput,
+#spellSearchInput,
 input[type="search"],
 input.search-input,
-#spellSearchInput {
+#searchInput:focus,
+#spellSearchInput:focus,
+input[type="search"]:focus,
+input.search-input:focus {
+    border-color: var(--ui-dim-color) !important;
+}
+
+/* Spell search in modal - ensure dim border even with modal styles */
+.modal #spellSearchInput,
+.modal #spellSearchInput:focus {
     border-color: var(--ui-dim-color) !important;
 }
 
@@ -1960,11 +1970,11 @@ input.search-input,
     border-color: var(--ui-dim-color) !important;
 }
 
-/* When focused, make the search field feel like a primary theme input */
+/* When focused, keep search field dim but add subtle glow */
 .panel-character-grid .search-input-wrapper .terminal-input:focus {
-    /* Use bright theme color */
-    border-color: var(--ui-border-color) !important;
-    box-shadow: 0 0 8px var(--ui-border-color) !important;
+    /* Keep dim border color */
+    border-color: var(--ui-dim-color) !important;
+    box-shadow: 0 0 8px var(--ui-dim-color) !important;
     color: var(--ui-fg-color) !important;
     -webkit-text-fill-color: var(--ui-fg-color) !important;
 }
