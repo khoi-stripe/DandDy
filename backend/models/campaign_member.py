@@ -67,7 +67,7 @@ class CampaignMember(Base):
     
     # Relationships
     campaign = relationship("Campaign", back_populates="members")
-    user = relationship("User", back_populates="campaign_memberships")
+    user = relationship("User", back_populates="campaign_memberships", foreign_keys=[user_id])
     character = relationship("Character", back_populates="campaign_membership")
     invited_by = relationship("User", foreign_keys=[invited_by_id])
 

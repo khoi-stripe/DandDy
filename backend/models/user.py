@@ -31,7 +31,7 @@ class User(Base):
     shared_characters = relationship("CharacterCollaborator", back_populates="user")
     
     # Campaign tracking relationships
-    campaign_memberships = relationship("CampaignMember", back_populates="user")
+    campaign_memberships = relationship("CampaignMember", back_populates="user", foreign_keys="[CampaignMember.user_id]")
     sessions = relationship("Session", back_populates="user")
     session_logs = relationship("SessionLog", back_populates="user")
     journal_entries = relationship("JournalEntry", back_populates="user")
