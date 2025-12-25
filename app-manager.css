@@ -1038,6 +1038,18 @@ div.sheet__sidebar.ui-theme-pink {
     gap: var(--spacing-sm);
 }
 
+.modal-footer-space-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-footer-space-between .modal-footer-left,
+.modal-footer-space-between .modal-footer-right {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
 /* ===== JOIN CAMPAIGN - INVITATIONS LIST ===== */
 .invitations-list {
     border: 1px solid var(--ui-dim-color);

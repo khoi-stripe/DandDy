@@ -533,9 +533,14 @@
                 
                 <div id="manageCampaignError" class="terminal-text-small terminal-text-error mt-sm is-hidden"></div>
             </div>
-            <div class="modal-footer modal-footer-right">
-                <button class="terminal-btn terminal-btn-danger" onclick="CampaignUI.confirmDeleteCampaignFromModal()">Delete</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.submitManageCampaign()">Save</button>
+            <div class="modal-footer modal-footer-space-between">
+                <div class="modal-footer-left">
+                    <button class="terminal-btn terminal-btn-danger" onclick="CampaignUI.confirmDeleteCampaignFromModal()">Delete</button>
+                </div>
+                <div class="modal-footer-right">
+                    <button class="terminal-btn" onclick="CampaignUI.confirmEndCampaign()">End Campaign</button>
+                    <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.submitManageCampaign()">Save</button>
+                </div>
             </div>
         </div>
     </div>

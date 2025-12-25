@@ -2373,6 +2373,36 @@ const CampaignUI = (window.CampaignUI = {
             showAlertDialog(error.message || 'Failed to delete campaign. Please try again.');
         }
     },
+    
+    async confirmEndCampaign() {
+        if (!this._managingCampaign) return;
+        
+        if (!confirm('End this campaign? The campaign will be marked as completed and moved to Past Adventures for all members. This cannot be undone.')) {
+            return;
+        }
+        
+        try {
+            // Update campaign status to completed
+            await CampaignAPI.updateCampaign(this._managingCampaign.id, { status: 'completed' });
+            
+            // Close the modal
+            this.closeManageModal();
+            
+            // Refresh character data
+            await AppState.loadCharacters();
+            
+            // Refresh campaign panel (will show empty state since campaign is no longer active)
+            ExpandedView._loadCampaignPanel();
+            
+            // Reset past campaigns cache so it gets refreshed
+            this._pastCampaignsCount = 0;
+            
+            showAlertDialog('Campaign ended successfully. It can now be found in Past Adventures.');
+        } catch (error) {
+            console.error('Failed to end campaign:', error);
+            showAlertDialog(error.message || 'Failed to end campaign. Please try again.');
+        }
+    },
 
     // ========================================
     // CAMPAIGN DATA LOADING
