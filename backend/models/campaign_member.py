@@ -52,7 +52,7 @@ class CampaignMember(Base):
     
     # Journal visibility - controls whether party members can see this character's journal entries
     # Using String instead of Enum to avoid migration complexity with existing data
-    journal_visibility = Column(String(20), default="private", nullable=False)
+    journal_visibility = Column(String(20), default="public", nullable=False)
     
     # Unique symbol for this member within the campaign (e.g., ▣, ◆, ▲)
     # Randomly assigned from PARTY_SYMBOLS when joining, unique per campaign

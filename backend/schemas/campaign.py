@@ -66,7 +66,7 @@ class CampaignMemberResponse(CampaignMemberBase):
     is_creator: bool
     status: str
     joined_at: datetime
-    journal_visibility: str = "private"  # "private" or "public"
+    journal_visibility: str = "public"  # "private" or "public"
     symbol: Optional[str] = None  # Unique symbol for this member (e.g., ▣, ◆, ▲)
     character: Optional[CampaignMemberCharacterInfo] = None
     

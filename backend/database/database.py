@@ -508,7 +508,7 @@ def ensure_journal_visibility_column():
     with engine.connect() as conn:
         if "journal_visibility" not in existing_cols:
             # Add as VARCHAR with lowercase default for consistency
-            conn.execute(text("ALTER TABLE campaign_members ADD COLUMN journal_visibility VARCHAR(20) DEFAULT 'private'"))
+            conn.execute(text("ALTER TABLE campaign_members ADD COLUMN journal_visibility VARCHAR(20) DEFAULT 'public'"))
             # Backfill existing members
             conn.execute(text("UPDATE campaign_members SET journal_visibility = 'private' WHERE journal_visibility IS NULL"))
         else:

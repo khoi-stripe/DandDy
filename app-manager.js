@@ -2884,7 +2884,7 @@ const CampaignUI = (window.CampaignUI = {
     _currentCampaignId: null,
     
     // Current user's journal visibility setting
-    _currentJournalVisibility: 'private',
+    _currentJournalVisibility: 'public',
 
     /** Open journal settings modal */
     async openJournalSettingsModal() {
