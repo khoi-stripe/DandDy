@@ -2348,6 +2348,8 @@ const CampaignUI = (window.CampaignUI = {
     
     // Track the entry being edited (null for new entry)
     _editingEntryId: null,
+    // Track existing character update when editing (for accurate level-up detection)
+    _existingCharacterUpdate: null,
 
     async openJournalEntryModal(entryId = null) {
         const modal = document.getElementById('journalEntryModal');
@@ -2367,6 +2369,8 @@ const CampaignUI = (window.CampaignUI = {
         const contentInput = document.getElementById('journalEntryContent');
         const idInput = document.getElementById('journalEntryId');
 
+        this._existingCharacterUpdate = null;
+        
         if (entryId) {
             // Load existing entry data
             try {
@@ -2374,6 +2378,7 @@ const CampaignUI = (window.CampaignUI = {
                 if (titleInput) titleInput.value = entry.title || '';
                 if (contentInput) contentInput.value = entry.content || '';
                 if (dateInput) dateInput.value = entry.entry_date || new Date().toISOString().split('T')[0];
+                this._existingCharacterUpdate = entry.character_update || null;
             } catch (error) {
                 console.error('Failed to load journal entry:', error);
                 showAlertDialog('Failed to load journal entry.');
@@ -2390,8 +2395,13 @@ const CampaignUI = (window.CampaignUI = {
             idInput.value = entryId || '';
         }
 
-        // Prepare character update fields
+        // Prepare character update fields (will set defaults)
         this._prepareCharacterUpdateFields();
+        
+        // If editing and there's existing character update data, populate those fields
+        if (this._existingCharacterUpdate) {
+            this._populateCharacterUpdateFields(this._existingCharacterUpdate);
+        }
 
         modal.classList.add('show');
 
@@ -2405,6 +2415,7 @@ const CampaignUI = (window.CampaignUI = {
             animateModalClose(modal, { removeOnClose: false });
         }
         this._editingEntryId = null;
+        this._existingCharacterUpdate = null;
         // Reset notice state when closing
         this.dismissJournalNotice();
     },
@@ -2530,11 +2541,85 @@ const CampaignUI = (window.CampaignUI = {
                 await CampaignAPI.createJournalEntry(entryData);
             }
 
+            // Store existing update before clearing (for level-up calculation)
+            const existingUpdate = this._existingCharacterUpdate;
+            
             this._editingEntryId = null;
             this.closeJournalEntryModal();
             
+            // Check if XP gain triggers a level-up
+            // For edits: backend reverts old XP then applies new, so calculate accordingly
+            let levelUpHandled = false;
+            if (xpGained > 0 && character) {
+                const currentXP = character.experience_points || character.experiencePoints || 0;
+                // If editing, account for the XP that will be reverted first
+                const oldXpGained = existingUpdate?.xp_gained || 0;
+                const newXP = currentXP - oldXpGained + xpGained;
+                const currentLevel = character.level || 1;
+                const levelFromXP = calculateLevelFromXP(newXP);
+                
+                if (levelFromXP > currentLevel) {
+                    // XP warrants a level-up! Show the standalone dialog
+                    const levelChangeChoice = await showStandaloneLevelUpDialog(currentLevel, levelFromXP, character.name);
+                    
+                    if (levelChangeChoice === 'auto') {
+                        // Calculate and apply auto stats
+                        const tempCharacter = { 
+                            ...character, 
+                            level: levelFromXP,
+                            experiencePoints: newXP,
+                            experience_points: newXP
+                        };
+                        const autoCalculatedStats = calculateStatsForLevel(tempCharacter, levelFromXP);
+                        
+                        const levelUpUpdates = {
+                            level: levelFromXP,
+                            hitPoints: {
+                                max: autoCalculatedStats.hpMax,
+                                current: autoCalculatedStats.hpMax,
+                                temp: character.hitPoints?.temp || 0
+                            },
+                            proficiencyBonus: autoCalculatedStats.proficiencyBonus,
+                        };
+                        
+                        if (autoCalculatedStats.spellSlots) {
+                            levelUpUpdates.spellSlots = autoCalculatedStats.spellSlots;
+                            levelUpUpdates.spellSlotsUsed = {};
+                        }
+                        
+                        if (autoCalculatedStats.hitDiceMax) {
+                            levelUpUpdates.hitDiceMax = autoCalculatedStats.hitDiceMax;
+                            levelUpUpdates.hitDiceCurrent = null;
+                        }
+                        
+                        if (autoCalculatedStats.classResources && Object.keys(autoCalculatedStats.classResources).length > 0) {
+                            levelUpUpdates.classResources = autoCalculatedStats.classResources;
+                        }
+                        
+                        // Apply level-up updates
+                        await CharacterStorage.update(characterId, levelUpUpdates);
+                        levelUpHandled = true;
+                        
+                        // Check for new spells after level-up
+                        if (autoCalculatedStats.spellProgression) {
+                            setTimeout(async () => {
+                                const updatedChar = await CharacterStorage.getById(characterId);
+                                if (updatedChar) {
+                                    checkAndPromptForNewSpells(updatedChar, currentLevel, levelFromXP);
+                                }
+                            }, 400);
+                        }
+                    } else if (levelChangeChoice === 'manual') {
+                        // User chose manual - just update the level, they'll handle stats
+                        await CharacterStorage.update(characterId, { level: levelFromXP });
+                        levelUpHandled = true;
+                    }
+                    // If cancelled, just continue without level change
+                }
+            }
+            
             // Refresh character data if updates were made
-            if (hasCharacterUpdate) {
+            if (hasCharacterUpdate || levelUpHandled) {
                 await AppState.loadCharacters();
                 if (characterId) {
                     viewCharacter(characterId);
@@ -2544,7 +2629,10 @@ const CampaignUI = (window.CampaignUI = {
             // Refresh the campaign panel
             ExpandedView._loadCampaignPanel();
             
-            showNotification(hasCharacterUpdate ? '✓ Journal entry saved & character updated' : '✓ Journal entry saved');
+            const notification = levelUpHandled 
+                ? '✓ Journal entry saved & LEVEL UP!' 
+                : (hasCharacterUpdate ? '✓ Journal entry saved & character updated' : '✓ Journal entry saved');
+            showNotification(notification);
 
         } catch (error) {
             console.error('Failed to save journal entry:', error);
@@ -2658,6 +2746,68 @@ const CampaignUI = (window.CampaignUI = {
                 cb.checked = currentConditions.includes(condition);
             }
         });
+    },
+
+    /** Populate character update fields with existing data (when editing a journal entry) */
+    _populateCharacterUpdateFields(charUpdate) {
+        if (!charUpdate) return;
+        
+        // XP gained
+        const xpInput = document.getElementById('charUpdateXp');
+        if (xpInput && charUpdate.xp_gained !== undefined) {
+            xpInput.value = charUpdate.xp_gained || 0;
+        }
+        
+        // Gold change (handle sign)
+        const goldInput = document.getElementById('charUpdateGold');
+        const goldSign = document.getElementById('charUpdateGoldSign');
+        const goldSignLabel = document.getElementById('charUpdateGoldSign-label');
+        if (goldInput && charUpdate.gold_change !== undefined) {
+            const goldValue = charUpdate.gold_change;
+            const isNegative = goldValue < 0;
+            goldInput.value = Math.abs(goldValue);
+            
+            if (goldSign) goldSign.value = isNegative ? '-' : '+';
+            if (goldSignLabel) goldSignLabel.textContent = isNegative ? '−' : '+';
+            
+            // Update gold sign selector visual state
+            const goldSignSelector = document.querySelector('.gold-sign-selector');
+            if (goldSignSelector) {
+                goldSignSelector.querySelectorAll('.selector-option').forEach(opt => {
+                    const optLabel = opt.querySelector('.selector-option-label')?.textContent;
+                    const isSelected = (isNegative && optLabel === '−') || (!isNegative && optLabel === '+');
+                    opt.classList.toggle('is-selected', isSelected);
+                    opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+                });
+            }
+        }
+        
+        // Items acquired (join as comma-separated string)
+        const itemsInput = document.getElementById('charUpdateItems');
+        if (itemsInput && charUpdate.items_acquired?.length > 0) {
+            itemsInput.value = charUpdate.items_acquired.join(', ');
+        }
+        
+        // Conditions (set checkboxes)
+        const conditionCheckboxes = {
+            'charUpdatePoisoned': 'poisoned',
+            'charUpdateExhausted': 'exhausted',
+            'charUpdateDiseased': 'diseased',
+            'charUpdateCursed': 'cursed'
+        };
+        
+        if (charUpdate.conditions?.length > 0) {
+            Object.entries(conditionCheckboxes).forEach(([checkboxId, condition]) => {
+                const cb = document.getElementById(checkboxId);
+                if (cb) {
+                    cb.checked = charUpdate.conditions.includes(condition);
+                }
+            });
+        }
+        
+        // Note: HP change is a delta, not absolute value. The form shows current HP.
+        // When editing, we keep the current HP shown (set by _prepareCharacterUpdateFields).
+        // The hp_change will be recalculated on save based on the difference.
     },
 
     /** Handle gold sign selector selection */
@@ -7988,6 +8138,59 @@ function showLevelChangeDialog(oldLevel, newLevel, xpTriggered = false) {
     });
 }
 
+// Standalone level-up dialog for contexts where the edit modal isn't open (e.g., journal entries)
+// Returns a promise that resolves to: 'auto' | 'manual' | 'cancel'
+function showStandaloneLevelUpDialog(oldLevel, newLevel, characterName = '') {
+    return new Promise((resolve) => {
+        const levelDiff = newLevel - oldLevel;
+        const direction = levelDiff > 0 ? 'up' : 'down';
+        const levelText = Math.abs(levelDiff) === 1 ? 'level' : 'levels';
+        
+        const nameDisplay = characterName ? ` for ${characterName}` : '';
+        const mainText = `XP gained has reached the threshold for <strong>Level\u00A0${newLevel}</strong>${nameDisplay}! (${Math.abs(levelDiff)} ${levelText} ${direction})`;
+        
+        const modalHtml = `
+          <div id="levelUpStandaloneModal" class="modal show">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h2 class="modal-title">LEVEL UP!</h2>
+                <button class="modal-close" id="levelUpClose">&times;</button>
+              </div>
+              <div class="modal-body">
+                <p class="terminal-text level-change-text">${mainText}</p>
+                <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">
+                  Would you like to automatically recalculate stats (HP, Proficiency Bonus, Spell Slots) for the new level, or update them manually?
+                </p>
+              </div>
+              <div class="modal-footer" style="flex-wrap: wrap; gap: 0.5rem;">
+                <button class="terminal-btn" id="levelUpCancel">Skip</button>
+                <button class="terminal-btn" id="levelUpManual">Level up (manual stats)</button>
+                <button class="terminal-btn terminal-btn-primary" id="levelUpAuto">Level up (auto-calculate)</button>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
+        const modal = document.getElementById('levelUpStandaloneModal');
+        
+        const closeAndResolve = (result) => {
+            if (modal) {
+                animateModalClose(modal, { removeOnClose: true });
+            }
+            resolve(result);
+        };
+        
+        document.getElementById('levelUpClose')?.addEventListener('click', () => closeAndResolve('cancel'));
+        document.getElementById('levelUpCancel')?.addEventListener('click', () => closeAndResolve('cancel'));
+        document.getElementById('levelUpManual')?.addEventListener('click', () => closeAndResolve('manual'));
+        document.getElementById('levelUpAuto')?.addEventListener('click', () => closeAndResolve('auto'));
+        
+        // Focus the auto-calculate button
+        document.getElementById('levelUpAuto')?.focus();
+    });
+}
+
 // D&D 5e XP thresholds for each level (same as CharacterSheet.XP_THRESHOLDS)
 const XP_THRESHOLDS = [
     0,       // Level 1
@@ -9329,15 +9532,31 @@ async function handleLogin() {
         if (result && result.success) {
             // Mark splash as dismissed on successful login
             sessionStorage.setItem('welcomeSplashDismissed', 'true');
-            
-            // Show quick feedback, then refresh the page to ensure all data is fresh
-            // (quota counts, admin status, etc.)
+            closeAuthModal();
+            updateAuthUI();
             showNotification(`✓ Logged in as ${email}`);
+
+            // Start session monitoring now that user is logged in
+            if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
+                window.AuthService.startSessionMonitor();
+            }
             
-            // Give the notification a moment to display before refreshing
-            setTimeout(() => {
-                window.location.reload();
-            }, 300);
+            // Check if should migrate user-created characters first
+            if (window.MigrationService && window.MigrationService.hasLocalCharacters()) {
+                showMigrationModal();
+            } 
+            // Then check for demo character migration (only ask once)
+            else if (shouldShowDemoMigration()) {
+                showDemoMigrationModal();
+            } else {
+                // Reload pinned characters and characters from cloud
+                await loadPinnedCharacterIds();
+                await AppState.loadCharacters();
+                UI.render();
+            }
+            
+            // Check for pending character shares (after a short delay to not overwhelm)
+            setTimeout(() => checkPendingShares(), 500);
             return;
         } else {
             errorEl.textContent = (result && result.error) || 'Login failed';
