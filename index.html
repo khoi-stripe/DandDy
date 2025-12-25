@@ -528,11 +528,11 @@
         </div>
     </div>
 
-    <!-- Manage Campaign Modal -->
+    <!-- Edit Campaign Modal -->
     <div id="manageCampaignModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Manage Campaign</h2>
+                <h2 class="modal-title">Edit Campaign</h2>
                 <button class="modal-close" onclick="CampaignUI.closeManageModal()">&times;</button>
             </div>
             <div class="modal-body">
@@ -547,14 +547,9 @@
                 
                 <div id="manageCampaignError" class="terminal-text-small terminal-text-error mt-sm is-hidden"></div>
             </div>
-            <div class="modal-footer modal-footer-space-between">
-                <div class="modal-footer-left">
-                    <button class="terminal-btn terminal-btn-danger" onclick="CampaignUI.confirmDeleteCampaignFromModal()">Delete</button>
-                </div>
-                <div class="modal-footer-right">
-                    <button class="terminal-btn" onclick="CampaignUI.confirmEndCampaign()">End Campaign</button>
-                    <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.submitManageCampaign()">Save</button>
-                </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="CampaignUI.closeManageModal()">Cancel</button>
+                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.submitManageCampaign()">Save</button>
             </div>
         </div>
     </div>
@@ -562,14 +557,14 @@
     <!-- Past Adventures Modal -->
     <div id="pastAdventuresModal" class="modal">
         <div class="modal-content modal-content--wide">
-            <div class="modal-header">
-                <div class="modal-breadcrumb" id="pastAdventuresBreadcrumb">
-                    <button class="breadcrumb-link" onclick="CampaignUI.backToPastCampaignsList()">Past Adventures</button>
-                    <span class="breadcrumb-separator">›</span>
-                    <span class="breadcrumb-current" id="pastAdventuresBreadcrumbCurrent"></span>
+            <div class="modal-header modal-header--stacked">
+                <div class="modal-header-top">
+                    <div class="modal-breadcrumb" id="pastAdventuresBreadcrumb">
+                        <button class="breadcrumb-link" onclick="CampaignUI.backToPastCampaignsList()">← Past Adventures</button>
+                    </div>
+                    <button class="modal-close" onclick="CampaignUI.closePastAdventuresModal()">&times;</button>
                 </div>
                 <h2 class="modal-title" id="pastAdventuresTitle">Past Adventures</h2>
-                <button class="modal-close" onclick="CampaignUI.closePastAdventuresModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <!-- List View (default) -->
@@ -1232,6 +1227,6 @@
     <!-- Theme loader (applies saved theme config) -->
     <script src="app-theme-loader.js?v=20251224a"></script>
     <!-- Concatenated manager bundle (see scripts/simple_bundle.py) -->
-    <script src="manager.bundle.js?v=20251224a"></script>
+    <script src="manager.bundle.js?v=20251225e"></script>
 </body>
 </html>

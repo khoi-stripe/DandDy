@@ -1240,7 +1240,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 .party-member-email {
     color: var(--ui-dim-color);
-    font-size: var(--font-size-xs);
+    font-size: 12px;
     opacity: 0.7;
 }
 
@@ -1277,6 +1277,29 @@ div.sheet__sidebar.ui-theme-pink {
     border-radius: 3px;
     padding: 0 4px;
     margin-left: 4px;
+}
+
+/* Invited tag - dimmer style for pending invitations */
+.party-member-invited-tag {
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-medium);
+    font-family: var(--font-mono);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    color: var(--ui-dim-color);
+    background-color: color-mix(in srgb, var(--ui-dim-color) 15%, transparent);
+    border-radius: 3px;
+    padding: 0 4px;
+    margin-left: 4px;
+}
+
+/* Invited party member row - dimmed appearance */
+.party-member--invited {
+    opacity: 0.7;
+}
+
+.party-member--invited .party-member-email {
+    font-style: normal;
 }
 
 /* See more link for party members when >3 */
@@ -1452,13 +1475,28 @@ div.sheet__sidebar.ui-theme-pink {
     max-width: 700px;
 }
 
+/* Stacked modal header (breadcrumb on top, title below) */
+.modal-header--stacked {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.modal-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header--stacked .modal-title {
+    margin-top: var(--spacing-xs);
+}
+
 /* Breadcrumb navigation */
 .modal-breadcrumb {
     display: none;
     align-items: center;
     gap: var(--spacing-xs);
     font-size: var(--font-size-sm);
-    margin-bottom: var(--spacing-xs);
 }
 
 .breadcrumb-link {
@@ -1475,18 +1513,6 @@ div.sheet__sidebar.ui-theme-pink {
 
 .breadcrumb-link:hover {
     opacity: 0.8;
-}
-
-.breadcrumb-separator {
-    color: var(--ui-dim-color);
-}
-
-.breadcrumb-current {
-    color: var(--ui-dim-color);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 200px;
 }
 
 /* Past campaigns list */
@@ -3047,9 +3073,9 @@ input.search-input:focus {
 }
 
 /* ===== CAMPAIGN MODALS ===== */
-/* Manage Campaign modal fixed height */
+/* Edit Campaign modal fixed height */
 #manageCampaignModal .modal-content {
-    height: 480px;
+    height: 380px;
     display: flex;
     flex-direction: column;
 }

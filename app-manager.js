@@ -1173,23 +1173,23 @@ const ExpandedView = (window.ExpandedView = {
         }
         
         if (!campaignId) {
-            // No campaign - fetch pending invitations, journal entries, and past campaigns count
+            // No campaign - fetch pending invitations and past campaigns count
+            // Note: Journal entries are NOT fetched here - they belong to past campaigns
+            // and should only be viewed via the "Past Adventures" modal
             let pendingCount = 0;
-            let journalEntries = [];
             let pastCampaignsCount = 0;
             try {
-                const [invitations, entries, pastCount] = await Promise.all([
+                const [invitations, pastCount] = await Promise.all([
                     CampaignAPI.getPendingInvitations().catch(() => []),
-                    CampaignAPI.getJournalEntries(characterId).catch(() => []),
                     CampaignUI.fetchPastCampaignsCount().catch(() => 0)
                 ]);
                 pendingCount = invitations?.length || 0;
-                journalEntries = entries || [];
                 pastCampaignsCount = pastCount || 0;
             } catch (e) {
                 console.warn('Could not fetch data:', e);
             }
-            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, pendingCount, journalEntries, pastCampaignsCount);
+            // Pass empty array for journal entries - past entries are in Past Adventures
+            panel.innerHTML = this._renderCampaignPanelContent(characterId, null, pendingCount, [], pastCampaignsCount);
             return;
         }
         
@@ -1201,6 +1201,10 @@ const ExpandedView = (window.ExpandedView = {
             // Otherwise fetch campaign details, members, and journal entries in parallel
             let campaignData;
             let journalEntries;
+            let pendingInvites = [];
+            
+            // Check if current user is the campaign creator (to fetch pending invitations)
+            const currentUserId = window.AuthService?.getCurrentUser()?.id;
             
             if (campaignDataFromMembership) {
                 // We already have campaign and members from the membership lookup
@@ -1208,8 +1212,9 @@ const ExpandedView = (window.ExpandedView = {
                     campaign: campaignDataFromMembership.campaign,
                     members: campaignDataFromMembership.members
                 };
-                // Use campaign-wide journal endpoint with filter + fetch past campaigns count
-                const [entries, pastCount] = await Promise.all([
+                const isCreator = campaignData.campaign.dm_id === currentUserId;
+                // Use campaign-wide journal endpoint with filter + fetch past campaigns count + pending invites
+                const [entries, pastCount, invites] = await Promise.all([
                     CampaignAPI.getCampaignJournalEntries(
                         campaignId, 
                         CampaignUI._journalFilterUserId
@@ -1217,23 +1222,33 @@ const ExpandedView = (window.ExpandedView = {
                         console.warn('Could not fetch journal entries:', e);
                         return [];
                     }),
-                    CampaignUI.fetchPastCampaignsCount().catch(() => 0)
+                    CampaignUI.fetchPastCampaignsCount().catch(() => 0),
+                    isCreator ? CampaignAPI.getCampaignPendingInvitations(campaignId).catch(() => []) : Promise.resolve([])
                 ]);
                 journalEntries = entries;
+                pendingInvites = invites;
             } else {
-                // Fetch campaign details, members, journal entries, and past campaigns count in parallel
-                const [campaign, members, entries, pastCount] = await Promise.all([
-                    CampaignAPI.getCampaign(campaignId),
+                // Fetch campaign details first to check if creator
+                const campaign = await CampaignAPI.getCampaign(campaignId);
+                const isCreator = campaign.dm_id === currentUserId;
+                
+                // Fetch members, journal entries, past campaigns count, and pending invites in parallel
+                const [members, entries, pastCount, invites] = await Promise.all([
                     CampaignAPI.getCampaignMembers(campaignId),
                     CampaignAPI.getCampaignJournalEntries(campaignId, CampaignUI._journalFilterUserId).catch(e => {
                         console.warn('Could not fetch journal entries:', e);
                         return [];
                     }),
-                    CampaignUI.fetchPastCampaignsCount().catch(() => 0)
+                    CampaignUI.fetchPastCampaignsCount().catch(() => 0),
+                    isCreator ? CampaignAPI.getCampaignPendingInvitations(campaignId).catch(() => []) : Promise.resolve([])
                 ]);
                 campaignData = { campaign, members };
                 journalEntries = entries;
+                pendingInvites = invites;
             }
+            
+            // Add pending invites to campaign data for rendering
+            campaignData.pendingInvites = pendingInvites;
             
             panel.innerHTML = this._renderCampaignPanelContent(characterId, campaignData, 0, journalEntries, CampaignUI._pastCampaignsCount);
             this._initDescriptionTruncation();
@@ -1361,7 +1376,7 @@ const ExpandedView = (window.ExpandedView = {
         }
 
         // Has campaign - show campaign info
-        const { campaign, members } = campaignData;
+        const { campaign, members, pendingInvites } = campaignData;
         
         // Check if current user is the campaign creator
         const currentUserId = window.AuthService?.getCurrentUser()?.id;
@@ -1428,6 +1443,21 @@ const ExpandedView = (window.ExpandedView = {
         } else {
             partyHtml = '<div class="party-empty">No party members yet</div>';
         }
+        
+        // Add pending invitations (only visible to creator)
+        if (isCreator && pendingInvites && pendingInvites.length > 0) {
+            const invitesHtml = pendingInvites.map(invite => `
+                <div class="party-member party-member--invited">
+                    <span class="party-member-left">
+                        <span class="party-member-name party-member-email">${Utils.escapeHtml(invite.email)}</span>
+                        <span class="party-member-invited-tag">Invited</span>
+                    </span>
+                    <span class="party-member-right">
+                    </span>
+                </div>
+            `).join('');
+            partyHtml += invitesHtml;
+        }
 
         // Campaign description section (name moved to header)
         const descriptionHtml = campaign.description 
@@ -1443,14 +1473,25 @@ const ExpandedView = (window.ExpandedView = {
         const menuItems = [];
         if (isCreator) {
             menuItems.push({
-                icon: '⚙︎',
-                label: 'Manage Campaign',
+                icon: '✎',
+                label: 'Edit Campaign',
                 onclick: `CampaignUI.openManageModal(${campaign.id})`,
             });
             menuItems.push({
                 icon: '✉︎',
                 label: 'Invite',
                 onclick: `CampaignUI.openInviteModal(${campaign.id})`,
+            });
+            menuItems.push({
+                icon: '⏹',
+                label: 'End Campaign',
+                onclick: `CampaignUI.confirmEndCampaignById(${campaign.id})`,
+            });
+            menuItems.push({
+                icon: '✕',
+                label: 'Delete Campaign',
+                onclick: `CampaignUI.confirmDeleteCampaign(${campaign.id})`,
+                danger: true,
             });
         } else {
             // Only non-creators can leave the campaign
@@ -1956,14 +1997,19 @@ const CampaignUI = (window.CampaignUI = {
             // Close create modal
             this.closeCreateModal();
             
-            // Show success modal with invite code (and warning if applicable)
+            // Show success toast
+            showNotification('✓ Campaign created');
+            
+            // Show warnings as alert dialog if any
             let warning = assignmentWarning;
             if (inviteFailures.length > 0) {
                 const failedEmails = inviteFailures.map(f => f.email).join(', ');
                 const inviteWarning = `Could not invite: ${failedEmails}`;
                 warning = warning ? `${warning}\n\n${inviteWarning}` : inviteWarning;
             }
-            this.showCampaignCreatedModal(campaign.invite_code, warning);
+            if (warning) {
+                showAlertDialog(warning);
+            }
             
             // Refresh character data to get updated campaignId
             await AppState.loadCharacters();
@@ -2417,9 +2463,13 @@ const CampaignUI = (window.CampaignUI = {
     closeManageModal() {
         const modal = document.getElementById('manageCampaignModal');
         if (modal) {
+            // Reset the fixed height in case it was cleared for confirmation view
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent) modalContent.style.height = '';
             animateModalClose(modal, { removeOnClose: false });
         }
         this._managingCampaign = null;
+        this._originalManageModalContent = null;
     },
     
     async submitManageCampaign() {
@@ -2474,6 +2524,7 @@ const CampaignUI = (window.CampaignUI = {
             
             // Refresh character data
             await AppState.loadCharacters();
+            UI.render();
             
             // Refresh campaign panel (will show empty state)
             await ExpandedView._loadCampaignPanel();
@@ -2487,19 +2538,23 @@ const CampaignUI = (window.CampaignUI = {
     
     confirmDeleteCampaignFromModal() {
         if (!this._managingCampaign) return;
-        
-        const campaignId = this._managingCampaign.id;
+        this.confirmDeleteCampaign(this._managingCampaign.id);
+    },
+    
+    // Delete campaign by ID (called from overflow menu)
+    confirmDeleteCampaign(campaignId) {
         showConfirmDialog(
             'Are you sure you want to DELETE this campaign?\n\nThis action cannot be undone and will remove all members.',
             async () => {
                 try {
                     await CampaignAPI.deleteCampaign(campaignId);
                     
-                    // Close the modal
+                    // Close the modal if it's open
                     CampaignUI.closeManageModal();
                     
                     // Refresh character data
                     await AppState.loadCharacters();
+                    UI.render();
                     
                     // Refresh campaign panel (will show empty state)
                     await ExpandedView._loadCampaignPanel();
@@ -2513,29 +2568,38 @@ const CampaignUI = (window.CampaignUI = {
         );
     },
     
-    confirmEndCampaign() {
-        if (!this._managingCampaign) return;
+    // End campaign by ID (called from overflow menu)
+    async confirmEndCampaignById(campaignId) {
+        // Fetch campaign name for the confirmation message
+        let campaignName = 'this campaign';
+        try {
+            const campaign = await CampaignAPI.getCampaign(campaignId);
+            campaignName = campaign.name || campaignName;
+        } catch (e) {
+            // Use default name if fetch fails
+        }
         
-        const campaignId = this._managingCampaign.id;
         showConfirmDialog(
-            'End this campaign?\n\nThe campaign will be marked as completed and moved to Past Adventures for all members. This cannot be undone.',
+            `End "${campaignName}"?\n\nThe campaign will be marked as completed and moved to Past Adventures for all members. This cannot be undone.`,
             async () => {
                 try {
                     // Update campaign status to completed
                     await CampaignAPI.updateCampaign(campaignId, { status: 'completed' });
                     
-                    // Clear all campaign-related caches before refreshing
+                    // Clear all campaign-related caches
                     CampaignUI._currentCampaign = null;
                     CampaignUI._managingCampaign = null;
                     CampaignUI._pastCampaignsCount = 0;
+                    CampaignUI._originalManageModalContent = null;
                     
-                    // Close the modal
+                    // Close the modal if it's open
                     CampaignUI.closeManageModal();
                     
-                    // Refresh character data first (this clears the campaignId from characters)
+                    // Refresh character data
                     await AppState.loadCharacters();
+                    UI.render();
                     
-                    // Refresh campaign panel (will show empty state since campaign is no longer active)
+                    // Refresh campaign panel (will show empty state)
                     await ExpandedView._loadCampaignPanel();
                     
                     showAlertDialog('Campaign ended successfully. It can now be found in Past Adventures.');
@@ -2545,6 +2609,113 @@ const CampaignUI = (window.CampaignUI = {
                 }
             }
         );
+    },
+    
+    // Store original manage modal content for restoration
+    _originalManageModalContent: null,
+    
+    confirmEndCampaign() {
+        if (!this._managingCampaign) return;
+        
+        const modal = document.getElementById('manageCampaignModal');
+        if (!modal) return;
+        
+        const modalContent = modal.querySelector('.modal-content');
+        if (!modalContent) return;
+        
+        // Store original content for back button
+        this._originalManageModalContent = modalContent.innerHTML;
+        
+        const campaignId = this._managingCampaign.id;
+        const campaignName = Utils.escapeHtml(this._managingCampaign.name || 'this campaign');
+        
+        // Build confirmation UI
+        const confirmHtml = `
+            <div class="modal-header">
+                <h2 class="modal-title">End Campaign</h2>
+                <button class="modal-close" onclick="CampaignUI._restoreManageModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="terminal-text">End <strong>${campaignName}</strong>?</p>
+                <p class="terminal-text-small" style="margin-top: 0.75rem; opacity: 0.8;">
+                    The campaign will be marked as completed and moved to Past Adventures for all members. This cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="CampaignUI._restoreManageModal()">Back</button>
+                <button class="terminal-btn terminal-btn-primary" id="confirmEndCampaignBtn">End Campaign</button>
+            </div>
+        `;
+        
+        // Animate transition to confirmation
+        animateModalContentSwap(modalContent, confirmHtml, () => {
+            // Override the CSS fixed height after animation completes
+            modalContent.style.height = 'auto';
+            
+            const confirmBtn = document.getElementById('confirmEndCampaignBtn');
+            confirmBtn?.addEventListener('click', async () => {
+                try {
+                    // Update campaign status to completed
+                    await CampaignAPI.updateCampaign(campaignId, { status: 'completed' });
+                    
+                    // Clear all campaign-related caches before refreshing
+                    CampaignUI._currentCampaign = null;
+                    CampaignUI._managingCampaign = null;
+                    CampaignUI._pastCampaignsCount = 0;
+                    CampaignUI._originalManageModalContent = null;
+                    
+                    // Close the modal
+                    CampaignUI.closeManageModal();
+                    
+                    // Refresh character data first (this clears the campaignId from characters)
+                    await AppState.loadCharacters();
+                    UI.render();
+                    
+                    // Refresh campaign panel (will show empty state since campaign is no longer active)
+                    await ExpandedView._loadCampaignPanel();
+                    
+                    showAlertDialog('Campaign ended successfully. It can now be found in Past Adventures.');
+                } catch (error) {
+                    console.error('Failed to end campaign:', error);
+                    showAlertDialog(error.message || 'Failed to end campaign. Please try again.');
+                }
+            });
+            confirmBtn?.focus();
+        });
+    },
+    
+    _restoreManageModal() {
+        if (!this._originalManageModalContent) {
+            this.closeManageModal();
+            return;
+        }
+        
+        const modal = document.getElementById('manageCampaignModal');
+        if (!modal) return;
+        
+        const modalContent = modal.querySelector('.modal-content');
+        if (!modalContent) return;
+        
+        // Cache campaign data before clearing (innerHTML doesn't preserve input values)
+        const campaignData = this._managingCampaign;
+        
+        // Animate back to original content
+        animateModalContentSwap(modalContent, this._originalManageModalContent, () => {
+            // Restore the fixed height for manage modal
+            modalContent.style.height = '';
+            this._originalManageModalContent = null;
+            
+            // Repopulate form fields from cached campaign data (innerHTML doesn't preserve input values)
+            if (campaignData) {
+                const nameInput = document.getElementById('manageCampaignName');
+                const descInput = document.getElementById('manageCampaignDesc');
+                if (nameInput) nameInput.value = campaignData.name || '';
+                if (descInput) descInput.value = campaignData.description || '';
+            }
+            
+            // Refocus name input
+            document.getElementById('manageCampaignName')?.focus();
+        });
     },
 
     // ========================================
@@ -3522,7 +3693,10 @@ const CampaignUI = (window.CampaignUI = {
         if (listView) listView.style.display = '';
         if (detailView) detailView.style.display = 'none';
         if (breadcrumb) breadcrumb.style.display = 'none';
-        if (title) title.style.display = '';
+        if (title) {
+            title.textContent = 'Past Adventures';
+            title.style.display = '';
+        }
     },
 
     /** Show the detail view (hide list view) */
@@ -3530,14 +3704,15 @@ const CampaignUI = (window.CampaignUI = {
         const listView = document.getElementById('pastAdventuresListView');
         const detailView = document.getElementById('pastAdventuresDetailView');
         const breadcrumb = document.getElementById('pastAdventuresBreadcrumb');
-        const breadcrumbCurrent = document.getElementById('pastAdventuresBreadcrumbCurrent');
         const title = document.getElementById('pastAdventuresTitle');
         
         if (listView) listView.style.display = 'none';
         if (detailView) detailView.style.display = '';
-        if (breadcrumb) breadcrumb.style.display = '';
-        if (breadcrumbCurrent) breadcrumbCurrent.textContent = campaignName;
-        if (title) title.style.display = 'none';
+        if (breadcrumb) breadcrumb.style.display = 'flex';
+        if (title) {
+            title.textContent = campaignName;
+            title.style.display = '';
+        }
     },
 
     /** Render the list of past campaigns */
@@ -3688,25 +3863,27 @@ const CampaignUI = (window.CampaignUI = {
             }).join('')
             : '<div class="party-empty">No party members</div>';
         
-        // Build journal entries (read-only)
+        // Build journal entries using existing expandable pattern (read-only, no actions)
         const journalHtml = journals && journals.length > 0
             ? journals.map(entry => {
                 const symbolPrefix = entry.character_symbol ? `${entry.character_symbol} ` : '';
                 const authorInfo = entry.character_name 
                     ? `<span class="journal-entry-author">${symbolPrefix}${Utils.escapeHtml(entry.character_name)}</span>` 
                     : '';
-                const dateStr = entry.entry_date 
-                    ? new Date(entry.entry_date).toLocaleDateString() 
-                    : '';
+                
                 return `
-                    <div class="journal-entry journal-entry--readonly">
-                        <div class="journal-entry-header">
-                            ${authorInfo}
-                            <span class="journal-entry-date">${dateStr}</span>
-                        </div>
-                        <div class="journal-entry-title">${Utils.escapeHtml(entry.title)}</div>
-                        ${entry.content ? `<div class="journal-entry-content">${Utils.escapeHtml(entry.content)}</div>` : ''}
+                <div class="journal-entry" data-entry-id="${entry.id}" onclick="CampaignUI.toggleJournalEntry(this, event)">
+                    <div class="journal-entry-header">
+                        <span class="journal-entry-meta">${authorInfo}<span class="journal-entry-date">${ExpandedView._formatDate(entry.entry_date)}</span></span>
+                        <span class="journal-entry-title">${entry.title || 'Untitled'}</span>
                     </div>
+                    <div class="journal-entry-preview">
+                        ${ExpandedView._truncateText(entry.content, 100)}
+                    </div>
+                    <div class="journal-entry-full">
+                        ${Utils.escapeHtml(entry.content || '').replace(/\n/g, '<br>')}
+                    </div>
+                </div>
                 `;
             }).join('')
             : '<div class="journal-empty">No journal entries for this campaign.</div>';
