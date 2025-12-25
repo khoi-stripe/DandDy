@@ -1321,7 +1321,7 @@ const ExpandedView = (window.ExpandedView = {
         const currentUserId = window.AuthService?.getCurrentUser()?.id;
         const isCreator = campaign.dm_id === currentUserId;
         
-        // Build party list from members with character info (limited to 3)
+        // Build party list from members with character info (limited to 3 initially)
         const MAX_PARTY_DISPLAY = 3;
         let partyHtml = '';
         if (members && members.length > 0) {
@@ -1332,16 +1332,16 @@ const ExpandedView = (window.ExpandedView = {
                 return 0;
             });
             const displayMembers = sortedMembers.slice(0, MAX_PARTY_DISPLAY);
-            const remainingCount = sortedMembers.length - MAX_PARTY_DISPLAY;
+            const hiddenMembers = sortedMembers.slice(MAX_PARTY_DISPLAY);
+            const remainingCount = hiddenMembers.length;
             
-            partyHtml = displayMembers.map(m => {
+            // Helper to render a single party member
+            const renderMember = (m) => {
                 const char = m.character;
                 const adminTag = m.is_creator ? '<span class="party-member-admin-tag">Admin</span>' : '';
                 const symbolPrefix = m.symbol ? `<span class="party-member-symbol">${m.symbol}</span> ` : '';
-                // Check if this is someone else's character (clickable to view their sheet)
                 const isOtherUser = m.user_id !== currentUserId;
                 if (char) {
-                    // Make clickable if it's another user's character
                     const clickable = isOtherUser ? 'party-member--clickable' : '';
                     const clickHandler = isOtherUser 
                         ? `onclick="CampaignUI.viewPartyMemberSheet(${char.id}, '${m.symbol || ''}')"` 
@@ -1369,13 +1369,18 @@ const ExpandedView = (window.ExpandedView = {
                         </div>
                     `;
                 }
-            }).join('');
+            };
             
+            // Render visible members
+            partyHtml = displayMembers.map(renderMember).join('');
+            
+            // Render hidden members in a collapsible container
             if (remainingCount > 0) {
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:_renderCampaignArea:seeMore',message:'Rendering See more link',data:{remainingCount,isCreator,campaignId:campaign.id,dmId:campaign.dm_id,currentUserId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C'})}).catch(()=>{});
+                fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:_renderCampaignArea:seeMore',message:'Rendering See more link with toggle (FIX)',data:{remainingCount,isCreator,campaignId:campaign.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A,C',runId:'post-fix'})}).catch(()=>{});
                 // #endregion
-                partyHtml += `<a class="party-see-more" href="#" onclick="CampaignUI.openManageModal(${campaign.id}); return false;">See more</a>`;
+                partyHtml += `<div class="party-hidden" style="display: none;">${hiddenMembers.map(renderMember).join('')}</div>`;
+                partyHtml += `<a class="party-see-more" href="#" onclick="CampaignUI.togglePartyList(this); return false;">See more</a>`;
             }
         } else {
             partyHtml = '<div class="party-empty">No party members yet</div>';
@@ -1395,12 +1400,12 @@ const ExpandedView = (window.ExpandedView = {
         const menuItems = [];
         if (isCreator) {
             menuItems.push({
-                icon: '✱',
+                icon: '⚙︎',
                 label: 'Manage Campaign',
                 onclick: `CampaignUI.openManageModal(${campaign.id})`,
             });
             menuItems.push({
-                icon: '>',
+                icon: '✉︎',
                 label: 'Invite',
                 onclick: `CampaignUI.openInviteModal(${campaign.id})`,
             });
@@ -1573,7 +1578,7 @@ const ExpandedView = (window.ExpandedView = {
             
             settingsHtml = `
                 <button class="journal-settings-btn terminal-btn-icon" onclick="CampaignUI.openJournalSettingsModal()" title="Journal settings">
-                    ✱
+                    ⚙︎
                 </button>
             `;
         }
@@ -2179,8 +2184,17 @@ const CampaignUI = (window.CampaignUI = {
             
             // #region agent log
             const isCreator = campaign.dm_id === currentUserId;
-            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:openManageModal:afterFetch',message:'Campaign fetched, checking isCreator',data:{dmId:campaign.dm_id,currentUserId,isCreator,campaignName:campaign.name},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:openManageModal:afterFetch',message:'Campaign fetched, checking isCreator (FIX)',data:{dmId:campaign.dm_id,currentUserId,isCreator,campaignName:campaign.name},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B',runId:'post-fix'})}).catch(()=>{});
             // #endregion
+            
+            // Permission check: only the campaign creator can manage the campaign
+            if (!isCreator) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:openManageModal:blocked',message:'Non-creator blocked from opening modal',data:{campaignId,isCreator},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B',runId:'post-fix'})}).catch(()=>{});
+                // #endregion
+                console.warn('Only the campaign creator can manage this campaign.');
+                return;
+            }
             
             const modal = document.getElementById('manageCampaignModal');
             if (!modal) return;
@@ -2919,6 +2933,35 @@ const CampaignUI = (window.CampaignUI = {
                 </div>
             `;
         }).join('');
+    },
+
+    // ========================================
+    // PARTY LIST EXPANSION
+    // ========================================
+    
+    /**
+     * Toggle the visibility of hidden party members in the party list
+     * @param {HTMLElement} linkEl - The "See more/less" link element
+     */
+    togglePartyList(linkEl) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-manager.js:togglePartyList',message:'togglePartyList called (FIX working)',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A',runId:'post-fix'})}).catch(()=>{});
+        // #endregion
+        if (!linkEl) return;
+        const partyList = linkEl.closest('.party-list');
+        if (!partyList) return;
+        
+        const hiddenContainer = partyList.querySelector('.party-hidden');
+        if (!hiddenContainer) return;
+        
+        const isExpanded = hiddenContainer.style.display !== 'none';
+        if (isExpanded) {
+            hiddenContainer.style.display = 'none';
+            linkEl.textContent = 'See more';
+        } else {
+            hiddenContainer.style.display = 'block';
+            linkEl.textContent = 'See less';
+        }
     },
 
     // ========================================

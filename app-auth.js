@@ -170,18 +170,26 @@
      * (typically the part before "@"). Newer backends that ignore usernames
      * will simply drop this extra field.
      */
-    async register(email, password, role = 'player') {
+    async register(email, password, role = null) {
       try {
         const derivedUsername =
           typeof email === 'string' && email.includes('@')
             ? email.split('@')[0]
             : email;
 
+        // Build request body - only include role if explicitly provided
+        // Backend defaults to PLAYER if not specified
+        const body = { username: derivedUsername, email, password };
+        if (role) {
+          // Normalize to uppercase (backend expects 'PLAYER', 'DM', or 'ADMIN')
+          body.role = role.toUpperCase();
+        }
+
         const data = await this._request('/auth/register', {
           method: 'POST',
           // Backend identifies accounts by email only; username is legacy.
           // Sending both keeps us compatible with older API versions.
-          body: { username: derivedUsername, email, password, role },
+          body,
         });
 
         if (!data || !data.access_token) {

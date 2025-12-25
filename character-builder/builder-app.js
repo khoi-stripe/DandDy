@@ -4445,7 +4445,7 @@ const App = (window.App = {
         // Set flag to show guest notice banner when returning to character manager
         sessionStorage.setItem('showGuestNoticeOnReturn', 'true');
         setTimeout(() => {
-          this.showNotification('💡 Log in or create an account to save your character to the cloud', 'info');
+          this.showNotification('Log in or create an account to save your character to the cloud', 'info');
         }, 1000);
       }
     } catch (error) {

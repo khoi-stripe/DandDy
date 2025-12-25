@@ -70,17 +70,23 @@
   --theme-violet-l-bright: 65%;
   --theme-violet-l-dim: 55%;
 
-  /* ===== CARD GLOW DEFAULTS (used by theme classes, splash logo) ===== */
+  /* ===== CARD GLOW DEFAULTS (used by theme classes) ===== */
   /* Default = yellow theme; overridden by .theme-* classes */
   --card-glow-h: var(--theme-yellow-h);
   --card-glow-s: var(--theme-yellow-s);
   --card-glow-l-bright: var(--theme-yellow-l-bright);
 
+  /* ===== UI ACCENT HSL (contrasting secondary color per theme) ===== */
+  /* Default = gold/amber (for white/neutral default); overridden by .theme-* classes */
+  --ui-accent-h: var(--theme-white-accent-h);
+  --ui-accent-s: 100%;
+  --ui-accent-l: 55%;
+
   /* ===== SPLASH LOGO THEME (opacity-based shading) ===== */
-  /* Inherits from active theme via card-glow-* variables */
-  --splash-logo-h: var(--card-glow-h);
-  --splash-logo-s: var(--card-glow-s);
-  --splash-logo-l: var(--card-glow-l-bright);
+  /* Uses the theme's accent color (contrasting secondary color) */
+  --splash-logo-h: var(--ui-accent-h);
+  --splash-logo-s: var(--ui-accent-s);
+  --splash-logo-l: var(--ui-accent-l);
   /* Face opacities (derived from original hex lightness values) */
   --splash-logo-op-1: 1.00;   /* brightest face */
   --splash-logo-op-2: 0.94;
@@ -314,6 +320,10 @@
   --card-glow-h: var(--theme-terminal-h);
   --card-glow-s: var(--theme-terminal-s);
   --card-glow-l-bright: var(--theme-terminal-l-bright);
+  /* Accent HSL (teal - for splash logo, etc.) */
+  --ui-accent-h: var(--theme-teal-h);
+  --ui-accent-s: var(--theme-teal-s);
+  --ui-accent-l: var(--theme-teal-l-bright);
   /* Tag accent tokens (secondary color for badges/tags) */
   --ui-tag-bg: var(--tag-accent-green);
   --ui-tag-color: var(--terminal-bg);
@@ -393,6 +403,10 @@
   --card-glow-h: var(--theme-teal-h);
   --card-glow-s: var(--theme-teal-s);
   --card-glow-l-bright: var(--theme-teal-l-bright);
+  /* Accent HSL (orange - for splash logo, etc.) */
+  --ui-accent-h: var(--theme-orange-h);
+  --ui-accent-s: var(--theme-orange-s);
+  --ui-accent-l: var(--theme-orange-l-bright);
   /* Tag accent tokens */
   --ui-tag-bg: var(--tag-accent-teal);
   --ui-tag-color: var(--terminal-bg);
@@ -441,6 +455,10 @@
   --card-glow-h: var(--theme-pink-h);
   --card-glow-s: var(--theme-pink-s);
   --card-glow-l-bright: var(--theme-pink-l-bright);
+  /* Accent HSL (teal/mint - for splash logo, etc.) */
+  --ui-accent-h: var(--theme-pink-accent-h);
+  --ui-accent-s: 75%;
+  --ui-accent-l: 50%;
   /* Tag accent tokens */
   --ui-tag-bg: var(--tag-accent-pink);
   --ui-tag-color: var(--terminal-bg);
@@ -542,6 +560,10 @@
   --card-glow-h: var(--theme-white-h);
   --card-glow-s: var(--theme-white-s);
   --card-glow-l-bright: var(--theme-white-l-bright);
+  /* Accent HSL (gold/amber - for splash logo, etc.) */
+  --ui-accent-h: var(--theme-white-accent-h);
+  --ui-accent-s: 100%;
+  --ui-accent-l: 55%;
   /* Tag accent tokens */
   --ui-tag-bg: var(--tag-accent-white);
   --ui-tag-color: var(--terminal-bg);
@@ -590,6 +612,10 @@
   --card-glow-h: var(--theme-red-h);
   --card-glow-s: var(--theme-red-s);
   --card-glow-l-bright: var(--theme-red-l-bright);
+  /* Accent HSL (cyan - for splash logo, etc.) */
+  --ui-accent-h: var(--theme-red-accent-h);
+  --ui-accent-s: 100%;
+  --ui-accent-l: 45%;
   /* Tag accent tokens */
   --ui-tag-bg: var(--tag-accent-red);
   --ui-tag-color: var(--terminal-bg);
@@ -638,6 +664,10 @@
   --card-glow-h: var(--theme-orange-h);
   --card-glow-s: var(--theme-orange-s);
   --card-glow-l-bright: var(--theme-orange-l-bright);
+  /* Accent HSL (blue - for splash logo, etc.) */
+  --ui-accent-h: var(--theme-orange-accent-h);
+  --ui-accent-s: 100%;
+  --ui-accent-l: 60%;
   /* Tag accent tokens */
   --ui-tag-bg: var(--tag-accent-orange);
   --ui-tag-color: var(--terminal-bg);
@@ -686,6 +716,10 @@
   --card-glow-h: var(--theme-blue-h);
   --card-glow-s: var(--theme-blue-s);
   --card-glow-l-bright: var(--theme-blue-l-bright);
+  /* Accent HSL (amber - for splash logo, etc.) */
+  --ui-accent-h: var(--theme-blue-accent-h);
+  --ui-accent-s: 100%;
+  --ui-accent-l: 55%;
   /* Tag accent tokens */
   --ui-tag-bg: var(--tag-accent-blue);
   --ui-tag-color: var(--terminal-bg);
@@ -734,6 +768,10 @@
   --card-glow-h: var(--theme-violet-h);
   --card-glow-s: var(--theme-violet-s);
   --card-glow-l-bright: var(--theme-violet-l-bright);
+  /* Accent HSL (gold - for splash logo, etc.) */
+  --ui-accent-h: var(--theme-violet-accent-h);
+  --ui-accent-s: 100%;
+  --ui-accent-l: 60%;
   /* Tag accent tokens */
   --ui-tag-bg: var(--tag-accent-violet);
   --ui-tag-color: var(--terminal-bg);
@@ -782,6 +820,10 @@
   --card-glow-h: var(--theme-yellow-h);
   --card-glow-s: var(--theme-yellow-s);
   --card-glow-l-bright: var(--theme-yellow-l-bright);
+  /* Accent HSL (blue - for splash logo, etc.) */
+  --ui-accent-h: var(--theme-yellow-accent-h);
+  --ui-accent-s: 100%;
+  --ui-accent-l: 60%;
   /* Tag accent tokens */
   --ui-tag-bg: var(--tag-accent-yellow);
   --ui-tag-color: var(--terminal-bg);
@@ -3951,6 +3993,7 @@ body.selector-menu-open .splash-art {
   border-color: var(--ui-fg-color);
   color: var(--ui-fg-color);
 }
+
 
 /* ===== TYPOGRAPHY ===== */
 .terminal-text {
