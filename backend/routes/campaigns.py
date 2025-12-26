@@ -264,8 +264,8 @@ def get_past_campaigns(
                     character_class=char.character_class if char else None,
                     character_level=char.level if char else None,
                     symbol=m.symbol,
-                    is_creator=m.is_creator,
-                    status=m.status.value if hasattr(m.status, 'value') else str(m.status),
+                    is_creator=bool(m.is_creator) if m.is_creator is not None else False,
+                    status=m.status.value if m.status and hasattr(m.status, 'value') else str(m.status) if m.status else "unknown",
                     joined_at=m.joined_at,
                     left_at=m.left_at
                 ))
@@ -274,11 +274,11 @@ def get_past_campaigns(
                 id=campaign.id,
                 name=campaign.name,
                 description=campaign.description,
-                status=campaign.status.value if hasattr(campaign.status, 'value') else str(campaign.status),
+                status=campaign.status.value if campaign.status and hasattr(campaign.status, 'value') else str(campaign.status) if campaign.status else "unknown",
                 created_at=campaign.created_at,
                 ended_at=campaign.ended_at,
                 user_left_at=user_membership.left_at if user_membership else None,
-                user_status=user_membership.status.value if user_membership and hasattr(user_membership.status, 'value') else str(user_membership.status) if user_membership else "unknown",
+                user_status=user_membership.status.value if user_membership and user_membership.status and hasattr(user_membership.status, 'value') else str(user_membership.status) if user_membership and user_membership.status else "unknown",
                 party_count=len(campaign_members),
                 members=member_infos
             ))
