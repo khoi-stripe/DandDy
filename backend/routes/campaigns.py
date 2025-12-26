@@ -174,117 +174,128 @@ def get_past_campaigns(
     - User left the campaign (membership status = LEFT), OR
     - Campaign is completed/archived and user was a member
     """
-    # Base filters for membership queries
-    base_left_filter = [
-        CampaignMember.user_id == current_user.id,
-        CampaignMember.status == MemberStatus.LEFT
-    ]
-    base_completed_filter = [
-        CampaignMember.user_id == current_user.id,
-        CampaignMember.status == MemberStatus.ACTIVE,
-        Campaign.status.in_([CampaignStatus.COMPLETED, CampaignStatus.ARCHIVED])
-    ]
-    
-    # If character_id is provided, add it to the filters
-    if character_id is not None:
-        # Verify the character belongs to the user
-        character = db.query(Character).filter(
-            Character.id == character_id,
-            Character.user_id == current_user.id
-        ).first()
-        if not character:
-            raise HTTPException(status_code=404, detail="Character not found")
+    # #region agent log
+    import traceback
+    import sys
+    try:
+        # #endregion
+        # Base filters for membership queries
+        base_left_filter = [
+            CampaignMember.user_id == current_user.id,
+            CampaignMember.status == MemberStatus.LEFT
+        ]
+        base_completed_filter = [
+            CampaignMember.user_id == current_user.id,
+            CampaignMember.status == MemberStatus.ACTIVE,
+            Campaign.status.in_([CampaignStatus.COMPLETED, CampaignStatus.ARCHIVED])
+        ]
         
-        base_left_filter.append(CampaignMember.character_id == character_id)
-        base_completed_filter.append(CampaignMember.character_id == character_id)
-    
-    # Find all memberships where user left
-    left_memberships = db.query(CampaignMember).filter(*base_left_filter).all()
-    
-    # Find campaigns that are completed/archived where user was active member
-    completed_memberships = db.query(CampaignMember).join(Campaign).filter(
-        *base_completed_filter
-    ).all()
-    
-    # Combine membership IDs, avoiding duplicates
-    membership_campaign_ids = set()
-    all_memberships = []
-    
-    for m in left_memberships + completed_memberships:
-        if m.campaign_id not in membership_campaign_ids:
-            membership_campaign_ids.add(m.campaign_id)
-            all_memberships.append(m)
-    
-    if not all_memberships:
-        return []
-    
-    # Get full campaign data with all members
-    campaign_ids = list(membership_campaign_ids)
-    campaigns = db.query(Campaign).filter(
-        Campaign.id.in_(campaign_ids)
-    ).all()
-    
-    # Get all members for these campaigns (including those who left)
-    all_members = db.query(CampaignMember).options(
-        joinedload(CampaignMember.character)
-    ).filter(
-        CampaignMember.campaign_id.in_(campaign_ids),
-        CampaignMember.status.in_([MemberStatus.ACTIVE, MemberStatus.LEFT])
-    ).all()
-    
-    # Build campaign_id -> members mapping
-    members_by_campaign = {}
-    for m in all_members:
-        if m.campaign_id not in members_by_campaign:
-            members_by_campaign[m.campaign_id] = []
-        members_by_campaign[m.campaign_id].append(m)
-    
-    # Build user's membership mapping for quick lookup
-    user_memberships = {m.campaign_id: m for m in all_memberships}
-    
-    # Build response
-    result = []
-    for campaign in campaigns:
-        user_membership = user_memberships.get(campaign.id)
-        campaign_members = members_by_campaign.get(campaign.id, [])
+        # If character_id is provided, add it to the filters
+        if character_id is not None:
+            # Verify the character belongs to the user
+            character = db.query(Character).filter(
+                Character.id == character_id,
+                Character.user_id == current_user.id
+            ).first()
+            if not character:
+                raise HTTPException(status_code=404, detail="Character not found")
+            
+            base_left_filter.append(CampaignMember.character_id == character_id)
+            base_completed_filter.append(CampaignMember.character_id == character_id)
         
-        # Build member info list
-        member_infos = []
-        for m in campaign_members:
-            char = m.character
-            member_infos.append(PastCampaignMemberInfo(
-                user_id=m.user_id,
-                character_id=m.character_id,
-                character_name=char.name if char else None,
-                character_class=char.character_class if char else None,
-                character_level=char.level if char else None,
-                symbol=m.symbol,
-                is_creator=m.is_creator,
-                status=m.status.value if hasattr(m.status, 'value') else str(m.status),
-                joined_at=m.joined_at,
-                left_at=m.left_at
+        # Find all memberships where user left
+        left_memberships = db.query(CampaignMember).filter(*base_left_filter).all()
+        
+        # Find campaigns that are completed/archived where user was active member
+        completed_memberships = db.query(CampaignMember).join(Campaign).filter(
+            *base_completed_filter
+        ).all()
+        
+        # Combine membership IDs, avoiding duplicates
+        membership_campaign_ids = set()
+        all_memberships = []
+        
+        for m in left_memberships + completed_memberships:
+            if m.campaign_id not in membership_campaign_ids:
+                membership_campaign_ids.add(m.campaign_id)
+                all_memberships.append(m)
+        
+        if not all_memberships:
+            return []
+        
+        # Get full campaign data with all members
+        campaign_ids = list(membership_campaign_ids)
+        campaigns = db.query(Campaign).filter(
+            Campaign.id.in_(campaign_ids)
+        ).all()
+        
+        # Get all members for these campaigns (including those who left)
+        all_members = db.query(CampaignMember).options(
+            joinedload(CampaignMember.character)
+        ).filter(
+            CampaignMember.campaign_id.in_(campaign_ids),
+            CampaignMember.status.in_([MemberStatus.ACTIVE, MemberStatus.LEFT])
+        ).all()
+        
+        # Build campaign_id -> members mapping
+        members_by_campaign = {}
+        for m in all_members:
+            if m.campaign_id not in members_by_campaign:
+                members_by_campaign[m.campaign_id] = []
+            members_by_campaign[m.campaign_id].append(m)
+        
+        # Build user's membership mapping for quick lookup
+        user_memberships = {m.campaign_id: m for m in all_memberships}
+        
+        # Build response
+        result = []
+        for campaign in campaigns:
+            user_membership = user_memberships.get(campaign.id)
+            campaign_members = members_by_campaign.get(campaign.id, [])
+            
+            # Build member info list
+            member_infos = []
+            for m in campaign_members:
+                char = m.character
+                member_infos.append(PastCampaignMemberInfo(
+                    user_id=m.user_id,
+                    character_id=m.character_id,
+                    character_name=char.name if char else None,
+                    character_class=char.character_class if char else None,
+                    character_level=char.level if char else None,
+                    symbol=m.symbol,
+                    is_creator=m.is_creator,
+                    status=m.status.value if hasattr(m.status, 'value') else str(m.status),
+                    joined_at=m.joined_at,
+                    left_at=m.left_at
+                ))
+            
+            result.append(PastCampaignResponse(
+                id=campaign.id,
+                name=campaign.name,
+                description=campaign.description,
+                status=campaign.status.value if hasattr(campaign.status, 'value') else str(campaign.status),
+                created_at=campaign.created_at,
+                ended_at=campaign.ended_at,
+                user_left_at=user_membership.left_at if user_membership else None,
+                user_status=user_membership.status.value if user_membership and hasattr(user_membership.status, 'value') else str(user_membership.status) if user_membership else "unknown",
+                party_count=len(campaign_members),
+                members=member_infos
             ))
         
-        result.append(PastCampaignResponse(
-            id=campaign.id,
-            name=campaign.name,
-            description=campaign.description,
-            status=campaign.status.value if hasattr(campaign.status, 'value') else str(campaign.status),
-            created_at=campaign.created_at,
-            ended_at=campaign.ended_at,
-            user_left_at=user_membership.left_at if user_membership else None,
-            user_status=user_membership.status.value if user_membership and hasattr(user_membership.status, 'value') else str(user_membership.status) if user_membership else "unknown",
-            party_count=len(campaign_members),
-            members=member_infos
-        ))
-    
-    # Sort by most recent first (by ended_at or left_at or created_at)
-    # Use a very old date as fallback if all are None
-    from datetime import datetime as dt
-    fallback_date = dt(1970, 1, 1)
-    result.sort(key=lambda c: c.ended_at or c.user_left_at or c.created_at or fallback_date, reverse=True)
-    
-    return result
+        # Sort by most recent first (by ended_at or left_at or created_at)
+        # Use a very old date as fallback if all are None
+        from datetime import datetime as dt
+        fallback_date = dt(1970, 1, 1)
+        result.sort(key=lambda c: c.ended_at or c.user_left_at or c.created_at or fallback_date, reverse=True)
+        
+        return result
+    # #region agent log
+    except Exception as e:
+        print(f"[PAST_CAMPAIGNS_ERROR] user_id={current_user.id}, character_id={character_id}, error={str(e)}", file=sys.stderr)
+        print(f"[PAST_CAMPAIGNS_TRACEBACK] {traceback.format_exc()}", file=sys.stderr)
+        raise
+    # #endregion
 
 
 @router.get("/{campaign_id}", response_model=CampaignWithCharacters)
