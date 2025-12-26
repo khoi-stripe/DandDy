@@ -11327,8 +11327,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             AppState.searchTerm = '';
             AppState.applyFilters();
             UI.render();
-            // On mobile, blur to close the expanded search; on desktop, keep focus
+            // On mobile, collapse the search bar and blur
             if (MobileView.isMobile()) {
+                const searchBar = document.querySelector('.search-bar');
+                if (searchBar) searchBar.classList.remove('is-search-expanded');
                 searchInput.blur();
             } else {
                 searchInput.focus();
@@ -11336,6 +11338,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateClearSearchVisibility();
         });
         updateClearSearchVisibility();
+    }
+    
+    // Mobile search toggle button - expands search bar on mobile
+    const mobileSearchBtn = document.getElementById('mobileSearchBtn');
+    if (mobileSearchBtn && searchInput) {
+        mobileSearchBtn.addEventListener('click', () => {
+            if (searchInput.disabled) return;
+            const searchBar = document.querySelector('.search-bar');
+            if (searchBar) {
+                searchBar.classList.add('is-search-expanded');
+                // Focus the input after a brief delay to allow CSS transition
+                setTimeout(() => {
+                    searchInput.focus();
+                }, 50);
+            }
+        });
+        
+        // Collapse search bar when input loses focus (and no search term)
+        searchInput.addEventListener('blur', () => {
+            if (!MobileView.isMobile()) return;
+            // Small delay to allow click on clear button to register first
+            setTimeout(() => {
+                const searchBar = document.querySelector('.search-bar');
+                // Only collapse if search is empty
+                if (searchBar && !searchInput.value.trim()) {
+                    searchBar.classList.remove('is-search-expanded');
+                }
+            }, 150);
+        });
     }
 
     // Fix iOS Safari double-tap issue on header overflow button.

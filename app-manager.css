@@ -2257,6 +2257,11 @@ input.search-input:focus {
     gap: var(--spacing-sm);
 }
 
+/* Mobile search button - hidden on desktop */
+.mobile-search-btn {
+    display: none;
+}
+
 .search-input-wrapper {
     position: relative;
     display: flex;
@@ -4234,22 +4239,52 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     .search-bar {
         margin-bottom: 0;
     }
-
-    /* When the search field is focused on mobile, let it expand full-width by
-       temporarily hiding the right-side actions (sort button, etc). */
-    .search-bar:focus-within .search-actions {
+    
+    /* Mobile search toggle button - show on mobile */
+    .mobile-search-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--font-size-lg);
+        padding: var(--spacing-sm);
+        min-width: var(--btn-height-sm);
+        height: var(--btn-height-sm);
+        flex-shrink: 0;
+    }
+    
+    /* Hide search input on mobile by default */
+    .search-bar .search-input-wrapper {
         display: none;
     }
-
-    .search-bar:focus-within .search-input-wrapper {
+    
+    /* When search is expanded on mobile, show full-width input and hide button + actions */
+    .search-bar.is-search-expanded .mobile-search-btn {
+        display: none;
+    }
+    
+    .search-bar.is-search-expanded .search-input-wrapper {
+        display: flex;
         flex: 1 1 100%;
         width: 100%;
     }
-
-    /* On mobile, always show the clear/close button when search is focused,
-       even if there's no text - it acts as a close button */
-    .search-bar:focus-within .search-clear-btn.is-hidden {
+    
+    .search-bar.is-search-expanded .search-actions {
+        display: none;
+    }
+    
+    /* Always show clear button when search is expanded (acts as close) */
+    .search-bar.is-search-expanded .search-clear-btn.is-hidden {
         display: block !important;
+    }
+    
+    /* Make Create New button same height as sort button */
+    .grid-new-character-btn {
+        height: var(--btn-height-sm);
+        min-height: var(--btn-height-sm);
+        padding: 0 var(--spacing-md) !important;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
     
     /* Hide the sheet loading indicator on mobile */
