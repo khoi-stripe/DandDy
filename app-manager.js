@@ -5342,10 +5342,9 @@ function _formatCreationQuotaTooltip() {
 }
 
 function _updateQuotaTooltipText() {
-    const tooltip = document.getElementById('newCharacterTooltip');
-    if (!tooltip) return;
-
-    tooltip.textContent = _formatCreationQuotaTooltip();
+    const text = _formatCreationQuotaTooltip();
+    const gridTooltip = document.getElementById('gridNewCharacterTooltip');
+    if (gridTooltip) gridTooltip.textContent = text;
 }
 
 
@@ -5354,13 +5353,13 @@ function _updateQuotaTooltipText() {
  * Updates the NEW CHARACTER button's disabled state and title.
  */
 async function updateCreationQuotaState() {
-    const btn = document.getElementById('newCharacterBtn');
     const overflowBtn = document.getElementById('overflowNewCharBtn');
-    const tooltip = document.getElementById('newCharacterTooltip');
+    const gridBtn = document.getElementById('gridNewCharacterBtn');
+    const gridTooltip = document.getElementById('gridNewCharacterTooltip');
     
-    // Helper to update both buttons and the custom tooltip
+    // Helper to update all buttons and the custom tooltip
     const updateButtons = (disabled, tooltipText, addClass) => {
-        [btn, overflowBtn].forEach(b => {
+        [overflowBtn, gridBtn].forEach(b => {
             if (!b) return;
             b.disabled = disabled;
             // Clear native title - we use custom tooltip now
@@ -5372,12 +5371,12 @@ async function updateCreationQuotaState() {
             }
         });
         // Update the custom tooltip text (creation-only).
-        if (tooltip) {
-            tooltip.textContent = tooltipText;
+        if (gridTooltip) {
+            gridTooltip.textContent = tooltipText;
         }
     };
 
-    if (!btn && !overflowBtn) return;
+    if (!overflowBtn && !gridBtn) return;
 
     try {
         // Use AIService if available, otherwise make direct fetch
@@ -11377,8 +11376,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
 
-            // Account for "Sort: " prefix plus a little breathing room.
-            const totalChars = 'Sort: '.length + maxLabelChars + 2;
+            // Account for label length plus a little breathing room.
+            const totalChars = maxLabelChars + 2;
             sortToggleBtn.style.minWidth = `${totalChars}ch`;
         };
 
@@ -11390,7 +11389,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 inCampaign: 'In campaign',
             };
             const currentLabel = sortLabels[AppState.sortMode] || 'Date modified';
-            sortToggleBtn.textContent = `Sort: ${currentLabel}`;
+            sortToggleBtn.textContent = currentLabel;
 
             // Keep the listbox selection state in sync with the trigger label.
             // This ensures the option marked as selected in the listbox always
@@ -11507,35 +11506,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     //     }
     // });
 
-    // Wire header buttons (guard against missing elements so init doesn't crash)
-    const newCharacterBtn = document.getElementById('newCharacterBtn');
-    const newCharacterTooltip = document.getElementById('newCharacterTooltip');
-    if (newCharacterBtn) {
-        newCharacterBtn.addEventListener('click', createNewCharacter);
+    // Wire grid inline new character button
+    const gridNewCharBtn = document.getElementById('gridNewCharacterBtn');
+    const gridNewCharTooltip = document.getElementById('gridNewCharacterTooltip');
+    if (gridNewCharBtn) {
+        gridNewCharBtn.addEventListener('click', createNewCharacter);
         
         // Show/hide custom tooltip on hover
-        if (newCharacterTooltip) {
-            const showTooltip = () => {
-                if (!newCharacterTooltip.textContent) return;
-                newCharacterTooltip.classList.add('show');
+        if (gridNewCharTooltip) {
+            const showGridTooltip = () => {
+                if (!gridNewCharTooltip.textContent) return;
+                gridNewCharTooltip.classList.add('show');
             };
-            const hideTooltip = () => {
-                newCharacterTooltip.classList.remove('show');
+            const hideGridTooltip = () => {
+                gridNewCharTooltip.classList.remove('show');
             };
 
-            newCharacterBtn.addEventListener('mouseenter', () => {
-                showTooltip();
-            });
-            newCharacterBtn.addEventListener('mouseleave', () => {
-                hideTooltip();
-            });
-            // Also hide on focus out for keyboard users
-            newCharacterBtn.addEventListener('focus', () => {
-                showTooltip();
-            });
-            newCharacterBtn.addEventListener('blur', () => {
-                hideTooltip();
-            });
+            gridNewCharBtn.addEventListener('mouseenter', showGridTooltip);
+            gridNewCharBtn.addEventListener('mouseleave', hideGridTooltip);
+            gridNewCharBtn.addEventListener('focus', showGridTooltip);
+            gridNewCharBtn.addEventListener('blur', hideGridTooltip);
         }
     }
 
@@ -11549,12 +11539,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             window._creationQuotaLimit =
                 typeof e.detail.limit === 'number' ? e.detail.limit : window._creationQuotaLimit;
             window._creationQuotaResetAt = e.detail.resetAt || window._creationQuotaResetAt;
-            const btn = document.getElementById('newCharacterBtn');
             const overflowBtn = document.getElementById('overflowNewCharBtn');
-            const tooltip = document.getElementById('newCharacterTooltip');
+            const gridBtn = document.getElementById('gridNewCharacterBtn');
+            const gridTooltip = document.getElementById('gridNewCharacterTooltip');
             
             let tooltipText = '';
-            [btn, overflowBtn].forEach(b => {
+            [overflowBtn, gridBtn].forEach(b => {
                 if (!b) return;
 
                 if (e.detail.remaining === -1) {
@@ -11574,10 +11564,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     tooltipText = `${e.detail.remaining}${' '}creation${e.detail.remaining === 1 ? '' : 's'}${' '}remaining`;
                 }
             });
-            if (tooltip) {
+            if (gridTooltip) {
                 _updateQuotaTooltipText();
-                if (!tooltip.textContent) {
-                    tooltip.textContent = tooltipText;
+                if (!gridTooltip.textContent) {
+                    gridTooltip.textContent = tooltipText;
                 }
             }
         }

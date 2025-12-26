@@ -114,10 +114,6 @@
                     <span id="userStatusText" class="user-status-text"></span>
                 </span>
                 <button id="authBtn" class="terminal-btn terminal-btn-secondary header-action-btn">Log in</button>
-                <span class="has-tooltip">
-                    <button id="newCharacterBtn" class="terminal-btn-primary header-action-btn">+ New character</button>
-                    <span id="newCharacterTooltip" class="custom-tooltip" data-position="bottom-end"></span>
-                </span>
                 <!-- Mobile overflow menu (shown when scrolling on mobile) -->
                 <div class="header-overflow selector-shell selector-shell--actions">
                     <button
@@ -141,7 +137,7 @@
                             type="button"
                             role="menuitem"
                             id="overflowNewCharBtn"
-                            onclick="document.getElementById('newCharacterBtn').click(); CharacterSheet.closeSelectorMenu(this.closest('.selector-shell').querySelector('.selector-trigger'));"
+                            onclick="document.getElementById('gridNewCharacterBtn').click(); CharacterSheet.closeSelectorMenu(this.closest('.selector-shell').querySelector('.selector-trigger'));"
                         >
                             <span class="selector-option-icon">+</span>
                             <span class="selector-option-label">New Character</span>
@@ -228,7 +224,7 @@
                                 aria-expanded="false"
                                 aria-controls="sortDropdown"
                                 onclick="CharacterSheet.toggleSelectorMenu(this)"
-                            >Sort: Date modified</button>
+                            >Date modified</button>
                             <div id="sortDropdown" class="sort-dropdown selector-menu" role="listbox" aria-label="Sort characters">
                                 <button class="sort-option selector-option" data-sort-value="alphabetical" role="option">
                                     Alphabetical
@@ -241,6 +237,10 @@
                                 </button>
                             </div>
                         </div>
+                        <span class="has-tooltip grid-new-character-wrap">
+                            <button id="gridNewCharacterBtn" class="terminal-btn-small terminal-btn-primary grid-new-character-btn">+ Create new</button>
+                            <span id="gridNewCharacterTooltip" class="custom-tooltip" data-position="bottom-end"></span>
+                        </span>
                     </div>
                 </div>
             </div>

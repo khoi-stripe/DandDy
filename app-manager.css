@@ -2379,6 +2379,37 @@ input.search-input:focus {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
+    flex-shrink: 0;
+}
+
+/* Grid inline new character button */
+.grid-new-character-wrap {
+    display: flex;
+    align-items: stretch;
+}
+
+.grid-new-character-btn {
+    white-space: nowrap;
+    /* Match sort button padding and font-size */
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-base);
+    /* Match sort button height behavior */
+    height: auto;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Always use bright theme colors for the new character button */
+#gridNewCharacterBtn {
+    background-color: var(--ui-fg-color) !important;
+    color: var(--ui-bg-color) !important;
+    border-color: var(--ui-fg-color) !important;
+}
+
+#gridNewCharacterBtn:hover:not(:disabled) {
+    background-color: transparent !important;
+    color: var(--ui-fg-color) !important;
+    border-color: var(--ui-fg-color) !important;
 }
 
 .sort-trigger-wrap {
@@ -2397,9 +2428,9 @@ input.search-input:focus {
     /* Match search input padding and font-size to maintain consistent height */
     padding: var(--spacing-sm) var(--spacing-md);
     font-size: var(--font-size-base);
-    /* Fixed width sized for longest label "Sort: Date modified" to prevent layout shift
+    /* Fixed width sized for longest label "Date modified" to prevent layout shift
        Override width: 100% from .selector-trigger */
-    width: 200px;
+    width: 140px;
     /* Override fixed height from .terminal-btn-small so it matches search input height */
     height: auto;
 }
@@ -3561,16 +3592,14 @@ input.search-input:focus {
    Works with ANY theme class (yellow, teal, green, pink, white, orange, red, violet, blue).
    The header's theme class sets --ui-primary-bg-color, and the button inherits it.
    Using !important to ensure these override any other rules. */
-.terminal-header .terminal-btn-primary,
-#newCharacterBtn {
+.terminal-header .terminal-btn-primary {
     /* Use modal-accent directly as fallback if ui-primary-bg-color doesn't resolve */
     background-color: var(--ui-primary-bg-color) !important;
     color: var(--ui-on-primary-color, var(--terminal-bg)) !important;
     border-color: var(--ui-primary-bg-color) !important;
 }
 
-.terminal-header .terminal-btn-primary:hover:not(:disabled),
-#newCharacterBtn:hover:not(:disabled) {
+.terminal-header .terminal-btn-primary:hover:not(:disabled) {
     background-color: transparent !important;
     color: var(--ui-primary-bg-color) !important;
     border-color: var(--ui-primary-bg-color) !important;
@@ -3879,18 +3908,18 @@ input.search-input:focus {
     text-shadow: 0 0 10px var(--ui-fg-color);
 }
 
-/* Grid panel loading cube - use white/gray to match grid panel scrollbar theme */
+/* Grid panel loading cube - uses theme colors */
 #gridPanelLoading .panel-loading-cube i {
-    border-color: var(--white-dim);
-    background: hsla(0, 0%, 100%, 0.05);
+    border-color: var(--ui-border-color);
+    background: var(--ui-bg-translucent);
     box-shadow: 
-        inset 0 0 20px hsla(0, 0%, 100%, 0.1),
-        0 0 15px hsla(0, 0%, 100%, 0.2);
+        inset 0 0 20px var(--ui-bg-translucent),
+        0 0 15px var(--ui-bg-translucent);
 }
 
 #gridPanelLoading .panel-loading-text {
-    color: var(--white-dim);
-    text-shadow: 0 0 10px var(--white-dim);
+    color: var(--ui-fg-color);
+    text-shadow: 0 0 10px var(--ui-fg-color);
 }
 
 /* Panel loading cube - larger, portrait-style cube */
@@ -4078,6 +4107,11 @@ input.search-input:focus {
     .search-sort-btn {
         width: auto;
         min-width: 100px;
+    }
+    
+    /* Adjust grid new character button on tablet */
+    .grid-new-character-btn {
+        padding: var(--spacing-sm) var(--spacing-sm);
     }
     
     /* New character card in empty state - show centered "+" on compact view */
@@ -4271,6 +4305,11 @@ input.search-input:focus {
     
     .new-character-card .card-name {
         font-size: var(--font-size-small);
+    }
+    
+    /* Grid new character button on mobile - adjust padding */
+    .grid-new-character-btn {
+        padding: var(--spacing-xs) var(--spacing-sm);
     }
     
     .header-actions {
