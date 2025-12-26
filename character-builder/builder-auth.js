@@ -450,6 +450,11 @@ const AuthUI = (window.AuthUI = {
         window.App?.showNotification?.('✓ Logged out', 'success');
       });
     }
+    // Update overflow menu auth label
+    const overflowIcon = document.getElementById('builderOverflowAuthIcon');
+    const overflowLabel = document.getElementById('builderOverflowAuthLabel');
+    if (overflowIcon) overflowIcon.textContent = '←';
+    if (overflowLabel) overflowLabel.textContent = 'Log Out';
   },
 
   // Show guest mode banner
@@ -471,7 +476,7 @@ const AuthUI = (window.AuthUI = {
           window.showAuthModal();
           return;
         }
-        // Fallback: full-screen overlay auth if modal isn’t available.
+        // Fallback: full-screen overlay auth if modal isn't available.
         if (window.App && typeof window.App.showAuthScreen === 'function') {
           window.App.showAuthScreen();
           return;
@@ -481,6 +486,11 @@ const AuthUI = (window.AuthUI = {
         }
       });
     }
+    // Update overflow menu auth label
+    const overflowIcon = document.getElementById('builderOverflowAuthIcon');
+    const overflowLabel = document.getElementById('builderOverflowAuthLabel');
+    if (overflowIcon) overflowIcon.textContent = '→';
+    if (overflowLabel) overflowLabel.textContent = 'Log In';
   },
 });
 
