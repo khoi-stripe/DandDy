@@ -2399,17 +2399,23 @@ input.search-input:focus {
     align-items: center;
 }
 
-/* Always use bright theme colors for the new character button */
-#gridNewCharacterBtn {
+/* Always use bright theme colors for the new character button - override all themes */
+#gridNewCharacterBtn,
+.panel-character-grid #gridNewCharacterBtn,
+button#gridNewCharacterBtn.terminal-btn-small {
     background-color: var(--ui-fg-color) !important;
     color: var(--ui-bg-color) !important;
     border-color: var(--ui-fg-color) !important;
+    opacity: 1 !important;
 }
 
-#gridNewCharacterBtn:hover:not(:disabled) {
+#gridNewCharacterBtn:hover:not(:disabled),
+.panel-character-grid #gridNewCharacterBtn:hover:not(:disabled),
+button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     background-color: transparent !important;
     color: var(--ui-fg-color) !important;
     border-color: var(--ui-fg-color) !important;
+    opacity: 1 !important;
 }
 
 .sort-trigger-wrap {
