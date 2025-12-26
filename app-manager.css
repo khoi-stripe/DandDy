@@ -3582,12 +3582,8 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     color: var(--ui-fg-color);
 }
 
-/* Mobile: disable hover states for login/logout buttons and hide user info */
+/* Mobile: disable hover states for login/logout buttons */
 @media (hover: none), (pointer: coarse) {
-    .terminal-header #userInfoDisplay {
-        display: none;
-    }
-    
     .terminal-header .header-actions #authBtn:hover:not(:disabled) {
         border-color: var(--ui-dim-color);
         color: var(--ui-dim-color);
@@ -4147,10 +4143,6 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
         display: none !important;
     }
     
-    /* Hide user email in header */
-    #userInfoDisplay {
-        display: none;
-    }
     
     /* Session notice: wrap actions below message */
     .session-notice-text {
@@ -4658,11 +4650,21 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     display: none;
 }
 
-/* Hide auth button and user info - they're in the overflow menu */
+/* Hide auth button - it's in the overflow menu */
 .terminal-header .header-action-btn,
-.terminal-header #authBtn,
-.terminal-header #userInfoDisplay {
+.terminal-header #authBtn {
     display: none;
+}
+
+/* Show user info to the left of overflow button */
+.terminal-header #userInfoDisplay {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    max-width: none;
+    opacity: 0.7;
+    overflow: hidden;
+    padding-right: 0;
 }
 
 /* ===== HEADER OVERFLOW - TEAL THEME ===== */
