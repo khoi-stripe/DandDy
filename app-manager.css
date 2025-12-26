@@ -4750,11 +4750,6 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
         overflow: visible;
     }
     
-    /* Header content layout */
-    .terminal-header .header-content {
-        padding: var(--spacing-sm);
-    }
-    
     /* Always hide settings icon on mobile - it's in the overflow menu */
     .terminal-header .manager-settings-link {
         display: none;
