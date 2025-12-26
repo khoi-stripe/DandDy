@@ -4644,12 +4644,24 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 /* ========================================
-   MOBILE HEADER OVERFLOW MENU
-   Collapsible navigation when scrolling on mobile
+   HEADER OVERFLOW MENU
+   Settings and auth are always in the overflow menu
    ======================================== */
 
-/* Hide overflow menu by default (shown only on mobile when scrolled) */
+/* Show overflow menu, positioned in header-actions */
 .header-overflow {
+    display: inline-block;
+}
+
+/* Hide settings icon - it's in the overflow menu */
+.terminal-header .manager-settings-link {
+    display: none;
+}
+
+/* Hide auth button and user info - they're in the overflow menu */
+.terminal-header .header-action-btn,
+.terminal-header #authBtn,
+.terminal-header #userInfoDisplay {
     display: none;
 }
 
@@ -4725,49 +4737,18 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 @media (max-width: 768px) {
-    /* ===== MOBILE HEADER: Compact with overflow menu =====
-       Single-row header with title + overflow button.
-       Settings and auth are in the overflow menu. */
+    /* ===== MOBILE HEADER =====
+       Ensure header stays above mobile sheet content */
     
     .terminal-header {
         position: relative;
-        /* Fixed height - no scroll-based expand/collapse */
         height: auto;
-        /* Ensure header stays above mobile sheet content (mobile-back-bar is z-index: 100) */
         z-index: 200;
     }
     
     /* Allow overflow menu to extend beyond header when open */
     .terminal-header:has(.selector-menu.is-open) {
         overflow: visible;
-    }
-    
-    /* Always hide settings icon on mobile - it's in the overflow menu */
-    .terminal-header .manager-settings-link {
-        display: none;
-    }
-    
-    /* Always hide auth button on mobile - it's in the overflow menu */
-    .terminal-header .header-action-btn,
-    .terminal-header #authBtn {
-        display: none;
-    }
-    
-    /* Always hide user info display on mobile */
-    .terminal-header #userInfoDisplay {
-        display: none;
-    }
-    
-    /* Overflow button: always visible on mobile, centered with title */
-    .header-overflow {
-        display: inline-block;
-        position: absolute;
-        right: var(--spacing-sm);
-        top: 50%;
-        transform: translateY(-50%);
-        opacity: 1;
-        pointer-events: auto;
-        z-index: 10;
     }
 }
 
