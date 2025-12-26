@@ -2521,9 +2521,16 @@ const CampaignUI = (window.CampaignUI = {
     // ========================================
     
     async leaveCampaign(campaignId) {
-        if (!confirm('Are you sure you want to leave this campaign? Your character will be removed from the party.')) {
-            return;
-        }
+        // Use custom confirm dialog with Promise wrapper
+        const confirmed = await new Promise(resolve => {
+            showConfirmDialog(
+                'Are you sure you want to leave this campaign?\n\nYour character will be removed from the party, but your journal entries will be preserved.',
+                () => resolve(true),  // onConfirm
+                () => resolve(false)  // onCancel
+            );
+        });
+        
+        if (!confirmed) return;
         
         try {
             await CampaignAPI.leaveCampaign(campaignId);
@@ -8693,7 +8700,7 @@ function closeAllEditorModals() {
 }
 
 // Generic confirmation modal using terminal modal styles
-function showConfirmDialog(message, onConfirm) {
+function showConfirmDialog(message, onConfirm, onCancel) {
     const existing = document.getElementById('genericConfirmModal');
     if (existing) existing.remove();
 
@@ -8703,7 +8710,7 @@ function showConfirmDialog(message, onConfirm) {
         <div class="modal-content modal-content--narrow">
           <div class="modal-header">
             <h2 class="modal-title">CONFIRM</h2>
-            <button class="modal-close" onclick="closeGenericConfirmModal()">&times;</button>
+            <button class="modal-close" id="genericConfirmClose">&times;</button>
           </div>
           <div class="modal-body">
             <p class="terminal-text">${escapedMessage}</p>
@@ -8718,17 +8725,22 @@ function showConfirmDialog(message, onConfirm) {
 
     getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('genericConfirmModal');
+    const closeBtn = document.getElementById('genericConfirmClose');
     const cancelBtn = document.getElementById('genericConfirmCancel');
     const okBtn = document.getElementById('genericConfirmOk');
 
-    const close = () => {
+    const close = (cancelled = false) => {
         if (!modal) return;
         animateModalClose(modal, { removeOnClose: true });
+        if (cancelled && onCancel) {
+            onCancel();
+        }
     };
 
-    cancelBtn.addEventListener('click', close);
+    closeBtn.addEventListener('click', () => close(true));
+    cancelBtn.addEventListener('click', () => close(true));
     okBtn.addEventListener('click', async () => {
-        close();
+        close(false);
         if (onConfirm) {
             await onConfirm();
         }
