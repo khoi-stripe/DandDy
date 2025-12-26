@@ -131,6 +131,16 @@
   z-index: 9999;
 }
 
+/* Exit button: match overflow button height */
+#exitBuilderBtn {
+  height: var(--btn-height-sm);
+  min-height: var(--btn-height-sm);
+  padding: 0 var(--spacing-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Builder header: title + Settings link grouped together */
 .terminal-header .terminal-title {
   display: flex;
