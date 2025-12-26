@@ -3729,7 +3729,7 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 .account-modal-body {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: 8px;
 }
 
 .account-username {
