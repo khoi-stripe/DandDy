@@ -4114,10 +4114,12 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
         aspect-ratio: 3 / 4;
     }
     
-    /* Hide the sort button text, show abbreviated version */
+    /* Sort button on tablet - auto width, fixed height to match other buttons */
     .search-sort-btn {
         width: auto;
         min-width: 100px;
+        height: var(--btn-height-sm);
+        min-height: var(--btn-height-sm);
     }
     
     /* Adjust grid new character button on tablet */
