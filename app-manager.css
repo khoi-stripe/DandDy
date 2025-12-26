@@ -3618,6 +3618,7 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     display: inline-flex;
     align-items: center;
     gap: 0;
+    margin-right: 4px;
     /* Hidden by default, slides out on logout button hover */
     max-width: 0;
     overflow: hidden;
@@ -3741,7 +3742,7 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 .account-modal-body {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 16px;
 }
 
 .account-username {
