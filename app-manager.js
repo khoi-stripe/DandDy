@@ -10724,14 +10724,14 @@ async function openAccountModal() {
     // Fetch fresh profile in background to ensure username is up-to-date
     try {
         const freshProfile = await window.AuthService.fetchProfile();
-        if (freshProfile && freshProfile.username) {
+        if (freshProfile) {
             // Update local storage with fresh data
             window.AuthService.setCurrentUser(freshProfile);
             user = freshProfile;
             
             // Update display
             if (usernameEl) {
-                usernameEl.textContent = `@${user.username}`;
+                usernameEl.textContent = user.username ? `@${user.username}` : 'Not set';
             }
             if (emailEl) {
                 emailEl.textContent = user.email || 'Not set';
@@ -10739,14 +10739,22 @@ async function openAccountModal() {
             
             // Also update the header
             updateAuthUI();
+        } else {
+            // fetchProfile returned null - show cached data or "Not set"
+            if (usernameEl) {
+                usernameEl.textContent = user.username ? `@${user.username}` : 'Not set';
+            }
+            if (emailEl) {
+                emailEl.textContent = user.email || 'Not set';
+            }
         }
     } catch (err) {
         console.error('Failed to refresh profile:', err);
         // Keep showing cached data, just update "Loading..." to "Not set"
-        if (usernameEl && usernameEl.textContent === 'Loading...') {
+        if (usernameEl) {
             usernameEl.textContent = user.username ? `@${user.username}` : 'Not set';
         }
-        if (emailEl && emailEl.textContent === 'Loading...') {
+        if (emailEl) {
             emailEl.textContent = user.email || 'Not set';
         }
     }
