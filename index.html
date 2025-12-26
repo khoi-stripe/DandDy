@@ -1149,18 +1149,28 @@
             <!-- Display mode -->
             <div id="usernameDisplayMode" class="account-mode">
                 <div class="modal-body account-modal-body">
-                    <p class="account-email" id="accountEmail">email@example.com</p>
-                    <div>
-                        <span class="account-username" id="accountUsername">@username</span>
-                        <a href="#" class="account-edit-link" onclick="event.preventDefault(); enterUsernameEditMode();">edit</a>
+                    <div class="account-field-group">
+                        <label class="account-field-label">Email</label>
+                        <p class="account-email" id="accountEmail">email@example.com</p>
+                    </div>
+                    <div class="account-field-group">
+                        <label class="account-field-label">Username</label>
+                        <div>
+                            <span class="account-username" id="accountUsername">@username</span>
+                            <a href="#" class="account-edit-link" onclick="event.preventDefault(); enterUsernameEditMode();">edit</a>
+                        </div>
                     </div>
                 </div>
             </div>
             <!-- Edit mode -->
             <div id="usernameEditMode" class="account-mode is-hidden">
                 <div class="modal-body account-modal-body">
-                    <p class="account-email" id="accountEmailEdit">email@example.com</p>
-                    <div class="account-edit-field">
+                    <div class="account-field-group">
+                        <label class="account-field-label">Email</label>
+                        <p class="account-email" id="accountEmailEdit">email@example.com</p>
+                    </div>
+                    <div class="account-field-group">
+                        <label class="account-field-label" for="usernameEditInput">Username</label>
                         <input type="text" id="usernameEditInput" class="terminal-input" 
                                placeholder="Enter new username" 
                                pattern="^[a-zA-Z0-9_]{3,30}$" 

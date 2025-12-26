@@ -3770,10 +3770,19 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     margin: 0;
 }
 
-.account-edit-field {
+.account-field-group {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
+}
+
+.account-field-label {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    color: var(--ui-fg-color);
+    opacity: 0.6;
 }
 
 /* Ability + combat grids inside Edit Details modal */
