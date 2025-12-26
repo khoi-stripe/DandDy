@@ -10729,11 +10729,162 @@ function closeAccountModal(animate = true) {
     const modal = document.getElementById('accountModal');
     if (!modal) return;
     
+    // Reset to display mode when closing
+    cancelUsernameEdit();
+    
     if (animate) {
         return animateModalClose(modal);
     } else {
         modal.classList.remove('show');
         syncAuthFlowDim();
+    }
+}
+
+/**
+ * Enter username edit mode in the account modal.
+ */
+function enterUsernameEditMode() {
+    const displayMode = document.getElementById('usernameDisplayMode');
+    const editMode = document.getElementById('usernameEditMode');
+    const input = document.getElementById('usernameEditInput');
+    const errorEl = document.getElementById('usernameEditError');
+    
+    if (!displayMode || !editMode || !input) return;
+    
+    // Get current username
+    const user = window.AuthService ? window.AuthService.getCurrentUser() : null;
+    if (!user) return;
+    
+    // Pre-fill with current username (without @)
+    input.value = user.username || '';
+    
+    // Clear any previous error
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.classList.add('is-hidden');
+    }
+    
+    // Switch to edit mode
+    displayMode.classList.add('is-hidden');
+    editMode.classList.remove('is-hidden');
+    
+    // Focus the input
+    setTimeout(() => input.focus(), 50);
+}
+
+/**
+ * Cancel username edit and return to display mode.
+ */
+function cancelUsernameEdit() {
+    const displayMode = document.getElementById('usernameDisplayMode');
+    const editMode = document.getElementById('usernameEditMode');
+    const input = document.getElementById('usernameEditInput');
+    const errorEl = document.getElementById('usernameEditError');
+    
+    if (!displayMode || !editMode) return;
+    
+    // Clear input and error
+    if (input) input.value = '';
+    if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.classList.add('is-hidden');
+    }
+    
+    // Switch back to display mode
+    editMode.classList.add('is-hidden');
+    displayMode.classList.remove('is-hidden');
+}
+
+/**
+ * Save the new username.
+ */
+async function saveUsername() {
+    const input = document.getElementById('usernameEditInput');
+    const errorEl = document.getElementById('usernameEditError');
+    const saveBtn = document.getElementById('saveUsernameBtn');
+    
+    if (!input) return;
+    
+    const newUsername = input.value.trim();
+    
+    // Validate
+    if (!newUsername) {
+        showUsernameError('Username cannot be empty');
+        return;
+    }
+    
+    if (newUsername.length < 3) {
+        showUsernameError('Username must be at least 3 characters');
+        return;
+    }
+    
+    if (newUsername.length > 30) {
+        showUsernameError('Username must be 30 characters or less');
+        return;
+    }
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(newUsername)) {
+        showUsernameError('Only letters, numbers, and underscores allowed');
+        return;
+    }
+    
+    // Check if same as current
+    const user = window.AuthService ? window.AuthService.getCurrentUser() : null;
+    if (user && newUsername === user.username) {
+        showUsernameError('New username is the same as current');
+        return;
+    }
+    
+    // Disable button and show loading state
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+    }
+    
+    try {
+        const result = await window.AuthService.updateUsername(newUsername);
+        
+        if (!result.success) {
+            showUsernameError(result.error || 'Failed to update username');
+            return;
+        }
+        
+        // Success - update display and return to display mode
+        const accountUsernameEl = document.getElementById('accountUsername');
+        if (accountUsernameEl) {
+            accountUsernameEl.textContent = `@${newUsername}`;
+        }
+        
+        // Update header
+        updateAuthUI();
+        
+        // Return to display mode
+        cancelUsernameEdit();
+        
+        // Show success notification
+        showNotification('Username updated successfully', 'success');
+        
+    } catch (error) {
+        console.error('Failed to update username:', error);
+        showUsernameError(error.message || 'Failed to update username');
+    } finally {
+        // Re-enable button
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save';
+        }
+    }
+}
+
+/**
+ * Show an error message in the username edit section.
+ * @param {string} message - The error message to display
+ */
+function showUsernameError(message) {
+    const errorEl = document.getElementById('usernameEditError');
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.classList.remove('is-hidden');
     }
 }
 

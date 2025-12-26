@@ -1148,18 +1148,33 @@
             </div>
             <div class="modal-body">
                 <div class="account-info">
-                    <div class="account-field">
+                    <!-- Username display mode -->
+                    <div class="account-field" id="usernameDisplayMode">
                         <span class="account-label terminal-text-small terminal-text-dim">Username:</span>
                         <span class="account-value terminal-text" id="accountUsername">@username</span>
+                        <button class="terminal-btn terminal-btn-tiny" onclick="enterUsernameEditMode()" title="Change username">Edit</button>
+                    </div>
+                    <!-- Username edit mode -->
+                    <div class="account-field account-field--edit is-hidden" id="usernameEditMode">
+                        <span class="account-label terminal-text-small terminal-text-dim">Username:</span>
+                        <div class="account-edit-row">
+                            <input type="text" id="usernameEditInput" class="terminal-input terminal-input--compact" 
+                                   placeholder="New username" 
+                                   pattern="^[a-zA-Z0-9_]{3,30}$" 
+                                   title="3-30 alphanumeric characters or underscores"
+                                   maxlength="30"
+                                   onkeydown="if(event.key==='Enter'){saveUsername();} else if(event.key==='Escape'){cancelUsernameEdit();}">
+                            <button class="terminal-btn terminal-btn-tiny terminal-btn-primary" onclick="saveUsername()" id="saveUsernameBtn">Save</button>
+                            <button class="terminal-btn terminal-btn-tiny" onclick="cancelUsernameEdit()">Cancel</button>
+                        </div>
+                        <p class="terminal-text-tiny terminal-text-dim account-hint">3-30 characters, letters, numbers, underscores only</p>
+                        <p class="terminal-text-tiny terminal-text-error account-error is-hidden" id="usernameEditError"></p>
                     </div>
                     <div class="account-field">
                         <span class="account-label terminal-text-small terminal-text-dim">Email:</span>
                         <span class="account-value terminal-text" id="accountEmail">email@example.com</span>
                     </div>
                 </div>
-                <p class="terminal-text-tiny terminal-text-dim" style="margin-top: 1rem;">
-                    More account management options coming soon.
-                </p>
             </div>
             <div class="modal-footer modal-footer-end">
                 <button class="terminal-btn" onclick="closeAccountModal()">Close</button>

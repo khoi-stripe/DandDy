@@ -3753,6 +3753,42 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     word-break: break-all;
 }
 
+.account-field--edit {
+    gap: var(--spacing-sm);
+}
+
+.account-edit-row {
+    display: flex;
+    gap: var(--spacing-xs);
+    align-items: center;
+}
+
+.account-edit-row .terminal-input--compact {
+    flex: 1;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.9rem;
+    height: auto;
+    min-height: 0;
+}
+
+.account-hint {
+    margin-top: var(--spacing-xs);
+    opacity: 0.7;
+}
+
+.account-error {
+    margin-top: var(--spacing-xs);
+    color: var(--color-error, #ff6b6b);
+}
+
+.terminal-btn-tiny {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 0.75rem;
+    line-height: 1.2;
+    min-height: 0;
+    height: auto;
+}
+
 /* Ability + combat grids inside Edit Details modal */
 .modal-grid-combat {
     display: grid;
