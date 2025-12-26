@@ -3726,85 +3726,48 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 /* Account modal styles */
-#accountModal .modal-body {
+.account-modal-body {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-lg);
-}
-
-#accountModal .settings-section {
-    padding: var(--spacing-md);
-    background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.03);
-    border: 1px solid var(--ui-border-color);
-    border-radius: var(--ui-border-radius);
-}
-
-#accountModal .settings-section--danger {
-    border-color: hsla(0, 60%, 50%, 0.3);
-    background: hsla(0, 60%, 50%, 0.05);
-}
-
-#accountModal .settings-group-label {
-    margin-bottom: var(--spacing-md);
-    padding-bottom: var(--spacing-sm);
-    border-bottom: 1px solid var(--ui-border-color);
-}
-
-#accountModal .settings-row {
-    margin-bottom: var(--spacing-sm);
-}
-
-#accountModal .settings-row:last-child {
-    margin-bottom: 0;
-}
-
-#accountModal .settings-row--inline {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     gap: var(--spacing-md);
 }
 
-#accountModal .settings-row--inline .settings-label {
-    margin-bottom: 0;
-    flex-shrink: 0;
-    min-width: 80px;
-}
-
-.account-value {
-    font-size: var(--font-size-md);
+.account-username {
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-medium);
     color: var(--ui-fg-color);
-    word-break: break-all;
 }
 
-.account-value-row {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
+.account-edit-link {
+    color: var(--ui-fg-color);
+    opacity: 0.6;
+    text-decoration: underline;
+    font-size: var(--font-size-sm);
+    margin-left: var(--spacing-sm);
+    transition: opacity 0.15s ease;
 }
 
-.account-edit-form {
+.account-edit-link:hover {
+    opacity: 1;
+}
+
+.account-email {
+    font-size: var(--font-size-base);
+    color: var(--ui-fg-color);
+    opacity: 0.7;
+    margin: 0;
+}
+
+.account-edit-mode {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
-}
-
-.account-edit-form .terminal-input {
-    width: 100%;
 }
 
 .account-edit-actions {
     display: flex;
     gap: var(--spacing-sm);
     margin-top: var(--spacing-sm);
-}
-
-.terminal-btn-tiny {
-    padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: 0.75rem;
-    line-height: 1.2;
-    min-height: 0;
-    height: auto;
 }
 
 /* Ability + combat grids inside Edit Details modal */

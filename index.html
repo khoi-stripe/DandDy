@@ -1139,66 +1139,40 @@
         </div>
     </div>
     
-    <!-- Account Management Modal -->
+    <!-- Account Modal -->
     <div id="accountModal" class="modal">
         <div class="modal-content modal-content--narrow">
             <div class="modal-header">
-                <h2 class="modal-title">Account Settings</h2>
+                <h2 class="modal-title">Account</h2>
                 <button class="modal-close" onclick="closeAccountModal()">&times;</button>
             </div>
-            <div class="modal-body">
-                <!-- Profile Section -->
-                <div class="settings-section">
-                    <p class="settings-group-label">Profile</p>
-                    
-                    <!-- Username row - display mode -->
-                    <div class="settings-row settings-row--inline" id="usernameDisplayMode">
-                        <label class="settings-label">Username</label>
-                        <div class="account-value-row">
-                            <span class="account-value" id="accountUsername">@username</span>
-                            <button class="terminal-btn terminal-btn-tiny" onclick="enterUsernameEditMode()">Edit</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Username row - edit mode -->
-                    <div class="settings-row is-hidden" id="usernameEditMode">
-                        <label class="settings-label">Username</label>
-                        <div class="account-edit-form">
-                            <input type="text" id="usernameEditInput" class="terminal-input" 
-                                   placeholder="Enter new username" 
-                                   pattern="^[a-zA-Z0-9_]{3,30}$" 
-                                   title="3-30 alphanumeric characters or underscores"
-                                   maxlength="30"
-                                   onkeydown="if(event.key==='Enter'){saveUsername();} else if(event.key==='Escape'){cancelUsernameEdit();}">
-                            <p class="terminal-text-tiny terminal-text-dim" style="margin-top: var(--spacing-xs);">3-30 characters: letters, numbers, underscores</p>
-                            <p class="terminal-text-tiny terminal-text-error is-hidden" id="usernameEditError" style="margin-top: var(--spacing-xs);"></p>
-                            <div class="account-edit-actions">
-                                <button class="terminal-btn terminal-btn-primary" onclick="saveUsername()" id="saveUsernameBtn">Save</button>
-                                <button class="terminal-btn" onclick="cancelUsernameEdit()">Cancel</button>
-                            </div>
-                        </div>
+            <div class="modal-body account-modal-body">
+                <!-- Username display -->
+                <div id="usernameDisplayMode">
+                    <span class="account-username" id="accountUsername">@username</span>
+                    <a href="#" class="account-edit-link" onclick="event.preventDefault(); enterUsernameEditMode();">edit</a>
+                </div>
+                <!-- Username edit mode -->
+                <div id="usernameEditMode" class="account-edit-mode is-hidden">
+                    <input type="text" id="usernameEditInput" class="terminal-input" 
+                           placeholder="Enter new username" 
+                           pattern="^[a-zA-Z0-9_]{3,30}$" 
+                           title="3-30 alphanumeric characters or underscores"
+                           maxlength="30"
+                           onkeydown="if(event.key==='Enter'){saveUsername();} else if(event.key==='Escape'){cancelUsernameEdit();}">
+                    <p class="terminal-text-tiny terminal-text-dim">3-30 characters: letters, numbers, underscores</p>
+                    <p class="terminal-text-tiny terminal-text-error is-hidden" id="usernameEditError"></p>
+                    <div class="account-edit-actions">
+                        <button class="terminal-btn terminal-btn-primary" onclick="saveUsername()" id="saveUsernameBtn">Save</button>
+                        <button class="terminal-btn" onclick="cancelUsernameEdit()">Cancel</button>
                     </div>
                 </div>
                 
-                <!-- Account Info Section -->
-                <div class="settings-section">
-                    <p class="settings-group-label">Account</p>
-                    
-                    <div class="settings-row settings-row--inline">
-                        <label class="settings-label">Email</label>
-                        <span class="account-value" id="accountEmail">email@example.com</span>
-                    </div>
-                </div>
+                <!-- Email -->
+                <p class="account-email" id="accountEmail">email@example.com</p>
                 
-                <!-- Session Section -->
-                <div class="settings-section settings-section--danger">
-                    <p class="settings-group-label">Session</p>
-                    <p class="terminal-text-small terminal-text-dim" style="margin-bottom: var(--spacing-sm);">End your current session on this device.</p>
-                    <button class="terminal-btn terminal-btn-secondary" onclick="closeAccountModal(); handleLogout();">Log out</button>
-                </div>
-            </div>
-            <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn terminal-btn-primary" onclick="closeAccountModal()">Done</button>
+                <!-- Logout -->
+                <button class="terminal-btn" onclick="closeAccountModal(); handleLogout();">Log out</button>
             </div>
         </div>
     </div>
