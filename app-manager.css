@@ -3726,59 +3726,77 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 /* Account modal styles */
-.account-info {
+#accountModal .modal-body {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: var(--spacing-lg);
 }
 
-.account-field {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.05);
+#accountModal .settings-section {
+    padding: var(--spacing-md);
+    background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.03);
     border: 1px solid var(--ui-border-color);
     border-radius: var(--ui-border-radius);
 }
 
-.account-label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+#accountModal .settings-section--danger {
+    border-color: hsla(0, 60%, 50%, 0.3);
+    background: hsla(0, 60%, 50%, 0.05);
+}
+
+#accountModal .settings-group-label {
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--ui-border-color);
+}
+
+#accountModal .settings-row {
+    margin-bottom: var(--spacing-sm);
+}
+
+#accountModal .settings-row:last-child {
+    margin-bottom: 0;
+}
+
+#accountModal .settings-row--inline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+}
+
+#accountModal .settings-row--inline .settings-label {
+    margin-bottom: 0;
+    flex-shrink: 0;
+    min-width: 80px;
 }
 
 .account-value {
-    font-size: 1rem;
+    font-size: var(--font-size-md);
+    color: var(--ui-fg-color);
     word-break: break-all;
 }
 
-.account-field--edit {
+.account-value-row {
+    display: flex;
+    align-items: center;
     gap: var(--spacing-sm);
 }
 
-.account-edit-row {
+.account-edit-form {
     display: flex;
+    flex-direction: column;
     gap: var(--spacing-xs);
-    align-items: center;
 }
 
-.account-edit-row .terminal-input--compact {
-    flex: 1;
-    padding: var(--spacing-xs) var(--spacing-sm);
-    font-size: 0.9rem;
-    height: auto;
-    min-height: 0;
+.account-edit-form .terminal-input {
+    width: 100%;
 }
 
-.account-hint {
-    margin-top: var(--spacing-xs);
-    opacity: 0.7;
-}
-
-.account-error {
-    margin-top: var(--spacing-xs);
-    color: var(--color-error, #ff6b6b);
+.account-edit-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
 }
 
 .terminal-btn-tiny {
