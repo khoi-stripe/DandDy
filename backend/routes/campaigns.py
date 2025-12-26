@@ -23,11 +23,20 @@ router = APIRouter(prefix="/campaigns", tags=["campaigns"])
 
 def check_campaign_access(campaign_id: int, current_user: User, db: Session) -> bool:
     """
-    Check if a user has access to a campaign.
+    Central source of truth for campaign access control.
     
-    A user has access if:
-    1. They are the campaign creator (dm_id), OR
-    2. They are a direct member (CampaignMember.user_id), OR
+    Use this helper for ALL view-only operations on campaign data:
+    - Viewing campaign details, members, journal entries, sessions
+    - Viewing other party members' characters (read-only)
+    
+    DO NOT use for user-specific operations like:
+    - Accepting/declining invitations (user must be the invitee)
+    - Leaving a campaign (user must be leaving for themselves)
+    - Listing YOUR campaigns (direct membership only)
+    
+    A user has access if ANY of these conditions are true:
+    1. They are the campaign creator (dm_id)
+    2. They are a direct member (CampaignMember.user_id)
     3. They are a collaborator on a character that's in the campaign
     
     Returns True if user has access, False otherwise.
@@ -360,34 +369,7 @@ def get_campaign(
             detail="Campaign not found"
         )
     
-    # Check access: must be creator, direct member, or collaborator on a character in the campaign
-    is_creator = campaign.dm_id == current_user.id
-    
-    is_direct_member = db.query(CampaignMember).filter(
-        CampaignMember.campaign_id == campaign_id,
-        CampaignMember.user_id == current_user.id,
-        CampaignMember.status == MemberStatus.ACTIVE
-    ).first() is not None
-    
-    # Check if user is a collaborator on any character in this campaign
-    is_collaborator_member = False
-    if not is_creator and not is_direct_member:
-        # Get all character_ids in this campaign
-        campaign_character_ids = db.query(CampaignMember.character_id).filter(
-            CampaignMember.campaign_id == campaign_id,
-            CampaignMember.status == MemberStatus.ACTIVE,
-            CampaignMember.character_id != None
-        ).all()
-        character_ids = [c[0] for c in campaign_character_ids]
-        
-        if character_ids:
-            # Check if user is a collaborator on any of these characters
-            is_collaborator_member = db.query(CharacterCollaborator).filter(
-                CharacterCollaborator.character_id.in_(character_ids),
-                CharacterCollaborator.user_id == current_user.id
-            ).first() is not None
-    
-    if not is_creator and not is_direct_member and not is_collaborator_member:
+    if not check_campaign_access(campaign_id, current_user, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to access this campaign"
@@ -613,31 +595,7 @@ def get_campaign_members(
             detail="Campaign not found"
         )
     
-    # Check access: creator, direct member, or collaborator on a character in the campaign
-    is_creator = campaign.dm_id == current_user.id
-    
-    is_direct_member = db.query(CampaignMember).filter(
-        CampaignMember.campaign_id == campaign_id,
-        CampaignMember.user_id == current_user.id,
-        CampaignMember.status == MemberStatus.ACTIVE
-    ).first() is not None
-    
-    is_collaborator_member = False
-    if not is_creator and not is_direct_member:
-        campaign_character_ids = db.query(CampaignMember.character_id).filter(
-            CampaignMember.campaign_id == campaign_id,
-            CampaignMember.status == MemberStatus.ACTIVE,
-            CampaignMember.character_id != None
-        ).all()
-        character_ids = [c[0] for c in campaign_character_ids]
-        
-        if character_ids:
-            is_collaborator_member = db.query(CharacterCollaborator).filter(
-                CharacterCollaborator.character_id.in_(character_ids),
-                CharacterCollaborator.user_id == current_user.id
-            ).first() is not None
-    
-    if not is_creator and not is_direct_member and not is_collaborator_member:
+    if not check_campaign_access(campaign_id, current_user, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view this campaign's members"

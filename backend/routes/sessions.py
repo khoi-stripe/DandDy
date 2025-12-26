@@ -7,12 +7,15 @@ from models.user import User
 from models.character import Character
 from models.campaign import Campaign
 from models.session import Session as GameSession, SessionStatus, SessionLog
+from models.campaign_member import CampaignMember, MemberStatus
+from models.character_collaborator import CharacterCollaborator
 from schemas.session import (
     SessionStart, SessionResponse, SessionWithLog,
     SessionLogCreate, SessionLogResponse
 )
 from utils.auth import get_current_active_user
 from datetime import datetime
+from routes.campaigns import check_campaign_access
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -236,19 +239,15 @@ def get_character_sessions(
             detail="Character not found"
         )
     
-    # Check access: owner or in same campaign
+    # Check access: owner, collaborator, or has campaign access
     is_owner = character.owner_id == current_user.id
-    is_campaign_member = False
+    is_collaborator = db.query(CharacterCollaborator).filter(
+        CharacterCollaborator.character_id == character_id,
+        CharacterCollaborator.user_id == current_user.id
+    ).first() is not None
+    has_campaign_access = character.campaign_id and check_campaign_access(character.campaign_id, current_user, db)
     
-    if character.campaign_id:
-        from models.campaign_member import CampaignMember, MemberStatus
-        is_campaign_member = db.query(CampaignMember).filter(
-            CampaignMember.campaign_id == character.campaign_id,
-            CampaignMember.user_id == current_user.id,
-            CampaignMember.status == MemberStatus.ACTIVE
-        ).first() is not None
-    
-    if not is_owner and not is_campaign_member:
+    if not is_owner and not is_collaborator and not has_campaign_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view this character's sessions"
@@ -269,9 +268,7 @@ def get_campaign_sessions(
     db: Session = Depends(get_db)
 ):
     """Get all sessions for a campaign."""
-    # Verify campaign membership
-    from models.campaign_member import CampaignMember, MemberStatus
-    
+    # Verify campaign exists
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     if not campaign:
         raise HTTPException(
@@ -279,13 +276,8 @@ def get_campaign_sessions(
             detail="Campaign not found"
         )
     
-    is_member = db.query(CampaignMember).filter(
-        CampaignMember.campaign_id == campaign_id,
-        CampaignMember.user_id == current_user.id,
-        CampaignMember.status == MemberStatus.ACTIVE
-    ).first()
-    
-    if campaign.dm_id != current_user.id and not is_member:
+    # Check campaign access (creator, direct member, or collaborator)
+    if not check_campaign_access(campaign_id, current_user, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view this campaign's sessions"
@@ -313,19 +305,11 @@ def get_session(
             detail="Session not found"
         )
     
-    # Check access: owner or campaign member
+    # Check access: owner or has campaign access
     is_owner = session.user_id == current_user.id
-    is_campaign_member = False
+    has_campaign_access = session.campaign_id and check_campaign_access(session.campaign_id, current_user, db)
     
-    if session.campaign_id:
-        from models.campaign_member import CampaignMember, MemberStatus
-        is_campaign_member = db.query(CampaignMember).filter(
-            CampaignMember.campaign_id == session.campaign_id,
-            CampaignMember.user_id == current_user.id,
-            CampaignMember.status == MemberStatus.ACTIVE
-        ).first() is not None
-    
-    if not is_owner and not is_campaign_member:
+    if not is_owner and not has_campaign_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view this session"

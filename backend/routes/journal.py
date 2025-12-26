@@ -123,19 +123,11 @@ def create_journal_entry(
             detail="Journal entries can only be created for characters in a campaign"
         )
     
-    # Verify user is an active member of the campaign
-    is_campaign_member = db.query(CampaignMember).filter(
-        CampaignMember.campaign_id == campaign_id,
-        CampaignMember.user_id == current_user.id,
-        CampaignMember.status == MemberStatus.ACTIVE
-    ).first()
-    
-    # Also allow DM to create entries
-    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
-    if not is_campaign_member and (not campaign or campaign.dm_id != current_user.id):
+    # Verify user has campaign access (direct member, DM, or collaborator on a character in the campaign)
+    if not check_campaign_access(campaign_id, current_user, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You must be an active member of the campaign to create journal entries"
+            detail="You must have access to the campaign to create journal entries"
         )
     
     # Validate character update if provided
@@ -212,18 +204,15 @@ def get_character_journal_entries(
             detail="Character not found"
         )
     
-    # Check access: owner or in same campaign
+    # Check access: owner, collaborator, or has campaign access
     is_owner = character.owner_id == current_user.id
-    is_campaign_member = False
+    is_collaborator = db.query(CharacterCollaborator).filter(
+        CharacterCollaborator.character_id == character_id,
+        CharacterCollaborator.user_id == current_user.id
+    ).first() is not None
+    has_campaign_access = character.campaign_id and check_campaign_access(character.campaign_id, current_user, db)
     
-    if character.campaign_id:
-        is_campaign_member = db.query(CampaignMember).filter(
-            CampaignMember.campaign_id == character.campaign_id,
-            CampaignMember.user_id == current_user.id,
-            CampaignMember.status == MemberStatus.ACTIVE
-        ).first() is not None
-    
-    if not is_owner and not is_campaign_member:
+    if not is_owner and not is_collaborator and not has_campaign_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view this character's journal"
@@ -383,26 +372,50 @@ def get_campaign_journal_history(
             detail="Campaign not found"
         )
     
-    # Check if user was a member (including LEFT status)
+    # Check if user was a direct member (including LEFT status)
     my_membership = db.query(CampaignMember).filter(
         CampaignMember.campaign_id == campaign_id,
         CampaignMember.user_id == current_user.id,
         CampaignMember.status.in_([MemberStatus.ACTIVE, MemberStatus.LEFT])
     ).first()
     
+    # If not a direct member, check if collaborator on a character that was in the campaign
+    is_collaborator_access = False
+    collaborator_character_membership = None
     if not my_membership:
+        # Find if user is a collaborator on any character that was in this campaign
+        campaign_character_ids = db.query(CampaignMember.character_id).filter(
+            CampaignMember.campaign_id == campaign_id,
+            CampaignMember.status.in_([MemberStatus.ACTIVE, MemberStatus.LEFT]),
+            CampaignMember.character_id != None
+        ).all()
+        char_ids = [c[0] for c in campaign_character_ids]
+        
+        if char_ids:
+            collab = db.query(CharacterCollaborator).filter(
+                CharacterCollaborator.character_id.in_(char_ids),
+                CharacterCollaborator.user_id == current_user.id
+            ).first()
+            if collab:
+                is_collaborator_access = True
+                # Get the membership for the character they're collaborating on
+                collaborator_character_membership = db.query(CampaignMember).filter(
+                    CampaignMember.campaign_id == campaign_id,
+                    CampaignMember.character_id == collab.character_id
+                ).first()
+    
+    if not my_membership and not is_collaborator_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view this campaign's journal history"
         )
     
     # Determine the cutoff date for entries
-    # If user left: use their left_at date
-    # If campaign ended: use campaign's ended_at date
-    # If both: use the earlier one (when user left or campaign ended, whichever came first)
+    # Use direct membership if available, otherwise use collaborator's character's membership
+    effective_membership = my_membership or collaborator_character_membership
     cutoff_date = None
-    if my_membership.status == MemberStatus.LEFT and my_membership.left_at:
-        cutoff_date = my_membership.left_at
+    if effective_membership and effective_membership.status == MemberStatus.LEFT and effective_membership.left_at:
+        cutoff_date = effective_membership.left_at
     if campaign.ended_at:
         if cutoff_date is None or campaign.ended_at < cutoff_date:
             cutoff_date = campaign.ended_at
@@ -502,18 +515,11 @@ def get_journal_entry(
             detail="Journal entry not found"
         )
     
-    # Check access: owner or campaign member
+    # Check access: entry owner or has campaign access
     is_owner = entry.user_id == current_user.id
-    is_campaign_member = False
+    has_campaign_access = entry.campaign_id and check_campaign_access(entry.campaign_id, current_user, db)
     
-    if entry.campaign_id:
-        is_campaign_member = db.query(CampaignMember).filter(
-            CampaignMember.campaign_id == entry.campaign_id,
-            CampaignMember.user_id == current_user.id,
-            CampaignMember.status == MemberStatus.ACTIVE
-        ).first() is not None
-    
-    if not is_owner and not is_campaign_member:
+    if not is_owner and not has_campaign_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view this journal entry"
@@ -548,19 +554,11 @@ def update_journal_entry(
             detail="Journal entries can only be updated for characters in a campaign"
         )
     
-    # Verify user is still an active member of the campaign
-    is_campaign_member = db.query(CampaignMember).filter(
-        CampaignMember.campaign_id == entry.campaign_id,
-        CampaignMember.user_id == current_user.id,
-        CampaignMember.status == MemberStatus.ACTIVE
-    ).first()
-    
-    # Also allow DM to update entries
-    campaign = db.query(Campaign).filter(Campaign.id == entry.campaign_id).first()
-    if not is_campaign_member and (not campaign or campaign.dm_id != current_user.id):
+    # Verify user still has campaign access (direct member, DM, or collaborator)
+    if not check_campaign_access(entry.campaign_id, current_user, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You must be an active member of the campaign to update journal entries"
+            detail="You must have access to the campaign to update journal entries"
         )
     
     # Update fields if provided
@@ -630,19 +628,11 @@ def add_character_update(
             detail="Character updates can only be added for journal entries in a campaign"
         )
     
-    # Verify user is still an active member of the campaign
-    is_campaign_member = db.query(CampaignMember).filter(
-        CampaignMember.campaign_id == entry.campaign_id,
-        CampaignMember.user_id == current_user.id,
-        CampaignMember.status == MemberStatus.ACTIVE
-    ).first()
-    
-    # Also allow DM to add character updates
-    campaign = db.query(Campaign).filter(Campaign.id == entry.campaign_id).first()
-    if not is_campaign_member and (not campaign or campaign.dm_id != current_user.id):
+    # Verify user still has campaign access (direct member, DM, or collaborator)
+    if not check_campaign_access(entry.campaign_id, current_user, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You must be an active member of the campaign to add character updates"
+            detail="You must have access to the campaign to add character updates"
         )
     
     # Check if update already exists
