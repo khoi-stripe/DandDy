@@ -1302,6 +1302,20 @@ div.sheet__sidebar.ui-theme-pink {
     margin-left: 4px;
 }
 
+/* You tag - indicates the current user's character (accent style like Admin) */
+.party-member-you-tag {
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-medium);
+    font-family: var(--font-mono);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    color: var(--ui-tag-bg, var(--ui-primary-bg-color));
+    background-color: color-mix(in srgb, var(--ui-tag-bg, var(--ui-primary-bg-color)) 20%, transparent);
+    border-radius: 3px;
+    padding: 0 4px;
+    margin-left: 4px;
+}
+
 /* Invited party member row - dimmed appearance */
 .party-member--invited {
     opacity: 0.7;
@@ -1310,6 +1324,11 @@ div.sheet__sidebar.ui-theme-pink {
 .party-member--invited .party-member-email {
     font-style: normal;
     font-size: var(--font-size-base);
+}
+
+/* Indent invited emails to align with character names (which have symbol prefix) */
+.party-member--invited .party-member-name {
+    padding-left: 2ch;
 }
 
 /* See more link for party members when >3 */
@@ -2232,6 +2251,28 @@ input.search-input:focus {
     border-color: var(--ui-dim-color) !important;
 }
 
+/* ===== SEARCH INPUT DIM BORDER ACROSS ALL COLOR THEMES =====
+   Ensure search inputs always use dim borders regardless of which theme is active.
+   These rules use attribute selectors to catch all theme variants. */
+[class*="theme-"] #searchInput,
+[class*="theme-"] #searchInput:focus,
+[class*="theme-"] .search-input-wrapper .terminal-input,
+[class*="theme-"] .search-input-wrapper .terminal-input:focus,
+.panel-character-grid[class*="theme-"] #searchInput,
+.panel-character-grid[class*="theme-"] #searchInput:focus,
+.panel-character-grid[class*="theme-"] .search-input-wrapper .terminal-input,
+.panel-character-grid[class*="theme-"] .search-input-wrapper .terminal-input:focus {
+    border-color: var(--ui-dim-color) !important;
+}
+
+/* Focused state within themes - keep dim border but add matching glow */
+[class*="theme-"] #searchInput:focus,
+[class*="theme-"] .search-input-wrapper .terminal-input:focus,
+.panel-character-grid[class*="theme-"] #searchInput:focus,
+.panel-character-grid[class*="theme-"] .search-input-wrapper .terminal-input:focus {
+    box-shadow: 0 0 8px var(--ui-dim-color) !important;
+}
+
 .search-bar {
     margin-bottom: var(--spacing-sm);
     display: flex;
@@ -2556,6 +2597,61 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     background-color: color-mix(in srgb, var(--terminal-bg) 70%, transparent);
     border-radius: 3px;
     padding-bottom: 1px;
+}
+
+/* Card status icon tooltips - desktop hover */
+.card-status-icon.has-tooltip {
+    position: relative;
+    cursor: help;
+}
+
+/* Override terminal-theme.css tooltip positioning for card status icons */
+.card-status-icon.has-tooltip .custom-tooltip,
+.card-status-icon.has-tooltip .custom-tooltip[data-position] {
+    /* Use fixed positioning to escape card's overflow:hidden */
+    position: fixed !important;
+    /* Position will be set via CSS custom properties by JS */
+    top: var(--tooltip-top, 0) !important;
+    left: var(--tooltip-left, 0) !important;
+    /* Reset the default tooltip positioning */
+    bottom: auto !important;
+    right: auto !important;
+    margin: 0 !important;
+    /* Reasonable width for readability */
+    max-width: 250px;
+    width: max-content;
+    white-space: normal;
+    text-align: left;
+    font-size: var(--font-size-xs);
+    line-height: var(--line-height-snug);
+    /* Higher z-index to appear above everything */
+    z-index: 10001;
+    /* Start hidden and scaled down */
+    opacity: 0;
+    transform: scale(0.95) !important;
+    transform-origin: top left;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    pointer-events: none;
+}
+
+/* Show tooltip on hover (desktop only) - JS sets position */
+.card-status-icon.has-tooltip:hover .custom-tooltip,
+.card-status-icon.has-tooltip:hover .custom-tooltip[data-position] {
+    opacity: 1;
+    transform: scale(1) !important;
+}
+
+/* Elevate the hovered card above others so tooltip isn't obscured by adjacent cards */
+.character-card:has(.card-status-icon.has-tooltip:hover) {
+    z-index: 100;
+}
+
+/* Mobile: disable tooltips to avoid tap conflicts with card click */
+@media (hover: none), (pointer: coarse) {
+    .card-status-icon.has-tooltip {
+        cursor: default;
+        pointer-events: none;
+    }
 }
 
 
