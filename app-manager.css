@@ -4277,7 +4277,17 @@ input.search-input:focus {
         width: 100%;
     }
     
-    .header-actions button {
+    /* Make login/logout and new character buttons equal width */
+    .header-actions > button,
+    .header-actions > .has-tooltip {
+        flex: 1;
+    }
+    
+    .header-actions > .has-tooltip {
+        display: flex;
+    }
+    
+    .header-actions > .has-tooltip > button {
         flex: 1;
     }
     
