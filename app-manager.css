@@ -3734,27 +3734,15 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 
 /* Account modal styles */
 #accountModal .modal-content {
-    position: relative;
+    overflow: hidden;
 }
 
 .account-mode {
-    opacity: 1;
-    transform: translateY(0);
-    transition: opacity 0.25s ease, transform 0.25s ease;
+    /* No special styles needed - transitions handled by JS */
 }
 
 .account-mode.is-hidden {
     display: none;
-}
-
-.account-mode.is-transitioning-out {
-    opacity: 0;
-    transform: translateY(-8px);
-}
-
-.account-mode.is-transitioning-in {
-    opacity: 0;
-    transform: translateY(8px);
 }
 
 .account-modal-body {

@@ -10781,6 +10781,60 @@ function closeAccountModal(animate = true) {
 }
 
 /**
+ * Animate transition between account modal modes (like spell edit modal transitions).
+ * @param {HTMLElement} outgoing - The element to hide
+ * @param {HTMLElement} incoming - The element to show
+ * @param {Function} [onComplete] - Callback after transition completes
+ */
+function animateAccountModeSwap(outgoing, incoming, onComplete) {
+    const modalContent = outgoing.closest('.modal-content');
+    if (!modalContent) {
+        // Fallback: just swap visibility
+        outgoing.classList.add('is-hidden');
+        incoming.classList.remove('is-hidden');
+        if (onComplete) onComplete();
+        return;
+    }
+    
+    const startHeight = modalContent.offsetHeight;
+    
+    // Phase 1: Fade out current content
+    modalContent.style.overflow = 'hidden';
+    modalContent.style.height = startHeight + 'px';
+    modalContent.style.transition = 'opacity 0.15s ease-out';
+    modalContent.style.opacity = '0';
+    
+    setTimeout(() => {
+        // Swap visibility
+        outgoing.classList.add('is-hidden');
+        incoming.classList.remove('is-hidden');
+        
+        // Measure new height
+        modalContent.style.height = 'auto';
+        const endHeight = modalContent.offsetHeight;
+        
+        // Reset to start height for animation
+        modalContent.style.height = startHeight + 'px';
+        
+        // Force reflow
+        void modalContent.offsetHeight;
+        
+        // Phase 2: Animate height and fade in
+        modalContent.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease-out 0.1s';
+        modalContent.style.height = endHeight + 'px';
+        modalContent.style.opacity = '1';
+        
+        setTimeout(() => {
+            // Clean up
+            modalContent.style.height = '';
+            modalContent.style.overflow = '';
+            modalContent.style.transition = '';
+            if (onComplete) onComplete();
+        }, 350);
+    }, 150);
+}
+
+/**
  * Enter username edit mode in the account modal with smooth transition.
  */
 function enterUsernameEditMode() {
@@ -10810,27 +10864,11 @@ function enterUsernameEditMode() {
         errorEl.classList.add('is-hidden');
     }
     
-    // Smooth transition: slide out display, slide in edit
-    displayMode.classList.add('is-transitioning-out');
-    
-    setTimeout(() => {
-        displayMode.classList.add('is-hidden');
-        displayMode.classList.remove('is-transitioning-out');
-        
-        // Prepare edit mode to slide in from below
-        editMode.classList.add('is-transitioning-in');
-        editMode.classList.remove('is-hidden');
-        
-        // Force reflow then animate in
-        void editMode.offsetWidth;
-        editMode.classList.remove('is-transitioning-in');
-        
-        // Focus the input after transition
-        setTimeout(() => {
-            input.focus();
-            input.select();
-        }, 250);
-    }, 250);
+    // Animate transition
+    animateAccountModeSwap(displayMode, editMode, () => {
+        input.focus();
+        input.select();
+    });
 }
 
 /**
@@ -10851,21 +10889,8 @@ function cancelUsernameEdit() {
         errorEl.classList.add('is-hidden');
     }
     
-    // Smooth transition: slide out edit, slide in display
-    editMode.classList.add('is-transitioning-out');
-    
-    setTimeout(() => {
-        editMode.classList.add('is-hidden');
-        editMode.classList.remove('is-transitioning-out');
-        
-        // Prepare display mode to slide in from below
-        displayMode.classList.add('is-transitioning-in');
-        displayMode.classList.remove('is-hidden');
-        
-        // Force reflow then animate in
-        void displayMode.offsetWidth;
-        displayMode.classList.remove('is-transitioning-in');
-    }, 250);
+    // Animate transition
+    animateAccountModeSwap(editMode, displayMode);
 }
 
 /**
