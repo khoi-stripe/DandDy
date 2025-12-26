@@ -278,8 +278,11 @@ def get_past_campaigns(
             members=member_infos
         ))
     
-    # Sort by most recent first (by ended_at or left_at)
-    result.sort(key=lambda c: c.ended_at or c.user_left_at or c.created_at, reverse=True)
+    # Sort by most recent first (by ended_at or left_at or created_at)
+    # Use a very old date as fallback if all are None
+    from datetime import datetime as dt
+    fallback_date = dt(1970, 1, 1)
+    result.sort(key=lambda c: c.ended_at or c.user_left_at or c.created_at or fallback_date, reverse=True)
     
     return result
 

@@ -137,7 +137,7 @@ class PastCampaignMemberInfo(BaseModel):
     symbol: Optional[str] = None
     is_creator: bool = False
     status: str  # "active", "left", etc.
-    joined_at: datetime
+    joined_at: Optional[datetime] = None  # Made optional to handle legacy data
     left_at: Optional[datetime] = None
     
     class Config:
@@ -150,7 +150,7 @@ class PastCampaignResponse(BaseModel):
     name: str
     description: Optional[str] = None
     status: str  # "completed", "archived", or "active" (if user left)
-    created_at: datetime
+    created_at: Optional[datetime] = None  # Made optional to handle legacy data
     ended_at: Optional[datetime] = None
     # User's relationship to this campaign
     user_left_at: Optional[datetime] = None  # When user left (if they left)
