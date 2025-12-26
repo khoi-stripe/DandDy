@@ -191,6 +191,7 @@ def get_past_campaigns(
         ]
         
         # If character_id is provided, add it to the filters
+        # Include memberships where character_id matches OR is NULL (user joined without a character)
         if character_id is not None:
             # Verify the character belongs to the user
             character = db.query(Character).filter(
@@ -200,8 +201,9 @@ def get_past_campaigns(
             if not character:
                 raise HTTPException(status_code=404, detail="Character not found")
             
-            base_left_filter.append(CampaignMember.character_id == character_id)
-            base_completed_filter.append(CampaignMember.character_id == character_id)
+            # Include campaigns where this character was used OR no character was assigned
+            base_left_filter.append(or_(CampaignMember.character_id == character_id, CampaignMember.character_id == None))
+            base_completed_filter.append(or_(CampaignMember.character_id == character_id, CampaignMember.character_id == None))
         
         # Find all memberships where user left
         left_memberships = db.query(CampaignMember).filter(*base_left_filter).all()
