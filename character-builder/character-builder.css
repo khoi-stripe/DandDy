@@ -1705,6 +1705,26 @@
     touch-action: pan-y pinch-zoom;
   }
   
+  /* Lock horizontal scrolling for character sheet in builder on mobile */
+  .right-panel .character-sheet,
+  .app-panel--builder .character-sheet {
+    overflow-x: hidden;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* Ensure portrait and ASCII art don't cause horizontal overflow */
+  .right-panel .portrait-container,
+  .right-panel .ascii-portrait,
+  .right-panel .ascii-portrait > pre,
+  .app-panel--builder .portrait-container,
+  .app-panel--builder .ascii-portrait,
+  .app-panel--builder .ascii-portrait > pre {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  
   /* Modal bodies need touch scrolling too */
   .modal-body {
     touch-action: pan-y pinch-zoom;

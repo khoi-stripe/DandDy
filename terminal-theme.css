@@ -4391,6 +4391,13 @@ body.selector-menu-open .splash-art {
   .modal-body {
     touch-action: pan-y pinch-zoom;
   }
+  
+  /* Lock horizontal scrolling for character sheet on mobile */
+  .character-sheet {
+    overflow-x: hidden;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
 }
 
 /* ===== SPINNER CUBE (shared snippet) =====
