@@ -10781,13 +10781,14 @@ function closeAccountModal(animate = true) {
 }
 
 /**
- * Enter username edit mode in the account modal.
+ * Enter username edit mode in the account modal with smooth transition.
  */
 function enterUsernameEditMode() {
     const displayMode = document.getElementById('usernameDisplayMode');
     const editMode = document.getElementById('usernameEditMode');
     const input = document.getElementById('usernameEditInput');
     const errorEl = document.getElementById('usernameEditError');
+    const editEmailEl = document.getElementById('accountEmailEdit');
     
     if (!displayMode || !editMode || !input) return;
     
@@ -10798,22 +10799,35 @@ function enterUsernameEditMode() {
     // Pre-fill with current username (without @)
     input.value = user.username || '';
     
+    // Sync email to edit view
+    if (editEmailEl) {
+        editEmailEl.textContent = user.email || '';
+    }
+    
     // Clear any previous error
     if (errorEl) {
         errorEl.textContent = '';
         errorEl.classList.add('is-hidden');
     }
     
-    // Switch to edit mode
-    displayMode.classList.add('is-hidden');
-    editMode.classList.remove('is-hidden');
-    
-    // Focus the input
-    setTimeout(() => input.focus(), 50);
+    // Smooth transition: fade out display, fade in edit
+    displayMode.classList.add('is-fading');
+    setTimeout(() => {
+        displayMode.classList.add('is-hidden');
+        displayMode.classList.remove('is-fading');
+        editMode.classList.remove('is-hidden');
+        editMode.classList.add('is-fading');
+        // Force reflow then remove fading
+        void editMode.offsetWidth;
+        editMode.classList.remove('is-fading');
+        // Focus the input
+        input.focus();
+        input.select();
+    }, 200);
 }
 
 /**
- * Cancel username edit and return to display mode.
+ * Cancel username edit and return to display mode with smooth transition.
  */
 function cancelUsernameEdit() {
     const displayMode = document.getElementById('usernameDisplayMode');
@@ -10830,9 +10844,17 @@ function cancelUsernameEdit() {
         errorEl.classList.add('is-hidden');
     }
     
-    // Switch back to display mode
-    editMode.classList.add('is-hidden');
-    displayMode.classList.remove('is-hidden');
+    // Smooth transition: fade out edit, fade in display
+    editMode.classList.add('is-fading');
+    setTimeout(() => {
+        editMode.classList.add('is-hidden');
+        editMode.classList.remove('is-fading');
+        displayMode.classList.remove('is-hidden');
+        displayMode.classList.add('is-fading');
+        // Force reflow then remove fading
+        void displayMode.offsetWidth;
+        displayMode.classList.remove('is-fading');
+    }, 200);
 }
 
 /**

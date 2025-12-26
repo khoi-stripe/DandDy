@@ -3726,6 +3726,18 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 /* Account modal styles */
+.account-mode {
+    transition: opacity 0.2s ease;
+}
+
+.account-mode.is-hidden {
+    display: none;
+}
+
+.account-mode.is-fading {
+    opacity: 0;
+}
+
 .account-modal-body {
     display: flex;
     flex-direction: column;
@@ -3758,16 +3770,10 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     margin: 0;
 }
 
-.account-edit-mode {
+.account-edit-field {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-xs);
-}
-
-.account-edit-actions {
-    display: flex;
-    gap: var(--spacing-sm);
-    margin-top: var(--spacing-sm);
 }
 
 /* Ability + combat grids inside Edit Details modal */

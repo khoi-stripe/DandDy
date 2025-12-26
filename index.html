@@ -1146,30 +1146,35 @@
                 <h2 class="modal-title">Account</h2>
                 <button class="modal-close" onclick="closeAccountModal()">&times;</button>
             </div>
-            <div class="modal-body account-modal-body">
-                <!-- Username display -->
-                <div id="usernameDisplayMode">
-                    <span class="account-username" id="accountUsername">@username</span>
-                    <a href="#" class="account-edit-link" onclick="event.preventDefault(); enterUsernameEditMode();">edit</a>
-                </div>
-                <!-- Username edit mode -->
-                <div id="usernameEditMode" class="account-edit-mode is-hidden">
-                    <input type="text" id="usernameEditInput" class="terminal-input" 
-                           placeholder="Enter new username" 
-                           pattern="^[a-zA-Z0-9_]{3,30}$" 
-                           title="3-30 alphanumeric characters or underscores"
-                           maxlength="30"
-                           onkeydown="if(event.key==='Enter'){saveUsername();} else if(event.key==='Escape'){cancelUsernameEdit();}">
-                    <p class="terminal-text-tiny terminal-text-dim">3-30 characters: letters, numbers, underscores</p>
-                    <p class="terminal-text-tiny terminal-text-error is-hidden" id="usernameEditError"></p>
-                    <div class="account-edit-actions">
-                        <button class="terminal-btn terminal-btn-primary" onclick="saveUsername()" id="saveUsernameBtn">Save</button>
-                        <button class="terminal-btn" onclick="cancelUsernameEdit()">Cancel</button>
+            <!-- Display mode -->
+            <div id="usernameDisplayMode" class="account-mode">
+                <div class="modal-body account-modal-body">
+                    <p class="account-email" id="accountEmail">email@example.com</p>
+                    <div>
+                        <span class="account-username" id="accountUsername">@username</span>
+                        <a href="#" class="account-edit-link" onclick="event.preventDefault(); enterUsernameEditMode();">edit</a>
                     </div>
                 </div>
-                
-                <!-- Email -->
-                <p class="account-email" id="accountEmail">email@example.com</p>
+            </div>
+            <!-- Edit mode -->
+            <div id="usernameEditMode" class="account-mode is-hidden">
+                <div class="modal-body account-modal-body">
+                    <p class="account-email" id="accountEmailEdit">email@example.com</p>
+                    <div class="account-edit-field">
+                        <input type="text" id="usernameEditInput" class="terminal-input" 
+                               placeholder="Enter new username" 
+                               pattern="^[a-zA-Z0-9_]{3,30}$" 
+                               title="3-30 alphanumeric characters or underscores"
+                               maxlength="30"
+                               onkeydown="if(event.key==='Enter'){saveUsername();} else if(event.key==='Escape'){cancelUsernameEdit();}">
+                        <p class="terminal-text-tiny terminal-text-dim">3-30 characters: letters, numbers, underscores</p>
+                        <p class="terminal-text-tiny terminal-text-error is-hidden" id="usernameEditError"></p>
+                    </div>
+                </div>
+                <div class="modal-footer modal-footer-end">
+                    <button class="terminal-btn" onclick="cancelUsernameEdit()">Cancel</button>
+                    <button class="terminal-btn terminal-btn-primary" onclick="saveUsername()" id="saveUsernameBtn">Save</button>
+                </div>
             </div>
         </div>
     </div>
