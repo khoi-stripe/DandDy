@@ -3733,7 +3733,7 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 .account-username {
-    font-size: 1.5rem;
+    font-size: var(--font-size-base);
     font-weight: var(--font-weight-medium);
     color: var(--ui-fg-color);
 }
