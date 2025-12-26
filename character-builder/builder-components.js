@@ -34,7 +34,7 @@ const Components = (window.Components = {
     return `
       <div class="question-card" data-question-id="${question.id}">
         <div class="question-text">${question.text}</div>
-        <input type="text" class="input-field" id="text-input" placeholder="${question.placeholder || 'Type here...'}">
+        <input type="text" class="input-field" id="text-input" placeholder="${question.placeholder || 'Type here...'}" data-1p-ignore>
         <button class="button-primary mt-md" onclick="App.handleTextInput('${question.id}')">
           CONTINUE
         </button>

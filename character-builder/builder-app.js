@@ -1468,6 +1468,7 @@ const App = (window.App = {
             class="input-field" 
             id="custom-name-input" 
             placeholder="Or enter your own name..."
+            data-1p-ignore
           >
           <button class="button-primary" onclick="App.handleCustomName()">
             SUBMIT
@@ -4893,6 +4894,7 @@ const App = (window.App = {
                 min="1"
                 max="99"
                 value="${currentLevel}"
+                data-1p-ignore
               >
             </div>
             <div id="level-modal-error" class="terminal-text-error level-modal-error is-hidden"></div>
@@ -5091,6 +5093,7 @@ const App = (window.App = {
                 class="terminal-input name-modal-input"
                 value="${currentName}"
                 placeholder="Enter character name"
+                data-1p-ignore
               >
             </div>
             <div id="name-modal-error" class="terminal-text-error name-modal-error is-hidden"></div>

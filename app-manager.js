@@ -6324,7 +6324,7 @@ async function renameCharacter(id) {
           </div>
           <div class="modal-body">
             <p class="terminal-text-small modal-section-label">New name:</p>
-            <input type="text" id="renameInput" class="terminal-input" value="${safeCurrentName}">
+            <input type="text" id="renameInput" class="terminal-input" value="${safeCurrentName}" data-1p-ignore>
           </div>
           <div class="modal-footer modal-footer-end">
             <button class="terminal-btn" id="renameCancel">Cancel</button>
@@ -13279,7 +13279,7 @@ function openSpellPickerForEdit(level) {
                     <span class="spell-picker-selected-count" id="inlineSpellCount">${countText}</span>
                 </div>
                 <div class="spell-picker-filters">
-                    <input type="text" id="inlineSpellSearch" class="terminal-input" placeholder="Search spells..." oninput="filterInlineSpellPicker()">
+                    <input type="text" id="inlineSpellSearch" class="terminal-input" placeholder="Search spells..." oninput="filterInlineSpellPicker()" data-1p-ignore>
                     <div class="selector-shell selector-shell--listbox" id="spellSchoolSelector">
                         <button type="button" 
                                 class="terminal-btn-small selector-trigger" 
@@ -14342,7 +14342,7 @@ function openSpellPickerForSpellEditModal(level) {
                         ${getSpellPickerInfoText()}
                     </div>
                     <div class="spell-picker-filters">
-                        <input type="text" id="spellEditModalSearchInput" class="terminal-input" placeholder="Search spells..." oninput="filterSpellEditModalPicker()">
+                        <input type="text" id="spellEditModalSearchInput" class="terminal-input" placeholder="Search spells..." oninput="filterSpellEditModalPicker()" data-1p-ignore>
                         <div class="selector-shell selector-shell--listbox" id="spellEditSchoolSelector">
                             <button type="button" 
                                     class="terminal-btn-small selector-trigger" 

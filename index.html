@@ -202,6 +202,7 @@
                             id="searchInput"
                             class="terminal-input"
                             placeholder="Search characters..."
+                            data-1p-ignore
                         >
                         <button id="clearSearchBtn" class="search-clear-btn" type="button" aria-label="Clear search">✕</button>
                     </div>
@@ -423,7 +424,7 @@
             <div class="modal-body">
                 <div class="settings-row settings-row--stacked mb-lg">
                     <label class="settings-label" for="createCampaignName">Campaign Name</label>
-                    <input type="text" id="createCampaignName" class="terminal-input" placeholder="e.g. Curse of Strahd" maxlength="100" required>
+                    <input type="text" id="createCampaignName" class="terminal-input" placeholder="e.g. Curse of Strahd" maxlength="100" required data-1p-ignore>
                 </div>
                 <div class="settings-row settings-row--stacked mb-lg">
                     <label class="settings-label" for="createCampaignDesc">Description <span class="terminal-text-dim">(optional)</span></label>
@@ -533,7 +534,7 @@
             <div class="modal-body">
                 <div class="settings-row settings-row--stacked mb-md">
                     <label class="settings-label" for="manageCampaignName">Campaign Name</label>
-                    <input type="text" id="manageCampaignName" class="terminal-input" placeholder="e.g. Curse of Strahd" maxlength="100" required>
+                    <input type="text" id="manageCampaignName" class="terminal-input" placeholder="e.g. Curse of Strahd" maxlength="100" required data-1p-ignore>
                 </div>
                 <div class="settings-row settings-row--stacked">
                     <label class="settings-label" for="manageCampaignDesc">Description <span class="terminal-text-dim">(optional)</span></label>
@@ -604,7 +605,7 @@
                         <div class="settings-row-inline mb-md">
                             <div class="settings-inline-field" style="flex: 2">
                                 <label class="settings-label" for="journalEntryTitle">Title</label>
-                                <input type="text" id="journalEntryTitle" class="terminal-input" placeholder="e.g., The Amber Temple" maxlength="100">
+                                <input type="text" id="journalEntryTitle" class="terminal-input" placeholder="e.g., The Amber Temple" maxlength="100" data-1p-ignore>
                             </div>
                             <div class="settings-inline-field" style="flex: 1">
                                 <label class="settings-label" for="journalEntryDate">Date</label>
@@ -662,7 +663,7 @@
                     <section class="settings-section">
                         <div class="settings-row settings-row--stacked">
                             <div class="settings-label">Items Acquired</div>
-                            <input type="text" id="charUpdateItems" class="terminal-input" placeholder="Potion of Healing, Silver Sword...">
+                            <input type="text" id="charUpdateItems" class="terminal-input" placeholder="Potion of Healing, Silver Sword..." data-1p-ignore>
                         </div>
                     </section>
                 </div>
@@ -753,7 +754,7 @@
                             <section class="settings-section">
                                 <div class="settings-row settings-row--stacked mb-lg">
                                     <div class="settings-label">Character name</div>
-                                    <input type="text" id="editName" class="terminal-input" placeholder="Enter character name">
+                                    <input type="text" id="editName" class="terminal-input" placeholder="Enter character name" data-1p-ignore>
                                 </div>
                                 <div class="settings-row-inline">
                                     <div class="settings-inline-field">
@@ -1005,7 +1006,7 @@
                     <!-- Populated dynamically: "Selecting cantrips (2 of 3)" -->
                 </div>
                 <div class="spell-picker-filters">
-                    <input type="text" id="spellSearchInput" class="terminal-input" placeholder="Search spells..." oninput="filterSpellPicker()">
+                    <input type="text" id="spellSearchInput" class="terminal-input" placeholder="Search spells..." oninput="filterSpellPicker()" data-1p-ignore>
                     <div class="selector-shell selector-shell--listbox" id="spellSchoolFilterShell">
                         <button type="button" 
                                 class="terminal-btn-small selector-trigger" 
@@ -1176,7 +1177,8 @@
                                pattern="^[a-zA-Z0-9_]{3,30}$" 
                                title="3-30 alphanumeric characters or underscores"
                                maxlength="30"
-                               onkeydown="if(event.key==='Enter'){saveUsername();} else if(event.key==='Escape'){cancelUsernameEdit();}">
+                               onkeydown="if(event.key==='Enter'){saveUsername();} else if(event.key==='Escape'){cancelUsernameEdit();}"
+                               data-1p-ignore>
                         <p class="terminal-text-tiny terminal-text-dim">3-30 characters: letters, numbers, underscores</p>
                         <p class="terminal-text-tiny terminal-text-error is-hidden" id="usernameEditError"></p>
                     </div>
