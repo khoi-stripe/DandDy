@@ -195,7 +195,7 @@ def get_past_campaigns(
             # Verify the character belongs to the user
             character = db.query(Character).filter(
                 Character.id == character_id,
-                Character.user_id == current_user.id
+                Character.owner_id == current_user.id
             ).first()
             if not character:
                 raise HTTPException(status_code=404, detail="Character not found")
