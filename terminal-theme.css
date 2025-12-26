@@ -3507,33 +3507,35 @@ body.selector-menu-open .splash-art {
   /* Must be above the modal overlay (z-index: 10000) so the menu is visible */
   z-index: 10001;
   
-  /* Use the modal's yellow theme when detached */
+  /* Use the modal glow HSL tokens for theme inheritance. The modal-glow-*
+     variables are set by the active theme class, allowing detached menus
+     to respect whatever theme is currently active (teal, yellow, pink, etc.). */
   --ui-border-color: hsl(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright)
+    var(--modal-glow-h),
+    var(--modal-glow-s),
+    var(--modal-glow-l-bright)
   );
   --ui-fg-color: hsl(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright)
+    var(--modal-glow-h),
+    var(--modal-glow-s),
+    var(--modal-glow-l-bright)
   );
   --ui-dim-color: hsla(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright),
+    var(--modal-glow-h),
+    var(--modal-glow-s),
+    var(--modal-glow-l-bright),
     0.7
   );
   --ui-primary-bg-color: hsl(
-    var(--theme-yellow-h),
-    var(--theme-yellow-s),
-    var(--theme-yellow-l-bright)
+    var(--modal-glow-h),
+    var(--modal-glow-s),
+    var(--modal-glow-l-bright)
   );
 
-  /* Yellow scrollbars for detached modal menus */
-  --scrollbar-track-color: hsl(var(--theme-yellow-h), 100%, 5%);
-  --scrollbar-thumb-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.6);
-  --scrollbar-thumb-hover-color: hsla(var(--theme-yellow-h), var(--theme-yellow-s), var(--theme-yellow-l-dim), 0.9);
+  /* Theme-aware scrollbars for detached modal menus */
+  --scrollbar-track-color: hsl(var(--modal-glow-h), 100%, 5%);
+  --scrollbar-thumb-color: hsla(var(--modal-glow-h), var(--modal-glow-s), 45%, 0.6);
+  --scrollbar-thumb-hover-color: hsla(var(--modal-glow-h), var(--modal-glow-s), var(--modal-glow-l-bright), 0.9);
 
   /* Re-declare base selector-menu visual properties that are lost when
      the menu is moved to document.body (outside the modal context). */

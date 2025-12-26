@@ -663,7 +663,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* ===== CAMPAIGN AREA (TOP SECTION) ===== */
 .campaign-area {
-    border: 1px solid var(--ui-border-color);
+    border: 1px solid var(--ui-dim-color);
     padding: var(--spacing-md);
     background: var(--terminal-bg);
     /* Allow overflow menu to escape bounds */
@@ -2954,8 +2954,8 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     border: none;
     text-transform: uppercase;
     letter-spacing: var(--tracking-wider);
-    background: rgba(200, 180, 60, 0.2);
-    color: #c8b040;
+    background: color-mix(in srgb, var(--ui-tag-bg, var(--ui-primary-bg-color)) 20%, transparent);
+    color: var(--ui-tag-bg, var(--ui-primary-bg-color));
     /* Position relative for tooltip */
     position: relative;
     /* Allow tooltips to overflow */
@@ -5718,18 +5718,18 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 .spell-picker-count.over-limit {
-    color: #ff6b6b;
+    color: var(--terminal-error, #ff6b6b);
     font-weight: var(--font-weight-normal);
 }
 
 /* Warning message when over limit */
 .spell-picker-warning {
-    color: #ff6b6b;
+    color: var(--terminal-error, #ff6b6b);
     font-weight: var(--font-weight-normal);
 }
 
 .spell-picker-info.over-limit {
-    border-bottom-color: #ff6b6b;
+    border-bottom-color: var(--terminal-error, #ff6b6b);
 }
 
 .spell-picker-filters {
