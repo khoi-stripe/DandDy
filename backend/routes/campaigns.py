@@ -21,6 +21,55 @@ from utils.auth import get_current_active_user
 router = APIRouter(prefix="/campaigns", tags=["campaigns"])
 
 
+def check_campaign_access(campaign_id: int, current_user: User, db: Session) -> bool:
+    """
+    Check if a user has access to a campaign.
+    
+    A user has access if:
+    1. They are the campaign creator (dm_id), OR
+    2. They are a direct member (CampaignMember.user_id), OR
+    3. They are a collaborator on a character that's in the campaign
+    
+    Returns True if user has access, False otherwise.
+    """
+    campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
+    if not campaign:
+        return False
+    
+    # Check if creator
+    if campaign.dm_id == current_user.id:
+        return True
+    
+    # Check if direct member
+    is_direct_member = db.query(CampaignMember).filter(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.user_id == current_user.id,
+        CampaignMember.status == MemberStatus.ACTIVE
+    ).first() is not None
+    
+    if is_direct_member:
+        return True
+    
+    # Check if collaborator on a character in the campaign
+    campaign_character_ids = db.query(CampaignMember.character_id).filter(
+        CampaignMember.campaign_id == campaign_id,
+        CampaignMember.status == MemberStatus.ACTIVE,
+        CampaignMember.character_id != None
+    ).all()
+    character_ids = [c[0] for c in campaign_character_ids]
+    
+    if character_ids:
+        is_collaborator = db.query(CharacterCollaborator).filter(
+            CharacterCollaborator.character_id.in_(character_ids),
+            CharacterCollaborator.user_id == current_user.id
+        ).first() is not None
+        
+        if is_collaborator:
+            return True
+    
+    return False
+
+
 def _get_available_symbol(campaign_id: int, db: Session) -> Optional[str]:
     """Get a random unused symbol for a campaign."""
     used_symbols = db.query(CampaignMember.symbol).filter(

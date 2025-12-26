@@ -10,6 +10,7 @@ from models.character_collaborator import CharacterCollaborator, CollaboratorPer
 from models.campaign_member import CampaignMember, MemberStatus
 from schemas.character import CharacterCreate, CharacterUpdate, CharacterResponse, CharacterLiteResponse
 from utils.auth import get_current_active_user, get_current_user_optional
+from routes.campaigns import check_campaign_access
 
 router = APIRouter(prefix="/characters", tags=["characters"])
 
@@ -297,15 +298,9 @@ def _check_character_access(character: Character, current_user: User, db: Sessio
     ).first()
     
     if character_membership:
-        # Check if current user is also a member of the same campaign
-        user_membership = db.query(CampaignMember).filter(
-            CampaignMember.campaign_id == character_membership.campaign_id,
-            CampaignMember.user_id == current_user.id,
-            CampaignMember.status == MemberStatus.ACTIVE
-        ).first()
-        
-        if user_membership:
-            # Fellow campaign members get view-only access
+        # Check if current user has access to this campaign (direct member or collaborator)
+        if check_campaign_access(character_membership.campaign_id, current_user, db):
+            # Campaign members (including collaborators) get view-only access to party members
             if require_edit:
                 return False, False, "view"
             return True, False, "party_member"

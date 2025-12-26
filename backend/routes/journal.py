@@ -8,12 +8,14 @@ from models.character import Character
 from models.campaign import Campaign
 from models.campaign_member import CampaignMember, MemberStatus
 from models.journal import JournalEntry, CharacterUpdate
+from models.character_collaborator import CharacterCollaborator
 from schemas.journal import (
     JournalEntryCreate, JournalEntryUpdate, JournalEntryResponse,
     CharacterUpdateCreate, CharacterUpdateResponse, JournalEntryWithUpdate
 )
 from utils.auth import get_current_active_user
 from datetime import date
+from routes.campaigns import check_campaign_access
 
 router = APIRouter(prefix="/journal", tags=["journal"])
 
@@ -248,7 +250,7 @@ def get_campaign_journal_entries(
     - If no user_id filter: returns all public entries from party + all your own entries
     - If user_id filter: returns public entries from that user only (or all if filtering yourself)
     """
-    # Verify campaign exists and user is a member
+    # Verify campaign exists
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     
     if not campaign:
@@ -257,14 +259,8 @@ def get_campaign_journal_entries(
             detail="Campaign not found"
         )
     
-    # Check if user is a member
-    my_membership = db.query(CampaignMember).filter(
-        CampaignMember.campaign_id == campaign_id,
-        CampaignMember.user_id == current_user.id,
-        CampaignMember.status == MemberStatus.ACTIVE
-    ).first()
-    
-    if not my_membership and campaign.dm_id != current_user.id:
+    # Check access (creator, direct member, or collaborator on a character in the campaign)
+    if not check_campaign_access(campaign_id, current_user, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to view this campaign's journal entries"
