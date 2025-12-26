@@ -188,13 +188,20 @@ def get_past_campaigns(
     # If character_id is provided, add it to the filters
     # Include memberships where character_id matches OR is NULL (user joined without a character)
     if character_id is not None:
-        # Verify the character belongs to the user
-        character = db.query(Character).filter(
-            Character.id == character_id,
-            Character.owner_id == current_user.id
-        ).first()
+        # Verify the character exists and user has access (owner or collaborator)
+        character = db.query(Character).filter(Character.id == character_id).first()
         if not character:
             raise HTTPException(status_code=404, detail="Character not found")
+        
+        # Check access: owner or collaborator
+        is_owner = character.owner_id == current_user.id
+        is_collaborator = db.query(CharacterCollaborator).filter(
+            CharacterCollaborator.character_id == character_id,
+            CharacterCollaborator.user_id == current_user.id
+        ).first() is not None
+        
+        if not is_owner and not is_collaborator:
+            raise HTTPException(status_code=403, detail="Not authorized to access this character")
         
         # Include campaigns where this character was used OR no character was assigned
         base_left_filter.append(or_(CampaignMember.character_id == character_id, CampaignMember.character_id == None))
