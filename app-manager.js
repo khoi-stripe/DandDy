@@ -10697,27 +10697,59 @@ function closePasswordResetModal(animate = true) {
 /**
  * Open the account management modal.
  * Shows current user's username and email.
+ * Fetches fresh profile data to ensure username is up-to-date.
  */
-function openAccountModal() {
+async function openAccountModal() {
     const modal = document.getElementById('accountModal');
     if (!modal) return;
     
-    const user = window.AuthService ? window.AuthService.getCurrentUser() : null;
+    // Show modal immediately with cached data
+    let user = window.AuthService ? window.AuthService.getCurrentUser() : null;
     if (!user) return;
     
-    // Populate account info
+    // Populate account info with cached data first
     const usernameEl = document.getElementById('accountUsername');
     const emailEl = document.getElementById('accountEmail');
     
     if (usernameEl) {
-        usernameEl.textContent = user.username ? `@${user.username}` : 'Not set';
+        usernameEl.textContent = user.username ? `@${user.username}` : 'Loading...';
     }
     if (emailEl) {
-        emailEl.textContent = user.email || 'Not set';
+        emailEl.textContent = user.email || 'Loading...';
     }
     
     modal.classList.add('show');
     syncAuthFlowDim();
+    
+    // Fetch fresh profile in background to ensure username is up-to-date
+    try {
+        const freshProfile = await window.AuthService.fetchProfile();
+        if (freshProfile && freshProfile.username) {
+            // Update local storage with fresh data
+            window.AuthService.setCurrentUser(freshProfile);
+            user = freshProfile;
+            
+            // Update display
+            if (usernameEl) {
+                usernameEl.textContent = `@${user.username}`;
+            }
+            if (emailEl) {
+                emailEl.textContent = user.email || 'Not set';
+            }
+            
+            // Also update the header
+            updateAuthUI();
+        }
+    } catch (err) {
+        console.error('Failed to refresh profile:', err);
+        // Keep showing cached data, just update "Loading..." to "Not set"
+        if (usernameEl && usernameEl.textContent === 'Loading...') {
+            usernameEl.textContent = user.username ? `@${user.username}` : 'Not set';
+        }
+        if (emailEl && emailEl.textContent === 'Loading...') {
+            emailEl.textContent = user.email || 'Not set';
+        }
+    }
 }
 
 /**
