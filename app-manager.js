@@ -3948,51 +3948,6 @@ const MobileView = {
         this._wasMobile = this.isMobile();
         window.addEventListener('resize', () => this.handleResize());
         this.initSwipeHandlers();
-        this.initScrollHandler();
-    },
-    
-    /** Track scroll state for header collapse */
-    _lastScrollTop: 0,
-    _scrollThreshold: 20,
-    
-    /** Initialize scroll handler for mobile header collapse */
-    initScrollHandler() {
-        const gridPanel = document.getElementById('characterGridPanel');
-        if (!gridPanel) return;
-        
-        const header = document.querySelector('.terminal-header');
-        if (!header) return;
-        
-        // Clear any stale scrolled state on init
-        if (!this.isMobile()) {
-            header.classList.remove('is-scrolled');
-        }
-        
-        // Handle resize: clear scrolled state when switching to desktop
-        window.addEventListener('resize', () => {
-            if (!this.isMobile()) {
-                const h = document.querySelector('.terminal-header');
-                if (h) h.classList.remove('is-scrolled');
-            }
-        });
-        
-        gridPanel.addEventListener('scroll', () => {
-            if (!this.isMobile()) return;
-            
-            const scrollTop = gridPanel.scrollTop;
-            const h = document.querySelector('.terminal-header');
-            if (!h) return;
-            
-            // Add/remove scrolled class based on scroll position
-            // CSS handles the max-height transition
-            if (scrollTop > this._scrollThreshold) {
-                h.classList.add('is-scrolled');
-            } else {
-                h.classList.remove('is-scrolled');
-            }
-            
-            this._lastScrollTop = scrollTop;
-        }, { passive: true });
     },
     
     /** Initialize swipe gesture handlers for mobile navigation */
@@ -4202,9 +4157,6 @@ const MobileView = {
                     gridPanel.classList.remove('is-viewing-sheet');
                 }
             }
-            // Clear scroll state on header when going to desktop
-            const header = document.querySelector('.terminal-header');
-            if (header) header.classList.remove('is-scrolled');
             
             // If nothing is selected, auto-select the first character
             // Otherwise keep the current selection from mobile
@@ -4287,10 +4239,8 @@ const MobileView = {
         // Update the view toggle link text (should show "Campaign" since we start in sheet view)
         this._updateViewToggle();
 
-        // Scroll to top and reset header scroll state
+        // Scroll to top when showing character sheet
         gridPanel.scrollTop = 0;
-        const header = document.querySelector('.terminal-header');
-        if (header) header.classList.remove('is-scrolled');
         
         // Wait for portrait image to load before hiding the loader
         if (isSwipeTransition) {
@@ -4618,10 +4568,6 @@ const MobileView = {
         const mobileStatusRow = document.getElementById('mobileSheetStatusRow');
         if (mobileHeader) mobileHeader.remove();
         if (mobileStatusRow) mobileStatusRow.remove();
-        
-        // Reset header scroll state when returning to grid
-        const header = document.querySelector('.terminal-header');
-        if (header) header.classList.remove('is-scrolled');
         
         // Clear selection state on mobile when going back
         if (typeof AppState !== 'undefined' && AppState) {

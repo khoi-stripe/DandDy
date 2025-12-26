@@ -4355,24 +4355,6 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
         padding: var(--spacing-xs) var(--spacing-sm);
     }
     
-    .header-actions {
-        width: 100%;
-    }
-    
-    /* Make login/logout and new character buttons equal width */
-    .header-actions > button,
-    .header-actions > .has-tooltip {
-        flex: 1;
-    }
-    
-    .header-actions > .has-tooltip {
-        display: flex;
-    }
-    
-    .header-actions > .has-tooltip > button {
-        flex: 1;
-    }
-    
     .stat-grid {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -4751,22 +4733,14 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 @media (max-width: 768px) {
-    /* ===== HEADER COLLAPSE: "Curtain from below" effect =====
-       On scroll, the header shrinks in height from the bottom up.
-       - Title and buttons are pinned in place (absolute)
-       - Settings icon fades out
-       - Overflow button fades in  
-       - Header clips buttons as it shrinks */
+    /* ===== MOBILE HEADER: Compact with overflow menu =====
+       Single-row header with title + overflow button.
+       Settings and auth are in the overflow menu. */
     
     .terminal-header {
         position: relative;
-        /* Clip content that extends beyond the header height during shrink animation.
-           When a selector menu is open, overflow must be visible so the dropdown can escape. */
-        overflow: hidden;
-        /* Expanded height - enough for title row + button row + gaps */
-        height: 80px;
-        /* Smooth transition with bounce easing (matches modals/toasts) */
-        transition: height 0.4s var(--ease-bounce);
+        /* Fixed height - no scroll-based expand/collapse */
+        height: auto;
         /* Ensure header stays above mobile sheet content (mobile-back-bar is z-index: 100) */
         z-index: 200;
     }
@@ -4776,62 +4750,36 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
         overflow: visible;
     }
     
-    /* Pin content at top - stays in place as header shrinks */
+    /* Header content layout */
     .terminal-header .header-content {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
         padding: var(--spacing-sm);
     }
     
-    /* Overflow button: positioned absolutely in top-right, hidden by default */
+    /* Always hide settings icon on mobile - it's in the overflow menu */
+    .terminal-header .manager-settings-link {
+        display: none;
+    }
+    
+    /* Always hide auth button on mobile - it's in the overflow menu */
+    .terminal-header .header-action-btn,
+    .terminal-header #authBtn {
+        display: none;
+    }
+    
+    /* Always hide user info display on mobile */
+    .terminal-header #userInfoDisplay {
+        display: none;
+    }
+    
+    /* Overflow button: always visible on mobile */
     .header-overflow {
         display: inline-block;
         position: absolute;
         right: var(--spacing-sm);
         top: var(--spacing-sm);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 10;
-    }
-    
-    /* Settings cog: add transition for smooth fade */
-    .terminal-header .manager-settings-link {
-        transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    /* Header action buttons (Login/Logout, New Character): add transition for smooth fade */
-    .terminal-header .header-action-btn {
-        transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-                    visibility 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    /* ===== SCROLLED STATE ===== */
-    
-    /* Collapse header to title row only */
-    .terminal-header.is-scrolled {
-        height: 41px;
-    }
-    
-    /* Settings cog fades out */
-    .terminal-header.is-scrolled .manager-settings-link {
-        opacity: 0;
-        pointer-events: none;
-    }
-    
-    /* Header action buttons fade out - they move to overflow menu */
-    .terminal-header.is-scrolled .header-action-btn {
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-    }
-    
-    /* Show overflow button */
-    .terminal-header.is-scrolled .header-overflow {
         opacity: 1;
         pointer-events: auto;
+        z-index: 10;
     }
 }
 
