@@ -2101,12 +2101,14 @@ body::before {
 .sheet-actions-trigger,
 .overflow-trigger {
   position: relative;
-  padding-left: 10px;
-  padding-right: 10px;
+  /* Compact sizing standardized across all overflow buttons */
+  padding: 4px 6px;
+  min-width: 28px;
+  height: auto;
   /* Use the same geometry as .terminal-btn-small so heights match exactly */
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
 }
 
 .sheet-actions-icon {

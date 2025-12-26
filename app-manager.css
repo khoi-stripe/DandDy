@@ -741,10 +741,6 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .campaign-overflow-trigger {
-    /* Compact overflow button sizing (shared with header/portrait history) */
-    padding: 4px 6px;
-    min-width: 28px;
-    height: auto;
     border-color: var(--ui-dim-color);
 }
 
@@ -4661,10 +4657,6 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 
 /* Trigger button: default state */
 .header-overflow-trigger {
-    /* Compact sizing to match campaign overflow button */
-    padding: 4px 6px;
-    min-width: 28px;
-    height: auto;
     border-color: var(--ui-dim-color);
     color: var(--ui-dim-color);
     background: transparent;
