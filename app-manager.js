@@ -587,7 +587,7 @@ const AppState = {
     characters: [],
     filteredCharacters: [],
     searchTerm: '',
-    sortMode: 'dateModified', // 'alphabetical' | 'dateModified' | 'inCampaign'
+    sortMode: 'dateModified', // 'alphabetical' | 'dateModified' | 'inCampaign' | 'pinned'
     // The character id that should be considered "selected" across the UI.
     // This is the single source of truth used to keep the left-hand card
     // highlight, keyboard focus, and right-hand sheet in sync.
@@ -677,29 +677,26 @@ const AppState = {
             return Number.isFinite(t) ? t : 0;
         };
 
-        // Separate pinned and unpinned characters
-        const pinnedIds = getPinnedCharacterIds();
-        const pinned = [];
-        const unpinned = [];
-        
-        filtered.forEach(char => {
-            if (pinnedIds.includes(String(char.id))) {
-                pinned.push(char);
-            } else {
-                unpinned.push(char);
-            }
-        });
-        
-        // Sort pinned characters by their pin order (order in pinnedIds array)
-        pinned.sort((a, b) => {
-            const aIndex = pinnedIds.indexOf(String(a.id));
-            const bIndex = pinnedIds.indexOf(String(b.id));
-            return aIndex - bIndex;
-        });
+        // Handle "pinned" sort mode: filter to only pinned characters, sorted alphabetically
+        if (this.sortMode === 'pinned') {
+            const pinnedIds = getPinnedCharacterIds();
+            filtered = filtered.filter(char => pinnedIds.includes(String(char.id)));
+            // Sort pinned characters alphabetically
+            filtered.sort((a, b) => {
+                const nameA = (a.name || '').toLowerCase();
+                const nameB = (b.name || '').toLowerCase();
+                if (nameA === nameB) {
+                    return (a.id || '').toString().localeCompare((b.id || '').toString());
+                }
+                return nameA.localeCompare(nameB);
+            });
+            this.filteredCharacters = filtered;
+            return;
+        }
 
-        // Sort unpinned characters according to current mode
+        // Sort characters according to current mode
         if (this.sortMode === 'alphabetical') {
-            unpinned.sort((a, b) => {
+            filtered.sort((a, b) => {
                 const nameA = (a.name || '').toLowerCase();
                 const nameB = (b.name || '').toLowerCase();
                 if (nameA === nameB) {
@@ -709,7 +706,7 @@ const AppState = {
             });
         } else if (this.sortMode === 'dateModified') {
             // Sort by most recently modified using canonical timestamps
-            unpinned.sort((a, b) => {
+            filtered.sort((a, b) => {
                 const aTime = getSortTime(a);
                 const bTime = getSortTime(b);
                 if (aTime === bTime) {
@@ -719,7 +716,7 @@ const AppState = {
             });
         } else if (this.sortMode === 'inCampaign') {
             // Sort characters in a campaign to the top, then by name
-            unpinned.sort((a, b) => {
+            filtered.sort((a, b) => {
                 const aInCampaign = a.campaignId ? 1 : 0;
                 const bInCampaign = b.campaignId ? 1 : 0;
                 if (aInCampaign !== bInCampaign) {
@@ -730,8 +727,7 @@ const AppState = {
             });
         }
 
-        // Combine: pinned first, then unpinned
-        this.filteredCharacters = [...pinned, ...unpinned];
+        this.filteredCharacters = filtered;
     }
 };
 
@@ -1400,6 +1396,7 @@ const ExpandedView = (window.ExpandedView = {
             const renderMember = (m) => {
                 const char = m.character;
                 const adminTag = m.is_creator ? '<span class="party-member-admin-tag">Admin</span>' : '';
+                const youTag = m.user_id === currentUserId ? '<span class="party-member-you-tag">You</span>' : '';
                 const symbolPrefix = m.symbol ? `<span class="party-member-symbol">${m.symbol}</span> ` : '';
                 const isOtherUser = m.user_id !== currentUserId;
                 if (char) {
@@ -1411,7 +1408,7 @@ const ExpandedView = (window.ExpandedView = {
                         <div class="party-member ${clickable}" ${clickHandler}>
                             <span class="party-member-left">
                                 <span class="party-member-name">${symbolPrefix}${char.name}</span>
-                                ${adminTag}
+                                ${youTag}${adminTag}
                             </span>
                             <span class="party-member-right">
                                 <span class="party-member-info">Lvl ${char.level} ${char.character_class || ''}</span>
@@ -1423,7 +1420,7 @@ const ExpandedView = (window.ExpandedView = {
                         <div class="party-member party-member--no-char">
                             <span class="party-member-left">
                                 <span class="party-member-name">${symbolPrefix}No character assigned</span>
-                                ${adminTag}
+                                ${youTag}${adminTag}
                             </span>
                             <span class="party-member-right">
                             </span>
@@ -4962,6 +4959,46 @@ const UI = {
         // Reset keyboard navigation to first card
         KeyboardNav.isActive = true;
         KeyboardNav.reset();
+        
+        // Create a portal container at body level for tooltips (escapes all overflow/stacking contexts)
+        let tooltipPortal = document.getElementById('card-tooltip-portal');
+        if (!tooltipPortal) {
+            tooltipPortal = document.createElement('div');
+            tooltipPortal.id = 'card-tooltip-portal';
+            document.body.appendChild(tooltipPortal);
+        }
+        
+        document.querySelectorAll('.card-status-icon.has-tooltip').forEach(icon => {
+            const originalTooltip = icon.querySelector('.custom-tooltip');
+            if (!originalTooltip) return;
+            
+            let portalTooltip = null;
+            
+            icon.addEventListener('mouseenter', () => {
+                const iconRect = icon.getBoundingClientRect();
+                
+                // Clone tooltip content to portal
+                portalTooltip = originalTooltip.cloneNode(true);
+                portalTooltip.classList.add('card-portal-tooltip');
+                portalTooltip.style.cssText = `
+                    position: fixed;
+                    top: ${iconRect.bottom + 4}px;
+                    left: ${iconRect.left}px;
+                    z-index: 10001;
+                    opacity: 1;
+                    transform: scale(1);
+                    pointer-events: none;
+                `;
+                tooltipPortal.appendChild(portalTooltip);
+            });
+            
+            icon.addEventListener('mouseleave', () => {
+                if (portalTooltip && portalTooltip.parentNode) {
+                    portalTooltip.parentNode.removeChild(portalTooltip);
+                    portalTooltip = null;
+                }
+            });
+        });
     },
     
     cropAsciiForThumbnail(asciiArt, heightLines = 80, widthChars = 160) {
@@ -5065,15 +5102,65 @@ const UI = {
         // Check if character is in a campaign
         const characterCampaignId = character.campaignId || character.campaign_id;
         const isInCampaign = !!characterCampaignId;
+        const campaignName = character.campaignName || character.campaign_name || null;
         
-        // Build status icons (icon-only, no text)
+        // Get owner email for shared characters
+        const ownerEmail = character.owner_email || character.ownerEmail || null;
+        const lastUpdatedByEmail = character.last_updated_by_email || character.lastUpdatedByEmail || null;
+        
+        // Build status icons (icon-only, no text) with tooltips
         // Order: IN CAMPAIGN, SHARED, PINNED
         const statusIcons = [];
         if (isInCampaign) {
-            statusIcons.push('<span class="card-status-icon card-status-icon--campaign">⚔</span>');
+            const campaignTooltip = campaignName 
+                ? Utils.escapeHtml(campaignName)
+                : 'In Campaign';
+            statusIcons.push(`<span class="card-status-icon card-status-icon--campaign has-tooltip">⚔<span class="custom-tooltip" data-position="bottom-start">${campaignTooltip}</span></span>`);
         }
         if (showSharedTag) {
-            statusIcons.push('<span class="card-status-icon card-status-icon--shared">↔</span>');
+            // Build shared tooltip content (matching character sheet format)
+            const updatedAt = character.updatedAt || character.updated_at;
+            let lastUpdatedText = '';
+            if (updatedAt) {
+                try {
+                    const date = new Date(updatedAt);
+                    lastUpdatedText = date.toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                    });
+                } catch (e) {
+                    lastUpdatedText = '';
+                }
+            }
+            
+            let sharedTooltip = '';
+            if (isSharedWithMe) {
+                // Collaborator's view
+                const sharedByLine = `Shared by ${Utils.escapeHtml(ownerEmail || 'unknown')}`;
+                let updatedLine = '';
+                if (lastUpdatedText) {
+                    updatedLine = lastUpdatedByEmail 
+                        ? `Last updated: ${lastUpdatedText}<br>by ${Utils.escapeHtml(lastUpdatedByEmail)}`
+                        : `Last updated: ${lastUpdatedText}`;
+                }
+                sharedTooltip = updatedLine ? `${sharedByLine}<br>${updatedLine}` : sharedByLine;
+            } else if (hasCollaborators) {
+                // Owner's view
+                const sharedWithLine = collaboratorCount === 1 ? 'Shared with 1 user' : `Shared with ${collaboratorCount} users`;
+                let updatedLine = '';
+                if (lastUpdatedText) {
+                    updatedLine = lastUpdatedByEmail 
+                        ? `Last updated: ${lastUpdatedText}<br>by ${Utils.escapeHtml(lastUpdatedByEmail)}`
+                        : `Last updated: ${lastUpdatedText}`;
+                }
+                sharedTooltip = updatedLine ? `${sharedWithLine}<br>${updatedLine}` : sharedWithLine;
+            } else {
+                sharedTooltip = 'Shared';
+            }
+            statusIcons.push(`<span class="card-status-icon card-status-icon--shared has-tooltip">↔<span class="custom-tooltip" data-position="bottom-start">${sharedTooltip}</span></span>`);
         }
         if (isPinned) {
             statusIcons.push('<span class="card-status-icon card-status-icon--pinned">◆</span>');
@@ -11364,6 +11451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alphabetical: 'Alphabetical',
                 dateModified: 'Date modified',
                 inCampaign: 'In campaign',
+                pinned: 'Pinned',
             };
             const currentLabel = sortLabels[AppState.sortMode] || 'Date modified';
             sortToggleBtn.textContent = currentLabel;
@@ -11389,7 +11477,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             opt.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const value = opt.getAttribute('data-sort-value');
-                if (value === 'alphabetical' || value === 'dateModified' || value === 'inCampaign') {
+                if (value === 'alphabetical' || value === 'dateModified' || value === 'inCampaign' || value === 'pinned') {
                     AppState.sortMode = value;
                     AppState.applyFilters();
                     UI.render();

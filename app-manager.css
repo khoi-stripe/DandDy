@@ -2296,19 +2296,20 @@ input.search-input:focus {
 .panel-character-grid .search-input-wrapper .terminal-input {
     padding-right: 28px; /* make room for clear button */
     padding-left: 32px;  /* make room for leading search icon */
-    /* Search field text should use dim theme color so it feels subtle
-       even when focused, while still using shared focus borders/shadows. */
-    color: var(--ui-dim-color) !important;
+    /* Use bright color so text remains legible with 0.7 opacity */
+    color: var(--ui-fg-color) !important;
     /* iOS Safari fix: override -webkit-text-fill-color to match theme */
-    -webkit-text-fill-color: var(--ui-dim-color) !important;
+    -webkit-text-fill-color: var(--ui-fg-color) !important;
     /* Match search input text size to small button text */
     font-size: var(--font-size-base);
+    /* Match opacity of secondary buttons (terminal-btn-small) for visual consistency */
+    opacity: 0.7;
 }
 
-/* Placeholder copy (e.g., "Search all 15 characters") should also use
-   the dim theme token so it matches the input text color. */
+/* Placeholder copy (e.g., "Search all 15 characters") - use bright color
+   so it remains legible with input's 0.7 opacity */
 .panel-character-grid .search-input-wrapper .terminal-input::placeholder {
-    color: var(--ui-dim-color) !important;
+    color: var(--ui-fg-color) !important;
     /* Keep placeholder the same size as the input/button text */
     font-size: var(--font-size-base);
 }
@@ -2325,6 +2326,8 @@ input.search-input:focus {
     box-shadow: 0 0 8px var(--ui-dim-color) !important;
     color: var(--ui-fg-color) !important;
     -webkit-text-fill-color: var(--ui-fg-color) !important;
+    /* Full opacity when focused (matches button hover behavior) */
+    opacity: 1;
 }
 
 .password-input-wrapper {
@@ -2370,7 +2373,8 @@ input.search-input:focus {
     transform: translateY(-50%);
     font-size: var(--font-size-lg);
     line-height: 1;
-    color: var(--ui-dim-color);
+    /* Use bright color so it remains legible with input's 0.7 opacity */
+    color: var(--ui-fg-color);
     pointer-events: none;
 }
 
@@ -2605,43 +2609,35 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     cursor: help;
 }
 
-/* Override terminal-theme.css tooltip positioning for card status icons */
-.card-status-icon.has-tooltip .custom-tooltip,
-.card-status-icon.has-tooltip .custom-tooltip[data-position] {
-    /* Use fixed positioning to escape card's overflow:hidden */
-    position: fixed !important;
-    /* Position will be set via CSS custom properties by JS */
-    top: var(--tooltip-top, 0) !important;
-    left: var(--tooltip-left, 0) !important;
-    /* Reset the default tooltip positioning */
-    bottom: auto !important;
-    right: auto !important;
-    margin: 0 !important;
-    /* Reasonable width for readability */
-    max-width: 250px;
+/* Hide original tooltip - we use portal tooltips instead */
+.card-status-icon.has-tooltip .custom-tooltip {
+    display: none !important;
+}
+
+/* Portal tooltip styles (appended to body by JS) - matches .custom-tooltip in terminal-theme.css */
+.card-portal-tooltip {
+    max-width: 360px;
     width: max-content;
-    white-space: normal;
+    white-space: nowrap;
     text-align: left;
+    text-transform: uppercase;
     font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-normal);
     line-height: var(--line-height-snug);
-    /* Higher z-index to appear above everything */
-    z-index: 10001;
-    /* Start hidden and scaled down */
-    opacity: 0;
-    transform: scale(0.95) !important;
-    transform-origin: top left;
-    transition: opacity 0.15s ease, transform 0.15s ease;
+    padding: 4px 8px;
+    /* Match .custom-tooltip exactly */
+    background-color: rgba(0, 0, 0, 0.85);
+    color: var(--ui-dim-color, var(--sheet-accent-dim));
+    border: 1px solid var(--ui-dim-color, var(--sheet-accent-dim));
+    border-radius: 2px;
+    box-shadow: 0 0 8px var(--ui-bg-translucent, hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-dim), 0.3));
+    font-family: var(--font-mono);
+    word-break: normal;
+    overflow-wrap: break-word;
     pointer-events: none;
 }
 
-/* Show tooltip on hover (desktop only) - JS sets position */
-.card-status-icon.has-tooltip:hover .custom-tooltip,
-.card-status-icon.has-tooltip:hover .custom-tooltip[data-position] {
-    opacity: 1;
-    transform: scale(1) !important;
-}
-
-/* Elevate the hovered card above others so tooltip isn't obscured by adjacent cards */
+/* Elevate the hovered card above others */
 .character-card:has(.card-status-icon.has-tooltip:hover) {
     z-index: 100;
 }
@@ -3670,6 +3666,13 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
         border-color: var(--ui-dim-color);
         color: var(--ui-dim-color);
         opacity: 0.7;
+    }
+}
+
+/* Mobile: hide account email in header */
+@media (max-width: 768px) {
+    .terminal-header #userInfoDisplay {
+        display: none !important;
     }
 }
 
