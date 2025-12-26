@@ -677,12 +677,16 @@ const AppState = {
             return Number.isFinite(t) ? t : 0;
         };
 
-        // Handle "pinned" sort mode: filter to only pinned characters, sorted alphabetically
+        // Handle "pinned" sort mode: pinned characters at the top, then by name
         if (this.sortMode === 'pinned') {
             const pinnedIds = getPinnedCharacterIds();
-            filtered = filtered.filter(char => pinnedIds.includes(String(char.id)));
-            // Sort pinned characters alphabetically
             filtered.sort((a, b) => {
+                const aIsPinned = pinnedIds.includes(String(a.id)) ? 1 : 0;
+                const bIsPinned = pinnedIds.includes(String(b.id)) ? 1 : 0;
+                if (aIsPinned !== bIsPinned) {
+                    return bIsPinned - aIsPinned; // Pinned first
+                }
+                // Secondary sort by name
                 const nameA = (a.name || '').toLowerCase();
                 const nameB = (b.name || '').toLowerCase();
                 if (nameA === nameB) {
