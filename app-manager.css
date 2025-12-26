@@ -1309,6 +1309,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 .party-member--invited .party-member-email {
     font-style: normal;
+    font-size: var(--font-size-base);
 }
 
 /* See more link for party members when >3 */
@@ -1484,28 +1485,13 @@ div.sheet__sidebar.ui-theme-pink {
     max-width: 700px;
 }
 
-/* Stacked modal header (breadcrumb on top, title below) */
-.modal-header--stacked {
-    flex-direction: column;
-    align-items: stretch;
-}
-
-.modal-header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header--stacked .modal-title {
-    margin-top: var(--spacing-xs);
-}
-
 /* Breadcrumb navigation */
 .modal-breadcrumb {
     display: none;
     align-items: center;
     gap: var(--spacing-xs);
     font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-md);
 }
 
 .breadcrumb-link {

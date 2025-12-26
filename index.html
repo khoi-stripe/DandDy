@@ -548,16 +548,14 @@
     <!-- Past Adventures Modal -->
     <div id="pastAdventuresModal" class="modal">
         <div class="modal-content modal-content--wide">
-            <div class="modal-header modal-header--stacked">
-                <div class="modal-header-top">
-                    <div class="modal-breadcrumb" id="pastAdventuresBreadcrumb">
-                        <button class="breadcrumb-link" onclick="CampaignUI.backToPastCampaignsList()">← Past Adventures</button>
-                    </div>
-                    <button class="modal-close" onclick="CampaignUI.closePastAdventuresModal()">&times;</button>
-                </div>
+            <div class="modal-header">
                 <h2 class="modal-title" id="pastAdventuresTitle">Past Adventures</h2>
+                <button class="modal-close" onclick="CampaignUI.closePastAdventuresModal()">&times;</button>
             </div>
             <div class="modal-body">
+                <div class="modal-breadcrumb" id="pastAdventuresBreadcrumb">
+                    <button class="breadcrumb-link" onclick="CampaignUI.backToPastCampaignsList()">← Past Adventures</button>
+                </div>
                 <!-- List View (default) -->
                 <div id="pastAdventuresListView">
                     <p class="terminal-text-dim mb-md">
