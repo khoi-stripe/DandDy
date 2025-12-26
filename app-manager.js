@@ -10810,20 +10810,27 @@ function enterUsernameEditMode() {
         errorEl.classList.add('is-hidden');
     }
     
-    // Smooth transition: fade out display, fade in edit
-    displayMode.classList.add('is-fading');
+    // Smooth transition: slide out display, slide in edit
+    displayMode.classList.add('is-transitioning-out');
+    
     setTimeout(() => {
         displayMode.classList.add('is-hidden');
-        displayMode.classList.remove('is-fading');
+        displayMode.classList.remove('is-transitioning-out');
+        
+        // Prepare edit mode to slide in from below
+        editMode.classList.add('is-transitioning-in');
         editMode.classList.remove('is-hidden');
-        editMode.classList.add('is-fading');
-        // Force reflow then remove fading
+        
+        // Force reflow then animate in
         void editMode.offsetWidth;
-        editMode.classList.remove('is-fading');
-        // Focus the input
-        input.focus();
-        input.select();
-    }, 200);
+        editMode.classList.remove('is-transitioning-in');
+        
+        // Focus the input after transition
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 250);
+    }, 250);
 }
 
 /**
@@ -10844,17 +10851,21 @@ function cancelUsernameEdit() {
         errorEl.classList.add('is-hidden');
     }
     
-    // Smooth transition: fade out edit, fade in display
-    editMode.classList.add('is-fading');
+    // Smooth transition: slide out edit, slide in display
+    editMode.classList.add('is-transitioning-out');
+    
     setTimeout(() => {
         editMode.classList.add('is-hidden');
-        editMode.classList.remove('is-fading');
+        editMode.classList.remove('is-transitioning-out');
+        
+        // Prepare display mode to slide in from below
+        displayMode.classList.add('is-transitioning-in');
         displayMode.classList.remove('is-hidden');
-        displayMode.classList.add('is-fading');
-        // Force reflow then remove fading
+        
+        // Force reflow then animate in
         void displayMode.offsetWidth;
-        displayMode.classList.remove('is-fading');
-    }, 200);
+        displayMode.classList.remove('is-transitioning-in');
+    }, 250);
 }
 
 /**

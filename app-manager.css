@@ -3634,6 +3634,12 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     padding-right: var(--spacing-sm);
 }
 
+/* Hover effect on user info display itself */
+.terminal-header #userInfoDisplay:hover {
+    opacity: 1;
+    color: var(--ui-fg-color);
+}
+
 .user-status-icon {
     display: none; /* hide cloud/local glyph; we only show the text label */
 }
@@ -3727,16 +3733,28 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 /* Account modal styles */
+#accountModal .modal-content {
+    position: relative;
+}
+
 .account-mode {
-    transition: opacity 0.2s ease;
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
 .account-mode.is-hidden {
     display: none;
 }
 
-.account-mode.is-fading {
+.account-mode.is-transitioning-out {
     opacity: 0;
+    transform: translateY(-8px);
+}
+
+.account-mode.is-transitioning-in {
+    opacity: 0;
+    transform: translateY(8px);
 }
 
 .account-modal-body {
