@@ -3253,32 +3253,6 @@ const CampaignUI = (window.CampaignUI = {
         }
     },
 
-    // ========================================
-    // LEAVE CAMPAIGN
-    // ========================================
-
-    async leaveCampaign(campaignId) {
-        const confirmed = await new Promise(resolve => {
-            showConfirmDialog(
-                'Are you sure you want to leave this campaign? Your journal entries will be preserved.',
-                () => resolve(true)
-            );
-            // If they cancel, resolve false after a delay (modal closed)
-            setTimeout(() => resolve(false), 100);
-        });
-
-        if (!confirmed) return;
-
-        try {
-            await CampaignAPI.leaveCampaign(campaignId);
-            showNotification('✓ Left campaign');
-            await ExpandedView._loadCampaignPanel();
-        } catch (error) {
-            console.error('Failed to leave campaign:', error);
-            showAlertDialog(error.message || 'Failed to leave campaign.');
-        }
-    },
-
     // Copy invite code (updated to accept code parameter)
     copyInviteCodeFromPanel(code) {
         if (code && navigator.clipboard) {
