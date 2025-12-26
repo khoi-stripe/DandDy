@@ -512,7 +512,7 @@ div.sheet__sidebar.ui-theme-pink {
 /* Hover state - flip the card */
 .character-nav-bar .nav-count-link:hover,
 .sheet__nav .nav-count-link:hover {
-    background-color: var(--ui-bg-translucent);
+    /* No background on hover - keep transparent */
 }
 
 .character-nav-bar .nav-count-link:hover .nav-count-value,
@@ -3547,6 +3547,11 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     z-index: 999;
 }
 
+/* Reduce bottom padding in settings modal - the grid gap provides enough spacing */
+.builder-settings-modal .modal-body {
+    padding-bottom: var(--spacing-sm);
+}
+
 /* Settings checkbox (similar to spell picker checkbox) */
 .settings-checkbox-label {
     display: flex;
@@ -3718,6 +3723,34 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 
 .modal-section-label {
     margin-top: var(--spacing-lg);
+}
+
+/* Account modal styles */
+.account-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.account-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: hsla(var(--theme-terminal-h), var(--theme-terminal-s), var(--theme-terminal-l-bright), 0.05);
+    border: 1px solid var(--ui-border-color);
+    border-radius: var(--ui-border-radius);
+}
+
+.account-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.account-value {
+    font-size: 1rem;
+    word-break: break-all;
 }
 
 /* Ability + combat grids inside Edit Details modal */

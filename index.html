@@ -510,9 +510,10 @@
                 <div class="share-section" style="margin-top: 1.25rem;">
                     <label class="terminal-text-small modal-section-label" for="inviteModalEmail">ADD PERSON</label>
                     <div class="share-add-row">
-                        <input type="email" id="inviteModalEmail" class="terminal-input" placeholder="email@example.com" autocomplete="off" data-1p-ignore onkeydown="if(event.key==='Enter'){event.preventDefault();CampaignUI.addPendingInviteFromModal();}">
+                        <input type="text" id="inviteModalEmail" class="terminal-input" placeholder="@username or email" autocomplete="off" data-1p-ignore onkeydown="if(event.key==='Enter'){event.preventDefault();CampaignUI.addPendingInviteFromModal();}">
                         <button type="button" class="terminal-btn" id="inviteAddBtn" onclick="CampaignUI.addPendingInviteFromModal()">Add</button>
                     </div>
+                    <p class="terminal-text-tiny terminal-text-dim" style="margin-top: 0.25rem;">Type @username for existing users or email for new users</p>
                     <p id="inviteModalError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
                 </div>
             </div>
@@ -1066,7 +1067,10 @@
                 </div>
                 <div id="registerForm" class="is-hidden">
                     <p class="terminal-text">Create an account to sync your characters across devices.</p>
-                    <p class="terminal-text-small">Email:</p>
+                    <p class="terminal-text-small">Username:</p>
+                    <input type="text" id="registerUsername" class="terminal-input" placeholder="your_username" maxlength="30" pattern="[a-zA-Z0-9_]{3,30}">
+                    <p class="terminal-text-tiny terminal-text-dim">3-30 characters, letters, numbers, and underscores only</p>
+                    <p class="terminal-text-small modal-section-label">Email:</p>
                     <input type="email" id="registerEmail" class="terminal-input" placeholder="you@example.com">
                     <p class="terminal-text-small modal-section-label">Password:</p>
                     <div class="password-input-wrapper">
@@ -1131,6 +1135,35 @@
                 <button id="passwordResetCloseBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="closePasswordResetModal()">Close</button>
                 <button id="passwordResetRequestBtn" class="terminal-btn terminal-btn-primary" onclick="handlePasswordResetRequest()">Send reset link</button>
                 <button id="passwordResetConfirmBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handlePasswordResetConfirm()">Set new password</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Account Management Modal -->
+    <div id="accountModal" class="modal">
+        <div class="modal-content modal-content--narrow">
+            <div class="modal-header">
+                <h2 class="modal-title">MY ACCOUNT</h2>
+                <button class="modal-close" onclick="closeAccountModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="account-info">
+                    <div class="account-field">
+                        <span class="account-label terminal-text-small terminal-text-dim">Username:</span>
+                        <span class="account-value terminal-text" id="accountUsername">@username</span>
+                    </div>
+                    <div class="account-field">
+                        <span class="account-label terminal-text-small terminal-text-dim">Email:</span>
+                        <span class="account-value terminal-text" id="accountEmail">email@example.com</span>
+                    </div>
+                </div>
+                <p class="terminal-text-tiny terminal-text-dim" style="margin-top: 1rem;">
+                    More account management options coming soon.
+                </p>
+            </div>
+            <div class="modal-footer modal-footer-end">
+                <button class="terminal-btn" onclick="closeAccountModal()">Close</button>
+                <button class="terminal-btn terminal-btn-secondary" onclick="closeAccountModal(); handleLogout();">Log out</button>
             </div>
         </div>
     </div>

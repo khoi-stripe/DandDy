@@ -5,6 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
+from sqlalchemy import func
 from database.database import get_db, get_settings
 from models.user import User
 from schemas.user import (
@@ -15,6 +16,7 @@ from schemas.user import (
     PasswordResetRequest,
     PasswordResetConfirm,
     PinnedCharactersUpdate,
+    UsernameUpdate,
 )
 import json
 from utils.auth import (
@@ -63,17 +65,27 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         )
     
     # Check if a user with this email already exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
-
-    if existing_user:
+    existing_email = db.query(User).filter(User.email == user_data.email).first()
+    if existing_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User with this email already exists",
         )
 
-    # Create new user (email is the only required identifier)
+    # Check if username is already taken (case-insensitive)
+    existing_username = db.query(User).filter(
+        func.lower(User.username) == user_data.username.lower()
+    ).first()
+    if existing_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This username is already taken",
+        )
+
+    # Create new user with username and email
     hashed_password = get_password_hash(user_data.password)
     new_user = User(
+        username=user_data.username.lower(),  # Store lowercase for consistency
         email=user_data.email,
         hashed_password=hashed_password,
         role=user_data.role,
@@ -214,6 +226,42 @@ def reset_password(data: PasswordResetConfirm, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(get_current_active_user)):
+    return current_user
+
+
+@router.put("/username", response_model=UserResponse)
+def update_username(
+    data: UsernameUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Update the current user's username.
+    Username must be unique (case-insensitive) and follow validation rules.
+    """
+    new_username = data.username.lower()
+    
+    # Check if new username is same as current (no-op)
+    if current_user.username == new_username:
+        return current_user
+    
+    # Check if username is already taken by another user
+    existing = db.query(User).filter(
+        func.lower(User.username) == new_username,
+        User.id != current_user.id
+    ).first()
+    
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This username is already taken",
+        )
+    
+    current_user.username = new_username
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    
     return current_user
 
 

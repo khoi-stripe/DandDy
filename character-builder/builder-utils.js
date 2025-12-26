@@ -130,6 +130,24 @@ const Utils = window.Utils = {
     return modifier >= 0 ? `+${modifier}` : `${modifier}`;
   },
 
+  /**
+   * Format a date as compact MM/DD/YY string
+   * @param {string|Date} dateInput - Date string or Date object
+   * @returns {string} - Formatted date like "12/26/25" or empty string on error
+   */
+  formatCompactDate(dateInput) {
+    if (!dateInput) return '';
+    try {
+      const date = dateInput instanceof Date ? dateInput : new Date(dateInput);
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      const year = date.getFullYear() % 100;
+      return `${month}/${day}/${year.toString().padStart(2, '0')}`;
+    } catch (e) {
+      return '';
+    }
+  },
+
   // Capitalize first letter
   capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);

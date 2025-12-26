@@ -56,3 +56,4 @@ class AppConfigResponse(BaseModel):
         from_attributes = True
 
 
+

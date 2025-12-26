@@ -246,14 +246,24 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
+    const usernameEl = document.getElementById('registerUsername');
+    const username = usernameEl ? usernameEl.value.trim() : '';
     const email = document.getElementById('registerEmail').value.trim();
     const password = document.getElementById('registerPassword').value;
     const passwordConfirmEl = document.getElementById('registerPasswordConfirm');
     const passwordConfirm = passwordConfirmEl ? passwordConfirmEl.value : '';
     const errorEl = document.getElementById('authError');
 
-    if (!email || !password || (passwordConfirmEl && !passwordConfirm)) {
+    if (!username || !email || !password || (passwordConfirmEl && !passwordConfirm)) {
         errorEl.textContent = 'Please fill in all fields';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
+    // Validate username format
+    const usernamePattern = /^[a-zA-Z0-9_]{3,30}$/;
+    if (!usernamePattern.test(username)) {
+        errorEl.textContent = 'Username must be 3-30 characters, using only letters, numbers, and underscores';
         errorEl.classList.remove('is-hidden');
         return;
     }
@@ -265,11 +275,11 @@ async function handleRegister() {
     }
 
     try {
-        const result = await window.AuthService.register(email, password);
+        const result = await window.AuthService.register(username, email, password);
         if (result.success) {
             closeAuthModal();
             updateAuthUI();
-            console.log(`✓ Registered as ${email}`);
+            console.log(`✓ Registered as @${username}`);
 
             // Start session monitoring now that user is logged in
             if (typeof window.AuthService.startSessionMonitor === 'function') {
@@ -325,7 +335,9 @@ function updateAuthUI() {
     if (window.AuthService && window.AuthService.isAuthenticated()) {
         const user = window.AuthService.getCurrentUser();
         userStatusIcon.textContent = '☁';
-        userStatusText.textContent = user ? user.email : 'Logged In';
+        // Show username if available, fall back to email
+        const displayName = user?.username ? `@${user.username}` : (user?.email || 'Logged In');
+        userStatusText.textContent = displayName;
         authBtn.textContent = 'Log out';
         authBtn.onclick = handleLogout;
     } else {

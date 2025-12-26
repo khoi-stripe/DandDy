@@ -1,5 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from database.database import get_db
 from models.user import User
@@ -11,6 +12,7 @@ from schemas.character_share import (
     CharacterShareResponse,
     PendingShareResponse,
     CharacterPreview,
+    CollaboratorResponse,
 )
 from utils.auth import get_current_active_user
 
@@ -25,10 +27,10 @@ def share_character(
     db: Session = Depends(get_db)
 ):
     """
-    Share a character with another user by email.
+    Share a character with another user by username (primary) or email (fallback).
     
     The recipient will see a pending share notification when they next log in.
-    They can choose to accept (copies the character) or dismiss (ignores forever).
+    They can choose to accept (becomes collaborator) or dismiss (ignores forever).
     """
     # Verify the character exists and belongs to current user
     character = db.query(Character).filter(Character.id == character_id).first()
@@ -45,8 +47,31 @@ def share_character(
             detail="You can only share your own characters"
         )
     
+    # Find recipient by username (primary) or email (fallback)
+    recipient_email = None
+    
+    if share_data.to_username:
+        # Lookup user by username
+        recipient_user = db.query(User).filter(
+            func.lower(User.username) == share_data.to_username.lower()
+        ).first()
+        
+        if not recipient_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No user found with username @{share_data.to_username}"
+            )
+        
+        recipient_email = recipient_user.email.lower()
+    elif share_data.to_email:
+        recipient_email = share_data.to_email.lower()
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Must provide either to_username or to_email"
+        )
+    
     # Prevent sharing with yourself
-    recipient_email = share_data.to_email.lower()
     if recipient_email == current_user.email.lower():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -63,7 +88,7 @@ def share_character(
     if existing_share:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A pending share already exists for this character and email"
+            detail="A pending share already exists for this character and user"
         )
     
     # Create the share record
@@ -130,6 +155,7 @@ def get_pending_shares(
                 ascii_portrait=share.character.ascii_portrait,
                 original_portrait_url=share.character.original_portrait_url
             ),
+            from_username=share.from_user.username if share.from_user else None,
             from_email=share.from_user.email if share.from_user else "Unknown",
             created_at=share.created_at
         ))

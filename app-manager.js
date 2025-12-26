@@ -1447,16 +1447,22 @@ const ExpandedView = (window.ExpandedView = {
         
         // Add pending invitations (only visible to creator)
         if (isCreator && pendingInvites && pendingInvites.length > 0) {
-            const invitesHtml = pendingInvites.map(invite => `
+            const invitesHtml = pendingInvites.map(invite => {
+                // Prefer username over email for display
+                const displayName = invite.username 
+                    ? `@${Utils.escapeHtml(invite.username)}` 
+                    : Utils.escapeHtml(invite.email);
+                return `
                 <div class="party-member party-member--invited">
                     <span class="party-member-left">
-                        <span class="party-member-name party-member-email">${Utils.escapeHtml(invite.email)}</span>
+                        <span class="party-member-name party-member-email">${displayName}</span>
                         <span class="party-member-invited-tag">Invited</span>
                     </span>
                     <span class="party-member-right">
                     </span>
                 </div>
-            `).join('');
+            `;
+            }).join('');
             partyHtml += invitesHtml;
         }
 
@@ -1626,7 +1632,7 @@ const ExpandedView = (window.ExpandedView = {
                 .filter(m => m.character)  // Only members with assigned characters
                 .map(m => ({
                     userId: m.user_id,
-                    label: m.character?.name || m.user_email || 'Unknown',
+                    label: m.character?.name || (m.username ? `@${m.username}` : m.user_email) || 'Unknown',
                     symbol: m.symbol || '',
                     isSelected: selectedUserId === m.user_id,
                 }))
@@ -1987,13 +1993,13 @@ const CampaignUI = (window.CampaignUI = {
             const inviteFailures = [];
             if (this._createCampaignPendingInvites.length > 0) {
                 console.log('🏰 Sending', this._createCampaignPendingInvites.length, 'invites...');
-                for (const email of this._createCampaignPendingInvites) {
+                for (const identifier of this._createCampaignPendingInvites) {
                     try {
-                        await CampaignAPI.inviteByEmail(campaign.id, email);
-                        console.log('🏰 Invited:', email);
+                        await CampaignAPI.inviteByUsernameOrEmail(campaign.id, identifier);
+                        console.log('🏰 Invited:', identifier);
                     } catch (inviteError) {
-                        console.warn('🏰 Failed to invite', email, ':', inviteError);
-                        inviteFailures.push({ email, error: inviteError.message || 'Unknown error' });
+                        console.warn('🏰 Failed to invite', identifier, ':', inviteError);
+                        inviteFailures.push({ identifier, error: inviteError.message || 'Unknown error' });
                     }
                 }
             }
@@ -2007,8 +2013,8 @@ const CampaignUI = (window.CampaignUI = {
             // Show warnings as alert dialog if any
             let warning = assignmentWarning;
             if (inviteFailures.length > 0) {
-                const failedEmails = inviteFailures.map(f => f.email).join(', ');
-                const inviteWarning = `Could not invite: ${failedEmails}`;
+                const failedIdentifiers = inviteFailures.map(f => f.identifier).join(', ');
+                const inviteWarning = `Could not invite: ${failedIdentifiers}`;
                 warning = warning ? `${warning}\n\n${inviteWarning}` : inviteWarning;
             }
             if (warning) {
@@ -2088,16 +2094,22 @@ const CampaignUI = (window.CampaignUI = {
             return;
         }
         
-        listEl.innerHTML = invitations.map(inv => `
+        listEl.innerHTML = invitations.map(inv => {
+            // Prefer username over email for inviter display
+            const inviterDisplay = inv.invited_by_username 
+                ? `@${Utils.escapeHtml(inv.invited_by_username)}`
+                : (inv.invited_by_email ? Utils.escapeHtml(inv.invited_by_email) : null);
+            return `
             <div class="invitation-item" data-campaign-id="${inv.campaign_id}" onclick="CampaignUI.selectInvitation(${inv.campaign_id})">
                 <div class="invitation-radio"></div>
                 <div class="invitation-info">
                     <div class="invitation-name">${Utils.escapeHtml(inv.campaign_name)}</div>
-                    ${inv.invited_by_email ? `<div class="invitation-inviter">Invited by ${Utils.escapeHtml(inv.invited_by_email)}</div>` : ''}
+                    ${inviterDisplay ? `<div class="invitation-inviter">Invited by ${inviterDisplay}</div>` : ''}
                     ${inv.campaign_description ? `<div class="invitation-desc">${Utils.escapeHtml(inv.campaign_description)}</div>` : ''}
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
     },
     
     selectInvitation(campaignId) {
@@ -2306,9 +2318,13 @@ const CampaignUI = (window.CampaignUI = {
             const isPending = inv.status === 'invited';
             const statusLabel = isPending ? 'PENDING' : 'MEMBER';
             const statusClass = isPending ? 'share-collaborator-pending' : '';
+            // Prefer username over email for display
+            const displayName = inv.username 
+                ? `@${Utils.escapeHtml(inv.username)}` 
+                : Utils.escapeHtml(inv.email);
             return `
             <div class="share-collaborator-item ${statusClass}" data-invite-id="${inv.id}">
-                <span class="share-collaborator-email">${Utils.escapeHtml(inv.email)}</span>
+                <span class="share-collaborator-email">${displayName}</span>
                 <span class="share-collaborator-status">${statusLabel}</span>
                 <button type="button" class="share-collaborator-remove" onclick="CampaignUI.removeMember(${inv.id}, ${isPending})" title="${isPending ? 'Cancel invite' : 'Remove from campaign'}">×</button>
             </div>
@@ -2352,22 +2368,45 @@ const CampaignUI = (window.CampaignUI = {
     async addPendingInviteFromModal() {
         const input = document.getElementById('inviteModalEmail');
         const addBtn = document.getElementById('inviteAddBtn');
-        const email = input?.value?.trim().toLowerCase();
+        const rawValue = input?.value?.trim();
         const errorEl = document.getElementById('inviteModalError');
         
-        if (!email) return;
+        if (!rawValue) return;
         
-        // Basic email validation
-        if (!email.includes('@') || !email.includes('.')) {
-            if (errorEl) {
-                errorEl.textContent = 'Please enter a valid email address';
-                errorEl.style.display = 'block';
+        // Determine if this is a username (@user) or email
+        const isUsername = rawValue.startsWith('@');
+        const identifier = isUsername ? rawValue.toLowerCase() : rawValue.toLowerCase();
+        
+        // Validation
+        if (isUsername) {
+            // Username validation: @username (3-30 chars, alphanumeric + underscore)
+            const usernamePattern = /^@[a-zA-Z0-9_]{3,30}$/;
+            if (!usernamePattern.test(rawValue)) {
+                if (errorEl) {
+                    errorEl.textContent = 'Username must be 3-30 characters (letters, numbers, underscores)';
+                    errorEl.style.display = 'block';
+                }
+                return;
             }
-            return;
+        } else {
+            // Basic email validation
+            if (!identifier.includes('@') || !identifier.includes('.')) {
+                if (errorEl) {
+                    errorEl.textContent = 'Enter @username or a valid email address';
+                    errorEl.style.display = 'block';
+                }
+                return;
+            }
         }
         
         // Check for duplicates in existing invitations
-        if (this._existingInvitations.some(inv => inv.email.toLowerCase() === email)) {
+        const isDuplicate = this._existingInvitations.some(inv => {
+            if (isUsername) {
+                return inv.username && `@${inv.username}`.toLowerCase() === identifier;
+            }
+            return inv.email.toLowerCase() === identifier;
+        });
+        if (isDuplicate) {
             if (errorEl) {
                 errorEl.textContent = 'This person has already been invited';
                 errorEl.style.display = 'block';
@@ -2387,8 +2426,8 @@ const CampaignUI = (window.CampaignUI = {
         }
         
         try {
-            // Send invitation immediately
-            await CampaignAPI.inviteByEmail(this._invitingCampaign.id, email);
+            // Send invitation (API handles @username vs email)
+            await CampaignAPI.inviteByUsernameOrEmail(this._invitingCampaign.id, identifier);
             
             // Refresh the list
             await this._loadExistingInvitations(this._invitingCampaign.id);
@@ -5126,18 +5165,7 @@ const UI = {
             const updatedAt = character.updatedAt || character.updated_at;
             let lastUpdatedText = '';
             if (updatedAt) {
-                try {
-                    const date = new Date(updatedAt);
-                    lastUpdatedText = date.toLocaleString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit',
-                    });
-                } catch (e) {
-                    lastUpdatedText = '';
-                }
+                lastUpdatedText = Utils.formatCompactDate(updatedAt);
             }
             
             let sharedTooltip = '';
@@ -6385,9 +6413,10 @@ async function openShareModal(characterId) {
             <div class="share-section" style="margin-top: 1.25rem;">
               <label class="terminal-text-small modal-section-label" for="shareEmailInput">ADD PERSON</label>
               <div class="share-add-row">
-                <input type="email" id="shareEmailInput" class="terminal-input" placeholder="email@example.com" autocomplete="off" data-1p-ignore>
+                <input type="text" id="shareEmailInput" class="terminal-input" placeholder="@username or email" autocomplete="off" data-1p-ignore>
                 <button class="terminal-btn" id="shareAddBtn">Add</button>
               </div>
+              <p class="terminal-text-tiny terminal-text-dim" style="margin-top: 0.25rem;">Type @username for existing users or email for new users</p>
               <p id="shareEmailError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
             </div>
           </div>
@@ -6442,12 +6471,18 @@ async function openShareModal(characterId) {
         collaboratorsSection.style.display = 'block';
         
         // Build HTML for collaborators (accepted)
-        const collabHtml = (collaborators || []).map(collab => `
+        const collabHtml = (collaborators || []).map(collab => {
+            // Prefer username over email for display
+            const displayName = collab.username 
+                ? `@${Utils.escapeHtml(collab.username)}` 
+                : Utils.escapeHtml(collab.user_email);
+            return `
             <div class="share-collaborator-item" data-id="${collab.id}" data-type="collaborator">
-                <span class="share-collaborator-email">${Utils.escapeHtml(collab.user_email)}</span>
+                <span class="share-collaborator-email">${displayName}</span>
                 <button class="share-collaborator-remove" title="Remove access" data-id="${collab.id}" data-type="collaborator">&times;</button>
             </div>
-        `).join('');
+        `;
+        }).join('');
         
         // Build HTML for pending shares
         const pendingHtml = (pendingShares || []).map(share => `
@@ -6533,16 +6568,30 @@ async function openShareModal(characterId) {
     });
 
     addBtn.addEventListener('click', async () => {
-        const email = input.value.trim().toLowerCase();
+        const rawValue = input.value.trim();
         
-        if (!email) {
-            showError('Please enter an email address');
+        if (!rawValue) {
+            showError('Please enter @username or email address');
             return;
         }
         
-        if (!isValidEmail(email)) {
-            showError('Please enter a valid email address');
-            return;
+        // Determine if this is a username (@user) or email
+        const isUsername = rawValue.startsWith('@');
+        const identifier = rawValue.toLowerCase();
+        
+        // Validation
+        if (isUsername) {
+            // Username validation: @username (3-30 chars, alphanumeric + underscore)
+            const usernamePattern = /^@[a-zA-Z0-9_]{3,30}$/;
+            if (!usernamePattern.test(rawValue)) {
+                showError('Username must be 3-30 characters (letters, numbers, underscores)');
+                return;
+            }
+        } else {
+            if (!isValidEmail(identifier)) {
+                showError('Enter @username or a valid email address');
+                return;
+            }
         }
 
         // Disable button while processing
@@ -6550,9 +6599,14 @@ async function openShareModal(characterId) {
         addBtn.textContent = 'ADDING...';
 
         try {
-            await CharacterCloudStorage.shareCharacter(characterId, email);
+            // Build share data based on type
+            const shareData = isUsername 
+                ? { to_username: identifier.substring(1) }  // Remove @ prefix
+                : { to_email: identifier };
+            
+            await CharacterCloudStorage.shareCharacterByUsernameOrEmail(characterId, shareData);
             input.value = '';
-            showNotification(`Invitation sent to ${email}`);
+            showNotification(`Invitation sent to ${identifier}`);
             // Refresh the access list (shows pending invitation)
             await loadAccessList();
         } catch (error) {
@@ -6623,7 +6677,10 @@ function showPendingSharesModal(shares) {
         const safeClass = Utils.escapeHtml(toTitleCase(char.character_class || 'Unknown'));
         const level = char.level || 1;
         const safeBackground = Utils.escapeHtml(toTitleCase(char.background || '—'));
-        const fromEmail = Utils.escapeHtml(share.from_email || 'Unknown');
+        // Prefer username over email for sender display
+        const fromDisplay = share.from_username 
+            ? `@${Utils.escapeHtml(share.from_username)}`
+            : Utils.escapeHtml(share.from_email || 'Unknown');
         
         // Format sex (title case)
         const safeSex = Utils.escapeHtml(toTitleCase(char.sex));
@@ -6665,7 +6722,7 @@ function showPendingSharesModal(shares) {
                   </div>
                 </div>
                 <p class="share-card-from">
-                  From: ${fromEmail} · ${dateStr}
+                  From: ${fromDisplay} · ${dateStr}
                 </p>
                 <div class="share-card-actions">
                   <button class="terminal-btn pending-share-ignore" data-share-id="${share.id}">Ignore</button>
@@ -10052,6 +10109,10 @@ async function cancelAuthFlow() {
             loginPassword.value = '';
             loginPassword.type = 'password';
         }
+        const registerUsername = document.getElementById('registerUsername');
+        if (registerUsername) {
+            registerUsername.value = '';
+        }
         document.getElementById('registerEmail').value = '';
         const registerPassword = document.getElementById('registerPassword');
         if (registerPassword) {
@@ -10099,6 +10160,10 @@ function closeAuthModal(animate = false) {
         if (loginPassword) {
             loginPassword.value = '';
             loginPassword.type = 'password';
+        }
+        const registerUsername = document.getElementById('registerUsername');
+        if (registerUsername) {
+            registerUsername.value = '';
         }
         document.getElementById('registerEmail').value = '';
         const registerPassword = document.getElementById('registerPassword');
@@ -10337,7 +10402,10 @@ async function handleLogin() {
             sessionStorage.setItem('welcomeSplashDismissed', 'true');
             closeAuthModal();
             updateAuthUI();
-            showNotification(`✓ Logged in as ${email}`);
+            // Show username in notification if available
+            const user = window.AuthService.getCurrentUser();
+            const displayName = user?.username ? `@${user.username}` : email;
+            showNotification(`✓ Logged in as ${displayName}`);
 
             // Start session monitoring now that user is logged in
             if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
@@ -10382,16 +10450,26 @@ async function handleRegister() {
     // the DOM a short moment to settle before reading values.
     await new Promise((resolve) => setTimeout(resolve, 50));
 
+    const usernameInput = document.getElementById('registerUsername');
     const emailInput = document.getElementById('registerEmail');
     const passwordInput = document.getElementById('registerPassword');
     const passwordConfirmInput = document.getElementById('registerPasswordConfirm');
 
+    const username = usernameInput ? usernameInput.value.trim() : '';
     const email = emailInput ? emailInput.value.trim() : '';
     const password = passwordInput ? passwordInput.value : '';
     const passwordConfirm = passwordConfirmInput ? passwordConfirmInput.value : '';
 
-    if (!email || !password || !passwordConfirm) {
+    if (!username || !email || !password || !passwordConfirm) {
         errorEl.textContent = 'Please fill in all fields';
+        errorEl.classList.remove('is-hidden');
+        return;
+    }
+
+    // Validate username format
+    const usernamePattern = /^[a-zA-Z0-9_]{3,30}$/;
+    if (!usernamePattern.test(username)) {
+        errorEl.textContent = 'Username must be 3-30 characters, using only letters, numbers, and underscores';
         errorEl.classList.remove('is-hidden');
         return;
     }
@@ -10413,13 +10491,13 @@ async function handleRegister() {
     setAuthLoading(true, 'CREATING ACCOUNT...');
 
     try {
-        const result = await window.AuthService.register(email, password);
+        const result = await window.AuthService.register(username, email, password);
         if (result.success) {
             // Mark splash as dismissed on successful registration
             sessionStorage.setItem('welcomeSplashDismissed', 'true');
             closeAuthModal();
             updateAuthUI();
-            showNotification(`✓ Registered as ${email}`);
+            showNotification(`✓ Registered as @${username}`);
 
             // Start session monitoring now that user is logged in
             if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
@@ -10612,6 +10690,53 @@ function closePasswordResetModal(animate = true) {
     }
 }
 
+// ========================================
+// ACCOUNT MANAGEMENT MODAL
+// ========================================
+
+/**
+ * Open the account management modal.
+ * Shows current user's username and email.
+ */
+function openAccountModal() {
+    const modal = document.getElementById('accountModal');
+    if (!modal) return;
+    
+    const user = window.AuthService ? window.AuthService.getCurrentUser() : null;
+    if (!user) return;
+    
+    // Populate account info
+    const usernameEl = document.getElementById('accountUsername');
+    const emailEl = document.getElementById('accountEmail');
+    
+    if (usernameEl) {
+        usernameEl.textContent = user.username ? `@${user.username}` : 'Not set';
+    }
+    if (emailEl) {
+        emailEl.textContent = user.email || 'Not set';
+    }
+    
+    modal.classList.add('show');
+    syncAuthFlowDim();
+}
+
+/**
+ * Close the account management modal.
+ * @param {boolean} [animate=true] - Whether to animate the close
+ * @returns {Promise|void} Returns a Promise if animated
+ */
+function closeAccountModal(animate = true) {
+    const modal = document.getElementById('accountModal');
+    if (!modal) return;
+    
+    if (animate) {
+        return animateModalClose(modal);
+    } else {
+        modal.classList.remove('show');
+        syncAuthFlowDim();
+    }
+}
+
 async function handlePasswordResetRequest() {
     const emailInput = document.getElementById('passwordResetEmail');
     const messageEl = document.getElementById('passwordResetMessage');
@@ -10800,7 +10925,14 @@ function updateAuthUI() {
     if (window.AuthService && window.AuthService.isAuthenticated()) {
         const user = window.AuthService.getCurrentUser();
         userStatusIcon.textContent = '☁';
-        userStatusText.textContent = user ? user.email : 'Logged In';
+        // Show username if available, fall back to email
+        const displayName = user?.username ? `@${user.username}` : (user?.email || 'Logged In');
+        userStatusText.textContent = displayName;
+        // Make username clickable to open account modal
+        userStatusText.style.cursor = 'pointer';
+        userStatusText.onclick = openAccountModal;
+        userStatusText.title = 'Manage account';
+        
         authBtn.textContent = 'Log out';
         authBtn.onclick = handleLogout;
         
@@ -10815,6 +10947,10 @@ function updateAuthUI() {
     } else {
         userStatusIcon.textContent = '▣';
         userStatusText.textContent = 'Guest Mode';
+        userStatusText.style.cursor = 'default';
+        userStatusText.onclick = null;
+        userStatusText.title = '';
+        
         authBtn.textContent = 'LOG IN';
         authBtn.onclick = () => {
             authOpenedFromWelcome = false;

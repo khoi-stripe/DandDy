@@ -609,13 +609,14 @@ def get_campaign_members(
         CampaignMember.status == MemberStatus.ACTIVE
     ).all()
     
-    # Build response with user email, journal visibility, and symbol
+    # Build response with username, user email, journal visibility, and symbol
     # journal_visibility is now a String column
     return [
         CampaignMemberResponse(
             id=m.id,
             campaign_id=m.campaign_id,
             user_id=m.user_id,
+            username=m.user.username if m.user else None,
             user_email=m.user.email if m.user else None,
             is_creator=m.is_creator,
             status=m.status.value if hasattr(m.status, 'value') else str(m.status),
@@ -663,6 +664,7 @@ def update_journal_visibility(
         id=membership.id,
         campaign_id=membership.campaign_id,
         user_id=membership.user_id,
+        username=membership.user.username if membership.user else None,
         user_email=membership.user.email if membership.user else None,
         is_creator=membership.is_creator,
         status=membership.status.value if hasattr(membership.status, 'value') else str(membership.status),
@@ -794,6 +796,7 @@ def get_pending_invitations(
             campaign_name=inv.campaign.name,
             campaign_description=inv.campaign.description,
             invited_at=inv.joined_at,
+            invited_by_username=inv.invited_by.username if inv.invited_by else None,
             invited_by_email=inv.invited_by.email if inv.invited_by else None
         )
         for inv in invitations
@@ -801,19 +804,24 @@ def get_pending_invitations(
 
 
 @router.post("/{campaign_id}/invite", status_code=status.HTTP_201_CREATED)
-def invite_user_by_email(
+def invite_user(
     campaign_id: int,
     invite_data: CampaignInviteByEmail,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Invite a user to a campaign by email. Only the creator can invite."""
-    # #region agent log - debug wrapper
+    """
+    Invite a user to a campaign by username (primary) or email (fallback for non-users).
+    Only the creator can invite.
+    
+    - If username is provided, lookup by username (for existing users)
+    - If email is provided without username, lookup by email (for acquisition funnel)
+    """
+    from sqlalchemy import func
     import traceback
     debug_step = "start"
     try:
         debug_step = "campaign_lookup"
-        # #endregion
         campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
         
         if not campaign:
@@ -823,25 +831,44 @@ def invite_user_by_email(
             )
         
         # Only creator can invite
-        # #region agent log
         debug_step = "permission_check"
-        # #endregion
         if campaign.dm_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only the campaign creator can invite users"
             )
         
-        # Find user by email
-        # #region agent log
+        # Find user by username (primary) or email (fallback)
         debug_step = "user_lookup"
-        # #endregion
-        invited_user = db.query(User).filter(User.email == invite_data.email).first()
+        invited_user = None
+        identifier_display = None  # For response message
         
-        if not invited_user:
+        if invite_data.username:
+            # Strip @ prefix if present
+            clean_username = invite_data.username.lstrip('@').lower()
+            invited_user = db.query(User).filter(
+                func.lower(User.username) == clean_username
+            ).first()
+            identifier_display = f"@{clean_username}"
+            
+            if not invited_user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"No user found with username @{clean_username}"
+                )
+        elif invite_data.email:
+            invited_user = db.query(User).filter(User.email == invite_data.email).first()
+            identifier_display = invite_data.email
+            
+            if not invited_user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No user found with that email address"
+                )
+        else:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No user found with that email address"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Must provide either username or email"
             )
         
         if invited_user.id == current_user.id:
@@ -851,9 +878,7 @@ def invite_user_by_email(
             )
         
         # Check if already a member or invited
-        # #region agent log
         debug_step = "existing_member_query"
-        # #endregion
         existing = db.query(CampaignMember).filter(
             CampaignMember.campaign_id == campaign_id,
             CampaignMember.user_id == invited_user.id,
@@ -873,9 +898,7 @@ def invite_user_by_email(
                 )
         
         # Create invitation (membership with INVITED status)
-        # #region agent log
         debug_step = "create_invitation"
-        # #endregion
         invitation = CampaignMember(
             campaign_id=campaign_id,
             user_id=invited_user.id,
@@ -883,17 +906,12 @@ def invite_user_by_email(
             status=MemberStatus.INVITED,
             invited_by_id=current_user.id  # Track who sent the invitation
         )
-        # #region agent log
         debug_step = "db_add"
-        # #endregion
         db.add(invitation)
-        # #region agent log
         debug_step = "db_commit"
-        # #endregion
         db.commit()
         
-        return {"message": f"Invitation sent to {invite_data.email}"}
-    # #region agent log - debug error handler
+        return {"message": f"Invitation sent to {identifier_display}"}
     except HTTPException:
         raise
     except Exception as e:
@@ -904,7 +922,6 @@ def invite_user_by_email(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=error_detail
         )
-    # #endregion
 
 
 @router.get("/{campaign_id}/pending-invitations", response_model=List[CampaignPendingInviteResponse])
@@ -942,6 +959,7 @@ def get_campaign_pending_invitations(
         CampaignPendingInviteResponse(
             id=m.id,
             user_id=m.user_id,
+            username=m.user.username if m.user else None,
             email=m.user.email,
             status=m.status.value,
             invited_at=m.joined_at

@@ -26,3 +26,4 @@ ORDER BY c.created_at DESC;
 -- To delete the "Quest for Tamiflu" campaign specifically:
 -- DELETE FROM campaigns WHERE name = 'Quest for Tamiflu' AND status = 'active';
 
+

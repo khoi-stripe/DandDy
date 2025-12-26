@@ -831,18 +831,9 @@ const CharacterSheet = (window.CharacterSheet = {
       const updatedAt = character.updatedAt || character.updated_at;
       let lastUpdatedText = '';
       if (updatedAt) {
-        try {
-          const date = new Date(updatedAt);
-          lastUpdatedText = date.toLocaleString(undefined, {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: 'numeric',
-            minute: '2-digit',
-          });
-        } catch (e) {
-          lastUpdatedText = '';
-        }
+        lastUpdatedText = window.Utils && Utils.formatCompactDate 
+          ? Utils.formatCompactDate(updatedAt)
+          : '';
       }
       
       // Format who last updated

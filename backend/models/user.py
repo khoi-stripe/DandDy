@@ -13,11 +13,11 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    # Email is now the single unique identifier for accounts
+    # Email is a unique identifier for accounts (used for login)
     email = Column(String, unique=True, index=True, nullable=False)
-    # Username is deprecated – kept nullable for backward-compatibility with
-    # existing databases, but no longer used for login or registration.
-    username = Column(String, nullable=True)
+    # Username is required and unique - displayed in UI and used for invitations
+    # Rules: 3-30 chars, alphanumeric + underscore only
+    username = Column(String(30), unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.PLAYER, nullable=False)
     # Pinned character IDs stored as JSON array string, e.g. '["1", "5", "3"]'

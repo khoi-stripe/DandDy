@@ -14,3 +14,4 @@ ALTER TABLE campaigns ADD COLUMN ended_at TIMESTAMP NULL;
 CREATE INDEX IF NOT EXISTS idx_campaign_members_left_at ON campaign_members(left_at);
 CREATE INDEX IF NOT EXISTS idx_campaigns_ended_at ON campaigns(ended_at);
 
+

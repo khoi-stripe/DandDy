@@ -162,24 +162,25 @@
     // ===== Auth flows =====
 
     /**
-     * Register a new user using email + password.
+     * Register a new user using username + email + password.
      * Returns { success, user, error }.
      *
-     * For backward-compatibility with older backend deployments that still
-     * expect a `username` field, we derive a simple username from the email
-     * (typically the part before "@"). Newer backends that ignore usernames
-     * will simply drop this extra field.
+     * @param {string} username - Required unique username (3-30 chars, alphanumeric + underscore)
+     * @param {string} email - User's email address
+     * @param {string} password - User's password
+     * @param {string|null} role - Optional role (PLAYER, DM, ADMIN)
      */
-    async register(email, password, role = null) {
+    async register(username, email, password, role = null) {
       try {
-        const derivedUsername =
-          typeof email === 'string' && email.includes('@')
-            ? email.split('@')[0]
-            : email;
+        // Validate username format on client side
+        const usernamePattern = /^[a-zA-Z0-9_]{3,30}$/;
+        if (!usernamePattern.test(username)) {
+          throw new Error('Username must be 3-30 characters, using only letters, numbers, and underscores');
+        }
 
         // Build request body - only include role if explicitly provided
         // Backend defaults to PLAYER if not specified
-        const body = { username: derivedUsername, email, password };
+        const body = { username: username.toLowerCase(), email, password };
         if (role) {
           // Normalize to uppercase (backend expects 'PLAYER', 'DM', or 'ADMIN')
           body.role = role.toUpperCase();
@@ -187,8 +188,6 @@
 
         const data = await this._request('/auth/register', {
           method: 'POST',
-          // Backend identifies accounts by email only; username is legacy.
-          // Sending both keeps us compatible with older API versions.
           body,
         });
 
@@ -198,18 +197,49 @@
 
         this.setToken(data.access_token);
 
-        // Try to fetch full user profile; fall back to a minimal email-only object.
+        // Try to fetch full user profile; fall back to a minimal object.
         const profile = await this.fetchProfile();
         const user =
           profile && Object.keys(profile).length
             ? profile
-            : { email, role };
+            : { username, email, role };
 
         this.setCurrentUser(user);
 
         return { success: true, user };
       } catch (error) {
         return { success: false, error: error.message || 'Registration failed' };
+      }
+    },
+
+    /**
+     * Update the current user's username.
+     * @param {string} newUsername - New username (3-30 chars, alphanumeric + underscore)
+     * @returns {Promise<{success: boolean, user?: object, error?: string}>}
+     */
+    async updateUsername(newUsername) {
+      try {
+        const usernamePattern = /^[a-zA-Z0-9_]{3,30}$/;
+        if (!usernamePattern.test(newUsername)) {
+          throw new Error('Username must be 3-30 characters, using only letters, numbers, and underscores');
+        }
+
+        const token = this.getToken();
+        if (!token) {
+          throw new Error('Not authenticated');
+        }
+
+        const data = await this._request('/auth/username', {
+          method: 'PUT',
+          body: { username: newUsername.toLowerCase() },
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        // Update local user info
+        this.setCurrentUser(data);
+        return { success: true, user: data };
+      } catch (error) {
+        return { success: false, error: error.message || 'Failed to update username' };
       }
     },
 

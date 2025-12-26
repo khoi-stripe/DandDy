@@ -63,7 +63,8 @@ class CampaignMemberResponse(CampaignMemberBase):
     id: int
     campaign_id: int
     user_id: int
-    user_email: Optional[str] = None
+    username: Optional[str] = None  # User's username for display
+    user_email: Optional[str] = None  # Kept for backward compatibility
     is_creator: bool
     status: str
     joined_at: datetime
@@ -92,9 +93,15 @@ class CampaignJoinResponse(BaseModel):
     membership: CampaignMemberResponse
 
 
-# Email invitation schemas
-class CampaignInviteByEmail(BaseModel):
-    email: str
+# Invitation schemas - supports username (primary) or email (for non-users)
+class CampaignInvite(BaseModel):
+    """Invite by username (for existing users) or email (for non-users)."""
+    username: Optional[str] = None  # Primary: invite existing user by username
+    email: Optional[str] = None  # Fallback: invite non-user by email (acquisition funnel)
+
+
+# Backward compatibility alias
+CampaignInviteByEmail = CampaignInvite
 
 
 class CampaignInvitationResponse(BaseModel):
@@ -104,7 +111,8 @@ class CampaignInvitationResponse(BaseModel):
     campaign_name: str
     campaign_description: Optional[str] = None
     invited_at: datetime
-    invited_by_email: Optional[str] = None  # Email of user who sent the invitation
+    invited_by_username: Optional[str] = None  # Username of user who sent the invitation
+    invited_by_email: Optional[str] = None  # Kept for backward compatibility
     
     class Config:
         from_attributes = True
@@ -118,7 +126,8 @@ class CampaignPendingInviteResponse(BaseModel):
     """Member/invitation for campaign management (for DM to see roster)"""
     id: int  # membership id
     user_id: int
-    email: str
+    username: Optional[str] = None  # User's username for display
+    email: str  # Kept for backward compatibility
     status: str  # "invited" or "active"
     invited_at: datetime
     

@@ -8,3 +8,4 @@ ALTER TABLE campaign_members ADD COLUMN invited_by_id INTEGER REFERENCES users(i
 -- Only new invitations created after this migration will track the inviter
 
 
+

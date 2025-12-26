@@ -352,111 +352,20 @@ const Components = (window.Components = {
             <div class="settings-layout">
               <div class="settings-grid">
                 <div class="settings-group">
-                  <div class="settings-group-label">[ Builder ]</div>
+                  <div class="settings-group-label">[ Character Sheet ]</div>
                   <section class="settings-section">
-                    <div class="settings-row-inline">
-                      <div class="settings-inline-field">
-                        <div class="settings-label">Narrator Voice</div>
-                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
-                        <button
-                          class="terminal-btn selector-trigger"
-                          id="narrator-select-trigger"
-                          type="button"
-                          aria-haspopup="listbox"
-                          aria-expanded="false"
-                          onclick="CharacterSheet.toggleSelectorMenu(this)"
-                        >
-                          <span class="selector-trigger-label" id="narrator-select-label">
-                            ${currentNarratorLabel}
-                          </span>
-                        </button>
-                        <div
-                          class="selector-menu"
-                          role="listbox"
-                          aria-label="Narrator voice"
-                          aria-hidden="true"
-                        >
-                          ${narratorOptionsMenu}
-                        </div>
-                      </div>
-                      <select
-                        id="narrator-select"
-                        class="terminal-select settings-select hidden"
-                      >
-                        ${narratorsList
-                          .map((narrator) => {
-                            const label = formatNarratorTitle(narrator);
-                            return `
-                            <option value="${narrator.id}" ${
-                              narrator.id === currentNarratorId ? 'selected' : ''
-                            }>
-                              ${label}
-                            </option>
-                          `;
-                          })
-                          .join('')}
-                      </select>
-                    </div>
-                    <div class="settings-inline-field">
-                      <div class="settings-label">Text Speed</div>
-                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
-                        <button
-                          class="terminal-btn selector-trigger"
-                          id="text-speed-select-trigger"
-                          type="button"
-                          aria-haspopup="listbox"
-                          aria-expanded="false"
-                          onclick="CharacterSheet.toggleSelectorMenu(this)"
-                        >
-                          <span class="selector-trigger-label" id="text-speed-select-label">
-                            ${currentTextSpeedLabel}
-                          </span>
-                        </button>
-                        <div
-                          class="selector-menu"
-                          role="listbox"
-                          aria-label="Narrator text speed"
-                          aria-hidden="true"
-                        >
-                          ${textSpeedOptions
-                            .map((opt) => {
-                              const isSelected =
-                                opt.value === currentTextSpeedOption.value;
-                              return `
-                              <button
-                                class="selector-option${isSelected ? ' is-selected' : ''}"
-                                type="button"
-                                role="option"
-                                data-value="${opt.value}"
-                                aria-selected="${isSelected ? 'true' : 'false'}"
-                              >
-                                <span class="selector-option-label">
-                                  ${opt.label}
-                                </span>
-                              </button>
-                            `;
-                            })
-                            .join('')}
-                        </div>
-                      </div>
-                      <select
-                        id="text-speed-select"
-                        class="terminal-select settings-select hidden"
-                      >
-                        ${textSpeedOptions
-                          .map(
-                            (opt) => `
-                            <option value="${opt.value}" ${
-                              opt.value === currentTextSpeedOption.value
-                                ? 'selected'
-                                : ''
-                            }>
-                              ${opt.label}
-                            </option>
-                          `,
-                          )
-                          .join('')}
-                      </select>
+                    <div class="settings-row settings-row--stacked">
+                      <div class="settings-field">
+                        <label class="settings-checkbox-label">
+                          <input
+                            type="checkbox"
+                            class="settings-checkbox"
+                            id="show-descriptions-toggle"
+                            ${StorageService.getShowDescriptions() ? 'checked' : ''}
+                          >
+                          <span class="settings-checkbox-text">Show Descriptions</span>
+                        </label>
+                        <div class="settings-hint settings-hint--small">Show inline descriptions for skills, class resources, traits, etc. When disabled, descriptions appear on hover.</div>
                       </div>
                     </div>
                   </section>
@@ -682,20 +591,111 @@ const Components = (window.Components = {
                 </div>
 
                 <div class="settings-group">
-                  <div class="settings-group-label">[ Character Sheet ]</div>
+                  <div class="settings-group-label">[ Builder ]</div>
                   <section class="settings-section">
-                    <div class="settings-row settings-row--stacked">
-                      <div class="settings-field">
-                        <label class="settings-checkbox-label">
-                          <input
-                            type="checkbox"
-                            class="settings-checkbox"
-                            id="show-descriptions-toggle"
-                            ${StorageService.getShowDescriptions() ? 'checked' : ''}
-                          >
-                          <span class="settings-checkbox-text">Show Descriptions</span>
-                        </label>
-                        <div class="settings-hint settings-hint--small">Show inline descriptions for skills, class resources, traits, etc. When disabled, descriptions appear on hover.</div>
+                    <div class="settings-row-inline">
+                      <div class="settings-inline-field">
+                        <div class="settings-label">Narrator Voice</div>
+                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
+                        <button
+                          class="terminal-btn selector-trigger"
+                          id="narrator-select-trigger"
+                          type="button"
+                          aria-haspopup="listbox"
+                          aria-expanded="false"
+                          onclick="CharacterSheet.toggleSelectorMenu(this)"
+                        >
+                          <span class="selector-trigger-label" id="narrator-select-label">
+                            ${currentNarratorLabel}
+                          </span>
+                        </button>
+                        <div
+                          class="selector-menu"
+                          role="listbox"
+                          aria-label="Narrator voice"
+                          aria-hidden="true"
+                        >
+                          ${narratorOptionsMenu}
+                        </div>
+                      </div>
+                      <select
+                        id="narrator-select"
+                        class="terminal-select settings-select hidden"
+                      >
+                        ${narratorsList
+                          .map((narrator) => {
+                            const label = formatNarratorTitle(narrator);
+                            return `
+                            <option value="${narrator.id}" ${
+                              narrator.id === currentNarratorId ? 'selected' : ''
+                            }>
+                              ${label}
+                            </option>
+                          `;
+                          })
+                          .join('')}
+                      </select>
+                    </div>
+                    <div class="settings-inline-field">
+                      <div class="settings-label">Text Speed</div>
+                      <div class="selector-shell selector-shell--listbox selector-shell--match-width">
+                        <button
+                          class="terminal-btn selector-trigger"
+                          id="text-speed-select-trigger"
+                          type="button"
+                          aria-haspopup="listbox"
+                          aria-expanded="false"
+                          onclick="CharacterSheet.toggleSelectorMenu(this)"
+                        >
+                          <span class="selector-trigger-label" id="text-speed-select-label">
+                            ${currentTextSpeedLabel}
+                          </span>
+                        </button>
+                        <div
+                          class="selector-menu"
+                          role="listbox"
+                          aria-label="Narrator text speed"
+                          aria-hidden="true"
+                        >
+                          ${textSpeedOptions
+                            .map((opt) => {
+                              const isSelected =
+                                opt.value === currentTextSpeedOption.value;
+                              return `
+                              <button
+                                class="selector-option${isSelected ? ' is-selected' : ''}"
+                                type="button"
+                                role="option"
+                                data-value="${opt.value}"
+                                aria-selected="${isSelected ? 'true' : 'false'}"
+                              >
+                                <span class="selector-option-label">
+                                  ${opt.label}
+                                </span>
+                              </button>
+                            `;
+                            })
+                            .join('')}
+                        </div>
+                      </div>
+                      <select
+                        id="text-speed-select"
+                        class="terminal-select settings-select hidden"
+                      >
+                        ${textSpeedOptions
+                          .map(
+                            (opt) => `
+                            <option value="${opt.value}" ${
+                              opt.value === currentTextSpeedOption.value
+                                ? 'selected'
+                                : ''
+                            }>
+                              ${opt.label}
+                            </option>
+                          `,
+                          )
+                          .join('')}
+                      </select>
                       </div>
                     </div>
                   </section>

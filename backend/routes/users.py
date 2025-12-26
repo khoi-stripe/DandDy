@@ -1,15 +1,44 @@
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from database.database import get_db
 from models.user import User, UserRole
-from schemas.user import UserCreate, UserResponse, UserUpdate
+from schemas.user import UserCreate, UserResponse, UserUpdate, UserLookupResponse
 from utils.auth import get_current_active_user, get_password_hash
 
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+
+@router.get("/lookup", response_model=UserLookupResponse)
+def lookup_user_by_username(
+    username: str = Query(..., min_length=1, description="Username to look up"),
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_active_user),
+):
+    """
+    Look up a user by their username (case-insensitive).
+    
+    Used for invitation flows where users want to invite by username.
+    Returns minimal info (id, username) to avoid leaking email addresses.
+    """
+    # Strip @ prefix if present (users might type @username)
+    clean_username = username.lstrip('@').lower()
+    
+    user = db.query(User).filter(
+        func.lower(User.username) == clean_username
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No user found with that username",
+        )
+    
+    return user
 
 
 def require_dm_or_admin(current_user: User = Depends(get_current_active_user)) -> User:
@@ -49,18 +78,28 @@ def create_user(
     Create a new user as an admin/DM.
 
     This mirrors registration but does not log the user in or return a token.
-    Accounts are identified by email only.
     """
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
-
-    if existing_user:
+    # Check for existing email
+    existing_email = db.query(User).filter(User.email == user_data.email).first()
+    if existing_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User with this email already exists",
         )
 
+    # Check for existing username (case-insensitive)
+    existing_username = db.query(User).filter(
+        func.lower(User.username) == user_data.username.lower()
+    ).first()
+    if existing_username:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This username is already taken",
+        )
+
     hashed_password = get_password_hash(user_data.password)
     new_user = User(
+        username=user_data.username.lower(),
         email=user_data.email,
         hashed_password=hashed_password,
         role=user_data.role,
@@ -100,6 +139,7 @@ def update_user(
 ) -> User:
     """Update a user's basic information.
 
+    - Username can be changed (with uniqueness checks).
     - Email can be changed (with uniqueness checks).
     - Role can be changed between player and DM.
     - Password can be reset by providing a new password.
@@ -110,6 +150,19 @@ def update_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
+
+    # Username uniqueness checks (if changed)
+    if update_data.username and update_data.username.lower() != user.username:
+        existing_username = db.query(User).filter(
+            func.lower(User.username) == update_data.username.lower(),
+            User.id != user.id
+        ).first()
+        if existing_username:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This username is already taken",
+            )
+        user.username = update_data.username.lower()
 
     # Email uniqueness checks (if changed)
     if update_data.email and update_data.email != user.email:

@@ -363,19 +363,22 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
   // ========================================
 
   /**
-   * Share a character with another user by email.
+   * Share a character with another user by username (primary) or email (fallback).
    * @param {number|string} characterId - The character ID to share
-   * @param {string} email - The recipient's email address
+   * @param {Object} shareData - { to_username: string } or { to_email: string }
    * @returns {Promise<Object>} The created share record
    */
-  async shareCharacter(characterId, email) {
+  async shareCharacterByUsernameOrEmail(characterId, shareData) {
     try {
+      const identifier = shareData.to_username 
+        ? `@${shareData.to_username}` 
+        : shareData.to_email;
       if (DEBUG_CLOUD) {
-        console.log('☁️ CLOUD: Sharing character', characterId, 'to', email);
+        console.log('☁️ CLOUD: Sharing character', characterId, 'to', identifier);
       }
       const result = await this._apiRequest(`/shares/character/${characterId}`, {
         method: 'POST',
-        body: JSON.stringify({ to_email: email }),
+        body: JSON.stringify(shareData),
       });
       if (DEBUG_CLOUD) {
         console.log('☁️ CLOUD: Character shared successfully');
@@ -385,6 +388,14 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
       console.error('☁️ CLOUD ERROR: Failed to share character:', error);
       throw error;
     }
+  },
+
+  /**
+   * Share a character with another user by email (legacy compatibility).
+   * @deprecated Use shareCharacterByUsernameOrEmail instead
+   */
+  async shareCharacter(characterId, email) {
+    return this.shareCharacterByUsernameOrEmail(characterId, { to_email: email });
   },
 
   /**
@@ -1015,20 +1026,53 @@ const CampaignAPI = (window.CampaignAPI = {
   },
 
   /**
-   * Invite a user to a campaign by email
+   * Invite a user to a campaign by username (primary) or email (fallback).
    * @param {number} campaignId
-   * @param {string} email
+   * @param {string} identifier - Username (starting with @) or email address
    * @returns {Promise<Object>} Invitation result
    */
-  async inviteByEmail(campaignId, email) {
+  async inviteByUsernameOrEmail(campaignId, identifier) {
     try {
-      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Inviting', email, 'to campaign', campaignId);
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Inviting', identifier, 'to campaign', campaignId);
+      
+      // Determine if this is a username (@user) or email
+      const isUsername = identifier.startsWith('@');
+      const body = isUsername 
+        ? { username: identifier.substring(1) }  // Remove @ prefix
+        : { email: identifier };
+      
       return await this._apiRequest(`/campaigns/${campaignId}/invite`, {
         method: 'POST',
-        body: JSON.stringify({ email }),
+        body: JSON.stringify(body),
       });
     } catch (error) {
       console.error('🏰 CAMPAIGN ERROR: Failed to invite user:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Invite a user to a campaign by email (legacy compatibility)
+   * @deprecated Use inviteByUsernameOrEmail instead
+   */
+  async inviteByEmail(campaignId, email) {
+    return this.inviteByUsernameOrEmail(campaignId, email);
+  },
+
+  /**
+   * Look up a user by username (for invitation/sharing validation)
+   * @param {string} username - Username to look up (with or without @ prefix)
+   * @returns {Promise<{id: number, username: string}>} User info
+   * @throws {Error} If user not found
+   */
+  async lookupUserByUsername(username) {
+    try {
+      // Strip @ prefix if present
+      const cleanUsername = username.startsWith('@') ? username.substring(1) : username;
+      if (DEBUG_CAMPAIGN) console.log('🏰 CAMPAIGN: Looking up user by username:', cleanUsername);
+      return await this._apiRequest(`/users/lookup?username=${encodeURIComponent(cleanUsername)}`);
+    } catch (error) {
+      console.error('🏰 CAMPAIGN ERROR: Failed to lookup user:', error);
       throw error;
     }
   },

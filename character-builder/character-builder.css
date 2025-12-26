@@ -963,6 +963,11 @@
   z-index: 999;
 }
 
+/* Reduce bottom padding in settings modal - the grid gap provides enough spacing */
+.builder-settings-modal .modal-body {
+  padding-bottom: var(--spacing-sm);
+}
+
 /* (All shared modal theming is handled by terminal-theme.css so it can be reused across apps.) */
 
 /* Settings modal: narrator select */

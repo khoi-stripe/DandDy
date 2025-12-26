@@ -25,3 +25,4 @@ class AppConfig(Base):
     updated_by_id = Column(Integer, nullable=True)  # User ID who last updated
 
 
+
