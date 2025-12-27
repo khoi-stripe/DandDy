@@ -472,9 +472,6 @@ async function saveCurrentCharacterToCloud() {
 
 // Handle session expired events in the builder
 function handleSessionExpired() {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'builder-manager.js:handleSessionExpired',message:'Session expired handler called',data:{existingModals:document.querySelectorAll('.modal.show').length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
     // Update the UI to reflect logged-out state
     updateAuthUI();
 
@@ -487,9 +484,6 @@ function handleSessionExpired() {
                 showAuthModal();
             },
             () => {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'builder-manager.js:continueOffline',message:'User chose CONTINUE OFFLINE',data:{modalsAfterClose:document.querySelectorAll('.modal.show').length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
-                // #endregion
                 // User chose to continue offline - just close the overlay
                 // Character is already saved locally, nothing else needed
             },
