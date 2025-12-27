@@ -699,13 +699,6 @@ div.sheet__sidebar.ui-theme-pink {
         order: 2;
         margin-left: auto;
     }
-    
-    /* Campaign name on its own row beneath */
-    .campaign-area-header .campaign-name {
-        order: 3;
-        width: 100%;
-        flex: none;
-    }
 }
 
 .campaign-area-title {
@@ -1722,17 +1715,22 @@ div.sheet__sidebar.ui-theme-pink {
 /* Campaign info (name + description) */
 .campaign-area-info {
     margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm);
+    /* Use translucent background if available, otherwise solid background */
+    background: var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg)));
+    border-radius: 4px;
 }
 
 .campaign-name {
-    font-size: var(--font-size-md);
+    display: block;
+    font-size: var(--font-size-base);
     font-weight: var(--font-weight-medium);
     color: var(--ui-fg-color);
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+}
+
+/* Add spacing between name and description when both present */
+.campaign-area-info .campaign-name + .campaign-desc-text {
+    margin-top: var(--spacing-sm);
 }
 
 @media (max-width: 768px) {
@@ -1741,15 +1739,11 @@ div.sheet__sidebar.ui-theme-pink {
     }
 }
 
-/* Campaign description */
-.campaign-area-description {
+/* Campaign description text */
+.campaign-area-info {
     color: var(--ui-dim-color);
     font-size: var(--font-size-base);
     line-height: var(--line-height-normal);
-    padding: var(--spacing-sm);
-    /* Use translucent background if available, otherwise solid background */
-    background: var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg)));
-    border-radius: 4px;
 }
 
 .campaign-desc-text {
@@ -1760,7 +1754,7 @@ div.sheet__sidebar.ui-theme-pink {
     white-space: pre-line;
 }
 
-.campaign-area-description[data-expanded="true"] .campaign-desc-text {
+.campaign-area-info[data-expanded="true"] .campaign-desc-text {
     display: block;
     -webkit-line-clamp: unset;
     overflow: visible;
@@ -1783,11 +1777,11 @@ div.sheet__sidebar.ui-theme-pink {
     opacity: 0.8;
 }
 
-.campaign-area-description.is-truncatable {
+.campaign-area-info.is-truncatable {
     padding: 16px;
 }
 
-.campaign-area-description.is-truncatable .campaign-desc-toggle {
+.campaign-area-info.is-truncatable .campaign-desc-toggle {
     display: inline-block;
 }
 

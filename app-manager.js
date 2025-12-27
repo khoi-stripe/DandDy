@@ -1075,7 +1075,7 @@ const ExpandedView = (window.ExpandedView = {
 
     /** Toggle campaign description expand/collapse */
     toggleDescription(btn) {
-        const container = btn.closest('.campaign-area-description');
+        const container = btn.closest('.campaign-area-info');
         if (!container) return;
         
         const isExpanded = container.dataset.expanded === 'true';
@@ -1085,7 +1085,7 @@ const ExpandedView = (window.ExpandedView = {
 
     /** Initialize description truncation check after content loads */
     _initDescriptionTruncation() {
-        const descEl = document.querySelector('.campaign-area-description');
+        const descEl = document.querySelector('.campaign-area-info');
         if (!descEl) return;
         
         const textEl = descEl.querySelector('.campaign-desc-text');
@@ -1482,14 +1482,10 @@ const ExpandedView = (window.ExpandedView = {
             partyHtml += invitesHtml;
         }
 
-        // Campaign description section (name moved to header)
-        const descriptionHtml = campaign.description 
-            ? `<div class="campaign-area-info">
-                   <div class="campaign-area-description" data-expanded="false">
-                       <div class="campaign-desc-text">${campaign.description}</div>
-                       <button class="campaign-desc-toggle" onclick="ExpandedView.toggleDescription(this)">More</button>
-                   </div>
-               </div>`
+        // Campaign info section (name + optional description)
+        const descriptionContent = campaign.description 
+            ? `<div class="campaign-desc-text">${campaign.description}</div>
+               <button class="campaign-desc-toggle" onclick="ExpandedView.toggleDescription(this)">More</button>`
             : '';
 
         // Overflow menu items
@@ -1571,10 +1567,12 @@ const ExpandedView = (window.ExpandedView = {
             <div class="campaign-area" data-campaign-id="${campaign.id}">
                 <div class="campaign-area-header">
                     <h3 class="campaign-area-title">[ Campaign ]</h3>
-                    <span class="campaign-name">${campaign.name}</span>
                     ${overflowMenuHtml}
                 </div>
-                ${descriptionHtml}
+                <div class="campaign-area-info"${campaign.description ? ' data-expanded="false"' : ''}>
+                    <span class="campaign-name">${campaign.name}</span>
+                    ${descriptionContent}
+                </div>
                 <div class="campaign-area-party sheet-section sheet-section--collapsible">
                     <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
                         <div class="sheet-header-title">[ PARTY (${members?.length || 0}) ]</div>
