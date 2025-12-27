@@ -26,17 +26,21 @@
   border-right: none;
 }
 
+/* Remove top padding from narrator panel in builder */
+.app-panel--narrator {
+  padding-top: 0;
+}
+
 /* ===== BUILDER PANEL HEADER (sticky header inside narrator panel) ===== */
 
 .builder-panel-header {
   position: sticky;
-  top: calc(-1 * var(--spacing-xl));
+  top: 0;
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  /* Extra padding-top extends the background above the visible content area */
-  padding: calc(var(--spacing-xl) + var(--spacing-sm)) 0 var(--spacing-sm) 0;
+  padding: 32px 0 var(--spacing-sm) 0;
   margin-bottom: 16px;
   background-color: var(--terminal-bg);
   border-bottom: 1px solid var(--ui-border-color, var(--terminal-border));
