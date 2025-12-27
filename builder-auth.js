@@ -425,21 +425,23 @@ const AuthUI = (window.AuthUI = {
     this._restoreUnderlay();
   },
 
-  // Show user info in header
+  // Show user info in header (uses same IDs as manager: userInfoDisplay, userStatusText, authBtn)
   updateHeaderWithUser(user) {
-    const slot = document.getElementById('auth-slot') || document.getElementById('status-text');
-    if (slot && user) {
-      const label = user && user.email ? String(user.email) : 'Logged In';
-      // Match manager header behavior: user label is revealed on button hover.
-      slot.innerHTML = `
-        <span id="builderUserInfo" class="builder-user-info">
-          <span class="user-status-text">${label}</span>
-        </span>
-        <button id="builderAuthBtn" class="terminal-btn terminal-btn-secondary" type="button">Log out</button>
-      `;
-
-      const authBtn = document.getElementById('builderAuthBtn');
-      authBtn?.addEventListener('click', () => {
+    const userStatusText = document.getElementById('userStatusText');
+    const authBtn = document.getElementById('authBtn');
+    
+    if (userStatusText && user) {
+      // Show username if available, fall back to email
+      const displayName = user?.username ? `@${user.username}` : (user?.email || 'Logged In');
+      userStatusText.textContent = displayName;
+      userStatusText.style.cursor = 'pointer';
+      userStatusText.onclick = typeof openAccountModal === 'function' ? openAccountModal : null;
+      userStatusText.title = 'Manage account';
+    }
+    
+    if (authBtn) {
+      authBtn.textContent = 'Log out';
+      authBtn.onclick = () => {
         try {
           window.AuthService?.logout?.();
         } catch (_) {}
@@ -448,29 +450,37 @@ const AuthUI = (window.AuthUI = {
           window.updateAuthUI();
         }
         window.App?.showNotification?.('✓ Logged out', 'success');
-      });
+      };
     }
+    
     // Update overflow menu auth label
-    const overflowIcon = document.getElementById('builderOverflowAuthIcon');
-    const overflowLabel = document.getElementById('builderOverflowAuthLabel');
+    const overflowIcon = document.getElementById('overflowAuthIcon');
+    const overflowLabel = document.getElementById('overflowAuthLabel');
     if (overflowIcon) overflowIcon.textContent = '←';
     if (overflowLabel) overflowLabel.textContent = 'Log Out';
+    
+    // Show account option in overflow
+    const overflowAccountBtn = document.getElementById('overflowAccountBtn');
+    if (overflowAccountBtn) overflowAccountBtn.classList.remove('is-hidden');
+    const overflowCreateAccountBtn = document.getElementById('overflowCreateAccountBtn');
+    if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.add('is-hidden');
   },
 
-  // Show guest mode banner
+  // Show guest mode banner (uses same IDs as manager)
   showGuestBanner() {
-    const slot = document.getElementById('auth-slot') || document.getElementById('status-text');
-    if (slot) {
-      // Match manager header UI: reveal "Guest mode" label on hover + LOGIN button.
-      slot.innerHTML = `
-        <span id="builderUserInfo" class="builder-user-info">
-          <span class="user-status-text">Guest mode</span>
-        </span>
-        <button id="builderAuthBtn" class="terminal-btn terminal-btn-secondary" type="button">Log in</button>
-      `;
-
-      const authBtn = document.getElementById('builderAuthBtn');
-      authBtn?.addEventListener('click', () => {
+    const userStatusText = document.getElementById('userStatusText');
+    const authBtn = document.getElementById('authBtn');
+    
+    if (userStatusText) {
+      userStatusText.textContent = 'Guest Mode';
+      userStatusText.style.cursor = 'default';
+      userStatusText.onclick = null;
+      userStatusText.title = '';
+    }
+    
+    if (authBtn) {
+      authBtn.textContent = 'Log in';
+      authBtn.onclick = () => {
         // Prefer the manager-style auth modal (matches manager flow + markup).
         if (typeof window.showAuthModal === 'function') {
           window.showAuthModal();
@@ -484,13 +494,20 @@ const AuthUI = (window.AuthUI = {
         if (window.AuthUI && typeof window.AuthUI.showLogin === 'function') {
           window.AuthUI.showLogin(() => window.location.reload(), () => {}, () => {});
         }
-      });
+      };
     }
+    
     // Update overflow menu auth label
-    const overflowIcon = document.getElementById('builderOverflowAuthIcon');
-    const overflowLabel = document.getElementById('builderOverflowAuthLabel');
+    const overflowIcon = document.getElementById('overflowAuthIcon');
+    const overflowLabel = document.getElementById('overflowAuthLabel');
     if (overflowIcon) overflowIcon.textContent = '→';
     if (overflowLabel) overflowLabel.textContent = 'Log In';
+    
+    // Hide account option, show create account in overflow
+    const overflowAccountBtn = document.getElementById('overflowAccountBtn');
+    if (overflowAccountBtn) overflowAccountBtn.classList.add('is-hidden');
+    const overflowCreateAccountBtn = document.getElementById('overflowCreateAccountBtn');
+    if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.remove('is-hidden');
   },
 });
 

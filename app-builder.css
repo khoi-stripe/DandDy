@@ -26,13 +26,34 @@
   border-right: none;
 }
 
-/* ===== BUILDER-SPECIFIC HEADER STYLES ===== */
+/* ===== BUILDER PANEL HEADER (sticky header inside narrator panel) ===== */
 
-/* Exit button: match overflow trigger height (28px instead of 32px) */
-#exitBuilderBtn {
+.builder-panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) 0;
+  margin-bottom: 16px;
+  background-color: var(--terminal-bg);
+  border-bottom: 1px solid var(--ui-border-color, var(--terminal-border));
+  /* Ensure content scrolls behind */
+  backdrop-filter: blur(4px);
+}
+
+.builder-panel-title {
+  color: var(--ui-fg-color, var(--terminal-accent));
+  font-size: 18px;
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--tracking-wide);
+}
+
+.builder-exit-btn {
   height: var(--btn-height-sm);
   min-height: var(--btn-height-sm);
-  z-index: 9999;
+  padding: 0 var(--spacing-sm);
 }
 
 /* ===== COMPONENTS ===== */

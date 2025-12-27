@@ -5362,7 +5362,10 @@ const App = (window.App = {
     if (!narratorPanel) return;
 
     // Clear any existing content for a clean quick-create experience
+    // Preserve the builder-panel-header if it exists
+    const header = narratorPanel.querySelector('.builder-panel-header');
     narratorPanel.innerHTML = '';
+    if (header) narratorPanel.appendChild(header);
     
     // Reset portrait tracking to ensure animation happens
     this._lastPortraitArt = null;
@@ -5684,7 +5687,12 @@ const App = (window.App = {
     // Clear panels BEFORE resetting state so the state change listener can properly re-render
     const narratorPanel = document.getElementById('narrator-panel');
     const characterPanel = document.getElementById('character-panel');
-    if (narratorPanel) narratorPanel.innerHTML = '';
+    if (narratorPanel) {
+      // Preserve the builder-panel-header if it exists
+      const header = narratorPanel.querySelector('.builder-panel-header');
+      narratorPanel.innerHTML = '';
+      if (header) narratorPanel.appendChild(header);
+    }
     
     // Reset state and caches
     CharacterState.reset();

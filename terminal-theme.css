@@ -1309,7 +1309,6 @@ body::before {
   min-height: 0;
 }
 
-.app-panel--narrator,
 .left-panel {
   /* Use theme border color, fallback to terminal-border for backward compatibility */
   border-right: 1px solid var(--ui-border-color, var(--terminal-border));
