@@ -109,7 +109,7 @@
   /* Used sparingly for tags, badges, and small highlights */
   --theme-green-accent-h: 181;   /* Teal - main teal color */
   --theme-teal-accent-h: 25;     /* Orange - warm contrast to teal */
-  --theme-yellow-accent-h: 225;  /* Blue - cool contrast to yellow */
+  --theme-yellow-accent-h: 130;  /* Sage green - earthy contrast to yellow */
   --theme-pink-accent-h: 165;    /* Teal/mint - cool contrast to pink */
   --theme-white-accent-h: 49;    /* Gold/amber - warm accent for neutral */
   --theme-red-accent-h: 180;     /* Cyan - complementary to red */
@@ -896,10 +896,10 @@
   --modal-glow-h: var(--theme-yellow-h);
   --modal-glow-s: var(--theme-yellow-s);
   --modal-glow-l-bright: var(--theme-yellow-l-bright);
-  /* Accent HSL (blue - for splash logo, etc.) */
+  /* Accent HSL (sage green - for splash logo, etc.) */
   --ui-accent-h: var(--theme-yellow-accent-h);
-  --ui-accent-s: 100%;
-  --ui-accent-l: 60%;
+  --ui-accent-s: 40%;
+  --ui-accent-l: 55%;
   /* Tag accent tokens */
   --ui-tag-bg: var(--tag-accent-yellow);
   --ui-tag-color: var(--terminal-bg);

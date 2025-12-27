@@ -337,24 +337,23 @@
    * Initialize the theme loader
    */
   async function init() {
-    // First, apply themes from localStorage for instant feedback
+    // Apply themes from localStorage immediately (no server fetch needed)
+    // User preferences are synced to localStorage by StorageService.applyPreferences()
+    // so localStorage is the authoritative source for the user's theme choice.
     applyAllThemes();
-    
-    // Then fetch from server (in background) to get authoritative config
-    try {
-      await fetchThemeConfigFromServer();
-      // Re-apply with server config
-      applyAllThemes();
-    } catch (e) {
-      console.warn('[ThemeLoader] Server fetch failed, using local config');
-    }
 
-    // Listen for theme changes from admin panel (same tab)
+    // Listen for theme changes (same tab - from settings modal or admin panel)
     window.addEventListener('danddy:themeConfigChanged', (e) => {
       console.log('[ThemeLoader] Theme config changed:', e.detail);
       // Update cache with the new config
       if (e.detail) {
         serverConfigCache = e.detail;
+        // Also save to localStorage for persistence
+        try {
+          localStorage.setItem(THEME_CONFIG_KEY, JSON.stringify(e.detail));
+        } catch (err) {
+          console.warn('[ThemeLoader] Could not save to localStorage:', err);
+        }
       }
       applyAllThemes();
     });
