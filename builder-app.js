@@ -4507,7 +4507,7 @@ const App = (window.App = {
       // Navigate to character manager after a brief moment
       setTimeout(() => {
         window.suppressBeforeunloadWarning();
-        window.location.href = '../index.html?from=builder';
+        window.location.href = 'index.html?from=builder';
       }, 500);
     } catch (error) {
       console.error('Error saving character:', error);
@@ -5751,7 +5751,8 @@ const App = (window.App = {
           </div>
         </div>
       </div>`;
-    const terminalContainer = document.querySelector('.terminal-container');
+    // Use .terminal-container if available (manager page), otherwise fall back to .app-root (builder page) or body
+    const terminalContainer = document.querySelector('.terminal-container') || document.querySelector('.app-root') || document.body;
     terminalContainer.insertAdjacentHTML('beforeend', overlayHTML);
 
     const overlay = document.getElementById('confirmationModal');
@@ -6308,12 +6309,12 @@ function exitToManager() {
 
         // Character saved successfully, proceed to exit
         window.suppressBeforeunloadWarning();
-        window.location.href = '../index.html?from=builder';
+        window.location.href = 'index.html?from=builder';
       },
       () => {
         // User clicked "DISCARD" - exit without saving
         window.suppressBeforeunloadWarning();
-        window.location.href = '../index.html?from=builder';
+        window.location.href = 'index.html?from=builder';
       },
       {
         primaryLabel: 'SAVE',
@@ -6325,7 +6326,7 @@ function exitToManager() {
   } else {
     // Character is already saved or incomplete; immediately exit
     window.suppressBeforeunloadWarning();
-    window.location.href = '../index.html?from=builder';
+    window.location.href = 'index.html?from=builder';
   }
 }
 

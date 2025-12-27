@@ -809,8 +809,7 @@ const AsciiArtService = (window.AsciiArtService = {
 
     // Try race-class combo first
     if (classLower) {
-      // Use ../ prefix since character-builder is in a subdirectory
-      const path = `../generated_portraits/ascii/${raceLower}-${classLower}.txt`;
+      const path = `generated_portraits/ascii/${raceLower}-${classLower}.txt`;
       if (DEBUG_BUILDER) console.log(`📂 Trying to load: ${path}`);
       try {
         const response = await fetch(path);
@@ -826,7 +825,7 @@ const AsciiArtService = (window.AsciiArtService = {
     }
 
     // Fallback to race-only
-    const path = `../generated_portraits/ascii/${raceLower}.txt`;
+    const path = `generated_portraits/ascii/${raceLower}.txt`;
     if (DEBUG_BUILDER) console.log(`📂 Trying fallback: ${path}`);
     try {
       const response = await fetch(path);

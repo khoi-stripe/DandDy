@@ -5388,7 +5388,7 @@ function createNewCharacter() {
     
     // Launch the Character Builder in the same tab.
     // The builder has an EXIT button to return to the manager view.
-    window.location.href = 'character-builder/index.html';
+    window.location.href = 'builder.html';
 }
 
 // Track creation quota state for NEW CHARACTER button
@@ -10442,7 +10442,7 @@ async function handleLogin() {
                 
                 // Users with no characters must create one first
                 if (!AppState.characters || AppState.characters.length === 0) {
-                    window.location.href = 'character-builder/index.html?new=true&required=true';
+                    window.location.href = 'builder.html?new=true&required=true';
                     return;
                 }
                 
@@ -10546,7 +10546,7 @@ async function handleRegister() {
                 
                 // New users with no characters - send them directly to character builder
                 if (!AppState.characters || AppState.characters.length === 0) {
-                    window.location.href = 'character-builder/index.html?new=true&required=true';
+                    window.location.href = 'builder.html?new=true&required=true';
                     return;
                 }
                 
@@ -11750,7 +11750,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Authenticated users with no characters must create one first
         if (isAuthenticated && (!AppState.characters || AppState.characters.length === 0)) {
-            window.location.href = 'character-builder/index.html?new=true&required=true';
+            window.location.href = 'builder.html?new=true&required=true';
             return;
         }
         

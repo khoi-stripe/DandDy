@@ -40,7 +40,7 @@ function cancelAuthFlow() {
 
 // Builder auth modal includes a "Forgot password?" link; route to manager reset UI.
 function openPasswordResetFromLogin() {
-    window.location.href = '../index.html#password-reset';
+    window.location.href = 'index.html#password-reset';
 }
 
 function closeAuthModal() {

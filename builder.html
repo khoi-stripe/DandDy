@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" class="theme-white">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <title>D&Dy - Character Builder</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="terminal-theme.css?v=20251227a">
+  <link rel="stylesheet" href="portraits.css?v=20251227a">
+  <link rel="stylesheet" href="app-manager.css?v=20251227a">
+  <link rel="stylesheet" href="app-builder.css?v=20251227a">
+</head>
+<body>
+  <!-- Print-only logo (positioned via CSS for print layout) -->
+  <img src="character-builder/danddy-logo-print.svg" alt="DandDy logo" class="print-logo">
+
+    <div class="app-root">
+    <header class="terminal-header">
+        <div class="header-content">
+            <div class="terminal-title">
+                <span class="title-bracket">[</span>
+                <div class="title-cube-spinner">
+                    <div class="title-cube">
+                        <div class="title-cube-face"></div>
+                        <div class="title-cube-face"></div>
+                        <div class="title-cube-face"></div>
+                        <div class="title-cube-face"></div>
+                        <div class="title-cube-face"></div>
+                        <div class="title-cube-face"></div>
+                    </div>
+                </div>
+                <span class="terminal-title-text">D&amp;Dy v2.4.0</span>
+                <span class="title-bracket">]</span>
+                <button
+                    id="managerSettingsBtn"
+                    class="manager-settings-link"
+                    type="button"
+                    aria-label="Settings"
+                    title="Settings"
+                    onclick="SettingsModal.open()"
+                >⚙︎</button>
+            </div>
+            <div class="header-actions">
+                <span id="userInfoDisplay">
+                    <span id="userStatusIcon" class="user-status-icon" aria-hidden="true"></span>
+                    <span id="userStatusText" class="user-status-text"></span>
+                </span>
+                <button id="authBtn" class="terminal-btn terminal-btn-secondary header-action-btn">Log in</button>
+                <button id="exitBuilderBtn" class="terminal-btn terminal-btn-primary header-action-btn" type="button" onclick="exitToManager()">Exit</button>
+                <!-- Mobile overflow menu (shown when scrolling on mobile) -->
+                <div class="header-overflow selector-shell selector-shell--actions">
+                    <button
+                        id="headerOverflowBtn"
+                        class="terminal-btn-small selector-trigger overflow-trigger header-overflow-trigger"
+                        type="button"
+                        aria-haspopup="menu"
+                        aria-expanded="false"
+                        aria-label="More actions"
+                        onclick="CharacterSheet.toggleSelectorMenu(this)"
+                    >
+                        <span class="sheet-actions-icon" aria-hidden="true">
+                            <span class="sheet-actions-dot dot-1"></span>
+                            <span class="sheet-actions-dot dot-2"></span>
+                            <span class="sheet-actions-dot dot-3"></span>
+                        </span>
+                    </button>
+                    <div class="selector-menu header-overflow-menu" role="menu" aria-hidden="true">
+                        <button
+                            class="selector-option"
+                            type="button"
+                            role="menuitem"
+                            id="overflowSettingsBtn"
+                            onclick="SettingsModal.open(); CharacterSheet.closeSelectorMenu(this.closest('.selector-shell').querySelector('.selector-trigger'));"
+                        >
+                            <span class="selector-option-icon">⚙︎</span>
+                            <span class="selector-option-label">Settings</span>
+                        </button>
+                        <button
+                            class="selector-option is-hidden"
+                            type="button"
+                            role="menuitem"
+                            id="overflowAccountBtn"
+                            onclick="openAccountModal(); CharacterSheet.closeSelectorMenu(this.closest('.selector-shell').querySelector('.selector-trigger'));"
+                        >
+                            <span class="selector-option-icon">☁</span>
+                            <span class="selector-option-label">Account</span>
+                        </button>
+                        <button
+                            class="selector-option is-hidden"
+                            type="button"
+                            role="menuitem"
+                            id="overflowCreateAccountBtn"
+                            onclick="showAuthModal(); showRegisterForm(); CharacterSheet.closeSelectorMenu(this.closest('.selector-shell').querySelector('.selector-trigger'));"
+                        >
+                            <span class="selector-option-icon">+</span>
+                            <span class="selector-option-label">Create account</span>
+                        </button>
+                        <button
+                            class="selector-option"
+                            type="button"
+                            role="menuitem"
+                            id="overflowAuthBtn"
+                            onclick="document.getElementById('authBtn').click(); CharacterSheet.closeSelectorMenu(this.closest('.selector-shell').querySelector('.selector-trigger'));"
+                        >
+                            <span class="selector-option-icon" id="overflowAuthIcon">→</span>
+                            <span class="selector-option-label" id="overflowAuthLabel">Log In</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-content" id="main-content">
+        <div class="split-layout" id="builder-layout">
+            <div class="app-panel app-panel--narrator" id="narrator-panel">
+                <!-- Narrator content will be injected here -->
+            </div>
+            
+            <div class="app-panel app-panel--builder" id="character-panel">
+                <!-- Character sheet will be injected here -->
+            </div>
+        </div>
+    </div>
+
+  <!-- Session Resume Modal -->
+  <div id="sessionResumeModal" class="modal">
+    <div class="modal-content session-resume-modal">
+      <div class="modal-header">
+        <h2 class="modal-title">Character in progress</h2>
+        <span class="session-time" id="sessionTimeStamp"></span>
+      </div>
+      <div class="modal-body">
+        <p class="terminal-text" id="sessionResumeDescription">
+          You have an unfinished character. Would you like to continue where you left off?
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="terminal-btn" id="sessionDiscardBtn">
+          Start fresh
+        </button>
+        <button class="terminal-btn terminal-btn-primary" id="sessionResumeBtn">
+          Continue
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Modal (Login/Register) - matches manager page -->
+  <div id="authModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="authModalTitle">LOG IN</h2>
+        <button class="modal-close" onclick="cancelAuthFlow()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="loginForm">
+          <p class="terminal-text-small">Username or email:</p>
+          <input type="text" id="loginEmail" class="terminal-input" placeholder="username or email">
+          <p class="terminal-text-small modal-section-label">Password:</p>
+          <div class="password-input-wrapper">
+            <input type="password" id="loginPassword" class="terminal-input" placeholder="Enter password">
+            <button type="button" class="password-toggle-btn" data-target="loginPassword" aria-label="Show password">Show</button>
+          </div>
+          <p class="terminal-text-small modal-section-label terminal-text-dim">
+            <button class="link-button" type="button" onclick="openPasswordResetFromLogin()">Forgot your password?</button>
+          </p>
+          <p class="terminal-text-small modal-section-label terminal-text-dim">
+            Don't have an account? <a href="#" onclick="showRegisterForm(); return false;" class="terminal-link">Register here</a>
+          </p>
+        </div>
+        <div id="registerForm" class="is-hidden">
+          <p class="terminal-text">Create an account to sync your characters across devices.</p>
+          <p class="terminal-text-small">Username:</p>
+          <input type="text" id="registerUsername" class="terminal-input" placeholder="your_username" maxlength="30" pattern="[a-zA-Z0-9_]{3,30}">
+          <p class="terminal-text-small terminal-text-dim">3-30 characters, letters, numbers, and underscores only</p>
+          <p class="terminal-text-small modal-section-label">Email:</p>
+          <input type="email" id="registerEmail" class="terminal-input" placeholder="you@example.com">
+          <p class="terminal-text-small modal-section-label">Password:</p>
+          <div class="password-input-wrapper">
+            <input type="password" id="registerPassword" class="terminal-input" placeholder="Choose password">
+            <button type="button" class="password-toggle-btn" data-target="registerPassword" aria-label="Show password">Show</button>
+          </div>
+          <p class="terminal-text-small modal-section-label">Confirm password:</p>
+          <div class="password-input-wrapper">
+            <input type="password" id="registerPasswordConfirm" class="terminal-input" placeholder="Re-enter password">
+            <button type="button" class="password-toggle-btn" data-target="registerPasswordConfirm" aria-label="Show password">Show</button>
+          </div>
+          <p class="terminal-text-small modal-section-label terminal-text-dim">
+            Already have an account? <a href="#" onclick="showLoginForm(); return false;" class="terminal-link">Log in here</a>
+          </p>
+        </div>
+        <div id="authError" class="terminal-text-error is-hidden"></div>
+      </div>
+      <div class="modal-footer modal-footer-end">
+        <button id="authCancelBtn" class="terminal-btn" onclick="cancelAuthFlow()">Cancel</button>
+        <button id="loginBtn" class="terminal-btn terminal-btn-primary" onclick="handleLogin()">Log in</button>
+        <button id="registerBtn" class="terminal-btn terminal-btn-primary is-hidden" onclick="handleRegister()">Register</button>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- end .app-root -->
+  
+  <!-- Theme loader (applies saved theme config) -->
+  <script src="app-theme-loader.js?v=20251227a"></script>
+  <!-- Concatenated builder bundle (see scripts/simple_bundle.py) -->
+  <script src="builder.bundle.js?v=20251227a"></script>
+</body>
+</html>
+
+
+

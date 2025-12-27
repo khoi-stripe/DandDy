@@ -6,8 +6,8 @@ Usage (from project root):
 
 It concatenates the existing JavaScript files in the same order as the
 <script> tags in:
-  - index.html      → outputs manager.bundle.js
-  - character-builder/index.html → outputs character-builder/builder.bundle.js
+  - index.html   → outputs manager.bundle.js
+  - builder.html → outputs builder.bundle.js
 
 Options:
   --no-minify    Skip minification (for debugging)
@@ -126,12 +126,12 @@ manager_parts = [
     "data-spells.js",
     "data-class-features.js",
     "data-racial-traits.js",
-    "character-builder/builder-dnd-data.js",
-    "character-builder/builder-config.js",
-    "character-builder/builder-utils.js",
-    "character-builder/builder-narrators.js",
-    "character-builder/builder-services.js",
-    "character-builder/builder-components.js",
+    "builder-dnd-data.js",
+    "builder-config.js",
+    "builder-utils.js",
+    "builder-narrators.js",
+    "builder-services.js",
+    "builder-components.js",
     "app-character-sheet.js",
     "app-api.js",
     "demo-characters.js",
@@ -139,7 +139,7 @@ manager_parts = [
     "app-manager.js",
 ]
 
-# Character builder bundle (character-builder/index.html), same script order.
+# Character builder bundle (builder.html), same script order.
 builder_parts = [
     "app-config.js",
     "app-auth.js",
@@ -153,21 +153,21 @@ builder_parts = [
     "data-racial-traits.js",
     "app-api.js",
     "demo-characters.js",
-    "character-builder/builder-config.js",
-    "character-builder/builder-dnd-data.js",
-    "character-builder/builder-spells.js",
-    "character-builder/builder-narrators.js",
-    "character-builder/builder-utils.js",
-    "character-builder/builder-auth.js",
-    "character-builder/builder-api.js",
-    "character-builder/builder-services.js",
-    "character-builder/builder-state.js",
+    "builder-config.js",
+    "builder-dnd-data.js",
+    "builder-spells.js",
+    "builder-narrators.js",
+    "builder-utils.js",
+    "builder-auth.js",
+    "builder-api.js",
+    "builder-services.js",
+    "builder-state.js",
     "app-character-sheet.js",
     "app-portraits.js",
-    "character-builder/builder-components.js",
-    "character-builder/builder-questions.js",
-    "character-builder/builder-app.js",
-    "character-builder/builder-manager.js",
+    "builder-components.js",
+    "builder-questions.js",
+    "builder-app.js",
+    "builder-manager.js",
 ]
 
 
@@ -199,7 +199,7 @@ def main() -> None:
         print("WARNING: rjsmin may corrupt template literals!\n")
     
     build_bundle(ROOT / "manager.bundle.js", manager_parts, minify=minify, use_terser=use_terser)
-    build_bundle(ROOT / "character-builder" / "builder.bundle.js", builder_parts, minify=minify, use_terser=use_terser)
+    build_bundle(ROOT / "builder.bundle.js", builder_parts, minify=minify, use_terser=use_terser)
     
     print("\nDone!")
 
