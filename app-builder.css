@@ -30,12 +30,13 @@
 
 .builder-panel-header {
   position: sticky;
-  top: 0;
+  top: calc(-1 * var(--spacing-xl));
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-sm) 0;
+  /* Extra padding-top extends the background above the visible content area */
+  padding: calc(var(--spacing-xl) + var(--spacing-sm)) 0 var(--spacing-sm) 0;
   margin-bottom: 16px;
   background-color: var(--terminal-bg);
   border-bottom: 1px solid var(--ui-border-color, var(--terminal-border));
