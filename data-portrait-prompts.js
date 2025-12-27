@@ -16,7 +16,7 @@
    * theme definitions below, then switching themes from the Settings UI.
    */
 
-  const DEFAULT_THEME_ID = 'cinematic-inks';
+  const DEFAULT_THEME_ID = 'classic-high-fantasy';
   const ADMIN_STORAGE_KEY = 'dnd_portrait_prompt_entries_v1';
 
   // In-memory cache of admin-configured variables (race/class/scene/style).

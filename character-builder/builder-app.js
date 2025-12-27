@@ -5751,7 +5751,8 @@ const App = (window.App = {
           </div>
         </div>
       </div>`;
-    const terminalContainer = document.querySelector('.terminal-container');
+    // Use .terminal-container if available (manager page), otherwise fall back to .app-root (builder page) or body
+    const terminalContainer = document.querySelector('.terminal-container') || document.querySelector('.app-root') || document.body;
     terminalContainer.insertAdjacentHTML('beforeend', overlayHTML);
 
     const overlay = document.getElementById('confirmationModal');
