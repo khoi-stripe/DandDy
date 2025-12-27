@@ -409,6 +409,24 @@ def ensure_pinned_character_ids_column():
         conn.commit()
 
 
+def ensure_user_preferences_column():
+    """
+    Lightweight migration helper for user preferences.
+    Adds preferences column to users table (stores JSON object with settings).
+    """
+    inspector = inspect(engine)
+    if not inspector.has_table("users"):
+        return
+
+    existing_cols = {col["name"] for col in inspector.get_columns("users")}
+
+    with engine.connect() as conn:
+        if "preferences" not in existing_cols:
+            conn.execute(text("ALTER TABLE users ADD COLUMN preferences TEXT DEFAULT '{}'"))
+
+        conn.commit()
+
+
 def ensure_campaign_tracking_columns():
     """
     Lightweight migration helper for campaign tracking feature.

@@ -17,6 +17,7 @@ from database.database import (
     ensure_character_collaborators_table,
     ensure_last_updated_by_column,
     ensure_pinned_character_ids_column,
+    ensure_user_preferences_column,
     ensure_campaign_tracking_columns,
     ensure_campaign_member_status_column,
     ensure_journal_visibility_column,
@@ -42,6 +43,7 @@ ensure_combat_tracking_columns()
 ensure_character_collaborators_table()
 ensure_last_updated_by_column()
 ensure_pinned_character_ids_column()
+ensure_user_preferences_column()
 ensure_campaign_tracking_columns()
 ensure_campaign_member_status_column()
 ensure_journal_visibility_column()

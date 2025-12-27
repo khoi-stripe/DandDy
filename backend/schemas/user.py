@@ -112,3 +112,26 @@ class PinnedCharactersUpdate(BaseModel):
     pinned_character_ids: list[str]
 
 
+class UserPreferences(BaseModel):
+    """User preferences stored at the account level."""
+    colorTheme: str | None = None  # white, teal, green, yellow
+    narratorId: str | None = None  # narrator voice for character builder
+    textSpeedMultiplier: float | None = None  # 1, 1.5, 2
+    imageModel: str | None = None  # dall-e-3, gpt-image-1, flux-1.1-pro, etc.
+    imageQuality: dict[str, str] | None = None  # per-model quality settings
+    portraitViewMode: str | None = None  # ascii, original
+    portraitPromptTheme: str | None = None  # portrait art style
+    showDescriptions: bool | None = None  # show inline descriptions
+
+    class Config:
+        extra = "allow"  # Allow additional fields for future extensibility
+
+
+class UserPreferencesResponse(BaseModel):
+    """Response for user preferences."""
+    preferences: UserPreferences
+
+    class Config:
+        from_attributes = True
+
+

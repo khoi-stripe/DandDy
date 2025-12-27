@@ -531,6 +531,204 @@ const StorageService = (window.StorageService = {
     }
   },
 
+  // ==== ACCOUNT-LEVEL PREFERENCES SYNC ====
+  // These functions sync settings to the server when logged in.
+
+  /**
+   * Gather all current settings into a single preferences object.
+   * @returns {object} All current preferences
+   */
+  getAllPreferences() {
+    const prefs = {};
+    
+    // Color theme from theme config
+    try {
+      const themeConfig = localStorage.getItem('danddy_theme_config');
+      if (themeConfig) {
+        const parsed = JSON.parse(themeConfig);
+        prefs.colorTheme = parsed.global || 'yellow';
+      }
+    } catch (e) { /* ignore */ }
+    
+    // Narrator ID
+    prefs.narratorId = this.getNarratorId();
+    
+    // Text speed
+    prefs.textSpeedMultiplier = this.getTextSpeedMultiplier();
+    
+    // Image model
+    prefs.imageModel = this.getImageModel();
+    
+    // Image quality (per-model)
+    try {
+      const raw = localStorage.getItem('dnd_image_quality');
+      if (raw) {
+        prefs.imageQuality = JSON.parse(raw);
+      }
+    } catch (e) { /* ignore */ }
+    
+    // Portrait view mode
+    prefs.portraitViewMode = this.getPortraitViewMode();
+    
+    // Portrait prompt theme
+    prefs.portraitPromptTheme = this.getPortraitPromptTheme();
+    
+    // Show descriptions
+    prefs.showDescriptions = this.getShowDescriptions();
+    
+    return prefs;
+  },
+
+  /**
+   * Apply preferences from server to local storage.
+   * @param {object} prefs - Preferences object from server
+   */
+  applyPreferences(prefs) {
+    if (!prefs || typeof prefs !== 'object') return;
+    
+    // Color theme
+    if (prefs.colorTheme) {
+      try {
+        const THEME_CONFIG_KEY = 'danddy_theme_config';
+        let config = {
+          global: 'yellow',
+          syncAll: true,
+          sections: {
+            terminal: null, narrator: null, sheet: null,
+            grid: null, campaign: null, modal: null, glow: null,
+          },
+        };
+        const stored = localStorage.getItem(THEME_CONFIG_KEY);
+        if (stored) {
+          config = { ...config, ...JSON.parse(stored) };
+        }
+        config.global = prefs.colorTheme;
+        localStorage.setItem(THEME_CONFIG_KEY, JSON.stringify(config));
+        // Dispatch event for theme loader
+        window.dispatchEvent(new CustomEvent('danddy:themeConfigChanged', { detail: config }));
+      } catch (e) {
+        console.warn('StorageService: failed to apply color theme', e);
+      }
+    }
+    
+    // Narrator ID
+    if (prefs.narratorId) {
+      this.setNarratorId(prefs.narratorId);
+    }
+    
+    // Text speed
+    if (prefs.textSpeedMultiplier != null) {
+      this.setTextSpeedMultiplier(prefs.textSpeedMultiplier);
+    }
+    
+    // Image model
+    if (prefs.imageModel) {
+      this.setImageModel(prefs.imageModel);
+    }
+    
+    // Image quality
+    if (prefs.imageQuality && typeof prefs.imageQuality === 'object') {
+      try {
+        localStorage.setItem('dnd_image_quality', JSON.stringify(prefs.imageQuality));
+      } catch (e) { /* ignore */ }
+    }
+    
+    // Portrait view mode
+    if (prefs.portraitViewMode) {
+      this.setPortraitViewMode(prefs.portraitViewMode);
+    }
+    
+    // Portrait prompt theme
+    if (prefs.portraitPromptTheme) {
+      this.setPortraitPromptTheme(prefs.portraitPromptTheme);
+    }
+    
+    // Show descriptions
+    if (prefs.showDescriptions != null) {
+      this.setShowDescriptions(prefs.showDescriptions);
+    }
+    
+    console.log('[StorageService] Applied preferences from server:', prefs);
+  },
+
+  /**
+   * Sync current preferences to the server.
+   * Only works when user is logged in.
+   * @returns {Promise<boolean>} True if sync succeeded
+   */
+  async syncPreferencesToServer() {
+    if (!window.AuthService || !AuthService.isAuthenticated()) {
+      return false;
+    }
+    
+    const prefs = this.getAllPreferences();
+    const token = AuthService.getToken();
+    const cfg = window.DanddyConfig || window.AppConfig || {};
+    const API_BASE = cfg.API_BASE_URL || 'https://danddy-api.onrender.com/api';
+    
+    try {
+      const response = await fetch(`${API_BASE}/auth/preferences`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(prefs),
+      });
+      
+      if (response.ok) {
+        console.log('[StorageService] Preferences synced to server');
+        return true;
+      } else {
+        console.warn('[StorageService] Failed to sync preferences:', response.status);
+        return false;
+      }
+    } catch (e) {
+      console.warn('[StorageService] Error syncing preferences:', e);
+      return false;
+    }
+  },
+
+  /**
+   * Load preferences from the server and apply locally.
+   * Called on login to sync settings across devices.
+   * @returns {Promise<object|null>} The loaded preferences, or null if failed
+   */
+  async loadPreferencesFromServer() {
+    if (!window.AuthService || !AuthService.isAuthenticated()) {
+      return null;
+    }
+    
+    const token = AuthService.getToken();
+    const cfg = window.DanddyConfig || window.AppConfig || {};
+    const API_BASE = cfg.API_BASE_URL || 'https://danddy-api.onrender.com/api';
+    
+    try {
+      const response = await fetch(`${API_BASE}/auth/preferences`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const prefs = data.preferences || {};
+        // Only apply if there are actual preferences stored
+        if (Object.keys(prefs).length > 0) {
+          this.applyPreferences(prefs);
+        }
+        return prefs;
+      } else {
+        console.warn('[StorageService] Failed to load preferences:', response.status);
+        return null;
+      }
+    } catch (e) {
+      console.warn('[StorageService] Error loading preferences:', e);
+      return null;
+    }
+  },
+
   // ==== CHARACTER STORAGE ====
   // Delegates to shared CharacterStorage facade (character-storage.js)
   // which handles cloud/local storage, fallbacks, and timestamp normalization.

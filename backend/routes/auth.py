@@ -17,6 +17,7 @@ from schemas.user import (
     PasswordResetConfirm,
     PinnedCharactersUpdate,
     UsernameUpdate,
+    UserPreferences,
 )
 import json
 from utils.auth import (
@@ -314,5 +315,47 @@ def update_pinned_characters(
     db.commit()
     
     return {"pinned_character_ids": pinned_ids}
+
+
+@router.get("/preferences")
+def get_user_preferences(
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get the current user's preferences.
+    Returns all stored settings (colorTheme, narratorId, textSpeedMultiplier, etc.)
+    """
+    try:
+        prefs = json.loads(current_user.preferences or "{}")
+        return {"preferences": prefs}
+    except (json.JSONDecodeError, TypeError):
+        return {"preferences": {}}
+
+
+@router.put("/preferences")
+def update_user_preferences(
+    data: UserPreferences,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Update the current user's preferences.
+    Merges the provided preferences with existing ones (partial update).
+    """
+    try:
+        existing = json.loads(current_user.preferences or "{}")
+    except (json.JSONDecodeError, TypeError):
+        existing = {}
+    
+    # Merge new preferences with existing (only non-None values)
+    updates = data.model_dump(exclude_none=True)
+    merged = {**existing, **updates}
+    
+    # Store as JSON string
+    current_user.preferences = json.dumps(merged)
+    db.add(current_user)
+    db.commit()
+    
+    return {"preferences": merged}
 
 

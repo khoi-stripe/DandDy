@@ -10423,6 +10423,11 @@ async function handleLogin() {
                 window.AuthService.startSessionMonitor();
             }
             
+            // Load user preferences from server
+            if (window.StorageService && StorageService.loadPreferencesFromServer) {
+                StorageService.loadPreferencesFromServer();
+            }
+            
             // Check if should migrate user-created characters first
             if (window.MigrationService && window.MigrationService.hasLocalCharacters()) {
                 showMigrationModal();
@@ -10520,6 +10525,11 @@ async function handleRegister() {
             // Start session monitoring now that user is logged in
             if (window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
                 window.AuthService.startSessionMonitor();
+            }
+            
+            // Sync current preferences to the new account
+            if (window.StorageService && StorageService.syncPreferencesToServer) {
+                StorageService.syncPreferencesToServer();
             }
             
             // Check if should migrate user-created characters first
@@ -11519,6 +11529,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Start session monitoring if authenticated, and listen for expiry events
     if (isAuthenticated && window.AuthService && typeof window.AuthService.startSessionMonitor === 'function') {
         window.AuthService.startSessionMonitor();
+    }
+    
+    // Load user preferences from server on app init (if authenticated)
+    if (isAuthenticated && window.StorageService && StorageService.loadPreferencesFromServer) {
+        // Fire and forget - don't block app startup
+        StorageService.loadPreferencesFromServer();
     }
 
     // Listen for session expired events to show the modal

@@ -1280,6 +1280,11 @@ const SettingsModal = (window.SettingsModal = {
       StorageService.setShowDescriptions(newValue);
     }
 
+    // Sync preferences to server if logged in (fire and forget)
+    if (window.StorageService && StorageService.syncPreferencesToServer) {
+      StorageService.syncPreferencesToServer();
+    }
+
     // Use a non-intrusive toast for settings changes instead of a narrator line
     if (window.App && typeof App.showToast === 'function') {
       App.showToast('Settings saved');

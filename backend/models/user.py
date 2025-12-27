@@ -23,6 +23,10 @@ class User(Base):
     # Pinned character IDs stored as JSON array string, e.g. '["1", "5", "3"]'
     # Order in array = pin order (first pinned appears first)
     pinned_character_ids = Column(Text, nullable=True, default="[]")
+    # User preferences stored as JSON string
+    # Contains: colorTheme, narratorId, textSpeedMultiplier, imageModel, 
+    # imageQuality, portraitViewMode, portraitPromptTheme, showDescriptions
+    preferences = Column(Text, nullable=True, default="{}")
 
     # Relationships
     characters = relationship("Character", back_populates="owner", foreign_keys="[Character.owner_id]")
