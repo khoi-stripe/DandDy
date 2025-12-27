@@ -2428,6 +2428,13 @@ input.search-input:focus {
     align-items: center;
 }
 
+/* Show quota tooltip on hover for create new button.
+   Uses CSS hover similar to .selector-option-wrapper tooltips for reliability. */
+.grid-new-character-wrap:hover .custom-tooltip:not(:empty) {
+    opacity: 1;
+    transform: scale(1);
+}
+
 /* Always use bright theme colors for the new character button - override all themes */
 #gridNewCharacterBtn,
 .panel-character-grid #gridNewCharacterBtn,

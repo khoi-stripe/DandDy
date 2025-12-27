@@ -10306,6 +10306,10 @@ async function handleLogin() {
                 UI.render();
             }
             
+            // Refresh quota states now that user is authenticated (affects tooltips)
+            updateCreationQuotaState();
+            updateImageQuotaState();
+            
             // Check for pending character shares (after a short delay to not overwhelm)
             setTimeout(() => checkPendingShares(), 500);
             return;
@@ -10409,6 +10413,10 @@ async function handleRegister() {
                 
                 UI.render();
             }
+            
+            // Refresh quota states now that user is authenticated (affects tooltips)
+            updateCreationQuotaState();
+            updateImageQuotaState();
             
             // Check for pending character shares (after a short delay to not overwhelm)
             setTimeout(() => checkPendingShares(), 500);
