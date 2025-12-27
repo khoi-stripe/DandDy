@@ -512,6 +512,11 @@ function initBuilderAuth() {
         if (typeof window.AuthService.startSessionMonitor === 'function') {
             window.AuthService.startSessionMonitor();
         }
+        
+        // Load user preferences from server (fire and forget)
+        if (window.StorageService && StorageService.loadPreferencesFromServer) {
+            StorageService.loadPreferencesFromServer();
+        }
     }
 
     // Listen for session expired events
