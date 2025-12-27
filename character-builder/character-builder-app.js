@@ -442,6 +442,15 @@ const App = (window.App = {
     const urlParams = new URLSearchParams(window.location.search);
     const forceResume = urlParams.get('resume') === 'true';
     const forceNew = urlParams.get('new') === 'true';
+    const isRequired = urlParams.get('required') === 'true';
+    
+    // Remove exit button if character creation is required (new user flow)
+    if (isRequired) {
+      const exitBtn = document.getElementById('exitBuilderBtn');
+      if (exitBtn) {
+        exitBtn.remove();
+      }
+    }
 
     // Check for existing session to resume
     if (!forceNew && CharacterState.hasSession()) {
@@ -6266,6 +6275,13 @@ window.suppressBeforeunloadWarning = () => {
 
 // Exit back to the Character Manager app from builder mode
 function exitToManager() {
+  // Check if exit is blocked (new user must create a character first)
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('required') === 'true') {
+    App.showSystemMessage('Please create your first character to continue.');
+    return;
+  }
+  
   const state = CharacterState.get();
   const character = state.character;
 

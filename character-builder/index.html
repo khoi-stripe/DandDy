@@ -45,7 +45,7 @@
           <span id="auth-slot"></span>
           <button id="exitBuilderBtn" class="terminal-btn terminal-btn-primary terminal-status-settings-btn" type="button" onclick="exitToManager()">Exit</button>
           <!-- Overflow menu for settings and auth -->
-          <div class="builder-overflow selector-shell selector-shell--actions">
+          <div class="header-overflow builder-overflow selector-shell selector-shell--actions">
             <button
               id="builderOverflowBtn"
               class="terminal-btn-small selector-trigger overflow-trigger builder-overflow-trigger"
@@ -145,7 +145,6 @@
       [ v1.4 | Press ↑↓ to navigate, Enter to select ]
     </div>
     -->
-  </div>
 
   <!-- Session Resume Modal -->
   <div id="sessionResumeModal" class="modal">
@@ -197,7 +196,7 @@
           <p class="terminal-text">Create an account to sync your characters across devices.</p>
           <p class="terminal-text-small">Username:</p>
           <input type="text" id="registerUsername" class="terminal-input" placeholder="your_username" maxlength="30" pattern="[a-zA-Z0-9_]{3,30}">
-          <p class="terminal-text-tiny terminal-text-dim">3-30 characters, letters, numbers, and underscores only</p>
+          <p class="terminal-text-small terminal-text-dim">3-30 characters, letters, numbers, and underscores only</p>
           <p class="terminal-text-small modal-section-label">Email:</p>
           <input type="email" id="registerEmail" class="terminal-input" placeholder="you@example.com">
           <p class="terminal-text-small modal-section-label">Password:</p>
@@ -223,11 +222,13 @@
       </div>
     </div>
   </div>
+
+  </div><!-- end .app-root -->
   
   <!-- Theme loader (applies saved theme config) -->
   <script src="../app-theme-loader.js?v=20251224a"></script>
   <!-- Concatenated builder bundle (see scripts/simple_bundle.py) -->
-  <script src="builder.bundle.js?v=20251224a"></script>
+  <script src="builder.bundle.js?v=20251226c"></script>
 </body>
 </html>
 

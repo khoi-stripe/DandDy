@@ -1260,6 +1260,17 @@ const ExpandedView = (window.ExpandedView = {
         }
     },
 
+    /** Render empty campaign state when no character is selected */
+    _renderNoCampaign() {
+        return `
+            <div class="campaign-panel-placeholder">
+                <div class="campaign-panel-placeholder-text">
+                    No character selected.
+                </div>
+            </div>
+        `;
+    },
+
     /** Render the full campaign panel with both sections */
     _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0, journalEntries = [], pastCampaignsCount = null) {
         // Use cached past campaigns count if not explicitly provided
@@ -10423,6 +10434,13 @@ async function handleLogin() {
                 // Reload pinned characters and characters from cloud
                 await loadPinnedCharacterIds();
                 await AppState.loadCharacters();
+                
+                // Users with no characters must create one first
+                if (!AppState.characters || AppState.characters.length === 0) {
+                    window.location.href = 'character-builder/index.html?new=true&required=true';
+                    return;
+                }
+                
                 UI.render();
             }
             
@@ -10515,6 +10533,13 @@ async function handleRegister() {
                 // Reload pinned characters and characters from cloud
                 await loadPinnedCharacterIds();
                 await AppState.loadCharacters();
+                
+                // New users with no characters - send them directly to character builder
+                if (!AppState.characters || AppState.characters.length === 0) {
+                    window.location.href = 'character-builder/index.html?new=true&required=true';
+                    return;
+                }
+                
                 UI.render();
             }
             
@@ -11164,6 +11189,7 @@ function updateAuthUI() {
     // Overflow menu elements
     const overflowAuthIcon = document.getElementById('overflowAuthIcon');
     const overflowAuthLabel = document.getElementById('overflowAuthLabel');
+    const overflowCreateAccountBtn = document.getElementById('overflowCreateAccountBtn');
     
     // If the header shell isn't present (e.g., in some embedded contexts),
     // safely bail out.
@@ -11188,6 +11214,7 @@ function updateAuthUI() {
         // Update overflow menu
         if (overflowAuthIcon) overflowAuthIcon.textContent = '←';
         if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log out';
+        if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.add('is-hidden');
 
         // Hide guest notice when logged in
         if (guestNotice) {
@@ -11209,6 +11236,7 @@ function updateAuthUI() {
         // Update overflow menu
         if (overflowAuthIcon) overflowAuthIcon.textContent = '→';
         if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log In';
+        if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.remove('is-hidden');
 
         // Don't show guest notice by default - only when user makes changes
         // (handled by maybeShowGuestNotice() function)
@@ -11700,6 +11728,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Initialize app state after demo characters are loaded
         await AppState.init();
+        
+        // Authenticated users with no characters must create one first
+        if (isAuthenticated && (!AppState.characters || AppState.characters.length === 0)) {
+            window.location.href = 'character-builder/index.html?new=true&required=true';
+            return;
+        }
         
         // Restore expanded view state from URL if present
         ExpandedView.restore();

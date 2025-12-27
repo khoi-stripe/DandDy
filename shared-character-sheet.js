@@ -1768,6 +1768,10 @@ const CharacterSheet = (window.CharacterSheet = {
           menu.style.display = 'block';
           menu.style.transform = 'none';
 
+          // Force a reflow before measuring to ensure styles are applied.
+          // This fixes issues where first-open menus have incorrect dimensions.
+          void menu.offsetHeight;
+
           const menuRect = menu.getBoundingClientRect();
           let menuHeight = menuRect.height || 0;
           let menuWidth = menuRect.width || 0;

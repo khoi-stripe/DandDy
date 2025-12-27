@@ -143,6 +143,16 @@
                             <span class="selector-option-label">Settings</span>
                         </button>
                         <button
+                            class="selector-option is-hidden"
+                            type="button"
+                            role="menuitem"
+                            id="overflowCreateAccountBtn"
+                            onclick="showAuthModal(); showRegisterForm(); CharacterSheet.closeSelectorMenu(this.closest('.selector-shell').querySelector('.selector-trigger'));"
+                        >
+                            <span class="selector-option-icon">+</span>
+                            <span class="selector-option-label">Create account</span>
+                        </button>
+                        <button
                             class="selector-option"
                             type="button"
                             role="menuitem"
@@ -272,7 +282,12 @@
                     <span class="nav-arrow">→</span>
                 </button>
             </div>
-            <div class="sheet-placeholder"></div>
+            <div class="sheet-placeholder">
+                <div class="sheet-empty-state">
+                    <div class="sheet-empty-text">Select a character from the grid to view their sheet, or create a new one to begin.</div>
+                    <button class="terminal-button terminal-button--primary" onclick="createNewCharacter()">+ New Character</button>
+                </div>
+            </div>
             <div class="sheet__content">
                 <div class="sheet__layout">
                     <div id="characterSheet" class="character-sheet is-hidden">
@@ -1070,7 +1085,7 @@
                     <p class="terminal-text">Create an account to sync your characters across devices.</p>
                     <p class="terminal-text-small">Username:</p>
                     <input type="text" id="registerUsername" class="terminal-input" placeholder="your_username" maxlength="30" pattern="[a-zA-Z0-9_]{3,30}">
-                    <p class="terminal-text-tiny terminal-text-dim">3-30 characters, letters, numbers, and underscores only</p>
+                    <p class="terminal-text-small terminal-text-dim">3-30 characters, letters, numbers, and underscores only</p>
                     <p class="terminal-text-small modal-section-label">Email:</p>
                     <input type="email" id="registerEmail" class="terminal-input" placeholder="you@example.com">
                     <p class="terminal-text-small modal-section-label">Password:</p>

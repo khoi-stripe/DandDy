@@ -11,6 +11,11 @@ function showAuthModal() {
     const modal = document.getElementById('authModal');
     if (modal) {
         modal.classList.add('show');
+        // Add dark overlay to terminal frame
+        const host = document.querySelector('.terminal-frame') || document.querySelector('.app-root');
+        if (host) {
+            host.classList.add('auth-flow-dim');
+        }
         showLoginForm();
         return;
     }
@@ -46,6 +51,11 @@ function closeAuthModal() {
         return;
     }
     modal.classList.remove('show');
+    // Remove dark overlay from terminal frame
+    const host = document.querySelector('.terminal-frame') || document.querySelector('.app-root');
+    if (host) {
+        host.classList.remove('auth-flow-dim');
+    }
     err.classList.add('is-hidden');
     // Clear form fields
     const loginEmail = document.getElementById('loginEmail');
