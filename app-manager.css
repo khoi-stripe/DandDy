@@ -2137,6 +2137,9 @@ div.sheet__sidebar.ui-theme-pink {
     padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-md) var(--spacing-xl);
     /* Negative margins to counteract panel padding so we go edge-to-edge */
     margin: 0 calc(-1 * var(--spacing-xl)) 0 calc(-1 * var(--spacing-xl));
+    /* Force GPU compositing layer to prevent content bleeding through during fast scroll */
+    transform: translateZ(0);
+    isolation: isolate;
 }
 
 /* Session in progress notice */
