@@ -1167,13 +1167,16 @@
                 <div class="modal-body account-modal-body">
                     <div class="account-field-group">
                         <label class="account-field-label">Email</label>
-                        <p class="account-email" id="accountEmail">email@example.com</p>
+                        <div>
+                            <p class="account-email" id="accountEmail">email@example.com</p>
+                            <a href="#" class="account-edit-link" onclick="event.preventDefault(); closeAccountModal(); handleLogout();">Log out</a>
+                        </div>
                     </div>
                     <div class="account-field-group">
                         <label class="account-field-label">Username</label>
                         <div>
                             <span class="account-username" id="accountUsername">@username</span>
-                            <a href="#" class="account-edit-link" onclick="event.preventDefault(); enterUsernameEditMode();">edit</a>
+                            <a href="#" class="account-edit-link" onclick="event.preventDefault(); enterUsernameEditMode();">Edit</a>
                         </div>
                     </div>
                 </div>
