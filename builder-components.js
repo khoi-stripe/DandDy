@@ -378,75 +378,6 @@ const Components = (window.Components = {
             <div class="settings-layout">
               <div class="settings-grid">
                 <div class="settings-group">
-                  <div class="settings-group-label">[ Display ]</div>
-                  <section class="settings-section">
-                    <div class="settings-row settings-row--stacked">
-                      <div class="settings-label">Color Theme</div>
-                      <div class="settings-field">
-                        <div class="selector-shell selector-shell--listbox selector-shell--match-width">
-                          <button
-                            class="terminal-btn selector-trigger"
-                            id="color-theme-select-trigger"
-                            type="button"
-                            aria-haspopup="listbox"
-                            aria-expanded="false"
-                            onclick="CharacterSheet.toggleSelectorMenu(this)"
-                          >
-                            <span
-                              class="selector-trigger-label"
-                              id="color-theme-select-label"
-                            >
-                              ${currentColorThemeLabel}
-                            </span>
-                          </button>
-                          <div
-                            class="selector-menu"
-                            role="listbox"
-                            aria-label="Color theme"
-                            aria-hidden="true"
-                          >
-                            ${colorThemeOptions
-                              .map((opt) => {
-                                const isSelected = opt.value === currentColorTheme;
-                                return `
-                                <button
-                                  class="selector-option${isSelected ? ' is-selected' : ''}"
-                                  type="button"
-                                  role="option"
-                                  data-value="${opt.value}"
-                                  aria-selected="${isSelected ? 'true' : 'false'}"
-                                >
-                                  <span class="selector-option-label">
-                                    ${opt.label}
-                                  </span>
-                                </button>
-                              `;
-                              })
-                              .join('')}
-                          </div>
-                        </div>
-                        <select
-                          id="color-theme-select"
-                          class="terminal-select settings-select hidden"
-                        >
-                          ${colorThemeOptions
-                            .map(
-                              (opt) => `
-                              <option value="${opt.value}" ${
-                                opt.value === currentColorTheme ? 'selected' : ''
-                              }>
-                                ${opt.label}
-                              </option>
-                            `,
-                            )
-                            .join('')}
-                        </select>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-
-                <div class="settings-group">
                   <div class="settings-group-label">[ Character Sheet ]</div>
                   <section class="settings-section">
                     <div class="settings-row settings-row--stacked">
@@ -791,6 +722,75 @@ const Components = (window.Components = {
                           )
                           .join('')}
                       </select>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+
+                <div class="settings-group">
+                  <div class="settings-group-label">[ Display ]</div>
+                  <section class="settings-section">
+                    <div class="settings-row settings-row--stacked">
+                      <div class="settings-label">Color Theme</div>
+                      <div class="settings-field">
+                        <div class="selector-shell selector-shell--listbox selector-shell--match-width">
+                          <button
+                            class="terminal-btn selector-trigger"
+                            id="color-theme-select-trigger"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            onclick="CharacterSheet.toggleSelectorMenu(this)"
+                          >
+                            <span
+                              class="selector-trigger-label"
+                              id="color-theme-select-label"
+                            >
+                              ${currentColorThemeLabel}
+                            </span>
+                          </button>
+                          <div
+                            class="selector-menu"
+                            role="listbox"
+                            aria-label="Color theme"
+                            aria-hidden="true"
+                          >
+                            ${colorThemeOptions
+                              .map((opt) => {
+                                const isSelected = opt.value === currentColorTheme;
+                                return `
+                                <button
+                                  class="selector-option${isSelected ? ' is-selected' : ''}"
+                                  type="button"
+                                  role="option"
+                                  data-value="${opt.value}"
+                                  aria-selected="${isSelected ? 'true' : 'false'}"
+                                >
+                                  <span class="selector-option-label">
+                                    ${opt.label}
+                                  </span>
+                                </button>
+                              `;
+                              })
+                              .join('')}
+                          </div>
+                        </div>
+                        <select
+                          id="color-theme-select"
+                          class="terminal-select settings-select hidden"
+                        >
+                          ${colorThemeOptions
+                            .map(
+                              (opt) => `
+                              <option value="${opt.value}" ${
+                                opt.value === currentColorTheme ? 'selected' : ''
+                              }>
+                                ${opt.label}
+                              </option>
+                            `,
+                            )
+                            .join('')}
+                        </select>
                       </div>
                     </div>
                   </section>
