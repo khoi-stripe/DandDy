@@ -1258,6 +1258,11 @@ const ExpandedView = (window.ExpandedView = {
             // Show empty state on error
             panel.innerHTML = this._renderCampaignPanelContent(characterId, null);
         }
+        
+        // Also refresh mobile campaign section if on mobile
+        if (typeof MobileView !== 'undefined' && MobileView.refreshCampaignSection) {
+            MobileView.refreshCampaignSection();
+        }
     },
 
     /** Render empty campaign state when no character is selected */
@@ -1501,7 +1506,7 @@ const ExpandedView = (window.ExpandedView = {
                 onclick: `CampaignUI.openInviteModal(${campaign.id})`,
             });
             menuItems.push({
-                icon: '⏹',
+                icon: '■',
                 label: 'End Campaign',
                 onclick: `CampaignUI.confirmEndCampaignById(${campaign.id})`,
             });
@@ -1862,8 +1867,8 @@ const CampaignUI = (window.CampaignUI = {
         document.getElementById('createCampaignDesc').value = '';
         
         // Clear invite fields
-        const emailInput = document.getElementById('createCampaignInviteEmail');
-        if (emailInput) emailInput.value = '';
+        const usernameInput = document.getElementById('createCampaignInviteUsername');
+        if (usernameInput) usernameInput.value = '';
         
         const errorEl = document.getElementById('createCampaignInviteError');
         if (errorEl) {
@@ -1893,25 +1898,33 @@ const CampaignUI = (window.CampaignUI = {
     },
     
     addPendingInviteFromCreate() {
-        const input = document.getElementById('createCampaignInviteEmail');
-        const email = input?.value?.trim().toLowerCase();
+        const input = document.getElementById('createCampaignInviteUsername');
+        let rawValue = input?.value?.trim();
         const errorEl = document.getElementById('createCampaignInviteError');
         
-        if (!email) return;
+        if (!rawValue) return;
         
-        // Basic email validation
-        if (!email.includes('@') || !email.includes('.')) {
+        // Auto-add @ prefix if not present
+        if (!rawValue.startsWith('@')) {
+            rawValue = '@' + rawValue;
+        }
+        
+        const username = rawValue.toLowerCase();
+        
+        // Username validation: @username (3-30 chars, alphanumeric + underscore)
+        const usernamePattern = /^@[a-zA-Z0-9_]{3,30}$/;
+        if (!usernamePattern.test(rawValue)) {
             if (errorEl) {
-                errorEl.textContent = 'Please enter a valid email address';
+                errorEl.textContent = 'Username must be 3-30 characters (letters, numbers, underscores)';
                 errorEl.style.display = 'block';
             }
             return;
         }
         
         // Check for duplicates
-        if (this._createCampaignPendingInvites.includes(email)) {
+        if (this._createCampaignPendingInvites.includes(username)) {
             if (errorEl) {
-                errorEl.textContent = 'This email is already in the list';
+                errorEl.textContent = 'This username is already in the list';
                 errorEl.style.display = 'block';
             }
             return;
@@ -1923,7 +1936,7 @@ const CampaignUI = (window.CampaignUI = {
         }
         
         // Add to pending list
-        this._createCampaignPendingInvites.push(email);
+        this._createCampaignPendingInvites.push(username);
         this._renderCreateCampaignInvites();
         
         // Clear input and refocus
@@ -1931,8 +1944,8 @@ const CampaignUI = (window.CampaignUI = {
         input.focus();
     },
     
-    removePendingInviteFromCreate(email) {
-        this._createCampaignPendingInvites = this._createCampaignPendingInvites.filter(e => e !== email);
+    removePendingInviteFromCreate(username) {
+        this._createCampaignPendingInvites = this._createCampaignPendingInvites.filter(u => u !== username);
         this._renderCreateCampaignInvites();
     },
     
@@ -1947,11 +1960,11 @@ const CampaignUI = (window.CampaignUI = {
         }
         
         container.style.display = 'block';
-        container.innerHTML = this._createCampaignPendingInvites.map(email => `
+        container.innerHTML = this._createCampaignPendingInvites.map(username => `
             <div class="share-collaborator-item share-collaborator-pending">
-                <span class="share-collaborator-email">${Utils.escapeHtml(email)}</span>
+                <span class="share-collaborator-email">${Utils.escapeHtml(username)}</span>
                 <span class="share-collaborator-status">PENDING</span>
-                <button type="button" class="share-collaborator-remove" onclick="CampaignUI.removePendingInviteFromCreate('${Utils.escapeHtml(email)}')" title="Remove">×</button>
+                <button type="button" class="share-collaborator-remove" onclick="CampaignUI.removePendingInviteFromCreate('${Utils.escapeHtml(username)}')" title="Remove">×</button>
             </div>
         `).join('');
     },
@@ -2275,9 +2288,9 @@ const CampaignUI = (window.CampaignUI = {
                 campaignNameEl.textContent = campaign.name || 'Unnamed Campaign';
             }
             
-            // Clear email input
-            const emailInput = document.getElementById('inviteModalEmail');
-            if (emailInput) emailInput.value = '';
+            // Clear username input
+            const usernameInput = document.getElementById('inviteModalUsername');
+            if (usernameInput) usernameInput.value = '';
             
             // Clear any error messages
             const errorEl = document.getElementById('inviteModalError');
@@ -2291,9 +2304,9 @@ const CampaignUI = (window.CampaignUI = {
             
             modal.classList.add('show');
             
-            // Focus email input
+            // Focus username input
             setTimeout(() => {
-                document.getElementById('inviteModalEmail')?.focus();
+                document.getElementById('inviteModalUsername')?.focus();
             }, 100);
             
         } catch (error) {
@@ -2377,45 +2390,33 @@ const CampaignUI = (window.CampaignUI = {
     },
     
     async addPendingInviteFromModal() {
-        const input = document.getElementById('inviteModalEmail');
+        const input = document.getElementById('inviteModalUsername');
         const addBtn = document.getElementById('inviteAddBtn');
-        const rawValue = input?.value?.trim();
+        let rawValue = input?.value?.trim();
         const errorEl = document.getElementById('inviteModalError');
         
         if (!rawValue) return;
         
-        // Determine if this is a username (@user) or email
-        const isUsername = rawValue.startsWith('@');
-        const identifier = isUsername ? rawValue.toLowerCase() : rawValue.toLowerCase();
+        // Auto-add @ prefix if not present
+        if (!rawValue.startsWith('@')) {
+            rawValue = '@' + rawValue;
+        }
         
-        // Validation
-        if (isUsername) {
-            // Username validation: @username (3-30 chars, alphanumeric + underscore)
-            const usernamePattern = /^@[a-zA-Z0-9_]{3,30}$/;
-            if (!usernamePattern.test(rawValue)) {
-                if (errorEl) {
-                    errorEl.textContent = 'Username must be 3-30 characters (letters, numbers, underscores)';
-                    errorEl.style.display = 'block';
-                }
-                return;
+        const identifier = rawValue.toLowerCase();
+        
+        // Username validation: @username (3-30 chars, alphanumeric + underscore)
+        const usernamePattern = /^@[a-zA-Z0-9_]{3,30}$/;
+        if (!usernamePattern.test(rawValue)) {
+            if (errorEl) {
+                errorEl.textContent = 'Username must be 3-30 characters (letters, numbers, underscores)';
+                errorEl.style.display = 'block';
             }
-        } else {
-            // Basic email validation
-            if (!identifier.includes('@') || !identifier.includes('.')) {
-                if (errorEl) {
-                    errorEl.textContent = 'Enter @username or a valid email address';
-                    errorEl.style.display = 'block';
-                }
-                return;
-            }
+            return;
         }
         
         // Check for duplicates in existing invitations
         const isDuplicate = this._existingInvitations.some(inv => {
-            if (isUsername) {
-                return inv.username && `@${inv.username}`.toLowerCase() === identifier;
-            }
-            return inv.email.toLowerCase() === identifier;
+            return inv.username && `@${inv.username}`.toLowerCase() === identifier;
         });
         if (isDuplicate) {
             if (errorEl) {
@@ -2437,7 +2438,7 @@ const CampaignUI = (window.CampaignUI = {
         }
         
         try {
-            // Send invitation (API handles @username vs email)
+            // Send invitation by username
             await CampaignAPI.inviteByUsernameOrEmail(this._invitingCampaign.id, identifier);
             
             // Refresh the list
@@ -3980,9 +3981,6 @@ const MobileView = {
     /** Track the previous viewport state to detect transitions */
     _wasMobile: null,
     
-    /** Current view in mobile sheet: 'sheet' or 'campaign' */
-    _currentView: 'sheet',
-    
     /** Swipe tracking state */
     _touchStartX: 0,
     _touchStartY: 0,
@@ -4122,9 +4120,6 @@ const MobileView = {
         const nextCharacter = characters[nextIndex];
         
         if (nextCharacter) {
-            // Reset to sheet view when swiping to a new character
-            this._currentView = 'sheet';
-            this._updateViewToggle();
             this.showSwipeLoader();
             viewCharacter(nextCharacter.id, { skipKeyboardSync: false, updateUrl: true });
         }
@@ -4143,9 +4138,6 @@ const MobileView = {
         const prevCharacter = characters[prevIndex];
         
         if (prevCharacter) {
-            // Reset to sheet view when swiping to a new character
-            this._currentView = 'sheet';
-            this._updateViewToggle();
             this.showSwipeLoader();
             viewCharacter(prevCharacter.id, { skipKeyboardSync: false, updateUrl: true });
         }
@@ -4372,166 +4364,45 @@ const MobileView = {
         countEl.textContent = currentNum + '/' + total;
     },
     
-    /** Update the view toggle link text based on current view */
+    /** Update the view toggle link (now just an anchor to campaign section) */
     _updateViewToggle() {
+        // Link text is always "⚔ Campaign" since it's just a scroll anchor now
         const toggleEl = document.getElementById('mobileViewToggle');
-        if (!toggleEl) return;
-        
-        toggleEl.textContent = this._currentView === 'sheet' ? 'Campaign' : 'Character';
+        if (toggleEl) {
+            toggleEl.innerHTML = '⚔ Campaign';
+        }
     },
     
-    /** Toggle between character sheet and campaign views */
-    toggleCampaign() {
-        const container = document.getElementById('mobileSheetContainer');
+    /** 
+     * Refresh the mobile campaign section if we're on mobile and viewing a character.
+     * This should be called whenever campaign data changes (journal entries, invites, etc.)
+     * After refreshing, scrolls to the campaign section so user can see their changes.
+     */
+    async refreshCampaignSection() {
+        if (!this.isMobile()) return;
+        
         const gridPanel = document.getElementById('characterGridPanel');
-        if (!container || !gridPanel) return;
+        if (!gridPanel?.classList.contains('is-viewing-sheet')) return;
         
-        if (this._currentView === 'sheet') {
-            // Switch to campaign view
-            this._currentView = 'campaign';
-            this._renderCampaignContent(container);
-        } else {
-            // Switch back to sheet view
-            this._currentView = 'sheet';
-            const sourceSheet = document.getElementById('characterSheet');
-            if (sourceSheet) {
-                container.innerHTML = sourceSheet.innerHTML;
-            }
-        }
-        
-        this._updateViewToggle();
-        
-        // Scroll to top when switching views
-        gridPanel.scrollTop = 0;
-    },
-    
-    /** Render campaign content into the mobile container */
-    _renderCampaignContent(container) {
-        // Get the campaign panel slot content from desktop (if available)
-        const campaignSlot = document.querySelector('.sidebar__content') || document.querySelector('.sheet__sidebar');
-        
-        if (campaignSlot && campaignSlot.innerHTML.trim()) {
-            // Clone the campaign content from desktop
-            container.innerHTML = campaignSlot.innerHTML;
-        } else {
-            // Need to fetch and render campaign content
-            this._loadAndRenderCampaign(container);
-        }
-    },
-    
-    /** Load campaign data and render it into the container */
-    async _loadAndRenderCampaign(container) {
         const characterId = AppState.selectedCharacterId;
-        if (!characterId) {
-            container.innerHTML = this._renderNoCampaign();
-            return;
-        }
+        if (!characterId) return;
         
-        // Show loading state
-        container.innerHTML = `
-            <div class="campaign-panel-placeholder">
-                <div class="panel-loading-cube-container">
-                    <div class="panel-loading-cube">
-                        <i></i><i></i><i></i><i></i><i></i><i></i>
-                    </div>
-                </div>
-                <div class="panel-loading-text" style="margin-top: 16px;">Loading campaign...</div>
-            </div>
-        `;
+        // Refresh the campaign section at the bottom of the sheet
+        await this._loadMobileCampaign(characterId);
         
-        // Check if user is authenticated
-        const isAuthenticated = window.AuthService && AuthService.isAuthenticated();
-        
-        // Get the character's campaignId
-        const character = AppState.characters?.find(c => String(c.id) === String(characterId));
-        let campaignId = character?.campaignId;
-        
-        if (!isAuthenticated) {
-            // Not authenticated - show empty state
-            container.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
-            return;
-        }
-        
-        // Try to find campaign via membership if not on character
-        let campaignDataFromMembership = null;
-        if (!campaignId && typeof CampaignUI !== 'undefined') {
-            try {
-                campaignDataFromMembership = await CampaignUI.getCharacterCampaign(characterId);
-                if (campaignDataFromMembership) {
-                    campaignId = campaignDataFromMembership.campaign.id;
-                }
-            } catch (e) {
-                console.warn('Could not check campaign membership:', e);
-            }
-        }
-        
-        if (!campaignId) {
-            // No campaign - show create/join options
-            container.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
-            return;
-        }
-        
-        // Fetch campaign data
-        try {
-            let campaignData, journalEntries = [];
-            
-            if (campaignDataFromMembership) {
-                campaignData = campaignDataFromMembership;
-            } else if (typeof CampaignUI !== 'undefined') {
-                campaignData = await CampaignUI.getCharacterCampaign(characterId);
-            }
-            
-            if (!campaignData) {
-                container.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
-                return;
-            }
-            
-            // Fetch journal entries (use campaign-wide endpoint for party visibility)
-            if (typeof CampaignAPI !== 'undefined' && campaignId) {
-                try {
-                    journalEntries = await CampaignAPI.getCampaignJournalEntries(
-                        campaignId, 
-                        CampaignUI._journalFilterUserId
-                    );
-                } catch (e) {
-                    console.warn('Could not fetch journal entries:', e);
-                }
-            }
-            
-            // Render campaign content
-            container.innerHTML = ExpandedView._renderCampaignPanelContent(
-                characterId,
-                campaignData,
-                journalEntries?.length || 0,
-                journalEntries || []
-            );
-            
-            // Initialize any collapsible sections
-            if (typeof ExpandedView !== 'undefined' && ExpandedView._initDescriptionTruncation) {
-                ExpandedView._initDescriptionTruncation();
-            }
-        } catch (e) {
-            console.error('Error loading campaign:', e);
-            container.innerHTML = `
-                <div class="campaign-panel-placeholder">
-                    <div class="campaign-panel-placeholder-text">
-                        Failed to load campaign data.<br>
-                        Please try again.
-                    </div>
-                </div>
-            `;
+        // Scroll to campaign section so user can see their changes
+        const campaignSection = document.getElementById('mobileCampaignSection');
+        if (campaignSection) {
+            // Use requestAnimationFrame to ensure DOM has updated before scrolling
+            requestAnimationFrame(() => {
+                campaignSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
         }
     },
     
-    /** Render empty campaign state */
-    _renderNoCampaign() {
-        return `
-            <div class="campaign-panel-placeholder">
-                <div class="campaign-panel-placeholder-text">
-                    No campaign selected.
-                </div>
-            </div>
-        `;
+    /** Scroll to campaign section (legacy method, now just scrolls) */
+    toggleCampaign() {
+        scrollToCampaign();
     },
     
     /** Add the swipe loader overlay to the portrait container */
@@ -4767,9 +4638,10 @@ function closeMobileSheet() {
 
 /** Global function to switch to campaign view on mobile (called from HTML onclick) */
 function scrollToCampaign() {
-    // Use the existing MobileView.toggleCampaign() method to switch to campaign view
-    if (typeof MobileView !== 'undefined' && MobileView.toggleCampaign) {
-        MobileView.toggleCampaign();
+    // Scroll to the campaign section at the bottom of the mobile sheet
+    const campaignSection = document.getElementById('mobileCampaignSection');
+    if (campaignSection) {
+        campaignSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 
@@ -6422,13 +6294,12 @@ async function openShareModal(characterId) {
             </div>
             
             <div class="share-section" style="margin-top: 1.25rem;">
-              <label class="terminal-text-small modal-section-label" for="shareEmailInput">ADD PERSON</label>
+              <label class="terminal-text-small modal-section-label" for="shareUsernameInput">ADD PERSON</label>
               <div class="share-add-row">
-                <input type="text" id="shareEmailInput" class="terminal-input" placeholder="@username or email" autocomplete="off" data-1p-ignore>
+                <input type="text" id="shareUsernameInput" class="terminal-input" placeholder="@username" autocomplete="off" data-1p-ignore>
                 <button class="terminal-btn" id="shareAddBtn">Add</button>
               </div>
-              <p class="terminal-text-tiny terminal-text-dim" style="margin-top: 0.25rem;">Type @username for existing users or email for new users</p>
-              <p id="shareEmailError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
+              <p id="shareUsernameError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
             </div>
           </div>
           <div class="modal-footer modal-footer-end">
@@ -6440,8 +6311,8 @@ async function openShareModal(characterId) {
 
     getManagerModalHost().insertAdjacentHTML('beforeend', modalHtml);
     const modal = document.getElementById('shareModal');
-    const input = document.getElementById('shareEmailInput');
-    const errorEl = document.getElementById('shareEmailError');
+    const input = document.getElementById('shareUsernameInput');
+    const errorEl = document.getElementById('shareUsernameError');
     const addBtn = document.getElementById('shareAddBtn');
     const doneBtn = document.getElementById('shareDoneBtn');
     const collaboratorsSection = document.getElementById('shareCollaboratorsSection');
@@ -6459,11 +6330,6 @@ async function openShareModal(characterId) {
 
     const clearError = () => {
         errorEl.style.display = 'none';
-    };
-
-    // Simple email validation
-    const isValidEmail = (email) => {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     };
 
     // Render collaborators and pending shares list
@@ -6579,30 +6445,25 @@ async function openShareModal(characterId) {
     });
 
     addBtn.addEventListener('click', async () => {
-        const rawValue = input.value.trim();
+        let rawValue = input.value.trim();
         
         if (!rawValue) {
-            showError('Please enter @username or email address');
+            showError('Please enter a username');
             return;
         }
         
-        // Determine if this is a username (@user) or email
-        const isUsername = rawValue.startsWith('@');
+        // Auto-add @ prefix if not present
+        if (!rawValue.startsWith('@')) {
+            rawValue = '@' + rawValue;
+        }
+        
         const identifier = rawValue.toLowerCase();
         
-        // Validation
-        if (isUsername) {
-            // Username validation: @username (3-30 chars, alphanumeric + underscore)
-            const usernamePattern = /^@[a-zA-Z0-9_]{3,30}$/;
-            if (!usernamePattern.test(rawValue)) {
-                showError('Username must be 3-30 characters (letters, numbers, underscores)');
-                return;
-            }
-        } else {
-            if (!isValidEmail(identifier)) {
-                showError('Enter @username or a valid email address');
-                return;
-            }
+        // Username validation: @username (3-30 chars, alphanumeric + underscore)
+        const usernamePattern = /^@[a-zA-Z0-9_]{3,30}$/;
+        if (!usernamePattern.test(rawValue)) {
+            showError('Username must be 3-30 characters (letters, numbers, underscores)');
+            return;
         }
 
         // Disable button while processing
@@ -6610,10 +6471,8 @@ async function openShareModal(characterId) {
         addBtn.textContent = 'ADDING...';
 
         try {
-            // Build share data based on type
-            const shareData = isUsername 
-                ? { to_username: identifier.substring(1) }  // Remove @ prefix
-                : { to_email: identifier };
+            // Build share data (username only)
+            const shareData = { to_username: identifier.substring(1) };  // Remove @ prefix
             
             await CharacterCloudStorage.shareCharacterByUsernameOrEmail(characterId, shareData);
             input.value = '';
@@ -11447,6 +11306,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Initialize modal behaviors (backdrop click, dirty checking)
     ModalManager.init();
+    
+    // Select all text on focus for text inputs (makes editing easier)
+    document.addEventListener('focus', (e) => {
+        const el = e.target;
+        if (el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'email' || el.type === 'number' || el.type === 'search')) {
+            // Use setTimeout to ensure selection happens after focus
+            setTimeout(() => el.select(), 0);
+        }
+    }, true);
     
     // Initialize mobile view handling (resize transitions)
     MobileView.init();

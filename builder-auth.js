@@ -52,7 +52,7 @@ const AuthUI = (window.AuthUI = {
         <div class="auth-form">
           <div class="form-group">
             <label class="form-label">[ USERNAME OR EMAIL ]</label>
-            <input type="text" id="login-email" class="terminal-input" placeholder="username or email" autocomplete="username" />
+            <input type="text" id="login-email" class="terminal-input" placeholder="username or email" autocomplete="username" autocapitalize="off" />
           </div>
           
           <div class="form-group">
@@ -234,7 +234,7 @@ const AuthUI = (window.AuthUI = {
         <div class="auth-form">
           <div class="form-group">
             <label class="form-label">[ EMAIL ]</label>
-            <input type="email" id="register-email" class="terminal-input" placeholder="adventurer@tavern.com" autocomplete="email" />
+            <input type="email" id="register-email" class="terminal-input" placeholder="adventurer@tavern.com" autocomplete="email" autocapitalize="off" />
           </div>
           
           <div class="form-group">

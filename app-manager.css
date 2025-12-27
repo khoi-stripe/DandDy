@@ -2970,6 +2970,19 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     overflow: visible;
 }
 
+/* Combat stats section: wrap conditions to own row on smaller viewports */
+#combat-stats-section .sheet-header {
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    #combat-stats-section .conditions-tags {
+        flex-basis: 100%;
+        margin-left: 0;
+        margin-top: var(--spacing-xs);
+    }
+}
+
 .condition-tag {
     display: inline-flex;
     align-items: center;
