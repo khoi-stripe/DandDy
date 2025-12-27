@@ -37,7 +37,8 @@ def check_campaign_access(campaign_id: int, current_user: User, db: Session) -> 
     A user has access if ANY of these conditions are true:
     1. They are the campaign creator (dm_id)
     2. They are a direct member (CampaignMember.user_id)
-    3. They are a collaborator on a character that's in the campaign
+    3. They own a character that's in the campaign (e.g., shared character used by collaborator)
+    4. They are a collaborator on a character that's in the campaign
     
     Returns True if user has access, False otherwise.
     """
@@ -59,7 +60,7 @@ def check_campaign_access(campaign_id: int, current_user: User, db: Session) -> 
     if is_direct_member:
         return True
     
-    # Check if collaborator on a character in the campaign
+    # Get all characters in the campaign
     campaign_character_ids = db.query(CampaignMember.character_id).filter(
         CampaignMember.campaign_id == campaign_id,
         CampaignMember.status == MemberStatus.ACTIVE,
@@ -68,6 +69,18 @@ def check_campaign_access(campaign_id: int, current_user: User, db: Session) -> 
     character_ids = [c[0] for c in campaign_character_ids]
     
     if character_ids:
+        # Check if user owns any character in the campaign
+        # This handles the case where a user shares their character and a collaborator
+        # joins a campaign with it - the owner should still have access
+        is_owner_of_campaign_character = db.query(Character).filter(
+            Character.id.in_(character_ids),
+            Character.owner_id == current_user.id
+        ).first() is not None
+        
+        if is_owner_of_campaign_character:
+            return True
+        
+        # Check if collaborator on a character in the campaign
         is_collaborator = db.query(CharacterCollaborator).filter(
             CharacterCollaborator.character_id.in_(character_ids),
             CharacterCollaborator.user_id == current_user.id
@@ -191,7 +204,7 @@ def get_campaigns(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get all active campaigns the user is a member of (excludes completed/archived)."""
+    """Get all active campaigns the user has access to (excludes completed/archived)."""
     # Get campaigns where user is a member (via CampaignMember)
     # Only include campaigns that are active or paused (not completed/archived)
     campaigns = db.query(Campaign).join(CampaignMember).filter(
@@ -212,6 +225,23 @@ def get_campaigns(
     for c in created_campaigns:
         if c.id not in campaign_ids:
             campaigns.append(c)
+    
+    # Also include campaigns where user owns a character that's in the campaign
+    # (e.g., user shared character with collaborator who joined a campaign with it)
+    owner_campaigns = db.query(Campaign).join(
+        CampaignMember, CampaignMember.campaign_id == Campaign.id
+    ).join(
+        Character, Character.id == CampaignMember.character_id
+    ).filter(
+        Character.owner_id == current_user.id,
+        CampaignMember.status == MemberStatus.ACTIVE,
+        Campaign.status.in_([CampaignStatus.ACTIVE, CampaignStatus.PAUSED])
+    ).all()
+    
+    for c in owner_campaigns:
+        if c.id not in campaign_ids:
+            campaigns.append(c)
+            campaign_ids.add(c.id)
     
     return campaigns
 
