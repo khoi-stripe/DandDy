@@ -146,6 +146,16 @@
                             class="selector-option is-hidden"
                             type="button"
                             role="menuitem"
+                            id="overflowAccountBtn"
+                            onclick="openAccountModal(); CharacterSheet.closeSelectorMenu(this.closest('.selector-shell').querySelector('.selector-trigger'));"
+                        >
+                            <span class="selector-option-icon">☁</span>
+                            <span class="selector-option-label">Account</span>
+                        </button>
+                        <button
+                            class="selector-option is-hidden"
+                            type="button"
+                            role="menuitem"
                             id="overflowCreateAccountBtn"
                             onclick="showAuthModal(); showRegisterForm(); CharacterSheet.closeSelectorMenu(this.closest('.selector-shell').querySelector('.selector-trigger'));"
                         >

@@ -11190,6 +11190,7 @@ function updateAuthUI() {
     const overflowAuthIcon = document.getElementById('overflowAuthIcon');
     const overflowAuthLabel = document.getElementById('overflowAuthLabel');
     const overflowCreateAccountBtn = document.getElementById('overflowCreateAccountBtn');
+    const overflowAccountBtn = document.getElementById('overflowAccountBtn');
     
     // If the header shell isn't present (e.g., in some embedded contexts),
     // safely bail out.
@@ -11215,6 +11216,7 @@ function updateAuthUI() {
         if (overflowAuthIcon) overflowAuthIcon.textContent = '←';
         if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log out';
         if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.add('is-hidden');
+        if (overflowAccountBtn) overflowAccountBtn.classList.remove('is-hidden');
 
         // Hide guest notice when logged in
         if (guestNotice) {
@@ -11237,6 +11239,7 @@ function updateAuthUI() {
         if (overflowAuthIcon) overflowAuthIcon.textContent = '→';
         if (overflowAuthLabel) overflowAuthLabel.textContent = 'Log In';
         if (overflowCreateAccountBtn) overflowCreateAccountBtn.classList.remove('is-hidden');
+        if (overflowAccountBtn) overflowAccountBtn.classList.add('is-hidden');
 
         // Don't show guest notice by default - only when user makes changes
         // (handled by maybeShowGuestNotice() function)

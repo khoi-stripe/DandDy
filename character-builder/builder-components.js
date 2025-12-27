@@ -339,6 +339,32 @@ const Components = (window.Components = {
       ? formatThemeName(activePromptTheme)
       : 'Cinematic Inks';
 
+    // Color theme options for global settings
+    const colorThemeOptions = [
+      { value: 'white', label: 'White' },
+      { value: 'teal', label: 'Teal' },
+      { value: 'green', label: 'Green' },
+      { value: 'yellow', label: 'Yellow' },
+    ];
+
+    // Get current color theme from theme config
+    const getCurrentColorTheme = () => {
+      try {
+        const stored = localStorage.getItem('danddy_theme_config');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          return parsed.global || 'yellow';
+        }
+      } catch (e) {
+        console.warn('Settings: failed to read color theme', e);
+      }
+      return 'yellow';
+    };
+
+    const currentColorTheme = getCurrentColorTheme();
+    const currentColorThemeOption = colorThemeOptions.find(opt => opt.value === currentColorTheme) || colorThemeOptions[3];
+    const currentColorThemeLabel = currentColorThemeOption.label;
+
     return `
       <div id="settingsModal" class="modal show" onclick="SettingsModal.close()">
         <div class="modal-content builder-settings-modal" onclick="event.stopPropagation();">
@@ -351,6 +377,75 @@ const Components = (window.Components = {
           <div class="modal-body">
             <div class="settings-layout">
               <div class="settings-grid">
+                <div class="settings-group">
+                  <div class="settings-group-label">[ Display ]</div>
+                  <section class="settings-section">
+                    <div class="settings-row settings-row--stacked">
+                      <div class="settings-label">Color Theme</div>
+                      <div class="settings-field">
+                        <div class="selector-shell selector-shell--listbox selector-shell--match-width">
+                          <button
+                            class="terminal-btn selector-trigger"
+                            id="color-theme-select-trigger"
+                            type="button"
+                            aria-haspopup="listbox"
+                            aria-expanded="false"
+                            onclick="CharacterSheet.toggleSelectorMenu(this)"
+                          >
+                            <span
+                              class="selector-trigger-label"
+                              id="color-theme-select-label"
+                            >
+                              ${currentColorThemeLabel}
+                            </span>
+                          </button>
+                          <div
+                            class="selector-menu"
+                            role="listbox"
+                            aria-label="Color theme"
+                            aria-hidden="true"
+                          >
+                            ${colorThemeOptions
+                              .map((opt) => {
+                                const isSelected = opt.value === currentColorTheme;
+                                return `
+                                <button
+                                  class="selector-option${isSelected ? ' is-selected' : ''}"
+                                  type="button"
+                                  role="option"
+                                  data-value="${opt.value}"
+                                  aria-selected="${isSelected ? 'true' : 'false'}"
+                                >
+                                  <span class="selector-option-label">
+                                    ${opt.label}
+                                  </span>
+                                </button>
+                              `;
+                              })
+                              .join('')}
+                          </div>
+                        </div>
+                        <select
+                          id="color-theme-select"
+                          class="terminal-select settings-select hidden"
+                        >
+                          ${colorThemeOptions
+                            .map(
+                              (opt) => `
+                              <option value="${opt.value}" ${
+                                opt.value === currentColorTheme ? 'selected' : ''
+                              }>
+                                ${opt.label}
+                              </option>
+                            `,
+                            )
+                            .join('')}
+                        </select>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+
                 <div class="settings-group">
                   <div class="settings-group-label">[ Character Sheet ]</div>
                   <section class="settings-section">
@@ -758,6 +853,34 @@ const SettingsModal = (window.SettingsModal = {
   initSelectors(modal) {
     if (!modal) return;
 
+    // Color theme selector
+    const colorThemeTrigger = modal.querySelector('#color-theme-select-trigger');
+    const colorThemeLabel = modal.querySelector('#color-theme-select-label');
+    const colorThemeSelect = modal.querySelector('#color-theme-select');
+    const colorThemeOptions = modal.querySelectorAll(
+      '.selector-menu[aria-label="Color theme"] .selector-option',
+    );
+
+    if (colorThemeTrigger && colorThemeLabel && colorThemeSelect && colorThemeOptions.length) {
+      colorThemeOptions.forEach((option) => {
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = option.getAttribute('data-value');
+          const label = option.querySelector('.selector-option-label');
+          if (value && label) {
+            colorThemeLabel.textContent = label.textContent.trim();
+            colorThemeSelect.value = value;
+            // Keep menu selection state in sync with the trigger
+            colorThemeOptions.forEach((opt) => {
+              const isSelected = opt === option;
+              opt.classList.toggle('is-selected', isSelected);
+              opt.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+            });
+          }
+        });
+      });
+    }
+
     // Narrator selector
     const narratorTrigger = modal.querySelector('#narrator-select-trigger');
     const narratorLabel = modal.querySelector('#narrator-select-label');
@@ -1059,6 +1182,41 @@ const SettingsModal = (window.SettingsModal = {
   },
 
   save() {
+    // Save color theme selection
+    const colorThemeSelect = document.getElementById('color-theme-select');
+    if (colorThemeSelect) {
+      const newTheme = colorThemeSelect.value;
+      try {
+        // Get existing theme config or create default
+        const THEME_CONFIG_KEY = 'danddy_theme_config';
+        let config = {
+          global: 'yellow',
+          syncAll: true,
+          sections: {
+            terminal: null,
+            narrator: null,
+            sheet: null,
+            grid: null,
+            campaign: null,
+            modal: null,
+            glow: null,
+          },
+        };
+        const stored = localStorage.getItem(THEME_CONFIG_KEY);
+        if (stored) {
+          config = { ...config, ...JSON.parse(stored) };
+        }
+        // Update global theme
+        config.global = newTheme;
+        // Save to localStorage
+        localStorage.setItem(THEME_CONFIG_KEY, JSON.stringify(config));
+        // Dispatch event for theme loader to pick up
+        window.dispatchEvent(new CustomEvent('danddy:themeConfigChanged', { detail: config }));
+      } catch (e) {
+        console.warn('Settings: failed to save color theme', e);
+      }
+    }
+
     // Save narrator selection
     const narratorSelect = document.getElementById('narrator-select');
     if (narratorSelect && window.StorageService && StorageService.setNarratorId) {
