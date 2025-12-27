@@ -51,8 +51,8 @@ const AuthUI = (window.AuthUI = {
         
         <div class="auth-form">
           <div class="form-group">
-            <label class="form-label">[ EMAIL ]</label>
-            <input type="email" id="login-email" class="terminal-input" placeholder="adventurer@tavern.com" autocomplete="email" />
+            <label class="form-label">[ USERNAME OR EMAIL ]</label>
+            <input type="text" id="login-email" class="terminal-input" placeholder="username or email" autocomplete="username" />
           </div>
           
           <div class="form-group">
@@ -122,7 +122,7 @@ const AuthUI = (window.AuthUI = {
       const password = passwordInput.value;
 
       if (!email || !password) {
-        this.showError(errorDiv, 'Please enter both email and password');
+        this.showError(errorDiv, 'Please enter your username/email and password');
         return;
       }
 

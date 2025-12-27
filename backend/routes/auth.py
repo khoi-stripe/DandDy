@@ -112,16 +112,23 @@ def login_for_access_token(
     """
     OAuth2 password flow login.
 
-    The standard form field is still called `username`, but in this app it is
-    interpreted strictly as an email address so that accounts are always
-    email/password based.
+    The standard form field is called `username` but accepts either an email
+    address or a username. We detect which by checking for '@' in the value.
     """
-    user = db.query(User).filter(User.email == form_data.username).first()
+    identifier = form_data.username.strip()
+    
+    # Detect if identifier is email or username
+    if "@" in identifier:
+        user = db.query(User).filter(User.email == identifier).first()
+    else:
+        user = db.query(User).filter(
+            func.lower(User.username) == identifier.lower()
+        ).first()
 
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect username/email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -135,12 +142,20 @@ def login_for_access_token(
 
 @router.post("/login", response_model=Token)
 def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == user_credentials.email).first()
+    identifier = user_credentials.identifier.strip()
+    
+    # Detect if identifier is email or username
+    if "@" in identifier:
+        user = db.query(User).filter(User.email == identifier).first()
+    else:
+        user = db.query(User).filter(
+            func.lower(User.username) == identifier.lower()
+        ).first()
 
     if not user or not verify_password(user_credentials.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect username/email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 

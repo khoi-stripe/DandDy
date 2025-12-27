@@ -68,7 +68,8 @@ class UsernameUpdate(BaseModel):
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    # Accepts either email or username - backend detects by checking for '@'
+    identifier: str
     password: str
 
 

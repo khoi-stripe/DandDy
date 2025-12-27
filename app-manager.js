@@ -10398,7 +10398,7 @@ async function handleLogin() {
     const password = passwordInput ? passwordInput.value : '';
 
     if (!email || !password) {
-        errorEl.textContent = 'Please enter both email and password';
+        errorEl.textContent = 'Please enter your username/email and password';
         errorEl.classList.remove('is-hidden');
         return;
     }

@@ -281,7 +281,7 @@
     const password = passwordInput.value;
     
     if (!email || !password) {
-      errorMessage.textContent = 'Please enter email and password';
+      errorMessage.textContent = 'Please enter your username/email and password';
       errorAlert.open = true;
       return;
     }

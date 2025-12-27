@@ -246,24 +246,24 @@
     /**
      * Login with email + password.
      *
-     * Note: the OAuth2 password flow still uses the `username` form field name,
-     * but this value is always interpreted as an email address by the backend.
+     * Note: the OAuth2 password flow still uses the `username` form field name.
+     * The value can be either a username or email address - backend detects by '@'.
      * Returns { success, user, error }.
      */
-    async login(email, password) {
+    async login(identifier, password) {
       const url = `${API_BASE_URL}/auth/token`;
       if (DEBUG) {
         console.log('[AuthService] Login attempt', {
           url,
-          email,
+          identifier,
         });
       }
 
       try {
         const formData = new FormData();
         // Field name must remain "username" for OAuth2PasswordRequestForm,
-        // but the value is the user's email address.
-        formData.append('username', email);
+        // but the value can be either username or email.
+        formData.append('username', identifier);
         formData.append('password', password);
 
         const response = await fetch(url, {

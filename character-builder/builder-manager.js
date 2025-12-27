@@ -219,9 +219,9 @@ async function handleLogin() {
     console.log('[handleLogin] Got email:', email ? '(provided)' : '(empty)');
 
     if (!email || !password) {
-        errorEl.textContent = 'Please enter both email and password';
+        errorEl.textContent = 'Please enter your username/email and password';
         errorEl.classList.remove('is-hidden');
-        console.log('[handleLogin] Validation failed: missing email or password');
+        console.log('[handleLogin] Validation failed: missing identifier or password');
         return;
     }
 
