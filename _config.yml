@@ -2,7 +2,6 @@
 exclude:
   - node_modules/
   - scripts/
-  - generated_portraits/
   - web/
   - .git/
   - .gitignore
@@ -17,9 +16,10 @@ keep_files:
   - character-builder
   - generated_portraits
 
-# Only process the character-builder directory
+# Include these directories in processing
 include:
   - character-builder
+  - generated_portraits
 
 
 
