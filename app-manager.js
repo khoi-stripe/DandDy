@@ -5539,7 +5539,9 @@ async function viewCharacter(id, options = {}) {
             campaignSlot.innerHTML = ExpandedView._renderCampaignSkeleton();
             campaignSlot.classList.remove('is-hidden');
         }
-        ExpandedView._loadCampaignPanel();
+        // Fire and forget - don't block character sheet rendering for campaign panel
+        // Errors are handled internally by _loadCampaignPanel
+        ExpandedView._loadCampaignPanel().catch(() => {});
         
         // Update URL with selected character (for sharing/bookmarking)
         if (updateUrl && id) {

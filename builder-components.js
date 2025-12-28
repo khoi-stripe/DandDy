@@ -276,15 +276,10 @@ const Components = (window.Components = {
 
     const currentPromptThemeId = getPortraitPromptTheme();
 
-    // Trigger API sync if not already done (in case settings opened before auto-sync)
-    if (
-      typeof window !== 'undefined' &&
-      window.PortraitPrompt &&
-      typeof window.PortraitPrompt.syncFromAPI === 'function'
-    ) {
-      // Fire and forget - will populate cache for next render
-      window.PortraitPrompt.syncFromAPI();
-    }
+    // Note: PortraitPrompt.syncFromAPI() runs automatically on page load for
+    // authenticated users (see data-portrait-prompts.js initAutoSync).
+    // We don't call it here because renderSettings is synchronous and can't
+    // wait for the async sync - we just use whatever themes are already cached.
 
     let promptThemes = [];
     if (
