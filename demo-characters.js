@@ -77,6 +77,19 @@
       if (_asciiLoadPromise) return _asciiLoadPromise;
       
       _asciiLoadPromise = (async () => {
+        // Skip ASCII loading if user prefers original portraits - ASCII isn't needed for display
+        try {
+          if (global.StorageService && typeof StorageService.getPortraitViewMode === 'function') {
+            const mode = StorageService.getPortraitViewMode();
+            if (mode === 'original') {
+              console.log('DemoCharacters: Skipping ASCII loading (user prefers original portraits)');
+              return;
+            }
+          }
+        } catch (e) {
+          // Non-fatal - continue with ASCII loading
+        }
+        
         const characters = this.getAll();
         console.log('DemoCharacters: Loading ASCII art for', characters.length, 'demo characters...');
         
