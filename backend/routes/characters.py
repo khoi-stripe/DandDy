@@ -291,7 +291,11 @@ def _check_character_access(character: Character, current_user: User, db: Sessio
             return True, False, "dm"
     
     # Check if user is in the same campaign as this character (view-only access for party members)
-    # Find which campaign this character belongs to via campaign_members table
+    # There are two ways a character can be associated with a campaign:
+    # 1. Via CampaignMember.character_id (assigned to a membership)
+    # 2. Via Character.campaign_id (direct association)
+    
+    # First, check via campaign_members table
     character_membership = db.query(CampaignMember).filter(
         CampaignMember.character_id == character.id,
         CampaignMember.status == MemberStatus.ACTIVE
@@ -301,6 +305,15 @@ def _check_character_access(character: Character, current_user: User, db: Sessio
         # Check if current user has access to this campaign (direct member or collaborator)
         if check_campaign_access(character_membership.campaign_id, current_user, db):
             # Campaign members (including collaborators) get view-only access to party members
+            if require_edit:
+                return False, False, "view"
+            return True, False, "party_member"
+    
+    # Also check direct Character.campaign_id association
+    # This handles cases where a character is in a campaign but not currently assigned
+    # to a membership (e.g., campaign creator's character)
+    if character.campaign_id:
+        if check_campaign_access(character.campaign_id, current_user, db):
             if require_edit:
                 return False, False, "view"
             return True, False, "party_member"

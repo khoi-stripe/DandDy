@@ -2198,6 +2198,62 @@ const CharacterSheet = (window.CharacterSheet = {
     }
   },
 
+  /**
+   * Close a selector menu (without toggling).
+   * Used when an action inside the menu should close it.
+   * @param {HTMLElement} triggerEl - The selector-trigger element
+   */
+  closeSelectorMenu(triggerEl) {
+    if (!triggerEl) return;
+    const shell = triggerEl.closest('.selector-shell');
+    if (!shell || !shell.classList.contains('is-open')) return;
+
+    const btn = shell.querySelector('.selector-trigger');
+    const menu = shell._detachedMenu || shell.querySelector('.selector-menu');
+    if (!btn || !menu) return;
+
+    // If focus is inside the menu, move it back to the trigger first
+    try {
+      const activeEl = document.activeElement;
+      if (activeEl && menu.contains(activeEl)) {
+        btn.focus();
+      }
+    } catch (e) {
+      // Non-fatal
+    }
+
+    // Close animation
+    btn.classList.remove('is-open');
+    menu.classList.remove('is-open');
+    menu.setAttribute('aria-hidden', 'true');
+    btn.setAttribute('aria-expanded', 'false');
+    shell.classList.remove('is-open');
+
+    // Unlock scroll
+    CharacterSheet._updateScrollLock(false);
+
+    // Restore menu to original parent after animation
+    if (menu._originalParent) {
+      const originalParent = menu._originalParent;
+      delete menu._originalParent;
+      delete shell._detachedMenu;
+
+      setTimeout(() => {
+        menu.classList.remove('portrait-history-menu-detached');
+        menu.classList.remove('portrait-history-menu-detached--teal');
+        menu.classList.remove('selector-menu-detached');
+        menu.style.position = '';
+        menu.style.top = '';
+        menu.style.left = '';
+        menu.style.width = '';
+        menu.style.minWidth = '';
+        menu.style.maxWidth = '';
+        menu.style.maxHeight = '';
+        originalParent.appendChild(menu);
+      }, 200);
+    }
+  },
+
   _renderSavingThrows(parsed) {
     if (!parsed.savingThrowModifiers) return '';
 
