@@ -1190,6 +1190,10 @@ const ExpandedView = (window.ExpandedView = {
             }
             // Pass empty array for journal entries - past entries are in Past Adventures
             panel.innerHTML = this._renderCampaignPanelContent(characterId, null, pendingCount, [], pastCampaignsCount);
+            // Also refresh mobile campaign section
+            if (typeof MobileView !== 'undefined' && MobileView.refreshCampaignSection) {
+                MobileView.refreshCampaignSection();
+            }
             return;
         }
         
