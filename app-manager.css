@@ -679,14 +679,19 @@ div.sheet__sidebar.ui-theme-pink {
     flex-wrap: wrap;
 }
 
-/* No campaign state: title/status can shrink, buttons wrap below when space is tight */
+/* No campaign state: actions always below title */
+.campaign-area-header--no-campaign {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
 .campaign-area-header--no-campaign .campaign-area-title {
-    flex: 1 1 auto;
-    min-width: 180px; /* Minimum before wrapping */
+    width: 100%;
 }
 
 .campaign-area-header--no-campaign .campaign-area-actions {
-    flex: 0 0 auto;
+    width: 100%;
+    margin-top: var(--spacing-sm);
 }
 
 @media (max-width: 768px) {
