@@ -747,17 +747,10 @@ const CharacterSheet = (window.CharacterSheet = {
       `
         : '';
 
-    // Manager-only: Standalone Edit button (pulled out of overflow menu)
+    // Manager-only: Standalone Edit link
     const editButtonHtml =
       context === 'manager' && onEdit && editFn
-        ? `
-        <button
-          class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--expandable"
-          type="button"
-          onclick="${editFn}"
-          title="Edit character"
-        ><span class="sheet-nav-btn__icon">✎</span><span class="sheet-nav-btn__label">Edit</span></button>
-      `
+        ? `<a href="#" class="action-link sheet-edit-link" onclick="${editFn}; return false;" title="Edit character">✎ Edit</a>`
         : '';
 
     const headerMenu =

@@ -988,15 +988,18 @@
   color: var(--terminal-warning);
 }
 
+/* Warning context links - follows .link-button pattern with warning color */
 .text-warning a,
 .text-warning .terminal-link {
   color: var(--terminal-warning);
   text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color var(--transition-speed);
 }
 
 .text-warning a:hover,
 .text-warning .terminal-link:hover {
-  text-shadow: 0 0 5px var(--terminal-warning);
+  color: var(--terminal-warning);
 }
 
 .text-error {
@@ -1243,21 +1246,40 @@
 }
 
 .auth-link {
-  color: var(--terminal-dim);
+  /* Extends: .action-link (uses terminal- tokens for auth screens) */
+  background: none;
+  border: none;
+  padding: 0;
   font-family: var(--font-mono);
   font-size: var(--font-size-small);
+  color: var(--terminal-dim);
+  text-decoration: none;
   cursor: pointer;
   transition: color var(--transition-speed);
 }
 
 .auth-link:hover {
   color: var(--terminal-fg);
+  text-decoration: underline;
 }
 
+/* Highlighted link - always visible, always underlined */
 .link-highlight {
+  /* Extends: .link-button */
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
   color: var(--terminal-accent);
   text-decoration: underline;
-  text-shadow: 0 0 5px var(--terminal-accent);
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color var(--transition-speed);
+}
+
+.link-highlight:hover {
+  color: var(--terminal-accent);
 }
 
 .loading-indicator {
@@ -1557,7 +1579,6 @@
 
 .right-panel .link-button:hover {
   color: var(--ui-fg-color) !important;
-  text-shadow: 0 0 5px var(--ui-fg-color) !important;
 }
 
 /* Character sheet in builder - fit within parent container, inherits theme from panel */

@@ -337,6 +337,40 @@ const StorageService = (window.StorageService = {
     }
   },
 
+  // Character grid sort mode preference.
+  // Stored per-browser so the sort selection persists across page refreshes.
+  getSortMode() {
+    try {
+      const raw = localStorage.getItem('dnd_sort_mode');
+      const fallback = 'dateModified';
+      if (!raw) return fallback;
+      const value = String(raw).trim();
+      const allowed = ['alphabetical', 'dateModified', 'inCampaign', 'pinned'];
+      return allowed.includes(value) ? value : fallback;
+    } catch (e) {
+      console.warn('StorageService.getSortMode failed, using fallback', e);
+      return 'dateModified';
+    }
+  },
+
+  setSortMode(mode) {
+    try {
+      const value = String(mode || '').trim();
+      const allowed = ['alphabetical', 'dateModified', 'inCampaign', 'pinned'];
+      if (!allowed.includes(value)) {
+        console.warn(
+          'StorageService.setSortMode: ignoring unsupported mode',
+          value,
+        );
+        localStorage.removeItem('dnd_sort_mode');
+        return;
+      }
+      localStorage.setItem('dnd_sort_mode', value);
+    } catch (e) {
+      console.warn('StorageService.setSortMode failed', e);
+    }
+  },
+
   // Preferred portrait prompt theme for AI portraits.
   // Stored per-browser so builder + manager can share the same choice.
   getPortraitPromptTheme() {

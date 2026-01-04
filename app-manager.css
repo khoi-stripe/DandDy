@@ -1007,8 +1007,9 @@ div.sheet__sidebar.ui-theme-pink {
     gap: var(--spacing-sm);
 }
 
-/* Text link button (looks like a link, not a button) */
+/* Text link button - follows .text-link pattern from terminal-theme.css */
 .terminal-btn-link {
+    /* Extends: .text-link */
     background: none;
     border: none;
     padding: 0;
@@ -1025,13 +1026,14 @@ div.sheet__sidebar.ui-theme-pink {
     text-decoration: underline;
 }
 
+/* Danger variant - follows .text-link.link--danger pattern */
 .terminal-btn-link--danger {
     color: var(--terminal-error, #f44);
 }
 
 .terminal-btn-link--danger:hover {
     color: var(--terminal-error, #f44);
-    opacity: 0.8;
+    text-decoration: underline;
 }
 
 /* ===== JOIN CAMPAIGN - INVITATIONS LIST ===== */
@@ -1543,9 +1545,11 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .past-adventures-link {
+    /* Extends: .action-link */
     font-size: var(--font-size-sm);
     color: var(--ui-dim-color);
     text-decoration: none;
+    cursor: pointer;
     transition: color var(--transition-speed);
     display: inline-flex;
     align-items: center;
@@ -1554,6 +1558,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 .past-adventures-link:hover {
     color: var(--ui-fg-color);
+    text-decoration: underline;
 }
 
 .past-adventures-link-icon {
@@ -1575,19 +1580,21 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .breadcrumb-link {
+    /* Extends: .link-button */
     background: none;
     border: none;
-    color: var(--ui-fg-color);
+    padding: 0;
     font-family: var(--font-mono);
     font-size: var(--font-size-sm);
-    cursor: pointer;
-    padding: 0;
+    color: var(--ui-fg-color);
     text-decoration: underline;
     text-underline-offset: 2px;
+    cursor: pointer;
+    transition: color var(--transition-speed);
 }
 
 .breadcrumb-link:hover {
-    opacity: 0.8;
+    color: var(--ui-fg-color);
 }
 
 /* Past campaigns list */
@@ -1818,21 +1825,27 @@ div.sheet__sidebar.ui-theme-pink {
     line-height: 1.2;
 }
 
-/* Campaign action link (manage/leave) */
+/* Campaign action link (manage/leave) - follows .action-link pattern */
 .campaign-action-link {
+    /* Extends: .action-link */
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-base);
     color: var(--ui-dim-color);
     text-decoration: none;
-    font-size: var(--font-size-sm);
+    cursor: pointer;
     flex-shrink: 0;
-    transition: color 0.15s ease, text-shadow 0.15s ease;
+    transition: color var(--transition-speed);
 }
 
 .campaign-action-link:hover {
     color: var(--ui-fg-color);
-    text-shadow: 0 0 8px currentColor;
+    text-decoration: underline;
 }
 
 .campaign-action-icon {
@@ -1840,13 +1853,14 @@ div.sheet__sidebar.ui-theme-pink {
     line-height: 1;
 }
 
+/* Danger variant - follows .action-link.link--danger pattern */
 .campaign-action-link--danger {
     color: var(--ui-dim-color);
 }
 
 .campaign-action-link--danger:hover {
     color: var(--color-danger, #ff6b6b);
-    text-shadow: 0 0 8px var(--color-danger, #ff6b6b);
+    text-decoration: underline;
 }
 
 /* Campaign description */
@@ -1883,15 +1897,21 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .journal-add-link {
+    /* Extends: .action-link */
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: var(--font-size-base);
     color: var(--ui-dim-color);
     text-decoration: none;
-    font-size: var(--font-size-base);
-    transition: color 0.2s ease;
+    cursor: pointer;
+    transition: color var(--transition-speed);
 }
 
 .journal-add-link:hover {
     color: var(--ui-fg-color);
-    text-decoration: none;
+    text-decoration: underline;
 }
 
 /* Journal section uses sheet-header--collapsible - inherits theme */
@@ -2252,19 +2272,21 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .session-notice-action {
+    /* Extends: .link-button */
     background: none;
     border: none;
-    color: var(--ui-fg-color);
+    padding: 0;
     font-family: var(--font-mono);
     font-size: var(--font-size-small);
+    color: var(--ui-fg-color);
     text-decoration: underline;
+    text-underline-offset: 2px;
     cursor: pointer;
-    padding: 0;
-    transition: text-shadow 0.2s ease;
+    transition: color var(--transition-speed);
 }
 
 .session-notice-action:hover {
-    text-shadow: 0 0 5px var(--ui-fg-color);
+    color: var(--ui-fg-color);
 }
 
 .guest-notice {
@@ -2294,17 +2316,25 @@ div.sheet__sidebar.ui-theme-pink {
 
 .guest-notice-close:hover {
     color: var(--ui-fg-color);
-    text-shadow: 0 0 8px var(--ui-fg-color);
+    text-decoration: underline;
 }
 
 .guest-notice-link {
+    /* Extends: .link-button (inherits color from parent) */
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
     color: inherit;
     text-decoration: underline;
+    text-underline-offset: 2px;
     cursor: pointer;
+    transition: color var(--transition-speed);
 }
 
 .guest-notice-link:hover {
-    text-shadow: 0 0 8px currentColor;
+    color: inherit;
 }
 
 /* All search inputs should have dim borders - both default and focused states.
@@ -3494,15 +3524,17 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 .manager-settings-link {
-    /* Match builder's icon-only settings button */
-    background: transparent;
+    /* Extends: .action-link (icon variant) */
+    background: none;
     border: none;
     padding: 0;
-    cursor: pointer;
-    color: var(--ui-dim-color);
+    font-family: var(--font-mono);
     font-size: var(--font-size-xl);
+    color: var(--ui-dim-color);
+    text-decoration: none;
+    cursor: pointer;
     line-height: 1;
-    transition: color 0.2s ease, text-shadow 0.2s ease;
+    transition: color var(--transition-speed);
     /* Center the gear icon visually */
     display: inline-flex;
     align-items: center;
@@ -3512,8 +3544,6 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 
 .manager-settings-link:hover {
     color: var(--ui-fg-color);
-    text-shadow: 0 0 5px var(--ui-fg-color);
-    text-decoration: none;
 }
 
 /* Settings modal layout (shared with builder via SettingsModal) */
@@ -3823,11 +3853,20 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 .terminal-link {
+    /* Extends: .text-link */
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    color: var(--ui-dim-color);
     text-decoration: none;
     cursor: pointer;
+    transition: color var(--transition-speed);
 }
 
 .terminal-link:hover {
+    color: var(--ui-fg-color);
     text-decoration: underline;
 }
 
@@ -3869,11 +3908,18 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 .account-edit-link {
-    color: var(--ui-fg-color);
-    opacity: 0.6;
-    text-decoration: underline;
+    /* Extends: .link-button .link--muted */
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: var(--font-mono);
     font-size: var(--font-size-sm);
+    color: var(--ui-fg-color);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
     margin-left: var(--spacing-sm);
+    opacity: 0.7;
     transition: opacity 0.15s ease;
 }
 
@@ -4406,8 +4452,9 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
         color: var(--terminal-dim);
     }
     
-    /* Hide inline Edit button - it moves to overflow menu */
-    .character-sheet .sheet-edit-btn {
+    /* Hide inline Edit link/button - it moves to overflow menu */
+    .character-sheet .sheet-edit-btn,
+    .character-sheet .sheet-edit-link {
         display: none !important;
     }
     
@@ -4440,10 +4487,10 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     }
 }
 
-/* On wider viewports, hide the Edit option in overflow menu (inline button is visible) */
+/* On wider viewports, hide the Edit option in overflow menu (inline link is visible) */
 @media (min-width: 1025px) {
-    #sheet-edit-overflow {
-        display: none;
+    #overflowEditCharacterBtn {
+        display: none !important;
     }
 }
 
@@ -4694,18 +4741,25 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
         text-decoration: none;
     }
 
-    /* Campaign link - pinned right */
+    /* Campaign link - pinned right - follows .action-link pattern */
     .mobile-campaign-link {
+        /* Extends: .action-link */
         margin-left: auto;
-        color: var(--ui-dim-color);
+        background: none;
+        border: none;
+        padding: 0;
         font-family: var(--font-mono);
         font-size: var(--font-size-small);
+        color: var(--ui-dim-color);
         text-decoration: none;
+        cursor: pointer;
         white-space: nowrap;
+        transition: color var(--transition-speed);
     }
 
     .mobile-campaign-link:hover {
         color: var(--ui-fg-color);
+        text-decoration: underline;
     }
     
     /* Hide grid and controls when viewing sheet */
@@ -4727,15 +4781,21 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 .mobile-back-link {
-    color: var(--ui-dim-color);
+    /* Extends: .action-link */
+    background: none;
+    border: none;
+    padding: 0;
     font-family: var(--font-mono);
     font-size: var(--font-size-small);
+    color: var(--ui-dim-color);
     text-decoration: none;
+    cursor: pointer;
     transition: color var(--transition-speed);
 }
 
 .mobile-back-link:hover {
     color: var(--ui-fg-color);
+    text-decoration: underline;
 }
 
 /* Mobile sheet title header (cloned from desktop sheet-title-header) */

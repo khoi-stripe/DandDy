@@ -2218,6 +2218,14 @@ body::before {
   line-height: 1;
 }
 
+/* Edit link in sheet header */
+.sheet-title-actions .sheet-edit-link {
+  margin-right: 8px;
+  /* Match button height for vertical centering */
+  height: var(--btn-height-sm);
+  line-height: var(--btn-height-sm);
+}
+
 .sheet-section {
   margin-bottom: var(--spacing-lg);
 }
@@ -2234,30 +2242,47 @@ body::before {
 }
 
 
-/* Edit link in section headers */
+/* Edit link in section headers - uses text-link pattern with muted modifier */
 .sheet-section-edit-link {
+  /* Extends: .text-link .link--muted */
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
   font-size: var(--font-size-sm);
-  color: var(--ui-fg-color, var(--terminal-accent));
+  color: var(--ui-fg-color);
   text-decoration: none;
+  cursor: pointer;
   opacity: 0.7;
-  transition: opacity 0.15s ease;
+  transition: color var(--transition-speed), opacity 0.15s ease;
 }
 
 .sheet-section-edit-link:hover {
-  opacity: 1;
+  color: var(--ui-fg-color);
   text-decoration: underline;
+  opacity: 1;
 }
 
-/* Inline edit link in collapsible headers (next to caret) */
+/* Inline edit link in collapsible headers (next to caret) - uses action-link pattern with muted modifier */
 .sheet-header-edit-link {
+  /* Extends: .action-link .link--muted */
+  background: none;
+  border: none;
+  padding: 0;
   margin-left: auto;
   margin-right: 12px;
+  font-family: inherit;
   font-size: var(--font-size-base);
   color: var(--ui-fg-color);
+  text-decoration: none;
+  cursor: pointer;
   opacity: 0.8;
+  transition: color var(--transition-speed), opacity 0.15s ease;
 }
 
 .sheet-header-edit-link:hover {
+  color: var(--ui-fg-color);
+  text-decoration: underline;
   opacity: 1;
 }
 
@@ -3547,39 +3572,120 @@ body.selector-menu-open .splash-art {
   overflow-y: auto;
 }
 
-/* Link-style button */
+/* ===== STANDARDIZED LINK STYLES =====
+   Three patterns for consistent link behavior across the app:
+   
+   1. .text-link     - Inline text links: dim → bright + underline on hover
+   2. .action-link   - UI action links: dim → bright + underline on hover
+   3. .link-button   - Always-visible links: bright + underlined always
+   
+   Modifiers:
+   - .link--danger   - Red color for destructive actions
+   - .link--muted    - Lower opacity, brightens on hover
+*/
+
+/* Pattern 1: Text Link - for inline content links */
+.text-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--ui-dim-color);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--transition-speed);
+}
+
+.text-link:hover {
+  color: var(--ui-fg-color);
+  text-decoration: underline;
+}
+
+/* Pattern 2: Action Link - for UI actions */
+.action-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: inherit;
+  color: var(--ui-dim-color);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--transition-speed);
+}
+
+.action-link:hover {
+  color: var(--ui-fg-color);
+  text-decoration: underline;
+}
+
+/* Pattern 3: Link Button - always visible, always underlined */
 .link-button {
   background: none;
   border: none;
-  /* Use themed foreground token so links respect the active UI theme.
-     - Default terminal: terminal accent green
-     - Character sheet: teal accent via sheet overrides
-     - Modals: yellow accent via modal overrides */
-  color: var(--ui-fg-color);
+  padding: 0;
   font-family: var(--font-mono);
   font-size: inherit;
-  cursor: pointer;
+  color: var(--ui-fg-color);
   text-decoration: underline;
-  padding: 0;
-  transition: color var(--transition-speed), text-shadow var(--transition-speed);
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color var(--transition-speed);
 }
 
 .link-button:hover {
-  /* On hover, keep the same themed color but add a subtle glow. */
   color: var(--ui-fg-color);
-  text-shadow: 0 0 5px var(--ui-fg-color);
+}
+
+/* Modifier: Danger variant - red for destructive actions */
+.text-link.link--danger,
+.action-link.link--danger {
+  color: var(--terminal-error, #f44);
+}
+
+.text-link.link--danger:hover,
+.action-link.link--danger:hover {
+  color: var(--color-danger, #ff6b6b);
+  text-decoration: underline;
+}
+
+.link-button.link--danger {
+  color: var(--terminal-error, #f44);
+}
+
+.link-button.link--danger:hover {
+  color: var(--terminal-error, #f44);
+}
+
+/* Modifier: Muted variant - uses opacity instead of color tokens */
+.link--muted {
+  opacity: 0.7;
+}
+
+.link--muted:hover {
+  opacity: 1;
 }
 
 /* Links inside modals follow the modal's theme */
-.modal .terminal-link,
+.modal .text-link,
+.modal .action-link,
 .modal .link-button {
   color: var(--ui-fg-color);
 }
 
-.modal .terminal-link:hover,
+.modal .text-link {
+  color: var(--ui-dim-color);
+}
+
+.modal .text-link:hover,
+.modal .action-link:hover {
+  color: var(--ui-fg-color);
+  text-decoration: underline;
+}
+
 .modal .link-button:hover {
   color: var(--ui-fg-color);
-  text-shadow: 0 0 5px var(--ui-fg-color);
 }
 
 /* Button group layout utilities */

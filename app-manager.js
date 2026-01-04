@@ -595,6 +595,10 @@ const AppState = {
     loading: false,
 
     async init() {
+        // Load saved sort mode preference
+        if (window.StorageService && StorageService.getSortMode) {
+            this.sortMode = StorageService.getSortMode();
+        }
         // Load pinned characters first (from cloud or localStorage)
         await loadPinnedCharacterIds();
         await this.loadCharacters();
@@ -4513,9 +4517,29 @@ function closeMobileSheet() {
 function scrollToCampaign() {
     // Scroll to the campaign section at the bottom of the mobile sheet
     const campaignSection = document.getElementById('mobileCampaignSection');
-    if (campaignSection) {
-        campaignSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const scrollContainer = document.getElementById('characterGridPanel');
+    if (!campaignSection || !scrollContainer) return;
+    
+    // Calculate offset for sticky headers (mobileBackBar + mobileSheetTitleHeader)
+    const mobileBackBar = document.getElementById('mobileBackBar');
+    const mobileSheetTitleHeader = document.getElementById('mobileSheetTitleHeader');
+    
+    let stickyOffset = 0;
+    if (mobileBackBar) {
+        stickyOffset += mobileBackBar.offsetHeight;
     }
+    if (mobileSheetTitleHeader) {
+        stickyOffset += mobileSheetTitleHeader.offsetHeight;
+    }
+    
+    // Calculate target scroll position accounting for sticky headers
+    const campaignTop = campaignSection.offsetTop;
+    const targetScroll = campaignTop - stickyOffset;
+    
+    scrollContainer.scrollTo({
+        top: targetScroll,
+        behavior: 'smooth'
+    });
 }
 
 // ========================================
@@ -11679,6 +11703,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const value = opt.getAttribute('data-sort-value');
                 if (value === 'alphabetical' || value === 'dateModified' || value === 'inCampaign' || value === 'pinned') {
                     AppState.sortMode = value;
+                    // Persist sort mode preference
+                    if (window.StorageService && StorageService.setSortMode) {
+                        StorageService.setSortMode(value);
+                    }
                     AppState.applyFilters();
                     UI.render();
                 }
