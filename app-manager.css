@@ -674,7 +674,7 @@ div.sheet__sidebar.ui-theme-pink {
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-md);
+    margin: 0 0 32px 0;
     flex-wrap: wrap;
 }
 
@@ -1178,7 +1178,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* Party members */
 .campaign-area-party {
-    margin-bottom: 0;
+    margin: 0 0 32px 0;
 }
 
 /* Party section uses sheet-header--collapsible - inherits theme */
@@ -1722,7 +1722,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* Campaign info (name + description) */
 .campaign-area-info {
-    margin-bottom: var(--spacing-md);
+    margin: 0 0 32px 0;
     padding: var(--spacing-sm);
     background: black;
     border-radius: 4px;
@@ -1798,7 +1798,7 @@ div.sheet__sidebar.ui-theme-pink {
     display: flex;
     flex-direction: column;
     overflow: visible;
-    margin-top: var(--spacing-md);
+    margin: 0 0 32px 0;
 }
 
 .journal-header {
