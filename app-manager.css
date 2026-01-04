@@ -674,7 +674,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* ===== CAMPAIGN AREA (TOP SECTION) ===== */
 .campaign-area {
-    padding: var(--spacing-md);
+    padding: 32px var(--spacing-md) var(--spacing-md) var(--spacing-md);
     background: var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg)));
     /* Allow overflow menu to escape bounds */
     overflow: visible;
@@ -751,7 +751,8 @@ div.sheet__sidebar.ui-theme-pink {
     }
     
     .campaign-area-info,
-    .campaign-area-party {
+    .campaign-area-party,
+    .journal-section {
         margin-bottom: 16px;
     }
 }
@@ -1848,68 +1849,53 @@ div.sheet__sidebar.ui-theme-pink {
 /* Campaign info (name + description) */
 .campaign-area-info {
     margin: 0 0 32px 0;
-    padding: 12px 16px 16px;
-    background: black;
-    border-radius: 4px;
 }
 
+/* Campaign info header - eyebrow + name + overflow menu */
+.campaign-info-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--ui-border-color);
+}
+
+.campaign-info-header-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Eyebrow label - small caps */
+.campaign-eyebrow {
+    font-size: 10px;
+    font-weight: var(--font-weight-normal);
+    color: var(--ui-dim-color);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* Campaign name - larger, below eyebrow */
 .campaign-name {
-    display: block;
-    font-size: var(--font-size-md);
+    font-size: 18px;
     font-weight: var(--font-weight-medium);
     color: var(--ui-fg-color);
+    line-height: 1.2;
 }
 
-/* Add spacing between name and description when both present */
-.campaign-area-info .campaign-name + .campaign-desc-text {
-    margin-top: var(--spacing-sm);
+/* Overflow menu in header */
+.campaign-info-header .campaign-overflow {
+    flex-shrink: 0;
 }
 
-/* Campaign description text */
-.campaign-area-info {
+/* Campaign description */
+.campaign-desc-text {
     color: var(--ui-dim-color);
     font-size: var(--font-size-base);
     line-height: var(--line-height-normal);
-}
-
-.campaign-desc-text {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
     white-space: pre-line;
-}
-
-.campaign-area-info[data-expanded="true"] .campaign-desc-text {
-    display: block;
-    -webkit-line-clamp: unset;
-    overflow: visible;
-}
-
-.campaign-desc-toggle {
-    display: none;
-    background: none;
-    border: none;
-    color: var(--ui-fg-color);
-    font-size: var(--font-size-small);
-    font-family: var(--font-mono);
-    padding: 0;
-    margin-top: var(--spacing-xs);
-    cursor: pointer;
-    text-decoration: underline;
-}
-
-.campaign-desc-toggle:hover {
-    opacity: 0.8;
-}
-
-.campaign-area-info.is-truncatable {
-    padding: 0;
-    background: none;
-}
-
-.campaign-area-info.is-truncatable .campaign-desc-toggle {
-    display: inline-block;
+    margin-top: var(--spacing-sm);
 }
 
 /* ===== JOURNAL SECTION (inside campaign-area) ===== */

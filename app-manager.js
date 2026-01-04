@@ -1519,12 +1519,6 @@ const ExpandedView = (window.ExpandedView = {
             partyHtml += invitesHtml;
         }
 
-        // Campaign info section (name + optional description)
-        const descriptionContent = campaign.description 
-            ? `<div class="campaign-desc-text">${campaign.description}</div>
-               <button class="campaign-desc-toggle" onclick="ExpandedView.toggleDescription(this)">More</button>`
-            : '';
-
         // Overflow menu items
         const menuItems = [];
         if (isCreator) {
@@ -1602,13 +1596,15 @@ const ExpandedView = (window.ExpandedView = {
 
         return `
             <div class="campaign-area" data-campaign-id="${campaign.id}">
-                <div class="campaign-area-header">
-                    <h3 class="campaign-area-title">[ Campaign ]</h3>
-                    ${overflowMenuHtml}
-                </div>
-                <div class="campaign-area-info"${campaign.description ? ' data-expanded="false"' : ''}>
-                    <span class="campaign-name">${campaign.name}</span>
-                    ${descriptionContent}
+                <div class="campaign-area-info">
+                    <div class="campaign-info-header">
+                        <div class="campaign-info-header-content">
+                            <span class="campaign-eyebrow">CAMPAIGN</span>
+                            <span class="campaign-name">${Utils.escapeHtml(campaign.name)}</span>
+                        </div>
+                        ${overflowMenuHtml}
+                    </div>
+                    ${campaign.description ? `<div class="campaign-desc-text">${Utils.escapeHtml(campaign.description)}</div>` : ''}
                 </div>
                 <div class="campaign-area-party sheet-section sheet-section--collapsible">
                     <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
@@ -4337,6 +4333,9 @@ const MobileView = {
         const section = document.getElementById('mobileCampaignSection');
         if (!section) return;
         
+        // Get scroll container (the grid panel on mobile)
+        const scrollContainer = document.getElementById('characterGridPanel');
+        
         // Show loading skeleton
         section.innerHTML = ExpandedView._renderCampaignSkeleton();
         
@@ -4344,7 +4343,11 @@ const MobileView = {
         try {
             const isAuthenticated = window.AuthService && AuthService.isAuthenticated();
             if (!isAuthenticated) {
+                // Save scroll position before content update
+                const savedScroll = scrollContainer?.scrollTop || 0;
                 section.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+                // Restore scroll position to prevent auto-scroll
+                if (scrollContainer) scrollContainer.scrollTop = savedScroll;
                 return;
             }
             
@@ -4359,7 +4362,11 @@ const MobileView = {
             }
             
             if (!campaignId) {
+                // Save scroll position before content update
+                const savedScroll = scrollContainer?.scrollTop || 0;
                 section.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+                // Restore scroll position to prevent auto-scroll
+                if (scrollContainer) scrollContainer.scrollTop = savedScroll;
                 return;
             }
             
@@ -4379,11 +4386,19 @@ const MobileView = {
                 journalEntries = await CampaignAPI.getJournalEntries(characterId).catch(() => []);
             }
             
+            // Save scroll position before content update
+            const savedScroll = scrollContainer?.scrollTop || 0;
             section.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, campaignData, 0, journalEntries || []);
             ExpandedView._initDescriptionTruncation();
+            // Restore scroll position to prevent auto-scroll
+            if (scrollContainer) scrollContainer.scrollTop = savedScroll;
         } catch (e) {
             console.warn('Failed to load mobile campaign:', e);
+            // Save scroll position before content update
+            const savedScroll = scrollContainer?.scrollTop || 0;
             section.innerHTML = ExpandedView._renderCampaignPanelContent(characterId, null, 0, []);
+            // Restore scroll position to prevent auto-scroll
+            if (scrollContainer) scrollContainer.scrollTop = savedScroll;
         }
     },
     
