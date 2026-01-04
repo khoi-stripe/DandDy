@@ -2351,7 +2351,8 @@ div.sheet__sidebar.ui-theme-pink {
     text-shadow: 0 0 8px currentColor;
 }
 
-/* All search inputs should have dim borders - both default and focused states */
+/* All search inputs should have dim borders - both default and focused states.
+   Use full border shorthand to match .terminal-btn-small exactly. */
 #searchInput,
 #spellSearchInput,
 input[type="search"],
@@ -2360,18 +2361,19 @@ input.search-input,
 #spellSearchInput:focus,
 input[type="search"]:focus,
 input.search-input:focus {
-    border-color: var(--ui-dim-color) !important;
+    border: 1px solid var(--ui-dim-color) !important;
 }
 
 /* Spell search in modal - ensure dim border even with modal styles */
 .modal #spellSearchInput,
 .modal #spellSearchInput:focus {
-    border-color: var(--ui-dim-color) !important;
+    border: 1px solid var(--ui-dim-color) !important;
 }
 
 /* ===== SEARCH INPUT DIM BORDER ACROSS ALL COLOR THEMES =====
    Ensure search inputs always use dim borders regardless of which theme is active.
-   These rules use attribute selectors to catch all theme variants. */
+   These rules use attribute selectors to catch all theme variants.
+   Use full border shorthand to match .terminal-btn-small exactly. */
 [class*="theme-"] #searchInput,
 [class*="theme-"] #searchInput:focus,
 [class*="theme-"] .search-input-wrapper .terminal-input,
@@ -2380,7 +2382,7 @@ input.search-input:focus {
 .panel-character-grid[class*="theme-"] #searchInput:focus,
 .panel-character-grid[class*="theme-"] .search-input-wrapper .terminal-input,
 .panel-character-grid[class*="theme-"] .search-input-wrapper .terminal-input:focus {
-    border-color: var(--ui-dim-color) !important;
+    border: 1px solid var(--ui-dim-color) !important;
 }
 
 /* Focused state within themes - keep dim border but add matching glow */
@@ -2428,13 +2430,14 @@ input.search-input:focus {
 }
 
 /* Dim the search box when not focused so it feels secondary until active */
+/* Use full border shorthand to match .terminal-btn-small exactly */
 .panel-character-grid .search-input-wrapper .terminal-input:not(:focus) {
-    border-color: var(--ui-dim-color) !important;
+    border: 1px solid var(--ui-dim-color) !important;
 }
 
 /* When focused, keep search field dim but add subtle glow */
 .panel-character-grid .search-input-wrapper .terminal-input:focus {
-    border-color: var(--ui-dim-color) !important;
+    border: 1px solid var(--ui-dim-color) !important;
     box-shadow: 0 0 8px var(--ui-dim-color) !important;
 }
 
