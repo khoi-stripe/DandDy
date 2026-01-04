@@ -2338,17 +2338,18 @@ const CampaignUI = (window.CampaignUI = {
         
         if (!username) {
             if (errorEl) {
-                errorEl.textContent = 'Please enter a username';
+                errorEl.textContent = 'Please enter a username or email';
                 errorEl.style.display = 'block';
             }
             return;
         }
         
-        // Remove @ prefix if present
-        const cleanUsername = username.startsWith('@') ? username.slice(1) : username;
+        // Pass as-is to inviteByUsernameOrEmail which handles @username vs email detection
+        // If user enters plain username without @, add @ prefix to treat as username
+        const identifier = username.includes('@') ? username : `@${username}`;
         
         try {
-            await CampaignAPI.inviteByUsernameOrEmail(this._managingCampaign.id, cleanUsername);
+            await CampaignAPI.inviteByUsernameOrEmail(this._managingCampaign.id, identifier);
             
             // Clear input and error
             if (input) input.value = '';
