@@ -1493,8 +1493,8 @@ const ExpandedView = (window.ExpandedView = {
 
         // Simple action link (admin vs member)
         const actionLinkHtml = isCreator
-            ? `<a href="#" class="campaign-action-link" onclick="CampaignUI.openManageModal(${campaign.id}); return false;"><span class="campaign-action-icon">✎</span> Manage campaign</a>`
-            : `<a href="#" class="campaign-action-link campaign-action-link--danger" onclick="CampaignUI.leaveCampaign(${campaign.id}); return false;"><span class="campaign-action-icon">↩</span> Leave campaign</a>`;
+            ? `<a href="#" class="campaign-action-link" onclick="CampaignUI.openManageModal(${campaign.id}); return false;"><span class="campaign-action-icon">✎</span> Manage</a>`
+            : `<a href="#" class="campaign-action-link campaign-action-link--danger" onclick="CampaignUI.leaveCampaign(${campaign.id}); return false;"><span class="campaign-action-icon">↩</span> Leave</a>`;
 
         return `
             <div class="campaign-area" data-campaign-id="${campaign.id}">
@@ -10965,7 +10965,6 @@ async function handleLogout() {
 function updateAuthUI() {
     const authBtn = document.getElementById('authBtn');
     const userInfoDisplay = document.getElementById('userInfoDisplay');
-    const userStatusIcon = document.getElementById('userStatusIcon');
     const userStatusText = document.getElementById('userStatusText');
     const guestNotice = document.getElementById('guestNotice');
     
@@ -10977,20 +10976,17 @@ function updateAuthUI() {
     
     // If the header shell isn't present (e.g., in some embedded contexts),
     // safely bail out.
-    if (!authBtn || !userInfoDisplay || !userStatusIcon || !userStatusText) {
+    if (!authBtn || !userInfoDisplay || !userStatusText) {
         return;
     }
     
     if (window.AuthService && window.AuthService.isAuthenticated()) {
         const user = window.AuthService.getCurrentUser();
-        userStatusIcon.textContent = '☁';
         // Show username if available, fall back to email
         const displayName = user?.username ? `@${user.username}` : (user?.email || 'Logged In');
         userStatusText.textContent = displayName;
-        // Make username clickable to open account modal
-        userStatusText.style.cursor = 'pointer';
-        userStatusText.onclick = openAccountModal;
-        userStatusText.title = 'Manage account';
+        // User status trigger opens overflow menu (contains Account option)
+        userInfoDisplay.title = 'Open user menu';
         
         authBtn.textContent = 'Log out';
         authBtn.onclick = handleLogout;
@@ -11006,11 +11002,8 @@ function updateAuthUI() {
             guestNotice.classList.add('is-hidden');
         }
     } else {
-        userStatusIcon.textContent = '▣';
-        userStatusText.textContent = 'Guest Mode';
-        userStatusText.style.cursor = 'default';
-        userStatusText.onclick = null;
-        userStatusText.title = '';
+        userStatusText.textContent = 'Guest';
+        userInfoDisplay.title = 'Open user menu';
         
         authBtn.textContent = 'LOG IN';
         authBtn.onclick = () => {

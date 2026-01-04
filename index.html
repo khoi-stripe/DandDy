@@ -109,27 +109,20 @@
                 >⚙︎</button>
             </div>
             <div class="header-actions">
-                <span id="userInfoDisplay">
-                    <span id="userStatusIcon" class="user-status-icon" aria-hidden="true"></span>
-                    <span id="userStatusText" class="user-status-text"></span>
-                </span>
                 <button id="authBtn" class="terminal-btn terminal-btn-secondary header-action-btn">Log in</button>
-                <!-- Mobile overflow menu (shown when scrolling on mobile) -->
+                <!-- Header overflow menu triggered by user status -->
                 <div class="header-overflow selector-shell selector-shell--actions">
                     <button
-                        id="headerOverflowBtn"
-                        class="terminal-btn-small selector-trigger overflow-trigger header-overflow-trigger"
+                        id="userInfoDisplay"
+                        class="selector-trigger header-overflow-trigger"
                         type="button"
                         aria-haspopup="menu"
                         aria-expanded="false"
-                        aria-label="More actions"
+                        aria-label="User menu"
                         onclick="CharacterSheet.toggleSelectorMenu(this)"
                     >
-                        <span class="sheet-actions-icon" aria-hidden="true">
-                            <span class="sheet-actions-dot dot-1"></span>
-                            <span class="sheet-actions-dot dot-2"></span>
-                            <span class="sheet-actions-dot dot-3"></span>
-                        </span>
+                        <span id="userStatusText" class="user-status-text"></span>
+                        <span class="header-overflow-caret" aria-hidden="true">▾</span>
                     </button>
                     <div class="selector-menu header-overflow-menu" role="menu" aria-hidden="true">
                         <button
