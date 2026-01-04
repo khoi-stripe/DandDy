@@ -355,6 +355,7 @@ def get_past_campaigns(
                 character_name=char.name if char else None,
                 character_class=char.character_class if char else None,
                 character_level=char.level if char else None,
+                original_portrait_url=char.original_portrait_url if char else None,
                 symbol=m.symbol,
                 is_creator=bool(m.is_creator) if m.is_creator is not None else False,
                 status=m.status.value if m.status and hasattr(m.status, 'value') else str(m.status) if m.status else "unknown",

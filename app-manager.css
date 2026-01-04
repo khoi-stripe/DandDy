@@ -1256,6 +1256,22 @@ div.sheet__sidebar.ui-theme-pink {
     color: var(--ui-dim-color);
 }
 
+.party-card-tag--left {
+    color: var(--ui-dim-color);
+    opacity: 0.8;
+}
+
+/* Past campaign party cards - readonly, slightly dimmed */
+.party-card--past {
+    cursor: default;
+    opacity: 0.9;
+}
+
+.party-card--past:hover {
+    border-color: var(--ui-border-color);
+    background-color: transparent;
+}
+
 /* Invited card - placeholder state */
 .party-card--invited {
     opacity: 0.7;
@@ -1770,7 +1786,21 @@ div.sheet__sidebar.ui-theme-pink {
     /* Uses existing sheet-header styles */
 }
 
-.past-campaign-party-list,
+.past-campaign-party-list {
+    margin-top: var(--spacing-sm);
+    /* Use same grid layout as active campaign party */
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-sm);
+}
+
+/* Responsive: 2 columns on narrow screens (matching active campaign) */
+@media (max-width: 500px) {
+    .past-campaign-party-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 .past-campaign-journal-list {
     margin-top: var(--spacing-sm);
 }
@@ -1912,6 +1942,7 @@ div.sheet__sidebar.ui-theme-pink {
     line-height: var(--line-height-normal);
     white-space: pre-line;
     margin-top: var(--spacing-sm);
+    padding-top: 16px;
 }
 
 /* ===== JOURNAL SECTION (inside campaign-area) ===== */

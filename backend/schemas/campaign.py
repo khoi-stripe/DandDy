@@ -145,6 +145,7 @@ class PastCampaignMemberInfo(BaseModel):
     character_name: Optional[str] = None
     character_class: Optional[str] = None
     character_level: Optional[int] = None
+    original_portrait_url: Optional[str] = None
     symbol: Optional[str] = None
     is_creator: bool = False
     status: str  # "active", "left", etc.

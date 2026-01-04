@@ -3756,26 +3756,60 @@ const CampaignUI = (window.CampaignUI = {
                 ? new Date(campaign.user_left_at).toLocaleDateString() 
                 : 'Ongoing');
         
-        // Build party list
+        // Build party grid with card layout (matching active campaign style)
         const partyHtml = campaign.members && campaign.members.length > 0
             ? campaign.members.map(m => {
-                const charInfo = m.character_name 
-                    ? `<span class="party-member-info">Lvl ${m.character_level || '?'} ${m.character_class || ''}</span>`
-                    : '<span class="party-member-info terminal-text-dim">No character</span>';
-                const statusBadge = m.status === 'left' 
-                    ? '<span class="party-member-left-badge">Left</span>' 
+                // Build status tags (Admin, Left)
+                const statusTags = [];
+                if (m.is_creator) {
+                    statusTags.push('<span class="party-card-tag party-card-tag--admin">Admin</span>');
+                }
+                if (m.status === 'left') {
+                    statusTags.push('<span class="party-card-tag party-card-tag--left">Left</span>');
+                }
+                const statusTagsHtml = statusTags.length > 0 
+                    ? `<div class="party-card-tags">${statusTags.join('')}</div>`
                     : '';
-                return `
-                    <div class="party-member party-member--readonly">
-                        <span class="party-member-left">
-                            <span class="party-member-name">${Utils.escapeHtml(m.character_name || 'Unknown')}</span>
-                            ${statusBadge}
-                        </span>
-                        <span class="party-member-right">
-                            ${charInfo}
-                        </span>
-                    </div>
-                `;
+                
+                if (m.character_name) {
+                    // Member with character - show character card
+                    const charName = Utils.escapeHtml(m.character_name);
+                    const charInfo = `Lvl ${m.character_level || '?'} ${m.character_class || ''}`.trim();
+                    
+                    // Get portrait URL if available
+                    let thumbnailHtml = '';
+                    if (m.original_portrait_url) {
+                        thumbnailHtml = `<div class="card-thumbnail card-thumbnail--image">
+                            <img src="${Utils.escapeHtml(m.original_portrait_url)}" alt="${charName}" loading="lazy" onload="this.classList.add('is-loaded')" />
+                        </div>`;
+                    } else {
+                        // Placeholder for no portrait
+                        thumbnailHtml = `<div class="card-thumbnail party-card-placeholder">⚔</div>`;
+                    }
+                    
+                    return `
+                        <div class="party-card character-card party-card--past">
+                            ${statusTagsHtml}
+                            ${thumbnailHtml}
+                            <div class="card-details">
+                                <div class="card-name">${charName}</div>
+                                <div class="card-info">${charInfo}</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Member without character assigned
+                    return `
+                        <div class="party-card character-card party-card--no-char party-card--past">
+                            ${statusTagsHtml}
+                            <div class="card-thumbnail">?</div>
+                            <div class="card-details">
+                                <div class="card-name">No character</div>
+                                <div class="card-info">Not assigned</div>
+                            </div>
+                        </div>
+                    `;
+                }
             }).join('')
             : '<div class="party-empty">No party members</div>';
         
