@@ -663,9 +663,8 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* ===== CAMPAIGN AREA (TOP SECTION) ===== */
 .campaign-area {
-    border: 1px solid var(--ui-dim-color);
     padding: var(--spacing-md);
-    background: var(--terminal-bg);
+    background: var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg)));
     /* Allow overflow menu to escape bounds */
     overflow: visible;
 }
@@ -711,7 +710,7 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .campaign-area-title {
-    font-size: var(--font-size-md);
+    font-size: 18px;
     color: var(--ui-fg-color);
     margin: 0;
     font-weight: var(--font-weight-medium);
@@ -1725,8 +1724,7 @@ div.sheet__sidebar.ui-theme-pink {
 .campaign-area-info {
     margin-bottom: var(--spacing-md);
     padding: var(--spacing-sm);
-    /* Use translucent background if available, otherwise solid background */
-    background: var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg)));
+    background: black;
     border-radius: 4px;
 }
 
@@ -1794,20 +1792,20 @@ div.sheet__sidebar.ui-theme-pink {
     display: inline-block;
 }
 
-/* ===== JOURNAL SECTION (BOTTOM) ===== */
+/* ===== JOURNAL SECTION (inside campaign-area) ===== */
 .journal-section {
     flex: 1 0 auto;
     display: flex;
     flex-direction: column;
     overflow: visible;
-    margin-bottom: 16px;
+    margin-top: var(--spacing-md);
 }
 
 .journal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 0 var(--spacing-md) 0;
+    padding: 0 0 var(--spacing-md) 0;
     border-bottom: 1px solid var(--ui-border-color);
     flex-shrink: 0;
     gap: var(--spacing-sm);
@@ -1918,7 +1916,7 @@ div.sheet__sidebar.ui-theme-pink {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
-    background: var(--ui-bg-translucent, var(--sheet-box-bg));
+    background: black;
     transition: border-color var(--transition-speed), background var(--transition-speed);
 }
 
