@@ -1801,23 +1801,16 @@ div.sheet__sidebar.ui-theme-pink {
     margin: 0 0 32px 0;
 }
 
-.journal-header {
+/* Journal controls row - below collapsible header */
+.journal-controls {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 0 var(--spacing-md) 0;
-    border-bottom: 1px solid var(--ui-border-color);
-    flex-shrink: 0;
+    padding: var(--spacing-sm) 0;
     gap: var(--spacing-sm);
 }
 
-.journal-header-left {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
-
-.journal-header-actions {
+.journal-controls-left {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
@@ -1835,11 +1828,22 @@ div.sheet__sidebar.ui-theme-pink {
     text-decoration: none;
 }
 
-.journal-title {
-    font-size: var(--font-size-md);
+/* Journal section uses sheet-header--collapsible - inherits theme */
+.journal-section .sheet-header--collapsible {
+    color: var(--ui-dim-color);
+    border-color: var(--ui-border-color);
+}
+
+.journal-section .sheet-header--collapsible:hover {
     color: var(--ui-fg-color);
-    margin: 0;
-    font-weight: var(--font-weight-medium);
+}
+
+.journal-section .sheet-header-toggle {
+    color: var(--ui-dim-color);
+}
+
+.journal-section .sheet-header--collapsible:hover .sheet-header-toggle {
+    color: var(--ui-fg-color);
 }
 
 /* Journal filter selector (uses custom selector component) */

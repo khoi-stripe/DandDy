@@ -1,34 +1,35 @@
 ---
 description: Auto-rebuild JavaScript bundles after editing source files
 globs:
-  - danddy-config.js
-  - danddy-auth.js
-  - danddy-character-mapper.js
-  - danddy-storage.js
+  - app-config.js
+  - app-auth.js
+  - app-character-mapper.js
+  - app-storage.js
+  - app-character-sheet.js
+  - app-api.js
+  - app-portraits.js
+  - app-manager.js
   - version.js
-  - portrait-prompts.js
-  - shared-portrait-data.js
-  - default-portraits.js
-  - character-name-data.js
-  - class-features-data.js
-  - shared-character-sheet.js
-  - character-manager-api.js
-  - character-storage.js
-  - portraits-ui.js
-  - character-manager.js
-  - character-builder/character-builder-config.js
-  - character-builder/character-builder-utils.js
-  - character-builder/character-builder-narrators.js
-  - character-builder/character-builder-services.js
-  - character-builder/character-builder-components.js
-  - character-builder/character-builder-dnd-data.js
-  - character-builder/character-builder-spells.js
-  - character-builder/character-builder-auth.js
-  - character-builder/character-builder-api.js
-  - character-builder/character-builder-state.js
-  - character-builder/character-builder-questions.js
-  - character-builder/character-builder-app.js
-  - character-builder/character-builder-manager.js
+  - demo-characters.js
+  - data-portrait-prompts.js
+  - data-portrait-shared.js
+  - data-character-names.js
+  - data-spells.js
+  - data-class-features.js
+  - data-racial-traits.js
+  - builder-config.js
+  - builder-dnd-data.js
+  - builder-utils.js
+  - builder-narrators.js
+  - builder-services.js
+  - builder-components.js
+  - builder-spells.js
+  - builder-auth.js
+  - builder-api.js
+  - builder-state.js
+  - builder-questions.js
+  - builder-app.js
+  - builder-manager.js
 ---
 
 # JavaScript Bundle Rebuilding
@@ -40,19 +41,13 @@ This project uses bundled JavaScript files for production. After editing ANY of 
 Run this command from the project root:
 
 ```bash
-cd /Users/khoi/Desktop/TEMP/_Personal/_Cursor/_DandDy/scripts && bash build-bundles.sh
-```
-
-Or equivalently:
-
-```bash
-python3 scripts/simple_bundle.py
+cd /Users/khoi/Desktop/TEMP/_Personal/_Cursor/_DandDy && python3 scripts/simple_bundle.py
 ```
 
 ## Bundle Outputs
 
 - `manager.bundle.js` - Used by `index.html` (Character Manager)
-- `character-builder/builder.bundle.js` - Used by `character-builder/index.html`
+- `builder.bundle.js` - Used by `builder.html` (Character Builder)
 
 ## IMPORTANT
 
@@ -60,12 +55,15 @@ python3 scripts/simple_bundle.py
 - **Never edit the bundle files directly** - They are auto-generated and will be overwritten
 - **Verify the rebuild succeeded** - Check for "Wrote bundle:" messages in output
 
-## Minification
+## Source Files → Bundles
 
-The bundler uses **terser** (via `npx`) for minification. Terser is an AST-based minifier that properly preserves template literals - no special workarounds needed for strings.
+**manager.bundle.js** includes:
+- app-*.js files
+- version.js, demo-characters.js
+- data-*.js files
+- builder-config.js, builder-dnd-data.js, builder-utils.js, builder-narrators.js, builder-services.js, builder-components.js
 
-Old workarounds like `${' '}` for spacing are no longer necessary (but still work).
-
-## File Watcher (Alternative)
-
-If running `./start-dev.sh`, the bundle watcher automatically rebuilds on file changes. But when editing files outside of that workflow, manual rebuilding is required.
+**builder.bundle.js** includes:
+- app-config.js, app-auth.js, app-character-mapper.js, app-storage.js, app-api.js, app-character-sheet.js, app-portraits.js
+- data-*.js files
+- All builder-*.js files

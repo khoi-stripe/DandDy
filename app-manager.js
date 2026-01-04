@@ -1284,10 +1284,9 @@ const ExpandedView = (window.ExpandedView = {
     _renderCampaignPanelContent(characterId, campaignData = null, pendingInvitationCount = 0, journalEntries = [], pastCampaignsCount = null) {
         // Use cached past campaigns count if not explicitly provided
         const pastCount = pastCampaignsCount !== null ? pastCampaignsCount : CampaignUI._pastCampaignsCount;
-        return `
-            ${this._renderCampaignArea(characterId, campaignData, pendingInvitationCount, pastCount)}
-            ${this._renderJournalSection(characterId, journalEntries, campaignData)}
-        `;
+        // Render journal HTML to pass into campaign area
+        const journalHtml = this._renderJournalSection(characterId, journalEntries, campaignData);
+        return this._renderCampaignArea(characterId, campaignData, pendingInvitationCount, pastCount, journalHtml);
     },
 
     /** Render skeleton loading state for campaign panel */
@@ -1316,21 +1315,24 @@ const ExpandedView = (window.ExpandedView = {
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="journal-section campaign-skeleton">
-                <div class="journal-header">
-                    <h3 class="journal-title">[ Journal ]</h3>
-                </div>
-                <div class="journal-list">
-                    <div class="skeleton-journal-entry">
-                        <div class="skeleton-line skeleton-journal-date"></div>
-                        <div class="skeleton-line skeleton-journal-title"></div>
-                        <div class="skeleton-line skeleton-journal-content"></div>
-                    </div>
-                    <div class="skeleton-journal-entry">
-                        <div class="skeleton-line skeleton-journal-date"></div>
-                        <div class="skeleton-line skeleton-journal-title"></div>
-                        <div class="skeleton-line skeleton-journal-content"></div>
+                <div class="journal-section sheet-section sheet-section--collapsible campaign-skeleton">
+                    <button class="sheet-header sheet-header--collapsible" aria-expanded="true">
+                        <div class="sheet-header-title">[ Journal ]</div>
+                        <span class="sheet-header-toggle">^</span>
+                    </button>
+                    <div class="sheet-collapsible-content">
+                        <div class="journal-list">
+                            <div class="skeleton-journal-entry">
+                                <div class="skeleton-line skeleton-journal-date"></div>
+                                <div class="skeleton-line skeleton-journal-title"></div>
+                                <div class="skeleton-line skeleton-journal-content"></div>
+                            </div>
+                            <div class="skeleton-journal-entry">
+                                <div class="skeleton-line skeleton-journal-date"></div>
+                                <div class="skeleton-line skeleton-journal-title"></div>
+                                <div class="skeleton-line skeleton-journal-content"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1338,7 +1340,7 @@ const ExpandedView = (window.ExpandedView = {
     },
 
     /** Render the Campaign Area section (top) */
-    _renderCampaignArea(characterId, campaignData, pendingInvitationCount = 0, pastCampaignsCount = 0) {
+    _renderCampaignArea(characterId, campaignData, pendingInvitationCount = 0, pastCampaignsCount = 0, journalHtml = '') {
         if (!campaignData) {
             // No campaign - show join/create buttons inline with header
             const hasInvitations = pendingInvitationCount > 0;
@@ -1391,6 +1393,7 @@ const ExpandedView = (window.ExpandedView = {
                             ${overflowMenuHtml}
                         </div>
                     </div>
+                    ${journalHtml}
                 </div>
             `;
         }
@@ -1588,6 +1591,7 @@ const ExpandedView = (window.ExpandedView = {
                         </div>
                     </div>
                 </div>
+                ${journalHtml}
             </div>
         `;
     },
@@ -1716,17 +1720,22 @@ const ExpandedView = (window.ExpandedView = {
             : '';
 
         return `
-            <div class="journal-section" data-campaign-id="${campaignData?.campaign?.id || ''}">
-                <div class="journal-header">
-                    <div class="journal-header-left">
-                        <h3 class="journal-title">[ Journal ]</h3>
-                        ${filterHtml}
-                        ${settingsHtml}
+            <div class="journal-section sheet-section sheet-section--collapsible" data-campaign-id="${campaignData?.campaign?.id || ''}">
+                <button class="sheet-header sheet-header--collapsible" onclick="CharacterSheet.toggleCollapsible(this)" aria-expanded="true">
+                    <div class="sheet-header-title">[ Journal ]</div>
+                    <span class="sheet-header-toggle">^</span>
+                </button>
+                <div class="sheet-collapsible-content">
+                    <div class="journal-controls">
+                        <div class="journal-controls-left">
+                            ${filterHtml}
+                            ${settingsHtml}
+                        </div>
+                        ${addLinkHtml}
                     </div>
-                    ${addLinkHtml}
-                </div>
-                <div class="journal-entries">
-                    ${entriesHtml}
+                    <div class="journal-entries">
+                        ${entriesHtml}
+                    </div>
                 </div>
             </div>
         `;
