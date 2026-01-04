@@ -850,9 +850,9 @@ div.sheet__sidebar.ui-theme-pink {
     margin-top: 0;
 }
 
-/* Remove bottom margin from header when no campaign (no content below) */
+/* Bottom margin for no-campaign header */
 .campaign-area-header--no-campaign {
-    margin-bottom: 0;
+    margin-bottom: 32px;
 }
 
 /* ===== CAMPAIGN SKELETON LOADERS ===== */
@@ -886,24 +886,27 @@ div.sheet__sidebar.ui-theme-pink {
     width: 40%;
 }
 
-.skeleton-party-member {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-sm) 0;
-    border-bottom: 1px solid var(--ui-border-color);
+/* Skeleton party card - matches character-card structure */
+.skeleton-party-card {
+    /* Uses character-card base styling via class */
 }
 
-.skeleton-party-member:last-child {
-    border-bottom: none;
+.skeleton-thumbnail {
+    width: 100%;
+    aspect-ratio: 1;
+    background-color: var(--ui-dim-color);
+    opacity: 0.15;
 }
 
-.skeleton-party-name {
-    width: 120px;
+.skeleton-card-name {
+    width: 80%;
+    height: 14px;
+    margin-bottom: var(--spacing-xs);
 }
 
-.skeleton-party-info {
-    width: 80px;
+.skeleton-card-info {
+    width: 60%;
+    height: 12px;
 }
 
 .skeleton-journal-entry {
@@ -1824,7 +1827,7 @@ div.sheet__sidebar.ui-theme-pink {
 /* Campaign info (name + description) */
 .campaign-area-info {
     margin: 0 0 32px 0;
-    padding: var(--spacing-sm);
+    padding: 12px 16px 16px;
     background: black;
     border-radius: 4px;
 }

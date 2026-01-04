@@ -1305,13 +1305,28 @@ const ExpandedView = (window.ExpandedView = {
                         <div class="sheet-header-title">[ PARTY ]</div>
                     </div>
                     <div class="sheet-collapsible-content">
-                        <div class="skeleton-party-member">
-                            <div class="skeleton-line skeleton-party-name"></div>
-                            <div class="skeleton-line skeleton-party-info"></div>
-                        </div>
-                        <div class="skeleton-party-member">
-                            <div class="skeleton-line skeleton-party-name"></div>
-                            <div class="skeleton-line skeleton-party-info"></div>
+                        <div class="party-list">
+                            <div class="skeleton-party-card character-card">
+                                <div class="skeleton-thumbnail"></div>
+                                <div class="card-details">
+                                    <div class="skeleton-line skeleton-card-name"></div>
+                                    <div class="skeleton-line skeleton-card-info"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-party-card character-card">
+                                <div class="skeleton-thumbnail"></div>
+                                <div class="card-details">
+                                    <div class="skeleton-line skeleton-card-name"></div>
+                                    <div class="skeleton-line skeleton-card-info"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-party-card character-card">
+                                <div class="skeleton-thumbnail"></div>
+                                <div class="card-details">
+                                    <div class="skeleton-line skeleton-card-name"></div>
+                                    <div class="skeleton-line skeleton-card-info"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
