@@ -4740,6 +4740,7 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
         font-family: var(--font-mono);
         font-size: var(--font-size-small);
         white-space: nowrap;
+        text-decoration: none;
     }
 
     /* Campaign link - pinned right */
