@@ -133,6 +133,16 @@
                     </button>
                     <div class="selector-menu header-overflow-menu" role="menu" aria-hidden="true">
                         <button
+                            class="selector-option is-hidden"
+                            type="button"
+                            role="menuitem"
+                            id="overflowEditCharacterBtn"
+                            onclick="editCharacter(AppState.selectedCharacterId); CharacterSheet.closeSelectorMenu(this.closest('.selector-shell').querySelector('.selector-trigger'));"
+                        >
+                            <span class="selector-option-icon">✎</span>
+                            <span class="selector-option-label">Edit character</span>
+                        </button>
+                        <button
                             class="selector-option"
                             type="button"
                             role="menuitem"

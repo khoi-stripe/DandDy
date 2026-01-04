@@ -1403,12 +1403,8 @@ const ExpandedView = (window.ExpandedView = {
                 const char = m.character;
                 const isOtherUser = m.user_id !== currentUserId;
                 
-                // Build status tags (Symbol, You, Admin) - positioned top-left over thumbnail
+                // Build status tags (You, Admin) - positioned top-left over thumbnail
                 const statusTags = [];
-                // Add unique party symbol first
-                if (m.symbol) {
-                    statusTags.push(`<span class="party-card-tag party-card-tag--symbol">${m.symbol}</span>`);
-                }
                 if (m.user_id === currentUserId) {
                     statusTags.push('<span class="party-card-tag party-card-tag--you">You</span>');
                 }
@@ -1422,7 +1418,7 @@ const ExpandedView = (window.ExpandedView = {
                 if (char) {
                     // Member with character - show character card
                     const clickHandler = isOtherUser 
-                        ? `onclick="CampaignUI.viewPartyMemberSheet(${char.id}, '${m.symbol || ''}')"` 
+                        ? `onclick="CampaignUI.viewPartyMemberSheet(${char.id})"` 
                         : '';
                     const clickableClass = isOtherUser ? 'party-card--clickable' : '';
                     const charName = Utils.escapeHtml(char.name || 'Unnamed');
@@ -1478,16 +1474,9 @@ const ExpandedView = (window.ExpandedView = {
                 const displayName = invite.username 
                     ? `@${Utils.escapeHtml(invite.username)}` 
                     : Utils.escapeHtml(invite.email);
-                // Use the invite's unique symbol, fallback to generic diamond
-                const inviteSymbol = invite.symbol || '◇';
-                // Build symbol tag if symbol exists
-                const symbolTagHtml = invite.symbol 
-                    ? `<div class="party-card-tags"><span class="party-card-tag party-card-tag--symbol">${invite.symbol}</span></div>`
-                    : '';
                 return `
                     <div class="party-card character-card party-card--invited">
-                        ${symbolTagHtml}
-                        <div class="card-thumbnail">${inviteSymbol}</div>
+                        <div class="card-thumbnail">◇</div>
                         <div class="card-details">
                             <div class="card-name">${displayName}</div>
                             <div class="card-info">Invited</div>
@@ -1498,55 +1487,10 @@ const ExpandedView = (window.ExpandedView = {
             partyHtml += invitesHtml;
         }
 
-        // Overflow menu items
-        const menuItems = [];
-        if (isCreator) {
-            menuItems.push({
-                icon: '✎',
-                label: 'Manage Campaign',
-                onclick: `CampaignUI.openManageModal(${campaign.id})`,
-            });
-        } else {
-            // Only non-creators can leave the campaign
-            menuItems.push({
-                icon: '↩',
-                label: 'Leave Campaign',
-                onclick: `CampaignUI.leaveCampaign(${campaign.id})`,
-                danger: true,
-            });
-        }
-
-        const overflowMenuHtml = `
-            <div class="campaign-overflow selector-shell selector-shell--actions">
-                <button
-                    class="terminal-btn-small selector-trigger overflow-trigger campaign-overflow-trigger"
-                    type="button"
-                    aria-haspopup="menu"
-                    aria-expanded="false"
-                    aria-label="Campaign actions"
-                    onclick="CharacterSheet.toggleSelectorMenu(this)"
-                >
-                    <span class="sheet-actions-icon" aria-hidden="true">
-                        <span class="sheet-actions-dot dot-1"></span>
-                        <span class="sheet-actions-dot dot-2"></span>
-                        <span class="sheet-actions-dot dot-3"></span>
-                    </span>
-                </button>
-                <div class="selector-menu campaign-overflow-menu" role="menu" aria-hidden="true">
-                    ${menuItems.map(item => `
-                        <button
-                            class="selector-option${item.danger ? ' is-danger' : ''}"
-                            type="button"
-                            role="menuitem"
-                            onclick="${item.onclick}"
-                        >
-                            <span class="selector-option-icon">${item.icon}</span>
-                            <span class="selector-option-label">${item.label}</span>
-                        </button>
-                    `).join('')}
-                </div>
-            </div>
-        `;
+        // Simple action link (admin vs member)
+        const actionLinkHtml = isCreator
+            ? `<a href="#" class="campaign-action-link" onclick="CampaignUI.openManageModal(${campaign.id}); return false;"><span class="campaign-action-icon">✎</span> Manage campaign</a>`
+            : `<a href="#" class="campaign-action-link campaign-action-link--danger" onclick="CampaignUI.leaveCampaign(${campaign.id}); return false;"><span class="campaign-action-icon">↩</span> Leave campaign</a>`;
 
         return `
             <div class="campaign-area" data-campaign-id="${campaign.id}">
@@ -1556,7 +1500,7 @@ const ExpandedView = (window.ExpandedView = {
                             <span class="campaign-eyebrow">CAMPAIGN</span>
                             <span class="campaign-name">${Utils.escapeHtml(campaign.name)}</span>
                         </div>
-                        ${overflowMenuHtml}
+                        ${actionLinkHtml}
                     </div>
                     ${campaign.description ? `<div class="campaign-desc-text">${Utils.escapeHtml(campaign.description)}</div>` : ''}
                 </div>
@@ -1635,21 +1579,18 @@ const ExpandedView = (window.ExpandedView = {
                 .map(m => ({
                     userId: m.user_id,
                     label: m.character?.name || (m.username ? `@${m.username}` : m.user_email) || 'Unknown',
-                    symbol: m.symbol || '',
                     isSelected: selectedUserId === m.user_id,
                 }))
                 .sort((a, b) => a.label.localeCompare(b.label))  // Sort alphabetically
-                .map(({ userId, label, symbol, isSelected }) => {
-                    const symbolHtml = symbol ? `<span class="party-member-symbol">${symbol}</span> ` : '';
+                .map(({ userId, label, isSelected }) => {
                     return `
                     <button class="selector-option ${isSelected ? 'is-selected' : ''}" 
                             type="button" 
                             role="option" 
                             data-value="${userId}" 
-                            data-symbol="${symbol}"
                             aria-selected="${isSelected ? 'true' : 'false'}" 
-                            onclick="CampaignUI.selectJournalFilter('${userId}', '${Utils.escapeHtml(label).replace(/'/g, "\\'")}', '${symbol}')">
-                        <span class="selector-option-label">${symbolHtml}${Utils.escapeHtml(label)}</span>
+                            onclick="CampaignUI.selectJournalFilter('${userId}', '${Utils.escapeHtml(label).replace(/'/g, "\\'")}')">
+                        <span class="selector-option-label">${Utils.escapeHtml(label)}</span>
                     </button>
                 `;
                 })
@@ -1657,9 +1598,8 @@ const ExpandedView = (window.ExpandedView = {
             
             const allSelected = selectedUserId === null;
             const selectedMember = members.find(m => m.user_id === selectedUserId);
-            const currentSymbol = selectedMember?.symbol ? `<span class="party-member-symbol">${selectedMember.symbol}</span> ` : '';
             const currentLabelName = selectedMember?.character?.name || 'All';
-            const currentLabelHtml = allSelected ? 'All' : (currentSymbol + Utils.escapeHtml(currentLabelName));
+            const currentLabelHtml = allSelected ? 'All' : Utils.escapeHtml(currentLabelName);
             
             filterHtml = `
                 <div class="journal-filter selector-shell selector-shell--listbox">
@@ -3318,12 +3258,11 @@ const CampaignUI = (window.CampaignUI = {
     },
 
     /** Handle journal filter selection from custom selector */
-    selectJournalFilter(value, label, symbol = '') {
-        // Update the trigger label (with symbol if provided)
+    selectJournalFilter(value, label) {
+        // Update the trigger label
         const labelEl = document.getElementById('journalFilter-label');
         if (labelEl) {
-            const symbolHtml = symbol ? `<span class="party-member-symbol">${symbol}</span> ` : '';
-            labelEl.innerHTML = symbolHtml + Utils.escapeHtml(label);
+            labelEl.innerHTML = Utils.escapeHtml(label);
         }
         
         // Update selected state in menu options
@@ -3461,9 +3400,8 @@ const CampaignUI = (window.CampaignUI = {
     /**
      * View a party member's character sheet in a modal (view-only)
      * @param {number} characterId - The character ID to view
-     * @param {string} symbol - The party member's symbol (e.g., ▣, ◆)
      */
-    async viewPartyMemberSheet(characterId, symbol = '') {
+    async viewPartyMemberSheet(characterId) {
         // Remove any existing modal first to ensure fresh state
         const existingModal = document.getElementById('partyMemberSheetModal');
         if (existingModal) {
@@ -3529,11 +3467,10 @@ const CampaignUI = (window.CampaignUI = {
                         ? `<div class="party-member-modal-email">${Utils.escapeHtml(backendCharacter.owner_email)}</div>` 
                         : '';
                     
-                    const symbolPrefix = symbol ? `<span class="party-member-symbol">${symbol}</span> ` : '';
                     modalContent.innerHTML = `
                         <div class="modal-header">
                             <div class="party-member-modal-title-group">
-                                <h2 class="modal-title">${symbolPrefix}${Utils.escapeHtml(character.name)}</h2>
+                                <h2 class="modal-title">${Utils.escapeHtml(character.name)}</h2>
                                 ${ownerEmail}
                             </div>
                             <button class="modal-close" onclick="CampaignUI.closePartyMemberSheetModal()">&times;</button>
@@ -3700,12 +3637,8 @@ const CampaignUI = (window.CampaignUI = {
                 statusClass = 'past-campaign-status--archived';
             }
             
-            // Build party preview (show first 3 symbols)
-            const partyPreview = campaign.members
-                .slice(0, 3)
-                .map(m => m.symbol || '○')
-                .join(' ');
-            const moreCount = campaign.party_count > 3 ? ` +${campaign.party_count - 3}` : '';
+            // Build party preview (show count)
+            const partyCount = campaign.party_count || campaign.members.length;
             
             return `
                 <div class="past-campaign-card" onclick="CampaignUI.viewPastCampaign(${campaign.id})">
@@ -3716,7 +3649,7 @@ const CampaignUI = (window.CampaignUI = {
                     ${campaign.description ? `<div class="past-campaign-desc">${Utils.escapeHtml(campaign.description)}</div>` : ''}
                     <div class="past-campaign-meta">
                         <span class="past-campaign-dates">${startDate} — ${endDate}</span>
-                        <span class="past-campaign-party">${partyPreview}${moreCount}</span>
+                        <span class="past-campaign-party">${partyCount} member${partyCount !== 1 ? 's' : ''}</span>
                     </div>
                 </div>
             `;
@@ -3793,7 +3726,6 @@ const CampaignUI = (window.CampaignUI = {
         // Build party list
         const partyHtml = campaign.members && campaign.members.length > 0
             ? campaign.members.map(m => {
-                const symbolPrefix = m.symbol ? `<span class="party-member-symbol">${m.symbol}</span> ` : '';
                 const charInfo = m.character_name 
                     ? `<span class="party-member-info">Lvl ${m.character_level || '?'} ${m.character_class || ''}</span>`
                     : '<span class="party-member-info terminal-text-dim">No character</span>';
@@ -3803,7 +3735,7 @@ const CampaignUI = (window.CampaignUI = {
                 return `
                     <div class="party-member party-member--readonly">
                         <span class="party-member-left">
-                            <span class="party-member-name">${symbolPrefix}${Utils.escapeHtml(m.character_name || 'Unknown')}</span>
+                            <span class="party-member-name">${Utils.escapeHtml(m.character_name || 'Unknown')}</span>
                             ${statusBadge}
                         </span>
                         <span class="party-member-right">
@@ -3817,9 +3749,8 @@ const CampaignUI = (window.CampaignUI = {
         // Build journal entries using existing expandable pattern (read-only, no actions)
         const journalHtml = journals && journals.length > 0
             ? journals.map(entry => {
-                const symbolPrefix = entry.character_symbol ? `${entry.character_symbol} ` : '';
                 const authorInfo = entry.character_name 
-                    ? `<span class="journal-entry-author">${symbolPrefix}${Utils.escapeHtml(entry.character_name)}</span>` 
+                    ? `<span class="journal-entry-author">${Utils.escapeHtml(entry.character_name)}</span>` 
                     : '';
                 
                 return `
@@ -4197,6 +4128,12 @@ const MobileView = {
         if (isSwipeTransition) {
             this.waitForPortraitLoad(container);
         }
+        
+        // Show "Edit character" in header overflow menu on mobile
+        const editCharBtn = document.getElementById('overflowEditCharacterBtn');
+        if (editCharBtn) {
+            editCharBtn.classList.remove('is-hidden');
+        }
     },
     
     /** Load campaign content for mobile view */
@@ -4420,6 +4357,12 @@ const MobileView = {
         const mobileStatusRow = document.getElementById('mobileSheetStatusRow');
         if (mobileHeader) mobileHeader.remove();
         if (mobileStatusRow) mobileStatusRow.remove();
+        
+        // Hide "Edit character" in header overflow menu when leaving mobile sheet
+        const editCharBtn = document.getElementById('overflowEditCharacterBtn');
+        if (editCharBtn) {
+            editCharBtn.classList.add('is-hidden');
+        }
         
         // Clear selection state on mobile when going back
         if (typeof AppState !== 'undefined' && AppState) {
