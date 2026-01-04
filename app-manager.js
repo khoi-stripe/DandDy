@@ -1510,9 +1510,16 @@ const ExpandedView = (window.ExpandedView = {
                 const displayName = invite.username 
                     ? `@${Utils.escapeHtml(invite.username)}` 
                     : Utils.escapeHtml(invite.email);
+                // Use the invite's unique symbol, fallback to generic diamond
+                const inviteSymbol = invite.symbol || '◇';
+                // Build symbol tag if symbol exists
+                const symbolTagHtml = invite.symbol 
+                    ? `<div class="party-card-tags"><span class="party-card-tag party-card-tag--symbol">${invite.symbol}</span></div>`
+                    : '';
                 return `
                     <div class="party-card character-card party-card--invited">
-                        <div class="card-thumbnail">◇</div>
+                        ${symbolTagHtml}
+                        <div class="card-thumbnail">${inviteSymbol}</div>
                         <div class="card-details">
                             <div class="card-name">${displayName}</div>
                             <div class="card-info">Invited</div>

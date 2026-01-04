@@ -934,7 +934,8 @@ def invite_user(
             user_id=invited_user.id,
             is_creator=False,
             status=MemberStatus.INVITED,
-            invited_by_id=current_user.id  # Track who sent the invitation
+            invited_by_id=current_user.id,  # Track who sent the invitation
+            symbol=_get_available_symbol(campaign_id, db)  # Assign unique symbol on invite
         )
         debug_step = "db_add"
         db.add(invitation)
@@ -992,7 +993,8 @@ def get_campaign_pending_invitations(
             username=m.user.username if m.user else None,
             email=m.user.email,
             status=m.status.value,
-            invited_at=m.joined_at
+            invited_at=m.joined_at,
+            symbol=m.symbol
         )
         for m in members
     ]

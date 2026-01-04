@@ -131,6 +131,7 @@ class CampaignPendingInviteResponse(BaseModel):
     email: str  # Kept for backward compatibility
     status: str  # "invited" or "active"
     invited_at: datetime
+    symbol: Optional[str] = None  # Unique party symbol (e.g., ▣, ◆, ▲)
     
     class Config:
         from_attributes = True
