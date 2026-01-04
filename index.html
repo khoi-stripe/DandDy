@@ -518,58 +518,47 @@
         </div>
     </div>
 
-    <!-- Invite Players Modal -->
-    <div id="invitePlayersModal" class="modal modal-yellow">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title">INVITE PLAYERS</h2>
-                <button class="modal-close" onclick="CampaignUI.closeInviteModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p class="terminal-text">Inviting to <strong id="inviteModalCampaignName"></strong></p>
-                
-                <div id="inviteModalExistingSection" class="share-section" style="margin-top: 1.25rem; display: none;">
-                    <label class="terminal-text-small modal-section-label">PEOPLE WITH ACCESS</label>
-                    <div id="inviteModalExistingList" class="share-collaborators-list"></div>
-                </div>
-                
-                <div class="share-section" style="margin-top: 1.25rem;">
-                    <label class="terminal-text-small modal-section-label" for="inviteModalUsername">ADD PERSON</label>
-                    <div class="share-add-row">
-                        <input type="text" id="inviteModalUsername" class="terminal-input" placeholder="@username" autocomplete="off" data-1p-ignore onkeydown="if(event.key==='Enter'){event.preventDefault();CampaignUI.addPendingInviteFromModal();}">
-                        <button type="button" class="terminal-btn" id="inviteAddBtn" onclick="CampaignUI.addPendingInviteFromModal()">Add</button>
-                    </div>
-                    <p id="inviteModalError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
-                </div>
-            </div>
-            <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.sendInvitations()">Done</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Campaign Modal -->
+    <!-- Manage Campaign Modal (Edit + Invite combined) -->
     <div id="manageCampaignModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title">Edit Campaign</h2>
+                <h2 class="modal-title">Manage Campaign</h2>
                 <button class="modal-close" onclick="CampaignUI.closeManageModal()">&times;</button>
             </div>
             <div class="modal-body">
+                <!-- Edit Section -->
                 <div class="settings-row settings-row--stacked mb-md">
                     <label class="settings-label" for="manageCampaignName">Campaign Name</label>
                     <input type="text" id="manageCampaignName" class="terminal-input" placeholder="e.g. Curse of Strahd" maxlength="100" required data-1p-ignore>
                 </div>
-                <div class="settings-row settings-row--stacked">
+                <div class="settings-row settings-row--stacked mb-lg">
                     <label class="settings-label" for="manageCampaignDesc">Description <span class="terminal-text-dim">(optional)</span></label>
                     <textarea id="manageCampaignDesc" class="terminal-textarea" rows="3" placeholder="A brief description of your campaign..." maxlength="500"></textarea>
                 </div>
                 
+                <!-- Invite Section -->
+                <div id="manageCampaignMembersSection" class="share-section">
+                    <label class="terminal-text-small modal-section-label">PEOPLE WITH ACCESS</label>
+                    <div id="manageCampaignMembersList" class="share-collaborators-list"></div>
+                </div>
+                
+                <div class="share-section mt-md">
+                    <label class="terminal-text-small modal-section-label" for="manageCampaignInviteInput">INVITE PLAYER</label>
+                    <div class="share-add-row">
+                        <input type="text" id="manageCampaignInviteInput" class="terminal-input" placeholder="@username" autocomplete="off" data-1p-ignore onkeydown="if(event.key==='Enter'){event.preventDefault();CampaignUI.addInviteFromManageModal();}">
+                        <button type="button" class="terminal-btn" onclick="CampaignUI.addInviteFromManageModal()">Add</button>
+                    </div>
+                    <p id="manageCampaignInviteError" class="terminal-text-small" style="color: var(--error-color, #f44); margin-top: 0.25rem; display: none;"></p>
+                </div>
+                
                 <div id="manageCampaignError" class="terminal-text-small terminal-text-error mt-sm is-hidden"></div>
             </div>
-            <div class="modal-footer modal-footer-end">
-                <button class="terminal-btn" onclick="CampaignUI.closeManageModal()">Cancel</button>
-                <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.submitManageCampaign()">Save</button>
+            <div class="modal-footer modal-footer-space-between">
+                <button class="terminal-btn-link terminal-btn-link--danger" onclick="CampaignUI.confirmEndCampaignFromModal()">End Campaign</button>
+                <div class="modal-footer-actions">
+                    <button class="terminal-btn" onclick="CampaignUI.closeManageModal()">Cancel</button>
+                    <button class="terminal-btn terminal-btn-primary" onclick="CampaignUI.submitManageCampaign()">Save</button>
+                </div>
             </div>
         </div>
     </div>

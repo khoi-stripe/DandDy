@@ -1524,19 +1524,8 @@ const ExpandedView = (window.ExpandedView = {
         if (isCreator) {
             menuItems.push({
                 icon: '✎',
-                label: 'Edit Campaign',
+                label: 'Manage Campaign',
                 onclick: `CampaignUI.openManageModal(${campaign.id})`,
-            });
-            menuItems.push({
-                icon: '✉︎',
-                label: 'Invite',
-                onclick: `CampaignUI.openInviteModal(${campaign.id})`,
-            });
-            menuItems.push({
-                icon: '■',
-                label: 'End Campaign',
-                onclick: `CampaignUI.confirmEndCampaignById(${campaign.id})`,
-                danger: true,
             });
         } else {
             // Only non-creators can leave the campaign
@@ -2300,221 +2289,24 @@ const CampaignUI = (window.CampaignUI = {
     },
 
     // ========================================
-    // INVITE PLAYERS MODAL
-    // ========================================
-    
-    _invitingCampaign: null,
-    _existingInvitations: [], // Invitations already sent (from server)
-    
-    async openInviteModal(campaignId) {
-        try {
-            const campaign = await CampaignAPI.getCampaign(campaignId);
-            this._invitingCampaign = campaign;
-            
-            const modal = document.getElementById('invitePlayersModal');
-            if (!modal) return;
-            
-            // Set campaign name
-            const campaignNameEl = document.getElementById('inviteModalCampaignName');
-            if (campaignNameEl) {
-                campaignNameEl.textContent = campaign.name || 'Unnamed Campaign';
-            }
-            
-            // Clear username input
-            const usernameInput = document.getElementById('inviteModalUsername');
-            if (usernameInput) usernameInput.value = '';
-            
-            // Clear any error messages
-            const errorEl = document.getElementById('inviteModalError');
-            if (errorEl) {
-                errorEl.textContent = '';
-                errorEl.style.display = 'none';
-            }
-            
-            // Load existing pending invitations from server
-            await this._loadExistingInvitations(campaignId);
-            
-            modal.classList.add('show');
-            
-            // Focus username input
-            setTimeout(() => {
-                document.getElementById('inviteModalUsername')?.focus();
-            }, 100);
-            
-        } catch (error) {
-            console.error('Failed to load campaign for invites:', error);
-            showAlertDialog('Failed to load campaign details. Please try again.');
-        }
-    },
-    
-    async _loadExistingInvitations(campaignId) {
-        try {
-            this._existingInvitations = await CampaignAPI.getCampaignPendingInvitations(campaignId);
-        } catch (error) {
-            console.warn('Failed to load existing invitations:', error);
-            this._existingInvitations = [];
-        }
-        this._renderExistingInvitations();
-    },
-    
-    _renderExistingInvitations() {
-        const container = document.getElementById('inviteModalExistingList');
-        const section = document.getElementById('inviteModalExistingSection');
-        if (!container) return;
-        
-        if (this._existingInvitations.length === 0) {
-            container.innerHTML = '';
-            if (section) section.style.display = 'none';
-            return;
-        }
-        
-        if (section) section.style.display = 'block';
-        
-        container.innerHTML = this._existingInvitations.map(inv => {
-            const isPending = inv.status === 'invited';
-            const statusLabel = isPending ? 'PENDING' : 'MEMBER';
-            const statusClass = isPending ? 'share-collaborator-pending' : '';
-            // Prefer username over email for display
-            const displayName = inv.username 
-                ? `@${Utils.escapeHtml(inv.username)}` 
-                : Utils.escapeHtml(inv.email);
-            return `
-            <div class="share-collaborator-item ${statusClass}" data-invite-id="${inv.id}">
-                <span class="share-collaborator-email">${displayName}</span>
-                <span class="share-collaborator-status">${statusLabel}</span>
-                <button type="button" class="share-collaborator-remove" onclick="CampaignUI.removeMember(${inv.id}, ${isPending})" title="${isPending ? 'Cancel invite' : 'Remove from campaign'}">×</button>
-            </div>
-        `;
-        }).join('');
-    },
-    
-    async removeMember(memberId, isPending) {
-        if (!this._invitingCampaign) return;
-        
-        // Mark as removing
-        const item = document.querySelector(`.share-collaborator-item[data-invite-id="${memberId}"]`);
-        if (item) item.classList.add('removing');
-        
-        try {
-            // Use same endpoint for both - it removes the membership
-            await CampaignAPI.revokeInvitation(this._invitingCampaign.id, memberId);
-            // Remove from local list
-            this._existingInvitations = this._existingInvitations.filter(inv => inv.id !== memberId);
-            this._renderExistingInvitations();
-        } catch (error) {
-            console.error('Failed to remove member:', error);
-            if (item) item.classList.remove('removing');
-            const errorEl = document.getElementById('inviteModalError');
-            if (errorEl) {
-                errorEl.textContent = error.message || 'Failed to remove member';
-                errorEl.style.display = 'block';
-            }
-        }
-    },
-    
-    closeInviteModal() {
-        const modal = document.getElementById('invitePlayersModal');
-        if (modal) {
-            animateModalClose(modal, { removeOnClose: false });
-        }
-        this._invitingCampaign = null;
-        this._existingInvitations = [];
-    },
-    
-    async addPendingInviteFromModal() {
-        const input = document.getElementById('inviteModalUsername');
-        const addBtn = document.getElementById('inviteAddBtn');
-        let rawValue = input?.value?.trim();
-        const errorEl = document.getElementById('inviteModalError');
-        
-        if (!rawValue) return;
-        
-        // Auto-add @ prefix if not present
-        if (!rawValue.startsWith('@')) {
-            rawValue = '@' + rawValue;
-        }
-        
-        const identifier = rawValue.toLowerCase();
-        
-        // Username validation: @username (3-30 chars, alphanumeric + underscore)
-        const usernamePattern = /^@[a-zA-Z0-9_]{3,30}$/;
-        if (!usernamePattern.test(rawValue)) {
-            if (errorEl) {
-                errorEl.textContent = 'Username must be 3-30 characters (letters, numbers, underscores)';
-                errorEl.style.display = 'block';
-            }
-            return;
-        }
-        
-        // Check for duplicates in existing invitations
-        const isDuplicate = this._existingInvitations.some(inv => {
-            return inv.username && `@${inv.username}`.toLowerCase() === identifier;
-        });
-        if (isDuplicate) {
-            if (errorEl) {
-                errorEl.textContent = 'This person has already been invited';
-                errorEl.style.display = 'block';
-            }
-            return;
-        }
-        
-        // Clear error
-        if (errorEl) {
-            errorEl.style.display = 'none';
-        }
-        
-        // Disable button while sending
-        if (addBtn) {
-            addBtn.disabled = true;
-            addBtn.textContent = '...';
-        }
-        
-        try {
-            // Send invitation by username
-            await CampaignAPI.inviteByUsernameOrEmail(this._invitingCampaign.id, identifier);
-            
-            // Refresh the list
-            await this._loadExistingInvitations(this._invitingCampaign.id);
-            
-            // Clear input
-            input.value = '';
-            input.focus();
-            
-        } catch (error) {
-            console.error('Failed to send invitation:', error);
-            if (errorEl) {
-                errorEl.textContent = error.message || 'Failed to send invitation';
-                errorEl.style.display = 'block';
-            }
-        } finally {
-            // Re-enable button
-            if (addBtn) {
-                addBtn.disabled = false;
-                addBtn.textContent = 'Add';
-            }
-        }
-    },
-    
-    // Close the modal and refresh campaign panel to show new invitees
-    async sendInvitations() {
-        this.closeInviteModal();
-        // Refresh campaign panel to show pending invitations
-        await ExpandedView._loadCampaignPanel();
-    },
-
-    // ========================================
     // MANAGE CAMPAIGN MODAL
     // ========================================
     
     // Cache current campaign data for the manage modal
     _managingCampaign: null,
+    _managingCampaignMembers: [], // Members and pending invitations
     
     async openManageModal(campaignId) {
         const currentUserId = window.AuthService?.getCurrentUser()?.id;
         try {
-            // Fetch campaign details
-            const campaign = await CampaignAPI.getCampaign(campaignId);
+            // Fetch campaign details and members in parallel
+            const [campaign, members, pendingInvites] = await Promise.all([
+                CampaignAPI.getCampaign(campaignId),
+                CampaignAPI.getCampaignMembers(campaignId),
+                CampaignAPI.getCampaignPendingInvitations(campaignId).catch(() => [])
+            ]);
             this._managingCampaign = campaign;
+            this._managingCampaignMembers = [...members, ...pendingInvites];
             
             // Permission check: only the campaign creator can manage the campaign
             const isCreator = campaign.dm_id === currentUserId;
@@ -2530,12 +2322,24 @@ const CampaignUI = (window.CampaignUI = {
             document.getElementById('manageCampaignName').value = campaign.name || '';
             document.getElementById('manageCampaignDesc').value = campaign.description || '';
             
+            // Clear invite input and error
+            const inviteInput = document.getElementById('manageCampaignInviteInput');
+            if (inviteInput) inviteInput.value = '';
+            const inviteError = document.getElementById('manageCampaignInviteError');
+            if (inviteError) {
+                inviteError.textContent = '';
+                inviteError.style.display = 'none';
+            }
+            
             // Clear any error messages
             const errorEl = document.getElementById('manageCampaignError');
             if (errorEl) {
                 errorEl.textContent = '';
                 errorEl.classList.add('is-hidden');
             }
+            
+            // Render members list
+            this._renderManageCampaignMembers();
             
             modal.classList.add('show');
             
@@ -2550,6 +2354,112 @@ const CampaignUI = (window.CampaignUI = {
         }
     },
     
+    _renderManageCampaignMembers() {
+        const container = document.getElementById('manageCampaignMembersList');
+        const section = document.getElementById('manageCampaignMembersSection');
+        if (!container) return;
+        
+        if (this._managingCampaignMembers.length === 0) {
+            container.innerHTML = '<p class="terminal-text-dim">No members yet.</p>';
+            return;
+        }
+        
+        const currentUserId = window.AuthService?.getCurrentUser()?.id;
+        
+        container.innerHTML = this._managingCampaignMembers.map(member => {
+            const isPending = member.status === 'invited';
+            const isCreator = member.user_id === this._managingCampaign?.dm_id;
+            const statusLabel = isCreator ? 'CREATOR' : (isPending ? 'PENDING' : 'MEMBER');
+            const statusClass = isPending ? 'share-collaborator-pending' : '';
+            // Prefer username over email for display
+            const displayName = member.username 
+                ? `@${Utils.escapeHtml(member.username)}` 
+                : Utils.escapeHtml(member.email || 'Unknown');
+            // Don't show remove button for the creator
+            const showRemove = !isCreator;
+            return `
+            <div class="share-collaborator-item ${statusClass}" data-member-id="${member.id}">
+                <span class="share-collaborator-email">${displayName}</span>
+                <span class="share-collaborator-status">${statusLabel}</span>
+                ${showRemove ? `<button type="button" class="share-collaborator-remove" onclick="CampaignUI.removeMemberFromManageModal(${member.id}, ${isPending})" title="${isPending ? 'Cancel invite' : 'Remove from campaign'}">×</button>` : ''}
+            </div>
+        `;
+        }).join('');
+    },
+    
+    async addInviteFromManageModal() {
+        if (!this._managingCampaign) return;
+        
+        const input = document.getElementById('manageCampaignInviteInput');
+        const errorEl = document.getElementById('manageCampaignInviteError');
+        const username = input?.value?.trim();
+        
+        if (!username) {
+            if (errorEl) {
+                errorEl.textContent = 'Please enter a username';
+                errorEl.style.display = 'block';
+            }
+            return;
+        }
+        
+        // Remove @ prefix if present
+        const cleanUsername = username.startsWith('@') ? username.slice(1) : username;
+        
+        try {
+            await CampaignAPI.inviteToJoinCampaign(this._managingCampaign.id, cleanUsername);
+            
+            // Clear input and error
+            if (input) input.value = '';
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.style.display = 'none';
+            }
+            
+            // Reload members list
+            const pendingInvites = await CampaignAPI.getCampaignPendingInvitations(this._managingCampaign.id).catch(() => []);
+            const members = await CampaignAPI.getCampaignMembers(this._managingCampaign.id);
+            this._managingCampaignMembers = [...members, ...pendingInvites];
+            this._renderManageCampaignMembers();
+            
+            // Refocus input
+            input?.focus();
+            
+        } catch (error) {
+            console.error('Failed to send invitation:', error);
+            if (errorEl) {
+                errorEl.textContent = error.message || 'Failed to send invitation';
+                errorEl.style.display = 'block';
+            }
+        }
+    },
+    
+    async removeMemberFromManageModal(memberId, isPending) {
+        if (!this._managingCampaign) return;
+        
+        try {
+            if (isPending) {
+                await CampaignAPI.cancelInvitation(memberId);
+            } else {
+                await CampaignAPI.removeCampaignMember(this._managingCampaign.id, memberId);
+            }
+            
+            // Reload members list
+            const pendingInvites = await CampaignAPI.getCampaignPendingInvitations(this._managingCampaign.id).catch(() => []);
+            const members = await CampaignAPI.getCampaignMembers(this._managingCampaign.id);
+            this._managingCampaignMembers = [...members, ...pendingInvites];
+            this._renderManageCampaignMembers();
+            
+        } catch (error) {
+            console.error('Failed to remove member:', error);
+            showAlertDialog(error.message || 'Failed to remove member. Please try again.');
+        }
+    },
+    
+    confirmEndCampaignFromModal() {
+        if (!this._managingCampaign) return;
+        this.confirmEndCampaignById(this._managingCampaign.id);
+    },
+    
     closeManageModal() {
         const modal = document.getElementById('manageCampaignModal');
         if (modal) {
@@ -2559,6 +2469,7 @@ const CampaignUI = (window.CampaignUI = {
             animateModalClose(modal, { removeOnClose: false });
         }
         this._managingCampaign = null;
+        this._managingCampaignMembers = [];
         this._originalManageModalContent = null;
     },
     
@@ -2631,11 +2542,6 @@ const CampaignUI = (window.CampaignUI = {
             console.error('Failed to leave campaign:', error);
             showAlertDialog(error.message || 'Failed to leave campaign. Please try again.');
         }
-    },
-    
-    confirmDeleteCampaignFromModal() {
-        if (!this._managingCampaign) return;
-        this.confirmDeleteCampaign(this._managingCampaign.id);
     },
     
     // Delete campaign by ID (called from overflow menu)

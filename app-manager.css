@@ -1080,9 +1080,37 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .modal-footer-space-between .modal-footer-left,
-.modal-footer-space-between .modal-footer-right {
+.modal-footer-space-between .modal-footer-right,
+.modal-footer-space-between .modal-footer-actions {
     display: flex;
     gap: var(--spacing-sm);
+}
+
+/* Text link button (looks like a link, not a button) */
+.terminal-btn-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: var(--font-mono);
+    font-size: var(--font-size-base);
+    color: var(--ui-dim-color);
+    cursor: pointer;
+    text-decoration: none;
+    transition: color var(--transition-speed);
+}
+
+.terminal-btn-link:hover {
+    color: var(--ui-fg-color);
+    text-decoration: underline;
+}
+
+.terminal-btn-link--danger {
+    color: var(--terminal-error, #f44);
+}
+
+.terminal-btn-link--danger:hover {
+    color: var(--terminal-error, #f44);
+    opacity: 0.8;
 }
 
 /* ===== JOIN CAMPAIGN - INVITATIONS LIST ===== */
