@@ -1435,7 +1435,7 @@ const ExpandedView = (window.ExpandedView = {
                 const char = m.character;
                 const isOtherUser = m.user_id !== currentUserId;
                 
-                // Build status tags (You, Admin) - text labels
+                // Build status tags (You, Admin) - positioned top-left over thumbnail
                 const statusTags = [];
                 if (m.user_id === currentUserId) {
                     statusTags.push('<span class="party-card-tag party-card-tag--you">You</span>');

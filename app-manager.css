@@ -1259,6 +1259,14 @@ div.sheet__sidebar.ui-theme-pink {
     background-color: rgba(0, 0, 0, 0.7);
 }
 
+.party-card-tag--symbol {
+    color: var(--ui-accent-color, var(--ui-fg-color));
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 1;
+    font-size: 10px;
+}
+
 .party-card-tag--you {
     color: var(--ui-fg-color);
 }
