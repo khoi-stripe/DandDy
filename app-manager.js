@@ -1363,37 +1363,6 @@ const ExpandedView = (window.ExpandedView = {
                 ? `[${pendingInvitationCount}] campaign${pendingInvitationCount === 1 ? '' : 's'} available`
                 : 'No active campaign.';
             
-            // Only show overflow menu with Past Adventures if user has past campaigns
-            const overflowMenuHtml = pastCampaignsCount > 0 ? `
-                <div class="campaign-overflow selector-shell selector-shell--actions">
-                    <button
-                        class="terminal-btn-small selector-trigger overflow-trigger campaign-overflow-trigger"
-                        type="button"
-                        aria-haspopup="menu"
-                        aria-expanded="false"
-                        aria-label="Campaign actions"
-                        onclick="CharacterSheet.toggleSelectorMenu(this)"
-                    >
-                        <span class="sheet-actions-icon" aria-hidden="true">
-                            <span class="sheet-actions-dot dot-1"></span>
-                            <span class="sheet-actions-dot dot-2"></span>
-                            <span class="sheet-actions-dot dot-3"></span>
-                        </span>
-                    </button>
-                    <div class="selector-menu campaign-overflow-menu" role="menu" aria-hidden="true">
-                        <button
-                            class="selector-option"
-                            type="button"
-                            role="menuitem"
-                            onclick="CampaignUI.openPastAdventuresModal(${characterId})"
-                        >
-                            <span class="selector-option-icon">↺</span>
-                            <span class="selector-option-label">Past Adventures</span>
-                        </button>
-                    </div>
-                </div>
-            ` : '';
-            
             return `
                 <div class="campaign-area">
                     <div class="campaign-area-header campaign-area-header--no-campaign">
@@ -1405,7 +1374,6 @@ const ExpandedView = (window.ExpandedView = {
                             <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openCreateModal()">
                                 CREATE
                             </button>
-                            ${overflowMenuHtml}
                         </div>
                     </div>
                     ${journalHtml}
@@ -1545,15 +1513,6 @@ const ExpandedView = (window.ExpandedView = {
                 label: 'Leave Campaign',
                 onclick: `CampaignUI.leaveCampaign(${campaign.id})`,
                 danger: true,
-            });
-        }
-        
-        // Past Adventures - only show if user has past campaigns (uses cached count)
-        if (CampaignUI._pastCampaignsCount > 0) {
-            menuItems.push({
-                icon: '↺',
-                label: 'Past Adventures',
-                onclick: `CampaignUI.openPastAdventuresModal(${characterId})`,
             });
         }
 
@@ -5172,6 +5131,7 @@ const UI = {
             lastUpdatedByEmail: character.last_updated_by_email || character.lastUpdatedByEmail,
             isPinned: isPinned,
             campaignName: campaignName,
+            hasPastAdventures: CampaignUI._pastCampaignsCount > 0,
         });
         
         // Move sheet-title-header and status row out of characterSheet and into sheet__content (above the layout)
@@ -5513,8 +5473,14 @@ async function viewCharacter(id, options = {}) {
             campaignSlot.classList.remove('is-hidden');
         }
         // Fire and forget - don't block character sheet rendering for campaign panel
-        // Errors are handled internally by _loadCampaignPanel
-        ExpandedView._loadCampaignPanel().catch(() => {});
+        // After loading, refresh character sheet if past adventures became available
+        // (the sheet is rendered before the past campaigns count is fetched)
+        ExpandedView._loadCampaignPanel().then(() => {
+            // Re-render character sheet if past adventures count changed (for overflow menu)
+            if (CampaignUI._pastCampaignsCount > 0 && character) {
+                UI.showCharacterSheet(character);
+            }
+        }).catch(() => {});
         
         // Update URL with selected character (for sharing/bookmarking)
         if (updateUrl && id) {

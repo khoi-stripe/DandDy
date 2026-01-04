@@ -548,6 +548,7 @@ const CharacterSheet = (window.CharacterSheet = {
       hideOverflowMenu,
       isPinned,
       campaignName,
+      hasPastAdventures,
     } = callbacks;
     // Function names differ by context
     const renameFn = context === 'builder' ? 'App.openNameModal()' : `renameCharacter('${character.id}')`;
@@ -685,6 +686,15 @@ const CharacterSheet = (window.CharacterSheet = {
       });
     }
 
+    // Manager-only: Past Adventures (for users with past campaigns)
+    if (context === 'manager' && hasPastAdventures && hasValidManagerId) {
+      headerActions.push({
+        icon: '↺',
+        label: 'Past adventures',
+        onclick: `CampaignUI.openPastAdventuresModal('${character.id}')`,
+      });
+    }
+
     // Manager-only: Edit Spells (only for spellcasting classes)
     if (context === 'manager' && onEdit && character.id && parsed.hasSpells) {
       headerActions.unshift({
@@ -706,15 +716,6 @@ const CharacterSheet = (window.CharacterSheet = {
     // Append Delete last so it always appears at the bottom of the listbox
     if (deleteAction) {
       headerActions.push(deleteAction);
-    }
-
-    // Manager-only: Add Edit to overflow menu
-    if (context === 'manager' && onEdit && editFn) {
-      headerActions.unshift({
-        icon: '✎',
-        label: 'Edit character',
-        onclick: editFn,
-      });
     }
 
     // Manager-only: Navigation buttons in header
@@ -743,6 +744,19 @@ const CharacterSheet = (window.CharacterSheet = {
           onclick="ExpandedView.expand()"
           title="View campaign info"
         ><span class="sheet-nav-btn__icon">↗</span><span class="sheet-nav-btn__label">Expand</span></button>
+      `
+        : '';
+
+    // Manager-only: Standalone Edit button (pulled out of overflow menu)
+    const editButtonHtml =
+      context === 'manager' && onEdit && editFn
+        ? `
+        <button
+          class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--expandable"
+          type="button"
+          onclick="${editFn}"
+          title="Edit character"
+        ><span class="sheet-nav-btn__icon">✎</span><span class="sheet-nav-btn__label">Edit</span></button>
       `
         : '';
 
@@ -793,15 +807,8 @@ const CharacterSheet = (window.CharacterSheet = {
       `
         : '';
 
-    const navActionsBlock =
-      charactersButtonHtml || campaignButtonHtml
-        ? `
-        <div class="sheet-title-actions">
-          ${charactersButtonHtml}
-          ${campaignButtonHtml}
-        </div>
-      `
-        : '';
+    // Right-side actions block: [edit] [overflow] [collapse/expand]
+    // Both collapse and expand buttons are included; CSS controls which is visible
 
     const safeTitle =
       character.name && typeof character.name === 'string'
@@ -884,11 +891,16 @@ const CharacterSheet = (window.CharacterSheet = {
 
     const headerClass = context === 'builder' ? 'sheet-title-header sheet-title-header--flush' : 'sheet-title-header';
 
+    // Build the right-side actions: [edit] [overflow] [collapse/expand]
+    // Both collapse and expand are included; CSS controls visibility based on view
+    const rightActionsHtml = (editButtonHtml || headerMenu || charactersButtonHtml || campaignButtonHtml)
+      ? `<div class="sheet-title-actions">${editButtonHtml}${headerMenu}${charactersButtonHtml}${campaignButtonHtml}</div>`
+      : '';
+
     return `
       <div class="${headerClass}">
         <div class="sheet-title"><span class="sheet-title-name">${safeTitle}</span></div>
-        ${navActionsBlock}
-        ${headerMenu}
+        ${rightActionsHtml}
       </div>
       ${statusRowHtml}
     `;

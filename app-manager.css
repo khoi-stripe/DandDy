@@ -580,8 +580,8 @@ div.sheet__sidebar.ui-theme-pink {
     justify-content: center;
     gap: 0;
     overflow: hidden;
-    /* Fixed width for icon-only state */
-    width: 36px;
+    /* Minimum width for icon-only state */
+    min-width: 36px;
     /* Use standard small button height */
     min-height: var(--btn-height-sm);
     padding: 0 8px;
@@ -594,7 +594,14 @@ div.sheet__sidebar.ui-theme-pink {
     line-height: 1;
     display: flex;
     align-items: center;
-    /* Adjust for arrow glyph baseline */
+    justify-content: center;
+    /* Fine-tune vertical position for icon glyphs */
+    transform: translateY(-1px);
+}
+
+/* Arrow icons need extra vertical adjustment */
+.sheet-nav-btn--to-characters .sheet-nav-btn__icon,
+.sheet-nav-btn--to-campaign .sheet-nav-btn__icon {
     transform: translateY(-3px);
 }
 
@@ -1287,8 +1294,6 @@ div.sheet__sidebar.ui-theme-pink {
     color: var(--ui-accent-color, var(--ui-fg-color));
     text-transform: none;
     letter-spacing: 0;
-    line-height: 1;
-    font-size: 10px;
 }
 
 .party-card-tag--you {
