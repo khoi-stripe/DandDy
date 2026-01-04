@@ -733,6 +733,16 @@ div.sheet__sidebar.ui-theme-pink {
     .campaign-status-inline {
         font-size: var(--font-size-xs);
     }
+    
+    /* Reduced padding and margins on mobile */
+    .campaign-area {
+        padding: 8px;
+    }
+    
+    .campaign-area-info,
+    .campaign-area-party {
+        margin-bottom: 16px;
+    }
 }
 
 /* Campaign overflow menu */
@@ -1834,7 +1844,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 .campaign-name {
     display: block;
-    font-size: var(--font-size-base);
+    font-size: var(--font-size-md);
     font-weight: var(--font-weight-medium);
     color: var(--ui-fg-color);
 }
@@ -1842,12 +1852,6 @@ div.sheet__sidebar.ui-theme-pink {
 /* Add spacing between name and description when both present */
 .campaign-area-info .campaign-name + .campaign-desc-text {
     margin-top: var(--spacing-sm);
-}
-
-@media (max-width: 768px) {
-    .campaign-name {
-        font-size: var(--font-size-base);
-    }
 }
 
 /* Campaign description text */
@@ -1889,7 +1893,8 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .campaign-area-info.is-truncatable {
-    padding: 16px;
+    padding: 0;
+    background: none;
 }
 
 .campaign-area-info.is-truncatable .campaign-desc-toggle {
