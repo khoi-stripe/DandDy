@@ -17,6 +17,17 @@
    Character manager modals use YELLOW theme (base modal style from terminal-theme.css)
    ======================================== */
 
+/* ===== DIMMED CHROME (focus on content) ===== */
+/* Terminal header and frame border dimmed to 60% to focus on content */
+.app-root,
+.terminal-frame {
+    border-color: color-mix(in srgb, var(--ui-border-color) 60%, transparent);
+}
+
+.terminal-header {
+    opacity: 0.6;
+}
+
 .main-content {
     flex: 1;
     display: flex;
