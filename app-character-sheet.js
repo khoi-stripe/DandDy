@@ -483,6 +483,8 @@ const CharacterSheet = (window.CharacterSheet = {
               collaboratorCount,
               ownerEmail,
               lastUpdatedByEmail,
+              isPinned,
+              campaignName,
             })
           : ''}
         
@@ -810,7 +812,39 @@ const CharacterSheet = (window.CharacterSheet = {
         ? this.escapeHtml(character.name)
         : '[ CHARACTER SHEET ]';
 
-    // Build status badges array for the status row
+    const headerClass = context === 'builder' ? 'sheet-title-header sheet-title-header--flush' : 'sheet-title-header';
+
+    // Build the right-side actions: [edit] [overflow] [collapse/expand]
+    // Both collapse and expand are included; CSS controls visibility based on view
+    const rightActionsHtml = (editButtonHtml || headerMenu || charactersButtonHtml || campaignButtonHtml)
+      ? `<div class="sheet-title-actions">${editButtonHtml}${headerMenu}${charactersButtonHtml}${campaignButtonHtml}</div>`
+      : '';
+
+    return `
+      <div class="${headerClass}">
+        <div class="sheet-title"><span class="sheet-title-name">${safeTitle}</span></div>
+        ${rightActionsHtml}
+      </div>
+    `;
+  },
+
+  _renderPortrait(character, parsed, context, callbacks) {
+    const { 
+      onGeneratePortrait, 
+      onTogglePortrait,
+      isShared,
+      hasCollaborators,
+      collaboratorCount,
+      ownerEmail,
+      lastUpdatedByEmail,
+      isPinned,
+      campaignName,
+    } = callbacks;
+
+    // Check if this is a demo character - show tag on portrait
+    const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
+    
+    // Build status badges array - overlays portrait at top-left
     // Order: IN CAMPAIGN, SHARED, PINNED
     const statusBadges = [];
     
@@ -879,41 +913,10 @@ const CharacterSheet = (window.CharacterSheet = {
         </span>`);
     }
     
-    // Only render status row if there are badges
-    const statusRowHtml = statusBadges.length > 0
-      ? `<div class="sheet-status-row">${statusBadges.join('')}</div>`
+    // Status badges overlay HTML
+    const statusOverlayHtml = statusBadges.length > 0
+      ? `<div class="sheet-status-overlay">${statusBadges.join('')}</div>`
       : '';
-
-    const headerClass = context === 'builder' ? 'sheet-title-header sheet-title-header--flush' : 'sheet-title-header';
-
-    // Build the right-side actions: [edit] [overflow] [collapse/expand]
-    // Both collapse and expand are included; CSS controls visibility based on view
-    const rightActionsHtml = (editButtonHtml || headerMenu || charactersButtonHtml || campaignButtonHtml)
-      ? `<div class="sheet-title-actions">${editButtonHtml}${headerMenu}${charactersButtonHtml}${campaignButtonHtml}</div>`
-      : '';
-
-    return `
-      <div class="${headerClass}">
-        <div class="sheet-title"><span class="sheet-title-name">${safeTitle}</span></div>
-        ${rightActionsHtml}
-      </div>
-      ${statusRowHtml}
-    `;
-  },
-
-  _renderPortrait(character, parsed, context, callbacks) {
-    const { 
-      onGeneratePortrait, 
-      onTogglePortrait,
-      isShared,
-      hasCollaborators,
-      collaboratorCount,
-      ownerEmail,
-      lastUpdatedByEmail,
-    } = callbacks;
-
-    // Check if this is a demo character - show tag on portrait
-    const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
 
     // Prefer the active portrait version from history (if any) so the sheet
     // always matches the grid card + history modal. Fall back to legacy
@@ -969,6 +972,7 @@ const CharacterSheet = (window.CharacterSheet = {
     return `
       <div class="portrait-container${showOriginalByDefault ? ' portrait-container--original-mode' : ''}">
         ${demoTagHtml}
+        ${statusOverlayHtml}
         <div class="ascii-portrait ${needsPlaceholder ? 'ascii-portrait--placeholder' : ''} ${showOriginalByDefault ? 'is-hidden' : ''}" id="${portraitId}">
           ${needsPlaceholder ? `
             <div class="portrait-placeholder-content">

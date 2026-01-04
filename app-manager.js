@@ -4072,7 +4072,8 @@ const MobileView = {
         // Clone the character sheet content into the container
         const sourceSheet = document.getElementById('characterSheet');
         const sourceTitleHeader = document.querySelector('.sheet__content .sheet-title-header');
-        const sourceStatusRow = document.querySelector('.sheet__content .sheet-status-row');
+        // Status badges are now in the portrait overlay, not a separate row
+        const sourceStatusOverlay = document.querySelector('.sheet__content .sheet-status-overlay');
         const campaignSlot = document.querySelector('.sheet__sidebar');
         
         // Insert title header (and status row if present) as direct child of gridPanel for proper sticky behavior
@@ -4089,12 +4090,12 @@ const MobileView = {
             titleHeader.innerHTML = sourceTitleHeader.innerHTML;
             container.parentNode.insertBefore(titleHeader, container);
             
-            // Also copy status row if present
-            if (sourceStatusRow) {
+            // Copy status badges from portrait overlay to mobile status row
+            if (sourceStatusOverlay) {
                 const statusRow = document.createElement('div');
                 statusRow.className = 'mobile-sheet-status-row sheet-status-row';
                 statusRow.id = 'mobileSheetStatusRow';
-                statusRow.innerHTML = sourceStatusRow.innerHTML;
+                statusRow.innerHTML = sourceStatusOverlay.innerHTML;
                 container.parentNode.insertBefore(statusRow, container);
             }
         }
@@ -5101,26 +5102,18 @@ const UI = {
             hasPastAdventures: CampaignUI._pastCampaignsCount > 0,
         });
         
-        // Move sheet-title-header and status row out of characterSheet and into sheet__content (above the layout)
+        // Move sheet-title-header out of characterSheet and into sheet__content (above the layout)
+        // Note: Status badges are now rendered inside the portrait overlay, not a separate row
         const scrollWrapper = document.querySelector('.sheet__content');
         const sheetCampaignGrid = document.querySelector('.sheet__layout');
         const titleHeader = sheetContainer.querySelector('.sheet-title-header');
-        const statusRow = sheetContainer.querySelector('.sheet-status-row');
         if (scrollWrapper && sheetCampaignGrid && titleHeader) {
-            // Remove any existing title header and status row from scroll wrapper first
+            // Remove any existing title header from scroll wrapper first
             const existingHeader = scrollWrapper.querySelector('.sheet-title-header');
-            const existingStatusRow = scrollWrapper.querySelector('.sheet-status-row');
             if (existingHeader) {
                 existingHeader.remove();
             }
-            if (existingStatusRow) {
-                existingStatusRow.remove();
-            }
             scrollWrapper.insertBefore(titleHeader, sheetCampaignGrid);
-            // Insert status row after header (before layout)
-            if (statusRow) {
-                scrollWrapper.insertBefore(statusRow, sheetCampaignGrid);
-            }
         }
         
         // Populate ASCII portrait after rendering

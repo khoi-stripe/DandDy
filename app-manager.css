@@ -5425,10 +5425,22 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 /* ========================================
-   STATUS ROW - Row below header for status badges
-   Shows: SHARED, PINNED, IN CAMPAIGN
+   STATUS OVERLAY - Badges overlay portrait at top-left
+   Shows: IN CAMPAIGN, SHARED, PINNED
    ======================================== */
 
+.sheet-status-overlay {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    pointer-events: auto;
+}
+
+/* Legacy status row - kept for mobile duplication */
 .sheet-status-row {
     display: flex;
     flex-wrap: wrap;
@@ -5437,7 +5449,7 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     background-color: var(--terminal-bg);
 }
 
-/* Status badge base styles */
+/* Status badge base styles - designed for portrait overlay */
 .sheet-status-badge {
     display: inline-flex;
     align-items: center;
@@ -5449,10 +5461,11 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     letter-spacing: var(--tracking-wider);
     text-transform: uppercase;
     color: var(--ui-tag-bg, var(--ui-primary-bg-color));
-    background-color: color-mix(in srgb, var(--ui-tag-bg, var(--ui-primary-bg-color)) 20%, transparent);
+    background-color: color-mix(in srgb, var(--terminal-bg, #0a0a0a) 85%, transparent);
     border-radius: 3px;
     cursor: help;
     white-space: nowrap;
+    backdrop-filter: blur(4px);
 }
 
 .sheet-status-badge__icon {
