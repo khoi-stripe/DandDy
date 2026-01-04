@@ -1536,11 +1536,6 @@ const ExpandedView = (window.ExpandedView = {
                 icon: '■',
                 label: 'End Campaign',
                 onclick: `CampaignUI.confirmEndCampaignById(${campaign.id})`,
-            });
-            menuItems.push({
-                icon: '✕',
-                label: 'Delete Campaign',
-                onclick: `CampaignUI.confirmDeleteCampaign(${campaign.id})`,
                 danger: true,
             });
         } else {
