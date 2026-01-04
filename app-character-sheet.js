@@ -442,6 +442,7 @@ const CharacterSheet = (window.CharacterSheet = {
       hideHeader = false,  // Hide the entire sheet-title-header (for modals with their own header)
       isPinned = false,  // Whether character is pinned
       campaignName = null,  // Name of campaign (for IN CAMPAIGN badge tooltip)
+      hasPastAdventures = false,  // Whether character has past campaigns
     } = options;
 
     // Parse character data (handle both old and new formats)
@@ -469,6 +470,7 @@ const CharacterSheet = (window.CharacterSheet = {
         hideOverflowMenu,
         isPinned,
         campaignName,
+        hasPastAdventures,
       })}
       
       <div class="sheet-portrait-info-row">
@@ -1726,6 +1728,10 @@ const CharacterSheet = (window.CharacterSheet = {
           document.body.appendChild(menu);
         }
 
+        // Define these before the try block so they're in scope for agent logging after try/catch
+        const inSearchActions = !!triggerEl.closest('.search-actions');
+        const inHeaderOverflow = !!triggerEl.closest('.header-overflow');
+
         try {
           const shellRect = shell.getBoundingClientRect();
           const triggerRect = triggerEl.getBoundingClientRect();
@@ -1738,8 +1744,6 @@ const CharacterSheet = (window.CharacterSheet = {
           // containers (e.g. app-root with overflow:hidden).
           // EXCEPTION: Search/sort bar and header overflow use absolute positioning
           // so the dropdown stays anchored to its button during page scroll.
-          const inSearchActions = !!triggerEl.closest('.search-actions');
-          const inHeaderOverflow = !!triggerEl.closest('.header-overflow');
           const useFixedPositioning = !inSearchActions && !inHeaderOverflow;
 
           // #region agent log
