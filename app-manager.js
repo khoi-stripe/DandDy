@@ -2348,7 +2348,7 @@ const CampaignUI = (window.CampaignUI = {
         const cleanUsername = username.startsWith('@') ? username.slice(1) : username;
         
         try {
-            await CampaignAPI.inviteToJoinCampaign(this._managingCampaign.id, cleanUsername);
+            await CampaignAPI.inviteByUsernameOrEmail(this._managingCampaign.id, cleanUsername);
             
             // Clear input and error
             if (input) input.value = '';
