@@ -5037,9 +5037,27 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     background-color: var(--context-hover) !important;
 }
 
-/* Dots: default state */
+/* Lines: default state (hamburger style) */
 .header-overflow-trigger .sheet-actions-dot {
     background-color: var(--ui-dim-color);
+    width: 10px;
+    height: 1px;
+    border-radius: 0;
+}
+
+/* Lines: evenly spaced positioning */
+.header-overflow-trigger .sheet-actions-dot.dot-1 {
+    top: 3px;
+}
+
+.header-overflow-trigger .sheet-actions-dot.dot-2 {
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.header-overflow-trigger .sheet-actions-dot.dot-3 {
+    bottom: 3px;
+    top: auto;
 }
 
 /* Dots: hover state */
