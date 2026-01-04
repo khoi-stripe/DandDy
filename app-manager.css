@@ -17,15 +17,10 @@
    Character manager modals use YELLOW theme (base modal style from terminal-theme.css)
    ======================================== */
 
-/* ===== DIMMED CHROME (focus on content) ===== */
-/* Terminal header and frame border dimmed to 60% to focus on content */
+/* ===== TERMINAL CHROME ===== */
 .app-root,
 .terminal-frame {
-    border-color: color-mix(in srgb, var(--ui-border-color) 60%, transparent);
-}
-
-.terminal-header {
-    opacity: 0.6;
+    border-color: var(--ui-border-color);
 }
 
 .main-content {
@@ -2419,21 +2414,16 @@ input.search-input:focus {
 .panel-character-grid .search-input-wrapper .terminal-input {
     padding-right: 28px; /* make room for clear button */
     padding-left: 32px;  /* make room for leading search icon */
-    /* Use bright color so text remains legible with 0.7 opacity */
     color: var(--ui-fg-color) !important;
     /* iOS Safari fix: override -webkit-text-fill-color to match theme */
     -webkit-text-fill-color: var(--ui-fg-color) !important;
     /* Match search input text size to small button text */
     font-size: var(--font-size-base);
-    /* Match opacity of secondary buttons (terminal-btn-small) for visual consistency */
-    opacity: 0.7;
 }
 
-/* Placeholder copy (e.g., "Search all 15 characters") - use bright color
-   so it remains legible with input's 0.7 opacity */
+/* Placeholder copy (e.g., "Search all 15 characters") */
 .panel-character-grid .search-input-wrapper .terminal-input::placeholder {
     color: var(--ui-fg-color) !important;
-    /* Keep placeholder the same size as the input/button text */
     font-size: var(--font-size-base);
 }
 
@@ -2444,13 +2434,8 @@ input.search-input:focus {
 
 /* When focused, keep search field dim but add subtle glow */
 .panel-character-grid .search-input-wrapper .terminal-input:focus {
-    /* Keep dim border color */
     border-color: var(--ui-dim-color) !important;
     box-shadow: 0 0 8px var(--ui-dim-color) !important;
-    color: var(--ui-fg-color) !important;
-    -webkit-text-fill-color: var(--ui-fg-color) !important;
-    /* Full opacity when focused (matches button hover behavior) */
-    opacity: 1;
 }
 
 .password-input-wrapper {
@@ -2496,7 +2481,6 @@ input.search-input:focus {
     transform: translateY(-50%);
     font-size: var(--font-size-lg);
     line-height: 1;
-    /* Use bright color so it remains legible with input's 0.7 opacity */
     color: var(--ui-fg-color);
     pointer-events: none;
 }

@@ -1737,6 +1737,14 @@ const CharacterSheet = (window.CharacterSheet = {
           const inHeaderOverflow = !!triggerEl.closest('.header-overflow');
           const useFixedPositioning = !inSearchActions && !inHeaderOverflow;
 
+          // #region agent log
+          if (inHeaderOverflow) {
+            const appRoot = document.querySelector('.app-root');
+            const appRootStyle = appRoot ? getComputedStyle(appRoot) : null;
+            fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-character-sheet.js:1739',message:'Header overflow menu config',data:{inHeaderOverflow,useFixedPositioning,appRootOverflow:appRootStyle?.overflow,bodyHasMenuOpen:document.body.classList.contains('selector-menu-open')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+          }
+          // #endregion
+
           // Measure menu size without affecting final animation. Temporarily
           // neutralize transforms so we get the *full* height instead of the
           // scaled (collapsed) height from CSS.
@@ -2057,6 +2065,14 @@ const CharacterSheet = (window.CharacterSheet = {
               const right = shellRect.right - triggerRect.right;
               menu.style.left = 'auto';
               menu.style.right = `${right}px`;
+
+              // #region agent log
+              const appRoot = document.querySelector('.app-root');
+              const appRootRect = appRoot ? appRoot.getBoundingClientRect() : null;
+              const termHeader = triggerEl.closest('.terminal-header');
+              const termHeaderRect = termHeader ? termHeader.getBoundingClientRect() : null;
+              fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-character-sheet.js:2055',message:'Header overflow positioning',data:{menuTop:top,shellRect:{top:shellRect.top,bottom:shellRect.bottom,right:shellRect.right},triggerRect:{top:triggerRect.top,bottom:triggerRect.bottom},menuHeight,appRootRect:appRootRect?{top:appRootRect.top,bottom:appRootRect.bottom,height:appRootRect.height}:null,termHeaderRect:termHeaderRect?{top:termHeaderRect.top,bottom:termHeaderRect.bottom,height:termHeaderRect.height}:null,menuWouldExtendTo:shellRect.top+top+menuHeight},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
+              // #endregion
             } else {
               // Default: align left edge of menu with left edge of trigger.
               const left = triggerRect.left - shellRect.left;
@@ -2101,9 +2117,30 @@ const CharacterSheet = (window.CharacterSheet = {
         menu.classList.add('is-open');
         menu.setAttribute('aria-hidden', 'false');
         triggerEl.setAttribute('aria-expanded', 'true');
+
+        // #region agent log
+        if (inHeaderOverflow) {
+          const finalMenuRect = menu.getBoundingClientRect();
+          const appRoot = document.querySelector('.app-root');
+          const appRootStyle = appRoot ? getComputedStyle(appRoot) : null;
+          const termHeader = triggerEl.closest('.terminal-header');
+          const termHeaderStyle = termHeader ? getComputedStyle(termHeader) : null;
+          fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-character-sheet.js:2099',message:'Header overflow final state',data:{menuStyle:{position:menu.style.position,top:menu.style.top,right:menu.style.right,zIndex:menu.style.zIndex},finalMenuRect:{top:finalMenuRect.top,bottom:finalMenuRect.bottom,height:finalMenuRect.height,right:finalMenuRect.right},appRootOverflow:appRootStyle?.overflow,termHeaderOverflow:termHeaderStyle?.overflow,bodyHasMenuOpen:document.body.classList.contains('selector-menu-open')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1,H4'})}).catch(()=>{});
+        }
+        // #endregion
         
         // Lock scroll when menu opens
         CharacterSheet._updateScrollLock(true);
+
+        // #region agent log
+        if (inHeaderOverflow) {
+          const appRoot = document.querySelector('.app-root');
+          const appRootStyle = appRoot ? getComputedStyle(appRoot) : null;
+          const appRootRect = appRoot ? appRoot.getBoundingClientRect() : null;
+          const menuRect = menu.getBoundingClientRect();
+          fetch('http://127.0.0.1:7242/ingest/bf1a39d7-1c35-40fc-94af-e8fe5dbe5644',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'app-character-sheet.js:2133',message:'After scroll lock',data:{appRootOverflow:appRootStyle?.overflow,bodyHasMenuOpen:document.body.classList.contains('selector-menu-open'),menuRect:{top:menuRect.top,bottom:menuRect.bottom,height:menuRect.height},appRootRect:appRootRect?{bottom:appRootRect.bottom}:null,menuExceedsAppRoot:menuRect.bottom>appRootRect?.bottom},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+        }
+        // #endregion
 
         // Focus behavior differs by menu type:
         // - Listbox (--listbox): Focus the selected option for keyboard nav

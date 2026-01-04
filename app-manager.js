@@ -4432,9 +4432,10 @@ const MobileView = {
     /** 
      * Refresh the mobile campaign section if we're on mobile and viewing a character.
      * This should be called whenever campaign data changes (journal entries, invites, etc.)
-     * After refreshing, scrolls to the campaign section so user can see their changes.
+     * @param {boolean} scrollAfter - If true, scrolls to the campaign section after refresh.
+     *                                 Defaults to false to prevent unwanted auto-scrolling during load.
      */
-    async refreshCampaignSection() {
+    async refreshCampaignSection(scrollAfter = false) {
         if (!this.isMobile()) return;
         
         const gridPanel = document.getElementById('characterGridPanel');
@@ -4446,13 +4447,15 @@ const MobileView = {
         // Refresh the campaign section at the bottom of the sheet
         await this._loadMobileCampaign(characterId);
         
-        // Scroll to campaign section so user can see their changes
-        const campaignSection = document.getElementById('mobileCampaignSection');
-        if (campaignSection) {
-            // Use requestAnimationFrame to ensure DOM has updated before scrolling
-            requestAnimationFrame(() => {
-                campaignSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
+        // Only scroll to campaign section if explicitly requested
+        if (scrollAfter) {
+            const campaignSection = document.getElementById('mobileCampaignSection');
+            if (campaignSection) {
+                // Use requestAnimationFrame to ensure DOM has updated before scrolling
+                requestAnimationFrame(() => {
+                    campaignSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            }
         }
     },
     
