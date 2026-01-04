@@ -1207,36 +1207,39 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 /* ===== PARTY CARD (compact character card for party grid) ===== */
+/* Party cards use identical styling to main character grid cards */
 .party-card {
-    /* Inherit character-card base styling, add compact sizing */
-    font-size: var(--font-size-small);
+    /* Inherits all character-card base styling */
 }
 
-.party-card .card-details {
-    padding: var(--spacing-sm);
-}
-
-.party-card .card-name {
-    font-size: var(--font-size-small);
-    /* Truncate long names */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.party-card .card-info {
-    font-size: var(--font-size-xs);
-}
-
-/* Party card status icons - positioned in thumbnail area */
-.party-card .card-status-icons {
+/* Party card tags (You, Admin) - positioned over thumbnail top-left */
+.party-card-tags {
+    position: absolute;
     top: var(--spacing-xs);
     left: var(--spacing-xs);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 1;
 }
 
-.party-card .card-status-icon {
-    font-size: var(--font-size-xs);
-    padding: 1px 3px;
+.party-card-tag {
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-medium);
+    font-family: var(--font-mono);
+    letter-spacing: var(--tracking-wider);
+    text-transform: uppercase;
+    border-radius: 3px;
+    padding: 1px 4px;
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+.party-card-tag--you {
+    color: var(--ui-fg-color);
+}
+
+.party-card-tag--admin {
+    color: var(--ui-dim-color);
 }
 
 /* Invited card - placeholder state */
@@ -1292,15 +1295,6 @@ div.sheet__sidebar.ui-theme-pink {
 .party-card--clickable:hover {
     border-color: var(--ui-border-color);
     background-color: var(--ui-bg-translucent);
-}
-
-/* Party card status icons - admin and "you" indicators */
-.party-card .card-status-icon--admin {
-    color: var(--ui-fg-color);
-}
-
-.party-card .card-status-icon--you {
-    color: var(--ui-accent-color, var(--ui-fg-color));
 }
 
 /* Party card placeholder thumbnail */
@@ -2902,8 +2896,7 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 
 .card-info {
     color: var(--ui-dim-color);
-    /* Slightly smaller than other card text for hierarchy */
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-small);
     line-height: var(--line-height-snug);
     overflow: hidden;
     text-overflow: ellipsis;

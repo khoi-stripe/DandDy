@@ -1420,16 +1420,16 @@ const ExpandedView = (window.ExpandedView = {
                 const char = m.character;
                 const isOtherUser = m.user_id !== currentUserId;
                 
-                // Build status icons (Admin, You)
-                const statusIcons = [];
+                // Build status tags (You, Admin) - text labels
+                const statusTags = [];
                 if (m.user_id === currentUserId) {
-                    statusIcons.push('<span class="card-status-icon card-status-icon--you">★</span>');
+                    statusTags.push('<span class="party-card-tag party-card-tag--you">You</span>');
                 }
                 if (m.is_creator) {
-                    statusIcons.push('<span class="card-status-icon card-status-icon--admin">⚑</span>');
+                    statusTags.push('<span class="party-card-tag party-card-tag--admin">Admin</span>');
                 }
-                const statusIconsHtml = statusIcons.length > 0 
-                    ? `<div class="card-status-icons">${statusIcons.join('')}</div>`
+                const statusTagsHtml = statusTags.length > 0 
+                    ? `<div class="party-card-tags">${statusTags.join('')}</div>`
                     : '';
                 
                 if (char) {
@@ -1455,7 +1455,7 @@ const ExpandedView = (window.ExpandedView = {
                     
                     return `
                         <div class="party-card character-card ${clickableClass}" ${clickHandler}>
-                            ${statusIconsHtml}
+                            ${statusTagsHtml}
                             ${thumbnailHtml}
                             <div class="card-details">
                                 <div class="card-name">${charName}</div>
@@ -1467,7 +1467,7 @@ const ExpandedView = (window.ExpandedView = {
                     // Member without character assigned
                     return `
                         <div class="party-card character-card party-card--no-char">
-                            ${statusIconsHtml}
+                            ${statusTagsHtml}
                             <div class="card-thumbnail">?</div>
                             <div class="card-details">
                                 <div class="card-name">No character</div>
