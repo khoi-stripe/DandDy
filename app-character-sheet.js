@@ -804,7 +804,7 @@ const CharacterSheet = (window.CharacterSheet = {
       `
         : '';
 
-    // Right-side actions block: [edit] [overflow] [collapse/expand]
+    // Left-side nav buttons (expand/collapse) + right-side actions (edit, overflow)
     // Both collapse and expand buttons are included; CSS controls which is visible
 
     const safeTitle =
@@ -814,14 +814,20 @@ const CharacterSheet = (window.CharacterSheet = {
 
     const headerClass = context === 'builder' ? 'sheet-title-header sheet-title-header--flush' : 'sheet-title-header';
 
-    // Build the right-side actions: [edit] [overflow] [collapse/expand]
+    // Left-side nav buttons: [collapse/expand] - positioned left of character name
     // Both collapse and expand are included; CSS controls visibility based on view
-    const rightActionsHtml = (editButtonHtml || headerMenu || charactersButtonHtml || campaignButtonHtml)
-      ? `<div class="sheet-title-actions">${editButtonHtml}${headerMenu}${charactersButtonHtml}${campaignButtonHtml}</div>`
+    const leftNavHtml = (charactersButtonHtml || campaignButtonHtml)
+      ? `<div class="sheet-title-nav">${charactersButtonHtml}${campaignButtonHtml}</div>`
+      : '';
+
+    // Right-side actions: [edit] [overflow]
+    const rightActionsHtml = (editButtonHtml || headerMenu)
+      ? `<div class="sheet-title-actions">${editButtonHtml}${headerMenu}</div>`
       : '';
 
     return `
       <div class="${headerClass}">
+        ${leftNavHtml}
         <div class="sheet-title"><span class="sheet-title-name">${safeTitle}</span></div>
         ${rightActionsHtml}
       </div>

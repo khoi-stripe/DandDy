@@ -4576,10 +4576,47 @@ function scrollToCampaign() {
 // UI RENDERING
 // ========================================
 const UI = {
+    // Default number of skeleton cards to show while loading
+    SKELETON_CARD_COUNT: 9,
+    
+    // Batch size for progressive rendering (cards per frame)
+    RENDER_BATCH_SIZE: 12,
+    
+    /**
+     * Render a single skeleton card for the loading state
+     */
+    _renderSkeletonCard() {
+        return `
+            <div class="character-card character-card--skeleton">
+                <div class="card-thumbnail"></div>
+                <div class="card-details">
+                    <div class="skeleton-name"></div>
+                    <div class="skeleton-info"></div>
+                </div>
+            </div>
+        `;
+    },
+    
+    /**
+     * Render skeleton cards in the grid while data is loading
+     * @param {number} count - Number of skeleton cards to show
+     */
+    renderSkeletonGrid(count = this.SKELETON_CARD_COUNT) {
+        const grid = document.getElementById('characterGrid');
+        if (!grid) {
+            if (DEBUG_MANAGER) console.log('⏳ SKELETON: Grid element not found');
+            return;
+        }
+        
+        grid.innerHTML = Array(count).fill(this._renderSkeletonCard()).join('');
+        if (DEBUG_MANAGER) console.log(`⏳ SKELETON: Rendered ${count} skeleton cards`);
+    },
+    
     setLoadingState(isLoading) {
         const gridLoading = document.getElementById('gridPanelLoading');
         const sheetLoading = document.getElementById('sheetPanelLoading');
         const campaignLoading = document.getElementById('campaignPanelLoading');
+        const loadingRow = document.querySelector('.panel-loading-row');
         const grid = document.getElementById('characterGrid');
         const emptyState = document.getElementById('emptyState');
         const sheetPlaceholder = document.querySelector('.sheet-placeholder');
@@ -4588,16 +4625,24 @@ const UI = {
         const sheetNavBar = document.getElementById('sheetNavBar');
 
         if (isLoading) {
-            if (gridLoading) gridLoading.classList.remove('is-hidden');
-            if (sheetLoading) sheetLoading.classList.remove('is-hidden');
-            if (campaignLoading) campaignLoading.classList.remove('is-hidden');
-            if (grid) grid.classList.add('is-hidden');
+            // Show skeleton cards in the grid instead of hiding it
+            this.renderSkeletonGrid();
+            if (grid) grid.classList.remove('is-hidden');
+            
+            // Hide ALL loading indicators (skeleton cards provide loading feedback)
+            // This prevents the absolute-positioned loading row from blocking the skeleton view
+            if (loadingRow) loadingRow.classList.add('is-hidden');
+            if (gridLoading) gridLoading.classList.add('is-hidden');
+            if (sheetLoading) sheetLoading.classList.add('is-hidden');
+            if (campaignLoading) campaignLoading.classList.add('is-hidden');
+            
             if (emptyState) emptyState.classList.add('is-hidden');
             if (sheetPlaceholder) sheetPlaceholder.classList.add('is-hidden');
             if (characterSheet) characterSheet.classList.add('is-hidden');
             if (campaignPlaceholder) campaignPlaceholder.classList.add('is-hidden');
             if (sheetNavBar) sheetNavBar.classList.add('is-hidden');
         } else {
+            if (loadingRow) loadingRow.classList.remove('is-hidden');
             if (gridLoading) gridLoading.classList.add('is-hidden');
             if (sheetLoading) sheetLoading.classList.add('is-hidden');
             if (campaignLoading) campaignLoading.classList.add('is-hidden');
@@ -4741,11 +4786,25 @@ const UI = {
         }
     },
 
+    // Threshold for using batched rendering (characters above this count use progressive render)
+    BATCH_RENDER_THRESHOLD: 20,
+    
+    // Cancel any pending batched render
+    _cancelBatchedRender() {
+        if (this._batchRenderFrameId) {
+            cancelAnimationFrame(this._batchRenderFrameId);
+            this._batchRenderFrameId = null;
+        }
+    },
+    
     renderCharacterGrid() {
         if (DEBUG_MANAGER) {
             console.log('🎨 RENDER: Starting grid render with', AppState.filteredCharacters.length, 'characters');
             console.log('🎨 RENDER: Character names:', AppState.filteredCharacters.map(c => c.name).join(', '));
         }
+        
+        // Cancel any pending batched render from previous call
+        this._cancelBatchedRender();
         
         // Theme inherits from parent - no need to set explicitly
         
@@ -4773,46 +4832,112 @@ const UI = {
         }
 
         emptyState.classList.remove('show');
-        grid.innerHTML = characters.map(char => this.renderCharacterCard(char)).join('');
         
-        // Check portrait view mode preference
-        let portraitViewMode = 'original';
-        try {
-            if (window.StorageService && StorageService.getPortraitViewMode) {
-                portraitViewMode = StorageService.getPortraitViewMode();
-            } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_PORTRAIT_VIEW_MODE) {
-                portraitViewMode = CONFIG.DEFAULT_PORTRAIT_VIEW_MODE;
-            }
-        } catch (e) {
-            // Non-fatal: keep default
+        // For large character lists, use batched rendering to avoid UI freeze
+        if (characters.length > this.BATCH_RENDER_THRESHOLD) {
+            this._renderCharacterGridBatched(grid, characters);
+        } else {
+            // Small list: render immediately
+            grid.innerHTML = characters.map(char => this.renderCharacterCard(char)).join('');
+            this._postRenderCharacterGrid(characters);
         }
+    },
+    
+    /**
+     * Render character cards in batches using requestAnimationFrame
+     * Shows skeleton placeholders first, then progressively replaces them
+     */
+    _renderCharacterGridBatched(grid, characters) {
+        const batchSize = this.RENDER_BATCH_SIZE;
+        let currentIndex = 0;
         
-        // Populate ASCII thumbnails after rendering (only when not showing original images)
-        characters.forEach(char => {
-            const thumbnailEl = document.getElementById(`card-thumb-${char.id}`);
-            if (!thumbnailEl) return;
+        // First, show skeleton placeholders for all cards (instant feedback)
+        grid.innerHTML = characters.map((char, i) => 
+            `<div class="character-card character-card--skeleton" data-placeholder-id="${char.id}">
+                <div class="card-thumbnail"></div>
+                <div class="card-details">
+                    <div class="skeleton-name"></div>
+                    <div class="skeleton-info"></div>
+                </div>
+            </div>`
+        ).join('');
+        
+        // Progressively replace skeletons with real cards
+        const renderBatch = () => {
+            const endIndex = Math.min(currentIndex + batchSize, characters.length);
             
-            // Skip if this is an image thumbnail (already rendered in HTML)
-            if (thumbnailEl.classList.contains('card-thumbnail--image')) return;
-            
-            // Use the same portrait selection logic as the character sheet so
-            // cards and detail views stay in sync.
-            const asciiPortrait = window.CharacterSheet
-                ? window.CharacterSheet.getAsciiPortrait(char)
-                : (char.customPortraitAscii || char.portrait?.ascii || char.asciiPortrait || null);
-            if (asciiPortrait) {
-                // Use <pre> wrapper for proper CSS flex centering
-                thumbnailEl.innerHTML = '';
-                const pre = document.createElement('pre');
-                pre.textContent = this.cropAsciiForThumbnail(asciiPortrait);
-                thumbnailEl.appendChild(pre);
+            for (let i = currentIndex; i < endIndex; i++) {
+                const char = characters[i];
+                const placeholder = grid.querySelector(`[data-placeholder-id="${char.id}"]`);
+                if (placeholder) {
+                    // Create real card element and replace skeleton
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = this.renderCharacterCard(char);
+                    const realCard = tempDiv.firstElementChild;
+                    placeholder.replaceWith(realCard);
+                    
+                    // Populate ASCII thumbnail if needed
+                    this._populateCardThumbnail(char);
+                }
             }
-        });
+            
+            currentIndex = endIndex;
+            
+            if (currentIndex < characters.length) {
+                // More cards to render, schedule next batch
+                this._batchRenderFrameId = requestAnimationFrame(renderBatch);
+            } else {
+                // All cards rendered, run post-render setup
+                this._batchRenderFrameId = null;
+                this._postRenderCharacterGrid(characters);
+            }
+        };
+        
+        // Start batched rendering on next frame
+        this._batchRenderFrameId = requestAnimationFrame(renderBatch);
+    },
+    
+    /**
+     * Populate a single card's ASCII thumbnail
+     */
+    _populateCardThumbnail(char) {
+        const thumbnailEl = document.getElementById(`card-thumb-${char.id}`);
+        if (!thumbnailEl) return;
+        
+        // Skip if this is an image thumbnail (already rendered in HTML)
+        if (thumbnailEl.classList.contains('card-thumbnail--image')) return;
+        
+        const asciiPortrait = window.CharacterSheet
+            ? window.CharacterSheet.getAsciiPortrait(char)
+            : (char.customPortraitAscii || char.portrait?.ascii || char.asciiPortrait || null);
+        if (asciiPortrait) {
+            thumbnailEl.innerHTML = '';
+            const pre = document.createElement('pre');
+            pre.textContent = this.cropAsciiForThumbnail(asciiPortrait);
+            thumbnailEl.appendChild(pre);
+        }
+    },
+    
+    /**
+     * Post-render setup (keyboard nav, tooltips, thumbnails)
+     * Called after all cards are rendered (immediate or batched)
+     */
+    _postRenderCharacterGrid(characters) {
+        // Populate ASCII thumbnails for all cards
+        characters.forEach(char => this._populateCardThumbnail(char));
         
         // Reset keyboard navigation to first card
         KeyboardNav.isActive = true;
         KeyboardNav.reset();
         
+        // Setup tooltip portal
+        this._setupCardTooltips();
+    },
+    
+    /**
+     * Setup tooltip portal for card status icons
+     */
+    _setupCardTooltips() {
         // Create a portal container at body level for tooltips (escapes all overflow/stacking contexts)
         let tooltipPortal = document.getElementById('card-tooltip-portal');
         if (!tooltipPortal) {
@@ -4833,10 +4958,11 @@ const UI = {
                 // Clone tooltip content to portal
                 portalTooltip = originalTooltip.cloneNode(true);
                 portalTooltip.classList.add('card-portal-tooltip');
+                // Position to the right of the icon
                 portalTooltip.style.cssText = `
                     position: fixed;
-                    top: ${iconRect.bottom + 4}px;
-                    left: ${iconRect.left}px;
+                    top: ${iconRect.top}px;
+                    left: ${iconRect.right + 6}px;
                     z-index: 10001;
                     opacity: 1;
                     transform: scale(1);
@@ -4968,7 +5094,7 @@ const UI = {
             const campaignTooltip = campaignName 
                 ? Utils.escapeHtml(campaignName)
                 : 'In Campaign';
-            statusIcons.push(`<span class="card-status-icon card-status-icon--campaign has-tooltip">⚔<span class="custom-tooltip" data-position="bottom-start">${campaignTooltip}</span></span>`);
+            statusIcons.push(`<span class="card-status-icon card-status-icon--campaign has-tooltip">⚔<span class="custom-tooltip" data-position="right">${campaignTooltip}</span></span>`);
         }
         if (showSharedTag) {
             // Build shared tooltip content (matching character sheet format)
@@ -5002,7 +5128,7 @@ const UI = {
             } else {
                 sharedTooltip = 'Shared';
             }
-            statusIcons.push(`<span class="card-status-icon card-status-icon--shared has-tooltip">↔<span class="custom-tooltip" data-position="bottom-start">${sharedTooltip}</span></span>`);
+            statusIcons.push(`<span class="card-status-icon card-status-icon--shared has-tooltip">↔<span class="custom-tooltip" data-position="right">${sharedTooltip}</span></span>`);
         }
         if (isPinned) {
             statusIcons.push('<span class="card-status-icon card-status-icon--pinned">◆</span>');

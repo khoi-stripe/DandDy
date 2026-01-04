@@ -44,20 +44,27 @@
                 >⚙︎</button>
             </div>
             <div class="header-actions">
+                <span id="userInfoDisplay">
+                    <span id="userStatusIcon" class="user-status-icon" aria-hidden="true"></span>
+                    <span id="userStatusText" class="user-status-text"></span>
+                </span>
                 <button id="authBtn" class="terminal-btn terminal-btn-secondary header-action-btn">Log in</button>
-                <!-- Header overflow menu triggered by user status -->
+                <!-- Header overflow menu -->
                 <div class="header-overflow selector-shell selector-shell--actions">
                     <button
-                        id="userInfoDisplay"
-                        class="selector-trigger header-overflow-trigger"
+                        id="headerOverflowBtn"
+                        class="terminal-btn-small selector-trigger overflow-trigger header-overflow-trigger"
                         type="button"
                         aria-haspopup="menu"
                         aria-expanded="false"
-                        aria-label="User menu"
+                        aria-label="More actions"
                         onclick="CharacterSheet.toggleSelectorMenu(this)"
                     >
-                        <span id="userStatusText" class="user-status-text"></span>
-                        <span class="header-overflow-caret" aria-hidden="true">▾</span>
+                        <span class="sheet-actions-icon" aria-hidden="true">
+                            <span class="sheet-actions-dot dot-1"></span>
+                            <span class="sheet-actions-dot dot-2"></span>
+                            <span class="sheet-actions-dot dot-3"></span>
+                        </span>
                     </button>
                     <div class="selector-menu header-overflow-menu" role="menu" aria-hidden="true">
                         <button

@@ -571,8 +571,8 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 /* ===== Expandable Navigation Buttons =====
-   Desktop: Show icon only, expand to show icon + label on hover
-   Mobile: Show icon only (no expand) */
+   Desktop: Show icon only (standard small button size), expand to show icon + label on hover
+   Mobile: Hidden (no room for nav buttons) */
 
 .sheet-nav-btn--expandable {
     display: inline-flex;
@@ -580,12 +580,11 @@ div.sheet__sidebar.ui-theme-pink {
     justify-content: center;
     gap: 0;
     overflow: hidden;
-    /* Minimum width for icon-only state */
-    min-width: 36px;
-    /* Use standard small button height */
-    min-height: var(--btn-height-sm);
+    /* Standard small button size */
+    min-width: var(--btn-height-sm);
+    height: var(--btn-height-sm);
     padding: 0 8px;
-    transition: width 0.2s ease, gap 0.2s ease;
+    transition: width 0.2s ease, gap 0.2s ease, padding 0.2s ease;
 }
 
 .sheet-nav-btn__icon {
@@ -619,7 +618,7 @@ div.sheet__sidebar.ui-theme-pink {
     .sheet-nav-btn--expandable:hover {
         width: auto;
         gap: 6px;
-        padding-right: 12px;
+        padding: 0 12px 0 8px;
     }
 
     .sheet-nav-btn--expandable:hover .sheet-nav-btn__label {
@@ -869,6 +868,49 @@ div.sheet__sidebar.ui-theme-pink {
     width: 90%;
     margin-bottom: var(--spacing-xs);
 }
+
+/* ===== CHARACTER GRID SKELETON LOADERS ===== */
+/* Skeleton character card for grid loading state */
+.character-card--skeleton {
+    pointer-events: none;
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+.character-card--skeleton .card-thumbnail {
+    background-color: var(--ui-dim-color);
+    opacity: 0.15;
+}
+
+.character-card--skeleton .card-details {
+    padding: var(--spacing-sm);
+}
+
+.character-card--skeleton .skeleton-name {
+    height: 16px;
+    width: 70%;
+    background: var(--ui-dim-color);
+    border-radius: 2px;
+    margin-bottom: var(--spacing-xs);
+}
+
+.character-card--skeleton .skeleton-info {
+    height: 12px;
+    width: 50%;
+    background: var(--ui-dim-color);
+    border-radius: 2px;
+    opacity: 0.7;
+}
+
+/* Staggered animation delays for skeleton cards */
+.character-card--skeleton:nth-child(1) { animation-delay: 0s; }
+.character-card--skeleton:nth-child(2) { animation-delay: 0.1s; }
+.character-card--skeleton:nth-child(3) { animation-delay: 0.2s; }
+.character-card--skeleton:nth-child(4) { animation-delay: 0.15s; }
+.character-card--skeleton:nth-child(5) { animation-delay: 0.25s; }
+.character-card--skeleton:nth-child(6) { animation-delay: 0.05s; }
+.character-card--skeleton:nth-child(7) { animation-delay: 0.12s; }
+.character-card--skeleton:nth-child(8) { animation-delay: 0.22s; }
+.character-card--skeleton:nth-child(9) { animation-delay: 0.08s; }
 
 /* Invite code display */
 .campaign-area-invite {
@@ -2689,6 +2731,8 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     left: 6px;
     z-index: 5;
     display: flex;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 4px;
 }
 
@@ -3745,8 +3789,51 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 }
 
 /* User status text styling (inside trigger button) */
+/* Header user info display - uses theme colors */
+.terminal-header #userInfoDisplay {
+    font-size: var(--font-size-base);
+    white-space: nowrap;
+    color: var(--ui-dim-color);
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    margin-right: 4px;
+    /* Hidden by default, slides out on logout button hover */
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-width 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
+    padding-right: 0;
+}
+
+/* Reveal email on logout button hover */
+.terminal-header .header-actions:has(#authBtn:hover) #userInfoDisplay {
+    max-width: 300px;
+    opacity: 0.7;
+    padding-right: var(--spacing-sm);
+}
+
+/* Hover effect on user info display itself */
+.terminal-header #userInfoDisplay:hover {
+    opacity: 1;
+    color: var(--ui-fg-color);
+}
+
+.user-status-icon {
+    display: none; /* hide cloud/local glyph; we only show the text label */
+}
+
 .user-status-text {
     line-height: var(--line-height-snug);
+}
+
+/* Username + auth/log links in header should all use theme colors */
+.terminal-header #userInfoDisplay .terminal-link {
+    color: var(--ui-dim-color);
+}
+
+.terminal-header #userInfoDisplay .terminal-link:hover {
+    color: var(--ui-fg-color);
 }
 
 /* Dim the header auth button (LOGIN / LOGOUT) so it reads as secondary */
@@ -3770,6 +3857,13 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
         border-color: var(--ui-dim-color);
         color: var(--ui-dim-color);
         opacity: 0.7;
+    }
+}
+
+/* Mobile: hide account email in header */
+@media (max-width: 768px) {
+    .terminal-header #userInfoDisplay {
+        display: none !important;
     }
 }
 
@@ -4911,7 +5005,6 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 /* ========================================
    HEADER OVERFLOW MENU
    Settings and auth are always in the overflow menu
-   Triggered by clicking user status (Guest Mode / @username)
    ======================================== */
 
 /* Show overflow menu, positioned in header-actions */
@@ -4930,74 +5023,96 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     display: none;
 }
 
-/* ===== HEADER OVERFLOW TRIGGER (User Status Link) ===== */
-
-/* User info display as a simple link with caret */
-.header-overflow-trigger {
+/* Show user info to the left of overflow button */
+.terminal-header #userInfoDisplay {
     display: inline-flex;
     align-items: center;
     gap: 0;
-    padding: 0;
-    border: none;
-    background: transparent;
+    max-width: none;
+    opacity: 0.7;
+    overflow: hidden;
+    padding-right: 0;
+}
+
+/* ===== HEADER OVERFLOW - TEAL THEME ===== */
+
+/* Trigger button: default state */
+.header-overflow-trigger {
+    border-color: var(--ui-dim-color);
     color: var(--ui-dim-color);
-    font-family: var(--font-family-mono);
-    font-size: var(--font-size-base);
-    cursor: pointer;
-    /* Mobile: avoid iOS/Android tap highlight */
+    background: transparent;
+    /* Mobile: avoid iOS/Android tap highlight + reduce "sticky hover" artifacts */
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
 }
 
-/* Trigger: hover state - underline like a normal link, no bg */
+/* Trigger button: hover state */
 .header-overflow-trigger:hover {
+    border-color: var(--ui-fg-color);
     color: var(--ui-fg-color);
-    background: transparent !important;
+    background-color: var(--context-hover);
+    box-shadow: 0 0 8px var(--context-hover);
 }
 
-.header-overflow-trigger:hover .user-status-text {
-    text-decoration: underline;
+/* Trigger button: active (touch press) state */
+.header-overflow-trigger:active {
+    border-color: var(--ui-fg-color) !important;
+    color: var(--ui-fg-color) !important;
+    background-color: var(--context-hover) !important;
+    box-shadow: 0 0 8px var(--context-hover) !important;
 }
 
-/* Trigger: focus state */
+/* Trigger button: focus state */
 .header-overflow-trigger:focus {
     outline: none;
-    color: var(--ui-fg-color);
-    background: transparent !important;
+    border-color: var(--ui-fg-color);
+    box-shadow: 0 0 0 2px var(--context-hover);
 }
 
-/* Trigger: open state - no bg */
+/* Trigger button: open state - must override .selector-trigger.is-open */
 .header-overflow-trigger.is-open,
 .header-overflow .selector-trigger.is-open {
-    color: var(--ui-fg-color);
-    background: transparent !important;
+    border-color: var(--ui-fg-color) !important;
+    color: var(--ui-fg-color) !important;
+    background-color: var(--context-hover) !important;
 }
 
-.header-overflow-trigger.is-open .user-status-text {
-    text-decoration: underline;
+/* Dots: default state (vertical three-dot overflow) */
+.header-overflow-trigger .sheet-actions-dot {
+    background-color: var(--ui-dim-color);
+    /* Use same dot size as other overflow buttons */
+    width: var(--overflow-dot-size, 3px);
+    height: var(--overflow-dot-size, 3px);
+    border-radius: 50%;
 }
 
-/* User status text inside trigger */
-.header-overflow-trigger .user-status-text {
-    white-space: nowrap;
+/* Dots: vertically stacked positioning (same as other overflow buttons) */
+.header-overflow-trigger .sheet-actions-dot.dot-1 {
+    top: 0;
 }
 
-/* Dropdown caret indicator */
-.header-overflow-caret {
-    font-size: 0.7em;
-    opacity: 0.6;
-    margin-left: 4px;
-    transition: transform 0.2s ease;
+.header-overflow-trigger .sheet-actions-dot.dot-2 {
+    top: 50%;
+    transform: translate(-50%, -50%);
 }
 
-/* Caret rotates when menu is open */
-.header-overflow-trigger.is-open .header-overflow-caret {
-    transform: rotate(180deg);
+.header-overflow-trigger .sheet-actions-dot.dot-3 {
+    bottom: 0;
+    top: auto;
 }
 
-/* Caret brightens on hover */
-.header-overflow-trigger:hover .header-overflow-caret {
-    opacity: 1;
+/* Dots: hover state */
+.header-overflow-trigger:hover .sheet-actions-dot {
+    background-color: var(--ui-fg-color);
+}
+
+/* Dots: open state (X morph) */
+.header-overflow-trigger.is-open .sheet-actions-dot {
+    background-color: var(--ui-fg-color);
+}
+
+.header-overflow-trigger.is-open .sheet-actions-dot.dot-2::after {
+    background-color: var(--ui-fg-color);
 }
 
 /* Menu container - set teal theme variables, let base styles handle the rest */
@@ -5435,7 +5550,8 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     left: 8px;
     z-index: 5;
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 6px;
     pointer-events: auto;
 }

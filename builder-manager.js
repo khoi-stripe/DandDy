@@ -330,11 +330,12 @@ async function handleLogout() {
 function updateAuthUI() {
     const authBtn = document.getElementById('authBtn');
     const userInfoDisplay = document.getElementById('userInfoDisplay');
+    const userStatusIcon = document.getElementById('userStatusIcon');
     const userStatusText = document.getElementById('userStatusText');
 
     // In the integrated app, these elements are missing. Delegate to the
     // builder's unified header renderer if available.
-    if (!authBtn || !userInfoDisplay || !userStatusText) {
+    if (!authBtn || !userInfoDisplay || !userStatusIcon || !userStatusText) {
         if (typeof window.updateAuthUI === 'function') {
             window.updateAuthUI();
         }
@@ -343,13 +344,15 @@ function updateAuthUI() {
 
     if (window.AuthService && window.AuthService.isAuthenticated()) {
         const user = window.AuthService.getCurrentUser();
+        userStatusIcon.textContent = '☁';
         // Show username if available, fall back to email
         const displayName = user?.username ? `@${user.username}` : (user?.email || 'Logged In');
         userStatusText.textContent = displayName;
         authBtn.textContent = 'Log out';
         authBtn.onclick = handleLogout;
     } else {
-        userStatusText.textContent = 'Guest';
+        userStatusIcon.textContent = '▣';
+        userStatusText.textContent = 'Guest mode';
         authBtn.textContent = 'LOG IN';
         authBtn.onclick = showAuthModal;
     }

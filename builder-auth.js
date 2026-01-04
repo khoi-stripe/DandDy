@@ -428,15 +428,17 @@ const AuthUI = (window.AuthUI = {
   // Show user info in header (uses same IDs as manager: userInfoDisplay, userStatusText, authBtn)
   updateHeaderWithUser(user) {
     const userStatusText = document.getElementById('userStatusText');
-    const userInfoDisplay = document.getElementById('userInfoDisplay');
+    const userStatusIcon = document.getElementById('userStatusIcon');
     const authBtn = document.getElementById('authBtn');
     
     if (userStatusText && user) {
       // Show username if available, fall back to email
       const displayName = user?.username ? `@${user.username}` : (user?.email || 'Logged In');
       userStatusText.textContent = displayName;
-      // User status trigger opens overflow menu (contains Account option)
-      if (userInfoDisplay) userInfoDisplay.title = 'Open user menu';
+      if (userStatusIcon) userStatusIcon.textContent = '☁';
+      userStatusText.style.cursor = 'pointer';
+      userStatusText.onclick = typeof openAccountModal === 'function' ? openAccountModal : null;
+      userStatusText.title = 'Manage account';
     }
     
     if (authBtn) {
@@ -469,13 +471,15 @@ const AuthUI = (window.AuthUI = {
   // Show guest mode banner (uses same IDs as manager)
   showGuestBanner() {
     const userStatusText = document.getElementById('userStatusText');
-    const userInfoDisplay = document.getElementById('userInfoDisplay');
+    const userStatusIcon = document.getElementById('userStatusIcon');
     const authBtn = document.getElementById('authBtn');
     
     if (userStatusText) {
-      userStatusText.textContent = 'Guest';
-      // User status trigger opens overflow menu
-      if (userInfoDisplay) userInfoDisplay.title = 'Open user menu';
+      userStatusText.textContent = 'Guest Mode';
+      if (userStatusIcon) userStatusIcon.textContent = '▣';
+      userStatusText.style.cursor = 'default';
+      userStatusText.onclick = null;
+      userStatusText.title = '';
     }
     
     if (authBtn) {

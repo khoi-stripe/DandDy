@@ -2052,6 +2052,13 @@ body::before {
   white-space: nowrap;
 }
 
+/* Wrapper for left-side nav buttons (expand/collapse) */
+.sheet-title-nav {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .sheet-title {
   color: var(--ui-fg-color);
   font-size: var(--font-size-lg);
