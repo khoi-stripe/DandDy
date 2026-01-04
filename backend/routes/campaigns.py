@@ -961,7 +961,7 @@ def get_campaign_pending_invitations(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
-    """Get all invited and active members for this campaign. Only the creator can view."""
+    """Get pending invitations for this campaign. Only the creator can view."""
     campaign = db.query(Campaign).filter(Campaign.id == campaign_id).first()
     
     if not campaign:
@@ -977,12 +977,12 @@ def get_campaign_pending_invitations(
             detail="Only the campaign creator can view pending invitations"
         )
     
-    # Get all invited AND active members (excluding the creator themselves)
+    # Get only INVITED members (pending invitations, not yet accepted)
     members = db.query(CampaignMember).options(
         joinedload(CampaignMember.user)
     ).filter(
         CampaignMember.campaign_id == campaign_id,
-        CampaignMember.status.in_([MemberStatus.INVITED, MemberStatus.ACTIVE]),
+        CampaignMember.status == MemberStatus.INVITED,
         CampaignMember.user_id != current_user.id  # Exclude creator from list
     ).all()
     

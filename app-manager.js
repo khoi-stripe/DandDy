@@ -1472,8 +1472,11 @@ const ExpandedView = (window.ExpandedView = {
         }
         
         // Add pending invitations as cards (only visible to creator)
-        if (isCreator && pendingInvites && pendingInvites.length > 0) {
-            const invitesHtml = pendingInvites.map(invite => {
+        // Filter out invites for users who are already members
+        const memberUserIds = new Set((members || []).map(m => m.user_id).filter(Boolean));
+        const filteredInvites = (pendingInvites || []).filter(inv => !inv.user_id || !memberUserIds.has(inv.user_id));
+        if (isCreator && filteredInvites.length > 0) {
+            const invitesHtml = filteredInvites.map(invite => {
                 // Prefer username over email for display
                 const displayName = invite.username 
                     ? `@${Utils.escapeHtml(invite.username)}` 
@@ -2210,6 +2213,31 @@ const CampaignUI = (window.CampaignUI = {
     _managingCampaign: null,
     _managingCampaignMembers: [], // Members and pending invitations
     
+    // Helper to dedupe members list (members take precedence over pending invites)
+    _dedupeMembers(members, pendingInvites) {
+        const seenUserIds = new Set();
+        const result = [];
+        // Add members first (they take precedence)
+        for (const m of members) {
+            if (m.user_id && !seenUserIds.has(m.user_id)) {
+                seenUserIds.add(m.user_id);
+                result.push(m);
+            } else if (!m.user_id) {
+                result.push(m); // Keep entries without user_id (shouldn't happen but safe)
+            }
+        }
+        // Add pending invites that aren't already in the list
+        for (const p of pendingInvites) {
+            if (p.user_id && !seenUserIds.has(p.user_id)) {
+                seenUserIds.add(p.user_id);
+                result.push(p);
+            } else if (!p.user_id) {
+                result.push(p); // Keep invites without user_id (email-only invites)
+            }
+        }
+        return result;
+    },
+    
     async openManageModal(campaignId) {
         const currentUserId = window.AuthService?.getCurrentUser()?.id;
         try {
@@ -2220,7 +2248,7 @@ const CampaignUI = (window.CampaignUI = {
                 CampaignAPI.getCampaignPendingInvitations(campaignId).catch(() => [])
             ]);
             this._managingCampaign = campaign;
-            this._managingCampaignMembers = [...members, ...pendingInvites];
+            this._managingCampaignMembers = this._dedupeMembers(members, pendingInvites);
             
             // Permission check: only the campaign creator can manage the campaign
             const isCreator = campaign.dm_id === currentUserId;
@@ -2332,7 +2360,7 @@ const CampaignUI = (window.CampaignUI = {
             // Reload members list
             const pendingInvites = await CampaignAPI.getCampaignPendingInvitations(this._managingCampaign.id).catch(() => []);
             const members = await CampaignAPI.getCampaignMembers(this._managingCampaign.id);
-            this._managingCampaignMembers = [...members, ...pendingInvites];
+            this._managingCampaignMembers = this._dedupeMembers(members, pendingInvites);
             this._renderManageCampaignMembers();
             
             // Refocus input
@@ -2352,7 +2380,7 @@ const CampaignUI = (window.CampaignUI = {
         
         try {
             if (isPending) {
-                await CampaignAPI.cancelInvitation(memberId);
+                await CampaignAPI.revokeInvitation(this._managingCampaign.id, memberId);
             } else {
                 await CampaignAPI.removeCampaignMember(this._managingCampaign.id, memberId);
             }
@@ -2360,7 +2388,7 @@ const CampaignUI = (window.CampaignUI = {
             // Reload members list
             const pendingInvites = await CampaignAPI.getCampaignPendingInvitations(this._managingCampaign.id).catch(() => []);
             const members = await CampaignAPI.getCampaignMembers(this._managingCampaign.id);
-            this._managingCampaignMembers = [...members, ...pendingInvites];
+            this._managingCampaignMembers = this._dedupeMembers(members, pendingInvites);
             this._renderManageCampaignMembers();
             
         } catch (error) {
@@ -10958,6 +10986,7 @@ async function handleLogout() {
 function updateAuthUI() {
     const authBtn = document.getElementById('authBtn');
     const userInfoDisplay = document.getElementById('userInfoDisplay');
+    const userStatusIcon = document.getElementById('userStatusIcon');
     const userStatusText = document.getElementById('userStatusText');
     const guestNotice = document.getElementById('guestNotice');
     
@@ -10969,17 +10998,20 @@ function updateAuthUI() {
     
     // If the header shell isn't present (e.g., in some embedded contexts),
     // safely bail out.
-    if (!authBtn || !userInfoDisplay || !userStatusText) {
+    if (!authBtn || !userInfoDisplay || !userStatusIcon || !userStatusText) {
         return;
     }
     
     if (window.AuthService && window.AuthService.isAuthenticated()) {
         const user = window.AuthService.getCurrentUser();
+        userStatusIcon.textContent = '☁';
         // Show username if available, fall back to email
         const displayName = user?.username ? `@${user.username}` : (user?.email || 'Logged In');
         userStatusText.textContent = displayName;
-        // User status trigger opens overflow menu (contains Account option)
-        userInfoDisplay.title = 'Open user menu';
+        // Make username clickable to open account modal
+        userStatusText.style.cursor = 'pointer';
+        userStatusText.onclick = openAccountModal;
+        userStatusText.title = 'Manage account';
         
         authBtn.textContent = 'Log out';
         authBtn.onclick = handleLogout;
@@ -10995,8 +11027,11 @@ function updateAuthUI() {
             guestNotice.classList.add('is-hidden');
         }
     } else {
-        userStatusText.textContent = 'Guest';
-        userInfoDisplay.title = 'Open user menu';
+        userStatusIcon.textContent = '▣';
+        userStatusText.textContent = 'Guest Mode';
+        userStatusText.style.cursor = 'default';
+        userStatusText.onclick = null;
+        userStatusText.title = '';
         
         authBtn.textContent = 'LOG IN';
         authBtn.onclick = () => {
