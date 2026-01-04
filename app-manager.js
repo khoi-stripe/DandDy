@@ -1405,8 +1405,7 @@ const ExpandedView = (window.ExpandedView = {
         const currentUserId = window.AuthService?.getCurrentUser()?.id;
         const isCreator = campaign.dm_id === currentUserId;
         
-        // Build party list from members with character info (limited to 3 initially)
-        const MAX_PARTY_DISPLAY = 3;
+        // Build party grid from members with character info
         let partyHtml = '';
         if (members && members.length > 0) {
             // Sort members to ensure admin (creator) is always at the top
@@ -1415,60 +1414,77 @@ const ExpandedView = (window.ExpandedView = {
                 if (!a.is_creator && b.is_creator) return 1;
                 return 0;
             });
-            const displayMembers = sortedMembers.slice(0, MAX_PARTY_DISPLAY);
-            const hiddenMembers = sortedMembers.slice(MAX_PARTY_DISPLAY);
-            const remainingCount = hiddenMembers.length;
             
-            // Helper to render a single party member
-            const renderMember = (m) => {
+            // Helper to render a single party member as a card
+            const renderMemberCard = (m) => {
                 const char = m.character;
-                const adminTag = m.is_creator ? '<span class="party-member-admin-tag">Admin</span>' : '';
-                const youTag = m.user_id === currentUserId ? '<span class="party-member-you-tag">You</span>' : '';
-                const symbolPrefix = m.symbol ? `<span class="party-member-symbol">${m.symbol}</span> ` : '';
                 const isOtherUser = m.user_id !== currentUserId;
+                
+                // Build status icons (Admin, You)
+                const statusIcons = [];
+                if (m.user_id === currentUserId) {
+                    statusIcons.push('<span class="card-status-icon card-status-icon--you">★</span>');
+                }
+                if (m.is_creator) {
+                    statusIcons.push('<span class="card-status-icon card-status-icon--admin">⚑</span>');
+                }
+                const statusIconsHtml = statusIcons.length > 0 
+                    ? `<div class="card-status-icons">${statusIcons.join('')}</div>`
+                    : '';
+                
                 if (char) {
-                    const clickable = isOtherUser ? 'party-member--clickable' : '';
+                    // Member with character - show character card
                     const clickHandler = isOtherUser 
                         ? `onclick="CampaignUI.viewPartyMemberSheet(${char.id}, '${m.symbol || ''}')"` 
                         : '';
+                    const clickableClass = isOtherUser ? 'party-card--clickable' : '';
+                    const charName = Utils.escapeHtml(char.name || 'Unnamed');
+                    const charInfo = `Lvl ${char.level || '?'} ${char.character_class || ''}`.trim();
+                    
+                    // Get portrait URL if available
+                    const portraitUrl = char.original_portrait_url || char.originalPortraitUrl || null;
+                    let thumbnailHtml = '';
+                    if (portraitUrl) {
+                        thumbnailHtml = `<div class="card-thumbnail card-thumbnail--image">
+                            <img src="${Utils.escapeHtml(portraitUrl)}" alt="${charName}" loading="lazy" onload="this.classList.add('is-loaded')" />
+                        </div>`;
+                    } else {
+                        // Placeholder for no portrait
+                        thumbnailHtml = `<div class="card-thumbnail party-card-placeholder">⚔</div>`;
+                    }
+                    
                     return `
-                        <div class="party-member ${clickable}" ${clickHandler}>
-                            <span class="party-member-left">
-                                <span class="party-member-name">${symbolPrefix}${char.name}</span>
-                                ${youTag}${adminTag}
-                            </span>
-                            <span class="party-member-right">
-                                <span class="party-member-info">Lvl ${char.level} ${char.character_class || ''}</span>
-                            </span>
+                        <div class="party-card character-card ${clickableClass}" ${clickHandler}>
+                            ${statusIconsHtml}
+                            ${thumbnailHtml}
+                            <div class="card-details">
+                                <div class="card-name">${charName}</div>
+                                <div class="card-info">${charInfo}</div>
+                            </div>
                         </div>
                     `;
                 } else {
+                    // Member without character assigned
                     return `
-                        <div class="party-member party-member--no-char">
-                            <span class="party-member-left">
-                                <span class="party-member-name">${symbolPrefix}No character assigned</span>
-                                ${youTag}${adminTag}
-                            </span>
-                            <span class="party-member-right">
-                            </span>
+                        <div class="party-card character-card party-card--no-char">
+                            ${statusIconsHtml}
+                            <div class="card-thumbnail">?</div>
+                            <div class="card-details">
+                                <div class="card-name">No character</div>
+                                <div class="card-info">Not assigned</div>
+                            </div>
                         </div>
                     `;
                 }
             };
             
-            // Render visible members
-            partyHtml = displayMembers.map(renderMember).join('');
-            
-            // Render hidden members in a collapsible container
-            if (remainingCount > 0) {
-                partyHtml += `<div class="party-hidden" style="display: none;">${hiddenMembers.map(renderMember).join('')}</div>`;
-                partyHtml += `<a class="party-see-more" href="#" onclick="CampaignUI.togglePartyList(this); return false;">See more</a>`;
-            }
+            // Render all members as cards (grid handles overflow naturally)
+            partyHtml = sortedMembers.map(renderMemberCard).join('');
         } else {
             partyHtml = '<div class="party-empty">No party members yet</div>';
         }
         
-        // Add pending invitations (only visible to creator)
+        // Add pending invitations as cards (only visible to creator)
         if (isCreator && pendingInvites && pendingInvites.length > 0) {
             const invitesHtml = pendingInvites.map(invite => {
                 // Prefer username over email for display
@@ -1476,15 +1492,14 @@ const ExpandedView = (window.ExpandedView = {
                     ? `@${Utils.escapeHtml(invite.username)}` 
                     : Utils.escapeHtml(invite.email);
                 return `
-                <div class="party-member party-member--invited">
-                    <span class="party-member-left">
-                        <span class="party-member-name party-member-email">${displayName}</span>
-                        <span class="party-member-invited-tag">Invited</span>
-                    </span>
-                    <span class="party-member-right">
-                    </span>
-                </div>
-            `;
+                    <div class="party-card character-card party-card--invited">
+                        <div class="card-thumbnail">◇</div>
+                        <div class="card-details">
+                            <div class="card-name">${displayName}</div>
+                            <div class="card-info">Invited</div>
+                        </div>
+                    </div>
+                `;
             }).join('');
             partyHtml += invitesHtml;
         }

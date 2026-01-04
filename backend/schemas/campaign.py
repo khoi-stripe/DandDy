@@ -54,6 +54,7 @@ class CampaignMemberCharacterInfo(BaseModel):
     name: str
     character_class: Optional[str] = None
     level: int = 1
+    original_portrait_url: Optional[str] = None  # Portrait URL for party grid cards
     
     class Config:
         from_attributes = True

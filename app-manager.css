@@ -1201,9 +1201,116 @@ div.sheet__sidebar.ui-theme-pink {
 }
 
 .party-list {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-sm);
+}
+
+/* ===== PARTY CARD (compact character card for party grid) ===== */
+.party-card {
+    /* Inherit character-card base styling, add compact sizing */
+    font-size: var(--font-size-small);
+}
+
+.party-card .card-details {
+    padding: var(--spacing-sm);
+}
+
+.party-card .card-name {
+    font-size: var(--font-size-small);
+    /* Truncate long names */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.party-card .card-info {
+    font-size: var(--font-size-xs);
+}
+
+/* Party card status icons - positioned in thumbnail area */
+.party-card .card-status-icons {
+    top: var(--spacing-xs);
+    left: var(--spacing-xs);
+}
+
+.party-card .card-status-icon {
+    font-size: var(--font-size-xs);
+    padding: 1px 3px;
+}
+
+/* Invited card - placeholder state */
+.party-card--invited {
+    opacity: 0.7;
+}
+
+.party-card--invited .card-thumbnail {
     display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-dim-color);
+    font-size: 24px;
+    opacity: 0.5;
+}
+
+.party-card--invited .card-name {
+    text-align: center;
+    color: var(--ui-dim-color);
+}
+
+.party-card--invited .card-info {
+    text-align: center;
+}
+
+/* No character assigned state */
+.party-card--no-char .card-thumbnail {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-dim-color);
+    font-size: 20px;
+    opacity: 0.4;
+}
+
+.party-card--no-char .card-name {
+    color: var(--ui-dim-color);
+    font-style: italic;
+}
+
+/* Responsive: 2 columns on narrow screens */
+@media (max-width: 500px) {
+    .party-list {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Clickable party cards (other users' characters) */
+.party-card--clickable {
+    cursor: pointer;
+}
+
+.party-card--clickable:hover {
+    border-color: var(--ui-border-color);
+    background-color: var(--ui-bg-translucent);
+}
+
+/* Party card status icons - admin and "you" indicators */
+.party-card .card-status-icon--admin {
+    color: var(--ui-fg-color);
+}
+
+.party-card .card-status-icon--you {
+    color: var(--ui-accent-color, var(--ui-fg-color));
+}
+
+/* Party card placeholder thumbnail */
+.party-card .party-card-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-dim-color);
+    font-size: 24px;
+    opacity: 0.5;
 }
 
 .party-member {
