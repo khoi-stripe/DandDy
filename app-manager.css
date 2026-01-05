@@ -5583,7 +5583,7 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
+    gap: 4px;
     pointer-events: auto;
 }
 
