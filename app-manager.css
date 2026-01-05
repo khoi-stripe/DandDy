@@ -5598,6 +5598,7 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 
 /* Status badge base styles - designed for portrait overlay */
 .sheet-status-badge {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -5628,10 +5629,16 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     transform: scale(1);
 }
 
+/* Elevate hovered badge above siblings so tooltip isn't clipped */
+.sheet-status-badge.has-tooltip:hover {
+    z-index: 10;
+}
+
 /* Status badge tooltip - content styling */
 .sheet-status-badge .custom-tooltip {
     white-space: nowrap;
     text-align: left;
+    z-index: 100;
 }
 
 /* Mobile: status badges are display-only (no tap interaction to avoid conflicts) */
