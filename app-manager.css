@@ -272,6 +272,7 @@
     --ui-dim-color: var(--sheet-accent-dim) !important;
     --ui-primary-bg-color: var(--sheet-accent) !important;
     --ui-on-primary-color: var(--terminal-bg) !important;
+    border-top: 1px solid var(--sheet-accent);
     --ui-bg-color: var(--terminal-bg) !important;
     --ui-bg-translucent: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1) !important;
     --context-hover: hsla(var(--theme-teal-h), var(--theme-teal-s), var(--theme-teal-l-bright), 0.1) !important;
