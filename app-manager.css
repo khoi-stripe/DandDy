@@ -5642,20 +5642,9 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     }
 }
 
-/* Mobile status row styling */
+/* Mobile status row - hidden since badges already show on portrait image */
 .mobile-sheet-status-row {
     display: none;
-}
-
-@media (max-width: 768px) {
-    /* Show mobile status row when viewing sheet */
-    .panel-character-grid.is-viewing-sheet .mobile-sheet-status-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        padding: 0 0 8px 0;
-        background-color: var(--terminal-bg);
-    }
 }
 
 /* ========================================
