@@ -2410,45 +2410,67 @@ div.sheet__sidebar.ui-theme-pink {
     color: inherit;
 }
 
-/* All search inputs should have dim borders - both default and focused states.
-   Use full border shorthand to match .terminal-btn-small exactly. */
+/* ===== SEARCH INPUT STYLING TO MATCH .terminal-btn-small =====
+   Non-focused: dim border/text, transparent bg, 0.7 opacity (matches selector)
+   Focused: bright border/text, full opacity (matches selector hover) */
+
+/* Default unfocused state - dim to match selector */
 #searchInput,
 #spellSearchInput,
 input[type="search"],
-input.search-input,
+input.search-input {
+    border: 1px solid var(--ui-dim-color) !important;
+    background: transparent !important;
+    color: var(--ui-dim-color) !important;
+    -webkit-text-fill-color: var(--ui-dim-color) !important;
+    opacity: 0.7;
+}
+
+/* Focused state - brighten like selector hover */
 #searchInput:focus,
 #spellSearchInput:focus,
 input[type="search"]:focus,
 input.search-input:focus {
-    border: 1px solid var(--ui-dim-color) !important;
+    border: 1px solid var(--ui-fg-color) !important;
+    color: var(--ui-fg-color) !important;
+    -webkit-text-fill-color: var(--ui-fg-color) !important;
+    opacity: 1;
+    box-shadow: 0 0 8px var(--ui-dim-color) !important;
 }
 
-/* Spell search in modal - ensure dim border even with modal styles */
-.modal #spellSearchInput,
+/* Spell search in modal - same pattern */
+.modal #spellSearchInput {
+    border: 1px solid var(--ui-dim-color) !important;
+    background: transparent !important;
+    opacity: 0.7;
+}
+
 .modal #spellSearchInput:focus {
-    border: 1px solid var(--ui-dim-color) !important;
+    border: 1px solid var(--ui-fg-color) !important;
+    opacity: 1;
+    box-shadow: 0 0 8px var(--ui-dim-color) !important;
 }
 
-/* ===== SEARCH INPUT DIM BORDER ACROSS ALL COLOR THEMES =====
-   Ensure search inputs always use dim borders regardless of which theme is active.
-   These rules use attribute selectors to catch all theme variants.
-   Use full border shorthand to match .terminal-btn-small exactly. */
+/* ===== SEARCH INPUT ACROSS ALL COLOR THEMES ===== */
+/* Unfocused state within themes - dim */
 [class*="theme-"] #searchInput,
-[class*="theme-"] #searchInput:focus,
 [class*="theme-"] .search-input-wrapper .terminal-input,
-[class*="theme-"] .search-input-wrapper .terminal-input:focus,
 .panel-character-grid[class*="theme-"] #searchInput,
-.panel-character-grid[class*="theme-"] #searchInput:focus,
-.panel-character-grid[class*="theme-"] .search-input-wrapper .terminal-input,
-.panel-character-grid[class*="theme-"] .search-input-wrapper .terminal-input:focus {
+.panel-character-grid[class*="theme-"] .search-input-wrapper .terminal-input {
     border: 1px solid var(--ui-dim-color) !important;
+    background: transparent !important;
+    opacity: 0.7;
 }
 
-/* Focused state within themes - keep dim border but add matching glow */
+/* Focused state within themes - brighten */
 [class*="theme-"] #searchInput:focus,
 [class*="theme-"] .search-input-wrapper .terminal-input:focus,
 .panel-character-grid[class*="theme-"] #searchInput:focus,
 .panel-character-grid[class*="theme-"] .search-input-wrapper .terminal-input:focus {
+    border: 1px solid var(--ui-fg-color) !important;
+    color: var(--ui-fg-color) !important;
+    -webkit-text-fill-color: var(--ui-fg-color) !important;
+    opacity: 1;
     box-shadow: 0 0 8px var(--ui-dim-color) !important;
 }
 
@@ -2475,16 +2497,19 @@ input.search-input:focus {
 .panel-character-grid .search-input-wrapper .terminal-input {
     padding-right: 28px; /* make room for clear button */
     padding-left: 32px;  /* make room for leading search icon */
-    color: var(--ui-fg-color) !important;
+    color: var(--ui-dim-color) !important;
     /* iOS Safari fix: override -webkit-text-fill-color to match theme */
-    -webkit-text-fill-color: var(--ui-fg-color) !important;
+    -webkit-text-fill-color: var(--ui-dim-color) !important;
     /* Match search input text size to small button text */
     font-size: var(--font-size-base);
+    /* Match .terminal-btn-small: transparent bg + dimmed opacity */
+    background: transparent !important;
+    opacity: 0.7;
 }
 
 /* Placeholder copy (e.g., "Search all 15 characters") */
 .panel-character-grid .search-input-wrapper .terminal-input::placeholder {
-    color: var(--ui-fg-color) !important;
+    color: var(--ui-dim-color) !important;
     font-size: var(--font-size-base);
 }
 
@@ -2494,9 +2519,12 @@ input.search-input:focus {
     border: 1px solid var(--ui-dim-color) !important;
 }
 
-/* When focused, keep search field dim but add subtle glow */
+/* When focused, brighten to match selector hover state */
 .panel-character-grid .search-input-wrapper .terminal-input:focus {
-    border: 1px solid var(--ui-dim-color) !important;
+    border: 1px solid var(--ui-fg-color) !important;
+    color: var(--ui-fg-color) !important;
+    -webkit-text-fill-color: var(--ui-fg-color) !important;
+    opacity: 1;
     box-shadow: 0 0 8px var(--ui-dim-color) !important;
 }
 
@@ -2543,12 +2571,15 @@ input.search-input:focus {
     transform: translateY(-50%);
     font-size: var(--font-size-lg);
     line-height: 1;
-    color: var(--ui-fg-color);
+    color: var(--ui-dim-color);
     pointer-events: none;
+    /* Match input opacity for consistent dimmed appearance */
+    opacity: 0.7;
 }
 
 .panel-character-grid .search-input-wrapper:focus-within .search-icon {
     color: var(--ui-fg-color);
+    opacity: 1;
 }
 
 .panel-character-grid .search-clear-btn {
