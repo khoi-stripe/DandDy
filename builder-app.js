@@ -6497,6 +6497,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     mainContent.classList.remove('is-hidden');
   }
 
+  // Apply app version to header from global version config
+  const version = window.DANDDY_VERSION || '3.0.0';
+  const headerTitleText = document.querySelector('.terminal-title-text');
+  if (headerTitleText) {
+    headerTitleText.innerHTML = `D&amp;Dy v${version}`;
+  }
+
   // Splash screen handlers (press any key / click to begin)
   const splash = document.getElementById('splash-content');
   if (splash) {

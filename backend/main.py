@@ -22,6 +22,7 @@ from database.database import (
     ensure_campaign_member_status_column,
     ensure_journal_visibility_column,
     ensure_app_config_table,
+    ensure_core_indexes,
 )
 from routes import auth, characters, campaigns, sessions, journal, ai, users, prompt_entries, shares, app_config
 import os
@@ -48,6 +49,7 @@ ensure_campaign_tracking_columns()
 ensure_campaign_member_status_column()
 ensure_journal_visibility_column()
 ensure_app_config_table()
+ensure_core_indexes()
 
 # Debug: Log current settings on startup
 settings = get_settings()

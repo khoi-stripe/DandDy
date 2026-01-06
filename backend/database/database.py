@@ -574,6 +574,85 @@ def ensure_app_config_table():
         conn.commit()
 
 
+def ensure_core_indexes():
+    """
+    Ensure high-value indexes exist for production databases that were created
+    before model-level Index(...) declarations were added.
+    
+    SQLAlchemy's create_all() will not backfill indexes on existing tables.
+    This function is safe to run on both SQLite and Postgres.
+    """
+    inspector = inspect(engine)
+    with engine.connect() as conn:
+        def _safe(sql: str):
+            try:
+                conn.execute(text(sql))
+            except Exception as e:
+                # Best-effort only; index creation should never block startup.
+                print(f"Note: index creation skipped/failed: {e}")
+        
+        # Characters: common filters + sorting
+        if inspector.has_table("characters"):
+            _safe("CREATE INDEX IF NOT EXISTS idx_characters_owner_id ON characters (owner_id)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_characters_campaign_id ON characters (campaign_id)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_characters_updated_at ON characters (updated_at)")
+            # Helpful composite for "my characters sorted by updated"
+            _safe("CREATE INDEX IF NOT EXISTS idx_characters_owner_updated_at ON characters (owner_id, updated_at)")
+        
+        # Collaborators: shared character access
+        if inspector.has_table("character_collaborators"):
+            _safe("CREATE INDEX IF NOT EXISTS idx_collaborators_user_id ON character_collaborators (user_id)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_collaborators_character_id ON character_collaborators (character_id)")
+            # Fast lookups for access checks (often WHERE character_id=? AND user_id=?)
+            _safe("CREATE INDEX IF NOT EXISTS idx_collaborators_character_user ON character_collaborators (character_id, user_id)")
+        
+        # Campaigns / memberships
+        if inspector.has_table("campaigns"):
+            _safe("CREATE INDEX IF NOT EXISTS idx_campaigns_invite_code ON campaigns (invite_code)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_campaigns_dm_id ON campaigns (dm_id)")
+        
+        if inspector.has_table("campaign_members"):
+            _safe("CREATE INDEX IF NOT EXISTS idx_campaign_members_campaign_id ON campaign_members (campaign_id)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_campaign_members_user_id ON campaign_members (user_id)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_campaign_members_character_id ON campaign_members (character_id)")
+        
+        # Shares (pending invitations)
+        if inspector.has_table("character_shares"):
+            _safe("CREATE INDEX IF NOT EXISTS idx_character_shares_to_email ON character_shares (to_email)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_character_shares_status ON character_shares (status)")
+        
+        # Prompt entries
+        if inspector.has_table("prompt_entries"):
+            _safe("CREATE INDEX IF NOT EXISTS idx_prompt_entries_owner_id ON prompt_entries (owner_id)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_prompt_entries_kind ON prompt_entries (kind)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_prompt_entries_key ON prompt_entries (key)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_prompt_entries_is_global ON prompt_entries (is_global)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_prompt_entries_is_archived ON prompt_entries (is_archived)")
+        
+        # Sessions / logs
+        if inspector.has_table("sessions"):
+            _safe("CREATE INDEX IF NOT EXISTS idx_sessions_campaign_id ON sessions (campaign_id)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_sessions_character_id ON sessions (character_id)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON sessions (started_at)")
+        
+        if inspector.has_table("session_logs"):
+            _safe("CREATE INDEX IF NOT EXISTS idx_session_logs_session_id ON session_logs (session_id)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_session_logs_character_id ON session_logs (character_id)")
+        
+        # Journal
+        if inspector.has_table("journal_entries"):
+            _safe("CREATE INDEX IF NOT EXISTS idx_journal_entries_character_id ON journal_entries (character_id)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_journal_entries_campaign_id ON journal_entries (campaign_id)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_journal_entries_entry_date ON journal_entries (entry_date)")
+        
+        if inspector.has_table("character_updates"):
+            _safe("CREATE INDEX IF NOT EXISTS idx_character_updates_journal_entry_id ON character_updates (journal_entry_id)")
+            _safe("CREATE INDEX IF NOT EXISTS idx_character_updates_character_id ON character_updates (character_id)")
+        
+        conn.commit()
+
+
 def get_db():
     db = SessionLocal()
     try:

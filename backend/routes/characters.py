@@ -1,7 +1,8 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
+from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
 from database.database import get_db
 from models.user import User, UserRole
@@ -52,6 +53,22 @@ def _strip_ascii_fields(char_dict: dict) -> dict:
     return char_dict
 
 
+def _get_collaborator_counts(db: Session, character_ids: list[int]) -> dict[int, int]:
+    """
+    Return {character_id: collaborator_count} for the given character_ids.
+    Uses a single GROUP BY query to avoid N+1 count() calls.
+    """
+    if not character_ids:
+        return {}
+    rows = (
+        db.query(CharacterCollaborator.character_id, func.count(CharacterCollaborator.id))
+        .filter(CharacterCollaborator.character_id.in_(character_ids))
+        .group_by(CharacterCollaborator.character_id)
+        .all()
+    )
+    return {int(character_id): int(count) for (character_id, count) in rows}
+
+
 @router.get("/", response_model=List[CharacterResponse])
 def get_characters(
     current_user: User = Depends(get_current_active_user),
@@ -68,13 +85,31 @@ def get_characters(
     """
     skip_ascii = portrait_mode == "original"
     
-    # Get owned characters
-    owned = db.query(Character).filter(Character.owner_id == current_user.id).all()
+    # Get owned characters with eager-loaded relationships to avoid lazy-load N+1.
+    owned = (
+        db.query(Character)
+        .options(
+            selectinload(Character.last_updated_by),
+            selectinload(Character.campaign),
+        )
+        .filter(Character.owner_id == current_user.id)
+        .all()
+    )
     
-    # Get shared characters (where user is a collaborator)
-    shared_collabs = db.query(CharacterCollaborator).filter(
-        CharacterCollaborator.user_id == current_user.id
-    ).all()
+    owned_ids = [c.id for c in owned]
+    collaborator_counts = _get_collaborator_counts(db, owned_ids)
+    
+    # Get shared characters (where user is a collaborator) with eager loads.
+    shared_collabs = (
+        db.query(CharacterCollaborator)
+        .options(
+            selectinload(CharacterCollaborator.character).selectinload(Character.last_updated_by),
+            selectinload(CharacterCollaborator.character).selectinload(Character.campaign),
+            selectinload(CharacterCollaborator.character).selectinload(Character.owner),
+        )
+        .filter(CharacterCollaborator.user_id == current_user.id)
+        .all()
+    )
     
     # Build response with sharing metadata
     result = []
@@ -83,11 +118,8 @@ def get_characters(
     for char in owned:
         char_dict = CharacterResponse.model_validate(char).model_dump()
         char_dict['is_shared'] = False
-        # Count how many collaborators this character has
-        collab_count = db.query(CharacterCollaborator).filter(
-            CharacterCollaborator.character_id == char.id
-        ).count()
-        char_dict['collaborator_count'] = collab_count
+        # How many collaborators this character has (single precomputed map)
+        char_dict['collaborator_count'] = collaborator_counts.get(char.id, 0)
         # Include who last updated (if tracked)
         char_dict['last_updated_by_email'] = char.last_updated_by.email if char.last_updated_by else None
         # Include campaign name if character is in a campaign
@@ -135,13 +167,31 @@ def get_characters_lite(
     
     Saves ~24KB per character compared to the full response.
     """
-    # Get owned characters
-    owned = db.query(Character).filter(Character.owner_id == current_user.id).all()
+    # Get owned characters with eager-loaded relationships to avoid lazy-load N+1.
+    owned = (
+        db.query(Character)
+        .options(
+            selectinload(Character.last_updated_by),
+            selectinload(Character.campaign),
+        )
+        .filter(Character.owner_id == current_user.id)
+        .all()
+    )
     
-    # Get shared characters (where user is a collaborator)
-    shared_collabs = db.query(CharacterCollaborator).filter(
-        CharacterCollaborator.user_id == current_user.id
-    ).all()
+    owned_ids = [c.id for c in owned]
+    collaborator_counts = _get_collaborator_counts(db, owned_ids)
+    
+    # Get shared characters (where user is a collaborator) with eager loads.
+    shared_collabs = (
+        db.query(CharacterCollaborator)
+        .options(
+            selectinload(CharacterCollaborator.character).selectinload(Character.last_updated_by),
+            selectinload(CharacterCollaborator.character).selectinload(Character.campaign),
+            selectinload(CharacterCollaborator.character).selectinload(Character.owner),
+        )
+        .filter(CharacterCollaborator.user_id == current_user.id)
+        .all()
+    )
     
     # Build response with sharing metadata
     result = []
@@ -150,10 +200,7 @@ def get_characters_lite(
     for char in owned:
         char_dict = CharacterLiteResponse.model_validate(char).model_dump()
         char_dict['is_shared'] = False
-        collab_count = db.query(CharacterCollaborator).filter(
-            CharacterCollaborator.character_id == char.id
-        ).count()
-        char_dict['collaborator_count'] = collab_count
+        char_dict['collaborator_count'] = collaborator_counts.get(char.id, 0)
         char_dict['last_updated_by_email'] = char.last_updated_by.email if char.last_updated_by else None
         char_dict['campaign_name'] = char.campaign.name if char.campaign else None
         result.append(char_dict)

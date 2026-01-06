@@ -72,7 +72,7 @@
                         <button class="terminal-btn terminal-btn-primary" id="welcomeLoginBtn">Log in</button>
                         <button class="terminal-btn" id="welcomeRegisterBtn">Create account</button>
                         <button class="terminal-btn terminal-btn-secondary" id="welcomeDemoBtn">Guest mode</button>
-                        <div class="welcome-version">D&Dy v3.0.1</div>
+                        <div class="welcome-version">D&Dy v3.0.2</div>
                     </div>
                 </div>
             </div>
@@ -97,7 +97,7 @@
                         <div class="title-cube-face"></div>
                     </div>
                 </div>
-                <span class="terminal-title-text">D&amp;Dy v3.0.1</span>
+                <span class="terminal-title-text">D&amp;Dy v3.0.2</span>
                 <span class="title-bracket">]</span>
                 <button
                     id="managerSettingsBtn"
@@ -1300,7 +1300,8 @@
     
     <!-- Theme loader (applies saved theme config) -->
     <script src="app-theme-loader.js?v=20251224a"></script>
-    <!-- Concatenated manager bundle (see scripts/simple_bundle.py) -->
-    <script src="manager.bundle.js?v=20251225e"></script>
+    <!-- Shared bundle (cached across pages) + manager-specific bundle -->
+    <script src="shared.bundle.js?v=20260106a"></script>
+    <script src="manager.bundle.js?v=20260106a"></script>
 </body>
 </html>

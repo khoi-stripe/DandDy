@@ -145,6 +145,44 @@
       return this._getLocalAll();
     },
 
+    /**
+     * Get a lightweight character list for list/grid rendering.
+     * - Cloud: uses /api/characters/lite (much smaller payload)
+     * - Local: falls back to full local list (already fast)
+     */
+    async getAllLite() {
+      if (this.useCloud() && window.CharacterCloudStorage && typeof window.CharacterCloudStorage.getAllLite === 'function') {
+        try {
+          if (DEBUG_STORAGE) {
+            console.log('☁️ STORAGE: Fetching lite characters from cloud...');
+          }
+          return await window.CharacterCloudStorage.getAllLite();
+        } catch (error) {
+          // If session expired, dispatch event and re-throw instead of silently falling back
+          if (error.message && error.message.toLowerCase().includes('session has expired')) {
+            console.warn('☁️ STORAGE: Session expired during getAllLite, dispatching event');
+            const event = new CustomEvent('danddy:sessionExpired', {
+              detail: { reason: 'api_401', operation: 'getAllLite' },
+            });
+            window.dispatchEvent(event);
+            throw error;
+          }
+          // For other errors (network issues, etc.), fall back to local
+          console.error(
+            '☁️ STORAGE: Cloud getAllLite failed, falling back to local:',
+            error,
+          );
+          if (typeof window.showNotification === 'function') {
+            window.showNotification(
+              '⚠️ Cloud sync failed. Showing local characters instead.',
+            );
+          }
+          return this._getLocalAll();
+        }
+      }
+      return this._getLocalAll();
+    },
+
     // Get single character by ID
     async getById(id) {
       if (this.useCloud() && window.CharacterCloudStorage) {

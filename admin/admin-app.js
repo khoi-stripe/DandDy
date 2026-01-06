@@ -1680,7 +1680,6 @@
       grid: null,      // character grid cards
       campaign: null,  // campaign sidebar
       modal: null,     // modal dialogs
-      glow: null,      // background radial gradient only
     },
   };
   
@@ -1724,7 +1723,7 @@
     }
     
     // Set section selects
-    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal', 'glow'];
+    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal'];
     sections.forEach(section => {
       const select = $(`theme-${section}`);
       if (select) {
@@ -1762,7 +1761,6 @@
             grid: serverConfig.sections?.grid === 'global' ? null : serverConfig.sections?.grid,
             campaign: serverConfig.sections?.campaign === 'global' ? null : serverConfig.sections?.campaign,
             modal: serverConfig.sections?.modal === 'global' ? null : serverConfig.sections?.modal,
-            glow: serverConfig.sections?.glow === 'global' ? null : serverConfig.sections?.glow,
           },
         };
         
@@ -1816,7 +1814,6 @@
           grid: config.sections?.grid || 'global',
           campaign: config.sections?.campaign || 'global',
           modal: config.sections?.modal || 'global',
-          glow: config.sections?.glow || 'global',
         },
       };
       
@@ -1882,7 +1879,6 @@
     const gridTheme = config.syncAll ? globalTheme : (config.sections?.grid || globalTheme);
     const sheetTheme = config.syncAll ? globalTheme : (config.sections?.sheet || globalTheme);
     const campaignTheme = config.syncAll ? globalTheme : (config.sections?.campaign || globalTheme);
-    const glowTheme = config.syncAll ? globalTheme : (config.sections?.glow || globalTheme);
     
     // Update preview colors
     const previewHeader = previewBox.querySelector('.preview-header');
@@ -1922,8 +1918,9 @@
       campaignArea.style.setProperty('--preview-l', t.l);
     }
     
+    // Glow now uses terminal theme automatically
     if (glowArea) {
-      const t = AVAILABLE_THEMES[glowTheme];
+      const t = AVAILABLE_THEMES[terminalTheme];
       glowArea.style.setProperty('--glow-h', t.h);
       glowArea.style.setProperty('--glow-s', t.s);
       glowArea.style.setProperty('--glow-l', t.l);
@@ -1954,7 +1951,7 @@
     cachedServerConfig = config;
     
     // Enable/disable section selects
-    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal', 'glow'];
+    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal'];
     sections.forEach(section => {
       const select = $(`theme-${section}`);
       if (select) {
@@ -2005,7 +2002,7 @@
       sections: {},
     };
     
-    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal', 'glow'];
+    const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal'];
     sections.forEach(section => {
       const select = $(`theme-${section}`);
       config.sections[section] = select?.value || null;
@@ -2103,7 +2100,7 @@
         };
         
         if (imported.sections && typeof imported.sections === 'object') {
-          const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal', 'glow'];
+          const sections = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal'];
           sections.forEach(section => {
             const val = imported.sections[section];
             if (val && AVAILABLE_THEMES[val]) {
@@ -2510,7 +2507,7 @@
     $('global-theme-sync')?.addEventListener('sl-change', handleSyncToggle);
     
     // Section theme selects
-    const sectionSelects = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal', 'glow'];
+    const sectionSelects = ['terminal', 'narrator', 'sheet', 'grid', 'campaign', 'modal'];
     sectionSelects.forEach(section => {
       const select = $(`theme-${section}`);
       if (select) {

@@ -610,7 +610,8 @@ const AppState = {
             if (typeof UI !== 'undefined' && UI && typeof UI.setLoadingState === 'function') {
                 UI.setLoadingState(true);
             }
-            this.characters = await CharacterStorage.getAll();
+            // Use lite list for initial load (much smaller payload in cloud mode).
+            this.characters = await (CharacterStorage.getAllLite ? CharacterStorage.getAllLite() : CharacterStorage.getAll());
             if (DEBUG_MANAGER) {
                 console.log('📚 LOAD: Loaded', this.characters.length, 'characters from storage');
                 console.log('📚 LOAD: Full character list with IDs:');
@@ -5560,6 +5561,37 @@ async function viewCharacter(id, options = {}) {
         } else {
             character = AppState.characters.find(c => c && String(c.id) === idStr);
             if (character) characterSource = 'characters';
+        }
+    }
+
+    // If we found a lite record (from /characters/lite), we must fetch the full
+    // character before rendering the sheet; otherwise many sections will be blank.
+    const _isLiteRecord = !!(character && character._isLite);
+    if (_isLiteRecord) {
+        try {
+            const full = await CharacterStorage.getById(id);
+            character = full;
+            characterSource = 'storage_full_from_lite';
+
+            // Patch the caches so subsequent lookups get the full record.
+            const idStr = String(id);
+            if (typeof AppState !== 'undefined' && AppState) {
+                if (Array.isArray(AppState.characters)) {
+                    const idx = AppState.characters.findIndex(c => c && String(c.id) === idStr);
+                    if (idx >= 0) AppState.characters[idx] = full;
+                }
+                if (Array.isArray(AppState.filteredCharacters)) {
+                    const idx = AppState.filteredCharacters.findIndex(c => c && String(c.id) === idStr);
+                    if (idx >= 0) AppState.filteredCharacters[idx] = full;
+                }
+            }
+        } catch (error) {
+            if (error && error.message && error.message.toLowerCase().includes('session has expired')) {
+                showSessionExpiredModal();
+                return;
+            }
+            console.warn('Failed to upgrade lite character to full payload:', error);
+            // Fall through and render what we have (better than nothing).
         }
     }
 
@@ -11712,6 +11744,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize app state after demo characters are loaded
         await AppState.init();
         
+        // Sync sort UI after AppState.init() loads the saved sort mode preference
+        if (typeof window._updateSortUI === 'function') {
+            window._updateSortUI();
+        }
+        
         // Authenticated users with no characters must create one first
         if (isAuthenticated && (!AppState.characters || AppState.characters.length === 0)) {
             window.location.href = 'builder.html?new=true&required=true';
@@ -11900,6 +11937,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize selection state and trigger sizing
         sizeSortTrigger();
         updateSortUI();
+
+        // Expose updateSortUI so it can be called after AppState.init() completes
+        window._updateSortUI = updateSortUI;
     }
 
     // Death saves click handler (event delegation on document) - TEMPORARILY DISABLED
@@ -12415,6 +12455,49 @@ let spellPickerState = {
     maxSelections: null, // Max spells that can be selected (null = unlimited)
 };
 
+// ========================================
+// LAZY-LOADED D&D REFERENCE DATA
+// ========================================
+// Large reference data (spells, class features, racial traits, name patterns)
+// is split into `dnd-data.bundle.js` and lazy-loaded by the Manager when needed.
+function ensureDndDataBundleLoaded() {
+    // If the primary thing we need (spells) is present, treat as loaded.
+    if (window.SPELL_DATABASE) {
+        return Promise.resolve(true);
+    }
+    // Reuse an in-flight load to avoid duplicate network requests.
+    if (window.__danddyDndDataBundlePromise) {
+        return window.__danddyDndDataBundlePromise;
+    }
+
+    window.__danddyDndDataBundlePromise = new Promise((resolve, reject) => {
+        try {
+            const existing = document.querySelector('script[data-danddy-dnd-data="1"]');
+            if (existing) {
+                // If it exists but SPELL_DATABASE is still missing, wait a tick.
+                setTimeout(() => resolve(!!window.SPELL_DATABASE), 0);
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.defer = true;
+            script.dataset.danddyDndData = '1';
+
+            // Best-effort cache busting using app version; HTML may override with its own ?v=... on builder page.
+            const v = window.DANDDY_VERSION ? `?v=${encodeURIComponent(window.DANDDY_VERSION)}` : '';
+            script.src = `dnd-data.bundle.js${v}`;
+
+            script.onload = () => resolve(!!window.SPELL_DATABASE);
+            script.onerror = () => reject(new Error('Failed to load dnd-data.bundle.js'));
+            document.head.appendChild(script);
+        } catch (e) {
+            reject(e);
+        }
+    });
+
+    return window.__danddyDndDataBundlePromise;
+}
+
 /**
  * Open the spell picker modal
  * @param {object} options - Configuration options
@@ -12425,8 +12508,16 @@ let spellPickerState = {
  * @param {Function} options.onConfirm - Callback with selected spells array
  * @param {number|null} options.maxSelections - Maximum spells that can be selected (null = unlimited)
  */
-function openSpellPicker(options) {
+async function openSpellPicker(options) {
     const { characterClass, level, maxSpellLevel = 9, existingSpells = [], onConfirm, maxSelections = null } = options;
+    
+    if (!window.SPELL_DATABASE) {
+        try {
+            await ensureDndDataBundleLoaded();
+        } catch (e) {
+            console.error('Spell database failed to load', e);
+        }
+    }
     
     if (!window.SPELL_DATABASE) {
         console.error('Spell database not loaded');
@@ -13941,8 +14032,22 @@ async function openSpellEditModal(characterId) {
         loadingOverlay.classList.add('is-visible');
     }
 
+    // Ensure spell database is available (lazy-loaded in Manager).
+    if (!window.SPELL_DATABASE) {
+        try {
+            await ensureDndDataBundleLoaded();
+        } catch (e) {
+            console.error('Spell database failed to load', e);
+        }
+    }
+
     // Prefer cached characters to avoid a slow cloud getById() fetch.
+    // NOTE: If the cache only contains lite records (from /characters/lite),
+    // we MUST fetch the full character for spell editing.
     let character = _getCachedCharacterById(characterId);
+    if (character && character._isLite) {
+        character = null;
+    }
     if (!character) {
         try {
             character = await CharacterStorage.getById(characterId);

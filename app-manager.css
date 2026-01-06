@@ -676,6 +676,7 @@ div.sheet__sidebar.ui-theme-pink {
 /* ===== CAMPAIGN AREA (TOP SECTION) ===== */
 .campaign-area {
     padding: 32px var(--spacing-md) var(--spacing-md) var(--spacing-md);
+    margin-bottom: 32px;
     background: var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg)));
     /* Allow overflow menu to escape bounds */
     overflow: visible;
@@ -3855,30 +3856,14 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 .terminal-header #userInfoDisplay {
     font-size: var(--font-size-base);
     white-space: nowrap;
-    color: var(--ui-dim-color);
+    color: var(--ui-fg-color);
     display: inline-flex;
     align-items: center;
     gap: 0;
     margin-right: 4px;
-    /* Hidden by default, slides out on logout button hover */
-    max-width: 0;
     overflow: hidden;
-    opacity: 0;
-    transition: max-width 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
-    padding-right: 0;
-}
-
-/* Reveal email on logout button hover */
-.terminal-header .header-actions:has(#authBtn:hover) #userInfoDisplay {
-    max-width: 300px;
-    opacity: 0.7;
-    padding-right: var(--spacing-sm);
-}
-
-/* Hover effect on user info display itself */
-.terminal-header #userInfoDisplay:hover {
     opacity: 1;
-    color: var(--ui-fg-color);
+    padding-right: 0;
 }
 
 .user-status-icon {
@@ -3891,10 +3876,6 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
 
 /* Username + auth/log links in header should all use theme colors */
 .terminal-header #userInfoDisplay .terminal-link {
-    color: var(--ui-dim-color);
-}
-
-.terminal-header #userInfoDisplay .terminal-link:hover {
     color: var(--ui-fg-color);
 }
 
@@ -5091,7 +5072,7 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     align-items: center;
     gap: 0;
     max-width: none;
-    opacity: 0.7;
+    opacity: 1;
     overflow: hidden;
     padding-right: 0;
 }

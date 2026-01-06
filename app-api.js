@@ -145,6 +145,24 @@ const CharacterCloudStorage = (window.CharacterCloudStorage = {
     }
   },
 
+  // Get lightweight character list for current user (no heavy fields)
+  async getAllLite() {
+    try {
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Fetching LITE character list from API...');
+      }
+      const apiChars = await this._apiRequest(`/characters/lite`);
+      const characters = apiChars.map(c => window.DanddyCharacterMapper.fromBackendLiteToManager(c));
+      if (DEBUG_CLOUD) {
+        console.log('☁️ CLOUD: Retrieved', characters.length, 'lite characters');
+      }
+      return characters;
+    } catch (error) {
+      console.error('☁️ CLOUD ERROR: Failed to fetch lite characters:', error);
+      throw error;
+    }
+  },
+
   // Get single character by ID
   async getById(id) {
     try {

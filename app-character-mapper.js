@@ -410,6 +410,48 @@
       };
     },
 
+    /**
+     * Map backend LITE DTO → manager character shape (minimal fields).
+     *
+     * This is used for list/grid views to avoid downloading/parsing huge payloads
+     * (ASCII portraits, inventory, spells, etc.) when they're not needed yet.
+     */
+    fromBackendLiteToManager(apiChar) {
+      if (!apiChar) return null;
+
+      return {
+        id: apiChar.id != null ? apiChar.id.toString() : '',
+        name: apiChar.name,
+        race: apiChar.race,
+        class: apiChar.character_class,
+        level: apiChar.level,
+        background: apiChar.background,
+
+        // Portrait (URL + metadata only; no ASCII)
+        originalPortraitUrl: apiChar.original_portrait_url || null,
+        customPortraitCount: apiChar.custom_portrait_count ?? 0,
+        portraitMetadata: apiChar.portrait_metadata || {},
+
+        // Campaign & ownership
+        campaignId: apiChar.campaign_id ?? null,
+        campaignName: apiChar.campaign_name || null,
+        ownerId: apiChar.owner_id,
+        createdAt: apiChar.created_at,
+        updatedAt: apiChar.updated_at,
+        isDemo: apiChar.is_demo || false,
+
+        // Sharing metadata (still useful for list badges)
+        isShared: apiChar.is_shared || false,
+        ownerEmail: apiChar.owner_email || null,
+        permission: apiChar.permission || null,
+        collaboratorCount: apiChar.collaborator_count ?? 0,
+        lastUpdatedByEmail: apiChar.last_updated_by_email || null,
+
+        // Marker so callers know this object is not a full character payload
+        _isLite: true,
+      };
+    },
+
     // ===== Shared helpers =====
 
     _arrayToDict(arr) {

@@ -29,7 +29,6 @@
       grid: null,
       campaign: null,
       modal: null,     // modal dialogs
-      glow: null,      // background glow only
     },
   };
 
@@ -84,7 +83,6 @@
               grid: serverConfig.sections?.grid === 'global' ? null : serverConfig.sections?.grid,
               campaign: serverConfig.sections?.campaign === 'global' ? null : serverConfig.sections?.campaign,
               modal: serverConfig.sections?.modal === 'global' ? null : serverConfig.sections?.modal,
-              glow: serverConfig.sections?.glow === 'global' ? null : serverConfig.sections?.glow,
             },
           };
           
@@ -191,25 +189,18 @@
   }
 
   /**
-   * Apply glow theme (background radial gradient only) via CSS variables
-   * This is separate from the UI theme to allow different colors
-   * 
-   * NOTE: We set these on BODY (not html) because:
-   * 1. body::before uses these variables for the radial gradient
-   * 2. The terminal theme class is also applied to body
-   * 3. Inline styles on body override the theme class on body
-   * 4. body::before inherits from body, getting the correct glow color
+   * Clear any inline glow overrides so CSS theme class takes effect
+   * The glow color is now derived from the terminal theme automatically
    */
-  function applyGlowTheme(themeName) {
+  function clearGlowOverrides() {
     const bodyEl = document.body;
-    const hsl = THEME_HSL[themeName];
-    if (!hsl || !bodyEl) return;
+    if (!bodyEl) return;
 
-    // Set glow-specific CSS variables on body (so body::before inherits them correctly)
-    bodyEl.style.setProperty('--bg-glow-h', hsl.h);
-    bodyEl.style.setProperty('--bg-glow-s', hsl.s);
-    bodyEl.style.setProperty('--bg-glow-l', hsl.l);
-    bodyEl.style.setProperty('--terminal-glow-color', `hsla(${hsl.h}, ${hsl.s}, ${hsl.l}, 0.28)`);
+    // Remove any inline glow overrides - let the CSS theme class handle it
+    bodyEl.style.removeProperty('--bg-glow-h');
+    bodyEl.style.removeProperty('--bg-glow-s');
+    bodyEl.style.removeProperty('--bg-glow-l');
+    bodyEl.style.removeProperty('--terminal-glow-color');
   }
 
   /**
@@ -221,7 +212,6 @@
     // Determine effective themes
     const globalTheme = config.global || 'yellow';
     const terminalTheme = getEffectiveTheme(config, 'terminal');
-    const glowTheme = getEffectiveTheme(config, 'glow');
     const narratorTheme = getEffectiveTheme(config, 'narrator');
     const sheetTheme = getEffectiveTheme(config, 'sheet');
     const gridTheme = getEffectiveTheme(config, 'grid');
@@ -232,8 +222,8 @@
     const htmlEl = document.documentElement;
     applyTheme(htmlEl, terminalTheme);
 
-    // Apply glow theme separately (background radial gradient only)
-    applyGlowTheme(glowTheme);
+    // Clear any legacy glow overrides - glow now uses terminal theme automatically via CSS
+    clearGlowOverrides();
 
     // Apply terminal theme to body and app-root for base styling
     const body = document.body;
@@ -312,7 +302,6 @@
       detail: {
         global: globalTheme,
         terminal: terminalTheme,
-        glow: glowTheme,
         narrator: narratorTheme,
         sheet: sheetTheme,
         grid: gridTheme,
@@ -324,7 +313,6 @@
     console.log('[ThemeLoader] Applied themes:', {
       global: globalTheme,
       terminal: terminalTheme,
-      glow: glowTheme,
       narrator: narratorTheme,
       sheet: sheetTheme,
       grid: gridTheme,
@@ -390,7 +378,7 @@
     applyAllThemes,
     applyTheme,
     applyThemeToSection,
-    applyGlowTheme,
+    clearGlowOverrides,
     getThemeConfig,
     getEffectiveTheme,
     fetchThemeConfigFromServer,
