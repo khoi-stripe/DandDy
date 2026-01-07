@@ -76,7 +76,8 @@ def _build_engine(database_url: str):
     return create_engine(
         database_url,
         connect_args=connect_args,
-        pool_pre_ping=True,
+        pool_pre_ping=False,  # Supabase pgbouncer handles connection health
+        pool_recycle=300,     # Recycle stale connections every 5 minutes
     )
 
 
