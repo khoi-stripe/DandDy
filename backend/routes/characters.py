@@ -1,6 +1,6 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, undefer
 from sqlalchemy import or_, func
 from sqlalchemy.orm import selectinload
 from pydantic import BaseModel
@@ -85,13 +85,22 @@ def get_characters(
     """
     skip_ascii = portrait_mode == "original"
     
+    # Build query options - only load deferred ASCII columns if needed
+    query_options = [
+        selectinload(Character.last_updated_by),
+        selectinload(Character.campaign),
+    ]
+    if not skip_ascii:
+        # Explicitly load deferred ASCII columns when needed
+        query_options.extend([
+            undefer(Character.ascii_portrait),
+            undefer(Character.custom_portrait_ascii),
+        ])
+    
     # Get owned characters with eager-loaded relationships to avoid lazy-load N+1.
     owned = (
         db.query(Character)
-        .options(
-            selectinload(Character.last_updated_by),
-            selectinload(Character.campaign),
-        )
+        .options(*query_options)
         .filter(Character.owner_id == current_user.id)
         .all()
     )
@@ -99,14 +108,22 @@ def get_characters(
     owned_ids = [c.id for c in owned]
     collaborator_counts = _get_collaborator_counts(db, owned_ids)
     
+    # Build collab query options
+    collab_options = [
+        selectinload(CharacterCollaborator.character).selectinload(Character.last_updated_by),
+        selectinload(CharacterCollaborator.character).selectinload(Character.campaign),
+        selectinload(CharacterCollaborator.character).selectinload(Character.owner),
+    ]
+    if not skip_ascii:
+        collab_options.extend([
+            selectinload(CharacterCollaborator.character).undefer(Character.ascii_portrait),
+            selectinload(CharacterCollaborator.character).undefer(Character.custom_portrait_ascii),
+        ])
+    
     # Get shared characters (where user is a collaborator) with eager loads.
     shared_collabs = (
         db.query(CharacterCollaborator)
-        .options(
-            selectinload(CharacterCollaborator.character).selectinload(Character.last_updated_by),
-            selectinload(CharacterCollaborator.character).selectinload(Character.campaign),
-            selectinload(CharacterCollaborator.character).selectinload(Character.owner),
-        )
+        .options(*collab_options)
         .filter(CharacterCollaborator.user_id == current_user.id)
         .all()
     )
@@ -254,9 +271,18 @@ def get_demo_characters(
     Query params:
     - portrait_mode: "original" to skip ASCII fields (saves ~24KB per character)
     """
-    demo_characters = db.query(Character).filter(Character.is_demo == True).all()
+    skip_ascii = portrait_mode == "original"
     
-    if portrait_mode == "original":
+    # Build query - only load deferred ASCII columns if needed
+    query = db.query(Character).filter(Character.is_demo == True)
+    if not skip_ascii:
+        query = query.options(
+            undefer(Character.ascii_portrait),
+            undefer(Character.custom_portrait_ascii),
+        )
+    demo_characters = query.all()
+    
+    if skip_ascii:
         result = []
         for char in demo_characters:
             char_dict = CharacterResponse.model_validate(char).model_dump()
@@ -381,7 +407,16 @@ def get_character(
     Query params:
     - portrait_mode: "original" to skip ASCII fields (saves ~24KB)
     """
-    character = db.query(Character).filter(Character.id == character_id).first()
+    skip_ascii = portrait_mode == "original"
+    
+    # Build query - only load deferred ASCII columns if needed
+    query = db.query(Character).filter(Character.id == character_id)
+    if not skip_ascii:
+        query = query.options(
+            undefer(Character.ascii_portrait),
+            undefer(Character.custom_portrait_ascii),
+        )
+    character = query.first()
     
     if not character:
         raise HTTPException(
@@ -405,7 +440,7 @@ def get_character(
         char_dict['owner_email'] = character.owner.email if character.owner else None
         char_dict['permission'] = permission
     
-    if portrait_mode == "original":
+    if skip_ascii:
         char_dict = _strip_ascii_fields(char_dict)
     
     return char_dict

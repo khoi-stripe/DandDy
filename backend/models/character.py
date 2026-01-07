@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, JSON, Enum, DateTime, Index, Boolean
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, deferred
 import enum
 from datetime import datetime
 from database.database import Base
@@ -94,9 +94,11 @@ class Character(Base):
     backstory = Column(String, nullable=True)
     
     # Portrait Data
-    ascii_portrait = Column(String, nullable=True)  # ASCII art portrait (text)
+    # NOTE: ascii_portrait and custom_portrait_ascii are deferred to reduce DB egress.
+    # They won't be loaded unless explicitly accessed, saving ~24KB per character.
+    ascii_portrait = deferred(Column(String, nullable=True))  # ASCII art portrait (text)
     original_portrait_url = Column(String, nullable=True)  # URL to generated image
-    custom_portrait_ascii = Column(String, nullable=True)  # Custom AI-generated ASCII
+    custom_portrait_ascii = deferred(Column(String, nullable=True))  # Custom AI-generated ASCII
     custom_portrait_count = Column(Integer, default=0, nullable=False)  # Number of custom portraits generated
     portrait_metadata = Column(JSON, default=dict, nullable=False)  # Additional portrait info (key, source, etc)
     
