@@ -138,7 +138,7 @@
           <div class="row">
             <div>
               <label>API Base URL</label>
-              <input id="apiBase" placeholder="http://localhost:8000" />
+              <input id="apiBase" value="https://danddy-api.onrender.com" />
             </div>
             <div class="row cols2">
               <div>
@@ -248,7 +248,7 @@
 
       function apiBase() {
         const v = $("apiBase").value.trim();
-        return v || "http://localhost:8000";
+        return v || "https://danddy-api.onrender.com";
       }
 
       function token() {
@@ -514,7 +514,7 @@
       // Bootstrap
       (function init() {
         const st = loadState();
-        $("apiBase").value = st.apiBase || "http://localhost:8000";
+        $("apiBase").value = st.apiBase || "https://danddy-api.onrender.com";
         updateStatusLine();
         appendLine(`[${now()}] Ready. Login, select a character, click Start Adventure.`, "sys");
         showHelp();
