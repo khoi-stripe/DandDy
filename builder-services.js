@@ -570,7 +570,9 @@ const StorageService = (window.StorageService = {
 
   /**
    * Gather all current settings into a single preferences object.
-   * @returns {object} All current preferences
+   * IMPORTANT: Only includes settings that have been explicitly set in localStorage.
+   * This prevents default values from overwriting actual user preferences on the server.
+   * @returns {object} All current preferences (only explicitly set values)
    */
   getAllPreferences() {
     const prefs = {};
@@ -580,20 +582,37 @@ const StorageService = (window.StorageService = {
       const themeConfig = localStorage.getItem('danddy_theme_config');
       if (themeConfig) {
         const parsed = JSON.parse(themeConfig);
-        prefs.colorTheme = parsed.global || 'yellow';
+        if (parsed.global) {
+          prefs.colorTheme = parsed.global;
+        }
       }
     } catch (e) { /* ignore */ }
     
-    // Narrator ID
-    prefs.narratorId = this.getNarratorId();
+    // Narrator ID - only include if explicitly set
+    const narratorRaw = localStorage.getItem('dnd_narrator_id');
+    if (narratorRaw) {
+      prefs.narratorId = narratorRaw;
+    }
     
-    // Text speed
-    prefs.textSpeedMultiplier = this.getTextSpeedMultiplier();
+    // Text speed - only include if explicitly set
+    const textSpeedRaw = localStorage.getItem('dnd_text_speed_multiplier');
+    if (textSpeedRaw) {
+      const num = parseFloat(textSpeedRaw);
+      if (Number.isFinite(num) && num > 0) {
+        prefs.textSpeedMultiplier = num;
+      }
+    }
     
-    // Image model
-    prefs.imageModel = this.getImageModel();
+    // Image model - only include if explicitly set
+    const imageModelRaw = localStorage.getItem('dnd_image_model');
+    if (imageModelRaw) {
+      const allowed = ['dall-e-3', 'gpt-image-1', 'gpt-image-1.5', 'flux-1.1-pro', 'flux-schnell'];
+      if (allowed.includes(imageModelRaw)) {
+        prefs.imageModel = imageModelRaw;
+      }
+    }
     
-    // Image quality (per-model)
+    // Image quality (per-model) - only include if explicitly set
     try {
       const raw = localStorage.getItem('dnd_image_quality');
       if (raw) {
@@ -601,14 +620,26 @@ const StorageService = (window.StorageService = {
       }
     } catch (e) { /* ignore */ }
     
-    // Portrait view mode
-    prefs.portraitViewMode = this.getPortraitViewMode();
+    // Portrait view mode - only include if explicitly set
+    const portraitModeRaw = localStorage.getItem('dnd_portrait_view_mode');
+    if (portraitModeRaw) {
+      const allowed = ['ascii', 'original'];
+      if (allowed.includes(portraitModeRaw.toLowerCase())) {
+        prefs.portraitViewMode = portraitModeRaw.toLowerCase();
+      }
+    }
     
-    // Portrait prompt theme
-    prefs.portraitPromptTheme = this.getPortraitPromptTheme();
+    // Portrait prompt theme - only include if explicitly set
+    const promptThemeRaw = localStorage.getItem('dnd_portrait_prompt_theme');
+    if (promptThemeRaw) {
+      prefs.portraitPromptTheme = promptThemeRaw;
+    }
     
-    // Show descriptions
-    prefs.showDescriptions = this.getShowDescriptions();
+    // Show descriptions - only include if explicitly set
+    const showDescRaw = localStorage.getItem('dnd_show_descriptions');
+    if (showDescRaw !== null) {
+      prefs.showDescriptions = showDescRaw === 'true';
+    }
     
     return prefs;
   },
