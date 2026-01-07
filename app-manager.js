@@ -5098,9 +5098,10 @@ const UI = {
             }
         }
 
-        // Check if this is a demo character
+        // Check if this is a demo character - only show SAMPLE tag in guest mode
         const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
-        const demoTagHtml = isDemo ? '<span class="card-demo-tag">SAMPLE</span>' : '';
+        const isDemoMode = window.DemoCharacters && window.DemoCharacters.isDemoMode();
+        const demoTagHtml = (isDemo && isDemoMode) ? '<span class="card-demo-tag">SAMPLE</span>' : '';
         
         // Check if this is a shared character:
         // - is_shared = true means current user is a collaborator (not owner)

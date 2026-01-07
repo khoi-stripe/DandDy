@@ -847,8 +847,9 @@ const CharacterSheet = (window.CharacterSheet = {
       campaignName,
     } = callbacks;
 
-    // Check if this is a demo character - show tag on portrait
+    // Check if this is a demo character - only show tag in guest mode
     const isDemo = window.DemoCharacters && window.DemoCharacters.isDemo(character);
+    const isDemoMode = window.DemoCharacters && window.DemoCharacters.isDemoMode();
     
     // Build status badges array - overlays portrait at top-left
     // Order: IN CAMPAIGN, SHARED, PINNED
@@ -972,8 +973,8 @@ const CharacterSheet = (window.CharacterSheet = {
       portraitViewMode === 'original' &&
       !needsPlaceholder;
 
-    // Demo tag overlays portrait like on cards
-    const demoTagHtml = isDemo ? '<span class="sheet-demo-tag">SAMPLE</span>' : '';
+    // Demo tag overlays portrait like on cards - only show in guest mode
+    const demoTagHtml = (isDemo && isDemoMode) ? '<span class="sheet-demo-tag">SAMPLE</span>' : '';
 
     return `
       <div class="portrait-container${showOriginalByDefault ? ' portrait-container--original-mode' : ''}">
