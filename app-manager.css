@@ -398,8 +398,8 @@ div.sheet__sidebar.ui-theme-pink {
     z-index: 10;
     align-items: center;
     justify-content: space-between;
-    padding: 0 0 12px 0;
-    background: var(--terminal-bg);
+    padding: 8px 16px;
+    background: var(--ui-bg-translucent, rgba(0, 0, 0, 0.3));
     /* Bottom border acts as top border for sheet-scroll-wrapper when nav is visible */
     border-bottom: 1px solid var(--ui-dim-color);
     /* Animation properties */
