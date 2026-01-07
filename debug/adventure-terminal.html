@@ -169,7 +169,7 @@
                 <select id="characterSelect"></select>
               </div>
             </div>
-            <div class="row cols2">
+            <div class="row cols3">
               <div>
                 <label>Adventure Module</label>
                 <select id="moduleSelect">
@@ -179,6 +179,13 @@
               <div>
                 <label>Seed (optional)</label>
                 <input id="seed" placeholder="leave blank for random" />
+              </div>
+              <div>
+                <label>Mode</label>
+                <select id="modeSelect">
+                  <option value="ai">🤖 AI Narration</option>
+                  <option value="fast">⚡ Fast (no AI)</option>
+                </select>
               </div>
             </div>
             <div class="row cols2">
@@ -350,6 +357,7 @@
         const characterId = Number($("characterSelect").value);
         const moduleId = $("moduleSelect").value || null;
         const seed = $("seed").value.trim() || null;
+        const fastMode = $("modeSelect").value === "fast";
         if (!characterId) throw new Error("Select a character first");
 
         const body = await apiFetch("/api/adventure/start", {
@@ -359,9 +367,10 @@
             character_id: characterId,
             module: moduleId,
             seed,
+            fast_mode: fastMode,
           }),
         });
-        saveState({ adventureId: body.adventure_id, characterId, campaignId, moduleId });
+        saveState({ adventureId: body.adventure_id, characterId, campaignId, moduleId, fastMode });
         
         const modLabel = moduleId ? `[${moduleId}] ` : "";
         appendLine(`\n[${now()}] --- ${modLabel}ADVENTURE #${body.adventure_id} STARTED ---`, "sys");
@@ -380,11 +389,15 @@
       }
 
       async function stepAdventure(actionText) {
-        const adventureId = loadState().adventureId;
+        const st = loadState();
+        const adventureId = st.adventureId;
         if (!adventureId) throw new Error("No adventure started yet. Click Start Adventure.");
+        
+        // Use saved fast_mode, but allow UI override
+        const fastMode = $("modeSelect").value === "fast";
         const body = await apiFetch(`/api/adventure/${adventureId}/step`, {
           method: "POST",
-          body: JSON.stringify({ action_text: actionText }),
+          body: JSON.stringify({ action_text: actionText, fast_mode: fastMode }),
         });
         appendLine(`\n> ${actionText}`, "sys");
         if (body.state_summary.area_name) {
@@ -420,6 +433,8 @@
         parts.push(`API: ${apiBase()}`);
         parts.push(`Token: ${token() ? "yes" : "no"}`);
         parts.push(`Adventure: ${st.adventureId ? "#" + st.adventureId : "(none)"}`);
+        const mode = $("modeSelect").value === "fast" ? "⚡Fast" : "🤖AI";
+        parts.push(`Mode: ${mode}`);
         setStatus(parts.join(" | "));
       }
 
@@ -523,6 +538,11 @@
       // Persist apiBase changes
       $("apiBase").addEventListener("change", () => {
         saveState({ apiBase: $("apiBase").value.trim() });
+        updateStatusLine();
+      });
+
+      // Update status when mode changes
+      $("modeSelect").addEventListener("change", () => {
         updateStatusLine();
       });
     </script>

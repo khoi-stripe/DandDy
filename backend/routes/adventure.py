@@ -279,6 +279,7 @@ def start_adventure(
     if module_data:
         start_pos = module_data.get("starting_area", "exterior")
         area = module_data.get("areas", {}).get(start_pos, {})
+        fast_mode = req.fast_mode
         
         state = {
             "seed": seed,
@@ -294,6 +295,7 @@ def start_adventure(
             "xp": int(character.experience_points or 0),
             "level": int(character.level or 1),
             "theme": module_data.get("theme"),
+            "fast_mode": fast_mode,
         }
 
         adventure = AdventureRun(
@@ -342,13 +344,14 @@ def start_adventure(
         narration = f"**{area_name}**\n\n{area_desc}"
         suggested_actions = exits[:4] + ["look", "inventory"]
         
-        try:
-            provider = get_narration_provider()
-            res = provider.narrate_json(system_prompt=system_prompt, user_prompt=user_prompt)
-            narration = res.narration or narration
-            suggested_actions = res.suggested_actions or suggested_actions
-        except Exception:
-            pass
+        if not fast_mode:
+            try:
+                provider = get_narration_provider()
+                res = provider.narrate_json(system_prompt=system_prompt, user_prompt=user_prompt)
+                narration = res.narration or narration
+                suggested_actions = res.suggested_actions or suggested_actions
+            except Exception:
+                pass
 
         turn = AdventureTurn(
             adventure_id=adventure.id,
@@ -368,6 +371,7 @@ def start_adventure(
         )
 
     # Procedural maze adventure (original behavior)
+    fast_mode = req.fast_mode
     w, h = 5, 5
     neighbors = _maze_neighbors(seed, w, h)
 
@@ -393,6 +397,7 @@ def start_adventure(
         "xp": int(character.experience_points or 0),
         "level": int(character.level or 1),
         "theme": (req.theme or "").strip() or None,
+        "fast_mode": fast_mode,
     }
 
     adventure = AdventureRun(
@@ -432,14 +437,16 @@ def start_adventure(
 
     narration = f"{room_desc} {item_line}"
     suggested_actions: list[str] = ["look", "north", "south", "east", "west"]
-    try:
-        provider = get_narration_provider()
-        res = provider.narrate_json(system_prompt=system_prompt, user_prompt=user_prompt)
-        narration = res.narration or narration
-        suggested_actions = res.suggested_actions or suggested_actions
-    except Exception:
-        # Fail open: still playable without AI
-        pass
+    
+    if not fast_mode:
+        try:
+            provider = get_narration_provider()
+            res = provider.narrate_json(system_prompt=system_prompt, user_prompt=user_prompt)
+            narration = res.narration or narration
+            suggested_actions = res.suggested_actions or suggested_actions
+        except Exception:
+            # Fail open: still playable without AI
+            pass
 
     turn = AdventureTurn(
         adventure_id=adventure.id,
@@ -774,13 +781,19 @@ def step_adventure(
         if monsters_here:
             suggested_actions.insert(0, "attack")
         
-        try:
-            provider = get_narration_provider()
-            res = provider.narrate_json(system_prompt=system_prompt, user_prompt=user_prompt)
-            narration = res.narration or narration
-            suggested_actions = res.suggested_actions or suggested_actions
-        except Exception:
-            pass
+        # Check fast_mode from state or request override
+        fast_mode = state.get("fast_mode", False)
+        if req.fast_mode is not None:
+            fast_mode = req.fast_mode
+        
+        if not fast_mode:
+            try:
+                provider = get_narration_provider()
+                res = provider.narrate_json(system_prompt=system_prompt, user_prompt=user_prompt)
+                narration = res.narration or narration
+                suggested_actions = res.suggested_actions or suggested_actions
+            except Exception:
+                pass
 
         turn = AdventureTurn(
             adventure_id=adventure.id,
@@ -988,13 +1001,20 @@ def step_adventure(
 
     narration = result_line
     suggested_actions: list[str] = ["look", "inventory", "north", "south", "east", "west"]
-    try:
-        provider = get_narration_provider()
-        res = provider.narrate_json(system_prompt=system_prompt, user_prompt=user_prompt)
-        narration = res.narration or narration
-        suggested_actions = res.suggested_actions or suggested_actions
-    except Exception:
-        pass
+    
+    # Check fast_mode from state or request override
+    fast_mode = state.get("fast_mode", False)
+    if req.fast_mode is not None:
+        fast_mode = req.fast_mode
+    
+    if not fast_mode:
+        try:
+            provider = get_narration_provider()
+            res = provider.narrate_json(system_prompt=system_prompt, user_prompt=user_prompt)
+            narration = res.narration or narration
+            suggested_actions = res.suggested_actions or suggested_actions
+        except Exception:
+            pass
 
     turn = AdventureTurn(
         adventure_id=adventure.id,

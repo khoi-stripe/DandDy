@@ -12,10 +12,12 @@ class AdventureStartRequest(BaseModel):
     seed: Optional[str] = None
     theme: Optional[str] = Field(None, max_length=100)
     module: Optional[str] = Field(None, max_length=100, description="Adventure module ID (e.g., 'red_demon')")
+    fast_mode: bool = Field(False, description="Skip AI narration for faster/free responses")
 
 
 class AdventureStepRequest(BaseModel):
     action_text: str = Field(..., min_length=1, max_length=500)
+    fast_mode: Optional[bool] = Field(None, description="Override fast_mode for this step (uses adventure default if None)")
 
 
 class AdventureStateSummary(BaseModel):
