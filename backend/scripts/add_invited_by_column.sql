@@ -16,3 +16,5 @@ ALTER TABLE campaign_members ADD COLUMN invited_by_id INTEGER REFERENCES users(i
 
 
 
+
+

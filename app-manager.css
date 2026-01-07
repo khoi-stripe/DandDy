@@ -675,7 +675,7 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* ===== CAMPAIGN AREA (TOP SECTION) ===== */
 .campaign-area {
-    padding: 32px var(--spacing-md) var(--spacing-md) var(--spacing-md);
+    padding: 16px var(--spacing-md) var(--spacing-md) var(--spacing-md);
     margin-bottom: 32px;
     background: var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg)));
     /* Allow overflow menu to escape bounds */
@@ -1883,11 +1883,6 @@ div.sheet__sidebar.ui-theme-pink {
 
 /* Eyebrow label - small caps */
 .campaign-eyebrow {
-    font-size: 10px;
-    font-weight: var(--font-weight-normal);
-    color: var(--ui-dim-color);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
 }
 
 /* Campaign name - larger, below eyebrow */
@@ -5491,6 +5486,40 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     .portrait-container img {
         filter: grayscale(100%) !important;
         -webkit-filter: grayscale(100%) !important;
+    }
+
+    /* In expanded view, campaign panel should render BELOW character sheet (like collapsed view) */
+    .sheet-campaign-grid,
+    .sheet__layout {
+        display: block !important;
+        grid-template-columns: none !important;
+    }
+
+    /* Campaign panel slot - render below character sheet */
+    .campaign-panel-slot,
+    .sheet__sidebar {
+        display: block !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin-top: 24px !important;
+    }
+
+    /* Campaign area in print */
+    .campaign-area {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    /* Hide character nav bar in print (expanded view navigation) */
+    #characterNavBar,
+    .sheet__nav {
+        display: none !important;
+    }
+
+    /* Remove border from sheet content in print */
+    .sheet__content,
+    .sheet-scroll-wrapper {
+        border: none !important;
     }
 }
 
