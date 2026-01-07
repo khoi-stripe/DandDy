@@ -18,6 +18,15 @@ class Settings(BaseSettings):
     max_requests_per_user_per_day: int = 100
     allowed_origins: str = "http://localhost:5173,http://localhost:3000"
 
+    # Adventure narration settings (OpenAI-first; Ollama optional)
+    # Provider choices: "openai" (default) or "ollama"
+    narration_provider: str = "openai"
+    # OpenAI model used specifically for the adventure DM narration (separate from other AI features)
+    openai_narration_model: str = "gpt-4o-mini"
+    # Ollama (local) configuration for later switching
+    ollama_base_url: str = "http://127.0.0.1:11434"
+    ollama_model_fast: str = "llama3.1:8b-instruct"
+
     # Email / Postmark + frontend reset URL
     postmark_server_token: str = ""
     email_from: str = "no-reply@example.com"
@@ -471,6 +480,113 @@ def ensure_campaign_tracking_columns():
                 SET invite_code = UPPER(SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 5) || '-' || SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 4))
                 WHERE invite_code IS NULL
             """))
+
+        conn.commit()
+
+
+def ensure_adventure_tables():
+    """
+    Lightweight migration helper for the adventure game loop tables.
+
+    We primarily rely on SQLAlchemy models + `Base.metadata.create_all(...)`.
+    This helper exists as a belt-and-suspenders creation step (portable across
+    SQLite/Postgres) and for older deployments that may not have imported the
+    models at startup.
+    """
+    inspector = inspect(engine)
+    has_runs = inspector.has_table("adventure_runs")
+    has_turns = inspector.has_table("adventure_turns")
+    if has_runs and has_turns:
+        return
+
+    dialect = getattr(engine, "dialect", None)
+    dialect_name = getattr(dialect, "name", "") if dialect else ""
+    is_postgres = dialect_name in ("postgresql", "postgres")
+
+    with engine.connect() as conn:
+        # Runs
+        if not has_runs:
+            if is_postgres:
+                conn.execute(
+                    text(
+                        """
+                        CREATE TABLE IF NOT EXISTS adventure_runs (
+                            id BIGSERIAL PRIMARY KEY,
+                            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                            campaign_id INTEGER NULL REFERENCES campaigns(id) ON DELETE SET NULL,
+                            character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+                            seed TEXT NOT NULL,
+                            state_json TEXT NOT NULL DEFAULT '{}',
+                            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        )
+                        """
+                    )
+                )
+            else:
+                conn.execute(
+                    text(
+                        """
+                        CREATE TABLE IF NOT EXISTS adventure_runs (
+                            id INTEGER PRIMARY KEY,
+                            owner_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                            campaign_id INTEGER NULL REFERENCES campaigns(id) ON DELETE SET NULL,
+                            character_id INTEGER NOT NULL REFERENCES characters(id) ON DELETE CASCADE,
+                            seed TEXT NOT NULL,
+                            state_json TEXT NOT NULL DEFAULT '{}',
+                            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        )
+                        """
+                    )
+                )
+
+            try:
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_adventure_runs_owner_id ON adventure_runs (owner_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_adventure_runs_campaign_id ON adventure_runs (campaign_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_adventure_runs_character_id ON adventure_runs (character_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_adventure_runs_updated_at ON adventure_runs (updated_at)"))
+            except Exception:
+                pass
+
+        # Turns
+        if not has_turns:
+            if is_postgres:
+                conn.execute(
+                    text(
+                        """
+                        CREATE TABLE IF NOT EXISTS adventure_turns (
+                            id BIGSERIAL PRIMARY KEY,
+                            adventure_id INTEGER NOT NULL REFERENCES adventure_runs(id) ON DELETE CASCADE,
+                            turn_index INTEGER NOT NULL,
+                            player_action TEXT NOT NULL,
+                            dm_text TEXT NOT NULL,
+                            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        )
+                        """
+                    )
+                )
+            else:
+                conn.execute(
+                    text(
+                        """
+                        CREATE TABLE IF NOT EXISTS adventure_turns (
+                            id INTEGER PRIMARY KEY,
+                            adventure_id INTEGER NOT NULL REFERENCES adventure_runs(id) ON DELETE CASCADE,
+                            turn_index INTEGER NOT NULL,
+                            player_action TEXT NOT NULL,
+                            dm_text TEXT NOT NULL,
+                            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        )
+                        """
+                    )
+                )
+
+            try:
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_adventure_turns_adventure_id ON adventure_turns (adventure_id)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_adventure_turns_created_at ON adventure_turns (created_at)"))
+            except Exception:
+                pass
 
         conn.commit()
 

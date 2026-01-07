@@ -116,4 +116,47 @@ The API can be tested using:
 - cURL or Postman
 - iOS app client
 
+## Adventure (AI DM) - Debug Terminal
+
+This repo includes a minimal Zork-like “AI DM” loop exposed as backend endpoints plus a simple debug HTML terminal.
+
+### Configure narration (OpenAI first; Ollama optional)
+
+In `backend/.env` (copy from `env.example`):
+- `OPENAI_API_KEY=...`
+- `NARRATION_PROVIDER=openai`
+- `OPENAI_NARRATION_MODEL=gpt-4o-mini`
+
+If you do not set `OPENAI_API_KEY`, the adventure will still run, but narration will fall back to deterministic text.
+
+### Run locally
+
+- Start backend:
+
+```bash
+cd backend
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+- Serve the frontend (so the debug page is on `http://localhost:8080` which matches backend CORS defaults).
+
+Then open:
+- `debug/adventure-terminal.html` (via the frontend server)
+
+### How to play
+
+1. Log in with an existing account (uses `POST /api/auth/login`).
+2. Select a character and campaign (optional).
+3. Click **Start Adventure**.
+4. Type commands like:
+   - `look`
+   - `north` / `south` / `east` / `west` (or `n/s/e/w`)
+   - `take torch`
+   - `use healing potion`
+   - `inventory`
+   - `rest`
+   - `attack`
+
+The backend updates the character’s `experience_points`, `level`, and `hit_points_current` as you play.
+
 

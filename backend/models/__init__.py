@@ -8,6 +8,7 @@ from .prompt_entry import PromptEntry, EntryKind
 from .character_share import CharacterShare, ShareStatus
 from .character_collaborator import CharacterCollaborator, CollaboratorPermission
 from .app_config import AppConfig
+from .adventure import AdventureRun, AdventureTurn
 
 __all__ = [
     "User", "UserRole", "Character", "Alignment", 
@@ -16,7 +17,8 @@ __all__ = [
     "JournalEntry", "CharacterUpdate",
     "PromptEntry", "EntryKind", "CharacterShare", "ShareStatus",
     "CharacterCollaborator", "CollaboratorPermission",
-    "AppConfig"
+    "AppConfig",
+    "AdventureRun", "AdventureTurn",
 ]
 
 

@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>DandDy Adventure Terminal</title>
+    <link rel="stylesheet" href="../terminal-theme.css" />
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+          "Courier New", monospace;
+        background: #0b0f14;
+        color: #e6edf3;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 16px;
+        display: grid;
+        gap: 12px;
+      }
+      .row {
+        display: grid;
+        gap: 8px;
+      }
+      @media (min-width: 900px) {
+        .row.cols2 {
+          grid-template-columns: 1fr 1fr;
+          align-items: end;
+        }
+        .row.cols3 {
+          grid-template-columns: 1fr 1fr 1fr;
+          align-items: end;
+        }
+      }
+      .card {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        opacity: 0.8;
+        margin-bottom: 4px;
+      }
+      input,
+      select,
+      button {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 10px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(0, 0, 0, 0.25);
+        color: inherit;
+        outline: none;
+      }
+      input::placeholder {
+        opacity: 0.6;
+      }
+      button {
+        cursor: pointer;
+        background: rgba(80, 160, 255, 0.18);
+      }
+      button.secondary {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      button.danger {
+        background: rgba(255, 80, 80, 0.18);
+      }
+      .status {
+        font-size: 12px;
+        opacity: 0.85;
+        white-space: pre-wrap;
+      }
+      .terminal {
+        height: 55vh;
+        overflow: auto;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(0, 0, 0, 0.35);
+        line-height: 1.45;
+      }
+      .line {
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .line.dim {
+        opacity: 0.7;
+      }
+      .line.sys {
+        opacity: 0.85;
+        color: #9dd7ff;
+      }
+      .line.err {
+        color: #ff8f8f;
+      }
+      .prompt {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+      .kbd {
+        display: inline-block;
+        padding: 1px 6px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-bottom-width: 2px;
+        border-radius: 6px;
+        font-size: 11px;
+        opacity: 0.85;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <div>
+            <div style="font-size:14px; font-weight:600;">DandDy Adventure Terminal</div>
+            <div class="status" id="status"></div>
+          </div>
+          <div style="min-width:240px; display:flex; gap:8px;">
+            <button class="secondary" id="btnClear">Clear Log</button>
+            <button class="danger" id="btnLogout">Logout</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="row cols2">
+        <div class="card">
+          <div class="row">
+            <div>
+              <label>API Base URL</label>
+              <input id="apiBase" placeholder="http://localhost:8000" />
+            </div>
+            <div class="row cols2">
+              <div>
+                <label>Identifier (email or username)</label>
+                <input id="identifier" placeholder="you@example.com" />
+              </div>
+              <div>
+                <label>Password</label>
+                <input id="password" type="password" placeholder="••••••••" />
+              </div>
+            </div>
+            <div class="row cols2">
+              <button id="btnLogin">Login</button>
+              <button class="secondary" id="btnWhoami">Who am I?</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <div class="row cols2">
+              <div>
+                <label>Campaign</label>
+                <select id="campaignSelect"></select>
+              </div>
+              <div>
+                <label>Character</label>
+                <select id="characterSelect"></select>
+              </div>
+            </div>
+            <div class="row cols2">
+              <div>
+                <label>Theme (optional)</label>
+                <input id="theme" placeholder="e.g., haunted library" />
+              </div>
+              <div>
+                <label>Seed (optional)</label>
+                <input id="seed" placeholder="leave blank for random" />
+              </div>
+            </div>
+            <div class="row cols2">
+              <button id="btnRefreshLists" class="secondary">Refresh campaigns/characters</button>
+              <button id="btnStart">Start Adventure</button>
+            </div>
+            <div class="row cols3">
+              <button class="secondary" id="btnGetState">Get State</button>
+              <button class="secondary" id="btnRestart">Start New (same char)</button>
+              <button class="secondary" id="btnHelp">Help</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="terminal" id="term" aria-live="polite"></div>
+
+      <div class="card">
+        <div class="prompt">
+          <input id="command" placeholder='Type a command (e.g., "look", "north", "take torch") — press Enter' />
+          <button id="btnSend" style="width:auto; padding-left:18px; padding-right:18px;">Send <span class="kbd">↵</span></button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const STORAGE_KEY = "danddy_adventure_terminal_v1";
+
+      const $ = (id) => document.getElementById(id);
+      const elStatus = $("status");
+      const elTerm = $("term");
+
+      function now() {
+        return new Date().toISOString().replace("T", " ").replace("Z", "");
+      }
+
+      function appendLine(text, cls = "") {
+        const div = document.createElement("div");
+        div.className = "line " + cls;
+        div.textContent = text;
+        elTerm.appendChild(div);
+        elTerm.scrollTop = elTerm.scrollHeight;
+      }
+
+      function setStatus(text) {
+        elStatus.textContent = text;
+      }
+
+      function loadState() {
+        try {
+          return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+        } catch {
+          return {};
+        }
+      }
+
+      function saveState(patch) {
+        const cur = loadState();
+        const next = { ...cur, ...patch };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        return next;
+      }
+
+      function clearState() {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+
+      function apiBase() {
+        const v = $("apiBase").value.trim();
+        return v || "http://localhost:8000";
+      }
+
+      function token() {
+        return (loadState().token || "").trim();
+      }
+
+      async function apiFetch(path, opts = {}) {
+        const headers = { ...(opts.headers || {}) };
+        headers["Content-Type"] = headers["Content-Type"] || "application/json";
+        const t = token();
+        if (t) headers["Authorization"] = `Bearer ${t}`;
+        const res = await fetch(apiBase() + path, { ...opts, headers });
+        let bodyText = "";
+        try {
+          bodyText = await res.text();
+        } catch {}
+        let body = null;
+        try {
+          body = bodyText ? JSON.parse(bodyText) : null;
+        } catch {
+          body = bodyText;
+        }
+        if (!res.ok) {
+          const msg =
+            (body && body.detail) ||
+            (typeof body === "string" ? body : "") ||
+            `HTTP ${res.status}`;
+          throw new Error(msg);
+        }
+        return body;
+      }
+
+      function renderSelect(selectEl, items, { getValue, getLabel, includeNone = false }) {
+        selectEl.innerHTML = "";
+        if (includeNone) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = "(none)";
+          selectEl.appendChild(opt);
+        }
+        for (const it of items) {
+          const opt = document.createElement("option");
+          opt.value = String(getValue(it));
+          opt.textContent = getLabel(it);
+          selectEl.appendChild(opt);
+        }
+      }
+
+      async function doLogin() {
+        const identifier = $("identifier").value.trim();
+        const password = $("password").value;
+        if (!identifier || !password) throw new Error("Missing identifier/password");
+        const body = await apiFetch("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify({ identifier, password }),
+        });
+        saveState({ token: body.access_token });
+        appendLine(`[${now()}] Logged in.`, "sys");
+        await refreshLists();
+        updateStatusLine();
+      }
+
+      async function whoami() {
+        const me = await apiFetch("/api/auth/me", { method: "GET" });
+        appendLine(`[${now()}] /me: ${me.email} (@${me.username || "?"})`, "sys");
+        updateStatusLine();
+      }
+
+      async function refreshLists() {
+        const [campaigns, characters] = await Promise.all([
+          apiFetch("/api/campaigns", { method: "GET" }),
+          apiFetch("/api/characters/lite", { method: "GET" }),
+        ]);
+        renderSelect($("campaignSelect"), campaigns, {
+          includeNone: true,
+          getValue: (c) => c.id,
+          getLabel: (c) => `${c.name} (#${c.id})`,
+        });
+        renderSelect($("characterSelect"), characters, {
+          includeNone: false,
+          getValue: (c) => c.id,
+          getLabel: (c) => `${c.name} (L${c.level} ${c.race} ${c.character_class})`,
+        });
+        appendLine(`[${now()}] Refreshed campaigns/characters.`, "dim");
+      }
+
+      async function startAdventure({ reuseChar = false } = {}) {
+        const campaignId = $("campaignSelect").value ? Number($("campaignSelect").value) : null;
+        const characterId = Number($("characterSelect").value);
+        const theme = $("theme").value.trim() || null;
+        const seed = $("seed").value.trim() || null;
+        if (!characterId) throw new Error("Select a character first");
+
+        const body = await apiFetch("/api/adventure/start", {
+          method: "POST",
+          body: JSON.stringify({
+            campaign_id: campaignId,
+            character_id: characterId,
+            theme,
+            seed,
+          }),
+        });
+        saveState({ adventureId: body.adventure_id, characterId, campaignId });
+        appendLine(`\n[${now()}] --- ADVENTURE #${body.adventure_id} STARTED ---`, "sys");
+        appendLine(body.narration || "(no narration)");
+        if (body.suggested_actions && body.suggested_actions.length) {
+          appendLine(`Suggestions: ${body.suggested_actions.join(" | ")}`, "dim");
+        }
+        appendLine(
+          `State: pos=${body.state_summary.position}, HP=${body.state_summary.hp}/${body.state_summary.hp_max}, XP=${body.state_summary.xp}, L=${body.state_summary.level}`,
+          "dim"
+        );
+        updateStatusLine();
+      }
+
+      async function stepAdventure(actionText) {
+        const adventureId = loadState().adventureId;
+        if (!adventureId) throw new Error("No adventure started yet. Click Start Adventure.");
+        const body = await apiFetch(`/api/adventure/${adventureId}/step`, {
+          method: "POST",
+          body: JSON.stringify({ action_text: actionText }),
+        });
+        appendLine(`\n> ${actionText}`, "sys");
+        appendLine(body.narration || "(no narration)");
+        if (body.events && body.events.length) {
+          for (const ev of body.events) {
+            appendLine(`Event: ${ev.kind} ${JSON.stringify(ev.data || {})}`, "dim");
+          }
+        }
+        if (body.suggested_actions && body.suggested_actions.length) {
+          appendLine(`Suggestions: ${body.suggested_actions.join(" | ")}`, "dim");
+        }
+        appendLine(
+          `State: pos=${body.state_summary.position}, HP=${body.state_summary.hp}/${body.state_summary.hp_max}, XP=${body.state_summary.xp}, L=${body.state_summary.level}`,
+          "dim"
+        );
+        updateStatusLine();
+      }
+
+      async function getState() {
+        const adventureId = loadState().adventureId;
+        if (!adventureId) throw new Error("No adventure started yet.");
+        const body = await apiFetch(`/api/adventure/${adventureId}`, { method: "GET" });
+        appendLine(`[${now()}] State: ${JSON.stringify(body.state_summary)}`, "dim");
+      }
+
+      function updateStatusLine() {
+        const st = loadState();
+        const parts = [];
+        parts.push(`API: ${apiBase()}`);
+        parts.push(`Token: ${token() ? "yes" : "no"}`);
+        parts.push(`Adventure: ${st.adventureId ? "#" + st.adventureId : "(none)"}`);
+        setStatus(parts.join(" | "));
+      }
+
+      function showHelp() {
+        appendLine(`[${now()}] Commands: look, north/south/east/west (or n/s/e/w), take <item>, use <item>, inventory, rest, attack`, "sys");
+      }
+
+      // Wire UI
+      $("btnLogin").addEventListener("click", async () => {
+        try {
+          appendLine(`[${now()}] Logging in...`, "dim");
+          await doLogin();
+        } catch (e) {
+          appendLine(`[${now()}] Login failed: ${e.message}`, "err");
+        }
+      });
+
+      $("btnWhoami").addEventListener("click", async () => {
+        try {
+          await whoami();
+        } catch (e) {
+          appendLine(`[${now()}] /me failed: ${e.message}`, "err");
+        }
+      });
+
+      $("btnRefreshLists").addEventListener("click", async () => {
+        try {
+          await refreshLists();
+        } catch (e) {
+          appendLine(`[${now()}] Refresh failed: ${e.message}`, "err");
+        }
+      });
+
+      $("btnStart").addEventListener("click", async () => {
+        try {
+          await startAdventure();
+        } catch (e) {
+          appendLine(`[${now()}] Start failed: ${e.message}`, "err");
+        }
+      });
+
+      $("btnRestart").addEventListener("click", async () => {
+        try {
+          await startAdventure({ reuseChar: true });
+        } catch (e) {
+          appendLine(`[${now()}] Restart failed: ${e.message}`, "err");
+        }
+      });
+
+      $("btnGetState").addEventListener("click", async () => {
+        try {
+          await getState();
+        } catch (e) {
+          appendLine(`[${now()}] Get state failed: ${e.message}`, "err");
+        }
+      });
+
+      $("btnHelp").addEventListener("click", () => showHelp());
+
+      $("btnClear").addEventListener("click", () => {
+        elTerm.innerHTML = "";
+        appendLine(`[${now()}] Cleared.`, "dim");
+      });
+
+      $("btnLogout").addEventListener("click", () => {
+        clearState();
+        updateStatusLine();
+        appendLine(`[${now()}] Logged out (token cleared).`, "sys");
+      });
+
+      $("btnSend").addEventListener("click", async () => {
+        const cmd = $("command").value.trim();
+        if (!cmd) return;
+        $("command").value = "";
+        try {
+          await stepAdventure(cmd);
+        } catch (e) {
+          appendLine(`[${now()}] Step failed: ${e.message}`, "err");
+        }
+      });
+
+      $("command").addEventListener("keydown", async (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          $("btnSend").click();
+        }
+      });
+
+      // Bootstrap
+      (function init() {
+        const st = loadState();
+        $("apiBase").value = st.apiBase || "http://localhost:8000";
+        updateStatusLine();
+        appendLine(`[${now()}] Ready. Login, select a character, click Start Adventure.`, "sys");
+        showHelp();
+      })();
+
+      // Persist apiBase changes
+      $("apiBase").addEventListener("change", () => {
+        saveState({ apiBase: $("apiBase").value.trim() });
+        updateStatusLine();
+      });
+    </script>
+  </body>
+</html>
+
+

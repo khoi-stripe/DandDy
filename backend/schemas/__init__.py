@@ -18,6 +18,13 @@ from .character_collaborator import (
     SharedCharacterInfo, CollaboratorPermission
 )
 from .app_config import ThemeConfig, ThemeConfigResponse, ThemeSectionConfig, AppConfigResponse
+from .adventure import (
+    AdventureStartRequest,
+    AdventureStepRequest,
+    AdventureStartResponse,
+    AdventureStepResponse,
+    AdventureGetResponse,
+)
 
 __all__ = [
     "UserCreate", "UserLogin", "UserResponse", "Token", "TokenData",
@@ -32,6 +39,12 @@ __all__ = [
     "CollaboratorCreate", "CollaboratorResponse", "CollaboratorUpdate", 
     "SharedCharacterInfo", "CollaboratorPermission",
     "ThemeConfig", "ThemeConfigResponse", "ThemeSectionConfig", "AppConfigResponse"
+    ,
+    "AdventureStartRequest",
+    "AdventureStepRequest",
+    "AdventureStartResponse",
+    "AdventureStepResponse",
+    "AdventureGetResponse",
 ]
 
 

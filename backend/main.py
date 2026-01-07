@@ -23,8 +23,9 @@ from database.database import (
     ensure_journal_visibility_column,
     ensure_app_config_table,
     ensure_core_indexes,
+    ensure_adventure_tables,
 )
-from routes import auth, characters, campaigns, sessions, journal, ai, users, prompt_entries, shares, app_config
+from routes import auth, characters, campaigns, sessions, journal, ai, users, prompt_entries, shares, app_config, adventure
 import os
 from dotenv import load_dotenv
 
@@ -50,6 +51,7 @@ ensure_campaign_member_status_column()
 ensure_journal_visibility_column()
 ensure_app_config_table()
 ensure_core_indexes()
+ensure_adventure_tables()
 
 # Debug: Log current settings on startup
 settings = get_settings()
@@ -114,6 +116,7 @@ app.include_router(ai.router, prefix="/api/ai")
 app.include_router(prompt_entries.router, prefix="/api")
 app.include_router(shares.router, prefix="/api")
 app.include_router(app_config.router, prefix="/api")
+app.include_router(adventure.router, prefix="/api")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
