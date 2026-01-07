@@ -28,6 +28,13 @@ from schemas.adventure import (
 from utils.auth import get_current_active_user
 from utils.narration_provider import get_narration_provider
 
+# Module support
+try:
+    from data.modules import get_module
+except ImportError:
+    def get_module(name: str):
+        return None
+
 router = APIRouter(prefix="/adventure", tags=["adventure"])
 
 
@@ -182,12 +189,23 @@ def _apply_leveling(character: Character) -> None:
 
 
 def _state_summary(adventure: AdventureRun, state: dict) -> AdventureStateSummary:
+    module_id = state.get("module")
+    area_name = None
+    if module_id:
+        module_data = get_module(module_id)
+        if module_data:
+            pos = str(state.get("pos") or "exterior")
+            area = module_data.get("areas", {}).get(pos, {})
+            area_name = area.get("name")
+    
     return AdventureStateSummary(
         adventure_id=adventure.id,
         character_id=adventure.character_id,
         campaign_id=adventure.campaign_id,
         seed=str(state.get("seed") or adventure.seed),
         position=str(state.get("pos") or "0,0"),
+        area_name=area_name,
+        module=module_id,
         hp=int(state.get("hp") or 0),
         hp_max=int(state.get("hp_max") or 0),
         xp=int(state.get("xp") or 0),
@@ -254,6 +272,102 @@ def start_adventure(
             )
 
     seed = (req.seed or "").strip() or uuid4().hex
+    module_id = (req.module or "").strip() or None
+    module_data = get_module(module_id) if module_id else None
+
+    # Module-based adventure
+    if module_data:
+        start_pos = module_data.get("starting_area", "exterior")
+        area = module_data.get("areas", {}).get(start_pos, {})
+        
+        state = {
+            "seed": seed,
+            "module": module_id,
+            "pos": start_pos,
+            "discovered": [start_pos],
+            "taken": [],
+            "inventory": [],
+            "defeated_monsters": [],
+            "opened_containers": [],
+            "hp": int(character.hit_points_current or 0),
+            "hp_max": int(character.hit_points_max or 0),
+            "xp": int(character.experience_points or 0),
+            "level": int(character.level or 1),
+            "theme": module_data.get("theme"),
+        }
+
+        adventure = AdventureRun(
+            owner_id=current_user.id,
+            campaign_id=campaign_id,
+            character_id=character.id,
+            seed=seed,
+            state_json=_dump_state(state),
+        )
+        db.add(adventure)
+        db.commit()
+        db.refresh(adventure)
+
+        area_name = area.get("name", start_pos)
+        area_desc = area.get("description", "You find yourself in an unfamiliar place.")
+        exits = list(area.get("exits", {}).keys())
+        items = area.get("items", [])
+        monsters = area.get("monsters", [])
+
+        system_prompt = (
+            f"You are a D&D dungeon master running '{module_data.get('name', 'an adventure')}'. "
+            f"Setting: {module_data.get('description', '')} "
+            "Be atmospheric and evocative - this is science fantasy horror. "
+            "Never invent stat changes; the backend handles mechanics. "
+            "Return ONLY JSON with keys: narration (string), suggested_actions (string array)."
+        )
+        
+        monster_info = ""
+        if monsters:
+            monster_names = [module_data.get("monsters", {}).get(m, {}).get("name", m) for m in monsters]
+            monster_info = f"\nDANGER: {', '.join(monster_names)} may be present here."
+        
+        user_prompt = (
+            f"NEW ADVENTURE START - {module_data.get('name', 'Adventure')}\n"
+            f"Background: {module_data.get('background', '')[:500]}\n\n"
+            f"Character: {character.name} (level {state['level']} {character.race} {character.character_class})\n"
+            f"HP: {state['hp']}/{state['hp_max']}, XP: {state['xp']}\n\n"
+            f"LOCATION: {area_name}\n"
+            f"{area_desc}\n"
+            f"{monster_info}\n"
+            f"Available exits: {exits}\n"
+            f"Items visible: {items if items else 'none obvious'}\n\n"
+            f"Present the scene dramatically. Suggest 4-6 actions the player could take.\n"
+        )
+
+        narration = f"**{area_name}**\n\n{area_desc}"
+        suggested_actions = exits[:4] + ["look", "inventory"]
+        
+        try:
+            provider = get_narration_provider()
+            res = provider.narrate_json(system_prompt=system_prompt, user_prompt=user_prompt)
+            narration = res.narration or narration
+            suggested_actions = res.suggested_actions or suggested_actions
+        except Exception:
+            pass
+
+        turn = AdventureTurn(
+            adventure_id=adventure.id,
+            turn_index=0,
+            player_action="start",
+            dm_text=narration,
+            created_at=datetime.utcnow(),
+        )
+        db.add(turn)
+        db.commit()
+
+        return AdventureStartResponse(
+            adventure_id=adventure.id,
+            state_summary=_state_summary(adventure, state),
+            narration=narration,
+            suggested_actions=suggested_actions,
+        )
+
+    # Procedural maze adventure (original behavior)
     w, h = 5, 5
     neighbors = _maze_neighbors(seed, w, h)
 
@@ -345,6 +459,227 @@ def start_adventure(
     )
 
 
+def _handle_module_step(
+    adventure: AdventureRun,
+    character: Character,
+    state: dict,
+    action_text: str,
+    next_turn_index: int,
+    current_user: User,
+) -> tuple[str, list[AdventureEvent], dict]:
+    """Handle a step in a module-based adventure. Returns (result_line, events, updated_state)."""
+    module_id = state.get("module")
+    module_data = get_module(module_id)
+    if not module_data:
+        return "Module data not found.", [], state
+
+    pos = str(state.get("pos") or "exterior")
+    area = module_data.get("areas", {}).get(pos, {})
+    seed = str(state.get("seed") or adventure.seed)
+    
+    inventory: list[str] = list(state.get("inventory") or [])
+    discovered: list[str] = list(state.get("discovered") or [])
+    taken: list[str] = list(state.get("taken") or [])
+    defeated_monsters: list[str] = list(state.get("defeated_monsters") or [])
+    opened_containers: list[str] = list(state.get("opened_containers") or [])
+
+    hp = int(state.get("hp") or character.hit_points_current or 0)
+    hp_max = int(state.get("hp_max") or character.hit_points_max or 0)
+    xp = int(state.get("xp") or character.experience_points or 0)
+
+    events: list[AdventureEvent] = []
+    result_line = ""
+    rng = _seeded_rng(seed, f"turn:{next_turn_index}:{pos}")
+
+    raw_action = action_text.strip().lower()
+    exits = area.get("exits", {})
+    area_items = area.get("items", [])
+    area_monsters = area.get("monsters", [])
+
+    # Check for exit commands (module exits are like "enter hole", "climb balcony", etc.)
+    matched_exit = None
+    for exit_name, target_area in exits.items():
+        if raw_action == exit_name.lower() or raw_action in exit_name.lower().split():
+            matched_exit = (exit_name, target_area)
+            break
+    
+    # Also handle cardinal directions as aliases
+    cardinal_aliases = {
+        "n": "north", "s": "south", "e": "east", "w": "west",
+        "u": "up", "d": "down", "out": "out", "back": "back",
+    }
+    if raw_action in cardinal_aliases:
+        raw_action = cardinal_aliases[raw_action]
+    
+    if not matched_exit:
+        for exit_name, target_area in exits.items():
+            if raw_action == exit_name.lower():
+                matched_exit = (exit_name, target_area)
+                break
+
+    if matched_exit:
+        exit_name, target_area = matched_exit
+        new_area = module_data.get("areas", {}).get(target_area, {})
+        if new_area:
+            pos = target_area
+            if pos not in discovered:
+                discovered.append(pos)
+                gained = 50  # More XP for module exploration
+                xp += gained
+                events.append(AdventureEvent(kind="xp_gained", data={"amount": gained, "reason": "exploration"}))
+            result_line = f"You {exit_name}. You are now in {new_area.get('name', target_area)}."
+        else:
+            result_line = f"You try to go that way, but something blocks you."
+
+    elif raw_action in ("look", "l", "examine"):
+        area_desc = area.get("description", "You see nothing special.")
+        monsters_here = [m for m in area_monsters if f"{pos}:{m}" not in defeated_monsters]
+        items_here = [i for i in area_items if f"{pos}:{i}" not in taken]
+        
+        result_line = f"**{area.get('name', pos)}**\n{area_desc}"
+        if monsters_here:
+            monster_names = [module_data.get("monsters", {}).get(m, {}).get("name", m) for m in monsters_here]
+            result_line += f"\n\n⚠️ DANGER: {', '.join(monster_names)}"
+        if items_here:
+            item_names = [module_data.get("items", {}).get(i, {}).get("name", i) for i in items_here]
+            result_line += f"\n\nYou notice: {', '.join(item_names)}"
+
+    elif raw_action in ("inventory", "inv", "i"):
+        if inventory:
+            result_line = "You are carrying: " + ", ".join(inventory) + "."
+        else:
+            result_line = "Your pack is empty."
+
+    elif raw_action.startswith("take "):
+        wanted = raw_action[5:].strip()
+        items_here = [i for i in area_items if f"{pos}:{i}" not in taken]
+        
+        # Try to match by item key or item name
+        matched_item = None
+        for item_key in items_here:
+            item_data = module_data.get("items", {}).get(item_key, {})
+            item_name = item_data.get("name", item_key).lower()
+            if wanted in item_key.lower() or wanted in item_name:
+                matched_item = (item_key, item_data)
+                break
+        
+        if not wanted:
+            result_line = "Take what?"
+        elif not items_here:
+            result_line = "There's nothing obvious here to take."
+        elif not matched_item:
+            result_line = f"You don't see '{wanted}' here."
+        else:
+            item_key, item_data = matched_item
+            taken.append(f"{pos}:{item_key}")
+            item_name = item_data.get("name", item_key)
+            inventory.append(item_name)
+            gained = 25
+            xp += gained
+            events.append(AdventureEvent(kind="item_taken", data={"item": item_name}))
+            events.append(AdventureEvent(kind="xp_gained", data={"amount": gained, "reason": "loot"}))
+            result_line = f"You take the {item_name}."
+            if item_data.get("description"):
+                result_line += f" {item_data['description']}"
+
+    elif raw_action in ("rest", "sleep"):
+        heal = rng.randint(1, 6) + max(0, _ability_mod(int(character.constitution or 10)))
+        old = hp
+        hp = min(hp_max, hp + max(1, heal))
+        events.append(AdventureEvent(kind="rest", data={"healed": hp - old}))
+        result_line = f"You rest cautiously. (+{hp-old} HP)"
+
+    elif raw_action in ("attack", "fight", "hit"):
+        monsters_here = [m for m in area_monsters if f"{pos}:{m}" not in defeated_monsters]
+        if not monsters_here:
+            result_line = "There's nothing here to attack."
+        else:
+            monster_key = monsters_here[0]
+            monster_data = module_data.get("monsters", {}).get(monster_key, {})
+            monster_name = monster_data.get("name", monster_key)
+            monster_ac = monster_data.get("ac", 10)
+            monster_hp = monster_data.get("hp", 20)
+            monster_damage = monster_data.get("damage", "1d6")
+            monster_xp = monster_data.get("xp", 100)
+
+            # Simple combat: player attacks, monster retaliates
+            to_hit = rng.randint(1, 20) + max(0, _ability_mod(int(character.strength or 10)))
+            player_damage = rng.randint(1, 8) + max(0, _ability_mod(int(character.strength or 10)))
+            
+            if to_hit >= monster_ac:
+                # Hit! For simplicity, track accumulated damage in state
+                monster_damage_taken = state.get(f"monster_damage:{pos}:{monster_key}", 0) + player_damage
+                state[f"monster_damage:{pos}:{monster_key}"] = monster_damage_taken
+                
+                if monster_damage_taken >= monster_hp:
+                    defeated_monsters.append(f"{pos}:{monster_key}")
+                    xp += monster_xp
+                    events.append(AdventureEvent(kind="monster_defeated", data={"monster": monster_name}))
+                    events.append(AdventureEvent(kind="xp_gained", data={"amount": monster_xp, "reason": "combat"}))
+                    result_line = f"You strike the {monster_name} for {player_damage} damage! It falls! (+{monster_xp} XP)"
+                else:
+                    result_line = f"You hit the {monster_name} for {player_damage} damage! It's wounded but still fighting."
+            else:
+                result_line = f"Your attack misses the {monster_name}!"
+
+            # Monster retaliates if still alive
+            if f"{pos}:{monster_key}" not in defeated_monsters:
+                monster_to_hit = rng.randint(1, 20)
+                player_ac = int(character.armor_class or 10)
+                if monster_to_hit >= player_ac:
+                    # Parse monster damage (simplified)
+                    dmg = rng.randint(1, 8)
+                    if "poison" in str(monster_data.get("special", [])).lower():
+                        # Poison damage
+                        poison_save = rng.randint(1, 20) + max(0, _ability_mod(int(character.constitution or 10)))
+                        if poison_save < 15:
+                            dmg += rng.randint(1, 6)
+                            result_line += f" The {monster_name} strikes back with its poisonous attack!"
+                    hp = max(0, hp - dmg)
+                    events.append(AdventureEvent(kind="damage", data={"amount": dmg, "source": monster_name}))
+                    result_line += f" You take {dmg} damage!"
+
+    elif raw_action.startswith("use "):
+        item_name = raw_action[4:].strip()
+        match = next((i for i in inventory if item_name in i.lower()), None)
+        if not match:
+            result_line = f"You don't have '{item_name}'."
+        elif "potion" in match.lower() or "healing" in match.lower():
+            heal = rng.randint(4, 10)
+            old = hp
+            hp = min(hp_max, hp + heal)
+            inventory.remove(match)
+            events.append(AdventureEvent(kind="healed", data={"amount": hp - old}))
+            result_line = f"You use the {match}. (+{hp-old} HP)"
+        elif "oil" in match.lower():
+            result_line = f"You apply the {match}. You feel slippery and hard to grapple."
+        else:
+            result_line = f"You examine the {match}. It might be useful somewhere specific."
+
+    elif raw_action.startswith("open "):
+        container = raw_action[5:].strip()
+        result_line = f"You try to open {container}. It may require a key or special action."
+
+    else:
+        # Freeform / unknown
+        result_line = f'You attempt: "{action_text}". The ancient machine offers no response.'
+
+    # Update state
+    state.update({
+        "pos": pos,
+        "inventory": inventory,
+        "discovered": discovered,
+        "taken": taken,
+        "defeated_monsters": defeated_monsters,
+        "opened_containers": opened_containers,
+        "hp": int(hp),
+        "hp_max": int(hp_max),
+        "xp": int(xp),
+    })
+
+    return result_line, events, state
+
+
 @router.post("/{adventure_id}/step", response_model=AdventureStepResponse)
 def step_adventure(
     adventure_id: int,
@@ -359,6 +694,115 @@ def step_adventure(
     character = _require_editable_character(db, character_id=adventure.character_id, user=current_user)
     state = _load_state(adventure)
 
+    # Determine next turn index
+    last_turn = (
+        db.query(AdventureTurn)
+        .filter(AdventureTurn.adventure_id == adventure.id)
+        .order_by(AdventureTurn.turn_index.desc())
+        .first()
+    )
+    next_turn_index = int(last_turn.turn_index + 1) if last_turn else 1
+
+    # Check if this is a module-based adventure
+    module_id = state.get("module")
+    if module_id:
+        module_data = get_module(module_id)
+        result_line, events, state = _handle_module_step(
+            adventure, character, state, req.action_text, next_turn_index, current_user
+        )
+        
+        pos = state.get("pos", "exterior")
+        area = module_data.get("areas", {}).get(pos, {}) if module_data else {}
+        exits = list(area.get("exits", {}).keys())
+        area_monsters = area.get("monsters", [])
+        defeated_monsters = state.get("defeated_monsters", [])
+        monsters_here = [m for m in area_monsters if f"{pos}:{m}" not in defeated_monsters]
+
+        # Apply changes to character
+        character.hit_points_current = int(state.get("hp", 0))
+        character.experience_points = int(state.get("xp", 0))
+        _apply_leveling(character)
+        state["level"] = int(character.level)
+        character.last_updated_by_id = current_user.id
+
+        adventure.state_json = _dump_state(state)
+        adventure.updated_at = datetime.utcnow()
+
+        # Build module-aware prompt
+        recent_turns = (
+            db.query(AdventureTurn)
+            .filter(AdventureTurn.adventure_id == adventure.id)
+            .order_by(AdventureTurn.turn_index.desc())
+            .limit(3)
+            .all()
+        )
+        recent_turns_text = "\n".join(
+            [f"- [{t.turn_index}] {t.player_action} -> {t.dm_text[:100]}" for t in reversed(recent_turns)]
+        )
+
+        monster_info = ""
+        if monsters_here and module_data:
+            monster_descs = []
+            for m in monsters_here:
+                md = module_data.get("monsters", {}).get(m, {})
+                monster_descs.append(f"{md.get('name', m)}: {md.get('description', '')[:100]}")
+            monster_info = "\nMONSTERS PRESENT:\n" + "\n".join(monster_descs)
+
+        system_prompt = (
+            f"You are a D&D dungeon master running '{module_data.get('name', 'an adventure')}' - a science fantasy horror module. "
+            "Be atmospheric, evocative, and slightly ominous. Describe the environment vividly. "
+            "Never invent stat changes; the backend handles all mechanics. "
+            "Return ONLY JSON with keys: narration (string), suggested_actions (string array)."
+        )
+        user_prompt = (
+            f"ADVENTURE STEP\n"
+            f"Character: {character.name} (level {character.level} {character.race} {character.character_class})\n"
+            f"HP: {state['hp']}/{state['hp_max']}, XP: {state['xp']}\n"
+            f"LOCATION: {area.get('name', pos)}\n"
+            f"{area.get('description', '')[:600]}\n"
+            f"{monster_info}\n"
+            f"Available exits: {exits}\n"
+            f"Inventory: {state.get('inventory', [])}\n"
+            f"RecentTurns:\n{recent_turns_text}\n"
+            f"PlayerAction: {req.action_text}\n"
+            f"Result: {result_line}\n"
+            f"Narrate the result dramatically. Suggest 4-6 concrete actions.\n"
+        )
+
+        narration = result_line
+        suggested_actions = exits[:4] + ["look", "inventory"]
+        if monsters_here:
+            suggested_actions.insert(0, "attack")
+        
+        try:
+            provider = get_narration_provider()
+            res = provider.narrate_json(system_prompt=system_prompt, user_prompt=user_prompt)
+            narration = res.narration or narration
+            suggested_actions = res.suggested_actions or suggested_actions
+        except Exception:
+            pass
+
+        turn = AdventureTurn(
+            adventure_id=adventure.id,
+            turn_index=next_turn_index,
+            player_action=req.action_text.strip(),
+            dm_text=narration,
+            created_at=datetime.utcnow(),
+        )
+        db.add(turn)
+        db.add(character)
+        db.add(adventure)
+        db.commit()
+
+        return AdventureStepResponse(
+            adventure_id=adventure.id,
+            state_summary=_state_summary(adventure, state),
+            narration=narration,
+            suggested_actions=suggested_actions,
+            events=events,
+        )
+
+    # Original procedural maze logic
     seed = str(state.get("seed") or adventure.seed)
     w = int(state.get("w") or 5)
     h = int(state.get("h") or 5)
@@ -378,15 +822,6 @@ def step_adventure(
     action_kind, action_arg = _parse_action(req.action_text)
     events: list[AdventureEvent] = []
     result_line = ""
-
-    # Determine next turn index
-    last_turn = (
-        db.query(AdventureTurn)
-        .filter(AdventureTurn.adventure_id == adventure.id)
-        .order_by(AdventureTurn.turn_index.desc())
-        .first()
-    )
-    next_turn_index = int(last_turn.turn_index + 1) if last_turn else 1
 
     rng = _seeded_rng(seed, f"turn:{next_turn_index}:{pos}")
 
@@ -493,7 +928,7 @@ def step_adventure(
         # Freeform talk / unknown command
         result_line = f'You say: "{action_arg}". The dungeon does not reply.'
 
-    # Apply XP/HP back to character + adventure state (simple “commit now” behavior)
+    # Apply XP/HP back to character + adventure state (simple "commit now" behavior)
     character.hit_points_current = int(hp)
     character.experience_points = int(xp)
     _apply_leveling(character)
@@ -580,6 +1015,25 @@ def step_adventure(
         suggested_actions=suggested_actions,
         events=events,
     )
+
+
+@router.get("/modules", response_model=list[dict])
+def list_modules():
+    """List available adventure modules."""
+    try:
+        from data.modules import MODULES
+        return [
+            {
+                "id": mod_id,
+                "name": mod.get("name", mod_id),
+                "description": mod.get("description", ""),
+                "level_range": mod.get("level_range", "Any"),
+                "theme": mod.get("theme", "fantasy"),
+            }
+            for mod_id, mod in MODULES.items()
+        ]
+    except ImportError:
+        return []
 
 
 @router.get("/{adventure_id}", response_model=AdventureGetResponse)

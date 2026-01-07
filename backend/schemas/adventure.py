@@ -11,6 +11,7 @@ class AdventureStartRequest(BaseModel):
     character_id: int
     seed: Optional[str] = None
     theme: Optional[str] = Field(None, max_length=100)
+    module: Optional[str] = Field(None, max_length=100, description="Adventure module ID (e.g., 'red_demon')")
 
 
 class AdventureStepRequest(BaseModel):
@@ -23,6 +24,8 @@ class AdventureStateSummary(BaseModel):
     campaign_id: Optional[int] = None
     seed: str
     position: str
+    area_name: Optional[str] = None  # Human-readable area name for modules
+    module: Optional[str] = None  # Module ID if using a module
     hp: int
     hp_max: int
     xp: int

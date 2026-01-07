@@ -171,8 +171,10 @@
             </div>
             <div class="row cols2">
               <div>
-                <label>Theme (optional)</label>
-                <input id="theme" placeholder="e.g., haunted library" />
+                <label>Adventure Module</label>
+                <select id="moduleSelect">
+                  <option value="">(Procedural Maze)</option>
+                </select>
               </div>
               <div>
                 <label>Seed (optional)</label>
@@ -316,9 +318,10 @@
       }
 
       async function refreshLists() {
-        const [campaigns, characters] = await Promise.all([
+        const [campaigns, characters, modules] = await Promise.all([
           apiFetch("/api/campaigns", { method: "GET" }),
           apiFetch("/api/characters/lite", { method: "GET" }),
+          apiFetch("/api/adventure/modules", { method: "GET" }).catch(() => []),
         ]);
         renderSelect($("campaignSelect"), campaigns, {
           includeNone: true,
@@ -330,13 +333,22 @@
           getValue: (c) => c.id,
           getLabel: (c) => `${c.name} (L${c.level} ${c.race} ${c.character_class})`,
         });
-        appendLine(`[${now()}] Refreshed campaigns/characters.`, "dim");
+        // Modules
+        const modSelect = $("moduleSelect");
+        modSelect.innerHTML = '<option value="">(Procedural Maze)</option>';
+        for (const mod of modules) {
+          const opt = document.createElement("option");
+          opt.value = mod.id;
+          opt.textContent = `${mod.name} (${mod.level_range})`;
+          modSelect.appendChild(opt);
+        }
+        appendLine(`[${now()}] Refreshed campaigns/characters/modules.`, "dim");
       }
 
       async function startAdventure({ reuseChar = false } = {}) {
         const campaignId = $("campaignSelect").value ? Number($("campaignSelect").value) : null;
         const characterId = Number($("characterSelect").value);
-        const theme = $("theme").value.trim() || null;
+        const moduleId = $("moduleSelect").value || null;
         const seed = $("seed").value.trim() || null;
         if (!characterId) throw new Error("Select a character first");
 
@@ -345,12 +357,17 @@
           body: JSON.stringify({
             campaign_id: campaignId,
             character_id: characterId,
-            theme,
+            module: moduleId,
             seed,
           }),
         });
-        saveState({ adventureId: body.adventure_id, characterId, campaignId });
-        appendLine(`\n[${now()}] --- ADVENTURE #${body.adventure_id} STARTED ---`, "sys");
+        saveState({ adventureId: body.adventure_id, characterId, campaignId, moduleId });
+        
+        const modLabel = moduleId ? `[${moduleId}] ` : "";
+        appendLine(`\n[${now()}] --- ${modLabel}ADVENTURE #${body.adventure_id} STARTED ---`, "sys");
+        if (body.state_summary.area_name) {
+          appendLine(`📍 ${body.state_summary.area_name}`, "sys");
+        }
         appendLine(body.narration || "(no narration)");
         if (body.suggested_actions && body.suggested_actions.length) {
           appendLine(`Suggestions: ${body.suggested_actions.join(" | ")}`, "dim");
@@ -370,10 +387,14 @@
           body: JSON.stringify({ action_text: actionText }),
         });
         appendLine(`\n> ${actionText}`, "sys");
+        if (body.state_summary.area_name) {
+          appendLine(`📍 ${body.state_summary.area_name}`, "sys");
+        }
         appendLine(body.narration || "(no narration)");
         if (body.events && body.events.length) {
           for (const ev of body.events) {
-            appendLine(`Event: ${ev.kind} ${JSON.stringify(ev.data || {})}`, "dim");
+            const emoji = ev.kind === "xp_gained" ? "⭐" : ev.kind === "damage" ? "💥" : ev.kind === "healed" ? "💚" : ev.kind === "monster_defeated" ? "💀" : "📋";
+            appendLine(`${emoji} ${ev.kind}: ${JSON.stringify(ev.data || {})}`, "dim");
           }
         }
         if (body.suggested_actions && body.suggested_actions.length) {
@@ -403,7 +424,10 @@
       }
 
       function showHelp() {
-        appendLine(`[${now()}] Commands: look, north/south/east/west (or n/s/e/w), take <item>, use <item>, inventory, rest, attack`, "sys");
+        appendLine(`[${now()}] Commands:`, "sys");
+        appendLine(`  Movement: north/south/east/west (n/s/e/w), up/down (u/d)`, "dim");
+        appendLine(`  Modules: Use exit names shown (e.g., "enter hole", "climb balcony")`, "dim");
+        appendLine(`  Actions: look, take <item>, use <item>, inventory (i), rest, attack`, "dim");
       }
 
       // Wire UI
