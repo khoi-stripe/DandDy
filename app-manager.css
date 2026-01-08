@@ -4653,6 +4653,22 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
         display: none;
     }
     
+    /* Make search-actions fill remaining space so button group is full width */
+    .search-actions {
+        flex: 1;
+    }
+    
+    /* Make sort selector fill remaining space in search-actions */
+    .sort-trigger-wrap {
+        flex: 1;
+        display: flex;
+    }
+    
+    .sort-trigger-wrap .selector-trigger {
+        flex: 1;
+        width: 100%;
+    }
+    
     /* Always show clear button when search is expanded (acts as close) */
     .search-bar.is-search-expanded .search-clear-btn.is-hidden {
         display: block !important;
