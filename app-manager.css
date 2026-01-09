@@ -2303,9 +2303,25 @@ div.sheet__sidebar.ui-theme-pink {
     padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-md) var(--spacing-xl);
     /* Negative margins to counteract panel padding so we go edge-to-edge */
     margin: 0 calc(-1 * var(--spacing-xl)) 0 calc(-1 * var(--spacing-xl));
-    /* Force GPU compositing layer to prevent content bleeding through during fast scroll */
-    transform: translateZ(0);
+    /* Safari fix: use will-change instead of transform to avoid z-index stacking bugs */
+    will-change: transform;
+    /* Safari-specific: force compositing layer without transform */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    /* Isolation creates stacking context for pseudo-element */
     isolation: isolate;
+}
+
+/* Safari sticky z-index fix: opaque backdrop pseudo-element */
+.controls-section::before,
+.grid__controls::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-color: inherit;
+    z-index: -1;
+    /* Extend slightly below to prevent sub-pixel gaps during scroll */
+    bottom: -1px;
 }
 
 /* Session in progress notice */
