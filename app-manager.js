@@ -930,6 +930,9 @@ const CharacterNavBar = (window.CharacterNavBar = {
 // Handles the expanded character sheet view with campaign panel
 
 const ExpandedView = (window.ExpandedView = {
+    /** Request ID for campaign panel loading (prevents race conditions) */
+    _campaignLoadRequestId: 0,
+    
     /** Check if expanded view is currently active */
     isExpanded() {
         return PanelManager.getCurrentView() === 'sheet-campaign';
@@ -1131,6 +1134,10 @@ const ExpandedView = (window.ExpandedView = {
 
     /** Load campaign panel content for the current character */
     async _loadCampaignPanel() {
+        // Increment request ID to track this specific load request
+        // This prevents race conditions when multiple loads are triggered
+        const requestId = ++this._campaignLoadRequestId;
+        
         // Target the sidebar__content inside sheet__sidebar
         const panel = document.querySelector('.sidebar__content') || document.querySelector('.sheet__sidebar') || document.getElementById('campaignPanel');
         if (!panel) {
@@ -1168,6 +1175,11 @@ const ExpandedView = (window.ExpandedView = {
         if (!campaignId) {
             try {
                 campaignDataFromMembership = await CampaignUI.getCharacterCampaign(characterId);
+                // Check if a newer request was started - if so, abort this one
+                if (requestId !== this._campaignLoadRequestId) {
+                    console.log('📋 Campaign load aborted (newer request in progress)');
+                    return;
+                }
                 if (campaignDataFromMembership) {
                     campaignId = campaignDataFromMembership.campaign.id;
                     console.log('📋 Found campaign via membership lookup:', campaignId);
@@ -1188,6 +1200,11 @@ const ExpandedView = (window.ExpandedView = {
                     CampaignAPI.getPendingInvitations().catch(() => []),
                     CampaignUI.fetchPastCampaignsCount().catch(() => 0)
                 ]);
+                // Check if a newer request was started
+                if (requestId !== this._campaignLoadRequestId) {
+                    console.log('📋 Campaign load aborted (newer request in progress)');
+                    return;
+                }
                 pendingCount = invitations?.length || 0;
                 pastCampaignsCount = pastCount || 0;
             } catch (e) {
@@ -1234,11 +1251,21 @@ const ExpandedView = (window.ExpandedView = {
                     CampaignUI.fetchPastCampaignsCount().catch(() => 0),
                     isCreator ? CampaignAPI.getCampaignPendingInvitations(campaignId).catch(() => []) : Promise.resolve([])
                 ]);
+                // Check if a newer request was started
+                if (requestId !== this._campaignLoadRequestId) {
+                    console.log('📋 Campaign load aborted (newer request in progress)');
+                    return;
+                }
                 journalEntries = entries;
                 pendingInvites = invites;
             } else {
                 // Fetch campaign details first to check if creator
                 const campaign = await CampaignAPI.getCampaign(campaignId);
+                // Check if a newer request was started
+                if (requestId !== this._campaignLoadRequestId) {
+                    console.log('📋 Campaign load aborted (newer request in progress)');
+                    return;
+                }
                 const isCreator = campaign.dm_id === currentUserId;
                 
                 // Fetch members, journal entries, past campaigns count, and pending invites in parallel
@@ -1251,6 +1278,11 @@ const ExpandedView = (window.ExpandedView = {
                     CampaignUI.fetchPastCampaignsCount().catch(() => 0),
                     isCreator ? CampaignAPI.getCampaignPendingInvitations(campaignId).catch(() => []) : Promise.resolve([])
                 ]);
+                // Check if a newer request was started
+                if (requestId !== this._campaignLoadRequestId) {
+                    console.log('📋 Campaign load aborted (newer request in progress)');
+                    return;
+                }
                 campaignData = { campaign, members };
                 journalEntries = entries;
                 pendingInvites = invites;
@@ -1264,8 +1296,10 @@ const ExpandedView = (window.ExpandedView = {
             
         } catch (error) {
             console.error('Failed to load campaign:', error);
-            // Show empty state on error
-            panel.innerHTML = this._renderCampaignPanelContent(characterId, null);
+            // Only show error state if this is still the current request
+            if (requestId === this._campaignLoadRequestId) {
+                panel.innerHTML = this._renderCampaignPanelContent(characterId, null);
+            }
         }
         
         // Also refresh mobile campaign section if on mobile
@@ -1362,20 +1396,12 @@ const ExpandedView = (window.ExpandedView = {
     /** Render the Campaign Area section (top) */
     _renderCampaignArea(characterId, campaignData, pendingInvitationCount = 0, pastCampaignsCount = 0, journalHtml = '') {
         if (!campaignData) {
-            // No campaign - show join/create buttons inline with header
-            const hasInvitations = pendingInvitationCount > 0;
-            const statusText = hasInvitations 
-                ? `[${pendingInvitationCount}] campaign${pendingInvitationCount === 1 ? '' : 's'} available`
-                : 'No active campaign.';
-            
+            // No campaign - show create button only
             return `
                 <div class="campaign-area">
                     <div class="campaign-area-header campaign-area-header--no-campaign">
-                        <h3 class="campaign-area-title">[ Campaign ] <span class="campaign-status-inline">${statusText}</span></h3>
-                        <div class="campaign-area-actions">
-                            <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openJoinModal()">
-                                JOIN
-                            </button>
+                        <h3 class="campaign-area-title">[ Campaign ] <span class="campaign-status-inline">No active campaign.</span></h3>
+                        <div class="campaign-area-actions campaign-area-actions--single">
                             <button class="terminal-btn terminal-btn-small" onclick="CampaignUI.openCreateModal()">
                                 CREATE
                             </button>

@@ -788,6 +788,15 @@ div.sheet__sidebar.ui-theme-pink {
     margin-top: 0;
 }
 
+/* Single action (create only) - full width button */
+.campaign-area-actions--single {
+    flex-direction: column;
+}
+
+.campaign-area-actions--single .terminal-btn {
+    width: 100%;
+}
+
 /* Bottom margin for no-campaign header */
 .campaign-area-header--no-campaign {
     margin-bottom: 32px;

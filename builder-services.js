@@ -381,27 +381,10 @@ const StorageService = (window.StorageService = {
       if (!raw) return fallback;
       const value = String(raw).trim();
 
-      // If the shared PortraitPrompt helper is available, validate against it
-      // so we gracefully fall back when themes change.
-      if (
-        typeof window !== 'undefined' &&
-        window.PortraitPrompt &&
-        typeof window.PortraitPrompt.getThemes === 'function'
-      ) {
-        try {
-          const themes = window.PortraitPrompt.getThemes();
-          const allowedIds = Array.isArray(themes)
-            ? themes.map((t) => t.id)
-            : [];
-          if (allowedIds.includes(value)) {
-            return value;
-          }
-          return fallback;
-        } catch (e) {
-          // Non-fatal – fall through to returning the raw value.
-        }
-      }
-
+      // Return the stored value directly - don't validate against themes list here.
+      // The themes list may not include custom/shared themes if the admin cache
+      // hasn't loaded yet (race condition on page load). Validation happens at
+      // usage time when themes are actually needed.
       return value || fallback;
     } catch (e) {
       console.warn('StorageService.getPortraitPromptTheme failed, using fallback', e);
@@ -417,30 +400,10 @@ const StorageService = (window.StorageService = {
         return;
       }
 
-      // If the shared PortraitPrompt helper is available, validate against it.
-      if (
-        typeof window !== 'undefined' &&
-        window.PortraitPrompt &&
-        typeof window.PortraitPrompt.getThemes === 'function'
-      ) {
-        try {
-          const themes = window.PortraitPrompt.getThemes();
-          const allowedIds = Array.isArray(themes)
-            ? themes.map((t) => t.id)
-            : [];
-          if (!allowedIds.includes(value)) {
-            console.warn(
-              'StorageService.setPortraitPromptTheme: ignoring unknown theme id',
-              value,
-            );
-            localStorage.removeItem('dnd_portrait_prompt_theme');
-            return;
-          }
-        } catch (e) {
-          // Non-fatal – if validation fails, still store the value.
-        }
-      }
-
+      // Always save the value - don't validate against themes list here.
+      // The themes list may not include custom/shared themes if the admin cache
+      // hasn't loaded yet (race condition when applying preferences on page load).
+      // Invalid themes will gracefully fall back to default at usage time.
       localStorage.setItem('dnd_portrait_prompt_theme', value);
     } catch (e) {
       console.warn('StorageService.setPortraitPromptTheme failed', e);
