@@ -263,6 +263,13 @@
     --context-hover: hsla(var(--theme-white-h), var(--theme-white-s), var(--theme-white-l-bright), 0.1) !important;
 }
 
+/* White theme layout adjustments - remove side padding, use margins instead */
+.sheet__sidebar.theme-white.ui-theme-white {
+    padding: 0 !important;
+    margin-left: 24px;
+    margin-right: 16px;
+}
+
 .sheet-campaign-grid .campaign-panel-slot.ui-theme-teal,
 .sheet__layout .sheet__sidebar.ui-theme-teal,
 .campaign-panel-slot.ui-theme-teal,
@@ -680,6 +687,8 @@ div.sheet__sidebar.ui-theme-pink {
     background: var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg)));
     /* Allow overflow menu to escape bounds */
     overflow: visible;
+    /* Top border to separate from character sheet */
+    border-top: 1px solid var(--ui-border-color, var(--ui-dim-color));
 }
 
 .campaign-area-header {
