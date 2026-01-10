@@ -5918,6 +5918,8 @@ async function viewCharacter(id, options = {}) {
                 latestRequestId: latestViewCharacterRequestId
             });
         }
+        // Hide loading spinner before abandoning (the newer request will handle its own loading state)
+        showSheetLoading(false);
         return;
     }
 
