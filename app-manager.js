@@ -1781,7 +1781,43 @@ const ExpandedView = (window.ExpandedView = {
     restore() {
         const url = new URL(window.location.href);
         if (url.searchParams.get('view') === 'expanded') {
-            this.expand();
+            // Check if we're already in the early-restored state
+            const splitLayout = document.querySelector('.split-layout');
+            const isAlreadyExpanded = splitLayout?.classList.contains('is-restoring-expanded');
+            
+            if (isAlreadyExpanded) {
+                // Already at correct size from early detection - just finish setup without animation
+                this._finishRestore();
+            } else {
+                // Normal expand with animation
+                this.expand();
+            }
+        }
+    },
+    
+    /** Finish restore without animation (called when already at correct size) */
+    async _finishRestore() {
+        const splitLayout = document.querySelector('.split-layout');
+        
+        // Calculate column widths for the expanded layout
+        this._updateColumnWidths();
+        
+        // Set up resize listener to keep columns responsive
+        this._setupResizeListener();
+        
+        // Load campaign panel data
+        await this._loadCampaignPanel();
+        
+        // Remove restoring class and show content
+        splitLayout?.classList.remove('is-restoring-expanded');
+        
+        // Show character nav bar (without animation delay since we're already loaded)
+        setTimeout(() => {
+            CharacterNavBar.show();
+        }, 100);
+        
+        if (DEBUG_MANAGER) {
+            console.log('📐 Expanded view restored (no animation)');
         }
     }
 });
@@ -11662,8 +11698,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // FIRST: Restore panel view state from URL BEFORE anything renders
     // This prevents flash of wrong view (e.g., showing grid when URL has view=expanded)
     const initialUrl = new URL(window.location.href);
-    if (initialUrl.searchParams.get('view') === 'expanded') {
+    const isRestoringExpanded = initialUrl.searchParams.get('view') === 'expanded';
+    if (isRestoringExpanded) {
         PanelManager.setView('sheet-campaign');
+        // Add expanded class immediately to start at correct size
+        const splitLayout = document.querySelector('.split-layout');
+        if (splitLayout) {
+            splitLayout.classList.add('is-sheet-expanded', 'is-restoring-expanded');
+        }
     }
     
     // Initialize modal behaviors (backdrop click, dirty checking)

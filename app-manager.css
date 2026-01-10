@@ -376,6 +376,27 @@ div.sheet__sidebar.ui-theme-pink {
     display: none;
 }
 
+/* ===== RESTORING EXPANDED VIEW (no animation, just loading) ===== */
+/* When restoring expanded state from URL, show loading state until data loads */
+
+/* Hide all content during restore - show loading spinner */
+.split-layout.is-restoring-expanded .sheet__layout,
+.split-layout.is-restoring-expanded .sheet-placeholder,
+.split-layout.is-restoring-expanded .sheet__nav {
+    visibility: hidden;
+}
+
+/* Show the sheet loading overlay centered during restore */
+.split-layout.is-restoring-expanded .sheet__loading {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    background: var(--ui-bg-color, #0a0a0a);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+}
+
 /* Theme-aware cube for expand overlay */
 .expand-loading-overlay .panel-loading-cube i,
 .sheet__loading .panel-loading-cube i {
