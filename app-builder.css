@@ -48,6 +48,12 @@
   backdrop-filter: blur(4px);
 }
 
+@media (max-width: 768px) {
+  .builder-panel-header {
+    padding-top: 16px;
+  }
+}
+
 .builder-panel-title {
   color: var(--ui-fg-color, var(--terminal-accent));
   font-size: 18px;
