@@ -4464,7 +4464,18 @@ const MobileView = {
             const titleHeader = document.createElement('div');
             titleHeader.className = 'mobile-sheet-title-header';
             titleHeader.id = 'mobileSheetTitleHeader';
-            titleHeader.innerHTML = sourceTitleHeader.innerHTML;
+            
+            const mobileTitleName =
+                sourceTitleHeader.querySelector('.sheet-title-name')?.textContent?.trim() ||
+                sourceTitleHeader.querySelector('.sheet-title')?.textContent?.trim() ||
+                '[ Campaign ]';
+            const actions = sourceTitleHeader.querySelector('.sheet-title-actions');
+            const actionsHtml = actions ? actions.outerHTML : '';
+            
+            titleHeader.innerHTML = `
+                <div class="sheet-title"><span class="sheet-title-name">${Utils.escapeHtml(mobileTitleName)}</span></div>
+                ${actionsHtml}
+            `;
             container.parentNode.insertBefore(titleHeader, container);
             
             // Add click handler to title name to scroll back to top when pinned
