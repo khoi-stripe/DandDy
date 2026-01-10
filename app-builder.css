@@ -54,6 +54,12 @@
   }
 }
 
+@media (prefers-reduced-transparency: reduce) {
+  .builder-panel-header {
+    backdrop-filter: none;
+  }
+}
+
 .builder-panel-title {
   color: var(--ui-fg-color, var(--terminal-accent));
   font-size: 18px;

@@ -5916,6 +5916,12 @@ button#gridNewCharacterBtn.terminal-btn-small:hover:not(:disabled) {
     backdrop-filter: blur(4px);
 }
 
+@media (prefers-reduced-transparency: reduce) {
+    .sheet-status-badge {
+        backdrop-filter: none;
+    }
+}
+
 .sheet-status-badge__icon {
     font-size: var(--font-size-md);
     line-height: 1;
