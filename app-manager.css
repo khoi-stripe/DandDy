@@ -725,11 +725,40 @@ div.sheet__sidebar.ui-theme-pink {
 /* ===== CAMPAIGN AREA (TOP SECTION) ===== */
 .campaign-area {
     padding: 16px var(--spacing-md) var(--spacing-md) var(--spacing-md);
+    margin-top: 4px; /* Space for top serrated edge */
     margin-bottom: 32px;
     background: var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg)));
     /* Allow overflow menu to escape bounds */
     overflow: visible;
     position: relative;
+}
+
+/* Serrated top edge on campaign area (visible in collapsed view) */
+.campaign-area::before {
+    content: "";
+    position: absolute;
+    top: -4px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: 
+        conic-gradient(
+            from 135deg at 50% 0%,
+            var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg))) 90deg,
+            transparent 90deg
+        );
+    background-size: 8px 100%;
+    background-repeat: repeat-x;
+}
+
+/* In expanded view: hide campaign-area's top serration (sticky border handles it) */
+/* Also remove margin-top since sticky border provides the edge */
+.split-layout.is-sheet-expanded .campaign-area::before {
+    display: none;
+}
+
+.split-layout.is-sheet-expanded .campaign-area {
+    margin-top: 0;
 }
 
 /* Serrated bottom edge on campaign area (visible when scrolling past bottom border) */
