@@ -727,8 +727,10 @@ const CharacterSheet = (window.CharacterSheet = {
     // - "Expand" to expand campaign panel (hidden in sheet-campaign view via CSS)
     // Desktop: icon-only, expands to show label on hover
     // Mobile: icon-only always
+    const allowExpandControls = window.innerWidth > 1024;
+
     const charactersButtonHtml =
-      context === 'manager' && hasValidManagerId
+      context === 'manager' && hasValidManagerId && allowExpandControls
         ? `
         <button
           class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-characters sheet-nav-btn--expandable"
@@ -740,7 +742,7 @@ const CharacterSheet = (window.CharacterSheet = {
         : '';
 
     const campaignButtonHtml =
-      context === 'manager' && hasValidManagerId
+      context === 'manager' && hasValidManagerId && allowExpandControls
         ? `
         <button
           class="terminal-btn terminal-btn-small terminal-btn-secondary sheet-edit-btn sheet-nav-btn sheet-nav-btn--to-campaign sheet-nav-btn--expandable"

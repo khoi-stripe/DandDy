@@ -944,6 +944,7 @@ const ExpandedView = (window.ExpandedView = {
         if (this.isExpanded()) {
             this.collapse();
         } else {
+            if (window.innerWidth <= 1024) return;
             this.expand();
         }
     },
