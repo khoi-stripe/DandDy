@@ -751,10 +751,10 @@ const CharacterSheet = (window.CharacterSheet = {
       `
         : '';
 
-    // Manager-only: Standalone Edit link
+    // Manager-only: Standalone Manage link
     const editButtonHtml =
       context === 'manager' && onEdit && editFn
-        ? `<a href="#" class="action-link sheet-edit-link" onclick="${editFn}; return false;" title="Edit character">✎ Edit</a>`
+        ? `<a href="#" class="action-link sheet-edit-link" onclick="${editFn}; return false;" title="Edit character">✎ Manage</a>`
         : '';
 
     const headerMenu =
@@ -864,7 +864,7 @@ const CharacterSheet = (window.CharacterSheet = {
       statusBadges.push(`
         <span class="sheet-status-badge sheet-status-badge--campaign has-tooltip">
           <span class="sheet-status-badge__icon">⚔</span> IN CAMPAIGN
-          <span class="custom-tooltip" data-position="bottom-start">${campaignTooltip}</span>
+          <span class="custom-tooltip" data-position="right">${campaignTooltip}</span>
         </span>`);
     }
     
@@ -908,7 +908,7 @@ const CharacterSheet = (window.CharacterSheet = {
       statusBadges.push(`
         <span class="sheet-status-badge sheet-status-badge--shared has-tooltip">
           <span class="sheet-status-badge__icon">↔</span> SHARED
-          <span class="custom-tooltip" data-position="bottom-start">${tooltipContent}</span>
+          <span class="custom-tooltip" data-position="right">${tooltipContent}</span>
         </span>`);
     }
     

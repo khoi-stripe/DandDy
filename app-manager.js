@@ -807,9 +807,9 @@ const CharacterNavBar = (window.CharacterNavBar = {
         // Also add padding to sheet to create space for nav
         requestAnimationFrame(() => {
             navBar.classList.add('is-visible');
-            // Measure actual nav bar height to set precise padding + 16px gap
+            // Measure actual nav bar height to set precise padding + 24px gap
             const navHeight = navBar.offsetHeight;
-            sheetWrapper.style.paddingTop = `${navHeight + 16}px`;
+            sheetWrapper.style.paddingTop = `${navHeight + 24}px`;
         });
     },
 
@@ -1160,8 +1160,9 @@ const ExpandedView = (window.ExpandedView = {
         const isAuthenticated = window.AuthService && AuthService.isAuthenticated();
         
         // Get the character's campaignId from the character object
+        // Check both campaignId (camelCase) and campaign_id (snake_case from API)
         const character = AppState.characters?.find(c => String(c.id) === String(characterId));
-        let campaignId = character?.campaignId;
+        let campaignId = character?.campaignId || character?.campaign_id;
         
         // If not authenticated, show empty state (can't fetch campaign data)
         if (!isAuthenticated) {
@@ -1563,9 +1564,8 @@ const ExpandedView = (window.ExpandedView = {
         const entriesHtml = entries.length > 0
             ? entries.map(entry => {
                 const isOwnEntry = entry.user_id === currentUserId;
-                const symbolPrefix = entry.character_symbol ? `${entry.character_symbol} ` : '';
                 const authorInfo = entry.character_name 
-                    ? `<span class="journal-entry-author">${symbolPrefix}${Utils.escapeHtml(entry.character_name)}</span>` 
+                    ? `<span class="journal-entry-author">${Utils.escapeHtml(entry.character_name)}</span>` 
                     : '';
                 
                 return `
@@ -3431,9 +3431,8 @@ const CampaignUI = (window.CampaignUI = {
         
         entriesContainer.innerHTML = entries.map(entry => {
             const isOwnEntry = entry.user_id === currentUserId;
-            const symbolPrefix = entry.character_symbol ? `${entry.character_symbol} ` : '';
             const authorInfo = entry.character_name 
-                ? `<span class="journal-entry-author">${symbolPrefix}${Utils.escapeHtml(entry.character_name)}</span>` 
+                ? `<span class="journal-entry-author">${Utils.escapeHtml(entry.character_name)}</span>` 
                 : '';
             
             return `
@@ -5514,7 +5513,15 @@ const UI = {
         const characterCampaignId = character.campaignId || character.campaign_id;
         let campaignName = character.campaignName || character.campaign_name || null;
         
-        // Fallback: try to get campaign name from DOM (campaign panel) if already loaded
+        // Fallback 1: try to get from cached campaign data (if this character's campaign is loaded)
+        if (characterCampaignId && !campaignName && typeof CampaignUI !== 'undefined') {
+            const cachedCampaign = CampaignUI._currentCampaign;
+            if (cachedCampaign && String(cachedCampaign.id) === String(characterCampaignId)) {
+                campaignName = cachedCampaign.name || null;
+            }
+        }
+        
+        // Fallback 2: try to get campaign name from DOM (campaign panel) if already loaded
         // IMPORTANT: Only use DOM value if the campaign IDs match (avoid showing wrong campaign)
         if (characterCampaignId && !campaignName) {
             const campaignAreaEl = document.querySelector('.campaign-area[data-campaign-id]');

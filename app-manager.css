@@ -570,6 +570,14 @@ div.sheet__sidebar.ui-theme-pink {
     transform: rotateX(0deg);
 }
 
+/* Underline on hover for count link text */
+.character-nav-bar .nav-count-link:hover .nav-count-value,
+.character-nav-bar .nav-count-link:hover .nav-count-hover,
+.sheet__nav .nav-count-link:hover .nav-count-value,
+.sheet__nav .nav-count-link:hover .nav-count-hover {
+    text-decoration: underline;
+}
+
 /* ===== SHEET NAV BAR (above character sheet) ===== */
 .sheet-nav-bar {
     padding: 32px 0 0 0;
