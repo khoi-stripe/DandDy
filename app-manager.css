@@ -723,14 +723,31 @@ div.sheet__sidebar.ui-theme-pink {
 /* ===== CAMPAIGN AREA (TOP SECTION) ===== */
 .campaign-area {
     padding: 16px var(--spacing-md) var(--spacing-md) var(--spacing-md);
+    margin-top: 4px;
     margin-bottom: 32px;
     background: var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg)));
     /* Allow overflow menu to escape bounds */
     overflow: visible;
-    /* Top border to separate from character sheet */
-    border-top: 1px solid var(--ui-border-color, var(--ui-dim-color));
-    /* Position context for torn edge pseudo-element */
+    /* Position context for torn edge pseudo-elements */
     position: relative;
+}
+
+/* Decorative torn edge at top of campaign area (triangles pointing up) */
+.campaign-area::before {
+    content: "";
+    position: absolute;
+    top: -4px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: 
+        conic-gradient(
+            from 135deg at 50% 0%,
+            var(--ui-bg-translucent, var(--ui-bg-color, var(--terminal-bg))) 90deg,
+            transparent 90deg
+        );
+    background-size: 8px 100%;
+    background-repeat: repeat-x;
 }
 
 /* Decorative torn edge at bottom of campaign area */

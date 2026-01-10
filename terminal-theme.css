@@ -2033,7 +2033,7 @@ body::before {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 8px 16px 32px 16px;
+  padding: 0 16px 32px 16px;
   /* Sticky header - pins to top as content scrolls */
   position: sticky;
   top: 0;
